@@ -21,8 +21,21 @@ export const authConfig: NextAuthConfig = {
       const isAuthApi = nextUrl.pathname.startsWith("/api/auth");
 
       if (isAuthApi) return true;
-      if (isOnLogin) return !isLoggedIn;
-      return isLoggedIn;
+
+      if (isOnLogin) {
+        // If logged in and on login page, redirect to dashboard
+        if (isLoggedIn) {
+          return Response.redirect(new URL("/", nextUrl));
+        }
+        return true; // Allow access to login page when not logged in
+      }
+
+      // For all other pages, require login
+      if (!isLoggedIn) {
+        return Response.redirect(new URL("/login", nextUrl));
+      }
+
+      return true;
     },
     async jwt({ token, user }) {
       if (user) {
