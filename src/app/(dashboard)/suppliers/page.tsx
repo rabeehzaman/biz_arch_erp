@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -21,22 +20,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Search, Users, MoreHorizontal, Wallet, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Truck } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 
-interface Customer {
+interface Supplier {
   id: string;
   name: string;
   email: string | null;
@@ -51,18 +43,16 @@ interface Customer {
   isActive: boolean;
   createdAt: string;
   _count?: {
-    invoices: number;
+    purchaseInvoices: number;
   };
 }
 
-export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+export default function SuppliersPage() {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isOpeningBalanceDialogOpen, setIsOpeningBalanceDialogOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [selectedCustomerForBalance, setSelectedCustomerForBalance] = useState<Customer | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -74,24 +64,20 @@ export default function CustomersPage() {
     country: "India",
     notes: "",
   });
-  const [openingBalanceData, setOpeningBalanceData] = useState({
-    amount: "",
-    transactionDate: new Date().toISOString().split("T")[0],
-  });
 
   useEffect(() => {
-    fetchCustomers();
+    fetchSuppliers();
   }, []);
 
-  const fetchCustomers = async () => {
+  const fetchSuppliers = async () => {
     try {
-      const response = await fetch("/api/customers");
+      const response = await fetch("/api/suppliers");
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
-      setCustomers(data);
+      setSuppliers(data);
     } catch (error) {
-      toast.error("Failed to load customers");
-      console.error("Failed to fetch customers:", error);
+      toast.error("Failed to load suppliers");
+      console.error("Failed to fetch suppliers:", error);
     } finally {
       setIsLoading(false);
     }
@@ -113,13 +99,13 @@ export default function CustomersPage() {
     };
 
     try {
-      const response = editingCustomer
-        ? await fetch(`/api/customers/${editingCustomer.id}`, {
+      const response = editingSupplier
+        ? await fetch(`/api/suppliers/${editingSupplier.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           })
-        : await fetch("/api/customers", {
+        : await fetch("/api/suppliers", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -129,98 +115,49 @@ export default function CustomersPage() {
 
       setIsDialogOpen(false);
       resetForm();
-      fetchCustomers();
-      toast.success(editingCustomer ? "Customer updated" : "Customer added");
+      fetchSuppliers();
+      toast.success(editingSupplier ? "Supplier updated" : "Supplier added");
     } catch (error) {
-      toast.error("Failed to save customer");
-      console.error("Failed to save customer:", error);
+      toast.error("Failed to save supplier");
+      console.error("Failed to save supplier:", error);
     }
   };
 
-  const handleOpeningBalanceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomerForBalance) return;
-
-    try {
-      const response = await fetch(`/api/customers/${selectedCustomerForBalance.id}/opening-balance`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: parseFloat(openingBalanceData.amount),
-          transactionDate: openingBalanceData.transactionDate,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to save");
-
-      setIsOpeningBalanceDialogOpen(false);
-      setSelectedCustomerForBalance(null);
-      setOpeningBalanceData({
-        amount: "",
-        transactionDate: new Date().toISOString().split("T")[0],
-      });
-      fetchCustomers();
-      toast.success("Opening balance set successfully");
-    } catch (error) {
-      toast.error("Failed to set opening balance");
-      console.error("Failed to set opening balance:", error);
-    }
-  };
-
-  const handleOpenOpeningBalanceDialog = async (customer: Customer) => {
-    setSelectedCustomerForBalance(customer);
-
-    // Fetch existing opening balance if any
-    try {
-      const response = await fetch(`/api/customers/${customer.id}/opening-balance`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data) {
-          setOpeningBalanceData({
-            amount: String(data.amount),
-            transactionDate: data.transactionDate.split("T")[0],
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch opening balance:", error);
-    }
-
-    setIsOpeningBalanceDialogOpen(true);
-  };
-
-  const handleEdit = (customer: Customer) => {
-    setEditingCustomer(customer);
+  const handleEdit = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
     setFormData({
-      name: customer.name,
-      email: customer.email || "",
-      phone: customer.phone || "",
-      address: customer.address || "",
-      city: customer.city || "",
-      state: customer.state || "",
-      zipCode: customer.zipCode || "",
-      country: customer.country || "India",
-      notes: customer.notes || "",
+      name: supplier.name,
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address: supplier.address || "",
+      city: supplier.city || "",
+      state: supplier.state || "",
+      zipCode: supplier.zipCode || "",
+      country: supplier.country || "India",
+      notes: supplier.notes || "",
     });
     setIsDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this customer?")) return;
+    if (!confirm("Are you sure you want to delete this supplier?")) return;
 
     try {
-      const response = await fetch(`/api/customers/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Failed to delete");
-      fetchCustomers();
-      toast.success("Customer deleted");
+      const response = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete");
+      }
+      fetchSuppliers();
+      toast.success("Supplier deleted");
     } catch (error) {
-      toast.error("Failed to delete customer");
-      console.error("Failed to delete customer:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete supplier");
+      console.error("Failed to delete supplier:", error);
     }
   };
 
   const resetForm = () => {
-    setEditingCustomer(null);
+    setEditingSupplier(null);
     setFormData({
       name: "",
       email: "",
@@ -234,19 +171,19 @@ export default function CustomersPage() {
     });
   };
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone?.includes(searchQuery)
+  const filteredSuppliers = suppliers.filter(
+    (supplier) =>
+      supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      supplier.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      supplier.phone?.includes(searchQuery)
   );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Customers</h2>
-          <p className="text-slate-500">Manage your customer database</p>
+          <h2 className="text-2xl font-bold text-slate-900">Suppliers</h2>
+          <p className="text-slate-500">Manage your supplier/vendor database</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -255,19 +192,19 @@ export default function CustomersPage() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Add Customer
+              Add Supplier
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>
-                  {editingCustomer ? "Edit Customer" : "Add New Customer"}
+                  {editingSupplier ? "Edit Supplier" : "Add New Supplier"}
                 </DialogTitle>
                 <DialogDescription>
-                  {editingCustomer
-                    ? "Update the customer details below."
-                    : "Fill in the details to add a new customer."}
+                  {editingSupplier
+                    ? "Update the supplier details below."
+                    : "Fill in the details to add a new supplier."}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -373,7 +310,7 @@ export default function CustomersPage() {
               </div>
               <DialogFooter>
                 <Button type="submit">
-                  {editingCustomer ? "Update Customer" : "Add Customer"}
+                  {editingSupplier ? "Update Supplier" : "Add Supplier"}
                 </Button>
               </DialogFooter>
             </form>
@@ -381,70 +318,13 @@ export default function CustomersPage() {
         </Dialog>
       </div>
 
-      {/* Opening Balance Dialog */}
-      <Dialog open={isOpeningBalanceDialogOpen} onOpenChange={(open) => {
-        setIsOpeningBalanceDialogOpen(open);
-        if (!open) {
-          setSelectedCustomerForBalance(null);
-          setOpeningBalanceData({
-            amount: "",
-            transactionDate: new Date().toISOString().split("T")[0],
-          });
-        }
-      }}>
-        <DialogContent>
-          <form onSubmit={handleOpeningBalanceSubmit}>
-            <DialogHeader>
-              <DialogTitle>Set Opening Balance</DialogTitle>
-              <DialogDescription>
-                Set the opening balance for {selectedCustomerForBalance?.name}. This represents the initial receivable amount.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="openingAmount">Opening Balance Amount *</Label>
-                <Input
-                  id="openingAmount"
-                  type="number"
-                  step="0.01"
-                  value={openingBalanceData.amount}
-                  onChange={(e) =>
-                    setOpeningBalanceData({ ...openingBalanceData, amount: e.target.value })
-                  }
-                  placeholder="Enter amount (positive for receivable)"
-                  required
-                />
-                <p className="text-xs text-slate-500">
-                  Enter a positive amount for receivables (customer owes you), or negative for advances (you owe customer).
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="balanceDate">As of Date *</Label>
-                <Input
-                  id="balanceDate"
-                  type="date"
-                  value={openingBalanceData.transactionDate}
-                  onChange={(e) =>
-                    setOpeningBalanceData({ ...openingBalanceData, transactionDate: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Set Opening Balance</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
-                placeholder="Search customers..."
+                placeholder="Search suppliers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -455,14 +335,14 @@ export default function CustomersPage() {
         <CardContent>
           {isLoading ? (
             <TableSkeleton columns={7} rows={5} />
-          ) : filteredCustomers.length === 0 ? (
+          ) : filteredSuppliers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Users className="h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-semibold">No customers found</h3>
+              <Truck className="h-12 w-12 text-slate-300" />
+              <h3 className="mt-4 text-lg font-semibold">No suppliers found</h3>
               <p className="text-sm text-slate-500">
                 {searchQuery
                   ? "Try a different search term"
-                  : "Add your first customer to get started"}
+                  : "Add your first supplier to get started"}
               </p>
             </div>
           ) : (
@@ -472,84 +352,67 @@ export default function CustomersPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>Balance</TableHead>
-                  <TableHead>Invoices</TableHead>
+                  <TableHead>Balance (Payable)</TableHead>
+                  <TableHead>Purchase Invoices</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
+                {filteredSuppliers.map((supplier) => (
+                  <TableRow key={supplier.id}>
                     <TableCell>
-                      <div className="font-medium">{customer.name}</div>
+                      <div className="font-medium">{supplier.name}</div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {customer.email && <div>{customer.email}</div>}
-                        {customer.phone && (
-                          <div className="text-slate-500">{customer.phone}</div>
+                        {supplier.email && <div>{supplier.email}</div>}
+                        {supplier.phone && (
+                          <div className="text-slate-500">{supplier.phone}</div>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {customer.city && customer.state
-                          ? `${customer.city}, ${customer.state}`
-                          : customer.city || customer.state || "-"}
+                        {supplier.city && supplier.state
+                          ? `${supplier.city}, ${supplier.state}`
+                          : supplier.city || supplier.state || "-"}
                       </div>
                     </TableCell>
                     <TableCell>
                       <span
                         className={
-                          Number(customer.balance) > 0
-                            ? "text-red-600 font-medium"
+                          Number(supplier.balance) > 0
+                            ? "text-orange-600 font-medium"
                             : ""
                         }
                       >
-                        ₹{Number(customer.balance).toLocaleString("en-IN")}
+                        ₹{Number(supplier.balance).toLocaleString("en-IN")}
                       </span>
                     </TableCell>
-                    <TableCell>{customer._count?.invoices || 0}</TableCell>
+                    <TableCell>{supplier._count?.purchaseInvoices || 0}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={customer.isActive ? "default" : "secondary"}
+                        variant={supplier.isActive ? "default" : "secondary"}
                       >
-                        {customer.isActive ? "Active" : "Inactive"}
+                        {supplier.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(customer)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(customer)}>
-                            <Wallet className="mr-2 h-4 w-4" />
-                            Opening Balance
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/customers/${customer.id}/statement`}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              View Statement
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDelete(customer.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(supplier)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(supplier.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

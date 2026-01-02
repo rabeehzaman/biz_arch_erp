@@ -13,6 +13,10 @@ import {
   Settings,
   LogOut,
   Menu,
+  Warehouse,
+  Truck,
+  Receipt,
+  Wallet,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -27,9 +31,13 @@ import { useState } from "react";
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
+  { name: "Inventory", href: "/inventory", icon: Warehouse },
   { name: "Customers", href: "/customers", icon: Users },
-  { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "Payments", href: "/payments", icon: CreditCard },
+  { name: "Suppliers", href: "/suppliers", icon: Truck },
+  { name: "Sales Invoices", href: "/invoices", icon: FileText },
+  { name: "Purchase Invoices", href: "/purchase-invoices", icon: Receipt },
+  { name: "Customer Payments", href: "/payments", icon: CreditCard },
+  { name: "Supplier Payments", href: "/supplier-payments", icon: Wallet },
 ];
 
 const bottomNavigation = [

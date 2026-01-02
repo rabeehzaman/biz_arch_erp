@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { restoreStockFromConsumptions, recalculateFromDate } from "@/lib/inventory/fifo";
 
 export async function GET(
   request: NextRequest,
@@ -14,6 +15,7 @@ export async function GET(
         items: {
           include: {
             product: true,
+            lotConsumptions: true,
           },
         },
         payments: true,
@@ -68,10 +70,16 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Get invoice to update customer balance
+    // Get invoice with items and consumptions
     const invoice = await prisma.invoice.findUnique({
       where: { id },
-      select: { customerId: true, total: true, amountPaid: true },
+      include: {
+        items: {
+          include: {
+            lotConsumptions: true,
+          },
+        },
+      },
     });
 
     if (!invoice) {
@@ -81,23 +89,40 @@ export async function DELETE(
       );
     }
 
-    // Delete invoice items first (cascade should handle this, but being explicit)
-    await prisma.invoiceItem.deleteMany({
-      where: { invoiceId: id },
-    });
+    // Check which products had stock consumed
+    const productsWithConsumptions = invoice.items
+      .filter((item) => item.lotConsumptions.length > 0)
+      .map((item) => ({
+        productId: item.productId!,
+        hasConsumptions: true,
+      }));
 
-    // Delete invoice
-    await prisma.invoice.delete({
-      where: { id },
-    });
+    await prisma.$transaction(async (tx) => {
+      // Restore stock for each item
+      for (const item of invoice.items) {
+        if (item.lotConsumptions.length > 0) {
+          await restoreStockFromConsumptions(item.id, tx);
+        }
+      }
 
-    // Update customer balance (subtract the unpaid amount)
-    const unpaidAmount = Number(invoice.total) - Number(invoice.amountPaid);
-    await prisma.customer.update({
-      where: { id: invoice.customerId },
-      data: {
-        balance: { decrement: unpaidAmount },
-      },
+      // Delete invoice (cascade will delete items and their consumptions)
+      await tx.invoice.delete({
+        where: { id },
+      });
+
+      // Update customer balance (subtract the unpaid amount)
+      const unpaidAmount = Number(invoice.total) - Number(invoice.amountPaid);
+      await tx.customer.update({
+        where: { id: invoice.customerId },
+        data: {
+          balance: { decrement: unpaidAmount },
+        },
+      });
+
+      // Recalculate FIFO for affected products
+      for (const { productId } of productsWithConsumptions) {
+        await recalculateFromDate(productId, invoice.issueDate, tx);
+      }
     });
 
     return NextResponse.json({ success: true });

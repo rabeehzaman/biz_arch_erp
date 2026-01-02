@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber() {
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerId, dueDate, items, taxRate, discount, notes, terms } = body;
+    const { customerId, issueDate, dueDate, items, taxRate, discount, notes, terms } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     const invoiceNumber = await generateInvoiceNumber();
+    const invoiceDate = issueDate ? new Date(issueDate) : new Date();
 
     // Calculate totals
     const subtotal = items.reduce(
@@ -75,49 +77,95 @@ export async function POST(request: NextRequest) {
     const total = subtotal + taxAmount - (discount || 0);
     const balanceDue = total;
 
-    const invoice = await prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        customerId,
-        dueDate: new Date(dueDate),
-        subtotal,
-        taxRate: taxRate || 0,
-        taxAmount,
-        discount: discount || 0,
-        total,
-        balanceDue,
-        notes: notes || null,
-        terms: terms || null,
-        items: {
-          create: items.map((item: {
-            productId?: string;
-            description: string;
-            quantity: number;
-            unitPrice: number;
-          }) => ({
-            productId: item.productId || null,
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.quantity * item.unitPrice,
-          })),
+    // Use a transaction to ensure data consistency
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the invoice
+      const invoice = await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          customerId,
+          issueDate: invoiceDate,
+          dueDate: new Date(dueDate),
+          subtotal,
+          taxRate: taxRate || 0,
+          taxAmount,
+          discount: discount || 0,
+          total,
+          balanceDue,
+          notes: notes || null,
+          terms: terms || null,
+          items: {
+            create: items.map((item: {
+              productId?: string;
+              description: string;
+              quantity: number;
+              unitPrice: number;
+            }) => ({
+              productId: item.productId || null,
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              total: item.quantity * item.unitPrice,
+              costOfGoodsSold: 0, // Will be updated below
+            })),
+          },
         },
-      },
-      include: {
-        customer: true,
-        items: true,
-      },
+        include: {
+          customer: true,
+          items: true,
+        },
+      });
+
+      // Consume stock for each item with a productId
+      for (const invoiceItem of invoice.items) {
+        if (invoiceItem.productId) {
+          const fifoResult = await consumeStockFIFO(
+            invoiceItem.productId,
+            invoiceItem.quantity,
+            invoiceItem.id,
+            invoiceDate,
+            tx
+          );
+
+          // Update the invoice item with COGS
+          await tx.invoiceItem.update({
+            where: { id: invoiceItem.id },
+            data: { costOfGoodsSold: fifoResult.totalCOGS },
+          });
+        }
+      }
+
+      // Update customer balance
+      await tx.customer.update({
+        where: { id: customerId },
+        data: {
+          balance: { increment: total },
+        },
+      });
+
+      // Check for backdated invoices and recalculate if needed
+      const productIds = items
+        .filter((item: { productId?: string }) => item.productId)
+        .map((item: { productId: string }) => item.productId);
+
+      for (const productId of productIds) {
+        const backdated = await isBackdated(productId, invoiceDate, tx);
+        if (backdated) {
+          await recalculateFromDate(productId, invoiceDate, tx);
+        }
+      }
+
+      // Fetch the updated invoice with COGS
+      return tx.invoice.findUnique({
+        where: { id: invoice.id },
+        include: {
+          customer: true,
+          items: true,
+        },
+      });
     });
 
-    // Update customer balance
-    await prisma.customer.update({
-      where: { id: customerId },
-      data: {
-        balance: { increment: total },
-      },
-    });
-
-    return NextResponse.json(invoice, { status: 201 });
+    return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("Failed to create invoice:", error);
     return NextResponse.json(
