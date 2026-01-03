@@ -1,6 +1,7 @@
 import { SessionProvider } from "next-auth/react";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { SWRProvider } from "@/lib/swr-config";
 
 export default function DashboardLayout({
   children,
@@ -9,13 +10,15 @@ export default function DashboardLayout({
 }) {
   return (
     <SessionProvider>
-      <div className="flex h-screen overflow-hidden bg-slate-100">
-        <Sidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+      <SWRProvider>
+        <div className="flex h-screen overflow-hidden bg-slate-100">
+          <Sidebar />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Header />
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+          </div>
         </div>
-      </div>
+      </SWRProvider>
     </SessionProvider>
   );
 }
