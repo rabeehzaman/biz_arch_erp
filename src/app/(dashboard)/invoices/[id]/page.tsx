@@ -4,15 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -52,7 +44,6 @@ interface Invoice {
   };
   issueDate: string;
   dueDate: string;
-  status: string;
   subtotal: number;
   taxRate: number;
   taxAmount: number;
@@ -63,24 +54,6 @@ interface Invoice {
   terms: string | null;
   items: InvoiceItem[];
 }
-
-const statusColors: Record<string, string> = {
-  DRAFT: "secondary",
-  SENT: "default",
-  PAID: "default",
-  PARTIALLY_PAID: "default",
-  OVERDUE: "destructive",
-  CANCELLED: "secondary",
-};
-
-const statusLabels: Record<string, string> = {
-  DRAFT: "Draft",
-  SENT: "Sent",
-  PAID: "Paid",
-  PARTIALLY_PAID: "Partial",
-  OVERDUE: "Overdue",
-  CANCELLED: "Cancelled",
-};
 
 export default function InvoiceDetailPage({
   params,
@@ -110,22 +83,6 @@ export default function InvoiceDetailPage({
       router.push("/invoices");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (status: string) => {
-    try {
-      const response = await fetch(`/api/invoices/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) throw new Error("Failed to update");
-      fetchInvoice();
-      toast.success("Status updated");
-    } catch (error) {
-      toast.error("Failed to update status");
-      console.error("Failed to update status:", error);
     }
   };
 
@@ -184,25 +141,10 @@ export default function InvoiceDetailPage({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={invoice.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="DRAFT">Draft</SelectItem>
-              <SelectItem value="SENT">Sent</SelectItem>
-              <SelectItem value="PAID">Paid</SelectItem>
-              <SelectItem value="PARTIALLY_PAID">Partially Paid</SelectItem>
-              <SelectItem value="OVERDUE">Overdue</SelectItem>
-              <SelectItem value="CANCELLED">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
-        </div>
+        <Button variant="outline" onClick={handleDownloadPDF}>
+          <Download className="mr-2 h-4 w-4" />
+          Download PDF
+        </Button>
       </div>
 
       {/* Invoice Document */}
@@ -221,9 +163,6 @@ export default function InvoiceDetailPage({
             </div>
             <div className="text-right">
               <h2 className="text-xl font-bold">{invoice.invoiceNumber}</h2>
-              <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
-                {statusLabels[invoice.status]}
-              </Badge>
             </div>
           </div>
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -12,14 +13,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Search, FileText, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
@@ -36,7 +29,6 @@ interface Invoice {
   };
   issueDate: string;
   dueDate: string;
-  status: string;
   total: number;
   balanceDue: number;
   _count: {
@@ -44,40 +36,19 @@ interface Invoice {
   };
 }
 
-const statusColors: Record<string, string> = {
-  DRAFT: "secondary",
-  SENT: "default",
-  PAID: "default",
-  PARTIALLY_PAID: "default",
-  OVERDUE: "destructive",
-  CANCELLED: "secondary",
-};
-
-const statusLabels: Record<string, string> = {
-  DRAFT: "Draft",
-  SENT: "Sent",
-  PAID: "Paid",
-  PARTIALLY_PAID: "Partial",
-  OVERDUE: "Overdue",
-  CANCELLED: "Cancelled",
-};
-
 export default function InvoicesPage() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     fetchInvoices();
-  }, [statusFilter]);
+  }, []);
 
   const fetchInvoices = async () => {
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== "all") params.set("status", statusFilter);
-
-      const response = await fetch(`/api/invoices?${params}`);
+      const response = await fetch("/api/invoices");
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
       setInvoices(data);
@@ -126,45 +97,29 @@ export default function InvoicesPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Search invoices..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="DRAFT">Draft</SelectItem>
-                <SelectItem value="SENT">Sent</SelectItem>
-                <SelectItem value="PAID">Paid</SelectItem>
-                <SelectItem value="PARTIALLY_PAID">Partially Paid</SelectItem>
-                <SelectItem value="OVERDUE">Overdue</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search invoices..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <TableSkeleton columns={8} rows={5} />
+            <TableSkeleton columns={7} rows={5} />
           ) : filteredInvoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <FileText className="h-12 w-12 text-slate-300" />
               <h3 className="mt-4 text-lg font-semibold">No invoices found</h3>
               <p className="text-sm text-slate-500">
-                {searchQuery || statusFilter !== "all"
-                  ? "Try different filters"
+                {searchQuery
+                  ? "Try a different search term"
                   : "Create your first invoice to get started"}
               </p>
-              {!searchQuery && statusFilter === "all" && (
+              {!searchQuery && (
                 <Link href="/invoices/new" className="mt-4">
                   <Button variant="outline">Create Invoice</Button>
                 </Link>
@@ -178,7 +133,6 @@ export default function InvoicesPage() {
                   <TableHead>Customer</TableHead>
                   <TableHead>Issue Date</TableHead>
                   <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -186,7 +140,11 @@ export default function InvoicesPage() {
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                  <TableRow
+                    key={invoice.id}
+                    onClick={() => router.push(`/invoices/${invoice.id}`)}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
                     <TableCell className="font-medium">
                       {invoice.invoiceNumber}
                     </TableCell>
@@ -206,11 +164,6 @@ export default function InvoicesPage() {
                     <TableCell>
                       {format(new Date(invoice.dueDate), "dd MMM yyyy")}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
-                        {statusLabels[invoice.status]}
-                      </Badge>
-                    </TableCell>
                     <TableCell className="text-right">
                       ₹{Number(invoice.total).toLocaleString("en-IN")}
                     </TableCell>
@@ -225,7 +178,7 @@ export default function InvoicesPage() {
                         ₹{Number(invoice.balanceDue).toLocaleString("en-IN")}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Link href={`/invoices/${invoice.id}`}>
                         <Button variant="ghost" size="icon">
                           <Eye className="h-4 w-4" />

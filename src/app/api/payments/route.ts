@@ -89,14 +89,12 @@ export async function POST(request: NextRequest) {
       if (invoice) {
         const newAmountPaid = Number(invoice.amountPaid) + amount;
         const newBalanceDue = Number(invoice.total) - newAmountPaid;
-        const newStatus = newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID";
 
         await prisma.invoice.update({
           where: { id: invoiceId },
           data: {
             amountPaid: newAmountPaid,
             balanceDue: Math.max(0, newBalanceDue),
-            status: newStatus,
           },
         });
       }

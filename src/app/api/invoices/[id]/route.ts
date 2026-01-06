@@ -39,30 +39,6 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const { status } = body;
-
-    const invoice = await prisma.invoice.update({
-      where: { id },
-      data: { status },
-    });
-
-    return NextResponse.json(invoice);
-  } catch (error) {
-    console.error("Failed to update invoice:", error);
-    return NextResponse.json(
-      { error: "Failed to update invoice" },
-      { status: 500 }
-    );
-  }
-}
-
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

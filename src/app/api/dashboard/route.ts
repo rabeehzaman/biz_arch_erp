@@ -15,13 +15,12 @@ export async function GET() {
     ] = await Promise.all([
       prisma.invoice.count(),
       prisma.invoice.count({
-        where: { status: { in: ["DRAFT", "SENT", "PARTIALLY_PAID"] } },
+        where: { balanceDue: { gt: 0 } },
       }),
       prisma.customer.count({ where: { isActive: true } }),
       prisma.product.count({ where: { isActive: true } }),
       prisma.invoice.aggregate({
         _sum: { amountPaid: true },
-        where: { status: { in: ["PAID", "PARTIALLY_PAID"] } },
       }),
       prisma.invoice.findMany({
         take: 5,
