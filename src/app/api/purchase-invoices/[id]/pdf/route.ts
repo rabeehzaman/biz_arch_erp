@@ -68,7 +68,7 @@ export async function GET(
 
     // Prepare invoice data for PDF
     const pdfInvoice = {
-      invoiceNumber: invoice.invoiceNumber,
+      invoiceNumber: invoice.purchaseInvoiceNumber,
       issueDate: invoice.invoiceDate,
       customer: {
         name: invoice.supplier.name,
@@ -93,7 +93,7 @@ export async function GET(
     );
 
     // Return PDF as response
-    const filename = `purchase-invoice-${invoice.invoiceNumber}-${format(
+    const filename = `purchase-invoice-${invoice.purchaseInvoiceNumber}-${format(
       new Date(),
       "yyyy-MM-dd"
     )}.pdf`;
