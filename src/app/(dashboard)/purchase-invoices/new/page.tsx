@@ -90,25 +90,49 @@ export default function NewPurchaseInvoicePage() {
   };
 
   const updateLineItem = (id: string, field: string, value: string | number) => {
-    setLineItems(
-      lineItems.map((item) => {
-        if (item.id !== id) return item;
+    let shouldAddNewLine = false;
+    const itemIndex = lineItems.findIndex((item) => item.id === id);
+    const isLastItem = itemIndex === lineItems.length - 1;
 
-        if (field === "productId") {
-          const product = products.find((p) => p.id === value);
-          if (product) {
-            return {
-              ...item,
-              productId: value as string,
-              // Use product cost if available, otherwise use selling price
-              unitCost: Number(product.cost) || Number(product.price),
-            };
+    const updatedItems = lineItems.map((item) => {
+      if (item.id !== id) return item;
+
+      if (field === "productId") {
+        const product = products.find((p) => p.id === value);
+        if (product) {
+          // Auto-add new line if selecting product on last item
+          if (isLastItem) {
+            shouldAddNewLine = true;
           }
+          return {
+            ...item,
+            productId: value as string,
+            // Use product cost if available, otherwise use selling price
+            unitCost: Number(product.cost) || Number(product.price),
+          };
         }
+      }
 
-        return { ...item, [field]: value };
-      })
-    );
+      return { ...item, [field]: value };
+    });
+
+    setLineItems(updatedItems);
+
+    // Add new line after state update if needed
+    if (shouldAddNewLine) {
+      setTimeout(() => {
+        setLineItems((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            productId: "",
+            quantity: 1,
+            unitCost: 0,
+            discount: 0,
+          },
+        ]);
+      }, 0);
+    }
   };
 
   const calculateSubtotal = () => {

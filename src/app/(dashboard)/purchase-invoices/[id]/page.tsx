@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Printer, Package } from "lucide-react";
+import { ArrowLeft, Building2, Download, Package } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -131,8 +131,28 @@ export default function PurchaseInvoiceDetailPage({
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await fetch(`/api/purchase-invoices/${id}/pdf`);
+      if (!response.ok) throw new Error("Failed to generate PDF");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `purchase-invoice-${invoice?.purchaseInvoiceNumber}-${format(
+        new Date(),
+        "yyyy-MM-dd"
+      )}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download PDF");
+      console.error(error);
+    }
   };
 
   if (isLoading) {
@@ -179,9 +199,9 @@ export default function PurchaseInvoiceDetailPage({
               <SelectItem value="CANCELLED">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" />
-            Print
+          <Button variant="outline" onClick={handleDownloadPDF}>
+            <Download className="mr-2 h-4 w-4" />
+            Download PDF
           </Button>
         </div>
       </div>

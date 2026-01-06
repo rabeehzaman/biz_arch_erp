@@ -1,0 +1,114 @@
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { InvoicePDF } from "@/components/pdf/invoice-pdf";
+import { createElement } from "react";
+import { format } from "date-fns";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // Fetch purchase invoice with supplier and items
+    const invoice = await prisma.purchaseInvoice.findUnique({
+      where: { id },
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            city: true,
+            state: true,
+            balance: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      return NextResponse.json(
+        { error: "Purchase invoice not found" },
+        { status: 404 }
+      );
+    }
+
+    // Calculate balance information
+    const currentBalance = Number(invoice.supplier.balance);
+    const invoiceTotal = Number(invoice.total);
+    const oldBalance = currentBalance - invoiceTotal;
+
+    const balanceInfo = {
+      oldBalance: oldBalance,
+      sales: invoiceTotal,
+      balance: currentBalance,
+    };
+
+    // Transform items for PDF
+    const pdfItems = invoice.items.map((item) => ({
+      description: item.description,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitCost),
+      discount: Number(item.discount),
+      total: Number(item.total),
+    }));
+
+    // Prepare invoice data for PDF
+    const pdfInvoice = {
+      invoiceNumber: invoice.invoiceNumber,
+      issueDate: invoice.invoiceDate,
+      customer: {
+        name: invoice.supplier.name,
+        address: invoice.supplier.address,
+        city: invoice.supplier.city,
+        state: invoice.supplier.state,
+      },
+      items: pdfItems,
+      subtotal: Number(invoice.subtotal),
+      taxAmount: Number(invoice.taxAmount),
+      total: Number(invoice.total),
+    };
+
+    // Generate PDF
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfBuffer = await renderToBuffer(
+      createElement(InvoicePDF, {
+        invoice: pdfInvoice,
+        type: "PURCHASE",
+        balanceInfo,
+      }) as any
+    );
+
+    // Return PDF as response
+    const filename = `purchase-invoice-${invoice.invoiceNumber}-${format(
+      new Date(),
+      "yyyy-MM-dd"
+    )}.pdf`;
+
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to generate purchase invoice PDF:", error);
+    return NextResponse.json(
+      { error: "Failed to generate purchase invoice PDF" },
+      { status: 500 }
+    );
+  }
+}
