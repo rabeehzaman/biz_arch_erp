@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -275,12 +275,14 @@ export default function NewPurchaseInvoicePage() {
 
             {/* Line Items */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader>
                 <CardTitle>Purchase Items</CardTitle>
-                <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Item
-                </Button>
+                <CardAction>
+                  <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                </CardAction>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
