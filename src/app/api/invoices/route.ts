@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerId, issueDate, dueDate, items, taxRate, discount, notes, terms } = body;
+    const { customerId, issueDate, dueDate, items, taxRate, notes, terms } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -67,14 +67,14 @@ export async function POST(request: NextRequest) {
     const invoiceNumber = await generateInvoiceNumber();
     const invoiceDate = issueDate ? new Date(issueDate) : new Date();
 
-    // Calculate totals
+    // Calculate totals with item-level discounts
     const subtotal = items.reduce(
-      (sum: number, item: { quantity: number; unitPrice: number }) =>
-        sum + item.quantity * item.unitPrice,
+      (sum: number, item: { quantity: number; unitPrice: number; discount?: number }) =>
+        sum + item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       0
     );
     const taxAmount = (subtotal * (taxRate || 0)) / 100;
-    const total = subtotal + taxAmount - (discount || 0);
+    const total = subtotal + taxAmount;
     const balanceDue = total;
 
     // Use a transaction to ensure data consistency
@@ -89,7 +89,6 @@ export async function POST(request: NextRequest) {
           subtotal,
           taxRate: taxRate || 0,
           taxAmount,
-          discount: discount || 0,
           total,
           balanceDue,
           notes: notes || null,
@@ -100,12 +99,14 @@ export async function POST(request: NextRequest) {
               description: string;
               quantity: number;
               unitPrice: number;
+              discount?: number;
             }) => ({
               productId: item.productId || null,
               description: item.description,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
-              total: item.quantity * item.unitPrice,
+              discount: item.discount || 0,
+              total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
               costOfGoodsSold: 0, // Will be updated below
             })),
           },

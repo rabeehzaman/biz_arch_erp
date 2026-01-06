@@ -6,17 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { CustomerCombobox } from "@/components/invoices/customer-combobox";
+import { ProductCombobox } from "@/components/invoices/product-combobox";
 
 interface Customer {
   id: string;
@@ -34,9 +29,9 @@ interface Product {
 interface LineItem {
   id: string;
   productId: string;
-  description: string;
   quantity: number;
   unitPrice: number;
+  discount: number;
 }
 
 export default function NewInvoicePage() {
@@ -47,15 +42,14 @@ export default function NewInvoicePage() {
 
   const [formData, setFormData] = useState({
     customerId: "",
-    dueDate: "",
-    taxRate: "18",
-    discount: "0",
+    date: new Date().toISOString().split("T")[0],
+    taxRate: "0",
     notes: "",
     terms: "",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", description: "", quantity: 1, unitPrice: 0 },
+    { id: "1", productId: "", quantity: 1, unitPrice: 0, discount: 0 },
   ]);
 
   useEffect(() => {
@@ -81,9 +75,9 @@ export default function NewInvoicePage() {
       {
         id: Date.now().toString(),
         productId: "",
-        description: "",
         quantity: 1,
         unitPrice: 0,
+        discount: 0,
       },
     ]);
   };
@@ -94,30 +88,53 @@ export default function NewInvoicePage() {
   };
 
   const updateLineItem = (id: string, field: string, value: string | number) => {
-    setLineItems(
-      lineItems.map((item) => {
-        if (item.id !== id) return item;
+    let shouldAddNewLine = false;
+    const itemIndex = lineItems.findIndex((item) => item.id === id);
+    const isLastItem = itemIndex === lineItems.length - 1;
 
-        if (field === "productId") {
-          const product = products.find((p) => p.id === value);
-          if (product) {
-            return {
-              ...item,
-              productId: value as string,
-              description: product.name,
-              unitPrice: Number(product.price),
-            };
+    const updatedItems = lineItems.map((item) => {
+      if (item.id !== id) return item;
+
+      if (field === "productId") {
+        const product = products.find((p) => p.id === value);
+        if (product) {
+          // Auto-add new line if selecting product on last item
+          if (isLastItem) {
+            shouldAddNewLine = true;
           }
+          return {
+            ...item,
+            productId: value as string,
+            unitPrice: Number(product.price),
+          };
         }
+      }
 
-        return { ...item, [field]: value };
-      })
-    );
+      return { ...item, [field]: value };
+    });
+
+    setLineItems(updatedItems);
+
+    // Add new line after state update if needed
+    if (shouldAddNewLine) {
+      setTimeout(() => {
+        setLineItems((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            productId: "",
+            quantity: 1,
+            unitPrice: 0,
+            discount: 0,
+          },
+        ]);
+      }, 0);
+    }
   };
 
   const calculateSubtotal = () => {
     return lineItems.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice,
+      (sum, item) => sum + item.quantity * item.unitPrice * (1 - item.discount / 100),
       0
     );
   };
@@ -127,7 +144,7 @@ export default function NewInvoicePage() {
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax() - parseFloat(formData.discount || "0");
+    return calculateSubtotal() + calculateTax();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,17 +157,23 @@ export default function NewInvoicePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerId: formData.customerId,
-          dueDate: formData.dueDate,
+          issueDate: formData.date,
+          dueDate: formData.date,
           taxRate: parseFloat(formData.taxRate) || 0,
-          discount: parseFloat(formData.discount) || 0,
           notes: formData.notes || null,
           terms: formData.terms || null,
-          items: lineItems.map((item) => ({
-            productId: item.productId || null,
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-          })),
+          items: lineItems
+            .filter((item) => item.productId)
+            .map((item) => {
+              const product = products.find((p) => p.id === item.productId);
+              return {
+                productId: item.productId,
+                description: product?.name || "",
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discount: item.discount,
+              };
+            }),
         }),
       });
 
@@ -184,9 +207,7 @@ export default function NewInvoicePage() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
             {/* Customer & Date */}
             <Card>
               <CardHeader>
@@ -195,33 +216,23 @@ export default function NewInvoicePage() {
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label htmlFor="customer">Customer *</Label>
-                  <Select
+                  <CustomerCombobox
+                    customers={customers}
                     value={formData.customerId}
                     onValueChange={(value) =>
                       setFormData({ ...formData, customerId: value })
                     }
                     required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="dueDate">Due Date *</Label>
+                  <Label htmlFor="date">Date *</Label>
                   <Input
-                    id="dueDate"
+                    id="date"
                     type="date"
-                    value={formData.dueDate}
+                    value={formData.date}
                     onChange={(e) =>
-                      setFormData({ ...formData, dueDate: e.target.value })
+                      setFormData({ ...formData, date: e.target.value })
                     }
                     required
                   />
@@ -245,35 +256,14 @@ export default function NewInvoicePage() {
                       key={item.id}
                       className="grid gap-4 sm:grid-cols-12 items-end p-4 border rounded-lg"
                     >
-                      <div className="sm:col-span-3">
-                        <Label>Product</Label>
-                        <Select
+                      <div className="sm:col-span-5">
+                        <Label>Product *</Label>
+                        <ProductCombobox
+                          products={products}
                           value={item.productId}
                           onValueChange={(value) =>
                             updateLineItem(item.id, "productId", value)
                           }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="sm:col-span-4">
-                        <Label>Description *</Label>
-                        <Input
-                          value={item.description}
-                          onChange={(e) =>
-                            updateLineItem(item.id, "description", e.target.value)
-                          }
-                          placeholder="Item description"
-                          required
                         />
                       </div>
                       <div className="sm:col-span-2">
@@ -310,6 +300,24 @@ export default function NewInvoicePage() {
                           required
                         />
                       </div>
+                      <div className="sm:col-span-2">
+                        <Label>Disc %</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={item.discount || ""}
+                          onChange={(e) =>
+                            updateLineItem(
+                              item.id,
+                              "discount",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          placeholder="0"
+                        />
+                      </div>
                       <div className="sm:col-span-1 flex justify-end">
                         <Button
                           type="button"
@@ -322,7 +330,10 @@ export default function NewInvoicePage() {
                         </Button>
                       </div>
                       <div className="sm:col-span-12 text-right text-sm text-slate-500">
-                        Line Total: ₹{(item.quantity * item.unitPrice).toLocaleString("en-IN")}
+                        Line Total: ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                        {item.discount > 0 && (
+                          <span className="ml-2 text-green-600">(-{item.discount}%)</span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -360,73 +371,33 @@ export default function NewInvoicePage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
           {/* Summary */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                  <Input
-                    id="taxRate"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.taxRate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, taxRate: e.target.value })
-                    }
-                  />
+          <Card>
+            <CardHeader>
+              <CardTitle>Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-w-xs ml-auto">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
+                  <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="discount">Discount (₹)</Label>
-                  <Input
-                    id="discount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.discount}
-                    onChange={(e) =>
-                      setFormData({ ...formData, discount: e.target.value })
-                    }
-                  />
+                <div className="flex justify-between font-bold text-lg border-t pt-2">
+                  <span>Total</span>
+                  <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
                 </div>
-
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
-                    <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Tax ({formData.taxRate}%)</span>
-                    <span>₹{calculateTax().toLocaleString("en-IN")}</span>
-                  </div>
-                  {parseFloat(formData.discount) > 0 && (
-                    <div className="flex justify-between text-sm text-red-600">
-                      <span>Discount</span>
-                      <span>-₹{parseFloat(formData.discount).toLocaleString("en-IN")}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Total</span>
-                    <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
-                  </div>
-                </div>
-
+              </div>
+              <div className="mt-6 flex justify-end">
                 <Button
                   type="submit"
-                  className="w-full"
-                  disabled={isSubmitting || !formData.customerId || !formData.dueDate}
+                  disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
                 >
                   {isSubmitting ? "Creating..." : "Create Invoice"}
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </form>
     </div>

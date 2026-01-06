@@ -30,6 +30,7 @@ interface InvoiceItem {
   description: string;
   quantity: number;
   unitPrice: number;
+  discount: number;
   total: number;
   product: {
     name: string;
@@ -55,7 +56,6 @@ interface Invoice {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
-  discount: number;
   total: number;
   amountPaid: number;
   balanceDue: number;
@@ -253,9 +253,10 @@ export default function InvoiceDetailPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50%]">Description</TableHead>
+                <TableHead className="w-[40%]">Description</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
                 <TableHead className="text-right">Unit Price</TableHead>
+                <TableHead className="text-right">Discount</TableHead>
                 <TableHead className="text-right">Total</TableHead>
               </TableRow>
             </TableHeader>
@@ -266,6 +267,13 @@ export default function InvoiceDetailPage({
                   <TableCell className="text-right">{Number(item.quantity)}</TableCell>
                   <TableCell className="text-right">
                     ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {Number(item.discount) > 0 ? (
+                      <span className="text-green-600">{Number(item.discount)}%</span>
+                    ) : (
+                      "-"
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     ₹{Number(item.total).toLocaleString("en-IN")}
@@ -286,12 +294,6 @@ export default function InvoiceDetailPage({
                 <div className="flex justify-between text-sm">
                   <span>Tax ({Number(invoice.taxRate)}%)</span>
                   <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
-                </div>
-              )}
-              {Number(invoice.discount) > 0 && (
-                <div className="flex justify-between text-sm text-red-600">
-                  <span>Discount</span>
-                  <span>-₹{Number(invoice.discount).toLocaleString("en-IN")}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-lg border-t pt-2">

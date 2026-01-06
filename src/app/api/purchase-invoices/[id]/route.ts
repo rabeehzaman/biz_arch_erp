@@ -88,14 +88,14 @@ export async function PUT(
           where: { purchaseInvoiceId: id },
         });
 
-        // Calculate new totals
+        // Calculate new totals with item-level discounts
         const subtotal = items.reduce(
-          (sum: number, item: { quantity: number; unitCost: number }) =>
-            sum + item.quantity * item.unitCost,
+          (sum: number, item: { quantity: number; unitCost: number; discount?: number }) =>
+            sum + item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
           0
         );
         const taxAmount = (subtotal * Number(existingInvoice.taxRate)) / 100;
-        const total = subtotal + taxAmount - Number(existingInvoice.discount);
+        const total = subtotal + taxAmount;
 
         // Update invoice with new items
         await tx.purchaseInvoice.update({
@@ -112,12 +112,14 @@ export async function PUT(
                 description: string;
                 quantity: number;
                 unitCost: number;
+                discount?: number;
               }) => ({
                 productId: item.productId,
                 description: item.description,
                 quantity: item.quantity,
                 unitCost: item.unitCost,
-                total: item.quantity * item.unitCost,
+                discount: item.discount || 0,
+                total: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
               })),
             },
           },
