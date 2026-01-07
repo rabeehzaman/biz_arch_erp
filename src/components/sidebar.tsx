@@ -18,6 +18,7 @@ import {
   Receipt,
   Wallet,
   FileCheck,
+  BarChart3,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const navigation = [
   { name: "Purchase Invoices", href: "/purchase-invoices", icon: Receipt },
   { name: "Customer Payments", href: "/payments", icon: CreditCard },
   { name: "Supplier Payments", href: "/supplier-payments", icon: Wallet },
+  { name: "Profit by Items", href: "/reports/profit-by-items", icon: BarChart3 },
 ];
 
 const bottomNavigation = [
