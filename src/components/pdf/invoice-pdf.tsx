@@ -74,6 +74,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderLeftWidth: 1,
     borderRightWidth: 1,
+    borderColor: "#000",
+  },
+  tableRowLast: {
+    flexDirection: "row",
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: "#000",
   },
@@ -313,7 +319,14 @@ export function InvoicePDF({ invoice, type, balanceInfo }: InvoicePDFProps) {
 
           {/* Data Rows */}
           {paddedItems.map((item, index) => (
-            <View key={index} style={styles.tableRow}>
+            <View
+              key={index}
+              style={
+                index === paddedItems.length - 1
+                  ? styles.tableRowLast
+                  : styles.tableRow
+              }
+            >
               <Text style={styles.colSNo}>{item ? index + 1 : ""}</Text>
               <Text style={styles.colDescription}>
                 {item ? item.description : ""}
