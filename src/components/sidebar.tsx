@@ -42,6 +42,8 @@ const navigation = [
   { name: "Customer Payments", href: "/payments", icon: CreditCard },
   { name: "Supplier Payments", href: "/supplier-payments", icon: Wallet },
   { name: "Profit by Items", href: "/reports/profit-by-items", icon: BarChart3 },
+  { name: "Customer Balances", href: "/reports/customer-balances", icon: Users },
+  { name: "Supplier Balances", href: "/reports/supplier-balances", icon: Truck },
 ];
 
 const bottomNavigation = [
