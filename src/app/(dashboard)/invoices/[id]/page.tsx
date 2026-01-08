@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Download, Pencil } from "lucide-react";
+import { ArrowLeft, Building2, Download, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -151,6 +151,10 @@ export default function InvoiceDetailPage({
           <Button variant="outline" onClick={handleDownloadPDF}>
             <Download className="mr-2 h-4 w-4" />
             Download PDF
+          </Button>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="mr-2 h-4 w-4" />
+            Print
           </Button>
         </div>
       </div>
