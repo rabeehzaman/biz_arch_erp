@@ -149,6 +149,16 @@ export default function NewInvoicePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Filter out blank items (items without a product selected)
+    const validItems = lineItems.filter((item) => item.productId);
+
+    // Validate that at least one item has a product selected
+    if (validItems.length === 0) {
+      toast.error("Please add at least one product to the invoice");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -162,18 +172,16 @@ export default function NewInvoicePage() {
           taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
           terms: formData.terms || null,
-          items: lineItems
-            .filter((item) => item.productId)
-            .map((item) => {
-              const product = products.find((p) => p.id === item.productId);
-              return {
-                productId: item.productId,
-                description: product?.name || "",
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                discount: item.discount,
-              };
-            }),
+          items: validItems.map((item) => {
+            const product = products.find((p) => p.id === item.productId);
+            return {
+              productId: item.productId,
+              description: product?.name || "",
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              discount: item.discount,
+            };
+          }),
         }),
       });
 

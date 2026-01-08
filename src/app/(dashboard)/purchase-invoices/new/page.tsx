@@ -153,10 +153,12 @@ export default function NewPurchaseInvoicePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate all items have products selected
-    const invalidItems = lineItems.filter((item) => !item.productId);
-    if (invalidItems.length > 0) {
-      toast.error("All items must have a product selected");
+    // Filter out blank items (items without a product selected)
+    const validItems = lineItems.filter((item) => item.productId);
+
+    // Validate that at least one item has a product selected
+    if (validItems.length === 0) {
+      toast.error("Please add at least one product to the purchase invoice");
       return;
     }
 
@@ -173,7 +175,7 @@ export default function NewPurchaseInvoicePage() {
           supplierInvoiceRef: formData.supplierInvoiceRef || null,
           taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
-          items: lineItems.map((item) => {
+          items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
               productId: item.productId,
