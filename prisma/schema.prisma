@@ -121,9 +121,10 @@ model Invoice {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  items         InvoiceItem[]
-  payments      Payment[]
-  quotation     Quotation?
+  items              InvoiceItem[]
+  payments           Payment[]
+  paymentAllocations PaymentAllocation[]
+  quotation          Quotation?
 
   @@map("invoices")
 }
@@ -240,6 +241,7 @@ model PurchaseInvoice {
 
   items                 PurchaseInvoiceItem[]
   payments              SupplierPayment[]
+  paymentAllocations    SupplierPaymentAllocation[]
   stockLots             StockLot[]
 
   @@map("purchase_invoices")
@@ -296,7 +298,23 @@ model Payment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  allocations   PaymentAllocation[]
+
   @@map("payments")
+}
+
+model PaymentAllocation {
+  id        String   @id @default(cuid())
+  paymentId String
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@map("payment_allocations")
 }
 
 // ==================== SUPPLIER PAYMENTS (TO SUPPLIERS) ====================
@@ -320,7 +338,23 @@ model SupplierPayment {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  allocations       SupplierPaymentAllocation[]
+
   @@map("supplier_payments")
+}
+
+model SupplierPaymentAllocation {
+  id                String          @id @default(cuid())
+  supplierPaymentId String
+  supplierPayment   SupplierPayment @relation(fields: [supplierPaymentId], references: [id], onDelete: Cascade)
+  purchaseInvoiceId String
+  purchaseInvoice   PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id])
+  amount            Decimal         @db.Decimal(12, 2)
+  createdAt         DateTime        @default(now())
+
+  @@index([supplierPaymentId])
+  @@index([purchaseInvoiceId])
+  @@map("supplier_payment_allocations")
 }
 
 enum PaymentMethod {

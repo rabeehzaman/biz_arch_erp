@@ -57,50 +57,112 @@ export async function POST(request: NextRequest) {
     }
 
     const paymentNumber = await generateSupplierPaymentNumber();
+    const parsedPaymentDate = paymentDate ? new Date(paymentDate) : new Date();
 
-    const payment = await prisma.supplierPayment.create({
-      data: {
-        paymentNumber,
-        supplierId,
-        purchaseInvoiceId: purchaseInvoiceId || null,
-        amount,
-        paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
-        paymentMethod: paymentMethod || "CASH",
-        reference: reference || null,
-        notes: notes || null,
-      },
-    });
-
-    // Update supplier balance (decrease payable)
-    await prisma.supplier.update({
-      where: { id: supplierId },
-      data: {
-        balance: { decrement: amount },
-      },
-    });
-
-    // Update purchase invoice if linked
-    if (purchaseInvoiceId) {
-      const invoice = await prisma.purchaseInvoice.findUnique({
-        where: { id: purchaseInvoiceId },
-        select: { total: true, amountPaid: true },
+    // Use transaction to ensure data consistency
+    const payment = await prisma.$transaction(async (tx) => {
+      // Create payment
+      const newPayment = await tx.supplierPayment.create({
+        data: {
+          paymentNumber,
+          supplierId,
+          purchaseInvoiceId: purchaseInvoiceId || null,
+          amount,
+          paymentDate: parsedPaymentDate,
+          paymentMethod: paymentMethod || "CASH",
+          reference: reference || null,
+          notes: notes || null,
+        },
       });
 
-      if (invoice) {
-        const newAmountPaid = Number(invoice.amountPaid) + amount;
-        const newBalanceDue = Number(invoice.total) - newAmountPaid;
-        const newStatus = newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID";
+      // Update supplier balance (decrease payable)
+      await tx.supplier.update({
+        where: { id: supplierId },
+        data: {
+          balance: { decrement: amount },
+        },
+      });
 
-        await prisma.purchaseInvoice.update({
+      // Apply payment to purchase invoices
+      if (purchaseInvoiceId) {
+        // Specific invoice selected - apply to that invoice only
+        const invoice = await tx.purchaseInvoice.findUnique({
           where: { id: purchaseInvoiceId },
-          data: {
-            amountPaid: newAmountPaid,
-            balanceDue: Math.max(0, newBalanceDue),
-            status: newStatus,
-          },
+          select: { id: true, total: true, amountPaid: true, balanceDue: true },
         });
+
+        if (invoice) {
+          const applyAmount = Math.min(amount, Number(invoice.balanceDue));
+          const newAmountPaid = Number(invoice.amountPaid) + applyAmount;
+          const newBalanceDue = Number(invoice.total) - newAmountPaid;
+          const newStatus = newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID";
+
+          await tx.purchaseInvoice.update({
+            where: { id: purchaseInvoiceId },
+            data: {
+              amountPaid: newAmountPaid,
+              balanceDue: Math.max(0, newBalanceDue),
+              status: newStatus,
+            },
+          });
+
+          // Create allocation record
+          await tx.supplierPaymentAllocation.create({
+            data: {
+              supplierPaymentId: newPayment.id,
+              purchaseInvoiceId: purchaseInvoiceId,
+              amount: applyAmount,
+            },
+          });
+        }
+      } else {
+        // No specific invoice - FIFO auto-apply to unpaid purchase invoices
+        const unpaidInvoices = await tx.purchaseInvoice.findMany({
+          where: {
+            supplierId,
+            balanceDue: { gt: 0 },
+          },
+          orderBy: { invoiceDate: "asc" }, // Oldest first (FIFO)
+          select: { id: true, total: true, amountPaid: true, balanceDue: true },
+        });
+
+        let remainingAmount = amount;
+
+        for (const invoice of unpaidInvoices) {
+          if (remainingAmount <= 0) break;
+
+          const balanceDue = Number(invoice.balanceDue);
+          const applyAmount = Math.min(remainingAmount, balanceDue);
+          const newAmountPaid = Number(invoice.amountPaid) + applyAmount;
+          const newBalanceDue = Number(invoice.total) - newAmountPaid;
+          const newStatus = newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID";
+
+          // Update invoice
+          await tx.purchaseInvoice.update({
+            where: { id: invoice.id },
+            data: {
+              amountPaid: newAmountPaid,
+              balanceDue: Math.max(0, newBalanceDue),
+              status: newStatus,
+            },
+          });
+
+          // Create allocation record
+          await tx.supplierPaymentAllocation.create({
+            data: {
+              supplierPaymentId: newPayment.id,
+              purchaseInvoiceId: invoice.id,
+              amount: applyAmount,
+            },
+          });
+
+          remainingAmount -= applyAmount;
+        }
+        // Any remaining amount just reduces supplier balance (already done above)
       }
-    }
+
+      return newPayment;
+    });
 
     return NextResponse.json(payment, { status: 201 });
   } catch (error) {

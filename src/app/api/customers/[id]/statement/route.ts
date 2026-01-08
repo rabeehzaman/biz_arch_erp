@@ -85,12 +85,10 @@ export async function GET(
       },
     });
 
-    // Get all payments
+    // Get all payments (by customerId directly to include on-account payments)
     const payments = await prisma.payment.findMany({
       where: {
-        invoice: {
-          customerId: id,
-        },
+        customerId: id,
         ...(Object.keys(dateFilter).length > 0 && { paymentDate: dateFilter }),
       },
       orderBy: { paymentDate: "asc" },
@@ -139,7 +137,9 @@ export async function GET(
         date: payment.paymentDate.toISOString(),
         type: "PAYMENT",
         reference: payment.paymentNumber,
-        description: `Payment for ${payment.invoice?.invoiceNumber || "Invoice"}`,
+        description: payment.invoice?.invoiceNumber
+          ? `Payment for ${payment.invoice.invoiceNumber}`
+          : `Payment ${payment.paymentNumber} (On Account)`,
         debit: 0,
         credit: Number(payment.amount),
         runningBalance: 0,

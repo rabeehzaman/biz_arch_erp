@@ -1,0 +1,111 @@
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const payment = await prisma.payment.findUnique({
+      where: { id },
+      include: {
+        customer: {
+          select: { id: true, name: true },
+        },
+        invoice: {
+          select: { id: true, invoiceNumber: true },
+        },
+      },
+    });
+
+    if (!payment) {
+      return NextResponse.json(
+        { error: "Payment not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(payment);
+  } catch (error) {
+    console.error("Failed to fetch payment:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch payment" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // Fetch payment with allocations
+    const payment = await prisma.payment.findUnique({
+      where: { id },
+      include: {
+        allocations: {
+          include: {
+            invoice: {
+              select: { id: true, total: true, amountPaid: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      return NextResponse.json(
+        { error: "Payment not found" },
+        { status: 404 }
+      );
+    }
+
+    // Use transaction to reverse all effects
+    await prisma.$transaction(async (tx) => {
+      // Reverse customer balance (increment since payment was a decrement)
+      await tx.customer.update({
+        where: { id: payment.customerId },
+        data: {
+          balance: { increment: payment.amount },
+        },
+      });
+
+      // Reverse all invoice allocations using tracked amounts
+      for (const allocation of payment.allocations) {
+        const invoice = allocation.invoice;
+        const allocatedAmount = Number(allocation.amount);
+
+        await tx.invoice.update({
+          where: { id: allocation.invoiceId },
+          data: {
+            amountPaid: { decrement: allocatedAmount },
+            balanceDue: { increment: allocatedAmount },
+          },
+        });
+      }
+
+      // Delete related CustomerTransaction
+      await tx.customerTransaction.deleteMany({
+        where: { paymentId: id },
+      });
+
+      // Delete allocations and payment (allocations cascade delete)
+      await tx.payment.delete({
+        where: { id },
+      });
+    });
+
+    return NextResponse.json({ success: true, message: "Payment deleted successfully" });
+  } catch (error) {
+    console.error("Failed to delete payment:", error);
+    return NextResponse.json(
+      { error: "Failed to delete payment" },
+      { status: 500 }
+    );
+  }
+}
