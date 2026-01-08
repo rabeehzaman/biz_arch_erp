@@ -31,7 +31,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, CreditCard } from "lucide-react";
+import { Plus, Search, CreditCard, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -83,6 +93,7 @@ export default function PaymentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deletePayment, setDeletePayment] = useState<Payment | null>(null);
   const [formData, setFormData] = useState({
     customerId: "",
     invoiceId: "",
@@ -171,6 +182,27 @@ export default function PaymentsPage() {
       reference: "",
       notes: "",
     });
+  };
+
+  const handleDelete = async () => {
+    if (!deletePayment) return;
+
+    try {
+      const response = await fetch(`/api/payments/${deletePayment.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Failed to delete");
+
+      setDeletePayment(null);
+      fetchPayments();
+      fetchCustomers();
+      fetchInvoices();
+      toast.success("Payment deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete payment");
+      console.error("Failed to delete payment:", error);
+    }
   };
 
   const filteredPayments = payments.filter(
@@ -364,6 +396,7 @@ export default function PaymentsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -387,6 +420,16 @@ export default function PaymentsPage() {
                     <TableCell className="text-right font-medium text-green-600">
                       ₹{Number(payment.amount).toLocaleString("en-IN")}
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeletePayment(payment)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -394,6 +437,28 @@ export default function PaymentsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deletePayment} onOpenChange={() => setDeletePayment(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Payment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete payment {deletePayment?.paymentNumber}?
+              This will reverse the customer balance and any invoice allocations.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
