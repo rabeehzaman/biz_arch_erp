@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -239,23 +240,28 @@ export default function SupplierPaymentsPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="supplier">Supplier *</Label>
-                  <Select
+                  <Combobox
+                    items={suppliers}
                     value={formData.supplierId}
                     onValueChange={(value) =>
                       setFormData({ ...formData, supplierId: value, purchaseInvoiceId: "" })
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name} (Payable: ₹{Number(supplier.balance).toLocaleString("en-IN")})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    getId={(supplier) => supplier.id}
+                    getLabel={(supplier) => supplier.name}
+                    filterFn={(supplier, query) =>
+                      supplier.name.toLowerCase().includes(query)
+                    }
+                    renderItem={(supplier) => (
+                      <div className="flex justify-between w-full">
+                        <span>{supplier.name}</span>
+                        <span className="text-slate-500 text-xs">
+                          Payable: ₹{Number(supplier.balance).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                    )}
+                    placeholder="Search supplier..."
+                    emptyText="No suppliers found."
+                  />
                 </div>
                 {formData.supplierId && supplierInvoices.length > 0 && (
                   <div className="grid gap-2">

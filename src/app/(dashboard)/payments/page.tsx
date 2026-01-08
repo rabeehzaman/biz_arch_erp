@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -239,23 +240,28 @@ export default function PaymentsPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="customer">Customer *</Label>
-                  <Select
+                  <Combobox
+                    items={customers}
                     value={formData.customerId}
                     onValueChange={(value) =>
                       setFormData({ ...formData, customerId: value, invoiceId: "" })
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.name} (Balance: ₹{Number(customer.balance).toLocaleString("en-IN")})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    getId={(customer) => customer.id}
+                    getLabel={(customer) => customer.name}
+                    filterFn={(customer, query) =>
+                      customer.name.toLowerCase().includes(query)
+                    }
+                    renderItem={(customer) => (
+                      <div className="flex justify-between w-full">
+                        <span>{customer.name}</span>
+                        <span className="text-slate-500 text-xs">
+                          Balance: ₹{Number(customer.balance).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                    )}
+                    placeholder="Search customer..."
+                    emptyText="No customers found."
+                  />
                 </div>
                 {formData.customerId && customerInvoices.length > 0 && (
                   <div className="grid gap-2">
