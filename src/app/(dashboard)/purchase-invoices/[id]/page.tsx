@@ -155,6 +155,25 @@ export default function PurchaseInvoiceDetailPage({
     }
   };
 
+  const handlePrint = async () => {
+    try {
+      const response = await fetch(`/api/purchase-invoices/${id}/pdf`);
+      if (!response.ok) throw new Error("Failed to generate PDF");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const printWindow = window.open(url, "_blank");
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+    } catch (error) {
+      toast.error("Failed to print invoice");
+      console.error(error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -209,7 +228,7 @@ export default function PurchaseInvoiceDetailPage({
             <Download className="mr-2 h-4 w-4" />
             Download PDF
           </Button>
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" />
             Print
           </Button>
