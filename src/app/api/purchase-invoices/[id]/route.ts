@@ -48,7 +48,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status, invoiceDate, items } = body;
+    const { status, supplierId, invoiceDate, dueDate, supplierInvoiceRef, taxRate, notes, items } = body;
 
     const existingInvoice = await prisma.purchaseInvoice.findUnique({
       where: { id },
@@ -63,7 +63,7 @@ export async function PUT(
     }
 
     // If only status is being updated
-    if (status && !invoiceDate && !items) {
+    if (status && !invoiceDate && !items && !supplierId && !dueDate && taxRate === undefined && notes === undefined) {
       const invoice = await prisma.purchaseInvoice.update({
         where: { id },
         data: { status },
@@ -74,6 +74,7 @@ export async function PUT(
     // If date or items are being updated, we need to recalculate
     const oldDate = existingInvoice.invoiceDate;
     const newDate = invoiceDate ? new Date(invoiceDate) : oldDate;
+    const newTaxRate = taxRate !== undefined ? taxRate : Number(existingInvoice.taxRate);
 
     await prisma.$transaction(async (tx) => {
       // If items are being updated
@@ -94,18 +95,29 @@ export async function PUT(
             sum + item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
           0
         );
-        const taxAmount = (subtotal * Number(existingInvoice.taxRate)) / 100;
+        const taxAmount = (subtotal * newTaxRate) / 100;
         const total = subtotal + taxAmount;
+        const newBalanceDue = total - Number(existingInvoice.amountPaid);
+
+        // Calculate balance change for supplier
+        const oldBalanceDue = Number(existingInvoice.balanceDue);
+        const balanceChange = newBalanceDue - oldBalanceDue;
+        const newSupplierId = supplierId || existingInvoice.supplierId;
 
         // Update invoice with new items
         await tx.purchaseInvoice.update({
           where: { id },
           data: {
+            supplierId: newSupplierId,
             invoiceDate: newDate,
+            dueDate: dueDate ? new Date(dueDate) : existingInvoice.dueDate,
+            supplierInvoiceRef: supplierInvoiceRef !== undefined ? supplierInvoiceRef : existingInvoice.supplierInvoiceRef,
+            taxRate: newTaxRate,
+            notes: notes !== undefined ? notes : existingInvoice.notes,
             subtotal,
             taxAmount,
             total,
-            balanceDue: total - Number(existingInvoice.amountPaid),
+            balanceDue: newBalanceDue,
             items: {
               create: items.map((item: {
                 productId: string;
@@ -124,6 +136,40 @@ export async function PUT(
             },
           },
         });
+
+        // Update supplier balance
+        if (balanceChange !== 0) {
+          await tx.supplier.update({
+            where: { id: newSupplierId },
+            data: {
+              balance: { increment: balanceChange },
+            },
+          });
+
+          // If supplier changed, update old supplier's balance
+          if (newSupplierId !== existingInvoice.supplierId) {
+            await tx.supplier.update({
+              where: { id: existingInvoice.supplierId },
+              data: {
+                balance: { decrement: oldBalanceDue },
+              },
+            });
+          }
+        } else if (newSupplierId !== existingInvoice.supplierId) {
+          // Supplier changed but total didn't - transfer balance
+          await tx.supplier.update({
+            where: { id: existingInvoice.supplierId },
+            data: {
+              balance: { decrement: oldBalanceDue },
+            },
+          });
+          await tx.supplier.update({
+            where: { id: newSupplierId },
+            data: {
+              balance: { increment: newBalanceDue },
+            },
+          });
+        }
 
         // Recreate stock lots
         const updatedInvoice = await tx.purchaseInvoice.findUnique({

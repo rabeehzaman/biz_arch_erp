@@ -15,6 +15,7 @@ interface ProductComboboxProps {
   value: string;
   onValueChange: (value: string) => void;
   required?: boolean;
+  onSelect?: () => void;
 }
 
 export function ProductCombobox({
@@ -22,6 +23,7 @@ export function ProductCombobox({
   value,
   onValueChange,
   required = false,
+  onSelect,
 }: ProductComboboxProps) {
   return (
     <Combobox
@@ -46,6 +48,7 @@ export function ProductCombobox({
       placeholder="Search products..."
       emptyText="No products found."
       required={required}
+      onSelect={onSelect}
     />
   );
 }

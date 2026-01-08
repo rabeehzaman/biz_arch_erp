@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Download } from "lucide-react";
+import { ArrowLeft, Building2, Download, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -141,10 +141,18 @@ export default function InvoiceDetailPage({
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={handleDownloadPDF}>
-          <Download className="mr-2 h-4 w-4" />
-          Download PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href={`/invoices/${id}/edit`}>
+            <Button variant="outline">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </Link>
+          <Button variant="outline" onClick={handleDownloadPDF}>
+            <Download className="mr-2 h-4 w-4" />
+            Download PDF
+          </Button>
+        </div>
       </div>
 
       {/* Invoice Document */}

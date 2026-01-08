@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,9 +54,40 @@ export default function NewPurchaseInvoicePage() {
     { id: "1", productId: "", quantity: 1, unitCost: 0, discount: 0 },
   ]);
 
+  const formRef = useRef<HTMLFormElement>(null);
+  const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
+  // Focus quantity input for a specific line item
+  const focusQuantity = useCallback((itemId: string) => {
+    const input = quantityRefs.current.get(itemId);
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }, []);
+
   useEffect(() => {
     fetchSuppliers();
     fetchProducts();
+  }, []);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Alt+A: Add new line item
+      if (e.altKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        addLineItem();
+      }
+      // Ctrl+Enter: Submit form
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        formRef.current?.requestSubmit();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const fetchSuppliers = async () => {
@@ -218,7 +249,7 @@ export default function NewPurchaseInvoicePage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form ref={formRef} onSubmit={handleSubmit}>
         <div className="space-y-6">
             {/* Supplier & Date */}
             <Card>
@@ -301,11 +332,19 @@ export default function NewPurchaseInvoicePage() {
                           onValueChange={(value) =>
                             updateLineItem(item.id, "productId", value)
                           }
+                          onSelect={() => focusQuantity(item.id)}
                         />
                       </div>
                       <div className="sm:col-span-2">
                         <Label>Quantity *</Label>
                         <Input
+                          ref={(el) => {
+                            if (el) {
+                              quantityRefs.current.set(item.id, el);
+                            } else {
+                              quantityRefs.current.delete(item.id);
+                            }
+                          }}
                           type="number"
                           min="0.01"
                           step="0.01"

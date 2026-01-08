@@ -13,6 +13,7 @@ interface SupplierComboboxProps {
   value: string;
   onValueChange: (value: string) => void;
   required?: boolean;
+  onSelect?: () => void;
 }
 
 export function SupplierCombobox({
@@ -20,6 +21,7 @@ export function SupplierCombobox({
   value,
   onValueChange,
   required = false,
+  onSelect,
 }: SupplierComboboxProps) {
   return (
     <Combobox
@@ -43,6 +45,7 @@ export function SupplierCombobox({
       placeholder="Search suppliers..."
       emptyText="No suppliers found."
       required={required}
+      onSelect={onSelect}
     />
   );
 }

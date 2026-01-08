@@ -13,6 +13,7 @@ interface CustomerComboboxProps {
   value: string;
   onValueChange: (value: string) => void;
   required?: boolean;
+  onSelect?: () => void;
 }
 
 export function CustomerCombobox({
@@ -20,6 +21,7 @@ export function CustomerCombobox({
   value,
   onValueChange,
   required = false,
+  onSelect,
 }: CustomerComboboxProps) {
   return (
     <Combobox
@@ -43,6 +45,7 @@ export function CustomerCombobox({
       placeholder="Search customers..."
       emptyText="No customers found."
       required={required}
+      onSelect={onSelect}
     />
   );
 }

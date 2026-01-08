@@ -18,6 +18,8 @@ interface ComboboxProps<T> {
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  onSelect?: () => void;
+  autoOpenOnFocus?: boolean;
 }
 
 export function Combobox<T>({
@@ -33,12 +35,15 @@ export function Combobox<T>({
   required = false,
   disabled = false,
   className,
+  onSelect,
+  autoOpenOnFocus = true,
 }: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   // Get the selected item
   const selectedItem = React.useMemo(
@@ -78,6 +83,11 @@ export function Combobox<T>({
       } else if (e.key === "Escape") {
         e.preventDefault();
         setOpen(false);
+        // Return focus to trigger button
+        triggerRef.current?.focus();
+      } else if (e.key === "Tab") {
+        // Close the combobox and let Tab naturally move focus
+        setOpen(false);
       }
     };
 
@@ -102,6 +112,10 @@ export function Combobox<T>({
     onValueChange(selectedValue);
     setOpen(false);
     setSearchQuery("");
+    // Call onSelect callback after a microtask to ensure state updates are applied
+    if (onSelect) {
+      setTimeout(() => onSelect(), 0);
+    }
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -114,11 +128,17 @@ export function Combobox<T>({
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
       <PopoverPrimitive.Trigger asChild>
         <button
+          ref={triggerRef}
           type="button"
           role="combobox"
           aria-expanded={open}
           aria-required={required}
           disabled={disabled}
+          onFocus={() => {
+            if (autoOpenOnFocus && !disabled) {
+              setOpen(true);
+            }
+          }}
           className={cn(
             "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
             className
