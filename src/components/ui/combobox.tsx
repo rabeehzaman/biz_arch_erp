@@ -45,17 +45,20 @@ export function Combobox<T>({
   const listRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
 
+  // Ensure items is always an array
+  const safeItems = Array.isArray(items) ? items : [];
+
   // Get the selected item
   const selectedItem = React.useMemo(
-    () => items.find((item) => getId(item) === value),
-    [items, value, getId]
+    () => safeItems.find((item) => getId(item) === value),
+    [safeItems, value, getId]
   );
 
   // Filter items based on search query
   const filteredItems = React.useMemo(() => {
-    if (!searchQuery) return items;
-    return items.filter((item) => filterFn(item, searchQuery.toLowerCase()));
-  }, [items, searchQuery, filterFn]);
+    if (!searchQuery) return safeItems;
+    return safeItems.filter((item) => filterFn(item, searchQuery.toLowerCase()));
+  }, [safeItems, searchQuery, filterFn]);
 
   // Reset highlighted index when filtered items change
   React.useEffect(() => {

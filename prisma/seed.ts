@@ -30,6 +30,34 @@ async function main() {
 
   console.log("Created admin user:", admin.email);
 
+  // Create Dilshad user
+  const dilshadPassword = await hash("dilshad123", 12);
+  const dilshad = await prisma.user.upsert({
+    where: { email: "dilshad@bizarch.com" },
+    update: {},
+    create: {
+      email: "dilshad@bizarch.com",
+      password: dilshadPassword,
+      name: "Dilshad",
+      role: "user",
+    },
+  });
+  console.log("Created user:", dilshad.email);
+
+  // Create Faljas user
+  const faljasPassword = await hash("faljas123", 12);
+  const faljas = await prisma.user.upsert({
+    where: { email: "faljas@bizarch.com" },
+    update: {},
+    create: {
+      email: "faljas@bizarch.com",
+      password: faljasPassword,
+      name: "Faljas",
+      role: "user",
+    },
+  });
+  console.log("Created user:", faljas.email);
+
   // Create default settings
   const settings = [
     { key: "company_name", value: "BizArch ERP" },

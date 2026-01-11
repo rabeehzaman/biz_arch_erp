@@ -1,12 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+// Helper to check if user can access a customer
+async function canAccessCustomer(customerId: string, userId: string, isAdmin: boolean) {
+  if (isAdmin) return true;
+
+  const customer = await prisma.customer.findUnique({
+    where: { id: customerId },
+    include: { assignments: true },
+  });
+
+  if (!customer) return false;
+
+  // Allow access if customer is unassigned or assigned to user
+  return customer.assignments.length === 0 ||
+         customer.assignments.some(a => a.userId === userId);
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const isAdmin = session.user.role === "admin";
+
+    if (!await canAccessCustomer(id, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const customer = await prisma.customer.findUnique({
       where: { id },
       include: {
@@ -17,6 +45,13 @@ export async function GET(
         payments: {
           orderBy: { createdAt: "desc" },
           take: 10,
+        },
+        assignments: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
         },
       },
     });
@@ -43,7 +78,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const isAdmin = session.user.role === "admin";
+
+    if (!await canAccessCustomer(id, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { name, email, phone, address, city, state, zipCode, country, notes, isActive } = body;
 
@@ -60,6 +106,15 @@ export async function PUT(
         country,
         notes,
         isActive,
+      },
+      include: {
+        assignments: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
       },
     });
 
@@ -78,7 +133,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const isAdmin = session.user.role === "admin";
+
+    if (!await canAccessCustomer(id, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await prisma.customer.delete({
       where: { id },
     });

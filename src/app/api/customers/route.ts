@@ -1,16 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const customers = await prisma.customer.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: {
-          select: { invoices: true },
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const isAdmin = session.user.role === "admin";
+
+    let customers;
+
+    if (isAdmin) {
+      // Admin sees all customers
+      customers = await prisma.customer.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          _count: {
+            select: { invoices: true },
+          },
+          assignments: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
         },
-      },
-    });
+      });
+    } else {
+      // Regular user sees:
+      // 1. Customers assigned to them
+      // 2. Customers with no assignments (unassigned)
+      customers = await prisma.customer.findMany({
+        where: {
+          OR: [
+            { assignments: { some: { userId } } },
+            { assignments: { none: {} } },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+        include: {
+          _count: {
+            select: { invoices: true },
+          },
+          assignments: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+        },
+      });
+    }
+
     return NextResponse.json(customers);
   } catch (error) {
     console.error("Failed to fetch customers:", error);
@@ -23,6 +70,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { name, email, phone, address, city, state, zipCode, country, notes } = body;
 
@@ -33,6 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create customer and auto-assign to creator
     const customer = await prisma.customer.create({
       data: {
         name,
@@ -44,6 +97,20 @@ export async function POST(request: NextRequest) {
         zipCode: zipCode || null,
         country: country || "India",
         notes: notes || null,
+        assignments: {
+          create: {
+            userId: session.user.id,
+          },
+        },
+      },
+      include: {
+        assignments: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        },
       },
     });
 

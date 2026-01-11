@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   estimateTitle: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
   },
@@ -180,26 +180,36 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   totalRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
     marginBottom: 2,
   },
   totalLabel: {
     fontSize: 9,
+    width: 55,
   },
   totalValue: {
     fontSize: 9,
+    width: 70,
+    textAlign: "right",
   },
   netAmountRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
     marginTop: 3,
     paddingTop: 2,
   },
   netAmountLabel: {
     fontSize: 10,
     fontWeight: "bold",
+    width: 55,
   },
   netAmountValue: {
     fontSize: 10,
     fontWeight: "bold",
     textDecoration: "underline",
+    width: 70,
+    textAlign: "right",
   },
 });
 
@@ -360,7 +370,7 @@ export function InvoicePDF({ invoice, type, balanceInfo }: InvoicePDFProps) {
           <View style={styles.footerLeft}>
             <View style={styles.totalRow}>
               <Text style={styles.totalQtyLabel}>
-                Total : {formatCurrency(totalQuantity)}
+                Total Qty : {formatCurrency(totalQuantity)}
               </Text>
             </View>
             <Text style={styles.amountInWords}>
@@ -394,16 +404,19 @@ export function InvoicePDF({ invoice, type, balanceInfo }: InvoicePDFProps) {
           {/* Right Side */}
           <View style={styles.footerRight}>
             <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>
                 {formatCurrency(invoice.subtotal + totalDiscount)}
               </Text>
             </View>
             <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Discount</Text>
               <Text style={styles.totalValue}>
                 {formatCurrency(totalDiscount)}
               </Text>
             </View>
             <View style={styles.netAmountRow}>
+              <Text style={styles.netAmountLabel}>Net Total</Text>
               <Text style={styles.netAmountValue}>
                 {formatCurrency(netAmount)}
               </Text>

@@ -32,9 +32,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Search, Users, MoreHorizontal, Wallet, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Users, MoreHorizontal, Wallet, FileText, UserPlus, X } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+}
+
+interface Assignment {
+  id: string;
+  userId: string;
+  user: User;
+  assignedAt: string;
+}
 
 interface Customer {
   id: string;
@@ -53,16 +69,24 @@ interface Customer {
   _count?: {
     invoices: number;
   };
+  assignments?: Assignment[];
 }
 
 export default function CustomersPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isOpeningBalanceDialogOpen, setIsOpeningBalanceDialogOpen] = useState(false);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedCustomerForBalance, setSelectedCustomerForBalance] = useState<Customer | null>(null);
+  const [selectedCustomerForAssign, setSelectedCustomerForAssign] = useState<Customer | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -81,6 +105,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetchCustomers();
+    fetchUsers();
   }, []);
 
   const fetchCustomers = async () => {
@@ -94,6 +119,64 @@ export default function CustomersPage() {
       console.error("Failed to fetch customers:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/users");
+      if (!response.ok) throw new Error("Failed to fetch");
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  };
+
+  const handleOpenAssignDialog = (customer: Customer) => {
+    setSelectedCustomerForAssign(customer);
+    setSelectedUserIds(customer.assignments?.map(a => a.userId) || []);
+    setIsAssignDialogOpen(true);
+  };
+
+  const handleAssignSubmit = async () => {
+    if (!selectedCustomerForAssign) return;
+
+    try {
+      // First, get current assignments
+      const currentAssignments = selectedCustomerForAssign.assignments || [];
+      const currentUserIds = currentAssignments.map(a => a.userId);
+
+      // Find users to add and remove
+      const usersToAdd = selectedUserIds.filter(id => !currentUserIds.includes(id));
+      const usersToRemove = currentUserIds.filter(id => !selectedUserIds.includes(id));
+
+      // Add new assignments
+      if (usersToAdd.length > 0) {
+        await fetch(`/api/customers/${selectedCustomerForAssign.id}/assign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds: usersToAdd }),
+        });
+      }
+
+      // Remove assignments
+      for (const userId of usersToRemove) {
+        await fetch(`/api/customers/${selectedCustomerForAssign.id}/assign`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+      }
+
+      setIsAssignDialogOpen(false);
+      setSelectedCustomerForAssign(null);
+      setSelectedUserIds([]);
+      fetchCustomers();
+      toast.success("Customer assignments updated");
+    } catch (error) {
+      toast.error("Failed to update assignments");
+      console.error("Failed to update assignments:", error);
     }
   };
 
@@ -438,6 +521,66 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Assign Customer Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
+        setIsAssignDialogOpen(open);
+        if (!open) {
+          setSelectedCustomerForAssign(null);
+          setSelectedUserIds([]);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Customer</DialogTitle>
+            <DialogDescription>
+              Select users to assign {selectedCustomerForAssign?.name} to. Only assigned users (and admins) will be able to see this customer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-3">
+              {users.filter(u => u.role !== "admin").map((user) => (
+                <div key={user.id} className="flex items-center space-x-3">
+                  <Checkbox
+                    id={`user-${user.id}`}
+                    checked={selectedUserIds.includes(user.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedUserIds([...selectedUserIds, user.id]);
+                      } else {
+                        setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor={`user-${user.id}`}
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    {user.name}
+                    <span className="text-slate-500 ml-2">({user.email})</span>
+                  </label>
+                </div>
+              ))}
+              {users.filter(u => u.role !== "admin").length === 0 && (
+                <p className="text-sm text-slate-500">No users available for assignment.</p>
+              )}
+            </div>
+            {selectedUserIds.length === 0 && (
+              <p className="mt-4 text-xs text-amber-600">
+                Note: If no users are selected, this customer will be visible to all users.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignSubmit}>
+              Save Assignments
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
@@ -471,7 +614,7 @@ export default function CustomersPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead>Assigned To</TableHead>
                   <TableHead>Balance</TableHead>
                   <TableHead>Invoices</TableHead>
                   <TableHead>Status</TableHead>
@@ -493,10 +636,16 @@ export default function CustomersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        {customer.city && customer.state
-                          ? `${customer.city}, ${customer.state}`
-                          : customer.city || customer.state || "-"}
+                      <div className="flex flex-wrap gap-1">
+                        {customer.assignments && customer.assignments.length > 0 ? (
+                          customer.assignments.map(a => (
+                            <Badge key={a.id} variant="outline" className="text-xs">
+                              {a.user.name}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-slate-400 text-sm">Unassigned</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -540,6 +689,12 @@ export default function CustomersPage() {
                               View Statement
                             </Link>
                           </DropdownMenuItem>
+                          {isAdmin && (
+                            <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
+                              <UserPlus className="mr-2 h-4 w-4" />
+                              Assign
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-600"

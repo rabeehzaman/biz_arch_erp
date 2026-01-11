@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, X } from "lucide-react";
+import { FileText, X, ChevronRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
@@ -29,10 +29,6 @@ interface Product {
 
 interface ProfitItem {
   id: string;
-  invoiceNumber: string;
-  invoiceDate: string;
-  invoiceId: string;
-  customerName: string;
   productId: string | null;
   productName: string;
   productSku: string | null;
@@ -48,7 +44,21 @@ interface ProfitItem {
   lineProfit: number;
 }
 
+interface InvoiceProfit {
+  invoiceId: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  customerName: string;
+  totalQty: number;
+  totalRevenue: number;
+  totalCOGS: number;
+  totalProfit: number;
+  profitPercent: number;
+  items: ProfitItem[];
+}
+
 interface Summary {
+  totalInvoices: number;
   totalItems: number;
   totalQuantity: number;
   totalRevenue: number;
@@ -58,7 +68,7 @@ interface Summary {
 }
 
 interface ReportData {
-  items: ProfitItem[];
+  invoices: InvoiceProfit[];
   summary: Summary;
   generatedAt: string;
 }
@@ -70,6 +80,21 @@ export default function ProfitByItemsPage() {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(
+    new Set()
+  );
+
+  const toggleInvoice = (invoiceId: string) => {
+    setExpandedInvoices((prev) => {
+      const next = new Set(prev);
+      if (next.has(invoiceId)) {
+        next.delete(invoiceId);
+      } else {
+        next.add(invoiceId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -136,14 +161,14 @@ export default function ProfitByItemsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Profit by Items</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Profit by Invoice</h2>
           <p className="text-slate-500">
-            View profit analysis for individual invoice items
+            View profit analysis by invoice with expandable item details
           </p>
         </div>
         <Card>
           <CardContent className="pt-6">
-            <TableSkeleton columns={10} rows={5} />
+            <TableSkeleton columns={8} rows={5} />
           </CardContent>
         </Card>
       </div>
@@ -153,9 +178,9 @@ export default function ProfitByItemsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Profit by Items</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Profit by Invoice</h2>
         <p className="text-slate-500">
-          View profit analysis for individual invoice items
+          View profit analysis by invoice with expandable item details
         </p>
       </div>
 
@@ -165,16 +190,16 @@ export default function ProfitByItemsPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-500">
-                Total Items
+                Total Invoices
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {reportData.summary.totalItems}
+                {reportData.summary.totalInvoices}
               </div>
               <p className="text-xs text-slate-500">
+                {reportData.summary.totalItems} items,{" "}
                 {reportData.summary.totalQuantity.toLocaleString("en-IN")} units
-                sold
               </p>
             </CardContent>
           </Card>
@@ -226,7 +251,7 @@ export default function ProfitByItemsPage() {
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <CardTitle>Item Details</CardTitle>
+            <CardTitle>Invoice Details</CardTitle>
             <div className="flex flex-wrap items-center gap-4">
               <div className="w-64">
                 <ProductCombobox
@@ -271,14 +296,14 @@ export default function ProfitByItemsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {!reportData || reportData.items.length === 0 ? (
+          {!reportData || reportData.invoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <FileText className="h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-semibold">No items found</h3>
+              <h3 className="mt-4 text-lg font-semibold">No invoices found</h3>
               <p className="text-sm text-slate-500">
                 {hasFilters
                   ? "Try adjusting your filters"
-                  : "No invoice items have been recorded yet"}
+                  : "No invoices have been recorded yet"}
               </p>
             </div>
           ) : (
@@ -286,70 +311,115 @@ export default function ProfitByItemsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10"></TableHead>
                     <TableHead>Invoice #</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Disc %</TableHead>
-                    <TableHead className="text-right">Sale Price</TableHead>
-                    <TableHead className="text-right">FIFO Cost</TableHead>
-                    <TableHead className="text-right">Profit/Unit</TableHead>
+                    <TableHead className="text-right">Total Qty</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="text-right">COGS</TableHead>
+                    <TableHead className="text-right">Profit</TableHead>
                     <TableHead className="text-right">Profit %</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reportData.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <Link
-                          href={`/invoices/${item.invoiceId}`}
-                          className="text-blue-600 hover:underline font-mono"
-                        >
-                          {item.invoiceNumber}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(item.invoiceDate), "dd MMM yyyy")}
-                      </TableCell>
-                      <TableCell>{item.customerName}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{item.productName}</div>
-                          {item.productSku && (
-                            <div className="text-xs text-slate-500">
-                              SKU: {item.productSku}
-                            </div>
+                  {reportData.invoices.map((invoice) => (
+                    <React.Fragment key={invoice.invoiceId}>
+                      {/* Invoice Row */}
+                      <TableRow
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => toggleInvoice(invoice.invoiceId)}
+                      >
+                        <TableCell className="w-10">
+                          {expandedInvoices.has(invoice.invoiceId) ? (
+                            <ChevronDown className="h-4 w-4 text-slate-500" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-slate-500" />
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.quantity}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(item.unitPrice)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.discount > 0 ? `${item.discount}%` : "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(item.salePriceAfterDiscount)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(item.fifoCostPerUnit)}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-medium ${item.profitPerUnit >= 0 ? "text-green-600" : "text-red-600"}`}
-                      >
-                        {formatCurrency(item.profitPerUnit)}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-medium ${item.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}
-                      >
-                        {item.profitPercent.toFixed(1)}%
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/invoices/${invoice.invoiceId}`}
+                            className="text-blue-600 hover:underline font-mono"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {invoice.invoiceNumber}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
+                        </TableCell>
+                        <TableCell>{invoice.customerName}</TableCell>
+                        <TableCell className="text-right">
+                          {invoice.totalQty}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(invoice.totalRevenue)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(invoice.totalCOGS)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-medium ${invoice.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {formatCurrency(invoice.totalProfit)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-medium ${invoice.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {invoice.profitPercent.toFixed(1)}%
+                        </TableCell>
+                      </TableRow>
+                      {/* Item Rows (expanded) */}
+                      {expandedInvoices.has(invoice.invoiceId) &&
+                        invoice.items.map((item) => (
+                          <TableRow
+                            key={item.id}
+                            className="bg-slate-50/50"
+                          >
+                            <TableCell></TableCell>
+                            <TableCell colSpan={2} className="pl-8">
+                              <div>
+                                <div className="font-medium text-slate-700">
+                                  {item.productName}
+                                </div>
+                                {item.productSku && (
+                                  <div className="text-xs text-slate-500">
+                                    SKU: {item.productSku}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-slate-600">
+                              {formatCurrency(item.unitPrice)} x {item.quantity}
+                              {item.discount > 0 && (
+                                <span className="text-orange-600 ml-1">
+                                  (-{item.discount}%)
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-slate-600">
+                              {item.quantity}
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-slate-600">
+                              {formatCurrency(item.lineTotal)}
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-slate-600">
+                              {formatCurrency(item.lineCOGS)}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right text-sm ${item.lineProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {formatCurrency(item.lineProfit)}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right text-sm ${item.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {item.profitPercent.toFixed(1)}%
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>

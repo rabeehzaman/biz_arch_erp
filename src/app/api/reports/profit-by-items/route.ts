@@ -69,12 +69,44 @@ export async function GET(request: Request) {
       },
     });
 
-    // Calculate profit for each item
+    // Calculate profit for each item and group by invoice
     let totalQuantity = 0;
     let totalRevenue = 0;
     let totalCOGS = 0;
 
-    const items = invoiceItems.map((item) => {
+    // Group items by invoice
+    const invoiceMap = new Map<
+      string,
+      {
+        invoiceId: string;
+        invoiceNumber: string;
+        invoiceDate: string;
+        customerName: string;
+        totalQty: number;
+        totalRevenue: number;
+        totalCOGS: number;
+        totalProfit: number;
+        profitPercent: number;
+        items: Array<{
+          id: string;
+          productId: string | null;
+          productName: string;
+          productSku: string | null;
+          quantity: number;
+          unitPrice: number;
+          discount: number;
+          salePriceAfterDiscount: number;
+          fifoCostPerUnit: number;
+          profitPerUnit: number;
+          profitPercent: number;
+          lineTotal: number;
+          lineCOGS: number;
+          lineProfit: number;
+        }>;
+      }
+    >();
+
+    invoiceItems.forEach((item) => {
       const quantity = Number(item.quantity);
       const unitPrice = Number(item.unitPrice);
       const discount = Number(item.discount);
@@ -97,12 +129,9 @@ export async function GET(request: Request) {
       totalRevenue += lineTotal;
       totalCOGS += lineCOGS;
 
-      return {
+      const invoiceId = item.invoice.id;
+      const profitItem = {
         id: item.id,
-        invoiceNumber: item.invoice.invoiceNumber,
-        invoiceDate: item.invoice.issueDate.toISOString(),
-        invoiceId: item.invoice.id,
-        customerName: item.invoice.customer.name,
         productId: item.productId,
         productName: item.product?.name || item.description,
         productSku: item.product?.sku || null,
@@ -117,16 +146,46 @@ export async function GET(request: Request) {
         lineCOGS,
         lineProfit,
       };
+
+      if (invoiceMap.has(invoiceId)) {
+        const invoice = invoiceMap.get(invoiceId)!;
+        invoice.totalQty += quantity;
+        invoice.totalRevenue += lineTotal;
+        invoice.totalCOGS += lineCOGS;
+        invoice.totalProfit = invoice.totalRevenue - invoice.totalCOGS;
+        invoice.profitPercent =
+          invoice.totalRevenue > 0
+            ? (invoice.totalProfit / invoice.totalRevenue) * 100
+            : 0;
+        invoice.items.push(profitItem);
+      } else {
+        invoiceMap.set(invoiceId, {
+          invoiceId,
+          invoiceNumber: item.invoice.invoiceNumber,
+          invoiceDate: item.invoice.issueDate.toISOString(),
+          customerName: item.invoice.customer.name,
+          totalQty: quantity,
+          totalRevenue: lineTotal,
+          totalCOGS: lineCOGS,
+          totalProfit: lineProfit,
+          profitPercent:
+            lineTotal > 0 ? (lineProfit / lineTotal) * 100 : 0,
+          items: [profitItem],
+        });
+      }
     });
+
+    const invoices = Array.from(invoiceMap.values());
 
     const totalProfit = totalRevenue - totalCOGS;
     const averageProfitPercent =
       totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
     return NextResponse.json({
-      items,
+      invoices,
       summary: {
-        totalItems: items.length,
+        totalInvoices: invoices.length,
+        totalItems: invoiceItems.length,
         totalQuantity,
         totalRevenue,
         totalCOGS,
