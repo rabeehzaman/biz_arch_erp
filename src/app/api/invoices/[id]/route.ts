@@ -3,18 +3,27 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { restoreStockFromConsumptions, recalculateFromDate, consumeStockFIFO, isBackdated } from "@/lib/inventory/fifo";
 
-// Helper to check if user can access an invoice
+// Helper to check if user can access an invoice (based on customer assignment)
 async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean) {
   if (isAdmin) return true;
 
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
-    select: { createdById: true },
+    select: {
+      customer: {
+        select: {
+          assignments: {
+            where: { userId },
+            select: { id: true }
+          }
+        }
+      }
+    },
   });
 
   if (!invoice) return false;
 
-  return invoice.createdById === userId;
+  return invoice.customer.assignments.length > 0;
 }
 
 export async function GET(

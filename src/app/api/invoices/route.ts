@@ -34,7 +34,13 @@ export async function GET(request: NextRequest) {
     const isAdmin = session.user.role === "admin";
 
     const invoices = await prisma.invoice.findMany({
-      where: isAdmin ? {} : { createdById: userId },
+      where: isAdmin ? {} : {
+        customer: {
+          assignments: {
+            some: { userId }
+          }
+        }
+      },
       orderBy: { createdAt: "desc" },
       include: {
         customer: {
