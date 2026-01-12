@@ -20,11 +20,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Search, Truck } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Truck, MoreHorizontal, Wallet } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 
@@ -52,7 +59,13 @@ export default function SuppliersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isOpeningBalanceDialogOpen, setIsOpeningBalanceDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [selectedSupplierForBalance, setSelectedSupplierForBalance] = useState<Supplier | null>(null);
+  const [openingBalanceData, setOpeningBalanceData] = useState({
+    amount: "",
+    transactionDate: new Date().toISOString().split("T")[0],
+  });
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -169,6 +182,58 @@ export default function SuppliersPage() {
       country: "India",
       notes: "",
     });
+  };
+
+  const handleOpeningBalanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSupplierForBalance) return;
+
+    try {
+      const response = await fetch(`/api/suppliers/${selectedSupplierForBalance.id}/opening-balance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseFloat(openingBalanceData.amount),
+          transactionDate: openingBalanceData.transactionDate,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to save");
+
+      setIsOpeningBalanceDialogOpen(false);
+      setSelectedSupplierForBalance(null);
+      setOpeningBalanceData({
+        amount: "",
+        transactionDate: new Date().toISOString().split("T")[0],
+      });
+      fetchSuppliers();
+      toast.success("Opening balance set successfully");
+    } catch (error) {
+      toast.error("Failed to set opening balance");
+      console.error("Failed to set opening balance:", error);
+    }
+  };
+
+  const handleOpenOpeningBalanceDialog = async (supplier: Supplier) => {
+    setSelectedSupplierForBalance(supplier);
+
+    // Fetch existing opening balance if any
+    try {
+      const response = await fetch(`/api/suppliers/${supplier.id}/opening-balance`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data) {
+          setOpeningBalanceData({
+            amount: String(data.amount),
+            transactionDate: data.transactionDate.split("T")[0],
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch opening balance:", error);
+    }
+
+    setIsOpeningBalanceDialogOpen(true);
   };
 
   const filteredSuppliers = suppliers.filter(
@@ -318,6 +383,63 @@ export default function SuppliersPage() {
         </Dialog>
       </div>
 
+      {/* Opening Balance Dialog */}
+      <Dialog open={isOpeningBalanceDialogOpen} onOpenChange={(open) => {
+        setIsOpeningBalanceDialogOpen(open);
+        if (!open) {
+          setSelectedSupplierForBalance(null);
+          setOpeningBalanceData({
+            amount: "",
+            transactionDate: new Date().toISOString().split("T")[0],
+          });
+        }
+      }}>
+        <DialogContent>
+          <form onSubmit={handleOpeningBalanceSubmit}>
+            <DialogHeader>
+              <DialogTitle>Set Opening Balance</DialogTitle>
+              <DialogDescription>
+                Set the opening balance for {selectedSupplierForBalance?.name}. This represents the initial payable amount.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="openingAmount">Opening Balance Amount *</Label>
+                <Input
+                  id="openingAmount"
+                  type="number"
+                  step="0.01"
+                  value={openingBalanceData.amount}
+                  onChange={(e) =>
+                    setOpeningBalanceData({ ...openingBalanceData, amount: e.target.value })
+                  }
+                  placeholder="Enter amount (positive for payable)"
+                  required
+                />
+                <p className="text-xs text-slate-500">
+                  Enter a positive amount for payables (you owe supplier), or negative for advances (supplier owes you).
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="balanceDate">As of Date *</Label>
+                <Input
+                  id="balanceDate"
+                  type="date"
+                  value={openingBalanceData.transactionDate}
+                  onChange={(e) =>
+                    setOpeningBalanceData({ ...openingBalanceData, transactionDate: e.target.value })
+                  }
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Set Opening Balance</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
@@ -399,20 +521,31 @@ export default function SuppliersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(supplier)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(supplier.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(supplier)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(supplier)}>
+                            <Wallet className="mr-2 h-4 w-4" />
+                            Opening Balance
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDelete(supplier.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
