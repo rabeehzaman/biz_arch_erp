@@ -13,9 +13,8 @@ async function canAccessCustomer(customerId: string, userId: string, isAdmin: bo
 
   if (!customer) return false;
 
-  // Allow access if customer is unassigned or assigned to user
-  return customer.assignments.length === 0 ||
-         customer.assignments.some(a => a.userId === userId);
+  // Allow access only if customer is assigned to user
+  return customer.assignments.some(a => a.userId === userId);
 }
 
 export async function GET(

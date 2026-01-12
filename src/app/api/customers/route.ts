@@ -32,15 +32,10 @@ export async function GET() {
         },
       });
     } else {
-      // Regular user sees:
-      // 1. Customers assigned to them
-      // 2. Customers with no assignments (unassigned)
+      // Regular user sees only customers assigned to them
       customers = await prisma.customer.findMany({
         where: {
-          OR: [
-            { assignments: { some: { userId } } },
-            { assignments: { none: {} } },
-          ],
+          assignments: { some: { userId } },
         },
         orderBy: { createdAt: "desc" },
         include: {

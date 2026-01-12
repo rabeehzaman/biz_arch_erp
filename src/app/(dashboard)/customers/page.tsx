@@ -566,7 +566,7 @@ export default function CustomersPage() {
             </div>
             {selectedUserIds.length === 0 && (
               <p className="mt-4 text-xs text-amber-600">
-                Note: If no users are selected, this customer will be visible to all users.
+                Note: If no users are selected, only admins will be able to see this customer.
               </p>
             )}
           </div>
