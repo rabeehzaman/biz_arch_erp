@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
@@ -24,11 +25,23 @@ async function generateInvoiceNumber() {
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const isAdmin = session.user.role === "admin";
+
     const invoices = await prisma.invoice.findMany({
+      where: isAdmin ? {} : { createdById: userId },
       orderBy: { createdAt: "desc" },
       include: {
         customer: {
           select: { id: true, name: true, email: true },
+        },
+        createdBy: {
+          select: { id: true, name: true },
         },
         _count: {
           select: { items: true },
@@ -48,6 +61,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { customerId, issueDate, dueDate, items, taxRate, notes, terms } = body;
 
@@ -78,6 +96,7 @@ export async function POST(request: NextRequest) {
         data: {
           invoiceNumber,
           customerId,
+          createdById: session.user.id,
           issueDate: invoiceDate,
           dueDate: new Date(dueDate),
           subtotal,

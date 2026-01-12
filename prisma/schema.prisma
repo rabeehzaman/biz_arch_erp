@@ -22,6 +22,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   customerAssignments CustomerAssignment[]
+  invoices            Invoice[]
 
   @@map("users")
 }
@@ -120,6 +121,8 @@ model Invoice {
   invoiceNumber String        @unique
   customerId    String
   customer      Customer      @relation(fields: [customerId], references: [id])
+  createdById   String?
+  createdBy     User?         @relation(fields: [createdById], references: [id])
 
   issueDate     DateTime      @default(now())
   dueDate       DateTime

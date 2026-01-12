@@ -1,13 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { restoreStockFromConsumptions, recalculateFromDate, consumeStockFIFO, isBackdated } from "@/lib/inventory/fifo";
+
+// Helper to check if user can access an invoice
+async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean) {
+  if (isAdmin) return true;
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: { createdById: true },
+  });
+
+  if (!invoice) return false;
+
+  return invoice.createdById === userId;
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const isAdmin = session.user.role === "admin";
+
+    if (!await canAccessInvoice(id, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const invoice = await prisma.invoice.findUnique({
       where: { id },
       include: {
@@ -19,6 +45,9 @@ export async function GET(
           },
         },
         payments: true,
+        createdBy: {
+          select: { id: true, name: true },
+        },
       },
     });
 
@@ -44,7 +73,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const isAdmin = session.user.role === "admin";
+
+    if (!await canAccessInvoice(id, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { customerId, issueDate, dueDate, taxRate, notes, terms, items } = body;
 
@@ -241,7 +281,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const isAdmin = session.user.role === "admin";
+
+    if (!await canAccessInvoice(id, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     // Get invoice with items and consumptions
     const invoice = await prisma.invoice.findUnique({
