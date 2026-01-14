@@ -19,6 +19,8 @@ import {
   Wallet,
   FileCheck,
   BarChart3,
+  FileMinus,
+  FileOutput,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -38,7 +40,9 @@ const navigation = [
   { name: "Suppliers", href: "/suppliers", icon: Truck },
   { name: "Quotations", href: "/quotations", icon: FileCheck },
   { name: "Sales Invoices", href: "/invoices", icon: FileText },
+  { name: "Credit Notes", href: "/credit-notes", icon: FileMinus },
   { name: "Purchase Invoices", href: "/purchase-invoices", icon: Receipt },
+  { name: "Debit Notes", href: "/debit-notes", icon: FileOutput },
   { name: "Customer Payments", href: "/payments", icon: CreditCard },
   { name: "Supplier Payments", href: "/supplier-payments", icon: Wallet },
   { name: "Profit by Items", href: "/reports/profit-by-items", icon: BarChart3 },

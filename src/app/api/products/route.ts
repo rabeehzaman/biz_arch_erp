@@ -4,6 +4,9 @@ import prisma from "@/lib/prisma";
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
+      include: {
+        unit: true,
+      },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(products);
@@ -19,11 +22,18 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, price, unit, sku } = body;
+    const { name, description, price, unitId, sku } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
         { error: "Name and price are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!unitId) {
+      return NextResponse.json(
+        { error: "Unit is required" },
         { status: 400 }
       );
     }
@@ -33,8 +43,11 @@ export async function POST(request: NextRequest) {
         name,
         description: description || null,
         price,
-        unit: unit || "pcs",
+        unitId,
         sku: sku || null,
+      },
+      include: {
+        unit: true,
       },
     });
 

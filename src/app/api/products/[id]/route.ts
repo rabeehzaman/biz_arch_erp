@@ -9,6 +9,9 @@ export async function GET(
     const { id } = await params;
     const product = await prisma.product.findUnique({
       where: { id },
+      include: {
+        unit: true,
+      },
     });
 
     if (!product) {
@@ -35,7 +38,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, price, unit, sku, isActive } = body;
+    const { name, description, price, unitId, sku, isActive } = body;
 
     const product = await prisma.product.update({
       where: { id },
@@ -43,9 +46,12 @@ export async function PUT(
         name,
         description,
         price,
-        unit,
+        unitId,
         sku,
         isActive,
+      },
+      include: {
+        unit: true,
       },
     });
 

@@ -189,6 +189,12 @@ interface QuotationItem {
   unitPrice: number;
   discount: number;
   total: number;
+  product?: {
+    unit?: {
+      code: string;
+      name: string;
+    } | null;
+  } | null;
 }
 
 interface QuotationPDFProps {
@@ -296,7 +302,9 @@ export function QuotationPDF({ quotation }: QuotationPDFProps) {
                 {item ? item.description : ""}
               </Text>
               <Text style={styles.colQty}>
-                {item ? formatCurrency(item.quantity) : ""}
+                {item
+                  ? `${formatCurrency(item.quantity)}${item.product?.unit ? " " + item.product.unit.code.toUpperCase() : ""}`
+                  : ""}
               </Text>
               <Text style={styles.colRate}>
                 {item ? formatCurrency(item.unitPrice) : ""}

@@ -17,7 +17,17 @@ export async function GET(
       where: { id },
       include: {
         customer: true,
-        items: true,
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                sku: true,
+                unit: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -35,6 +45,7 @@ export async function GET(
       unitPrice: Number(item.unitPrice),
       discount: Number(item.discount),
       total: Number(item.total),
+      product: item.product,
     }));
 
     // Prepare quotation data for PDF

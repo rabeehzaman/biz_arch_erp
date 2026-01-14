@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createStockLotFromPurchase, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
+import { Decimal } from "@prisma/client/runtime/client";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
 async function generatePurchaseInvoiceNumber() {
@@ -132,12 +133,16 @@ export async function POST(request: NextRequest) {
 
       // Create stock lots for each item
       for (const item of invoice.items) {
+        // Calculate net unit cost after discount
+        const discountFactor = new Decimal(1).minus(new Decimal(item.discount || 0).div(100));
+        const netUnitCost = new Decimal(item.unitCost).mul(discountFactor);
+
         await createStockLotFromPurchase(
           item.id,
           invoice.id,
           item.productId,
           item.quantity,
-          item.unitCost,
+          netUnitCost,
           purchaseDate,
           tx
         );

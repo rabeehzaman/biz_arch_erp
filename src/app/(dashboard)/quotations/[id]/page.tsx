@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Download, FileCheck, Ban, Info } from "lucide-react";
+import { ArrowLeft, Building2, Download, FileCheck, Ban, Info, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -117,6 +117,25 @@ export default function QuotationDetailPage({
     }
   };
 
+  const handlePrint = async () => {
+    try {
+      const response = await fetch(`/api/quotations/${id}/pdf`);
+      if (!response.ok) throw new Error("Failed to generate PDF");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const printWindow = window.open(url, "_blank");
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+    } catch (error) {
+      toast.error("Failed to print quotation");
+      console.error(error);
+    }
+  };
+
   const handleConvertToInvoice = async () => {
     if (!confirm("Convert this quotation to an invoice? This action cannot be undone.")) return;
 
@@ -214,9 +233,21 @@ export default function QuotationDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
+          {quotation.status !== "CONVERTED" && (
+            <Link href={`/quotations/${id}/edit`}>
+              <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+          )}
           <Button variant="outline" onClick={handleDownloadPDF}>
             <Download className="mr-2 h-4 w-4" />
             Download PDF
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" />
+            Print
           </Button>
           {quotation.status === "SENT" && !isExpired && (
             <>

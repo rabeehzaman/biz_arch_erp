@@ -14,7 +14,11 @@ export async function GET(
         customer: true,
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                unit: true,
+              },
+            },
           },
         },
         convertedInvoice: {
@@ -63,17 +67,10 @@ export async function PUT(
       );
     }
 
-    // Only SENT quotations can be edited
+    // Only CONVERTED quotations cannot be edited (they're linked to invoices)
     if (existingQuotation.status === "CONVERTED") {
       return NextResponse.json(
         { error: "Cannot edit a converted quotation" },
-        { status: 400 }
-      );
-    }
-
-    if (existingQuotation.status === "CANCELLED") {
-      return NextResponse.json(
-        { error: "Cannot edit a cancelled quotation" },
         { status: 400 }
       );
     }

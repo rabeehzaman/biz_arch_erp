@@ -11,7 +11,11 @@ export async function GET(
     const openingStock = await prisma.openingStock.findUnique({
       where: { id },
       include: {
-        product: true,
+        product: {
+          include: {
+            unit: true,
+          },
+        },
         stockLot: true,
       },
     });
@@ -95,7 +99,11 @@ export async function PUT(
     const updatedOpeningStock = await prisma.openingStock.findUnique({
       where: { id },
       include: {
-        product: true,
+        product: {
+          include: {
+            unit: true,
+          },
+        },
         stockLot: true,
       },
     });

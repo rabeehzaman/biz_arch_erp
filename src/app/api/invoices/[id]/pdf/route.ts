@@ -32,6 +32,7 @@ export async function GET(
               select: {
                 name: true,
                 sku: true,
+                unit: true,
               },
             },
           },
@@ -64,6 +65,7 @@ export async function GET(
       unitPrice: Number(item.unitPrice),
       discount: Number(item.discount),
       total: Number(item.total),
+      product: item.product,
     }));
 
     // Prepare invoice data for PDF

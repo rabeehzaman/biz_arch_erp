@@ -49,7 +49,11 @@ export async function GET(
         customer: true,
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                unit: true,
+              },
+            },
             lotConsumptions: true,
           },
         },

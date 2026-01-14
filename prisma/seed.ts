@@ -105,34 +105,59 @@ async function main() {
 
   console.log("Created sample customers:", customer1.name, customer2.name);
 
+  // Create default units
+  const units = [
+    { code: "pcs", name: "Piece" },
+    { code: "kg", name: "Kilogram" },
+    { code: "mtr", name: "Meter" },
+    { code: "ltr", name: "Liter" },
+    { code: "box", name: "Box" },
+    { code: "hour", name: "Hour" },
+    { code: "day", name: "Day" },
+    { code: "month", name: "Month" },
+    { code: "project", name: "Project" },
+  ];
+
+  const createdUnits: Record<string, any> = {};
+  for (const unit of units) {
+    const createdUnit = await prisma.unit.upsert({
+      where: { code: unit.code },
+      update: {},
+      create: unit,
+    });
+    createdUnits[unit.code] = createdUnit;
+  }
+
+  console.log("Created default units");
+
   // Create sample products
   const products = [
     {
       name: "Web Development Service",
       description: "Professional web development service",
       price: 50000,
-      unit: "project",
+      unitId: createdUnits["project"].id,
       sku: "WEB-001",
     },
     {
       name: "Mobile App Development",
       description: "iOS and Android app development",
       price: 100000,
-      unit: "project",
+      unitId: createdUnits["project"].id,
       sku: "MOB-001",
     },
     {
       name: "Consulting Hour",
       description: "Professional consulting service",
       price: 2500,
-      unit: "hour",
+      unitId: createdUnits["hour"].id,
       sku: "CON-001",
     },
     {
       name: "Server Maintenance",
       description: "Monthly server maintenance",
       price: 15000,
-      unit: "month",
+      unitId: createdUnits["month"].id,
       sku: "SRV-001",
     },
   ];

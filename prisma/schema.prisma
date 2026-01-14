@@ -23,8 +23,24 @@ model User {
 
   customerAssignments CustomerAssignment[]
   invoices            Invoice[]
+  creditNotes         CreditNote[]
 
   @@map("users")
+}
+
+// ==================== UNITS ====================
+
+model Unit {
+  id        String    @id @default(cuid())
+  code      String    @unique // "pcs", "kg", "mtr", etc.
+  name      String              // "Piece", "Kilogram", "Meter", etc.
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products  Product[]
+
+  @@map("units")
 }
 
 // ==================== PRODUCTS ====================
@@ -35,7 +51,9 @@ model Product {
   description String?
   price       Decimal       @db.Decimal(10, 2)  // Selling price
   cost        Decimal       @default(0) @db.Decimal(10, 2)  // Default cost when no lot available
-  unit        String        @default("pcs") // pcs, kg, ltr, box, etc.
+  unitCode    String?       // Temporary: old unit string for migration
+  unitId      String?
+  unit        Unit?         @relation(fields: [unitId], references: [id])
   sku         String?       @unique
   isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
@@ -46,6 +64,8 @@ model Product {
   stockLots            StockLot[]
   openingStocks        OpeningStock[]
   quotationItems       QuotationItem[]
+  creditNoteItems      CreditNoteItem[]
+  debitNoteItems       DebitNoteItem[]
 
   @@map("products")
 }
@@ -73,6 +93,7 @@ model Customer {
   transactions CustomerTransaction[]
   quotations   Quotation[]
   assignments  CustomerAssignment[]
+  creditNotes  CreditNote[]
 
   @@map("customers")
 }
@@ -111,6 +132,7 @@ model Supplier {
   purchaseInvoices PurchaseInvoice[]
   payments         SupplierPayment[]
   transactions     SupplierTransaction[]
+  debitNotes       DebitNote[]
 
   @@map("suppliers")
 }
@@ -145,6 +167,7 @@ model Invoice {
   payments           Payment[]
   paymentAllocations PaymentAllocation[]
   quotation          Quotation?
+  creditNotes        CreditNote[]
 
   @@map("invoices")
 }
@@ -263,6 +286,7 @@ model PurchaseInvoice {
   payments              SupplierPayment[]
   paymentAllocations    SupplierPaymentAllocation[]
   stockLots             StockLot[]
+  debitNotes            DebitNote[]
 
   @@map("purchase_invoices")
 }
@@ -295,6 +319,141 @@ model PurchaseInvoiceItem {
   stockLot          StockLot?       // One-to-one: each purchase item creates one lot
 
   @@map("purchase_invoice_items")
+}
+
+// ==================== CREDIT NOTES (SALES RETURNS) ====================
+
+model CreditNote {
+  id               String           @id @default(cuid())
+  creditNoteNumber String           @unique
+
+  invoiceId        String?
+  invoice          Invoice?         @relation(fields: [invoiceId], references: [id])
+
+  customerId       String
+  customer         Customer         @relation(fields: [customerId], references: [id])
+
+  createdById      String?
+  createdBy        User?            @relation(fields: [createdById], references: [id])
+
+  issueDate        DateTime         @default(now())
+
+  subtotal         Decimal          @db.Decimal(12, 2)
+  taxRate          Decimal          @default(0) @db.Decimal(5, 2)
+  taxAmount        Decimal          @default(0) @db.Decimal(12, 2)
+  total            Decimal          @db.Decimal(12, 2)
+
+  appliedToBalance Boolean          @default(true)
+  reason           String?
+  notes            String?
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  items            CreditNoteItem[]
+
+  @@map("credit_notes")
+}
+
+model CreditNoteItem {
+  id             String       @id @default(cuid())
+  creditNoteId   String
+  creditNote     CreditNote   @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  invoiceItemId  String?
+
+  productId      String?
+  product        Product?     @relation(fields: [productId], references: [id])
+
+  description    String
+  quantity       Decimal      @db.Decimal(10, 2)
+  unitPrice      Decimal      @db.Decimal(10, 2)
+  discount       Decimal      @default(0) @db.Decimal(5, 2)
+  total          Decimal      @db.Decimal(12, 2)
+
+  originalCOGS   Decimal      @default(0) @db.Decimal(12, 2)
+
+  stockLotId     String?      @unique
+  stockLot       StockLot?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("credit_note_items")
+}
+
+// ==================== DEBIT NOTES (PURCHASE RETURNS) ====================
+
+model DebitNote {
+  id                String         @id @default(cuid())
+  debitNoteNumber   String         @unique
+
+  purchaseInvoiceId String?
+  purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+
+  supplierId        String
+  supplier          Supplier       @relation(fields: [supplierId], references: [id])
+
+  issueDate         DateTime       @default(now())
+
+  subtotal          Decimal        @db.Decimal(12, 2)
+  taxRate           Decimal        @default(0) @db.Decimal(5, 2)
+  taxAmount         Decimal        @default(0) @db.Decimal(12, 2)
+  total             Decimal        @db.Decimal(12, 2)
+
+  appliedToBalance  Boolean        @default(true)
+  reason            String?
+  notes             String?
+
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  items             DebitNoteItem[]
+
+  @@map("debit_notes")
+}
+
+model DebitNoteItem {
+  id                    String                    @id @default(cuid())
+  debitNoteId           String
+  debitNote             DebitNote                 @relation(fields: [debitNoteId], references: [id], onDelete: Cascade)
+
+  purchaseInvoiceItemId String?
+
+  productId             String
+  product               Product                   @relation(fields: [productId], references: [id])
+
+  description           String
+  quantity              Decimal                   @db.Decimal(10, 2)
+  unitCost              Decimal                   @db.Decimal(10, 2)
+  discount              Decimal                   @default(0) @db.Decimal(5, 2)
+  total                 Decimal                   @db.Decimal(12, 2)
+
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  lotConsumptions       DebitNoteLotConsumption[]
+
+  @@map("debit_note_items")
+}
+
+model DebitNoteLotConsumption {
+  id               String        @id @default(cuid())
+  debitNoteItemId  String
+  debitNoteItem    DebitNoteItem @relation(fields: [debitNoteItemId], references: [id], onDelete: Cascade)
+
+  stockLotId       String
+  stockLot         StockLot      @relation(fields: [stockLotId], references: [id])
+
+  quantityReturned Decimal       @db.Decimal(10, 2)
+  unitCost         Decimal       @db.Decimal(10, 2)
+  totalCost        Decimal       @db.Decimal(12, 2)
+
+  createdAt        DateTime      @default(now())
+
+  @@index([debitNoteItemId])
+  @@index([stockLotId])
+  @@map("debit_note_lot_consumptions")
 }
 
 // ==================== PAYMENTS (FROM CUSTOMERS) ====================
@@ -400,6 +559,8 @@ model StockLot {
   purchaseInvoice       PurchaseInvoice?     @relation(fields: [purchaseInvoiceId], references: [id])
   openingStockId        String?              @unique
   openingStock          OpeningStock?        @relation(fields: [openingStockId], references: [id])
+  creditNoteItemId      String?              @unique
+  creditNoteItem        CreditNoteItem?      @relation(fields: [creditNoteItemId], references: [id])
 
   lotDate               DateTime             // Date for FIFO ordering
   unitCost              Decimal              @db.Decimal(10, 2) // Cost per unit for this lot
@@ -410,6 +571,7 @@ model StockLot {
   updatedAt             DateTime             @updatedAt
 
   consumptions          StockLotConsumption[]
+  debitNoteConsumptions DebitNoteLotConsumption[]
 
   @@index([productId, lotDate])
   @@index([productId, remainingQuantity])
@@ -420,6 +582,7 @@ enum StockSourceType {
   PURCHASE
   OPENING_STOCK
   ADJUSTMENT
+  CREDIT_NOTE
 }
 
 model StockLotConsumption {

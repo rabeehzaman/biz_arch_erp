@@ -27,13 +27,19 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
+import { UnitSelect } from "@/components/units/unit-select";
 
 interface Product {
   id: string;
   name: string;
   description: string | null;
   price: number;
-  unit: string;
+  unitId: string | null;
+  unit: {
+    id: string;
+    code: string;
+    name: string;
+  } | null;
   sku: string | null;
   isActive: boolean;
   createdAt: string;
@@ -49,7 +55,7 @@ export default function ProductsPage() {
     name: "",
     description: "",
     price: "",
-    unit: "pcs",
+    unitId: "",
     sku: "",
   });
 
@@ -78,7 +84,7 @@ export default function ProductsPage() {
       name: formData.name,
       description: formData.description || null,
       price: parseFloat(formData.price),
-      unit: formData.unit,
+      unitId: formData.unitId,
       sku: formData.sku || null,
     };
 
@@ -113,7 +119,7 @@ export default function ProductsPage() {
       name: product.name,
       description: product.description || "",
       price: product.price.toString(),
-      unit: product.unit,
+      unitId: product.unit?.id || "",
       sku: product.sku || "",
     });
     setIsDialogOpen(true);
@@ -139,7 +145,7 @@ export default function ProductsPage() {
       name: "",
       description: "",
       price: "",
-      unit: "pcs",
+      unitId: "",
       sku: "",
     });
   };
@@ -215,17 +221,13 @@ export default function ProductsPage() {
                       required
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="unit">Unit</Label>
-                    <Input
-                      id="unit"
-                      value={formData.unit}
-                      onChange={(e) =>
-                        setFormData({ ...formData, unit: e.target.value })
-                      }
-                      placeholder="pcs, kg, hour..."
-                    />
-                  </div>
+                  <UnitSelect
+                    value={formData.unitId}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, unitId: value })
+                    }
+                    required
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="sku">SKU</Label>
@@ -305,7 +307,7 @@ export default function ProductsPage() {
                     <TableCell>
                       ₹{Number(product.price).toLocaleString("en-IN")}
                     </TableCell>
-                    <TableCell>{product.unit}</TableCell>
+                    <TableCell>{product.unit?.name || "-"}</TableCell>
                     <TableCell>
                       <Badge
                         variant={product.isActive ? "default" : "secondary"}

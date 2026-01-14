@@ -219,6 +219,12 @@ interface InvoiceItem {
   unitPrice: number;
   discount: number;
   total: number;
+  product?: {
+    unit?: {
+      code: string;
+      name: string;
+    } | null;
+  } | null;
 }
 
 interface InvoicePDFProps {
@@ -342,7 +348,9 @@ export function InvoicePDF({ invoice, type, balanceInfo }: InvoicePDFProps) {
                 {item ? item.description : ""}
               </Text>
               <Text style={styles.colQty}>
-                {item ? formatCurrency(item.quantity) : ""}
+                {item
+                  ? `${formatCurrency(item.quantity)}${item.product?.unit ? " " + item.product.unit.code.toUpperCase() : ""}`
+                  : ""}
               </Text>
               <Text style={styles.colRate}>
                 {item ? formatCurrency(item.unitPrice) : ""}

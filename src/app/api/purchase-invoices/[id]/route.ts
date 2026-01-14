@@ -14,7 +14,11 @@ export async function GET(
         supplier: true,
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                unit: true,
+              },
+            },
             stockLot: true,
           },
         },
@@ -179,6 +183,9 @@ export async function PUT(
 
         if (updatedInvoice) {
           for (const item of updatedInvoice.items) {
+            // Calculate net unit cost after discount
+            const netUnitCost = Number(item.unitCost) * (1 - (Number(item.discount) || 0) / 100);
+
             await tx.stockLot.create({
               data: {
                 productId: item.productId,
@@ -186,7 +193,7 @@ export async function PUT(
                 purchaseInvoiceItemId: item.id,
                 purchaseInvoiceId: id,
                 lotDate: newDate,
-                unitCost: item.unitCost,
+                unitCost: netUnitCost,
                 initialQuantity: item.quantity,
                 remainingQuantity: item.quantity,
               },
