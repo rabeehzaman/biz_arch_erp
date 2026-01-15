@@ -99,13 +99,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   colDate: {
-    width: "15%",
+    width: "12%",
   },
   colRef: {
-    width: "15%",
+    width: "20%",
+    fontSize: 8,
   },
   colDescription: {
-    width: "30%",
+    width: "26%",
   },
   colDebit: {
     width: "13%",
@@ -192,7 +193,7 @@ interface Props {
 }
 
 const formatCurrency = (amount: number): string => {
-  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 export function CustomerStatementPDF({ statement }: Props) {
