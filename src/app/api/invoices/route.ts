@@ -136,22 +136,50 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Collect warnings from FIFO consumption
+      const warnings: string[] = [];
+
+      // Get unique product IDs to check for backdating
+      const productIds = items
+        .filter((item: { productId?: string }) => item.productId)
+        .map((item: { productId: string }) => item.productId);
+      const uniqueProductIds: string[] = [...new Set<string>(productIds)];
+
+      // OPTIMIZATION: Check if any products are backdated before consuming
+      const backdatedProducts = new Set<string>();
+      for (const productId of uniqueProductIds) {
+        const backdated = await isBackdated(productId, invoiceDate, tx);
+        if (backdated) {
+          backdatedProducts.add(productId);
+        }
+      }
+
       // Consume stock for each item with a productId
+      // If product is backdated, skip individual consumption (will be handled by recalculation)
       for (const invoiceItem of invoice.items) {
         if (invoiceItem.productId) {
-          const fifoResult = await consumeStockFIFO(
-            invoiceItem.productId,
-            invoiceItem.quantity,
-            invoiceItem.id,
-            invoiceDate,
-            tx
-          );
+          if (!backdatedProducts.has(invoiceItem.productId)) {
+            // Normal flow: consume stock and update COGS
+            const fifoResult = await consumeStockFIFO(
+              invoiceItem.productId,
+              invoiceItem.quantity,
+              invoiceItem.id,
+              invoiceDate,
+              tx
+            );
 
-          // Update the invoice item with COGS
-          await tx.invoiceItem.update({
-            where: { id: invoiceItem.id },
-            data: { costOfGoodsSold: fifoResult.totalCOGS },
-          });
+            // Update the invoice item with COGS
+            await tx.invoiceItem.update({
+              where: { id: invoiceItem.id },
+              data: { costOfGoodsSold: fifoResult.totalCOGS },
+            });
+
+            // Collect any warnings
+            if (fifoResult.warnings.length > 0) {
+              warnings.push(...fifoResult.warnings);
+            }
+          }
+          // If backdated, COGS remains 0 and will be set by recalculation
         }
       }
 
@@ -163,26 +191,27 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Check for backdated invoices and recalculate if needed
-      const productIds = items
-        .filter((item: { productId?: string }) => item.productId)
-        .map((item: { productId: string }) => item.productId);
-
-      for (const productId of productIds) {
-        const backdated = await isBackdated(productId, invoiceDate, tx);
-        if (backdated) {
-          await recalculateFromDate(productId, invoiceDate, tx);
-        }
+      // Recalculate FIFO for backdated products
+      for (const productId of backdatedProducts) {
+        await recalculateFromDate(
+          productId,
+          invoiceDate,
+          tx,
+          "backdated_invoice",
+          `Invoice created with date ${invoiceDate.toISOString().split("T")[0]}`
+        );
       }
 
       // Fetch the updated invoice with COGS
-      return tx.invoice.findUnique({
+      const updatedInvoice = await tx.invoice.findUnique({
         where: { id: invoice.id },
         include: {
           customer: true,
           items: true,
         },
       });
+
+      return { invoice: updatedInvoice, warnings };
     });
 
     return NextResponse.json(result, { status: 201 });

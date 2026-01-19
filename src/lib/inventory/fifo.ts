@@ -22,6 +22,8 @@ export interface FIFOConsumptionResult {
   insufficientStock: boolean;
   shortfall: Decimal;
   availableQuantity: Decimal;
+  usedFallbackCost: boolean; // Indicates if product.cost was used instead of FIFO lots
+  warnings: string[]; // Array of warning messages for the user
 }
 
 export interface StockInfo {
@@ -146,6 +148,8 @@ export async function calculateFIFOConsumption(
     insufficientStock: remainingToConsume.gt(0),
     shortfall: remainingToConsume.gt(0) ? remainingToConsume : new Decimal(0),
     availableQuantity: totalAvailable,
+    usedFallbackCost: false, // Will be set in consumeStockFIFO if fallback is used
+    warnings: [],
   };
 }
 
@@ -173,13 +177,29 @@ export async function consumeStockFIFO(
     // If no lots available, try to use product's default cost
     const product = await tx.product.findUnique({
       where: { id: productId },
-      select: { cost: true },
+      select: { cost: true, name: true },
     });
 
-    // Return with zero COGS (or product default cost if you want)
+    const fallbackCost = product?.cost || new Decimal(0);
+    const warnings: string[] = [];
+
+    // Generate appropriate warning messages
+    if (fallbackCost.lte(0)) {
+      warnings.push(
+        `Product "${product?.name || productId}" has no stock and no fallback cost set. COGS will be $0.`
+      );
+    } else {
+      warnings.push(
+        `Product "${product?.name || productId}" has no stock. Using fallback cost of $${fallbackCost.toFixed(2)}/unit.`
+      );
+    }
+
+    // Return with fallback cost or zero
     return {
       ...result,
-      totalCOGS: product?.cost ? qty.mul(product.cost) : new Decimal(0),
+      totalCOGS: qty.mul(fallbackCost),
+      usedFallbackCost: true,
+      warnings,
     };
   }
 
@@ -205,6 +225,39 @@ export async function consumeStockFIFO(
         },
       },
     });
+  }
+
+  // Check if there was insufficient stock and handle shortfall with fallback cost
+  if (result.insufficientStock && result.shortfall.gt(0)) {
+    const product = await tx.product.findUnique({
+      where: { id: productId },
+      select: { cost: true, name: true },
+    });
+
+    const fallbackCost = product?.cost || new Decimal(0);
+    const shortfallCost = result.shortfall.mul(fallbackCost);
+    const warnings: string[] = [];
+
+    // Add shortfall cost to total COGS
+    const updatedTotalCOGS = result.totalCOGS.add(shortfallCost);
+
+    // Generate warning message
+    if (fallbackCost.lte(0)) {
+      warnings.push(
+        `Product "${product?.name || productId}" only has ${result.availableQuantity.toFixed(2)} units in stock, but ${qty.toFixed(2)} were sold. Shortfall of ${result.shortfall.toFixed(2)} units costed at $0 (no fallback cost set).`
+      );
+    } else {
+      warnings.push(
+        `Product "${product?.name || productId}" only has ${result.availableQuantity.toFixed(2)} units in stock, but ${qty.toFixed(2)} were sold. Shortfall of ${result.shortfall.toFixed(2)} units costed at fallback price of $${fallbackCost.toFixed(2)}/unit.`
+      );
+    }
+
+    return {
+      ...result,
+      totalCOGS: updatedTotalCOGS,
+      usedFallbackCost: true,
+      warnings,
+    };
   }
 
   return result;
@@ -267,6 +320,12 @@ export async function createStockLotFromPurchase(
       remainingQuantity: qty,
     },
   });
+
+  // Auto-update product.cost to latest purchase price (fallback cost)
+  await tx.product.update({
+    where: { id: productId },
+    data: { cost },
+  });
 }
 
 /**
@@ -294,6 +353,12 @@ export async function createStockLotFromOpeningStock(
       remainingQuantity: qty,
     },
   });
+
+  // Auto-update product.cost to opening stock price (fallback cost)
+  await tx.product.update({
+    where: { id: productId },
+    data: { cost },
+  });
 }
 
 /**
@@ -303,8 +368,23 @@ export async function createStockLotFromOpeningStock(
 export async function recalculateFromDate(
   productId: string,
   fromDate: Date,
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  changeReason: string = "recalculation",
+  triggeredBy?: string
 ): Promise<void> {
+  // OPTIMIZATION: Early exit if no sales to recalculate
+  const salesCount = await tx.invoiceItem.count({
+    where: {
+      productId,
+      invoice: { issueDate: { gte: fromDate } },
+    },
+  });
+
+  if (salesCount === 0) {
+    // No sales from this date onwards, nothing to recalculate
+    return;
+  }
+
   // 1. Get all stock lots for this product
   const allLots = await tx.stockLot.findMany({
     where: { productId },
@@ -364,9 +444,11 @@ export async function recalculateFromDate(
     });
   }
 
-  // 5. Re-process each sale in date order
+  // 5. Re-process each sale in date order and log cost changes
   for (const item of salesItems) {
     if (!item.productId) continue;
+
+    const oldCOGS = item.costOfGoodsSold;
 
     const fifoResult = await consumeStockFIFO(
       item.productId,
@@ -376,11 +458,28 @@ export async function recalculateFromDate(
       tx
     );
 
+    const newCOGS = fifoResult.totalCOGS;
+
     // Update invoice item COGS
     await tx.invoiceItem.update({
       where: { id: item.id },
-      data: { costOfGoodsSold: fifoResult.totalCOGS },
+      data: { costOfGoodsSold: newCOGS },
     });
+
+    // Log cost change if COGS changed
+    if (!oldCOGS.equals(newCOGS)) {
+      await tx.costAuditLog.create({
+        data: {
+          productId: item.productId,
+          invoiceItemId: item.id,
+          oldCOGS,
+          newCOGS,
+          changeAmount: newCOGS.sub(oldCOGS),
+          changeReason,
+          triggeredBy: triggeredBy || null,
+        },
+      });
+    }
   }
 }
 

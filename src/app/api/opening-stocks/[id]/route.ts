@@ -91,6 +91,12 @@ export async function PUT(
         });
       }
 
+      // Auto-update product.cost to the new opening stock cost (fallback cost)
+      await tx.product.update({
+        where: { id: existingOpeningStock.productId },
+        data: { cost: newUnitCost },
+      });
+
       // Recalculate if date changed or quantity/cost changed
       const recalcDate = getRecalculationStartDate(oldDate, newDate);
       await recalculateFromDate(existingOpeningStock.productId, recalcDate, tx);

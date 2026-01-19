@@ -161,7 +161,13 @@ export async function POST(request: NextRequest) {
       for (const productId of productIds) {
         const backdated = await isBackdated(productId as string, purchaseDate, tx);
         if (backdated) {
-          await recalculateFromDate(productId as string, purchaseDate, tx);
+          await recalculateFromDate(
+            productId as string,
+            purchaseDate,
+            tx,
+            "backdated_purchase",
+            `Purchase invoice dated ${purchaseDate.toISOString().split("T")[0]}`
+          );
         }
       }
 

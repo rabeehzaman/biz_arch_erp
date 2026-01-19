@@ -198,6 +198,12 @@ export async function PUT(
                 remainingQuantity: item.quantity,
               },
             });
+
+            // Auto-update product.cost to latest purchase price (fallback cost)
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { cost: netUnitCost },
+            });
           }
         }
 

@@ -66,6 +66,7 @@ model Product {
   quotationItems       QuotationItem[]
   creditNoteItems      CreditNoteItem[]
   debitNoteItems       DebitNoteItem[]
+  costAuditLogs        CostAuditLog[]
 
   @@map("products")
 }
@@ -192,6 +193,7 @@ model InvoiceItem {
   updatedAt   DateTime @updatedAt
 
   lotConsumptions StockLotConsumption[]
+  costAuditLogs   CostAuditLog[]
 
   @@map("invoice_items")
 }
@@ -621,6 +623,30 @@ model OpeningStock {
   stockLot  StockLot? // One-to-one relation to the created lot
 
   @@map("opening_stocks")
+}
+
+// ==================== COST AUDIT LOG ====================
+
+model CostAuditLog {
+  id                String   @id @default(cuid())
+  productId         String
+  product           Product  @relation(fields: [productId], references: [id])
+
+  invoiceItemId     String
+  invoiceItem       InvoiceItem @relation(fields: [invoiceItemId], references: [id])
+
+  oldCOGS           Decimal  @db.Decimal(12, 2)
+  newCOGS           Decimal  @db.Decimal(12, 2)
+  changeAmount      Decimal  @db.Decimal(12, 2) // newCOGS - oldCOGS
+
+  changeReason      String   // "backdated_purchase", "invoice_edit", "lot_cost_update", "opening_stock_update"
+  triggeredBy       String?  // Description of what triggered the change
+
+  changedAt         DateTime @default(now())
+
+  @@index([productId, changedAt])
+  @@index([invoiceItemId])
+  @@map("cost_audit_logs")
 }
 
 // ==================== CUSTOMER TRANSACTIONS (FOR STATEMENT) ====================
