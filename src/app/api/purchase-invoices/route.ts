@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { createStockLotFromPurchase, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
+import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
@@ -156,17 +156,32 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Check if this is a backdated purchase and recalculate if needed
+      // Check if this is a backdated purchase OR if there are zero-COGS items that need fixing
       const productIds = [...new Set(items.map((item: { productId: string }) => item.productId))];
       for (const productId of productIds) {
+        // Check if backdated (purchase before existing sales)
         const backdated = await isBackdated(productId as string, purchaseDate, tx);
+
+        // Check if there are earlier zero-COGS items (sales before this purchase)
+        const zeroCOGSDate = await hasZeroCOGSItems(productId as string, tx);
+
         if (backdated) {
+          // Recalculate from purchase date if backdated
           await recalculateFromDate(
             productId as string,
             purchaseDate,
             tx,
             "backdated_purchase",
             `Purchase invoice dated ${purchaseDate.toISOString().split("T")[0]}`
+          );
+        } else if (zeroCOGSDate) {
+          // Recalculate from earliest zero-COGS date to fix those items
+          await recalculateFromDate(
+            productId as string,
+            zeroCOGSDate,
+            tx,
+            "zero_cogs_fix",
+            `Fixing zero-COGS items with new purchase`
           );
         }
       }

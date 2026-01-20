@@ -1,0 +1,100 @@
+  ✓ Recalculated: GML 6MD METAL BOX
+  ✓ Recalculated: GML 8MD METAL BOX
+  ✓ Recalculated: POLYCAB GREEN 1MM 
+  ✓ Recalculated: POLYCAB GREEN 1.5MM
+  ✓ Recalculated: POLYCAB GREEN 2.5MM
+  ✓ Recalculated: POLYCAB GREEN 4MM
+  ✓ Recalculated: POLYCAB GREEN 6MM
+  ✓ Recalculated: VGUARD SUPERIO PLUS 1MM
+  ✓ Recalculated: ESQ MCB DP 32A
+  ✓ Recalculated: ESQ 20A 2WAY 1MD
+  ✓ Recalculated: ESQ 12MD PLATE
+  ✓ Recalculated: Vguard superio plus 1.5mm
+  ✓ Recalculated: Vguard superio plus 2.5
+  ✓ Recalculated: LYNCUS BELL PUSH 1MD IND
+  ✓ Recalculated: gml euro holder
+  ✓ Recalculated: ATOMBERG WALL FAN BLACK
+  ✓ Recalculated: VGUARD 10MM
+  ✓ Recalculated: LYNCUS 6A 1 WAY SWITCH
+  ✓ Recalculated: LYNCUS 6A 2 WAY SWITCH 
+  ✓ Recalculated: LYNCUS 6A 3PIN SOCKET
+  ✓ Recalculated: LYNCUS 16A SOCKET
+  ✓ Recalculated: LYNCUS 2MD PLATE
+  ✓ Recalculated: LYNCUS 3MD PLATE
+  ✓ Recalculated: LYNCUS 6MD PLATE
+  ✓ Recalculated: LYNCUS 8MD PLATE
+  ✓ Recalculated: LYNCUS 4MD PLATE
+  ✓ Recalculated: ESQ 3MD PLATE
+  ✓ Recalculated: gml glassio holder
+  ✓ Recalculated: LYNCUS 10A 2WAY
+  ✓ Recalculated: Esq 18md plate 
+  ✓ Recalculated: SCH RELAY
+  ✓ Recalculated: CAPACITOR 50 UF
+  ✓ Recalculated: electro 8md plate
+  ✓ Recalculated: electro 6md plate
+  ✓ Recalculated: electro 4md plate
+  ✓ Recalculated: electro 3md plate
+  ✓ Recalculated: electro 2md plate
+  ✓ Recalculated: ATOMBERG RENESA PRIME WITH REMOTE
+  ✓ Recalculated: VGUARD 4MM
+  ✓ Recalculated: MYRIUS 1&2 SURFACE
+  ✓ Recalculated: MYRIUS 4MD SURFACE
+  ✓ Recalculated: MYRIUS 6MD SURFACE
+  ✓ Recalculated: MYRIUS 8MD SURFACE
+  ✓ Recalculated: mcb schnieder 6a
+  ✓ Recalculated: VGUARD 1MM
+  ✓ Recalculated: VGUARD 1.5MM
+  ✓ Recalculated: VGUARD 2.5MM
+✅ Recalculated 88 products
+
+📈 Step 4: Analyzing cost changes...
+✅ Found 43 invoice items with cost changes
+
+📝 Generating Report...
+
+================================================================================
+FIFO COST RECALCULATION REPORT
+================================================================================
+
+Product Cost Changes:
+--------------------------------------------------------------------------------
+Product Name                  Old Cost       New Cost       Change         
+--------------------------------------------------------------------------------
+GML 2MD METAL BOX             $35.00         $40.00         $5.00          
+
+Invoice COGS Changes (First 20):
+--------------------------------------------------------------------------------
+Invoice             Product                  Old COGS       New COGS       
+--------------------------------------------------------------------------------
+INV-20260112-001    POLYCAB GREEN 1.5MM      $9060.00       $8990.00       
+INV-20260112-004    POLYCAB GREEN 6MM LOOSE  $0.00          $2916.00       
+INV-20260112-005    POLYCAB GREEN 1MM        $9390.00       $9180.00       
+INV-20260112-007    GML 2MD METAL BOX        $1425.00       $1450.00       
+INV-20260114-004    VGUARD SUPERIO PLUS 1MM  $4410.00       $13230.00      
+INV-20260114-004    Vguard superio plus 1.5mm$0.00          $17280.00      
+INV-20260114-004    Vguard superio plus 2.5  $0.00          $17525.00      
+INV-20260112-007    POLYCAB GREEN 1MM        $6120.00       $6200.00       
+INV-20260117-004    ESQ 10A 1WAY SWITCH      $1000.00       $980.00        
+INV-20260112-001    POLYCAB GREEN 1MM        $21700.00      $21910.00      
+INV-20260117-006    POLYCAB GREEN 2.5MM      $14535.00      $14640.00      
+INV-20260114-012    POLYCAB GREEN 1.5MM      $61865.00      $60480.00      
+INV-20260114-018    POLYCAB GREEN 1.5MM      $9035.00       $9180.00       
+INV-20260114-012    POLYCAB GREEN 2.5MM      $30835.00      $32355.00      
+INV-20260112-003    ESQ 10A 2WAY SWITHCH     $1774.50       $1737.32       
+INV-20260112-012    ESQ 10A 2WAY SWITHCH     $2328.82       $2366.00       
+INV-20260113-001    POLYCAB GREEN 1MM        $1530.00       $1550.00       
+INV-20260114-001    POLYCAB GREEN 1MM        $24800.00      $25040.00      
+INV-20260114-011    VGUARD SUPERIO PLUS 1MM  $0.00          $2940.00       
+INV-20260115-002    POLYCAB GREEN 1.5MM      $11200.00      $11475.00      
+... and 23 more changes
+
+Summary:
+--------------------------------------------------------------------------------
+Total Products Updated: 1
+Total Invoice Items Changed: 43
+Total COGS Before: $1775142.39
+Total COGS After: $1830588.39
+Total Change: $55446.00
+================================================================================
+
+✅ Recalculation complete!

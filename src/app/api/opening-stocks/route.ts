@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { createStockLotFromOpeningStock, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
+import { createStockLotFromOpeningStock, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 
 export async function GET() {
   try {
@@ -79,10 +79,16 @@ export async function POST(request: NextRequest) {
         tx
       );
 
-      // Check if this is backdated and recalculate if needed
+      // Check if this is backdated OR if there are zero-COGS items that need fixing
       const backdated = await isBackdated(productId, parsedStockDate, tx);
+      const zeroCOGSDate = await hasZeroCOGSItems(productId, tx);
+
       if (backdated) {
+        // Recalculate from opening stock date if backdated
         await recalculateFromDate(productId, parsedStockDate, tx);
+      } else if (zeroCOGSDate) {
+        // Recalculate from earliest zero-COGS date to fix those items
+        await recalculateFromDate(productId, zeroCOGSDate, tx);
       }
 
       return openingStock;

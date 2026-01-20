@@ -503,6 +503,33 @@ export async function isBackdated(
 }
 
 /**
+ * Check if there are any zero-COGS items for a product that need recalculation
+ * Returns the earliest date that needs recalculation, or null if no zero-COGS items
+ */
+export async function hasZeroCOGSItems(
+  productId: string,
+  tx: PrismaTransaction = prisma
+): Promise<Date | null> {
+  // Find the earliest invoice item with zero COGS for this product
+  const earliestZeroCOGS = await tx.invoiceItem.findFirst({
+    where: {
+      productId,
+      costOfGoodsSold: 0,
+    },
+    include: {
+      invoice: {
+        select: { issueDate: true },
+      },
+    },
+    orderBy: {
+      invoice: { issueDate: "asc" },
+    },
+  });
+
+  return earliestZeroCOGS ? earliestZeroCOGS.invoice.issueDate : null;
+}
+
+/**
  * Get the earliest date that needs recalculation when editing a transaction
  */
 export function getRecalculationStartDate(

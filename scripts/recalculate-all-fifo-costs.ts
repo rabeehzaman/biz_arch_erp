@@ -26,7 +26,13 @@ const pool = new pg.Pool({
 });
 
 const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  adapter,
+  transactionOptions: {
+    maxWait: 60000, // 60 seconds
+    timeout: 60000, // 60 seconds
+  },
+});
 
 interface CostChange {
   productId: string;
@@ -130,9 +136,15 @@ async function main() {
       const earliestInvoiceDate = product.invoiceItems[0].invoice.issueDate;
 
       try {
-        await prisma.$transaction(async (tx: any) => {
-          await recalculateFromDate(product.id, earliestInvoiceDate, tx);
-        });
+        await prisma.$transaction(
+          async (tx: any) => {
+            await recalculateFromDate(product.id, earliestInvoiceDate, tx);
+          },
+          {
+            maxWait: 60000, // 60 seconds
+            timeout: 60000, // 60 seconds
+          }
+        );
 
         recalculatedProducts++;
         console.log(`  ✓ Recalculated: ${product.name}`);
