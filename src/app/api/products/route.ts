@@ -21,7 +21,7 @@ export async function GET() {
     // Calculate available stock for each product
     const productsWithStock = products.map((product) => {
       const availableStock = product.stockLots.reduce(
-        (sum, lot) => sum + lot.remainingQuantity,
+        (sum, lot) => sum + Number(lot.remainingQuantity),
         0
       );
       return {
