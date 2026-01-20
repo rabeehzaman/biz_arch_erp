@@ -124,7 +124,10 @@ export async function PUT(
       (item) => item.lotConsumptions.length > 0
     );
 
-    await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      // Collect warnings from FIFO consumption
+      const warnings: string[] = [];
+
       // Get products that had consumptions for FIFO recalculation
       const productsWithConsumptions = existingInvoice.items
         .filter((item) => item.lotConsumptions.length > 0)
@@ -233,24 +236,48 @@ export async function PUT(
         include: { items: true },
       });
 
+      // Get unique product IDs to check for backdating
+      const productIds = items
+        .filter((item: { productId?: string }) => item.productId)
+        .map((item: { productId: string }) => item.productId);
+      const uniqueProductIds: string[] = [...new Set<string>(productIds)];
+
+      // Check if any products are backdated before consuming
+      const backdatedProducts = new Set<string>();
+      for (const productId of uniqueProductIds) {
+        const backdated = await isBackdated(productId, new Date(issueDate), tx);
+        if (backdated) {
+          backdatedProducts.add(productId);
+        }
+      }
+
       // Consume stock for each new item with a productId
       if (updatedInvoice) {
         const newInvoiceDate = new Date(issueDate);
         for (const invoiceItem of updatedInvoice.items) {
           if (invoiceItem.productId) {
-            const fifoResult = await consumeStockFIFO(
-              invoiceItem.productId,
-              invoiceItem.quantity,
-              invoiceItem.id,
-              newInvoiceDate,
-              tx
-            );
+            if (!backdatedProducts.has(invoiceItem.productId)) {
+              // Normal flow: consume stock and update COGS
+              const fifoResult = await consumeStockFIFO(
+                invoiceItem.productId,
+                invoiceItem.quantity,
+                invoiceItem.id,
+                newInvoiceDate,
+                tx
+              );
 
-            // Update the invoice item with COGS
-            await tx.invoiceItem.update({
-              where: { id: invoiceItem.id },
-              data: { costOfGoodsSold: fifoResult.totalCOGS },
-            });
+              // Update the invoice item with COGS
+              await tx.invoiceItem.update({
+                where: { id: invoiceItem.id },
+                data: { costOfGoodsSold: fifoResult.totalCOGS },
+              });
+
+              // Collect any warnings
+              if (fifoResult.warnings.length > 0) {
+                warnings.push(...fifoResult.warnings);
+              }
+            }
+            // If backdated, COGS remains 0 and will be set by recalculation
           }
         }
       }
@@ -267,19 +294,22 @@ export async function PUT(
           await recalculateFromDate(productId, existingInvoice.issueDate, tx);
         }
       }
-    });
 
-    const updatedInvoice = await prisma.invoice.findUnique({
-      where: { id },
-      include: {
-        customer: true,
-        items: {
-          include: { product: true },
+      // Fetch the final updated invoice
+      const finalInvoice = await tx.invoice.findUnique({
+        where: { id },
+        include: {
+          customer: true,
+          items: {
+            include: { product: true },
+          },
         },
-      },
+      });
+
+      return { invoice: finalInvoice, warnings };
     });
 
-    return NextResponse.json(updatedInvoice);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Failed to update invoice:", error);
     return NextResponse.json(

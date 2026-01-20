@@ -24,6 +24,7 @@ interface Product {
   name: string;
   price: number;
   unit: string;
+  availableStock?: number;
 }
 
 interface LineItem {
@@ -217,7 +218,17 @@ export default function NewInvoicePage() {
       });
 
       if (response.ok) {
-        const invoice = await response.json();
+        const data = await response.json();
+        const invoice = data.invoice || data;
+        const warnings = data.warnings || [];
+
+        // Display warnings if any
+        if (warnings.length > 0) {
+          warnings.forEach((warning: string) => {
+            toast.warning(warning, { duration: 6000 });
+          });
+        }
+
         toast.success("Invoice created");
         router.push(`/invoices/${invoice.id}`);
       } else {
@@ -292,46 +303,60 @@ export default function NewInvoicePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {lineItems.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="grid gap-4 sm:grid-cols-12 items-end p-4 border rounded-lg"
-                    >
-                      <div className="sm:col-span-5">
-                        <Label>Product *</Label>
-                        <ProductCombobox
-                          products={products}
-                          value={item.productId}
-                          onValueChange={(value) =>
-                            updateLineItem(item.id, "productId", value)
-                          }
-                          onSelect={() => focusQuantity(item.id)}
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <Label>Quantity *</Label>
-                        <Input
-                          ref={(el) => {
-                            if (el) {
-                              quantityRefs.current.set(item.id, el);
-                            } else {
-                              quantityRefs.current.delete(item.id);
+                  {lineItems.map((item, index) => {
+                    const product = products.find((p) => p.id === item.productId);
+                    const availableStock = product?.availableStock ?? 0;
+                    const hasStockShortfall = item.productId && item.quantity > availableStock;
+                    const shortfall = item.quantity - availableStock;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="grid gap-4 sm:grid-cols-12 items-end p-4 border rounded-lg"
+                      >
+                        <div className="sm:col-span-5">
+                          <Label>Product *</Label>
+                          <ProductCombobox
+                            products={products}
+                            value={item.productId}
+                            onValueChange={(value) =>
+                              updateLineItem(item.id, "productId", value)
                             }
-                          }}
-                          type="number"
-                          min="1"
-                          step="0.01"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            updateLineItem(
-                              item.id,
-                              "quantity",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          required
-                        />
-                      </div>
+                            onSelect={() => focusQuantity(item.id)}
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Label>Quantity *</Label>
+                          <Input
+                            ref={(el) => {
+                              if (el) {
+                                quantityRefs.current.set(item.id, el);
+                              } else {
+                                quantityRefs.current.delete(item.id);
+                              }
+                            }}
+                            type="number"
+                            min="1"
+                            step="0.01"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateLineItem(
+                                item.id,
+                                "quantity",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className={hasStockShortfall ? "border-yellow-500" : ""}
+                            required
+                          />
+                          {hasStockShortfall && (
+                            <p className="text-xs text-yellow-600 mt-1">
+                              {availableStock === 0
+                                ? "⚠ No stock available"
+                                : `⚠ Only ${availableStock} units in stock (shortfall: ${shortfall})`}
+                            </p>
+                          )}
+                        </div>
                       <div className="sm:col-span-2">
                         <Label>Unit Price *</Label>
                         <Input
@@ -378,14 +403,15 @@ export default function NewInvoicePage() {
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
-                      <div className="sm:col-span-12 text-right text-sm text-slate-500">
-                        Line Total: ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                        {item.discount > 0 && (
-                          <span className="ml-2 text-green-600">(-{item.discount}%)</span>
-                        )}
+                        <div className="sm:col-span-12 text-right text-sm text-slate-500">
+                          Line Total: ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                          {item.discount > 0 && (
+                            <span className="ml-2 text-green-600">(-{item.discount}%)</span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

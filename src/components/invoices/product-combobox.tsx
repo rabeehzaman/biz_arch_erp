@@ -8,6 +8,7 @@ interface Product {
   price: number;
   unit: string;
   sku?: string;
+  availableStock?: number;
 }
 
 interface ProductComboboxProps {
@@ -36,15 +37,36 @@ export function ProductCombobox({
         product.name.toLowerCase().includes(query) ||
         (product.sku?.toLowerCase().includes(query) ?? false)
       }
-      renderItem={(product) => (
-        <div className="flex flex-col">
-          <div className="font-medium">{product.name}</div>
-          <div className="text-sm text-slate-500">
-            {product.sku && <span>SKU: {product.sku} | </span>}
-            ₹{Number(product.price).toLocaleString("en-IN")}
+      renderItem={(product) => {
+        const stock = product.availableStock ?? 0;
+        const isOutOfStock = stock === 0;
+        const isLowStock = stock > 0 && stock <= 5;
+
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{product.name}</span>
+              {isOutOfStock && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">
+                  Out of stock
+                </span>
+              )}
+              {isLowStock && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 font-medium">
+                  Low stock
+                </span>
+              )}
+            </div>
+            <div className="text-sm text-slate-500">
+              {product.sku && <span>SKU: {product.sku} | </span>}
+              ₹{Number(product.price).toLocaleString("en-IN")}
+              <span className="ml-2">
+                Stock: <span className={isOutOfStock ? "text-red-600 font-medium" : isLowStock ? "text-yellow-600 font-medium" : ""}>{stock}</span> units
+              </span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      }}
       placeholder="Search products..."
       emptyText="No products found."
       required={required}

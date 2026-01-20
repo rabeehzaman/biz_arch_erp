@@ -6,10 +6,31 @@ export async function GET() {
     const products = await prisma.product.findMany({
       include: {
         unit: true,
+        stockLots: {
+          where: {
+            remainingQuantity: { gt: 0 },
+          },
+          select: {
+            remainingQuantity: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(products);
+
+    // Calculate available stock for each product
+    const productsWithStock = products.map((product) => {
+      const availableStock = product.stockLots.reduce(
+        (sum, lot) => sum + lot.remainingQuantity,
+        0
+      );
+      return {
+        ...product,
+        availableStock,
+      };
+    });
+
+    return NextResponse.json(productsWithStock);
   } catch (error) {
     console.error("Failed to fetch products:", error);
     return NextResponse.json(
