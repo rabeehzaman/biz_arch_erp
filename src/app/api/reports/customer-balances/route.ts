@@ -35,8 +35,11 @@ export async function GET() {
     const summary = {
       totalCustomers: customers.length,
       activeCustomers: customers.filter((c) => c.isActive).length,
-      totalReceivable: formattedCustomers.reduce((sum, c) => sum + c.balance, 0),
+      totalReceivable: formattedCustomers.reduce((sum, c) => sum + Math.max(0, c.balance), 0), // Only positive balances (receivables)
+      totalAdvances: formattedCustomers.reduce((sum, c) => sum + Math.abs(Math.min(0, c.balance)), 0), // Only negative balances (advances)
+      netBalance: formattedCustomers.reduce((sum, c) => sum + c.balance, 0), // Actual net balance
       customersWithBalance: formattedCustomers.filter((c) => c.balance > 0).length,
+      customersWithAdvances: formattedCustomers.filter((c) => c.balance < 0).length,
     };
 
     return NextResponse.json({

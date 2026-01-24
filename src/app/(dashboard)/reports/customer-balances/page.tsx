@@ -30,7 +30,10 @@ interface Summary {
   totalCustomers: number;
   activeCustomers: number;
   totalReceivable: number;
+  totalAdvances: number;
+  netBalance: number;
   customersWithBalance: number;
+  customersWithAdvances: number;
 }
 
 interface ReportData {
@@ -80,7 +83,7 @@ export default function CustomerBalancesPage() {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Customer Balances</h2>
-          <p className="text-slate-500">View outstanding customer balances (Accounts Receivable)</p>
+          <p className="text-slate-500">View customer balances - positive amounts are receivables (owed to you), negative amounts in green are advances (paid in advance)</p>
         </div>
         <Card>
           <CardContent className="pt-6">
@@ -95,11 +98,11 @@ export default function CustomerBalancesPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Customer Balances</h2>
-        <p className="text-slate-500">View outstanding customer balances (Accounts Receivable)</p>
+        <p className="text-slate-500">View customer balances - positive amounts are receivables (owed to you), negative amounts in green are advances (paid in advance)</p>
       </div>
 
       {reportData && (
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-500">
@@ -110,18 +113,7 @@ export default function CustomerBalancesPage() {
               <div className="text-2xl font-bold">
                 {reportData.summary.totalCustomers}
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Active Customers
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {reportData.summary.activeCustomers}
-              </div>
+              <p className="text-xs text-slate-500">{reportData.summary.activeCustomers} active</p>
             </CardContent>
           </Card>
           <Card>
@@ -131,22 +123,36 @@ export default function CustomerBalancesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-red-600">
                 {formatCurrency(reportData.summary.totalReceivable)}
               </div>
+              <p className="text-xs text-slate-500">{reportData.summary.customersWithBalance} customers</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-500">
-                With Balance
+                Total Advances
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
-                {reportData.summary.customersWithBalance}
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(reportData.summary.totalAdvances)}
               </div>
-              <p className="text-xs text-slate-500">customers owe money</p>
+              <p className="text-xs text-slate-500">{reportData.summary.customersWithAdvances} customers</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500">
+                Net Balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${reportData.summary.netBalance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                {formatCurrency(reportData.summary.netBalance)}
+              </div>
+              <p className="text-xs text-slate-500">total outstanding</p>
             </CardContent>
           </Card>
         </div>
@@ -210,10 +216,16 @@ export default function CustomerBalancesPage() {
                       </TableCell>
                       <TableCell
                         className={`text-right font-medium ${
-                          customer.balance > 0 ? "text-red-600" : "text-slate-900"
+                          customer.balance > 0
+                            ? "text-red-600"
+                            : customer.balance < 0
+                            ? "text-green-600"
+                            : "text-slate-900"
                         }`}
                       >
-                        {formatCurrency(customer.balance)}
+                        {customer.balance < 0
+                          ? `(${formatCurrency(Math.abs(customer.balance))})`
+                          : formatCurrency(customer.balance)}
                       </TableCell>
                       <TableCell className="text-right">
                         {customer.invoiceCount}
