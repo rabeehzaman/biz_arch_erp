@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   Warehouse,
+  Wrench,
   Truck,
   Receipt,
   Wallet,
@@ -52,6 +53,7 @@ const navigation = [
 
 const bottomNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Fix Balances", href: "/admin/fix-balances", icon: Wrench },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
