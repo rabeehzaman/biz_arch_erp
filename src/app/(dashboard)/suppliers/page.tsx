@@ -505,11 +505,13 @@ export default function SuppliersPage() {
                       <span
                         className={
                           Number(supplier.balance) > 0
-                            ? "text-orange-600 font-medium"
-                            : ""
+                            ? "text-red-600 font-medium"
+                            : Number(supplier.balance) < 0
+                              ? "text-green-600 font-medium"
+                              : ""
                         }
                       >
-                        ₹{Number(supplier.balance).toLocaleString("en-IN")}
+                        ₹{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
                       </span>
                     </TableCell>
                     <TableCell>{supplier._count?.purchaseInvoices || 0}</TableCell>

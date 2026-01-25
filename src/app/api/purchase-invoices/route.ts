@@ -156,6 +156,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Create SupplierTransaction record for purchase invoice
+      await tx.supplierTransaction.create({
+        data: {
+          supplierId,
+          transactionType: "PURCHASE_INVOICE",
+          transactionDate: purchaseDate,
+          amount: total, // Positive = we owe supplier more
+          description: `Purchase Invoice ${purchaseInvoiceNumber}`,
+          purchaseInvoiceId: invoice.id,
+          runningBalance: 0, // Will be recalculated if needed
+        },
+      });
+
       // Check if this is a backdated purchase OR if there are zero-COGS items that need fixing
       const productIds = [...new Set(items.map((item: { productId: string }) => item.productId))];
       for (const productId of productIds) {

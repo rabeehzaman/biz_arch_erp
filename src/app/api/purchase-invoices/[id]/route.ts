@@ -150,6 +150,12 @@ export async function PUT(
             },
           });
 
+          // Update SupplierTransaction record for purchase invoice
+          await tx.supplierTransaction.updateMany({
+            where: { purchaseInvoiceId: id },
+            data: { amount: total },
+          });
+
           // If supplier changed, update old supplier's balance
           if (newSupplierId !== existingInvoice.supplierId) {
             await tx.supplier.update({
@@ -157,6 +163,12 @@ export async function PUT(
               data: {
                 balance: { decrement: oldBalanceDue },
               },
+            });
+
+            // Move SupplierTransaction to new supplier
+            await tx.supplierTransaction.updateMany({
+              where: { purchaseInvoiceId: id },
+              data: { supplierId: newSupplierId },
             });
           }
         } else if (newSupplierId !== existingInvoice.supplierId) {
@@ -172,6 +184,12 @@ export async function PUT(
             data: {
               balance: { increment: newBalanceDue },
             },
+          });
+
+          // Move SupplierTransaction to new supplier
+          await tx.supplierTransaction.updateMany({
+            where: { purchaseInvoiceId: id },
+            data: { supplierId: newSupplierId },
           });
         }
 
@@ -291,6 +309,11 @@ export async function DELETE(
     await prisma.$transaction(async (tx) => {
       const productIds = invoice.items.map((item) => item.productId);
       const invoiceDate = invoice.invoiceDate;
+
+      // Delete SupplierTransaction record for purchase invoice
+      await tx.supplierTransaction.deleteMany({
+        where: { purchaseInvoiceId: id },
+      });
 
       // Delete stock lots (will cascade delete consumptions)
       await tx.stockLot.deleteMany({

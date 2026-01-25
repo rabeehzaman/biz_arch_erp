@@ -83,6 +83,21 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Create SupplierTransaction record for payment
+      await tx.supplierTransaction.create({
+        data: {
+          supplierId,
+          transactionType: "PAYMENT",
+          transactionDate: parsedPaymentDate,
+          amount: -amount, // Negative = reduces what we owe
+          description: purchaseInvoiceId
+            ? `Payment ${paymentNumber} for purchase invoice`
+            : `Payment ${paymentNumber} (On Account)`,
+          supplierPaymentId: newPayment.id,
+          runningBalance: 0, // Will be recalculated if needed
+        },
+      });
+
       // Apply payment to purchase invoices
       if (purchaseInvoiceId) {
         // Specific invoice selected - apply to that invoice only
