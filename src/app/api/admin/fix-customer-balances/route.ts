@@ -40,14 +40,34 @@ export async function POST(request: NextRequest) {
 
     for (const customer of customers) {
       try {
-        // Get all transactions for this customer
-        const transactions = await prisma.customerTransaction.findMany({
-          where: { customerId: customer.id },
-          orderBy: { transactionDate: "asc" },
-        });
+        // Calculate balance from actual transactions (not CustomerTransaction table)
+        // because invoices don't create CustomerTransaction records
+        const [invoices, payments, creditNotes, openingBalance] = await Promise.all([
+          prisma.invoice.aggregate({
+            where: { customerId: customer.id },
+            _sum: { total: true },
+          }),
+          prisma.payment.aggregate({
+            where: { customerId: customer.id },
+            _sum: { amount: true },
+          }),
+          prisma.creditNote.aggregate({
+            where: { customerId: customer.id, appliedToBalance: true },
+            _sum: { total: true },
+          }),
+          prisma.customerTransaction.findFirst({
+            where: { customerId: customer.id, transactionType: "OPENING_BALANCE" },
+            select: { amount: true },
+          }),
+        ]);
 
-        // Calculate correct balance from transactions
-        const calculatedBalance = transactions.reduce((sum, txn) => sum + Number(txn.amount), 0);
+        const invoiceTotal = Number(invoices._sum.total || 0);
+        const paymentTotal = Number(payments._sum.amount || 0);
+        const creditNoteTotal = Number(creditNotes._sum.total || 0);
+        const openingBalanceAmount = Number(openingBalance?.amount || 0);
+
+        // Correct formula: opening + invoices - payments - creditNotes
+        const calculatedBalance = openingBalanceAmount + invoiceTotal - paymentTotal - creditNoteTotal;
 
         const discrepancy = Number(customer.balance) - calculatedBalance;
 
@@ -56,22 +76,10 @@ export async function POST(request: NextRequest) {
             `[Fix Balances] Fixing ${customer.name}: ${customer.balance} → ${calculatedBalance.toFixed(2)}`
           );
 
-          await prisma.$transaction(async (tx) => {
-            // Update customer balance
-            await tx.customer.update({
-              where: { id: customer.id },
-              data: { balance: calculatedBalance },
-            });
-
-            // Recalculate and update running balances for all transactions
-            let runningBalance = 0;
-            for (const txn of transactions) {
-              runningBalance += Number(txn.amount);
-              await tx.customerTransaction.update({
-                where: { id: txn.id },
-                data: { runningBalance },
-              });
-            }
+          // Update customer balance
+          await prisma.customer.update({
+            where: { id: customer.id },
+            data: { balance: calculatedBalance },
           });
 
           fixes.push({
@@ -142,13 +150,34 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     for (const customer of customers) {
-      // Get all transactions for this customer
-      const transactions = await prisma.customerTransaction.findMany({
-        where: { customerId: customer.id },
-      });
+      // Calculate balance from actual transactions (not CustomerTransaction table)
+      // because invoices don't create CustomerTransaction records
+      const [invoices, payments, creditNotes, openingBalance] = await Promise.all([
+        prisma.invoice.aggregate({
+          where: { customerId: customer.id },
+          _sum: { total: true },
+        }),
+        prisma.payment.aggregate({
+          where: { customerId: customer.id },
+          _sum: { amount: true },
+        }),
+        prisma.creditNote.aggregate({
+          where: { customerId: customer.id, appliedToBalance: true },
+          _sum: { total: true },
+        }),
+        prisma.customerTransaction.findFirst({
+          where: { customerId: customer.id, transactionType: "OPENING_BALANCE" },
+          select: { amount: true },
+        }),
+      ]);
 
-      // Calculate correct balance from transactions
-      const calculatedBalance = transactions.reduce((sum, txn) => sum + Number(txn.amount), 0);
+      const invoiceTotal = Number(invoices._sum.total || 0);
+      const paymentTotal = Number(payments._sum.amount || 0);
+      const creditNoteTotal = Number(creditNotes._sum.total || 0);
+      const openingBalanceAmount = Number(openingBalance?.amount || 0);
+
+      // Correct formula: opening + invoices - payments - creditNotes
+      const calculatedBalance = openingBalanceAmount + invoiceTotal - paymentTotal - creditNoteTotal;
 
       const discrepancy = Number(customer.balance) - calculatedBalance;
 

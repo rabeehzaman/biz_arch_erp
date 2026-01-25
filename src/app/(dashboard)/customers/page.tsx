@@ -652,11 +652,13 @@ export default function CustomersPage() {
                       <span
                         className={
                           Number(customer.balance) > 0
-                            ? "text-red-600 font-medium"
-                            : ""
+                            ? "text-green-600 font-medium"
+                            : Number(customer.balance) < 0
+                              ? "text-red-600 font-medium"
+                              : ""
                         }
                       >
-                        ₹{Number(customer.balance).toLocaleString("en-IN")}
+                        ₹{Math.abs(Number(customer.balance)).toLocaleString("en-IN")}
                       </span>
                     </TableCell>
                     <TableCell>{customer._count?.invoices || 0}</TableCell>

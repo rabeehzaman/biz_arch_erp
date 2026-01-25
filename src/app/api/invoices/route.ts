@@ -191,6 +191,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Create CustomerTransaction record for invoice
+      await tx.customerTransaction.create({
+        data: {
+          customerId,
+          transactionType: "INVOICE",
+          transactionDate: invoiceDate,
+          amount: total, // Positive = debit (customer owes)
+          description: `Invoice ${invoiceNumber}`,
+          invoiceId: invoice.id,
+          runningBalance: 0, // Will be recalculated if needed
+        },
+      });
+
       // Recalculate FIFO for backdated products
       for (const productId of backdatedProducts) {
         await recalculateFromDate(

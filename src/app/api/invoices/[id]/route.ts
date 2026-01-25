@@ -205,6 +205,12 @@ export async function PUT(
           },
         });
 
+        // Update CustomerTransaction record for invoice
+        await tx.customerTransaction.updateMany({
+          where: { invoiceId: id },
+          data: { amount: total },
+        });
+
         // If customer changed, also update old customer's balance
         if (customerId !== existingInvoice.customerId) {
           await tx.customer.update({
@@ -212,6 +218,12 @@ export async function PUT(
             data: {
               balance: { decrement: oldBalanceDue },
             },
+          });
+
+          // Move CustomerTransaction to new customer
+          await tx.customerTransaction.updateMany({
+            where: { invoiceId: id },
+            data: { customerId },
           });
         }
       } else if (customerId !== existingInvoice.customerId) {
@@ -227,6 +239,12 @@ export async function PUT(
           data: {
             balance: { increment: newBalanceDue },
           },
+        });
+
+        // Move CustomerTransaction to new customer
+        await tx.customerTransaction.updateMany({
+          where: { invoiceId: id },
+          data: { customerId },
         });
       }
 
@@ -370,6 +388,11 @@ export async function DELETE(
           await restoreStockFromConsumptions(item.id, tx);
         }
       }
+
+      // Delete CustomerTransaction record for invoice
+      await tx.customerTransaction.deleteMany({
+        where: { invoiceId: id },
+      });
 
       // Delete invoice (cascade will delete items and their consumptions)
       await tx.invoice.delete({

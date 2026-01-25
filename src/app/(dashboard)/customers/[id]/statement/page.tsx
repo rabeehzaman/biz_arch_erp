@@ -22,7 +22,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 interface StatementTransaction {
   id: string;
   date: string;
-  type: "OPENING_BALANCE" | "INVOICE" | "PAYMENT" | "ADJUSTMENT";
+  type: "OPENING_BALANCE" | "INVOICE" | "PAYMENT" | "CREDIT_NOTE" | "ADJUSTMENT";
   reference: string;
   description: string;
   debit: number;
@@ -50,6 +50,7 @@ const typeLabels: Record<string, string> = {
   OPENING_BALANCE: "Opening Balance",
   INVOICE: "Invoice",
   PAYMENT: "Payment",
+  CREDIT_NOTE: "Credit Note",
   ADJUSTMENT: "Adjustment",
 };
 
@@ -57,6 +58,7 @@ const typeBadgeVariant: Record<string, "default" | "secondary" | "outline"> = {
   OPENING_BALANCE: "secondary",
   INVOICE: "default",
   PAYMENT: "outline",
+  CREDIT_NOTE: "outline",
   ADJUSTMENT: "secondary",
 };
 
@@ -215,7 +217,7 @@ export default function CustomerStatementPage({
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${statement.openingBalance >= 0 ? "text-red-600" : "text-green-600"}`}
+              className={`text-2xl font-bold ${statement.openingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
             >
               {formatCurrency(statement.openingBalance)}
             </div>
@@ -253,7 +255,7 @@ export default function CustomerStatementPage({
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${statement.closingBalance >= 0 ? "text-red-600" : "text-green-600"}`}
+              className={`text-2xl font-bold ${statement.closingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
             >
               {formatCurrency(statement.closingBalance)}
               <span className="text-sm ml-1">
@@ -345,7 +347,7 @@ export default function CustomerStatementPage({
                       {txn.credit > 0 ? formatCurrency(txn.credit) : "-"}
                     </TableCell>
                     <TableCell
-                      className={`text-right font-medium ${txn.runningBalance >= 0 ? "text-red-600" : "text-green-600"}`}
+                      className={`text-right font-medium ${txn.runningBalance >= 0 ? "text-green-600" : "text-red-600"}`}
                     >
                       {formatCurrency(txn.runningBalance)}
                       <span className="text-xs ml-1">
@@ -365,7 +367,7 @@ export default function CustomerStatementPage({
                     {formatCurrency(statement.totalCredits)}
                   </TableCell>
                   <TableCell
-                    className={`text-right ${statement.closingBalance >= 0 ? "text-red-600" : "text-green-600"}`}
+                    className={`text-right ${statement.closingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
                   >
                     {formatCurrency(statement.closingBalance)}
                   </TableCell>

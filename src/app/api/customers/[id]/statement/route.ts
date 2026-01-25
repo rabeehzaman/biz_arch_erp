@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export interface StatementTransaction {
   id: string;
   date: string;
-  type: "OPENING_BALANCE" | "INVOICE" | "PAYMENT" | "ADJUSTMENT";
+  type: "OPENING_BALANCE" | "INVOICE" | "PAYMENT" | "CREDIT_NOTE" | "ADJUSTMENT";
   reference: string;
   description: string;
   debit: number;
@@ -99,6 +99,23 @@ export async function GET(
       },
     });
 
+    // Get all credit notes applied to balance
+    const creditNotes = await prisma.creditNote.findMany({
+      where: {
+        customerId: id,
+        appliedToBalance: true,
+        ...(Object.keys(dateFilter).length > 0 && { issueDate: dateFilter }),
+      },
+      orderBy: { issueDate: "asc" },
+      select: {
+        id: true,
+        creditNoteNumber: true,
+        issueDate: true,
+        total: true,
+        reason: true,
+      },
+    });
+
     // Build transactions list
     const transactions: StatementTransaction[] = [];
 
@@ -142,6 +159,20 @@ export async function GET(
           : `Payment ${payment.paymentNumber} (On Account)`,
         debit: 0,
         credit: Number(payment.amount),
+        runningBalance: 0,
+      });
+    }
+
+    // Add credit notes (credits - reduces what customer owes)
+    for (const creditNote of creditNotes) {
+      transactions.push({
+        id: creditNote.id,
+        date: creditNote.issueDate.toISOString(),
+        type: "CREDIT_NOTE",
+        reference: creditNote.creditNoteNumber,
+        description: creditNote.reason || `Credit Note ${creditNote.creditNoteNumber}`,
+        debit: 0,
+        credit: Number(creditNote.total),
         runningBalance: 0,
       });
     }
