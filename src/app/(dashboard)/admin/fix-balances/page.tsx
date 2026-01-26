@@ -15,6 +15,23 @@ import {
 } from "@/components/ui/table";
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-react";
 
+interface ProductCostIssue {
+  id: string;
+  name: string;
+  currentCost: number;
+  correctCost: number;
+  latestInvoice: string;
+  discount: number;
+}
+
+interface ProductCostFix {
+  id: string;
+  name: string;
+  oldCost: number;
+  newCost: number;
+  discount: number;
+}
+
 interface BalanceIssue {
   id: string;
   name: string;
@@ -49,6 +66,23 @@ export default function FixBalancesPage() {
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null);
   const [fixResult, setFixResult] = useState<FixResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Product cost fix state
+  const [isCheckingCosts, setIsCheckingCosts] = useState(false);
+  const [isFixingCosts, setIsFixingCosts] = useState(false);
+  const [costCheckResult, setCostCheckResult] = useState<{
+    totalProducts: number;
+    productsWithIssues: number;
+    issues: ProductCostIssue[];
+    message: string;
+  } | null>(null);
+  const [costFixResult, setCostFixResult] = useState<{
+    success: boolean;
+    summary: { totalProducts: number; fixedCount: number };
+    fixes: ProductCostFix[];
+    message: string;
+  } | null>(null);
+  const [costError, setCostError] = useState<string | null>(null);
 
   const handleCheck = async () => {
     setIsChecking(true);
@@ -96,6 +130,48 @@ export default function FixBalancesPage() {
       setError(err instanceof Error ? err.message : "Failed to fix balances");
     } finally {
       setIsFixing(false);
+    }
+  };
+
+  const handleCheckCosts = async () => {
+    setIsCheckingCosts(true);
+    setCostError(null);
+    setCostFixResult(null);
+
+    try {
+      const response = await fetch("/api/admin/fix-product-costs");
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to check product costs");
+      }
+      setCostCheckResult(await response.json());
+    } catch (err) {
+      setCostError(err instanceof Error ? err.message : "Failed to check product costs");
+    } finally {
+      setIsCheckingCosts(false);
+    }
+  };
+
+  const handleFixCosts = async () => {
+    if (!confirm("Are you sure you want to fix all product costs to MRP? This will update the database.")) {
+      return;
+    }
+
+    setIsFixingCosts(true);
+    setCostError(null);
+
+    try {
+      const response = await fetch("/api/admin/fix-product-costs", { method: "POST" });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to fix product costs");
+      }
+      setCostFixResult(await response.json());
+      setCostCheckResult(null);
+    } catch (err) {
+      setCostError(err instanceof Error ? err.message : "Failed to fix product costs");
+    } finally {
+      setIsFixingCosts(false);
     }
   };
 
@@ -257,6 +333,161 @@ export default function FixBalancesPage() {
                     <TableCell className="text-right">
                       {formatCurrency(fix.difference)}
                     </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Product Cost Fix Section */}
+      <div className="pt-6 border-t">
+        <h2 className="text-2xl font-bold text-slate-900">Fix Product Costs</h2>
+        <p className="text-slate-500">
+          Fix products whose cost was set to the discounted price instead of MRP
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Cost Checker</CardTitle>
+          <CardDescription>
+            This tool checks all products with purchase history and ensures their cost reflects the
+            original MRP (pre-discount), not the discounted price.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-4">
+            <Button onClick={handleCheckCosts} disabled={isCheckingCosts || isFixingCosts}>
+              {isCheckingCosts ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="mr-2 h-4 w-4" />
+              )}
+              Check Product Costs
+            </Button>
+
+            {costCheckResult && costCheckResult.productsWithIssues > 0 && (
+              <Button onClick={handleFixCosts} disabled={isCheckingCosts || isFixingCosts} variant="destructive">
+                {isFixingCosts ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Fix All Costs
+              </Button>
+            )}
+          </div>
+
+          {costError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{costError}</AlertDescription>
+            </Alert>
+          )}
+
+          {costCheckResult && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Check Results</AlertTitle>
+              <AlertDescription>
+                {costCheckResult.message}
+                <div className="mt-2 flex gap-4">
+                  <Badge variant="outline">Total Products: {costCheckResult.totalProducts}</Badge>
+                  <Badge variant={costCheckResult.productsWithIssues > 0 ? "destructive" : "default"}>
+                    Issues Found: {costCheckResult.productsWithIssues}
+                  </Badge>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {costFixResult && (
+            <Alert className="border-green-600 bg-green-50">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-900">Success</AlertTitle>
+              <AlertDescription className="text-green-800">
+                {costFixResult.message}
+                <div className="mt-2 flex gap-4">
+                  <Badge variant="outline">Total Products: {costFixResult.summary.totalProducts}</Badge>
+                  <Badge className="bg-green-600">Fixed: {costFixResult.summary.fixedCount}</Badge>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {costCheckResult && costCheckResult.issues.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Products with Incorrect Costs</CardTitle>
+            <CardDescription>
+              These products have their cost set to the discounted price instead of MRP
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead className="text-right">Current Cost</TableHead>
+                  <TableHead className="text-right">Correct MRP</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
+                  <TableHead>Latest Invoice</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {costCheckResult.issues.map((issue) => (
+                  <TableRow key={issue.id}>
+                    <TableCell className="font-medium">{issue.name}</TableCell>
+                    <TableCell className="text-right text-red-600">
+                      {formatCurrency(issue.currentCost)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-green-600">
+                      {formatCurrency(issue.correctCost)}
+                    </TableCell>
+                    <TableCell className="text-right">{issue.discount}%</TableCell>
+                    <TableCell>{issue.latestInvoice}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {costFixResult && costFixResult.fixes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Fixed Product Costs</CardTitle>
+            <CardDescription>
+              Successfully updated the following product costs to MRP
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead className="text-right">Old Cost</TableHead>
+                  <TableHead className="text-right">New Cost (MRP)</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {costFixResult.fixes.map((fix) => (
+                  <TableRow key={fix.id}>
+                    <TableCell className="font-medium">{fix.name}</TableCell>
+                    <TableCell className="text-right text-red-600">
+                      {formatCurrency(fix.oldCost)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-green-600">
+                      {formatCurrency(fix.newCost)}
+                    </TableCell>
+                    <TableCell className="text-right">{fix.discount}%</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
