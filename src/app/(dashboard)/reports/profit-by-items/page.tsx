@@ -83,6 +83,7 @@ export default function ProfitByItemsPage() {
   const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(
     new Set()
   );
+  const [displayCount, setDisplayCount] = useState(20);
 
   const toggleInvoice = (invoiceId: string) => {
     setExpandedInvoices((prev) => {
@@ -115,6 +116,7 @@ export default function ProfitByItemsPage() {
 
   const fetchReport = async () => {
     setIsLoading(true);
+    setDisplayCount(20);
     try {
       let url = "/api/reports/profit-by-items";
       const params = new URLSearchParams();
@@ -308,6 +310,22 @@ export default function ProfitByItemsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
+              <div className="flex items-center justify-between mb-2 text-sm text-slate-500">
+                <span>
+                  Showing {Math.min(displayCount, reportData.invoices.length)} of{" "}
+                  {reportData.invoices.length} invoices
+                </span>
+                {reportData.invoices.length > displayCount && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-600"
+                    onClick={() => setDisplayCount(reportData.invoices.length)}
+                  >
+                    Show All
+                  </Button>
+                )}
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -323,7 +341,7 @@ export default function ProfitByItemsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reportData.invoices.map((invoice) => (
+                  {reportData.invoices.slice(0, displayCount).map((invoice) => (
                     <React.Fragment key={invoice.invoiceId}>
                       {/* Invoice Row */}
                       <TableRow
@@ -423,6 +441,16 @@ export default function ProfitByItemsPage() {
                   ))}
                 </TableBody>
               </Table>
+              {reportData.invoices.length > displayCount && (
+                <div className="flex items-center justify-center pt-4 pb-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDisplayCount((prev) => prev + 20)}
+                  >
+                    Show More ({reportData.invoices.length - displayCount} remaining)
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
