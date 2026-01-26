@@ -9,11 +9,12 @@
  */
 
 import dotenv from "dotenv";
-import prisma from "../src/lib/prisma";
-
 dotenv.config();
 
 async function main() {
+  // Dynamic import so dotenv loads before prisma creates the connection pool
+  const { default: prisma } = await import("../src/lib/prisma");
+
   console.log("Starting fix: Update product.cost to MRP from latest purchase invoice...\n");
 
   try {
