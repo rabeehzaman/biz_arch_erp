@@ -47,7 +47,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { supplierId, purchaseInvoiceId, amount, paymentDate, paymentMethod, reference, notes } = body;
+    const { supplierId, purchaseInvoiceId, amount, paymentDate, paymentMethod, reference, notes, discountGiven: rawDiscount } = body;
+    const discountGiven = rawDiscount || 0;
 
     if (!supplierId || !amount) {
       return NextResponse.json(
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
           supplierId,
           purchaseInvoiceId: purchaseInvoiceId || null,
           amount,
+          discountGiven,
           paymentDate: parsedPaymentDate,
           paymentMethod: paymentMethod || "CASH",
           reference: reference || null,
@@ -75,11 +77,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Update supplier balance (decrease payable)
+      // Total settlement = cash paid + discount received from supplier
+      const totalSettlement = Number(amount) + Number(discountGiven);
+
+      // Update supplier balance (decrease payable by amount + discount)
       await tx.supplier.update({
         where: { id: supplierId },
         data: {
-          balance: { decrement: amount },
+          balance: { decrement: totalSettlement },
         },
       });
 
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest) {
           supplierId,
           transactionType: "PAYMENT",
           transactionDate: parsedPaymentDate,
-          amount: -amount, // Negative = reduces what we owe
+          amount: -totalSettlement, // Negative = reduces what we owe (payment + discount)
           description: purchaseInvoiceId
             ? `Payment ${paymentNumber} for purchase invoice`
             : `Payment ${paymentNumber} (On Account)`,
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (invoice) {
-          const applyAmount = Math.min(amount, Number(invoice.balanceDue));
+          const applyAmount = Math.min(totalSettlement, Number(invoice.balanceDue));
           const newAmountPaid = Number(invoice.amountPaid) + applyAmount;
           const newBalanceDue = Number(invoice.total) - newAmountPaid;
           const newStatus = newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID";
@@ -141,7 +146,7 @@ export async function POST(request: NextRequest) {
           select: { id: true, total: true, amountPaid: true, balanceDue: true },
         });
 
-        let remainingAmount = amount;
+        let remainingAmount = totalSettlement;
 
         for (const invoice of unpaidInvoices) {
           if (remainingAmount <= 0) break;

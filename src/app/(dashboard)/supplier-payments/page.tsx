@@ -59,6 +59,7 @@ interface SupplierPayment {
     purchaseInvoiceNumber: string;
   } | null;
   amount: number;
+  discountGiven: number;
   paymentDate: string;
   paymentMethod: string;
   reference: string | null;
@@ -99,6 +100,7 @@ export default function SupplierPaymentsPage() {
     supplierId: "",
     purchaseInvoiceId: "",
     amount: "",
+    discountGiven: "",
     paymentDate: new Date().toISOString().split("T")[0],
     paymentMethod: "CASH",
     reference: "",
@@ -152,6 +154,7 @@ export default function SupplierPaymentsPage() {
           supplierId: formData.supplierId,
           purchaseInvoiceId: formData.purchaseInvoiceId || null,
           amount: parseFloat(formData.amount),
+          discountGiven: parseFloat(formData.discountGiven) || 0,
           paymentDate: formData.paymentDate,
           paymentMethod: formData.paymentMethod,
           reference: formData.reference || null,
@@ -178,6 +181,7 @@ export default function SupplierPaymentsPage() {
       supplierId: "",
       purchaseInvoiceId: "",
       amount: "",
+      discountGiven: "",
       paymentDate: new Date().toISOString().split("T")[0],
       paymentMethod: "CASH",
       reference: "",
@@ -300,6 +304,21 @@ export default function SupplierPaymentsPage() {
                     />
                   </div>
                   <div className="grid gap-2">
+                    <Label htmlFor="discountGiven">Discount Given</Label>
+                    <Input
+                      id="discountGiven"
+                      type="number"
+                      step="0.01"
+                      value={formData.discountGiven}
+                      onChange={(e) =>
+                        setFormData({ ...formData, discountGiven: e.target.value })
+                      }
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
                     <Label htmlFor="paymentDate">Payment Date *</Label>
                     <Input
                       id="paymentDate"
@@ -402,6 +421,7 @@ export default function SupplierPaymentsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -425,6 +445,11 @@ export default function SupplierPaymentsPage() {
                     </TableCell>
                     <TableCell className="text-right font-medium text-orange-600">
                       ₹{Number(payment.amount).toLocaleString("en-IN")}
+                    </TableCell>
+                    <TableCell className="text-right text-slate-500">
+                      {Number(payment.discountGiven) > 0
+                        ? `₹${Number(payment.discountGiven).toLocaleString("en-IN")}`
+                        : "-"}
                     </TableCell>
                     <TableCell>
                       <Button

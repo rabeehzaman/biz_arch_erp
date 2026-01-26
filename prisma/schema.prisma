@@ -470,11 +470,12 @@ model Payment {
   invoiceId     String?
   invoice       Invoice?      @relation(fields: [invoiceId], references: [id])
 
-  amount        Decimal       @db.Decimal(12, 2)
-  paymentDate   DateTime      @default(now())
-  paymentMethod PaymentMethod @default(CASH)
-  reference     String?       // Check number, transaction ID, etc.
-  notes         String?
+  amount           Decimal       @db.Decimal(12, 2)
+  discountReceived Decimal       @default(0) @db.Decimal(12, 2)
+  paymentDate      DateTime      @default(now())
+  paymentMethod    PaymentMethod @default(CASH)
+  reference        String?       // Check number, transaction ID, etc.
+  notes            String?
 
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -511,6 +512,7 @@ model SupplierPayment {
   purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
 
   amount            Decimal         @db.Decimal(12, 2)
+  discountGiven     Decimal         @default(0) @db.Decimal(12, 2)
   paymentDate       DateTime        @default(now())
   paymentMethod     PaymentMethod   @default(CASH)
   reference         String?

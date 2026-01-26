@@ -67,11 +67,12 @@ export async function DELETE(
 
     // Use transaction to reverse all effects
     await prisma.$transaction(async (tx) => {
-      // Reverse customer balance (increment since payment was a decrement)
+      // Reverse customer balance (increment by amount + discount since both were decremented)
+      const totalSettlement = Number(payment.amount) + Number(payment.discountReceived);
       await tx.customer.update({
         where: { id: payment.customerId },
         data: {
-          balance: { increment: payment.amount },
+          balance: { increment: totalSettlement },
         },
       });
 

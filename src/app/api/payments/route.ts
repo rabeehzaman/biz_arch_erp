@@ -47,7 +47,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerId, invoiceId, amount, paymentDate, paymentMethod, reference, notes } = body;
+    const { customerId, invoiceId, amount, paymentDate, paymentMethod, reference, notes, discountReceived: rawDiscount } = body;
+    const discountReceived = rawDiscount || 0;
 
     if (!customerId || !amount) {
       return NextResponse.json(
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
           customerId,
           invoiceId: invoiceId || null,
           amount,
+          discountReceived,
           paymentDate: parsedPaymentDate,
           paymentMethod: paymentMethod || "CASH",
           reference: reference || null,
@@ -75,11 +77,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Update customer balance
+      // Total settlement = cash received + discount
+      const totalSettlement = Number(amount) + Number(discountReceived);
+
+      // Update customer balance (amount + discount settles the balance)
       await tx.customer.update({
         where: { id: customerId },
         data: {
-          balance: { decrement: amount },
+          balance: { decrement: totalSettlement },
         },
       });
 
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (invoice) {
-          const applyAmount = Math.min(amount, Number(invoice.balanceDue));
+          const applyAmount = Math.min(totalSettlement, Number(invoice.balanceDue));
           const newAmountPaid = Number(invoice.amountPaid) + applyAmount;
           const newBalanceDue = Number(invoice.total) - newAmountPaid;
 
@@ -124,7 +129,7 @@ export async function POST(request: NextRequest) {
           select: { id: true, total: true, amountPaid: true, balanceDue: true },
         });
 
-        let remainingAmount = amount;
+        let remainingAmount = totalSettlement;
 
         for (const invoice of unpaidInvoices) {
           if (remainingAmount <= 0) break;
@@ -161,7 +166,7 @@ export async function POST(request: NextRequest) {
           customerId,
           transactionType: "PAYMENT",
           transactionDate: parsedPaymentDate,
-          amount: -amount, // Negative for credit (payment reduces balance)
+          amount: -totalSettlement, // Negative for credit (payment + discount reduces balance)
           description: invoiceId
             ? `Payment ${paymentNumber}`
             : `Payment ${paymentNumber} (Auto-Applied)`,
