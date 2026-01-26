@@ -2,8 +2,12 @@
  * Fix Script: Update product.cost to MRP (pre-discount) from latest purchase invoice
  *
  * Previously, product.cost was being set to the discounted price instead of the
- * original MRP. This script corrects existing products by looking at each product's
- * most recent purchase invoice item and setting product.cost to its unitCost (MRP).
+ * original MRP. This caused forms to auto-populate with the wrong price, and some
+ * users then entered the discounted price directly with 0% discount.
+ *
+ * Strategy:
+ * 1. Find the most recent purchase invoice item WITH a discount > 0 — that has the true MRP
+ * 2. If none found, fall back to the latest invoice's unitCost
  *
  * Run with: npx tsx scripts/fix-product-costs-to-mrp.ts
  */
@@ -12,13 +16,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 async function main() {
-  // Dynamic import so dotenv loads before prisma creates the connection pool
   const { default: prisma } = await import("../src/lib/prisma");
 
-  console.log("Starting fix: Update product.cost to MRP from latest purchase invoice...\n");
+  console.log("Starting fix: Update product.cost to MRP from purchase invoices...\n");
 
   try {
-    // Get all products that have purchase invoice items
     const products = await prisma.product.findMany({
       where: {
         purchaseInvoiceItems: { some: {} },
@@ -27,6 +29,7 @@ async function main() {
         id: true,
         name: true,
         cost: true,
+        price: true,
       },
     });
 
@@ -36,7 +39,25 @@ async function main() {
     let skipped = 0;
 
     for (const product of products) {
-      // Find the most recent purchase invoice item for this product
+      // First: find the most recent invoice WITH a discount — has the true MRP
+      const discountedItem = await prisma.purchaseInvoiceItem.findFirst({
+        where: {
+          productId: product.id,
+          discount: { gt: 0 },
+        },
+        orderBy: {
+          purchaseInvoice: { invoiceDate: "desc" },
+        },
+        select: {
+          unitCost: true,
+          discount: true,
+          purchaseInvoice: {
+            select: { purchaseInvoiceNumber: true },
+          },
+        },
+      });
+
+      // Fallback: latest invoice regardless of discount
       const latestItem = await prisma.purchaseInvoiceItem.findFirst({
         where: { productId: product.id },
         orderBy: {
@@ -46,29 +67,31 @@ async function main() {
           unitCost: true,
           discount: true,
           purchaseInvoice: {
-            select: { purchaseInvoiceNumber: true, invoiceDate: true },
+            select: { purchaseInvoiceNumber: true },
           },
         },
       });
 
-      if (!latestItem) {
+      // Prefer the discounted item's unitCost (true MRP), fall back to latest
+      const sourceItem = discountedItem || latestItem;
+      if (!sourceItem) {
         skipped++;
         continue;
       }
 
-      const mrp = Number(latestItem.unitCost);
+      const mrp = Number(sourceItem.unitCost);
       const currentCost = Number(product.cost);
 
-      if (currentCost === mrp) {
+      if (Math.abs(currentCost - mrp) < 0.01) {
         skipped++;
         continue;
       }
 
-      console.log(
-        `${product.name}: cost ${currentCost} -> ${mrp} ` +
-        `(from invoice ${latestItem.purchaseInvoice.purchaseInvoiceNumber}, ` +
-        `discount: ${latestItem.discount}%)`
-      );
+      const source = discountedItem
+        ? `discounted invoice ${sourceItem.purchaseInvoice.purchaseInvoiceNumber} (discount: ${sourceItem.discount}%)`
+        : `latest invoice ${sourceItem.purchaseInvoice.purchaseInvoiceNumber}`;
+
+      console.log(`${product.name}: cost ${currentCost} -> ${mrp} (from ${source})`);
 
       await prisma.product.update({
         where: { id: product.id },

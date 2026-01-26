@@ -2,7 +2,59 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-// GET: Check which products have discounted costs
+/**
+ * Find the true MRP for a product by preferring invoices with discounts.
+ * Invoices entered with a discount have the real MRP as unitCost.
+ * Invoices with 0% discount may have a corrupted (already-discounted) unitCost.
+ */
+async function findProductMRP(productId: string) {
+  // First: most recent invoice WITH a discount — has the true MRP
+  const discountedItem = await prisma.purchaseInvoiceItem.findFirst({
+    where: {
+      productId,
+      discount: { gt: 0 },
+    },
+    orderBy: { purchaseInvoice: { invoiceDate: "desc" } },
+    select: {
+      unitCost: true,
+      discount: true,
+      purchaseInvoice: { select: { purchaseInvoiceNumber: true } },
+    },
+  });
+
+  if (discountedItem) {
+    return {
+      mrp: Number(discountedItem.unitCost),
+      discount: Number(discountedItem.discount),
+      invoice: discountedItem.purchaseInvoice.purchaseInvoiceNumber,
+      source: "discounted" as const,
+    };
+  }
+
+  // Fallback: latest invoice (no discounts found)
+  const latestItem = await prisma.purchaseInvoiceItem.findFirst({
+    where: { productId },
+    orderBy: { purchaseInvoice: { invoiceDate: "desc" } },
+    select: {
+      unitCost: true,
+      discount: true,
+      purchaseInvoice: { select: { purchaseInvoiceNumber: true } },
+    },
+  });
+
+  if (latestItem) {
+    return {
+      mrp: Number(latestItem.unitCost),
+      discount: Number(latestItem.discount),
+      invoice: latestItem.purchaseInvoice.purchaseInvoiceNumber,
+      source: "latest" as const,
+    };
+  }
+
+  return null;
+}
+
+// GET: Check which products have incorrect costs
 export async function GET() {
   try {
     const session = await auth();
@@ -17,11 +69,7 @@ export async function GET() {
       where: {
         purchaseInvoiceItems: { some: {} },
       },
-      select: {
-        id: true,
-        name: true,
-        cost: true,
-      },
+      select: { id: true, name: true, cost: true },
       orderBy: { name: "asc" },
     });
 
@@ -35,31 +83,18 @@ export async function GET() {
     }> = [];
 
     for (const product of products) {
-      const latestItem = await prisma.purchaseInvoiceItem.findFirst({
-        where: { productId: product.id },
-        orderBy: { purchaseInvoice: { invoiceDate: "desc" } },
-        select: {
-          unitCost: true,
-          discount: true,
-          purchaseInvoice: {
-            select: { purchaseInvoiceNumber: true },
-          },
-        },
-      });
+      const result = await findProductMRP(product.id);
+      if (!result) continue;
 
-      if (!latestItem) continue;
-
-      const mrp = Number(latestItem.unitCost);
       const currentCost = Number(product.cost);
-
-      if (Math.abs(currentCost - mrp) > 0.01) {
+      if (Math.abs(currentCost - result.mrp) > 0.01) {
         issues.push({
           id: product.id,
           name: product.name,
           currentCost,
-          correctCost: mrp,
-          latestInvoice: latestItem.purchaseInvoice.purchaseInvoiceNumber,
-          discount: Number(latestItem.discount),
+          correctCost: result.mrp,
+          latestInvoice: result.invoice,
+          discount: result.discount,
         });
       }
     }
@@ -69,7 +104,7 @@ export async function GET() {
       productsWithIssues: issues.length,
       issues,
       message: issues.length > 0
-        ? `Found ${issues.length} product(s) with discounted cost instead of MRP.`
+        ? `Found ${issues.length} product(s) with incorrect cost.`
         : "All product costs are correct.",
     });
   } catch (error) {
@@ -95,11 +130,7 @@ export async function POST(request: NextRequest) {
       where: {
         purchaseInvoiceItems: { some: {} },
       },
-      select: {
-        id: true,
-        name: true,
-        cost: true,
-      },
+      select: { id: true, name: true, cost: true },
     });
 
     const fixes: Array<{
@@ -111,35 +142,25 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     for (const product of products) {
-      const latestItem = await prisma.purchaseInvoiceItem.findFirst({
-        where: { productId: product.id },
-        orderBy: { purchaseInvoice: { invoiceDate: "desc" } },
-        select: {
-          unitCost: true,
-          discount: true,
-        },
-      });
+      const result = await findProductMRP(product.id);
+      if (!result) continue;
 
-      if (!latestItem) continue;
-
-      const mrp = Number(latestItem.unitCost);
       const currentCost = Number(product.cost);
-
-      if (Math.abs(currentCost - mrp) > 0.01) {
+      if (Math.abs(currentCost - result.mrp) > 0.01) {
         await prisma.product.update({
           where: { id: product.id },
-          data: { cost: mrp },
+          data: { cost: result.mrp },
         });
 
         fixes.push({
           id: product.id,
           name: product.name,
           oldCost: currentCost,
-          newCost: mrp,
-          discount: Number(latestItem.discount),
+          newCost: result.mrp,
+          discount: result.discount,
         });
 
-        console.log(`[Fix Product Costs] ${product.name}: ${currentCost} -> ${mrp}`);
+        console.log(`[Fix Product Costs] ${product.name}: ${currentCost} -> ${result.mrp}`);
       }
     }
 
