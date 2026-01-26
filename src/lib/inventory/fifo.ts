@@ -303,7 +303,8 @@ export async function createStockLotFromPurchase(
   quantity: Decimal | number,
   unitCost: Decimal | number,
   lotDate: Date,
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  originalUnitCost?: Decimal | number
 ): Promise<void> {
   const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
   const cost = unitCost instanceof Decimal ? unitCost : new Decimal(unitCost);
@@ -321,10 +322,14 @@ export async function createStockLotFromPurchase(
     },
   });
 
-  // Auto-update product.cost to latest purchase price (fallback cost)
+  // Auto-update product.cost to original MRP (pre-discount) for form auto-population
+  const productCost = originalUnitCost != null
+    ? (originalUnitCost instanceof Decimal ? originalUnitCost : new Decimal(originalUnitCost))
+    : cost;
+
   await tx.product.update({
     where: { id: productId },
-    data: { cost },
+    data: { cost: productCost },
   });
 }
 

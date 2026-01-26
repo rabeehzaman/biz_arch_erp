@@ -217,10 +217,10 @@ export async function PUT(
               },
             });
 
-            // Auto-update product.cost to latest purchase price (fallback cost)
+            // Auto-update product.cost to original MRP (pre-discount) for form auto-population
             await tx.product.update({
               where: { id: item.productId },
-              data: { cost: netUnitCost },
+              data: { cost: Number(item.unitCost) },
             });
           }
         }

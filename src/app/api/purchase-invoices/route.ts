@@ -144,7 +144,8 @@ export async function POST(request: NextRequest) {
           item.quantity,
           netUnitCost,
           purchaseDate,
-          tx
+          tx,
+          item.unitCost
         );
       }
 
