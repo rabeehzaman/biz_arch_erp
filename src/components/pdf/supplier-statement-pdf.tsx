@@ -27,19 +27,19 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginBottom: 20,
   },
-  customerInfo: {
+  supplierInfo: {
     marginBottom: 20,
     padding: 15,
     backgroundColor: "#f8fafc",
     borderRadius: 4,
   },
-  customerName: {
+  supplierName: {
     fontSize: 14,
     fontWeight: "bold",
     marginBottom: 5,
     color: "#1e293b",
   },
-  customerDetail: {
+  supplierDetail: {
     fontSize: 10,
     color: "#64748b",
     marginBottom: 2,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
 interface StatementTransaction {
   id: string;
   date: string;
-  type: "OPENING_BALANCE" | "INVOICE" | "PAYMENT" | "ADJUSTMENT";
+  type: "OPENING_BALANCE" | "PURCHASE_INVOICE" | "PAYMENT" | "DEBIT_NOTE" | "ADJUSTMENT";
   reference: string;
   description: string;
   debit: number;
@@ -172,8 +172,8 @@ interface StatementTransaction {
   runningBalance: number;
 }
 
-interface CustomerStatementData {
-  customer: {
+interface SupplierStatementData {
+  supplier: {
     id: string;
     name: string;
     email: string | null;
@@ -189,34 +189,34 @@ interface CustomerStatementData {
 }
 
 interface Props {
-  statement: CustomerStatementData;
+  statement: SupplierStatementData;
 }
 
 const formatCurrency = (amount: number): string => {
   return amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-export function CustomerStatementPDF({ statement }: Props) {
+export function SupplierStatementPDF({ statement }: Props) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.title}>Customer Statement</Text>
+          <Text style={styles.title}>Supplier Statement</Text>
           <Text style={styles.subtitle}>
             Generated on {format(new Date(statement.generatedAt), "dd MMM yyyy, hh:mm a")}
           </Text>
         </View>
 
-        <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{statement.customer.name}</Text>
-          {statement.customer.email && (
-            <Text style={styles.customerDetail}>{statement.customer.email}</Text>
+        <View style={styles.supplierInfo}>
+          <Text style={styles.supplierName}>{statement.supplier.name}</Text>
+          {statement.supplier.email && (
+            <Text style={styles.supplierDetail}>{statement.supplier.email}</Text>
           )}
-          {statement.customer.phone && (
-            <Text style={styles.customerDetail}>{statement.customer.phone}</Text>
+          {statement.supplier.phone && (
+            <Text style={styles.supplierDetail}>{statement.supplier.phone}</Text>
           )}
-          {statement.customer.address && (
-            <Text style={styles.customerDetail}>{statement.customer.address}</Text>
+          {statement.supplier.address && (
+            <Text style={styles.supplierDetail}>{statement.supplier.address}</Text>
           )}
         </View>
 
@@ -228,13 +228,13 @@ export function CustomerStatementPDF({ statement }: Props) {
             </Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>TOTAL RECEIVABLE</Text>
+            <Text style={styles.summaryLabel}>TOTAL PAYABLE</Text>
             <Text style={styles.summaryValuePositive}>
               {formatCurrency(statement.totalDebits)}
             </Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>TOTAL RECEIVED</Text>
+            <Text style={styles.summaryLabel}>TOTAL PAID</Text>
             <Text style={styles.summaryValueNegative}>
               {formatCurrency(statement.totalCredits)}
             </Text>
@@ -253,8 +253,8 @@ export function CustomerStatementPDF({ statement }: Props) {
             <Text style={[styles.colDate, styles.headerText]}>Date</Text>
             <Text style={[styles.colRef, styles.headerText]}>Reference</Text>
             <Text style={[styles.colDescription, styles.headerText]}>Description</Text>
-            <Text style={[styles.colDebit, styles.headerText]}>Receivable</Text>
-            <Text style={[styles.colCredit, styles.headerText]}>Received</Text>
+            <Text style={[styles.colDebit, styles.headerText]}>Payable</Text>
+            <Text style={[styles.colCredit, styles.headerText]}>Paid</Text>
             <Text style={[styles.colBalance, styles.headerText]}>Balance</Text>
           </View>
 

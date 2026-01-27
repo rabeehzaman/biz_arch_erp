@@ -22,7 +22,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 interface StatementTransaction {
   id: string;
   date: string;
-  type: "OPENING_BALANCE" | "INVOICE" | "PAYMENT" | "CREDIT_NOTE" | "ADJUSTMENT";
+  type: "OPENING_BALANCE" | "PURCHASE_INVOICE" | "PAYMENT" | "DEBIT_NOTE" | "ADJUSTMENT";
   reference: string;
   description: string;
   debit: number;
@@ -30,8 +30,8 @@ interface StatementTransaction {
   runningBalance: number;
 }
 
-interface CustomerStatement {
-  customer: {
+interface SupplierStatement {
+  supplier: {
     id: string;
     name: string;
     email: string | null;
@@ -48,27 +48,27 @@ interface CustomerStatement {
 
 const typeLabels: Record<string, string> = {
   OPENING_BALANCE: "Opening Balance",
-  INVOICE: "Invoice",
+  PURCHASE_INVOICE: "Purchase Invoice",
   PAYMENT: "Payment",
-  CREDIT_NOTE: "Credit Note",
+  DEBIT_NOTE: "Debit Note",
   ADJUSTMENT: "Adjustment",
 };
 
 const typeBadgeVariant: Record<string, "default" | "secondary" | "outline"> = {
   OPENING_BALANCE: "secondary",
-  INVOICE: "default",
+  PURCHASE_INVOICE: "default",
   PAYMENT: "outline",
-  CREDIT_NOTE: "outline",
+  DEBIT_NOTE: "outline",
   ADJUSTMENT: "secondary",
 };
 
-export default function CustomerStatementPage({
+export default function SupplierStatementPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [statement, setStatement] = useState<CustomerStatement | null>(null);
+  const [statement, setStatement] = useState<SupplierStatement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [fromDate, setFromDate] = useState("");
@@ -81,7 +81,7 @@ export default function CustomerStatementPage({
   const fetchStatement = async () => {
     setIsLoading(true);
     try {
-      let url = `/api/customers/${id}/statement`;
+      let url = `/api/suppliers/${id}/statement`;
       const params = new URLSearchParams();
       if (fromDate) params.append("from", fromDate);
       if (toDate) params.append("to", toDate);
@@ -101,7 +101,7 @@ export default function CustomerStatementPage({
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     try {
-      let url = `/api/customers/${id}/statement/pdf`;
+      let url = `/api/suppliers/${id}/statement/pdf`;
       const params = new URLSearchParams();
       if (fromDate) params.append("from", fromDate);
       if (toDate) params.append("to", toDate);
@@ -114,7 +114,7 @@ export default function CustomerStatementPage({
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = `statement-${statement?.customer.name.replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      link.download = `statement-${statement?.supplier.name.replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -141,14 +141,14 @@ export default function CustomerStatementPage({
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/customers">
+          <Link href="/suppliers">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              Customer Statement
+              Supplier Statement
             </h2>
             <p className="text-slate-500">Loading statement...</p>
           </div>
@@ -166,14 +166,14 @@ export default function CustomerStatementPage({
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/customers">
+          <Link href="/suppliers">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              Customer Statement
+              Supplier Statement
             </h2>
             <p className="text-slate-500">Statement not found</p>
           </div>
@@ -186,16 +186,16 @@ export default function CustomerStatementPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/customers">
+          <Link href="/suppliers">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              Customer Statement
+              Supplier Statement
             </h2>
-            <p className="text-slate-500">{statement.customer.name}</p>
+            <p className="text-slate-500">{statement.supplier.name}</p>
           </div>
         </div>
         <Button onClick={handleDownloadPDF} disabled={isDownloading}>
@@ -226,7 +226,7 @@ export default function CustomerStatementPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">
-              Total Receivable
+              Total Payable
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -238,7 +238,7 @@ export default function CustomerStatementPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">
-              Total Received
+              Total Paid
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -311,7 +311,7 @@ export default function CustomerStatementPage({
               <p className="text-sm text-slate-500">
                 {fromDate || toDate
                   ? "Try adjusting the date filter"
-                  : "This customer has no transactions yet"}
+                  : "This supplier has no transactions yet"}
               </p>
             </div>
           ) : (
@@ -322,8 +322,8 @@ export default function CustomerStatementPage({
                   <TableHead>Type</TableHead>
                   <TableHead>Reference</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Receivable</TableHead>
-                  <TableHead className="text-right">Received</TableHead>
+                  <TableHead className="text-right">Payable</TableHead>
+                  <TableHead className="text-right">Paid</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                 </TableRow>
               </TableHeader>

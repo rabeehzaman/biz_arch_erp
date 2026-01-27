@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Truck, Search } from "lucide-react";
+import Link from "next/link";
 import { TableSkeleton } from "@/components/table-skeleton";
 
 interface Supplier {
@@ -194,7 +195,12 @@ export default function SupplierBalancesPage() {
                   {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id}>
                       <TableCell className="font-medium">
-                        {supplier.name}
+                        <Link
+                          href={`/suppliers/${supplier.id}/statement`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {supplier.name}
+                        </Link>
                       </TableCell>
                       <TableCell className="text-slate-500">
                         {supplier.email || "-"}
