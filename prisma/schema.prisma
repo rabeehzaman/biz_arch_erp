@@ -635,7 +635,7 @@ model CostAuditLog {
   product           Product  @relation(fields: [productId], references: [id])
 
   invoiceItemId     String
-  invoiceItem       InvoiceItem @relation(fields: [invoiceItemId], references: [id])
+  invoiceItem       InvoiceItem @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
 
   oldCOGS           Decimal  @db.Decimal(12, 2)
   newCOGS           Decimal  @db.Decimal(12, 2)
