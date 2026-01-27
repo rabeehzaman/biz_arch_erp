@@ -389,9 +389,23 @@ export async function DELETE(
         }
       }
 
-      // Delete CustomerTransaction record for invoice
-      await tx.customerTransaction.deleteMany({
+      // Find payments linked to this invoice
+      const linkedPayments = await tx.payment.findMany({
         where: { invoiceId: id },
+        select: { id: true },
+      });
+      const paymentIds = linkedPayments.map((p) => p.id);
+
+      // Delete CustomerTransaction records for invoice and its payments
+      await tx.customerTransaction.deleteMany({
+        where: {
+          OR: [
+            { invoiceId: id },
+            ...(paymentIds.length > 0
+              ? [{ paymentId: { in: paymentIds } }]
+              : []),
+          ],
+        },
       });
 
       // Delete payment allocations for this invoice
@@ -399,11 +413,12 @@ export async function DELETE(
         where: { invoiceId: id },
       });
 
-      // Unlink payments that reference this invoice
-      await tx.payment.updateMany({
-        where: { invoiceId: id },
-        data: { invoiceId: null },
-      });
+      // Delete payments linked to this invoice
+      if (paymentIds.length > 0) {
+        await tx.payment.deleteMany({
+          where: { id: { in: paymentIds } },
+        });
+      }
 
       // Unlink credit notes that reference this invoice
       await tx.creditNote.updateMany({
