@@ -394,6 +394,29 @@ export async function DELETE(
         where: { invoiceId: id },
       });
 
+      // Delete payment allocations for this invoice
+      await tx.paymentAllocation.deleteMany({
+        where: { invoiceId: id },
+      });
+
+      // Unlink payments that reference this invoice
+      await tx.payment.updateMany({
+        where: { invoiceId: id },
+        data: { invoiceId: null },
+      });
+
+      // Unlink credit notes that reference this invoice
+      await tx.creditNote.updateMany({
+        where: { invoiceId: id },
+        data: { invoiceId: null },
+      });
+
+      // Unlink quotation that was converted to this invoice
+      await tx.quotation.updateMany({
+        where: { convertedInvoiceId: id },
+        data: { convertedInvoiceId: null, convertedAt: null },
+      });
+
       // Delete invoice (cascade will delete items and their consumptions)
       await tx.invoice.delete({
         where: { id },
