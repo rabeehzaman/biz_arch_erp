@@ -334,7 +334,7 @@ export default function NewQuotationPage() {
                           type="number"
                           min="1"
                           step="0.01"
-                          value={item.quantity}
+                          value={item.quantity || ""}
                           onChange={(e) =>
                             updateLineItem(
                               item.id,

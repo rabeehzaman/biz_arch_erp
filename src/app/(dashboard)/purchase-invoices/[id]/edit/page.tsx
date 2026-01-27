@@ -384,7 +384,7 @@ export default function EditPurchaseInvoicePage({
                         type="number"
                         min="0.01"
                         step="0.01"
-                        value={item.quantity}
+                        value={item.quantity || ""}
                         onChange={(e) =>
                           updateLineItem(
                             item.id,
