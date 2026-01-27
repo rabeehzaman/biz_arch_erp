@@ -243,7 +243,8 @@ interface InvoicePDFProps {
     total: number;
   };
   type: "SALES" | "PURCHASE";
-  balanceInfo: {
+  title?: string;
+  balanceInfo?: {
     oldBalance: number;
     sales: number;
     balance: number;
@@ -257,7 +258,7 @@ const formatCurrency = (amount: number): string => {
   });
 };
 
-export function InvoicePDF({ invoice, type, balanceInfo }: InvoicePDFProps) {
+export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: InvoicePDFProps) {
   const DISPLAY_ROWS = 12;
   const emptyRowsCount = Math.max(0, DISPLAY_ROWS - invoice.items.length);
   const paddedItems = [
@@ -305,7 +306,7 @@ export function InvoicePDF({ invoice, type, balanceInfo }: InvoicePDFProps) {
             </Text>
           </View>
           <View style={styles.headerCenter}>
-            <Text style={styles.estimateTitle}>ESTIMATE</Text>
+            <Text style={styles.estimateTitle}>{title}</Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.toLabel}>To</Text>
@@ -384,28 +385,30 @@ export function InvoicePDF({ invoice, type, balanceInfo }: InvoicePDFProps) {
             <Text style={styles.amountInWords}>
               ( {numberToWords(netAmount)} )
             </Text>
-            <View style={styles.balanceSection}>
-              <View style={styles.balanceRow}>
-                <Text style={styles.balanceLabel}>Old Balance</Text>
-                <Text style={styles.balanceValue}>
-                  : {formatCurrency(balanceInfo.oldBalance)}
-                </Text>
+            {balanceInfo && (
+              <View style={styles.balanceSection}>
+                <View style={styles.balanceRow}>
+                  <Text style={styles.balanceLabel}>Old Balance</Text>
+                  <Text style={styles.balanceValue}>
+                    : {formatCurrency(balanceInfo.oldBalance)}
+                  </Text>
+                </View>
+                <View style={styles.balanceRow}>
+                  <Text style={styles.balanceLabel}>Sales</Text>
+                  <Text style={styles.balanceValue}>
+                    : {formatCurrency(balanceInfo.sales)}
+                  </Text>
+                </View>
+                <View style={styles.balanceRow}>
+                  <Text style={[styles.balanceLabel, styles.balanceBold]}>
+                    Balance
+                  </Text>
+                  <Text style={[styles.balanceValue, styles.balanceBold]}>
+                    : {formatCurrency(balanceInfo.balance)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.balanceRow}>
-                <Text style={styles.balanceLabel}>Sales</Text>
-                <Text style={styles.balanceValue}>
-                  : {formatCurrency(balanceInfo.sales)}
-                </Text>
-              </View>
-              <View style={styles.balanceRow}>
-                <Text style={[styles.balanceLabel, styles.balanceBold]}>
-                  Balance
-                </Text>
-                <Text style={[styles.balanceValue, styles.balanceBold]}>
-                  : {formatCurrency(balanceInfo.balance)}
-                </Text>
-              </View>
-            </View>
+            )}
             <Text style={styles.eoeText}>E & O.E</Text>
           </View>
 

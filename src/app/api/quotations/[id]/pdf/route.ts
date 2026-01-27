@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { QuotationPDF } from "@/components/pdf/quotation-pdf";
+import { InvoicePDF } from "@/components/pdf/invoice-pdf";
 import { createElement } from "react";
 import { format } from "date-fns";
 
@@ -48,11 +48,10 @@ export async function GET(
       product: item.product,
     }));
 
-    // Prepare quotation data for PDF
-    const quotationData = {
-      quotationNumber: quotation.quotationNumber,
+    // Prepare invoice-shaped data for PDF
+    const invoiceData = {
+      invoiceNumber: quotation.quotationNumber,
       issueDate: quotation.issueDate,
-      validUntil: quotation.validUntil,
       customer: {
         name: quotation.customer.name,
         address: quotation.customer.address,
@@ -68,7 +67,11 @@ export async function GET(
     // Generate PDF
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pdfBuffer = await renderToBuffer(
-      createElement(QuotationPDF, { quotation: quotationData }) as any
+      createElement(InvoicePDF, {
+        invoice: invoiceData,
+        type: "SALES",
+        title: "QUOTATION",
+      }) as any
     );
 
     // Return PDF as response
