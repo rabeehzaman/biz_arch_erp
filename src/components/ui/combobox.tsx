@@ -44,6 +44,7 @@ export function Combobox<T>({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const justClosedRef = React.useRef(false);
 
   // Ensure items is always an array
   const safeItems = Array.isArray(items) ? items : [];
@@ -113,6 +114,7 @@ export function Combobox<T>({
 
   const handleSelect = (selectedValue: string) => {
     onValueChange(selectedValue);
+    justClosedRef.current = true;
     setOpen(false);
     setSearchQuery("");
     // Call onSelect callback after a microtask to ensure state updates are applied
@@ -138,6 +140,10 @@ export function Combobox<T>({
           aria-required={required}
           disabled={disabled}
           onFocus={() => {
+            if (justClosedRef.current) {
+              justClosedRef.current = false;
+              return;
+            }
             if (autoOpenOnFocus && !disabled) {
               setOpen(true);
             }
