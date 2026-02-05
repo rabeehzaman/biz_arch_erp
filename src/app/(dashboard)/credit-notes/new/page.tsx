@@ -43,7 +43,6 @@ export default function NewCreditNotePage() {
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [taxRate, setTaxRate] = useState(18);
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<LineItem[]>([
@@ -144,12 +143,8 @@ export default function NewCreditNotePage() {
     }, 0);
   };
 
-  const calculateTax = () => {
-    return (calculateSubtotal() * taxRate) / 100;
-  };
-
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
+    return calculateSubtotal();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,7 +178,7 @@ export default function NewCreditNotePage() {
             unitPrice: item.unitPrice,
             discount: item.discount,
           })),
-          taxRate,
+          taxRate: 0,
           reason: reason || null,
           notes: notes || null,
         }),
@@ -376,19 +371,6 @@ export default function NewCreditNotePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="taxRate">Tax Rate (%)</Label>
-              <Input
-                id="taxRate"
-                type="number"
-                value={taxRate}
-                onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                min="0"
-                max="100"
-                step="0.01"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"
@@ -407,15 +389,7 @@ export default function NewCreditNotePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span>₹{calculateSubtotal().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Tax ({taxRate}%):</span>
-                <span>₹{calculateTax().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
+              <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
                 <span>₹{calculateTotal().toFixed(2)}</span>
               </div>

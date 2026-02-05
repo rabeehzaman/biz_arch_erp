@@ -196,55 +196,34 @@ export async function PUT(
         },
       });
 
-      // Update customer balance if changed
-      if (balanceChange !== 0) {
+      // Update customer balance
+      const customerChanged = customerId !== existingInvoice.customerId;
+
+      if (customerChanged) {
+        // Remove old invoice impact from old customer
+        await tx.customer.update({
+          where: { id: existingInvoice.customerId },
+          data: { balance: { decrement: oldBalanceDue } },
+        });
+        // Add new invoice impact to new customer
         await tx.customer.update({
           where: { id: customerId },
-          data: {
-            balance: { increment: balanceChange },
-          },
+          data: { balance: { increment: newBalanceDue } },
         });
-
-        // Update CustomerTransaction record for invoice
+        // Update and move CustomerTransaction to new customer
+        await tx.customerTransaction.updateMany({
+          where: { invoiceId: id },
+          data: { customerId, amount: total },
+        });
+      } else if (balanceChange !== 0) {
+        // Same customer, total changed — apply delta
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { balance: { increment: balanceChange } },
+        });
         await tx.customerTransaction.updateMany({
           where: { invoiceId: id },
           data: { amount: total },
-        });
-
-        // If customer changed, also update old customer's balance
-        if (customerId !== existingInvoice.customerId) {
-          await tx.customer.update({
-            where: { id: existingInvoice.customerId },
-            data: {
-              balance: { decrement: oldBalanceDue },
-            },
-          });
-
-          // Move CustomerTransaction to new customer
-          await tx.customerTransaction.updateMany({
-            where: { invoiceId: id },
-            data: { customerId },
-          });
-        }
-      } else if (customerId !== existingInvoice.customerId) {
-        // Customer changed but total didn't - transfer balance
-        await tx.customer.update({
-          where: { id: existingInvoice.customerId },
-          data: {
-            balance: { decrement: oldBalanceDue },
-          },
-        });
-        await tx.customer.update({
-          where: { id: customerId },
-          data: {
-            balance: { increment: newBalanceDue },
-          },
-        });
-
-        // Move CustomerTransaction to new customer
-        await tx.customerTransaction.updateMany({
-          where: { invoiceId: id },
-          data: { customerId },
         });
       }
 

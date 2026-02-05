@@ -142,54 +142,33 @@ export async function PUT(
         });
 
         // Update supplier balance
-        if (balanceChange !== 0) {
+        const supplierChanged = newSupplierId !== existingInvoice.supplierId;
+
+        if (supplierChanged) {
+          // Remove old invoice impact from old supplier
+          await tx.supplier.update({
+            where: { id: existingInvoice.supplierId },
+            data: { balance: { decrement: oldBalanceDue } },
+          });
+          // Add new invoice impact to new supplier
           await tx.supplier.update({
             where: { id: newSupplierId },
-            data: {
-              balance: { increment: balanceChange },
-            },
+            data: { balance: { increment: newBalanceDue } },
           });
-
-          // Update SupplierTransaction record for purchase invoice
+          // Update and move SupplierTransaction to new supplier
+          await tx.supplierTransaction.updateMany({
+            where: { purchaseInvoiceId: id },
+            data: { supplierId: newSupplierId, amount: total },
+          });
+        } else if (balanceChange !== 0) {
+          // Same supplier, total changed — apply delta
+          await tx.supplier.update({
+            where: { id: newSupplierId },
+            data: { balance: { increment: balanceChange } },
+          });
           await tx.supplierTransaction.updateMany({
             where: { purchaseInvoiceId: id },
             data: { amount: total },
-          });
-
-          // If supplier changed, update old supplier's balance
-          if (newSupplierId !== existingInvoice.supplierId) {
-            await tx.supplier.update({
-              where: { id: existingInvoice.supplierId },
-              data: {
-                balance: { decrement: oldBalanceDue },
-              },
-            });
-
-            // Move SupplierTransaction to new supplier
-            await tx.supplierTransaction.updateMany({
-              where: { purchaseInvoiceId: id },
-              data: { supplierId: newSupplierId },
-            });
-          }
-        } else if (newSupplierId !== existingInvoice.supplierId) {
-          // Supplier changed but total didn't - transfer balance
-          await tx.supplier.update({
-            where: { id: existingInvoice.supplierId },
-            data: {
-              balance: { decrement: oldBalanceDue },
-            },
-          });
-          await tx.supplier.update({
-            where: { id: newSupplierId },
-            data: {
-              balance: { increment: newBalanceDue },
-            },
-          });
-
-          // Move SupplierTransaction to new supplier
-          await tx.supplierTransaction.updateMany({
-            where: { purchaseInvoiceId: id },
-            data: { supplierId: newSupplierId },
           });
         }
 

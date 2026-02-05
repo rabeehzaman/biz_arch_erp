@@ -31,8 +31,6 @@ interface CreditNote {
   } | null;
   issueDate: string;
   subtotal: number;
-  taxRate: number;
-  taxAmount: number;
   total: number;
   reason: string | null;
   notes: string | null;
@@ -255,15 +253,7 @@ export default function CreditNoteDetailPage() {
           </Table>
 
           <div className="mt-4 space-y-2 max-w-xs ml-auto">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal:</span>
-              <span>₹{Number(creditNote.subtotal).toLocaleString("en-IN")}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Tax ({creditNote.taxRate}%):</span>
-              <span>₹{Number(creditNote.taxAmount).toLocaleString("en-IN")}</span>
-            </div>
-            <div className="flex justify-between text-lg font-bold border-t pt-2">
+            <div className="flex justify-between text-lg font-bold">
               <span>Total:</span>
               <span className="text-green-600">
                 ₹{Number(creditNote.total).toLocaleString("en-IN")}
