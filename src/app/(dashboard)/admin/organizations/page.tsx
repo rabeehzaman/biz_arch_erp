@@ -23,7 +23,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Plus, Users, FileText, ShoppingCart, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -49,6 +56,17 @@ export default function OrganizationsPage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [error, setError] = useState("");
+
+  // User creation state
+  const [userOpen, setUserOpen] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [userRole, setUserRole] = useState("admin");
+  const [userOrgId, setUserOrgId] = useState("");
+  const [userError, setUserError] = useState("");
+  const [userSuccess, setUserSuccess] = useState("");
 
   const fetchOrganizations = useCallback(async () => {
     try {
@@ -109,6 +127,48 @@ export default function OrganizationsPage() {
     }
   };
 
+  const handleCreateUser = async () => {
+    setUserError("");
+    setUserSuccess("");
+    if (!userName || !userEmail || !userPassword || !userOrgId) {
+      setUserError("All fields are required");
+      return;
+    }
+
+    setCreatingUser(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: userName,
+          email: userEmail,
+          password: userPassword,
+          role: userRole,
+          organizationId: userOrgId,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUserSuccess(`User "${data.name}" created successfully!`);
+        setUserName("");
+        setUserEmail("");
+        setUserPassword("");
+        setUserRole("admin");
+        setUserOrgId("");
+        fetchOrganizations();
+      } else {
+        const data = await res.json();
+        setUserError(data.error || "Failed to create user");
+      }
+    } catch {
+      setUserError("Failed to create user");
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   if (session?.user?.role !== "superadmin") {
     return null;
   }
@@ -120,6 +180,96 @@ export default function OrganizationsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
           <p className="text-muted-foreground">Manage tenant organizations</p>
         </div>
+        <div className="flex gap-2">
+        <Dialog open={userOpen} onOpenChange={(open) => { setUserOpen(open); if (!open) { setUserError(""); setUserSuccess(""); } }}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <UserPlus className="mr-2 h-4 w-4" />
+              Create User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create User</DialogTitle>
+              <DialogDescription>
+                Create a new user and assign them to an organization.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="userName">Full Name</Label>
+                <Input
+                  id="userName"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="John Doe"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="userEmail">Email</Label>
+                <Input
+                  id="userEmail"
+                  type="email"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  placeholder="john@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="userPassword">Password</Label>
+                <Input
+                  id="userPassword"
+                  type="password"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  placeholder="Enter password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="userRole">Role</Label>
+                <Select value={userRole} onValueChange={setUserRole}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="userOrg">Organization</Label>
+                <Select value={userOrgId} onValueChange={setUserOrgId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select organization" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {userError && (
+                <p className="text-sm text-red-500">{userError}</p>
+              )}
+              {userSuccess && (
+                <p className="text-sm text-green-600">{userSuccess}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUserOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateUser} disabled={creatingUser}>
+                {creatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Create User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -171,6 +321,7 @@ export default function OrganizationsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
