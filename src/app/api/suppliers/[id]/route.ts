@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const supplier = await prisma.supplier.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         purchaseInvoices: {
           orderBy: { createdAt: "desc" },
@@ -43,12 +51,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
     const { name, email, phone, address, city, state, zipCode, country, notes, isActive } = body;
 
     const supplier = await prisma.supplier.update({
-      where: { id },
+      where: { id, organizationId },
       data: {
         name,
         email,
@@ -78,11 +92,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     // Check if supplier has any purchase invoices
     const supplier = await prisma.supplier.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         _count: {
           select: { purchaseInvoices: true },
@@ -90,7 +110,14 @@ export async function DELETE(
       },
     });
 
-    if (supplier && supplier._count.purchaseInvoices > 0) {
+    if (!supplier) {
+      return NextResponse.json(
+        { error: "Supplier not found" },
+        { status: 404 }
+      );
+    }
+
+    if (supplier._count.purchaseInvoices > 0) {
       return NextResponse.json(
         { error: "Cannot delete supplier with existing purchase invoices" },
         { status: 400 }
@@ -98,7 +125,7 @@ export async function DELETE(
     }
 
     await prisma.supplier.delete({
-      where: { id },
+      where: { id, organizationId },
     });
 
     return NextResponse.json({ success: true });

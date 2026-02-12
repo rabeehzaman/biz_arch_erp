@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
+
     const suppliers = await prisma.supplier.findMany({
+      where: { organizationId },
       orderBy: { createdAt: "desc" },
       include: {
         _count: {
@@ -23,6 +33,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const { name, email, phone, address, city, state, zipCode, country, notes } = body;
 
@@ -35,6 +51,7 @@ export async function POST(request: NextRequest) {
 
     const supplier = await prisma.supplier.create({
       data: {
+        organizationId,
         name,
         email: email || null,
         phone: phone || null,

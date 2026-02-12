@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
 
 export async function GET(
@@ -7,9 +9,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const { id } = await params;
     const openingStock = await prisma.openingStock.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         product: {
           include: {
@@ -42,12 +50,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const { id } = await params;
     const body = await request.json();
     const { quantity, unitCost, stockDate, notes } = body;
 
     const existingOpeningStock = await prisma.openingStock.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: { stockLot: true },
     });
 
@@ -66,7 +80,7 @@ export async function PUT(
     await prisma.$transaction(async (tx) => {
       // Update opening stock entry
       await tx.openingStock.update({
-        where: { id },
+        where: { id, organizationId },
         data: {
           quantity: newQuantity,
           unitCost: newUnitCost,
@@ -103,7 +117,7 @@ export async function PUT(
     });
 
     const updatedOpeningStock = await prisma.openingStock.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         product: {
           include: {
@@ -129,10 +143,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const { id } = await params;
 
     const openingStock = await prisma.openingStock.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         stockLot: {
           include: {
@@ -163,7 +183,7 @@ export async function DELETE(
 
       // Delete the opening stock entry
       await tx.openingStock.delete({
-        where: { id },
+        where: { id, organizationId },
       });
 
       // If there were consumptions, recalculate FIFO

@@ -14,15 +14,6 @@ type PrismaTransaction = Omit<
 
 /**
  * Create stock lot from credit note (sales return)
- * Uses original COGS as the new unitCost to maintain accurate inventory valuation
- *
- * @param creditNoteItemId - The credit note item creating this lot
- * @param productId - The product being returned
- * @param quantity - Quantity being returned
- * @param unitCost - Original COGS per unit (from the sale)
- * @param lotDate - Date of the credit note (used for FIFO ordering)
- * @param tx - Prisma transaction client
- * @returns The ID of the created stock lot
  */
 export async function createStockLotFromCreditNote(
   creditNoteItemId: string,
@@ -30,21 +21,25 @@ export async function createStockLotFromCreditNote(
   quantity: Decimal | number,
   unitCost: Decimal | number,
   lotDate: Date,
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  organizationId?: string
 ): Promise<string> {
   const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
   const cost = unitCost instanceof Decimal ? unitCost : new Decimal(unitCost);
 
+  const lotData: any = {
+    productId,
+    sourceType: "CREDIT_NOTE",
+    creditNoteItemId,
+    lotDate,
+    unitCost: cost,
+    initialQuantity: qty,
+    remainingQuantity: qty,
+  };
+  if (organizationId) lotData.organizationId = organizationId;
+
   const stockLot = await tx.stockLot.create({
-    data: {
-      productId,
-      sourceType: "CREDIT_NOTE",
-      creditNoteItemId,
-      lotDate,
-      unitCost: cost,
-      initialQuantity: qty,
-      remainingQuantity: qty,
-    },
+    data: lotData,
   });
 
   return stockLot.id;
@@ -52,22 +47,14 @@ export async function createStockLotFromCreditNote(
 
 /**
  * Consume stock using FIFO for a debit note (purchase return)
- * Similar to invoice consumption but creates DebitNoteLotConsumption records
- *
- * @param productId - The product being returned to supplier
- * @param quantityNeeded - Quantity to return
- * @param debitNoteItemId - The debit note item consuming the stock
- * @param asOfDate - Date of the debit note (for FIFO calculation)
- * @param tx - Prisma transaction client
- * @returns FIFO consumption result with details of which lots were consumed
- * @throws Error if insufficient stock available
  */
 export async function consumeStockForDebitNote(
   productId: string,
   quantityNeeded: Decimal | number,
   debitNoteItemId: string,
   asOfDate: Date,
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  organizationId?: string
 ): Promise<FIFOConsumptionResult> {
   const qty =
     quantityNeeded instanceof Decimal
@@ -87,15 +74,17 @@ export async function consumeStockForDebitNote(
 
   // Create debit note consumption records and update lot quantities
   for (const consumption of result.consumptions) {
-    // Create consumption record
+    const consumptionData: any = {
+      debitNoteItemId,
+      stockLotId: consumption.lotId,
+      quantityReturned: consumption.quantity,
+      unitCost: consumption.unitCost,
+      totalCost: consumption.totalCost,
+    };
+    if (organizationId) consumptionData.organizationId = organizationId;
+
     await tx.debitNoteLotConsumption.create({
-      data: {
-        debitNoteItemId,
-        stockLotId: consumption.lotId,
-        quantityReturned: consumption.quantity,
-        unitCost: consumption.unitCost,
-        totalCost: consumption.totalCost,
-      },
+      data: consumptionData,
     });
 
     // Update lot remaining quantity (reduce stock)
@@ -114,10 +103,6 @@ export async function consumeStockForDebitNote(
 
 /**
  * Restore stock from debit note consumptions (when deleting/editing debit notes)
- * Reverses the stock consumption by adding quantities back to the lots
- *
- * @param debitNoteItemId - The debit note item whose consumptions should be reversed
- * @param tx - Prisma transaction client
  */
 export async function restoreStockFromDebitNote(
   debitNoteItemId: string,
@@ -148,11 +133,6 @@ export async function restoreStockFromDebitNote(
 
 /**
  * Delete stock lot created by credit note (when deleting/editing credit notes)
- * This is simpler than debit note restoration - just delete the lot
- * If the lot has been consumed by sales, those consumptions will be recalculated by FIFO
- *
- * @param creditNoteItemId - The credit note item whose stock lot should be deleted
- * @param tx - Prisma transaction client
  */
 export async function deleteStockLotFromCreditNote(
   creditNoteItemId: string,
@@ -173,11 +153,6 @@ export async function deleteStockLotFromCreditNote(
 
 /**
  * Get the original COGS for an invoice item
- * Used when creating credit notes to determine the cost basis for returned inventory
- *
- * @param invoiceItemId - The invoice item to get COGS from
- * @param tx - Prisma transaction client
- * @returns The original COGS, or null if not found
  */
 export async function getOriginalCOGSForInvoiceItem(
   invoiceItemId: string,
@@ -200,12 +175,6 @@ export async function getOriginalCOGSForInvoiceItem(
 
 /**
  * Calculate available returnable quantity for a product from purchase invoice
- * Checks current stock to ensure we don't try to return more than available
- *
- * @param productId - The product to check
- * @param requestedQuantity - Quantity requested for return
- * @param tx - Prisma transaction client
- * @returns Object with available quantity and whether the requested amount is available
  */
 export async function checkReturnableStock(
   productId: string,

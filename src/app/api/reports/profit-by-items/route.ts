@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId");
     const fromDate = searchParams.get("from");
@@ -10,14 +18,17 @@ export async function GET(request: Request) {
 
     // Build where clause
     const where: {
-      productId?: string;
       invoice?: {
+        organizationId?: string;
         issueDate?: {
           gte?: Date;
           lte?: Date;
         };
       };
-    } = {};
+      productId?: string;
+    } = {
+      invoice: { organizationId },
+    };
 
     if (productId) {
       where.productId = productId;
@@ -25,6 +36,7 @@ export async function GET(request: Request) {
 
     if (fromDate || toDate) {
       where.invoice = {
+        ...where.invoice,
         issueDate: {},
       };
       if (fromDate) {

@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 // Generate supplier payment number: SPAY-YYYYMMDD-XXX
-async function generateSupplierPaymentNumber() {
+async function generateSupplierPaymentNumber(organizationId: string) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `SPAY-${dateStr}`;
 
   const lastPayment = await prisma.supplierPayment.findFirst({
-    where: { paymentNumber: { startsWith: prefix } },
+    where: { paymentNumber: { startsWith: prefix }, organizationId },
     orderBy: { paymentNumber: "desc" },
   });
 
@@ -23,7 +25,15 @@ async function generateSupplierPaymentNumber() {
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
+
     const payments = await prisma.supplierPayment.findMany({
+      where: { organizationId },
       orderBy: { createdAt: "desc" },
       include: {
         supplier: {
@@ -46,6 +56,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
+
     const body = await request.json();
     const { supplierId, purchaseInvoiceId, amount, paymentDate, paymentMethod, reference, notes, discountGiven: rawDiscount } = body;
     const discountGiven = rawDiscount || 0;
@@ -57,7 +74,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const paymentNumber = await generateSupplierPaymentNumber();
+    const paymentNumber = await generateSupplierPaymentNumber(organizationId);
     const parsedPaymentDate = paymentDate ? new Date(paymentDate) : new Date();
 
     // Use transaction to ensure data consistency
@@ -74,6 +91,7 @@ export async function POST(request: NextRequest) {
           paymentMethod: paymentMethod || "CASH",
           reference: reference || null,
           notes: notes || null,
+          organizationId,
         },
       });
 
@@ -82,7 +100,7 @@ export async function POST(request: NextRequest) {
 
       // Update supplier balance (decrease payable by amount + discount)
       await tx.supplier.update({
-        where: { id: supplierId },
+        where: { id: supplierId, organizationId },
         data: {
           balance: { decrement: totalSettlement },
         },
@@ -100,6 +118,7 @@ export async function POST(request: NextRequest) {
             : `Payment ${paymentNumber} (On Account)`,
           supplierPaymentId: newPayment.id,
           runningBalance: 0, // Will be recalculated if needed
+          organizationId,
         },
       });
 
@@ -107,7 +126,7 @@ export async function POST(request: NextRequest) {
       if (purchaseInvoiceId) {
         // Specific invoice selected - apply to that invoice only
         const invoice = await tx.purchaseInvoice.findUnique({
-          where: { id: purchaseInvoiceId },
+          where: { id: purchaseInvoiceId, organizationId },
           select: { id: true, total: true, amountPaid: true, balanceDue: true },
         });
 
@@ -118,7 +137,7 @@ export async function POST(request: NextRequest) {
           const newStatus = newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID";
 
           await tx.purchaseInvoice.update({
-            where: { id: purchaseInvoiceId },
+            where: { id: purchaseInvoiceId, organizationId },
             data: {
               amountPaid: newAmountPaid,
               balanceDue: Math.max(0, newBalanceDue),
@@ -132,6 +151,7 @@ export async function POST(request: NextRequest) {
               supplierPaymentId: newPayment.id,
               purchaseInvoiceId: purchaseInvoiceId,
               amount: applyAmount,
+              organizationId,
             },
           });
         }
@@ -140,6 +160,7 @@ export async function POST(request: NextRequest) {
         const unpaidInvoices = await tx.purchaseInvoice.findMany({
           where: {
             supplierId,
+            organizationId,
             balanceDue: { gt: 0 },
           },
           orderBy: { invoiceDate: "asc" }, // Oldest first (FIFO)
@@ -159,7 +180,7 @@ export async function POST(request: NextRequest) {
 
           // Update invoice
           await tx.purchaseInvoice.update({
-            where: { id: invoice.id },
+            where: { id: invoice.id, organizationId },
             data: {
               amountPaid: newAmountPaid,
               balanceDue: Math.max(0, newBalanceDue),
@@ -173,6 +194,7 @@ export async function POST(request: NextRequest) {
               supplierPaymentId: newPayment.id,
               purchaseInvoiceId: invoice.id,
               amount: applyAmount,
+              organizationId,
             },
           });
 

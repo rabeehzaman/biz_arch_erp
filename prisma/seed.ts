@@ -14,9 +14,35 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("Seeding database...");
 
+  // Create default organization
+  const defaultOrg = await prisma.organization.upsert({
+    where: { slug: "default" },
+    update: {},
+    create: {
+      id: "default-org",
+      name: "Default Organization",
+      slug: "default",
+    },
+  });
+  console.log("Created organization:", defaultOrg.name);
+
+  // Create superadmin user
+  const superadminPassword = await hash("superadmin123", 12);
+  const superadmin = await prisma.user.upsert({
+    where: { email: "superadmin@bizarch.com" },
+    update: {},
+    create: {
+      email: "superadmin@bizarch.com",
+      password: superadminPassword,
+      name: "Super Admin",
+      role: "superadmin",
+      organizationId: defaultOrg.id,
+    },
+  });
+  console.log("Created superadmin user:", superadmin.email);
+
   // Create admin user
   const hashedPassword = await hash("admin123", 12);
-
   const admin = await prisma.user.upsert({
     where: { email: "admin@bizarch.com" },
     update: {},
@@ -25,9 +51,9 @@ async function main() {
       password: hashedPassword,
       name: "Admin",
       role: "admin",
+      organizationId: defaultOrg.id,
     },
   });
-
   console.log("Created admin user:", admin.email);
 
   // Create Dilshad user
@@ -40,6 +66,7 @@ async function main() {
       password: dilshadPassword,
       name: "Dilshad",
       role: "user",
+      organizationId: defaultOrg.id,
     },
   });
   console.log("Created user:", dilshad.email);
@@ -54,6 +81,7 @@ async function main() {
       password: faljasPassword,
       name: "Faljas",
       role: "user",
+      organizationId: defaultOrg.id,
     },
   });
   console.log("Created user:", faljas.email);
@@ -70,9 +98,17 @@ async function main() {
 
   for (const setting of settings) {
     await prisma.setting.upsert({
-      where: { key: setting.key },
+      where: {
+        organizationId_key: {
+          organizationId: defaultOrg.id,
+          key: setting.key,
+        },
+      },
       update: { value: setting.value },
-      create: setting,
+      create: {
+        ...setting,
+        organizationId: defaultOrg.id,
+      },
     });
   }
 
@@ -88,6 +124,7 @@ async function main() {
       city: "Mumbai",
       state: "Maharashtra",
       zipCode: "400001",
+      organizationId: defaultOrg.id,
     },
   });
 
@@ -100,6 +137,7 @@ async function main() {
       city: "Bangalore",
       state: "Karnataka",
       zipCode: "560001",
+      organizationId: defaultOrg.id,
     },
   });
 
@@ -121,9 +159,17 @@ async function main() {
   const createdUnits: Record<string, any> = {};
   for (const unit of units) {
     const createdUnit = await prisma.unit.upsert({
-      where: { code: unit.code },
+      where: {
+        organizationId_code: {
+          organizationId: defaultOrg.id,
+          code: unit.code,
+        },
+      },
       update: {},
-      create: unit,
+      create: {
+        ...unit,
+        organizationId: defaultOrg.id,
+      },
     });
     createdUnits[unit.code] = createdUnit;
   }
@@ -164,9 +210,17 @@ async function main() {
 
   for (const product of products) {
     await prisma.product.upsert({
-      where: { sku: product.sku },
+      where: {
+        organizationId_sku: {
+          organizationId: defaultOrg.id,
+          sku: product.sku,
+        },
+      },
       update: {},
-      create: product,
+      create: {
+        ...product,
+        organizationId: defaultOrg.id,
+      },
     });
   }
 

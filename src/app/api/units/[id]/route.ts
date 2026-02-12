@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const unit = await prisma.unit.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         _count: {
           select: { products: true },
@@ -35,23 +43,29 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
     const { code, name, isActive } = body;
 
-    // Check if unit exists
+    // Check if unit exists in this org
     const existing = await prisma.unit.findUnique({
-      where: { id },
+      where: { id, organizationId },
     });
 
     if (!existing) {
       return NextResponse.json({ error: "Unit not found" }, { status: 404 });
     }
 
-    // If code is being changed, check for conflicts
+    // If code is being changed, check for conflicts within org
     if (code && code.toLowerCase() !== existing.code) {
-      const codeExists = await prisma.unit.findUnique({
-        where: { code: code.toLowerCase() },
+      const codeExists = await prisma.unit.findFirst({
+        where: { code: code.toLowerCase(), organizationId },
       });
 
       if (codeExists) {
@@ -63,7 +77,7 @@ export async function PUT(
     }
 
     const unit = await prisma.unit.update({
-      where: { id },
+      where: { id, organizationId },
       data: {
         ...(code && { code: code.toLowerCase() }),
         ...(name && { name }),
@@ -86,11 +100,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     // Check if unit has associated products
     const unit = await prisma.unit.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         _count: {
           select: { products: true },
@@ -105,7 +125,7 @@ export async function DELETE(
     if (unit._count.products > 0) {
       // Soft delete - just deactivate
       const updated = await prisma.unit.update({
-        where: { id },
+        where: { id, organizationId },
         data: { isActive: false },
       });
       return NextResponse.json({
@@ -116,7 +136,7 @@ export async function DELETE(
 
     // Hard delete if no products
     await prisma.unit.delete({
-      where: { id },
+      where: { id, organizationId },
     });
 
     return NextResponse.json({ message: "Unit deleted successfully" });

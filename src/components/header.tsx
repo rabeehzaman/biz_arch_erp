@@ -11,17 +11,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "next-auth/react";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Building2 } from "lucide-react";
 import { MobileSidebar } from "./sidebar";
+import { useEffect, useState } from "react";
 
 export function Header() {
   const { data: session } = useSession();
+  const [orgName, setOrgName] = useState<string>("");
 
   const initials = session?.user?.name
     ?.split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase() || "U";
+
+  useEffect(() => {
+    if (session?.user?.organizationId) {
+      fetch("/api/settings")
+        .then((res) => res.json())
+        .then((settings) => {
+          const companyName = settings.find?.((s: { key: string }) => s.key === "company_name");
+          if (companyName) {
+            setOrgName(companyName.value);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [session?.user?.organizationId]);
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
@@ -32,7 +48,14 @@ export function Header() {
             Welcome, {session?.user?.name?.split(" ")[0] || "User"}
           </h1>
           <p className="text-xs md:text-sm text-slate-500 hidden sm:block">
-            Manage your business operations
+            {orgName ? (
+              <span className="inline-flex items-center gap-1">
+                <Building2 className="h-3 w-3" />
+                {orgName}
+              </span>
+            ) : (
+              "Manage your business operations"
+            )}
           </p>
         </div>
       </div>

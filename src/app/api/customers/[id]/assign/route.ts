@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 // GET - Get current assignments for a customer
 export async function GET(
@@ -12,11 +13,12 @@ export async function GET(
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
 
     const { id } = await params;
 
     const assignments = await prisma.customerAssignment.findMany({
-      where: { customerId: id },
+      where: { customerId: id, organizationId },
       include: {
         user: {
           select: { id: true, name: true, email: true },
@@ -45,6 +47,7 @@ export async function POST(
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
 
     // Only admins can assign customers
     if (session.user.role !== "admin") {
@@ -63,7 +66,7 @@ export async function POST(
     }
 
     // Check if customer exists
-    const customer = await prisma.customer.findUnique({ where: { id } });
+    const customer = await prisma.customer.findUnique({ where: { id, organizationId } });
     if (!customer) {
       return NextResponse.json(
         { error: "Customer not found" },
@@ -76,13 +79,14 @@ export async function POST(
       data: userIds.map((userId: string) => ({
         customerId: id,
         userId,
+        organizationId,
       })),
       skipDuplicates: true,
     });
 
     // Return updated assignments
     const assignments = await prisma.customerAssignment.findMany({
-      where: { customerId: id },
+      where: { customerId: id, organizationId },
       include: {
         user: {
           select: { id: true, name: true, email: true },
@@ -110,6 +114,7 @@ export async function DELETE(
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
 
     // Only admins can unassign customers
     if (session.user.role !== "admin") {
@@ -131,12 +136,13 @@ export async function DELETE(
       where: {
         customerId: id,
         userId,
+        organizationId,
       },
     });
 
     // Return updated assignments
     const assignments = await prisma.customerAssignment.findMany({
-      where: { customerId: id },
+      where: { customerId: id, organizationId },
       include: {
         user: {
           select: { id: true, name: true, email: true },

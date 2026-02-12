@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
-async function generateInvoiceNumber() {
+async function generateInvoiceNumber(organizationId: string) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `INV-${dateStr}`;
 
   const lastInvoice = await prisma.invoice.findFirst({
-    where: { invoiceNumber: { startsWith: prefix } },
+    where: { invoiceNumber: { startsWith: prefix }, organizationId },
     orderBy: { invoiceNumber: "desc" },
   });
 
@@ -27,11 +29,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     // Fetch quotation with items
     const quotation = await prisma.quotation.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         items: true,
         customer: true,
@@ -72,13 +80,14 @@ export async function POST(
     // Use transaction for atomic operation
     const invoice = await prisma.$transaction(async (tx) => {
       // Generate invoice number
-      const invoiceNumber = await generateInvoiceNumber();
+      const invoiceNumber = await generateInvoiceNumber(organizationId);
       const invoiceDate = new Date(); // Use current date for invoice
       const dueDate = new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
 
       // Create invoice from quotation
       const newInvoice = await tx.invoice.create({
         data: {
+          organizationId,
           invoiceNumber,
           customerId: quotation.customerId,
           issueDate: invoiceDate,
@@ -92,6 +101,7 @@ export async function POST(
           terms: quotation.terms,
           items: {
             create: quotation.items.map((item) => ({
+              organizationId,
               productId: item.productId,
               description: item.description,
               quantity: item.quantity,
@@ -114,7 +124,8 @@ export async function POST(
             Number(invoiceItem.quantity),
             invoiceItem.id,
             invoiceDate,
-            tx
+            tx,
+            organizationId
           );
 
           // Update invoice item with COGS
@@ -156,7 +167,7 @@ export async function POST(
       for (const productId of productIds) {
         const backdated = await isBackdated(productId, invoiceDate, tx);
         if (backdated) {
-          await recalculateFromDate(productId, invoiceDate, tx);
+          await recalculateFromDate(productId, invoiceDate, tx, "recalculation", undefined, organizationId);
         }
       }
 

@@ -162,7 +162,8 @@ export async function consumeStockFIFO(
   quantityNeeded: Decimal | number,
   invoiceItemId: string,
   asOfDate: Date,
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  organizationId?: string
 ): Promise<FIFOConsumptionResult> {
   const qty =
     quantityNeeded instanceof Decimal
@@ -206,14 +207,17 @@ export async function consumeStockFIFO(
   // Create consumption records and update lot quantities
   for (const consumption of result.consumptions) {
     // Create consumption record
+    const consumptionData: any = {
+      stockLotId: consumption.lotId,
+      invoiceItemId,
+      quantityConsumed: consumption.quantity,
+      unitCost: consumption.unitCost,
+      totalCost: consumption.totalCost,
+    };
+    if (organizationId) consumptionData.organizationId = organizationId;
+
     await tx.stockLotConsumption.create({
-      data: {
-        stockLotId: consumption.lotId,
-        invoiceItemId,
-        quantityConsumed: consumption.quantity,
-        unitCost: consumption.unitCost,
-        totalCost: consumption.totalCost,
-      },
+      data: consumptionData,
     });
 
     // Update lot remaining quantity
@@ -304,22 +308,26 @@ export async function createStockLotFromPurchase(
   unitCost: Decimal | number,
   lotDate: Date,
   tx: PrismaTransaction,
-  originalUnitCost?: Decimal | number
+  originalUnitCost?: Decimal | number,
+  organizationId?: string
 ): Promise<void> {
   const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
   const cost = unitCost instanceof Decimal ? unitCost : new Decimal(unitCost);
 
+  const lotData: any = {
+    productId,
+    sourceType: "PURCHASE",
+    purchaseInvoiceItemId,
+    purchaseInvoiceId,
+    lotDate,
+    unitCost: cost,
+    initialQuantity: qty,
+    remainingQuantity: qty,
+  };
+  if (organizationId) lotData.organizationId = organizationId;
+
   await tx.stockLot.create({
-    data: {
-      productId,
-      sourceType: "PURCHASE",
-      purchaseInvoiceItemId,
-      purchaseInvoiceId,
-      lotDate,
-      unitCost: cost,
-      initialQuantity: qty,
-      remainingQuantity: qty,
-    },
+    data: lotData,
   });
 
   // Auto-update product.cost to original MRP (pre-discount) for form auto-population
@@ -342,21 +350,25 @@ export async function createStockLotFromOpeningStock(
   quantity: Decimal | number,
   unitCost: Decimal | number,
   stockDate: Date,
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  organizationId?: string
 ): Promise<void> {
   const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
   const cost = unitCost instanceof Decimal ? unitCost : new Decimal(unitCost);
 
+  const lotData: any = {
+    productId,
+    sourceType: "OPENING_STOCK",
+    openingStockId,
+    lotDate: stockDate,
+    unitCost: cost,
+    initialQuantity: qty,
+    remainingQuantity: qty,
+  };
+  if (organizationId) lotData.organizationId = organizationId;
+
   await tx.stockLot.create({
-    data: {
-      productId,
-      sourceType: "OPENING_STOCK",
-      openingStockId,
-      lotDate: stockDate,
-      unitCost: cost,
-      initialQuantity: qty,
-      remainingQuantity: qty,
-    },
+    data: lotData,
   });
 
   // Auto-update product.cost to opening stock price (fallback cost)
@@ -375,7 +387,8 @@ export async function recalculateFromDate(
   fromDate: Date,
   tx: PrismaTransaction,
   changeReason: string = "recalculation",
-  triggeredBy?: string
+  triggeredBy?: string,
+  organizationId?: string
 ): Promise<void> {
   // OPTIMIZATION: Early exit if no sales to recalculate
   const salesCount = await tx.invoiceItem.count({
@@ -460,7 +473,8 @@ export async function recalculateFromDate(
       item.quantity,
       item.id,
       item.invoice.issueDate,
-      tx
+      tx,
+      organizationId
     );
 
     const newCOGS = fifoResult.totalCOGS;
@@ -473,16 +487,19 @@ export async function recalculateFromDate(
 
     // Log cost change if COGS changed
     if (!oldCOGS.equals(newCOGS)) {
+      const auditData: any = {
+        productId: item.productId,
+        invoiceItemId: item.id,
+        oldCOGS,
+        newCOGS,
+        changeAmount: newCOGS.sub(oldCOGS),
+        changeReason,
+        triggeredBy: triggeredBy || null,
+      };
+      if (organizationId) auditData.organizationId = organizationId;
+
       await tx.costAuditLog.create({
-        data: {
-          productId: item.productId,
-          invoiceItemId: item.id,
-          oldCOGS,
-          newCOGS,
-          changeAmount: newCOGS.sub(oldCOGS),
-          changeReason,
-          triggeredBy: triggeredBy || null,
-        },
+        data: auditData,
       });
     }
   }

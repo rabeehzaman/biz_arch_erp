@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
+
     const units = await prisma.unit.findMany({
-      where: { isActive: true },
+      where: { isActive: true, organizationId },
       orderBy: { code: "asc" },
       include: {
         _count: {
@@ -24,6 +33,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const { code, name } = body;
 
@@ -34,9 +49,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if unit code already exists
-    const existing = await prisma.unit.findUnique({
-      where: { code: code.toLowerCase() },
+    // Check if unit code already exists in this org
+    const existing = await prisma.unit.findFirst({
+      where: { code: code.toLowerCase(), organizationId },
     });
 
     if (existing) {
@@ -48,6 +63,7 @@ export async function POST(request: NextRequest) {
 
     const unit = await prisma.unit.create({
       data: {
+        organizationId,
         code: code.toLowerCase(),
         name,
       },

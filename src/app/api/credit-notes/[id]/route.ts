@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import {
   createStockLotFromCreditNote,
   deleteStockLotFromCreditNote,
@@ -19,10 +20,11 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     const creditNote = await prisma.creditNote.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         customer: true,
         invoice: true,
@@ -79,6 +81,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
     const {
@@ -117,7 +120,7 @@ export async function PUT(
     const result = await prisma.$transaction(async (tx) => {
       // Get the old credit note
       const oldCreditNote = await tx.creditNote.findUnique({
-        where: { id },
+        where: { id, organizationId },
         include: {
           items: true,
         },
@@ -172,7 +175,7 @@ export async function PUT(
 
       // Update the credit note and create new items
       const updatedCreditNote = await tx.creditNote.update({
-        where: { id },
+        where: { id, organizationId },
         data: {
           customerId,
           invoiceId: invoiceId || null,
@@ -195,6 +198,7 @@ export async function PUT(
                 discount?: number;
                 originalCOGS?: number;
               }) => ({
+                organizationId,
                 invoiceItemId: item.invoiceItemId || null,
                 productId: item.productId || null,
                 description: item.description,
@@ -248,7 +252,8 @@ export async function PUT(
             creditNoteItem.quantity,
             unitCost,
             creditNoteDate,
-            tx
+            tx,
+            organizationId
           );
 
           productsToRecalculate.add(creditNoteItem.productId);
@@ -267,6 +272,7 @@ export async function PUT(
         // Create new customer transaction
         await tx.customerTransaction.create({
           data: {
+            organizationId,
             customerId,
             transactionType: "CREDIT_NOTE",
             transactionDate: creditNoteDate,
@@ -297,7 +303,7 @@ export async function PUT(
       for (const productId of productsToRecalculate) {
         const backdated = await isBackdated(productId, creditNoteDate, tx);
         if (backdated) {
-          await recalculateFromDate(productId, creditNoteDate, tx);
+          await recalculateFromDate(productId, creditNoteDate, tx, "recalculation", undefined, organizationId);
         }
       }
 
@@ -340,12 +346,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     const result = await prisma.$transaction(async (tx) => {
       // Get the credit note with items
       const creditNote = await tx.creditNote.findUnique({
-        where: { id },
+        where: { id, organizationId },
         include: {
           items: true,
         },
@@ -407,7 +414,7 @@ export async function DELETE(
           tx
         );
         if (backdated) {
-          await recalculateFromDate(productId, creditNote.issueDate, tx);
+          await recalculateFromDate(productId, creditNote.issueDate, tx, "recalculation", undefined, organizationId);
         }
       }
 

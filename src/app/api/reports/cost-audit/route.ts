@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 /**
  * GET /api/reports/cost-audit
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
 
     // Only admins can view cost audit logs
     if (session.user.role !== "admin") {
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     // Build filter conditions
-    const where: any = {};
+    const where: any = { organizationId };
 
     if (productId) {
       where.productId = productId;

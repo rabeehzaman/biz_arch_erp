@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     const payment = await prisma.supplierPayment.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         supplier: {
           select: { id: true, name: true },
@@ -42,11 +50,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     // Fetch payment with allocations
     const payment = await prisma.supplierPayment.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         allocations: {
           include: {
@@ -70,7 +84,7 @@ export async function DELETE(
       // Reverse supplier balance (increment by amount + discount since both were decremented)
       const totalSettlement = Number(payment.amount) + Number(payment.discountGiven);
       await tx.supplier.update({
-        where: { id: payment.supplierId },
+        where: { id: payment.supplierId, organizationId },
         data: {
           balance: { increment: totalSettlement },
         },
@@ -92,7 +106,7 @@ export async function DELETE(
         }
 
         await tx.purchaseInvoice.update({
-          where: { id: allocation.purchaseInvoiceId },
+          where: { id: allocation.purchaseInvoiceId, organizationId },
           data: {
             amountPaid: Math.max(0, newAmountPaid),
             balanceDue: newBalanceDue,
@@ -103,7 +117,7 @@ export async function DELETE(
 
       // Delete allocations and payment (allocations cascade delete)
       await tx.supplierPayment.delete({
-        where: { id },
+        where: { id, organizationId },
       });
     });
 

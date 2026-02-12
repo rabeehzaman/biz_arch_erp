@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         unit: true,
       },
@@ -36,12 +44,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
     const { name, description, price, unitId, sku, isActive } = body;
 
     const product = await prisma.product.update({
-      where: { id },
+      where: { id, organizationId },
       data: {
         name,
         description,
@@ -70,9 +84,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     await prisma.product.delete({
-      where: { id },
+      where: { id, organizationId },
     });
 
     return NextResponse.json({ success: true });

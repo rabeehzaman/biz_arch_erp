@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,6 +10,7 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
 
     if (session.user.role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
@@ -17,6 +19,7 @@ export async function POST(request: NextRequest) {
     console.log(`[Fix Balances] Starting balance fix by ${session.user.email}`);
 
     const customers = await prisma.customer.findMany({
+      where: { organizationId },
       select: {
         id: true,
         name: true,
@@ -44,19 +47,19 @@ export async function POST(request: NextRequest) {
         // because invoices don't create CustomerTransaction records
         const [invoices, payments, creditNotes, openingBalance] = await Promise.all([
           prisma.invoice.aggregate({
-            where: { customerId: customer.id },
+            where: { customerId: customer.id, organizationId },
             _sum: { total: true },
           }),
           prisma.payment.aggregate({
-            where: { customerId: customer.id },
+            where: { customerId: customer.id, organizationId },
             _sum: { amount: true },
           }),
           prisma.creditNote.aggregate({
-            where: { customerId: customer.id, appliedToBalance: true },
+            where: { customerId: customer.id, organizationId, appliedToBalance: true },
             _sum: { total: true },
           }),
           prisma.customerTransaction.findFirst({
-            where: { customerId: customer.id, transactionType: "OPENING_BALANCE" },
+            where: { customerId: customer.id, organizationId, transactionType: "OPENING_BALANCE" },
             select: { amount: true },
           }),
         ]);
@@ -127,12 +130,14 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
 
     if (session.user.role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     const customers = await prisma.customer.findMany({
+      where: { organizationId },
       select: {
         id: true,
         name: true,
@@ -154,19 +159,19 @@ export async function GET(request: NextRequest) {
       // because invoices don't create CustomerTransaction records
       const [invoices, payments, creditNotes, openingBalance] = await Promise.all([
         prisma.invoice.aggregate({
-          where: { customerId: customer.id },
+          where: { customerId: customer.id, organizationId },
           _sum: { total: true },
         }),
         prisma.payment.aggregate({
-          where: { customerId: customer.id },
+          where: { customerId: customer.id, organizationId },
           _sum: { amount: true },
         }),
         prisma.creditNote.aggregate({
-          where: { customerId: customer.id, appliedToBalance: true },
+          where: { customerId: customer.id, organizationId, appliedToBalance: true },
           _sum: { total: true },
         }),
         prisma.customerTransaction.findFirst({
-          where: { customerId: customer.id, transactionType: "OPENING_BALANCE" },
+          where: { customerId: customer.id, organizationId, transactionType: "OPENING_BALANCE" },
           select: { amount: true },
         }),
       ]);

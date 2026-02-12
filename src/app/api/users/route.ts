@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 // GET - List all users (for assignment dropdown)
 export async function GET() {
@@ -10,7 +11,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const isSuperAdmin = session.user.role === "superadmin";
+
+    let whereClause = {};
+    if (!isSuperAdmin) {
+      const organizationId = getOrgId(session);
+      whereClause = { organizationId };
+    }
+
     const users = await prisma.user.findMany({
+      where: whereClause,
       select: {
         id: true,
         name: true,

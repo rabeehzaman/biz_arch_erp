@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 // Helper to check if user can access a customer
-async function canAccessCustomer(customerId: string, userId: string, isAdmin: boolean) {
+async function canAccessCustomer(customerId: string, organizationId: string, userId: string, isAdmin: boolean) {
   if (isAdmin) return true;
 
   const customer = await prisma.customer.findUnique({
-    where: { id: customerId },
+    where: { id: customerId, organizationId },
     include: { assignments: true },
   });
 
@@ -27,15 +28,16 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const isAdmin = session.user.role === "admin";
 
-    if (!await canAccessCustomer(id, session.user.id, isAdmin)) {
+    if (!await canAccessCustomer(id, organizationId, session.user.id, isAdmin)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const customer = await prisma.customer.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         invoices: {
           orderBy: { createdAt: "desc" },
@@ -82,10 +84,11 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const isAdmin = session.user.role === "admin";
 
-    if (!await canAccessCustomer(id, session.user.id, isAdmin)) {
+    if (!await canAccessCustomer(id, organizationId, session.user.id, isAdmin)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -93,7 +96,7 @@ export async function PUT(
     const { name, email, phone, address, city, state, zipCode, country, notes, isActive } = body;
 
     const customer = await prisma.customer.update({
-      where: { id },
+      where: { id, organizationId },
       data: {
         name,
         email,
@@ -137,15 +140,16 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const isAdmin = session.user.role === "admin";
 
-    if (!await canAccessCustomer(id, session.user.id, isAdmin)) {
+    if (!await canAccessCustomer(id, organizationId, session.user.id, isAdmin)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     await prisma.customer.delete({
-      where: { id },
+      where: { id, organizationId },
     });
 
     return NextResponse.json({ success: true });

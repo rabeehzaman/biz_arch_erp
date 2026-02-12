@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import {
   consumeStockForDebitNote,
   checkReturnableStock,
@@ -9,13 +10,13 @@ import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 
 // Generate debit note number: DN-YYYYMMDD-XXX
-async function generateDebitNoteNumber() {
+async function generateDebitNoteNumber(organizationId: string) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `DN-${dateStr}`;
 
   const lastDN = await prisma.debitNote.findFirst({
-    where: { debitNoteNumber: { startsWith: prefix } },
+    where: { debitNoteNumber: { startsWith: prefix }, organizationId },
     orderBy: { debitNoteNumber: "desc" },
   });
 
@@ -35,7 +36,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
+
     const debitNotes = await prisma.debitNote.findMany({
+      where: { organizationId },
       orderBy: { createdAt: "desc" },
       include: {
         supplier: {
@@ -67,6 +71,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const {
       supplierId,
@@ -97,7 +102,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const debitNoteNumber = await generateDebitNoteNumber();
+    const debitNoteNumber = await generateDebitNoteNumber(organizationId);
     const debitNoteDate = issueDate ? new Date(issueDate) : new Date();
 
     // Calculate totals with item-level discounts
@@ -142,6 +147,7 @@ export async function POST(request: NextRequest) {
       // Create the debit note
       const debitNote = await tx.debitNote.create({
         data: {
+          organizationId,
           debitNoteNumber,
           supplierId,
           purchaseInvoiceId: purchaseInvoiceId || null,
@@ -163,6 +169,7 @@ export async function POST(request: NextRequest) {
                 unitCost: number;
                 discount?: number;
               }) => ({
+                organizationId,
                 purchaseInvoiceItemId: item.purchaseInvoiceItemId || null,
                 productId: item.productId,
                 description: item.description,
@@ -190,7 +197,8 @@ export async function POST(request: NextRequest) {
           debitNoteItem.quantity,
           debitNoteItem.id,
           debitNoteDate,
-          tx
+          tx,
+          organizationId
         );
 
         productsToRecalculate.add(debitNoteItem.productId);
@@ -208,6 +216,7 @@ export async function POST(request: NextRequest) {
         // Create supplier transaction record
         await tx.supplierTransaction.create({
           data: {
+            organizationId,
             supplierId,
             transactionType: "DEBIT_NOTE",
             transactionDate: debitNoteDate,
@@ -238,7 +247,7 @@ export async function POST(request: NextRequest) {
       for (const productId of productsToRecalculate) {
         const backdated = await isBackdated(productId, debitNoteDate, tx);
         if (backdated) {
-          await recalculateFromDate(productId, debitNoteDate, tx);
+          await recalculateFromDate(productId, debitNoteDate, tx, "recalculation", undefined, organizationId);
         }
       }
 

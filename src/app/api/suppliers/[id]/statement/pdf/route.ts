@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { SupplierStatementPDF } from "@/components/pdf/supplier-statement-pdf";
 import { createElement } from "react";
@@ -20,13 +22,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const fromDate = searchParams.get("from");
     const toDate = searchParams.get("to");
 
     const supplier = await prisma.supplier.findUnique({
-      where: { id },
+      where: { id, organizationId },
       select: {
         id: true,
         name: true,
@@ -53,6 +61,7 @@ export async function GET(
       where: {
         supplierId: id,
         transactionType: "OPENING_BALANCE",
+        organizationId,
       },
       orderBy: { transactionDate: "asc" },
     });
@@ -61,6 +70,7 @@ export async function GET(
     const purchaseInvoices = await prisma.purchaseInvoice.findMany({
       where: {
         supplierId: id,
+        organizationId,
         ...(Object.keys(dateFilter).length > 0 && { invoiceDate: dateFilter }),
       },
       orderBy: { invoiceDate: "asc" },
@@ -76,6 +86,7 @@ export async function GET(
     const payments = await prisma.supplierPayment.findMany({
       where: {
         supplierId: id,
+        organizationId,
         ...(Object.keys(dateFilter).length > 0 && { paymentDate: dateFilter }),
       },
       orderBy: { paymentDate: "asc" },
@@ -90,6 +101,7 @@ export async function GET(
     const debitNotes = await prisma.debitNote.findMany({
       where: {
         supplierId: id,
+        organizationId,
         appliedToBalance: true,
         ...(Object.keys(dateFilter).length > 0 && { issueDate: dateFilter }),
       },

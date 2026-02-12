@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
+
     const products = await prisma.product.findMany({
+      where: { organizationId },
       include: {
         unit: true,
         stockLots: {
@@ -42,6 +52,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const { name, description, price, unitId, sku } = body;
 
@@ -61,6 +77,7 @@ export async function POST(request: NextRequest) {
 
     const product = await prisma.product.create({
       data: {
+        organizationId,
         name,
         description: description || null,
         price,

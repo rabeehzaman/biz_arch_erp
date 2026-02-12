@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { restoreStockFromConsumptions, recalculateFromDate, consumeStockFIFO, isBackdated } from "@/lib/inventory/fifo";
 
 // Helper to check if user can access an invoice (based on customer assignment)
-async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean) {
+async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean, organizationId: string) {
   if (isAdmin) return true;
 
   const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
+    where: { id: invoiceId, organizationId },
     select: {
       customer: {
         select: {
@@ -36,15 +37,16 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const isAdmin = session.user.role === "admin";
 
-    if (!await canAccessInvoice(id, session.user.id, isAdmin)) {
+    if (!await canAccessInvoice(id, session.user.id, isAdmin, organizationId)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const invoice = await prisma.invoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         customer: true,
         items: {
@@ -91,10 +93,11 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const isAdmin = session.user.role === "admin";
 
-    if (!await canAccessInvoice(id, session.user.id, isAdmin)) {
+    if (!await canAccessInvoice(id, session.user.id, isAdmin, organizationId)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -102,7 +105,7 @@ export async function PUT(
     const { customerId, issueDate, dueDate, taxRate, notes, terms, items } = body;
 
     const existingInvoice = await prisma.invoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         items: {
           include: {
@@ -165,7 +168,7 @@ export async function PUT(
 
       // Update invoice
       await tx.invoice.update({
-        where: { id },
+        where: { id, organizationId },
         data: {
           customerId,
           issueDate: new Date(issueDate),
@@ -185,6 +188,7 @@ export async function PUT(
               unitPrice: number;
               discount?: number;
             }) => ({
+              organizationId,
               productId: item.productId,
               description: item.description,
               quantity: item.quantity,
@@ -260,7 +264,8 @@ export async function PUT(
                 invoiceItem.quantity,
                 invoiceItem.id,
                 newInvoiceDate,
-                tx
+                tx,
+                organizationId
               );
 
               // Update the invoice item with COGS
@@ -288,7 +293,7 @@ export async function PUT(
       for (const productId of allProductIds) {
         const backdated = await isBackdated(productId, new Date(issueDate), tx);
         if (hasConsumptions || backdated) {
-          await recalculateFromDate(productId, existingInvoice.issueDate, tx);
+          await recalculateFromDate(productId, existingInvoice.issueDate, tx, "recalculation", undefined, organizationId);
         }
       }
 
@@ -326,16 +331,17 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const isAdmin = session.user.role === "admin";
 
-    if (!await canAccessInvoice(id, session.user.id, isAdmin)) {
+    if (!await canAccessInvoice(id, session.user.id, isAdmin, organizationId)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Get invoice with items and consumptions
     const invoice = await prisma.invoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         items: {
           include: {
@@ -427,7 +433,7 @@ export async function DELETE(
 
       // Recalculate FIFO for affected products
       for (const { productId } of productsWithConsumptions) {
-        await recalculateFromDate(productId, invoice.issueDate, tx);
+        await recalculateFromDate(productId, invoice.issueDate, tx, "recalculation", undefined, organizationId);
       }
     });
 

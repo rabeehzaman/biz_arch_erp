@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/pdf/invoice-pdf";
 import { createElement } from "react";
@@ -10,11 +12,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     // Fetch purchase invoice with supplier and items
     const invoice = await prisma.purchaseInvoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         supplier: {
           select: {

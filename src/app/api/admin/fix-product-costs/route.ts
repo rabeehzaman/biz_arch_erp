@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 /**
  * Find the true MRP for a product by preferring invoices with discounts.
  * Invoices entered with a discount have the real MRP as unitCost.
  * Invoices with 0% discount may have a corrupted (already-discounted) unitCost.
  */
-async function findProductMRP(productId: string) {
+async function findProductMRP(productId: string, organizationId: string) {
   // First: most recent invoice WITH a discount — has the true MRP
   const discountedItem = await prisma.purchaseInvoiceItem.findFirst({
     where: {
       productId,
       discount: { gt: 0 },
+      purchaseInvoice: { organizationId },
     },
     orderBy: { purchaseInvoice: { invoiceDate: "desc" } },
     select: {
@@ -33,7 +35,10 @@ async function findProductMRP(productId: string) {
 
   // Fallback: latest invoice (no discounts found)
   const latestItem = await prisma.purchaseInvoiceItem.findFirst({
-    where: { productId },
+    where: {
+      productId,
+      purchaseInvoice: { organizationId },
+    },
     orderBy: { purchaseInvoice: { invoiceDate: "desc" } },
     select: {
       unitCost: true,
@@ -61,12 +66,15 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
+
     if (session.user.role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     const products = await prisma.product.findMany({
       where: {
+        organizationId,
         purchaseInvoiceItems: { some: {} },
       },
       select: { id: true, name: true, cost: true },
@@ -83,7 +91,7 @@ export async function GET() {
     }> = [];
 
     for (const product of products) {
-      const result = await findProductMRP(product.id);
+      const result = await findProductMRP(product.id, organizationId);
       if (!result) continue;
 
       const currentCost = Number(product.cost);
@@ -120,6 +128,8 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
+
     if (session.user.role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
@@ -128,6 +138,7 @@ export async function POST(request: NextRequest) {
 
     const products = await prisma.product.findMany({
       where: {
+        organizationId,
         purchaseInvoiceItems: { some: {} },
       },
       select: { id: true, name: true, cost: true },
@@ -142,7 +153,7 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     for (const product of products) {
-      const result = await findProductMRP(product.id);
+      const result = await findProductMRP(product.id, organizationId);
       if (!result) continue;
 
       const currentCost = Number(product.cost);

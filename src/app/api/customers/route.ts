@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET() {
   try {
@@ -9,14 +10,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const userId = session.user.id;
     const isAdmin = session.user.role === "admin";
 
     let customers;
 
     if (isAdmin) {
-      // Admin sees all customers
+      // Admin sees all customers in their org
       customers = await prisma.customer.findMany({
+        where: { organizationId },
         orderBy: { createdAt: "desc" },
         include: {
           _count: {
@@ -35,6 +38,7 @@ export async function GET() {
       // Regular user sees only customers assigned to them
       customers = await prisma.customer.findMany({
         where: {
+          organizationId,
           assignments: { some: { userId } },
         },
         orderBy: { createdAt: "desc" },
@@ -70,6 +74,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const { name, email, phone, address, city, state, zipCode, country, notes } = body;
 
@@ -83,6 +88,7 @@ export async function POST(request: NextRequest) {
     // Create customer and auto-assign to creator
     const customer = await prisma.customer.create({
       data: {
+        organizationId,
         name,
         email: email || null,
         phone: phone || null,
@@ -95,6 +101,7 @@ export async function POST(request: NextRequest) {
         assignments: {
           create: {
             userId: session.user.id,
+            organizationId,
           },
         },
       },

@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     const quotation = await prisma.quotation.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         customer: true,
         items: {
@@ -52,12 +60,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
 
     // Check if quotation exists and is editable
     const existingQuotation = await prisma.quotation.findUnique({
-      where: { id },
+      where: { id, organizationId },
     });
 
     if (!existingQuotation) {
@@ -139,6 +153,7 @@ export async function PUT(
           unitPrice: number;
           discount?: number;
         }) => ({
+          organizationId,
           productId: item.productId || null,
           description: item.description,
           quantity: item.quantity,
@@ -156,7 +171,7 @@ export async function PUT(
     }
 
     const quotation = await prisma.quotation.update({
-      where: { id },
+      where: { id, organizationId },
       data: updateData,
       include: {
         customer: true,
@@ -183,11 +198,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     // Check if quotation exists
     const quotation = await prisma.quotation.findUnique({
-      where: { id },
+      where: { id, organizationId },
     });
 
     if (!quotation) {

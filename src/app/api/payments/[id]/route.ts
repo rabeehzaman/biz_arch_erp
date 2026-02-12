@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     const payment = await prisma.payment.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         customer: {
           select: { id: true, name: true },
@@ -42,11 +50,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     // Fetch payment with allocations
     const payment = await prisma.payment.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         allocations: {
           include: {
@@ -70,7 +84,7 @@ export async function DELETE(
       // Reverse customer balance (increment by amount + discount since both were decremented)
       const totalSettlement = Number(payment.amount) + Number(payment.discountReceived);
       await tx.customer.update({
-        where: { id: payment.customerId },
+        where: { id: payment.customerId, organizationId },
         data: {
           balance: { increment: totalSettlement },
         },
@@ -82,7 +96,7 @@ export async function DELETE(
         const allocatedAmount = Number(allocation.amount);
 
         await tx.invoice.update({
-          where: { id: allocation.invoiceId },
+          where: { id: allocation.invoiceId, organizationId },
           data: {
             amountPaid: { decrement: allocatedAmount },
             balanceDue: { increment: allocatedAmount },
@@ -92,12 +106,12 @@ export async function DELETE(
 
       // Delete related CustomerTransaction
       await tx.customerTransaction.deleteMany({
-        where: { paymentId: id },
+        where: { paymentId: id, organizationId },
       });
 
       // Delete allocations and payment (allocations cascade delete)
       await tx.payment.delete({
-        where: { id },
+        where: { id, organizationId },
       });
     });
 

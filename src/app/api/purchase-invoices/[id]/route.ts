@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
 
 export async function GET(
@@ -7,9 +9,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const invoice = await prisma.purchaseInvoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         supplier: true,
         items: {
@@ -50,12 +58,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
     const { status, supplierId, invoiceDate, dueDate, supplierInvoiceRef, taxRate, notes, items } = body;
 
     const existingInvoice = await prisma.purchaseInvoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: { items: true },
     });
 
@@ -69,7 +83,7 @@ export async function PUT(
     // If only status is being updated
     if (status && !invoiceDate && !items && !supplierId && !dueDate && taxRate === undefined && notes === undefined) {
       const invoice = await prisma.purchaseInvoice.update({
-        where: { id },
+        where: { id, organizationId },
         data: { status },
       });
       return NextResponse.json(invoice);
@@ -110,7 +124,7 @@ export async function PUT(
 
         // Update invoice with new items
         await tx.purchaseInvoice.update({
-          where: { id },
+          where: { id, organizationId },
           data: {
             supplierId: newSupplierId,
             invoiceDate: newDate,
@@ -130,6 +144,7 @@ export async function PUT(
                 unitCost: number;
                 discount?: number;
               }) => ({
+                organizationId,
                 productId: item.productId,
                 description: item.description,
                 quantity: item.quantity,
@@ -185,6 +200,7 @@ export async function PUT(
 
             await tx.stockLot.create({
               data: {
+                organizationId,
                 productId: item.productId,
                 sourceType: "PURCHASE",
                 purchaseInvoiceItemId: item.id,
@@ -209,12 +225,12 @@ export async function PUT(
         const recalcDate = getRecalculationStartDate(oldDate, newDate);
 
         for (const productId of productIds) {
-          await recalculateFromDate(productId as string, recalcDate, tx);
+          await recalculateFromDate(productId as string, recalcDate, tx, "recalculation", undefined, organizationId);
         }
       } else if (invoiceDate) {
         // Only date is being updated
         await tx.purchaseInvoice.update({
-          where: { id },
+          where: { id, organizationId },
           data: { invoiceDate: newDate },
         });
 
@@ -229,7 +245,7 @@ export async function PUT(
         const recalcDate = getRecalculationStartDate(oldDate, newDate);
 
         for (const productId of productIds) {
-          await recalculateFromDate(productId, recalcDate, tx);
+          await recalculateFromDate(productId, recalcDate, tx, "recalculation", undefined, organizationId);
         }
       }
     });
@@ -259,10 +275,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     const invoice = await prisma.purchaseInvoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         items: true,
         stockLots: {
@@ -312,13 +334,13 @@ export async function DELETE(
 
       // Delete the invoice (items will cascade)
       await tx.purchaseInvoice.delete({
-        where: { id },
+        where: { id, organizationId },
       });
 
       // If there were consumptions, recalculate FIFO for affected products
       if (hasConsumptions) {
         for (const productId of productIds) {
-          await recalculateFromDate(productId, invoiceDate, tx);
+          await recalculateFromDate(productId, invoiceDate, tx, "recalculation", undefined, organizationId);
         }
       }
     });

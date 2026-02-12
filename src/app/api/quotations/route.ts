@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 // Generate quotation number: QUO-YYYYMMDD-XXX
-async function generateQuotationNumber() {
+async function generateQuotationNumber(organizationId: string) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `QUO-${dateStr}`;
 
   const lastQuotation = await prisma.quotation.findFirst({
-    where: { quotationNumber: { startsWith: prefix } },
+    where: { quotationNumber: { startsWith: prefix }, organizationId },
     orderBy: { quotationNumber: "desc" },
   });
 
@@ -23,7 +25,15 @@ async function generateQuotationNumber() {
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
+
     const quotations = await prisma.quotation.findMany({
+      where: { organizationId },
       orderBy: { createdAt: "desc" },
       include: {
         customer: {
@@ -47,6 +57,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const { customerId, issueDate, validUntil, items, taxRate, notes, terms } = body;
 
@@ -57,7 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const quotationNumber = await generateQuotationNumber();
+    const quotationNumber = await generateQuotationNumber(organizationId);
     const quotationIssueDate = issueDate ? new Date(issueDate) : new Date();
     const quotationValidUntil = validUntil ? new Date(validUntil) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
@@ -73,6 +89,7 @@ export async function POST(request: NextRequest) {
     // Create the quotation
     const quotation = await prisma.quotation.create({
       data: {
+        organizationId,
         quotationNumber,
         customerId,
         issueDate: quotationIssueDate,
@@ -92,6 +109,7 @@ export async function POST(request: NextRequest) {
             unitPrice: number;
             discount?: number;
           }) => ({
+            organizationId,
             productId: item.productId || null,
             description: item.description,
             quantity: item.quantity,

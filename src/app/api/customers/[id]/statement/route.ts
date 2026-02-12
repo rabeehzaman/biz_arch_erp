@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export interface StatementTransaction {
   id: string;
@@ -33,13 +35,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const fromDate = searchParams.get("from");
     const toDate = searchParams.get("to");
 
     const customer = await prisma.customer.findUnique({
-      where: { id },
+      where: { id, organizationId },
       select: {
         id: true,
         name: true,
@@ -66,6 +74,7 @@ export async function GET(
       where: {
         customerId: id,
         transactionType: "OPENING_BALANCE",
+        organizationId,
       },
       orderBy: { transactionDate: "asc" },
     });
@@ -74,6 +83,7 @@ export async function GET(
     const invoices = await prisma.invoice.findMany({
       where: {
         customerId: id,
+        organizationId,
         ...(Object.keys(dateFilter).length > 0 && { issueDate: dateFilter }),
       },
       orderBy: { issueDate: "asc" },
@@ -89,6 +99,7 @@ export async function GET(
     const payments = await prisma.payment.findMany({
       where: {
         customerId: id,
+        organizationId,
         ...(Object.keys(dateFilter).length > 0 && { paymentDate: dateFilter }),
       },
       orderBy: { paymentDate: "asc" },
@@ -103,6 +114,7 @@ export async function GET(
     const creditNotes = await prisma.creditNote.findMany({
       where: {
         customerId: id,
+        organizationId,
         appliedToBalance: true,
         ...(Object.keys(dateFilter).length > 0 && { issueDate: dateFilter }),
       },

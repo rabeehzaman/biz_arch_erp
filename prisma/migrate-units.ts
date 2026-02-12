@@ -48,7 +48,7 @@ async function migrateUnits() {
       const lowerCode = code.toLowerCase();
 
       // Try to find existing unit by code
-      let unit = await prisma.unit.findUnique({
+      let unit = await prisma.unit.findFirst({
         where: { code: lowerCode },
       });
 
@@ -57,10 +57,15 @@ async function migrateUnits() {
         const name = code.charAt(0).toUpperCase() + code.slice(1).toLowerCase();
         console.log(`Creating new unit: ${lowerCode} (${name})`);
 
+        // Use the first organization found as default
+        const org = await prisma.organization.findFirst();
+        if (!org) throw new Error("No organization found");
+
         unit = await prisma.unit.create({
           data: {
             code: lowerCode,
             name: name,
+            organizationId: org.id,
           },
         });
       }

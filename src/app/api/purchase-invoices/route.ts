@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
-async function generatePurchaseInvoiceNumber() {
+async function generatePurchaseInvoiceNumber(organizationId: string) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `PI-${dateStr}`;
 
   const lastInvoice = await prisma.purchaseInvoice.findFirst({
-    where: { purchaseInvoiceNumber: { startsWith: prefix } },
+    where: { purchaseInvoiceNumber: { startsWith: prefix }, organizationId },
     orderBy: { purchaseInvoiceNumber: "desc" },
   });
 
@@ -25,10 +27,18 @@ async function generatePurchaseInvoiceNumber() {
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
 
-    const where = status && status !== "all" ? { status: status as never } : {};
+    const where = status && status !== "all"
+      ? { status: status as never, organizationId }
+      : { organizationId };
 
     const invoices = await prisma.purchaseInvoice.findMany({
       where,
@@ -55,6 +65,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const { supplierId, invoiceDate, dueDate, supplierInvoiceRef, items, taxRate, notes } = body;
 
@@ -74,7 +90,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const purchaseInvoiceNumber = await generatePurchaseInvoiceNumber();
+    const purchaseInvoiceNumber = await generatePurchaseInvoiceNumber(organizationId);
     const purchaseDate = invoiceDate ? new Date(invoiceDate) : new Date();
 
     // Calculate totals with item-level discounts
@@ -92,6 +108,7 @@ export async function POST(request: NextRequest) {
       // Create the purchase invoice
       const invoice = await tx.purchaseInvoice.create({
         data: {
+          organizationId,
           purchaseInvoiceNumber,
           supplierId,
           invoiceDate: purchaseDate,
@@ -112,6 +129,7 @@ export async function POST(request: NextRequest) {
               unitCost: number;
               discount?: number;
             }) => ({
+              organizationId,
               productId: item.productId,
               description: item.description,
               quantity: item.quantity,
@@ -145,7 +163,8 @@ export async function POST(request: NextRequest) {
           netUnitCost,
           purchaseDate,
           tx,
-          item.unitCost
+          item.unitCost,
+          organizationId
         );
       }
 
@@ -160,6 +179,7 @@ export async function POST(request: NextRequest) {
       // Create SupplierTransaction record for purchase invoice
       await tx.supplierTransaction.create({
         data: {
+          organizationId,
           supplierId,
           transactionType: "PURCHASE_INVOICE",
           transactionDate: purchaseDate,
@@ -186,7 +206,8 @@ export async function POST(request: NextRequest) {
             purchaseDate,
             tx,
             "backdated_purchase",
-            `Purchase invoice dated ${purchaseDate.toISOString().split("T")[0]}`
+            `Purchase invoice dated ${purchaseDate.toISOString().split("T")[0]}`,
+            organizationId
           );
         } else if (zeroCOGSDate) {
           // Recalculate from earliest zero-COGS date to fix those items
@@ -195,7 +216,8 @@ export async function POST(request: NextRequest) {
             zeroCOGSDate,
             tx,
             "zero_cogs_fix",
-            `Fixing zero-COGS items with new purchase`
+            `Fixing zero-COGS items with new purchase`,
+            organizationId
           );
         }
       }

@@ -10,54 +10,104 @@ datasource db {
   provider = "postgresql"
 }
 
+// ==================== ORGANIZATIONS ====================
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                      User[]
+  customers                  Customer[]
+  customerAssignments        CustomerAssignment[]
+  customerTransactions       CustomerTransaction[]
+  suppliers                  Supplier[]
+  supplierTransactions       SupplierTransaction[]
+  products                   Product[]
+  units                      Unit[]
+  invoices                   Invoice[]
+  invoiceItems               InvoiceItem[]
+  quotations                 Quotation[]
+  quotationItems             QuotationItem[]
+  purchaseInvoices           PurchaseInvoice[]
+  purchaseInvoiceItems       PurchaseInvoiceItem[]
+  creditNotes                CreditNote[]
+  creditNoteItems            CreditNoteItem[]
+  debitNotes                 DebitNote[]
+  debitNoteItems             DebitNoteItem[]
+  debitNoteLotConsumptions   DebitNoteLotConsumption[]
+  payments                   Payment[]
+  paymentAllocations         PaymentAllocation[]
+  supplierPayments           SupplierPayment[]
+  supplierPaymentAllocations SupplierPaymentAllocation[]
+  stockLots                  StockLot[]
+  stockLotConsumptions       StockLotConsumption[]
+  openingStocks              OpeningStock[]
+  costAuditLogs              CostAuditLog[]
+  settings                   Setting[]
+
+  @@map("organizations")
+}
+
 // ==================== AUTH ====================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  role          String    @default("user") // admin, user
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  name           String
+  role           String    @default("user") // superadmin, admin, user
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   customerAssignments CustomerAssignment[]
   invoices            Invoice[]
   creditNotes         CreditNote[]
 
+  @@index([organizationId])
   @@map("users")
 }
 
 // ==================== UNITS ====================
 
 model Unit {
-  id        String    @id @default(cuid())
-  code      String    @unique // "pcs", "kg", "mtr", etc.
-  name      String              // "Piece", "Kilogram", "Meter", etc.
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id             String       @id @default(cuid())
+  code           String
+  name           String
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  products  Product[]
+  products Product[]
 
+  @@unique([organizationId, code])
+  @@index([organizationId])
   @@map("units")
 }
 
 // ==================== PRODUCTS ====================
 
 model Product {
-  id          String        @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal       @db.Decimal(10, 2)  // Selling price
-  cost        Decimal       @default(0) @db.Decimal(10, 2)  // Default cost when no lot available
-  unitCode    String?       // Temporary: old unit string for migration
-  unitId      String?
-  unit        Unit?         @relation(fields: [unitId], references: [id])
-  sku         String?       @unique
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  price          Decimal      @db.Decimal(10, 2)
+  cost           Decimal      @default(0) @db.Decimal(10, 2)
+  unitCode       String?
+  unitId         String?
+  unit           Unit?        @relation(fields: [unitId], references: [id])
+  sku            String?
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   invoiceItems         InvoiceItem[]
   purchaseInvoiceItems PurchaseInvoiceItem[]
@@ -68,26 +118,30 @@ model Product {
   debitNoteItems       DebitNoteItem[]
   costAuditLogs        CostAuditLog[]
 
+  @@unique([organizationId, sku])
+  @@index([organizationId])
   @@map("products")
 }
 
 // ==================== CUSTOMERS ====================
 
 model Customer {
-  id          String    @id @default(cuid())
-  name        String
-  email       String?
-  phone       String?
-  address     String?
-  city        String?
-  state       String?
-  zipCode     String?
-  country     String?   @default("India")
-  balance     Decimal   @default(0) @db.Decimal(12, 2) // Outstanding balance (Accounts Receivable)
-  notes       String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String?      @default("India")
+  balance        Decimal      @default(0) @db.Decimal(12, 2)
+  notes          String?
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   invoices     Invoice[]
   payments     Payment[]
@@ -96,73 +150,82 @@ model Customer {
   assignments  CustomerAssignment[]
   creditNotes  CreditNote[]
 
+  @@index([organizationId])
   @@map("customers")
 }
 
 model CustomerAssignment {
-  id         String   @id @default(cuid())
-  customerId String
-  userId     String
-  assignedAt DateTime @default(now())
+  id             String       @id @default(cuid())
+  customerId     String
+  userId         String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  assignedAt     DateTime     @default(now())
 
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, userId])
+  @@index([organizationId])
   @@map("customer_assignments")
 }
 
 // ==================== SUPPLIERS ====================
 
 model Supplier {
-  id          String    @id @default(cuid())
-  name        String
-  email       String?
-  phone       String?
-  address     String?
-  city        String?
-  state       String?
-  zipCode     String?
-  country     String?   @default("India")
-  balance     Decimal   @default(0) @db.Decimal(12, 2) // Outstanding balance (Accounts Payable)
-  notes       String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String?      @default("India")
+  balance        Decimal      @default(0) @db.Decimal(12, 2)
+  notes          String?
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   purchaseInvoices PurchaseInvoice[]
   payments         SupplierPayment[]
   transactions     SupplierTransaction[]
   debitNotes       DebitNote[]
 
+  @@index([organizationId])
   @@map("suppliers")
 }
 
 // ==================== INVOICES (SALES) ====================
 
 model Invoice {
-  id            String        @id @default(cuid())
-  invoiceNumber String        @unique
-  customerId    String
-  customer      Customer      @relation(fields: [customerId], references: [id])
-  createdById   String?
-  createdBy     User?         @relation(fields: [createdById], references: [id])
+  id             String       @id @default(cuid())
+  invoiceNumber  String
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id])
+  createdById    String?
+  createdBy      User?        @relation(fields: [createdById], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  issueDate     DateTime      @default(now())
-  dueDate       DateTime
+  issueDate  DateTime @default(now())
+  dueDate    DateTime
 
-  subtotal      Decimal       @db.Decimal(12, 2)
-  taxRate       Decimal       @default(0) @db.Decimal(5, 2) // Percentage
-  taxAmount     Decimal       @default(0) @db.Decimal(12, 2)
-  total         Decimal       @db.Decimal(12, 2)
-  amountPaid    Decimal       @default(0) @db.Decimal(12, 2)
-  balanceDue    Decimal       @db.Decimal(12, 2)
+  subtotal   Decimal @db.Decimal(12, 2)
+  taxRate    Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount  Decimal @default(0) @db.Decimal(12, 2)
+  total      Decimal @db.Decimal(12, 2)
+  amountPaid Decimal @default(0) @db.Decimal(12, 2)
+  balanceDue Decimal @db.Decimal(12, 2)
 
-  notes         String?
-  terms         String?
+  notes String?
+  terms String?
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   items              InvoiceItem[]
   payments           Payment[]
@@ -170,64 +233,73 @@ model Invoice {
   quotation          Quotation?
   creditNotes        CreditNote[]
 
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId])
   @@map("invoices")
 }
 
 model InvoiceItem {
-  id          String   @id @default(cuid())
-  invoiceId   String
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  productId   String?
-  product     Product? @relation(fields: [productId], references: [id])
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
 
   description String
-  quantity    Decimal  @db.Decimal(10, 2)
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  discount    Decimal  @default(0) @db.Decimal(5, 2) // Percentage discount (0-100)
-  total       Decimal  @db.Decimal(12, 2)
+  quantity    Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(5, 2)
+  total       Decimal @db.Decimal(12, 2)
 
-  costOfGoodsSold Decimal @default(0) @db.Decimal(12, 2) // COGS calculated via FIFO
+  costOfGoodsSold Decimal @default(0) @db.Decimal(12, 2)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   lotConsumptions StockLotConsumption[]
   costAuditLogs   CostAuditLog[]
 
+  @@index([organizationId])
   @@map("invoice_items")
 }
 
 // ==================== QUOTATIONS ====================
 
 model Quotation {
-  id                 String          @id @default(cuid())
-  quotationNumber    String          @unique
-  customerId         String
-  customer           Customer        @relation(fields: [customerId], references: [id])
+  id              String          @id @default(cuid())
+  quotationNumber String
+  customerId      String
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  organizationId  String
+  organization    Organization    @relation(fields: [organizationId], references: [id])
 
-  issueDate          DateTime        @default(now())
-  validUntil         DateTime
+  issueDate  DateTime        @default(now())
+  validUntil DateTime
 
-  status             QuotationStatus @default(SENT)
+  status QuotationStatus @default(SENT)
 
-  subtotal           Decimal         @db.Decimal(12, 2)
-  taxRate            Decimal         @default(0) @db.Decimal(5, 2)
-  taxAmount          Decimal         @default(0) @db.Decimal(12, 2)
-  total              Decimal         @db.Decimal(12, 2)
+  subtotal  Decimal @db.Decimal(12, 2)
+  taxRate   Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount Decimal @default(0) @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
 
-  notes              String?
-  terms              String?
+  notes String?
+  terms String?
 
-  convertedInvoiceId String?         @unique
-  convertedInvoice   Invoice?        @relation(fields: [convertedInvoiceId], references: [id])
+  convertedInvoiceId String?  @unique
+  convertedInvoice   Invoice? @relation(fields: [convertedInvoiceId], references: [id])
   convertedAt        DateTime?
 
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  items              QuotationItem[]
+  items QuotationItem[]
 
+  @@unique([organizationId, quotationNumber])
+  @@index([organizationId])
   @@map("quotations")
 }
 
@@ -239,22 +311,25 @@ enum QuotationStatus {
 }
 
 model QuotationItem {
-  id          String    @id @default(cuid())
-  quotationId String
-  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  quotationId    String
+  quotation      Quotation    @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  productId   String?
-  product     Product?  @relation(fields: [productId], references: [id])
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
 
   description String
-  quantity    Decimal   @db.Decimal(10, 2)
-  unitPrice   Decimal   @db.Decimal(10, 2)
-  discount    Decimal   @default(0) @db.Decimal(5, 2)
-  total       Decimal   @db.Decimal(12, 2)
+  quantity    Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(5, 2)
+  total       Decimal @db.Decimal(12, 2)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@index([organizationId])
   @@map("quotation_items")
 }
 
@@ -262,34 +337,38 @@ model QuotationItem {
 
 model PurchaseInvoice {
   id                    String                @id @default(cuid())
-  purchaseInvoiceNumber String                @unique
+  purchaseInvoiceNumber String
   supplierId            String
   supplier              Supplier              @relation(fields: [supplierId], references: [id])
+  organizationId        String
+  organization          Organization          @relation(fields: [organizationId], references: [id])
 
-  invoiceDate           DateTime              @default(now()) // Date of purchase
-  dueDate               DateTime
-  supplierInvoiceRef    String?               // Supplier's invoice number
+  invoiceDate        DateTime              @default(now())
+  dueDate            DateTime
+  supplierInvoiceRef String?
 
-  status                PurchaseInvoiceStatus @default(DRAFT)
+  status PurchaseInvoiceStatus @default(DRAFT)
 
-  subtotal              Decimal               @db.Decimal(12, 2)
-  taxRate               Decimal               @default(0) @db.Decimal(5, 2)
-  taxAmount             Decimal               @default(0) @db.Decimal(12, 2)
-  total                 Decimal               @db.Decimal(12, 2)
-  amountPaid            Decimal               @default(0) @db.Decimal(12, 2)
-  balanceDue            Decimal               @db.Decimal(12, 2)
+  subtotal   Decimal @db.Decimal(12, 2)
+  taxRate    Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount  Decimal @default(0) @db.Decimal(12, 2)
+  total      Decimal @db.Decimal(12, 2)
+  amountPaid Decimal @default(0) @db.Decimal(12, 2)
+  balanceDue Decimal @db.Decimal(12, 2)
 
-  notes                 String?
+  notes String?
 
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  items                 PurchaseInvoiceItem[]
-  payments              SupplierPayment[]
-  paymentAllocations    SupplierPaymentAllocation[]
-  stockLots             StockLot[]
-  debitNotes            DebitNote[]
+  items              PurchaseInvoiceItem[]
+  payments           SupplierPayment[]
+  paymentAllocations SupplierPaymentAllocation[]
+  stockLots          StockLot[]
+  debitNotes         DebitNote[]
 
+  @@unique([organizationId, purchaseInvoiceNumber])
+  @@index([organizationId])
   @@map("purchase_invoices")
 }
 
@@ -305,55 +384,62 @@ model PurchaseInvoiceItem {
   id                String          @id @default(cuid())
   purchaseInvoiceId String
   purchaseInvoice   PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+  organizationId    String
+  organization      Organization    @relation(fields: [organizationId], references: [id])
 
-  productId         String
-  product           Product         @relation(fields: [productId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
-  description       String
-  quantity          Decimal         @db.Decimal(10, 2)
-  unitCost          Decimal         @db.Decimal(10, 2) // Purchase cost per unit
-  discount          Decimal         @default(0) @db.Decimal(5, 2) // Percentage discount (0-100)
-  total             Decimal         @db.Decimal(12, 2)
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  unitCost    Decimal @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(5, 2)
+  total       Decimal @db.Decimal(12, 2)
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  stockLot          StockLot?       // One-to-one: each purchase item creates one lot
+  stockLot StockLot?
 
+  @@index([organizationId])
   @@map("purchase_invoice_items")
 }
 
 // ==================== CREDIT NOTES (SALES RETURNS) ====================
 
 model CreditNote {
-  id               String           @id @default(cuid())
-  creditNoteNumber String           @unique
+  id               String       @id @default(cuid())
+  creditNoteNumber String
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
 
-  invoiceId        String?
-  invoice          Invoice?         @relation(fields: [invoiceId], references: [id])
+  invoiceId  String?
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id])
 
-  customerId       String
-  customer         Customer         @relation(fields: [customerId], references: [id])
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
 
-  createdById      String?
-  createdBy        User?            @relation(fields: [createdById], references: [id])
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
 
-  issueDate        DateTime         @default(now())
+  issueDate DateTime @default(now())
 
-  subtotal         Decimal          @db.Decimal(12, 2)
-  taxRate          Decimal          @default(0) @db.Decimal(5, 2)
-  taxAmount        Decimal          @default(0) @db.Decimal(12, 2)
-  total            Decimal          @db.Decimal(12, 2)
+  subtotal  Decimal @db.Decimal(12, 2)
+  taxRate   Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount Decimal @default(0) @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
 
-  appliedToBalance Boolean          @default(true)
+  appliedToBalance Boolean @default(true)
   reason           String?
   notes            String?
 
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  items            CreditNoteItem[]
+  items CreditNoteItem[]
 
+  @@unique([organizationId, creditNoteNumber])
+  @@index([organizationId])
   @@map("credit_notes")
 }
 
@@ -361,168 +447,192 @@ model CreditNoteItem {
   id             String       @id @default(cuid())
   creditNoteId   String
   creditNote     CreditNote   @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  invoiceItemId  String?
+  invoiceItemId String?
 
-  productId      String?
-  product        Product?     @relation(fields: [productId], references: [id])
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
 
-  description    String
-  quantity       Decimal      @db.Decimal(10, 2)
-  unitPrice      Decimal      @db.Decimal(10, 2)
-  discount       Decimal      @default(0) @db.Decimal(5, 2)
-  total          Decimal      @db.Decimal(12, 2)
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(5, 2)
+  total       Decimal @db.Decimal(12, 2)
 
-  originalCOGS   Decimal      @default(0) @db.Decimal(12, 2)
+  originalCOGS Decimal @default(0) @db.Decimal(12, 2)
 
-  stockLotId     String?      @unique
-  stockLot       StockLot?
+  stockLotId String?    @unique
+  stockLot   StockLot?
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@index([organizationId])
   @@map("credit_note_items")
 }
 
 // ==================== DEBIT NOTES (PURCHASE RETURNS) ====================
 
 model DebitNote {
-  id                String         @id @default(cuid())
-  debitNoteNumber   String         @unique
+  id              String       @id @default(cuid())
+  debitNoteNumber String
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
 
   purchaseInvoiceId String?
   purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
 
-  supplierId        String
-  supplier          Supplier       @relation(fields: [supplierId], references: [id])
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
 
-  issueDate         DateTime       @default(now())
+  issueDate DateTime @default(now())
 
-  subtotal          Decimal        @db.Decimal(12, 2)
-  taxRate           Decimal        @default(0) @db.Decimal(5, 2)
-  taxAmount         Decimal        @default(0) @db.Decimal(12, 2)
-  total             Decimal        @db.Decimal(12, 2)
+  subtotal  Decimal @db.Decimal(12, 2)
+  taxRate   Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount Decimal @default(0) @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
 
-  appliedToBalance  Boolean        @default(true)
-  reason            String?
-  notes             String?
+  appliedToBalance Boolean @default(true)
+  reason           String?
+  notes            String?
 
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  items             DebitNoteItem[]
+  items DebitNoteItem[]
 
+  @@unique([organizationId, debitNoteNumber])
+  @@index([organizationId])
   @@map("debit_notes")
 }
 
 model DebitNoteItem {
-  id                    String                    @id @default(cuid())
-  debitNoteId           String
-  debitNote             DebitNote                 @relation(fields: [debitNoteId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  debitNoteId    String
+  debitNote      DebitNote    @relation(fields: [debitNoteId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   purchaseInvoiceItemId String?
 
-  productId             String
-  product               Product                   @relation(fields: [productId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
-  description           String
-  quantity              Decimal                   @db.Decimal(10, 2)
-  unitCost              Decimal                   @db.Decimal(10, 2)
-  discount              Decimal                   @default(0) @db.Decimal(5, 2)
-  total                 Decimal                   @db.Decimal(12, 2)
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  unitCost    Decimal @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(5, 2)
+  total       Decimal @db.Decimal(12, 2)
 
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  lotConsumptions       DebitNoteLotConsumption[]
+  lotConsumptions DebitNoteLotConsumption[]
 
+  @@index([organizationId])
   @@map("debit_note_items")
 }
 
 model DebitNoteLotConsumption {
-  id               String        @id @default(cuid())
-  debitNoteItemId  String
-  debitNoteItem    DebitNoteItem @relation(fields: [debitNoteItemId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  debitNoteItemId String
+  debitNoteItem   DebitNoteItem @relation(fields: [debitNoteItemId], references: [id], onDelete: Cascade)
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id])
 
   stockLotId       String
-  stockLot         StockLot      @relation(fields: [stockLotId], references: [id])
+  stockLot         StockLot @relation(fields: [stockLotId], references: [id])
 
-  quantityReturned Decimal       @db.Decimal(10, 2)
-  unitCost         Decimal       @db.Decimal(10, 2)
-  totalCost        Decimal       @db.Decimal(12, 2)
+  quantityReturned Decimal @db.Decimal(10, 2)
+  unitCost         Decimal @db.Decimal(10, 2)
+  totalCost        Decimal @db.Decimal(12, 2)
 
-  createdAt        DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@index([debitNoteItemId])
   @@index([stockLotId])
+  @@index([organizationId])
   @@map("debit_note_lot_consumptions")
 }
 
 // ==================== PAYMENTS (FROM CUSTOMERS) ====================
 
 model Payment {
-  id            String        @id @default(cuid())
-  paymentNumber String        @unique
+  id             String       @id @default(cuid())
+  paymentNumber  String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  customerId    String
-  customer      Customer      @relation(fields: [customerId], references: [id])
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
 
-  invoiceId     String?
-  invoice       Invoice?      @relation(fields: [invoiceId], references: [id])
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
 
   amount           Decimal       @db.Decimal(12, 2)
   discountReceived Decimal       @default(0) @db.Decimal(12, 2)
   paymentDate      DateTime      @default(now())
   paymentMethod    PaymentMethod @default(CASH)
-  reference        String?       // Check number, transaction ID, etc.
+  reference        String?
   notes            String?
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  allocations   PaymentAllocation[]
+  allocations PaymentAllocation[]
 
+  @@unique([organizationId, paymentNumber])
+  @@index([organizationId])
   @@map("payments")
 }
 
 model PaymentAllocation {
-  id        String   @id @default(cuid())
-  paymentId String
-  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  invoiceId String
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
-  amount    Decimal  @db.Decimal(12, 2)
-  createdAt DateTime @default(now())
+  id             String       @id @default(cuid())
+  paymentId      String
+  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId      String
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  amount         Decimal      @db.Decimal(12, 2)
+  createdAt      DateTime     @default(now())
 
   @@index([paymentId])
   @@index([invoiceId])
+  @@index([organizationId])
   @@map("payment_allocations")
 }
 
 // ==================== SUPPLIER PAYMENTS (TO SUPPLIERS) ====================
 
 model SupplierPayment {
-  id                String          @id @default(cuid())
-  paymentNumber     String          @unique
+  id             String       @id @default(cuid())
+  paymentNumber  String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  supplierId        String
-  supplier          Supplier        @relation(fields: [supplierId], references: [id])
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
 
   purchaseInvoiceId String?
   purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
 
-  amount            Decimal         @db.Decimal(12, 2)
-  discountGiven     Decimal         @default(0) @db.Decimal(12, 2)
-  paymentDate       DateTime        @default(now())
-  paymentMethod     PaymentMethod   @default(CASH)
-  reference         String?
-  notes             String?
+  amount        Decimal       @db.Decimal(12, 2)
+  discountGiven Decimal       @default(0) @db.Decimal(12, 2)
+  paymentDate   DateTime      @default(now())
+  paymentMethod PaymentMethod @default(CASH)
+  reference     String?
+  notes         String?
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  allocations       SupplierPaymentAllocation[]
+  allocations SupplierPaymentAllocation[]
 
+  @@unique([organizationId, paymentNumber])
+  @@index([organizationId])
   @@map("supplier_payments")
 }
 
@@ -532,11 +642,14 @@ model SupplierPaymentAllocation {
   supplierPayment   SupplierPayment @relation(fields: [supplierPaymentId], references: [id], onDelete: Cascade)
   purchaseInvoiceId String
   purchaseInvoice   PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id])
+  organizationId    String
+  organization      Organization    @relation(fields: [organizationId], references: [id])
   amount            Decimal         @db.Decimal(12, 2)
   createdAt         DateTime        @default(now())
 
   @@index([supplierPaymentId])
   @@index([purchaseInvoiceId])
+  @@index([organizationId])
   @@map("supplier_payment_allocations")
 }
 
@@ -552,9 +665,11 @@ enum PaymentMethod {
 // ==================== INVENTORY / STOCK ====================
 
 model StockLot {
-  id                    String               @id @default(cuid())
-  productId             String
-  product               Product              @relation(fields: [productId], references: [id])
+  id             String       @id @default(cuid())
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   sourceType            StockSourceType
   purchaseInvoiceItemId String?              @unique
@@ -566,19 +681,20 @@ model StockLot {
   creditNoteItemId      String?              @unique
   creditNoteItem        CreditNoteItem?      @relation(fields: [creditNoteItemId], references: [id])
 
-  lotDate               DateTime             // Date for FIFO ordering
-  unitCost              Decimal              @db.Decimal(10, 2) // Cost per unit for this lot
-  initialQuantity       Decimal              @db.Decimal(10, 2) // Original quantity
-  remainingQuantity     Decimal              @db.Decimal(10, 2) // Current available quantity
+  lotDate           DateTime
+  unitCost          Decimal @db.Decimal(10, 2)
+  initialQuantity   Decimal @db.Decimal(10, 2)
+  remainingQuantity Decimal @db.Decimal(10, 2)
 
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   consumptions          StockLotConsumption[]
   debitNoteConsumptions DebitNoteLotConsumption[]
 
   @@index([productId, lotDate])
   @@index([productId, remainingQuantity])
+  @@index([organizationId])
   @@map("stock_lots")
 }
 
@@ -590,87 +706,99 @@ enum StockSourceType {
 }
 
 model StockLotConsumption {
-  id               String      @id @default(cuid())
-  stockLotId       String
-  stockLot         StockLot    @relation(fields: [stockLotId], references: [id])
+  id             String       @id @default(cuid())
+  stockLotId     String
+  stockLot       StockLot     @relation(fields: [stockLotId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  invoiceItemId    String
-  invoiceItem      InvoiceItem @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
+  invoiceItemId String
+  invoiceItem   InvoiceItem @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
 
-  quantityConsumed Decimal     @db.Decimal(10, 2)
-  unitCost         Decimal     @db.Decimal(10, 2) // Cost at time of consumption
-  totalCost        Decimal     @db.Decimal(12, 2)
+  quantityConsumed Decimal @db.Decimal(10, 2)
+  unitCost         Decimal @db.Decimal(10, 2)
+  totalCost        Decimal @db.Decimal(12, 2)
 
-  createdAt        DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   @@index([stockLotId])
   @@index([invoiceItemId])
+  @@index([organizationId])
   @@map("stock_lot_consumptions")
 }
 
 model OpeningStock {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  id             String       @id @default(cuid())
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   quantity  Decimal  @db.Decimal(10, 2)
   unitCost  Decimal  @db.Decimal(10, 2)
-  stockDate DateTime // Opening stock date for FIFO
+  stockDate DateTime
 
-  notes     String?
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  stockLot  StockLot? // One-to-one relation to the created lot
+  stockLot StockLot?
 
+  @@index([organizationId])
   @@map("opening_stocks")
 }
 
 // ==================== COST AUDIT LOG ====================
 
 model CostAuditLog {
-  id                String   @id @default(cuid())
-  productId         String
-  product           Product  @relation(fields: [productId], references: [id])
+  id             String       @id @default(cuid())
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  invoiceItemId     String
-  invoiceItem       InvoiceItem @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
+  invoiceItemId String
+  invoiceItem   InvoiceItem @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
 
-  oldCOGS           Decimal  @db.Decimal(12, 2)
-  newCOGS           Decimal  @db.Decimal(12, 2)
-  changeAmount      Decimal  @db.Decimal(12, 2) // newCOGS - oldCOGS
+  oldCOGS      Decimal @db.Decimal(12, 2)
+  newCOGS      Decimal @db.Decimal(12, 2)
+  changeAmount Decimal @db.Decimal(12, 2)
 
-  changeReason      String   // "backdated_purchase", "invoice_edit", "lot_cost_update", "opening_stock_update"
-  triggeredBy       String?  // Description of what triggered the change
+  changeReason String
+  triggeredBy  String?
 
-  changedAt         DateTime @default(now())
+  changedAt DateTime @default(now())
 
   @@index([productId, changedAt])
   @@index([invoiceItemId])
+  @@index([organizationId])
   @@map("cost_audit_logs")
 }
 
 // ==================== CUSTOMER TRANSACTIONS (FOR STATEMENT) ====================
 
 model CustomerTransaction {
-  id              String                  @id @default(cuid())
-  customerId      String
-  customer        Customer                @relation(fields: [customerId], references: [id])
+  id             String       @id @default(cuid())
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   transactionType CustomerTransactionType
   transactionDate DateTime
-  amount          Decimal                 @db.Decimal(12, 2) // Positive for debit (invoice), negative for credit (payment)
+  amount          Decimal @db.Decimal(12, 2)
   description     String
 
-  invoiceId       String?
-  paymentId       String?
+  invoiceId String?
+  paymentId String?
 
-  runningBalance  Decimal                 @db.Decimal(12, 2) // Balance after this transaction
+  runningBalance Decimal @db.Decimal(12, 2)
 
-  createdAt       DateTime                @default(now())
+  createdAt DateTime @default(now())
 
   @@index([customerId, transactionDate])
+  @@index([organizationId])
   @@map("customer_transactions")
 }
 
@@ -685,23 +813,26 @@ enum CustomerTransactionType {
 // ==================== SUPPLIER TRANSACTIONS (FOR STATEMENT) ====================
 
 model SupplierTransaction {
-  id              String                  @id @default(cuid())
-  supplierId      String
-  supplier        Supplier                @relation(fields: [supplierId], references: [id])
+  id             String       @id @default(cuid())
+  supplierId     String
+  supplier       Supplier     @relation(fields: [supplierId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   transactionType SupplierTransactionType
   transactionDate DateTime
-  amount          Decimal                 @db.Decimal(12, 2) // Positive for debit (purchase), negative for credit (payment)
+  amount          Decimal @db.Decimal(12, 2)
   description     String
 
   purchaseInvoiceId String?
   supplierPaymentId String?
 
-  runningBalance  Decimal                 @db.Decimal(12, 2) // Balance after this transaction
+  runningBalance Decimal @db.Decimal(12, 2)
 
-  createdAt       DateTime                @default(now())
+  createdAt DateTime @default(now())
 
   @@index([supplierId, transactionDate])
+  @@index([organizationId])
   @@map("supplier_transactions")
 }
 
@@ -716,11 +847,15 @@ enum SupplierTransactionType {
 // ==================== SETTINGS ====================
 
 model Setting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String       @id @default(cuid())
+  key            String
+  value          String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
+  @@unique([organizationId, key])
+  @@index([organizationId])
   @@map("settings")
 }

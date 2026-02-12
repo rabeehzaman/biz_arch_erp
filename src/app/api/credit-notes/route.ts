@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import {
   createStockLotFromCreditNote,
   getOriginalCOGSForInvoiceItem,
@@ -9,13 +10,13 @@ import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 
 // Generate credit note number: CN-YYYYMMDD-XXX
-async function generateCreditNoteNumber() {
+async function generateCreditNoteNumber(organizationId: string) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `CN-${dateStr}`;
 
   const lastCN = await prisma.creditNote.findFirst({
-    where: { creditNoteNumber: { startsWith: prefix } },
+    where: { creditNoteNumber: { startsWith: prefix }, organizationId },
     orderBy: { creditNoteNumber: "desc" },
   });
 
@@ -37,14 +38,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const userId = session.user.id;
     const isAdmin = session.user.role === "admin";
 
     // Apply same access control as invoices - user can only see credit notes for assigned customers
     const creditNotes = await prisma.creditNote.findMany({
       where: isAdmin
-        ? {}
+        ? { organizationId }
         : {
+            organizationId,
             customer: {
               assignments: {
                 some: { userId },
@@ -85,6 +88,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const {
       customerId,
@@ -104,7 +108,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const creditNoteNumber = await generateCreditNoteNumber();
+    const creditNoteNumber = await generateCreditNoteNumber(organizationId);
     const creditNoteDate = issueDate ? new Date(issueDate) : new Date();
 
     // Calculate totals with item-level discounts
@@ -125,6 +129,7 @@ export async function POST(request: NextRequest) {
       // Create the credit note
       const creditNote = await tx.creditNote.create({
         data: {
+          organizationId,
           creditNoteNumber,
           customerId,
           createdById: session.user.id,
@@ -148,6 +153,7 @@ export async function POST(request: NextRequest) {
                 discount?: number;
                 originalCOGS?: number;
               }) => ({
+                organizationId,
                 invoiceItemId: item.invoiceItemId || null,
                 productId: item.productId || null,
                 description: item.description,
@@ -209,7 +215,8 @@ export async function POST(request: NextRequest) {
             creditNoteItem.quantity,
             unitCost,
             creditNoteDate,
-            tx
+            tx,
+            organizationId
           );
 
           productsToRecalculate.add(creditNoteItem.productId);
@@ -228,6 +235,7 @@ export async function POST(request: NextRequest) {
         // Create customer transaction record
         await tx.customerTransaction.create({
           data: {
+            organizationId,
             customerId,
             transactionType: "CREDIT_NOTE",
             transactionDate: creditNoteDate,
@@ -258,7 +266,7 @@ export async function POST(request: NextRequest) {
       for (const productId of productsToRecalculate) {
         const backdated = await isBackdated(productId, creditNoteDate, tx);
         if (backdated) {
-          await recalculateFromDate(productId, creditNoteDate, tx);
+          await recalculateFromDate(productId, creditNoteDate, tx, "recalculation", undefined, organizationId);
         }
       }
 

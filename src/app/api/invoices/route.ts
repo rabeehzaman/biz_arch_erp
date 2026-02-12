@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
-async function generateInvoiceNumber() {
+async function generateInvoiceNumber(organizationId: string) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `INV-${dateStr}`;
 
   const lastInvoice = await prisma.invoice.findFirst({
-    where: { invoiceNumber: { startsWith: prefix } },
+    where: { invoiceNumber: { startsWith: prefix }, organizationId },
     orderBy: { invoiceNumber: "desc" },
   });
 
@@ -30,11 +31,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const userId = session.user.id;
     const isAdmin = session.user.role === "admin";
 
     const invoices = await prisma.invoice.findMany({
-      where: isAdmin ? {} : {
+      where: isAdmin ? { organizationId } : {
+        organizationId,
         customer: {
           assignments: {
             some: { userId }
@@ -72,6 +75,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const body = await request.json();
     const { customerId, issueDate, dueDate, items, taxRate, notes, terms } = body;
 
@@ -82,7 +86,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const invoiceNumber = await generateInvoiceNumber();
+    const invoiceNumber = await generateInvoiceNumber(organizationId);
     const invoiceDate = issueDate ? new Date(issueDate) : new Date();
 
     // Calculate totals with item-level discounts
@@ -100,6 +104,7 @@ export async function POST(request: NextRequest) {
       // Create the invoice
       const invoice = await tx.invoice.create({
         data: {
+          organizationId,
           invoiceNumber,
           customerId,
           createdById: session.user.id,
@@ -120,6 +125,7 @@ export async function POST(request: NextRequest) {
               unitPrice: number;
               discount?: number;
             }) => ({
+              organizationId,
               productId: item.productId || null,
               description: item.description,
               quantity: item.quantity,
@@ -165,7 +171,8 @@ export async function POST(request: NextRequest) {
               invoiceItem.quantity,
               invoiceItem.id,
               invoiceDate,
-              tx
+              tx,
+              organizationId
             );
 
             // Update the invoice item with COGS
@@ -194,6 +201,7 @@ export async function POST(request: NextRequest) {
       // Create CustomerTransaction record for invoice
       await tx.customerTransaction.create({
         data: {
+          organizationId,
           customerId,
           transactionType: "INVOICE",
           transactionDate: invoiceDate,
@@ -211,7 +219,8 @@ export async function POST(request: NextRequest) {
           invoiceDate,
           tx,
           "backdated_invoice",
-          `Invoice created with date ${invoiceDate.toISOString().split("T")[0]}`
+          `Invoice created with date ${invoiceDate.toISOString().split("T")[0]}`,
+          organizationId
         );
       }
 

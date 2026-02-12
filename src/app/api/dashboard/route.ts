@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const [
       totalInvoices,
       pendingInvoices,
@@ -13,16 +21,18 @@ export async function GET() {
       revenueResult,
       recentInvoices,
     ] = await Promise.all([
-      prisma.invoice.count(),
+      prisma.invoice.count({ where: { organizationId } }),
       prisma.invoice.count({
-        where: { balanceDue: { gt: 0 } },
+        where: { organizationId, balanceDue: { gt: 0 } },
       }),
-      prisma.customer.count({ where: { isActive: true } }),
-      prisma.product.count({ where: { isActive: true } }),
+      prisma.customer.count({ where: { organizationId, isActive: true } }),
+      prisma.product.count({ where: { organizationId, isActive: true } }),
       prisma.invoice.aggregate({
+        where: { organizationId },
         _sum: { amountPaid: true },
       }),
       prisma.invoice.findMany({
+        where: { organizationId },
         take: 5,
         orderBy: { createdAt: "desc" },
         include: {

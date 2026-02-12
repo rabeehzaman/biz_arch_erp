@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const { id } = await params;
     const body = await request.json();
     const { amount, transactionDate, description } = body;
@@ -18,7 +26,7 @@ export async function POST(
     }
 
     const customer = await prisma.customer.findUnique({
-      where: { id },
+      where: { id, organizationId },
     });
 
     if (!customer) {
@@ -33,6 +41,7 @@ export async function POST(
       where: {
         customerId: id,
         transactionType: "OPENING_BALANCE",
+        organizationId,
       },
     });
 
@@ -67,6 +76,7 @@ export async function POST(
           where: {
             customerId: id,
             transactionDate: { gt: date },
+            organizationId,
           },
           orderBy: { transactionDate: "asc" },
         });
@@ -89,6 +99,7 @@ export async function POST(
             amount: parsedAmount,
             description: description || "Opening Balance",
             runningBalance: parsedAmount,
+            organizationId,
           },
         });
 
@@ -124,12 +135,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const organizationId = getOrgId(session);
+
     const { id } = await params;
 
     const openingBalance = await prisma.customerTransaction.findFirst({
       where: {
         customerId: id,
         transactionType: "OPENING_BALANCE",
+        organizationId,
       },
     });
 

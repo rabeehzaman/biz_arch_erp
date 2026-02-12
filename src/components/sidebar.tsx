@@ -23,7 +23,7 @@ import {
   FileMinus,
   FileOutput,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -56,8 +56,14 @@ const bottomNavigation = [
   { name: "Fix Balances", href: "/admin/fix-balances", icon: Wrench },
 ];
 
+const superadminNavigation = [
+  { name: "Organizations", href: "/admin/organizations", icon: Building2 },
+];
+
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isSuperadmin = session?.user?.role === "superadmin";
 
   return (
     <>
@@ -98,6 +104,25 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Bottom Navigation */}
       <div className="px-3 py-4">
         <Separator className="mb-4 bg-slate-700" />
+        {isSuperadmin && superadminNavigation.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              {item.name}
+            </Link>
+          );
+        })}
         {bottomNavigation.map((item) => {
           const isActive = pathname === item.href;
           return (

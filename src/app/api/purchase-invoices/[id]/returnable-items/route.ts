@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import { Decimal } from "@prisma/client/runtime/client";
 
 export async function GET(
@@ -13,11 +14,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     // Get the purchase invoice with all items and related debit notes
     const purchaseInvoice = await prisma.purchaseInvoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         items: {
           include: {

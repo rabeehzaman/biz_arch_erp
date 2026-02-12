@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 import {
   consumeStockForDebitNote,
   restoreStockFromDebitNote,
@@ -19,10 +20,11 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     const debitNote = await prisma.debitNote.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         supplier: true,
         purchaseInvoice: true,
@@ -66,6 +68,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
     const {
@@ -114,7 +117,7 @@ export async function PUT(
     const result = await prisma.$transaction(async (tx) => {
       // Get the old debit note
       const oldDebitNote = await tx.debitNote.findUnique({
-        where: { id },
+        where: { id, organizationId },
         include: {
           items: true,
         },
@@ -188,7 +191,7 @@ export async function PUT(
 
       // Update the debit note and create new items
       const updatedDebitNote = await tx.debitNote.update({
-        where: { id },
+        where: { id, organizationId },
         data: {
           supplierId,
           purchaseInvoiceId: purchaseInvoiceId || null,
@@ -210,6 +213,7 @@ export async function PUT(
                 unitCost: number;
                 discount?: number;
               }) => ({
+                organizationId,
                 purchaseInvoiceItemId: item.purchaseInvoiceItemId || null,
                 productId: item.productId,
                 description: item.description,
@@ -236,7 +240,8 @@ export async function PUT(
           debitNoteItem.quantity,
           debitNoteItem.id,
           debitNoteDate,
-          tx
+          tx,
+          organizationId
         );
 
         productsToRecalculate.add(debitNoteItem.productId);
@@ -254,6 +259,7 @@ export async function PUT(
         // Create new supplier transaction
         await tx.supplierTransaction.create({
           data: {
+            organizationId,
             supplierId,
             transactionType: "DEBIT_NOTE",
             transactionDate: debitNoteDate,
@@ -284,7 +290,7 @@ export async function PUT(
       for (const productId of productsToRecalculate) {
         const backdated = await isBackdated(productId, debitNoteDate, tx);
         if (backdated) {
-          await recalculateFromDate(productId, debitNoteDate, tx);
+          await recalculateFromDate(productId, debitNoteDate, tx, "recalculation", undefined, organizationId);
         }
       }
 
@@ -328,12 +334,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = getOrgId(session);
     const { id } = await params;
 
     const result = await prisma.$transaction(async (tx) => {
       // Get the debit note with items
       const debitNote = await tx.debitNote.findUnique({
-        where: { id },
+        where: { id, organizationId },
         include: {
           items: true,
         },
@@ -381,14 +388,14 @@ export async function DELETE(
 
       // Delete the debit note (cascade will delete items and lot consumptions)
       await tx.debitNote.delete({
-        where: { id },
+        where: { id, organizationId },
       });
 
       // Recalculate FIFO for affected products
       for (const productId of productsToRecalculate) {
         const backdated = await isBackdated(productId, debitNote.issueDate, tx);
         if (backdated) {
-          await recalculateFromDate(productId, debitNote.issueDate, tx);
+          await recalculateFromDate(productId, debitNote.issueDate, tx, "recalculation", undefined, organizationId);
         }
       }
 

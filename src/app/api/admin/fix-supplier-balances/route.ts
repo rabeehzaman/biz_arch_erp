@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getOrgId } from "@/lib/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,6 +10,7 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
 
     if (session.user.role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
@@ -17,6 +19,7 @@ export async function POST(request: NextRequest) {
     console.log(`[Fix Supplier Balances] Starting balance fix by ${session.user.email}`);
 
     const suppliers = await prisma.supplier.findMany({
+      where: { organizationId },
       select: {
         id: true,
         name: true,
@@ -44,19 +47,19 @@ export async function POST(request: NextRequest) {
         // because purchase invoices don't create SupplierTransaction records
         const [purchaseInvoices, payments, debitNotes, openingBalance] = await Promise.all([
           prisma.purchaseInvoice.aggregate({
-            where: { supplierId: supplier.id },
+            where: { supplierId: supplier.id, organizationId },
             _sum: { total: true },
           }),
           prisma.supplierPayment.aggregate({
-            where: { supplierId: supplier.id },
+            where: { supplierId: supplier.id, organizationId },
             _sum: { amount: true },
           }),
           prisma.debitNote.aggregate({
-            where: { supplierId: supplier.id, appliedToBalance: true },
+            where: { supplierId: supplier.id, organizationId, appliedToBalance: true },
             _sum: { total: true },
           }),
           prisma.supplierTransaction.findFirst({
-            where: { supplierId: supplier.id, transactionType: "OPENING_BALANCE" },
+            where: { supplierId: supplier.id, organizationId, transactionType: "OPENING_BALANCE" },
             select: { amount: true },
           }),
         ]);
@@ -128,12 +131,14 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const organizationId = getOrgId(session);
 
     if (session.user.role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     const suppliers = await prisma.supplier.findMany({
+      where: { organizationId },
       select: {
         id: true,
         name: true,
@@ -154,19 +159,19 @@ export async function GET(request: NextRequest) {
       // Calculate balance from actual transactions (not SupplierTransaction table)
       const [purchaseInvoices, payments, debitNotes, openingBalance] = await Promise.all([
         prisma.purchaseInvoice.aggregate({
-          where: { supplierId: supplier.id },
+          where: { supplierId: supplier.id, organizationId },
           _sum: { total: true },
         }),
         prisma.supplierPayment.aggregate({
-          where: { supplierId: supplier.id },
+          where: { supplierId: supplier.id, organizationId },
           _sum: { amount: true },
         }),
         prisma.debitNote.aggregate({
-          where: { supplierId: supplier.id, appliedToBalance: true },
+          where: { supplierId: supplier.id, organizationId, appliedToBalance: true },
           _sum: { total: true },
         }),
         prisma.supplierTransaction.findFirst({
-          where: { supplierId: supplier.id, transactionType: "OPENING_BALANCE" },
+          where: { supplierId: supplier.id, organizationId, transactionType: "OPENING_BALANCE" },
           select: { amount: true },
         }),
       ]);
