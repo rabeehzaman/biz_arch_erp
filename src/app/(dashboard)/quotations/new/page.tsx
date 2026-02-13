@@ -321,6 +321,7 @@ export default function NewQuotationPage() {
                           onSelect={() => focusQuantity(item.id)}
                         />
                       </div>
+                      <div className="grid grid-cols-3 gap-2 sm:contents">
                       <div className="sm:col-span-2">
                         <Label>Quantity *</Label>
                         <Input
@@ -379,6 +380,7 @@ export default function NewQuotationPage() {
                           }
                           placeholder="0"
                         />
+                      </div>
                       </div>
                       <div className="sm:col-span-1 flex justify-end">
                         <Button

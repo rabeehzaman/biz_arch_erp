@@ -326,7 +326,7 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Customers</h2>
           <p className="text-slate-500">Manage your customer database</p>
@@ -354,7 +354,7 @@ export default function CustomersPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="name">Name *</Label>
                     <Input
@@ -378,7 +378,7 @@ export default function CustomersPage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="phone">Phone</Label>
                     <Input
@@ -410,7 +410,7 @@ export default function CustomersPage() {
                     }
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-4 sm:grid-cols-3">
                   <div className="grid gap-2">
                     <Label htmlFor="city">City</Label>
                     <Input
@@ -613,8 +613,8 @@ export default function CustomersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Assigned To</TableHead>
+                  <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                  <TableHead className="hidden sm:table-cell">Assigned To</TableHead>
                   <TableHead>Balance</TableHead>
                   <TableHead>Invoices</TableHead>
                   <TableHead>Status</TableHead>
@@ -627,7 +627,7 @@ export default function CustomersPage() {
                     <TableCell>
                       <div className="font-medium">{customer.name}</div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="text-sm">
                         {customer.email && <div>{customer.email}</div>}
                         {customer.phone && (
@@ -635,7 +635,7 @@ export default function CustomersPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="flex flex-wrap gap-1">
                         {customer.assignments && customer.assignments.length > 0 ? (
                           customer.assignments.map(a => (

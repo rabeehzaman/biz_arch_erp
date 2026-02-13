@@ -158,7 +158,7 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Products</h2>
           <p className="text-slate-500">Manage your product catalog</p>
@@ -207,7 +207,7 @@ export default function ProductsPage() {
                     }
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="price">Price *</Label>
                     <Input
@@ -283,9 +283,9 @@ export default function ProductsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>SKU</TableHead>
+                  <TableHead className="hidden sm:table-cell">SKU</TableHead>
                   <TableHead>Price</TableHead>
-                  <TableHead>Unit</TableHead>
+                  <TableHead className="hidden sm:table-cell">Unit</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -303,11 +303,11 @@ export default function ProductsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{product.sku || "-"}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{product.sku || "-"}</TableCell>
                     <TableCell>
                       ₹{Number(product.price).toLocaleString("en-IN")}
                     </TableCell>
-                    <TableCell>{product.unit?.name || "-"}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{product.unit?.name || "-"}</TableCell>
                     <TableCell>
                       <Badge
                         variant={product.isActive ? "default" : "secondary"}

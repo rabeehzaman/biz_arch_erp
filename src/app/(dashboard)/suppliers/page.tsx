@@ -245,7 +245,7 @@ export default function SuppliersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Suppliers</h2>
           <p className="text-slate-500">Manage your supplier/vendor database</p>
@@ -273,7 +273,7 @@ export default function SuppliersPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="name">Name *</Label>
                     <Input
@@ -297,7 +297,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="phone">Phone</Label>
                     <Input
@@ -329,7 +329,7 @@ export default function SuppliersPage() {
                     }
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-4 sm:grid-cols-3">
                   <div className="grid gap-2">
                     <Label htmlFor="city">City</Label>
                     <Input

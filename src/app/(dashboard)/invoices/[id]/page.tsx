@@ -144,7 +144,7 @@ export default function InvoiceDetailPage({
   return (
     <div className="space-y-6 print:space-y-4">
       {/* Header - Hidden on print */}
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div className="flex items-center gap-4">
           <Link href="/invoices">
             <Button variant="ghost" size="icon">
@@ -160,7 +160,7 @@ export default function InvoiceDetailPage({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href={`/invoices/${id}/edit`}>
             <Button variant="outline">
               <Pencil className="mr-2 h-4 w-4" />
@@ -180,7 +180,7 @@ export default function InvoiceDetailPage({
 
       {/* Invoice Document */}
       <Card className="print:shadow-none print:border-none">
-        <CardContent className="p-8">
+        <CardContent className="p-4 sm:p-8">
           {/* Company & Invoice Info */}
           <div className="flex justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ export default function InvoiceDetailPage({
 
           {/* Totals */}
           <div className="flex justify-end mt-6">
-            <div className="w-64 space-y-2">
+            <div className="w-full sm:w-64 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
                 <span>₹{Number(invoice.subtotal).toLocaleString("en-IN")}</span>

@@ -185,7 +185,7 @@ export default function OpeningStockPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Opening Stock</h2>
           <p className="text-slate-500">Set initial stock quantities for your products</p>
@@ -234,7 +234,7 @@ export default function OpeningStockPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="quantity">Quantity *</Label>
                     <Input

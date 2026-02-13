@@ -82,7 +82,7 @@ export default function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Invoices</h2>
           <p className="text-slate-500">Create and manage invoices</p>
@@ -131,8 +131,8 @@ export default function InvoicesPage() {
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Issue Date</TableHead>
-                  <TableHead>Due Date</TableHead>
+                  <TableHead className="hidden sm:table-cell">Issue Date</TableHead>
+                  <TableHead className="hidden sm:table-cell">Due Date</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -158,10 +158,10 @@ export default function InvoicesPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {format(new Date(invoice.issueDate), "dd MMM yyyy")}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {format(new Date(invoice.dueDate), "dd MMM yyyy")}
                     </TableCell>
                     <TableCell className="text-right">

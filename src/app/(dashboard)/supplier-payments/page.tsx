@@ -218,7 +218,7 @@ export default function SupplierPaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Supplier Payments</h2>
           <p className="text-slate-500">Record payments to suppliers</p>
@@ -289,7 +289,7 @@ export default function SupplierPaymentsPage() {
                     </Select>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="amount">Amount *</Label>
                     <Input
@@ -317,7 +317,7 @@ export default function SupplierPaymentsPage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="paymentDate">Payment Date *</Label>
                     <Input
@@ -331,7 +331,7 @@ export default function SupplierPaymentsPage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="paymentMethod">Payment Method</Label>
                     <Select

@@ -189,7 +189,7 @@ export default function PurchaseInvoiceDetailPage({
   return (
     <div className="space-y-6 print:space-y-4">
       {/* Header - Hidden on print */}
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div className="flex items-center gap-4">
           <Link href="/purchase-invoices">
             <Button variant="ghost" size="icon">
@@ -205,7 +205,7 @@ export default function PurchaseInvoiceDetailPage({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={invoice.status} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[150px]">
               <SelectValue />
@@ -237,7 +237,7 @@ export default function PurchaseInvoiceDetailPage({
 
       {/* Invoice Document */}
       <Card className="print:shadow-none print:border-none">
-        <CardContent className="p-8">
+        <CardContent className="p-4 sm:p-8">
           {/* Company & Invoice Info */}
           <div className="flex justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -351,7 +351,7 @@ export default function PurchaseInvoiceDetailPage({
 
           {/* Totals */}
           <div className="flex justify-end mt-6">
-            <div className="w-64 space-y-2">
+            <div className="w-full sm:w-64 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
                 <span>₹{Number(invoice.subtotal).toLocaleString("en-IN")}</span>

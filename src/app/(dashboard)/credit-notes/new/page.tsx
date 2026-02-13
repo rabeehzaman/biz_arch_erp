@@ -222,7 +222,7 @@ export default function NewCreditNotePage() {
             <CardTitle>Credit Note Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="customer">Customer *</Label>
                 <select
@@ -289,7 +289,7 @@ export default function NewCreditNotePage() {
             <div className="space-y-3">
               {items.map((item, index) => (
                 <div key={item.id} className="flex gap-2 items-start">
-                  <div className="flex-1 grid grid-cols-5 gap-2">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
                     <select
                       value={item.productId}
                       onChange={(e) => handleProductSelect(index, e.target.value)}
@@ -303,6 +303,7 @@ export default function NewCreditNotePage() {
                       ))}
                     </select>
 
+                    <div className="grid grid-cols-3 gap-2 sm:contents">
                     <Input
                       type="number"
                       placeholder="Qty"
@@ -336,6 +337,7 @@ export default function NewCreditNotePage() {
                       max="100"
                       step="0.01"
                     />
+                    </div>
 
                     <div className="flex items-center justify-end">
                       <span className="text-sm font-medium">

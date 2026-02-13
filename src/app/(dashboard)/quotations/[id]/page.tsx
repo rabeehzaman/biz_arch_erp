@@ -213,7 +213,7 @@ export default function QuotationDetailPage({
   return (
     <div className="space-y-6 print:space-y-4">
       {/* Header - Hidden on print */}
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div className="flex items-center gap-4">
           <Link href="/quotations">
             <Button variant="ghost" size="icon">
@@ -232,7 +232,7 @@ export default function QuotationDetailPage({
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {quotation.status !== "CONVERTED" && (
             <Link href={`/quotations/${id}/edit`}>
               <Button variant="outline">
@@ -294,7 +294,7 @@ export default function QuotationDetailPage({
 
       {/* Quotation Document */}
       <Card className="print:shadow-none print:border-0">
-        <CardContent className="p-8 print:p-0">
+        <CardContent className="p-4 sm:p-8 print:p-0">
           {/* Company Header */}
           <div className="flex items-start justify-between mb-8 print:mb-6">
             <div className="flex items-center gap-3">
@@ -392,7 +392,7 @@ export default function QuotationDetailPage({
 
           {/* Totals */}
           <div className="flex justify-end mt-6 print:mt-4">
-            <div className="w-64 space-y-2">
+            <div className="w-full sm:w-64 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Subtotal</span>
                 <span className="font-medium">
