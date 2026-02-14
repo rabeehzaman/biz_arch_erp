@@ -38,7 +38,7 @@ interface Unit {
   };
 }
 
-export default function UnitsPage() {
+export function UnitsSettings() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -151,11 +151,7 @@ export default function UnitsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Units of Measurement</h2>
-          <p className="text-slate-500">Manage units used for products</p>
-        </div>
+      <div className="flex items-center justify-end">
         <Dialog
           open={isDialogOpen}
           onOpenChange={(open) => {
