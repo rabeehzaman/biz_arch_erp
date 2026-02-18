@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { seedDefaultCOA } from "@/lib/accounting/seed-coa";
 
 export async function GET() {
   try {
@@ -76,6 +77,13 @@ export async function POST(request: NextRequest) {
     const organization = await prisma.organization.create({
       data: { name, slug },
     });
+
+    // Seed default chart of accounts for the new organization
+    try {
+      await seedDefaultCOA(prisma as never, organization.id);
+    } catch (coaError) {
+      console.error("Failed to seed COA for new org:", coaError);
+    }
 
     return NextResponse.json(organization, { status: 201 });
   } catch (error) {

@@ -3,6 +3,7 @@ import { PrismaClient } from "../src/generated/prisma/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 import { hash } from "bcryptjs";
+import { seedDefaultCOA } from "../src/lib/accounting/seed-coa.js";
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -225,6 +226,10 @@ async function main() {
   }
 
   console.log("Created sample products");
+
+  // Seed default chart of accounts
+  await seedDefaultCOA(prisma as never, defaultOrg.id);
+  console.log("Created default chart of accounts");
 
   console.log("Seeding complete!");
 }

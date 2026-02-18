@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
 async function generatePurchaseInvoiceNumber(organizationId: string) {
@@ -189,6 +190,22 @@ export async function POST(request: NextRequest) {
           runningBalance: 0, // Will be recalculated if needed
         },
       });
+
+      // Create auto journal entry: DR Inventory, CR Accounts Payable
+      const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+      const apAccount = await getSystemAccount(tx, organizationId, "2100");
+      if (inventoryAccount && apAccount) {
+        await createAutoJournalEntry(tx, organizationId, {
+          date: purchaseDate,
+          description: `Purchase Invoice ${purchaseInvoiceNumber}`,
+          sourceType: "PURCHASE_INVOICE",
+          sourceId: invoice.id,
+          lines: [
+            { accountId: inventoryAccount.id, description: "Inventory", debit: total, credit: 0 },
+            { accountId: apAccount.id, description: "Accounts Payable", debit: 0, credit: total },
+          ],
+        });
+      }
 
       // Check if this is a backdated purchase OR if there are zero-COGS items that need fixing
       const productIds = [...new Set(items.map((item: { productId: string }) => item.productId))];

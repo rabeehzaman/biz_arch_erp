@@ -47,6 +47,13 @@ model Organization {
   openingStocks              OpeningStock[]
   costAuditLogs              CostAuditLog[]
   settings                   Setting[]
+  accounts                   Account[]
+  cashBankAccounts           CashBankAccount[]
+  cashBankTransactions       CashBankTransaction[]
+  expenses                   Expense[]
+  expenseItems               ExpenseItem[]
+  journalEntries             JournalEntry[]
+  journalEntryLines          JournalEntryLine[]
 
   @@map("organizations")
 }
@@ -194,6 +201,7 @@ model Supplier {
   payments         SupplierPayment[]
   transactions     SupplierTransaction[]
   debitNotes       DebitNote[]
+  expenses         Expense[]
 
   @@index([organizationId])
   @@map("suppliers")
@@ -858,4 +866,238 @@ model Setting {
   @@unique([organizationId, key])
   @@index([organizationId])
   @@map("settings")
+}
+
+// ==================== ACCOUNTING ====================
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccountSubType {
+  CURRENT_ASSET
+  FIXED_ASSET
+  BANK
+  CASH
+  ACCOUNTS_RECEIVABLE
+  INVENTORY
+  OTHER_ASSET
+  CURRENT_LIABILITY
+  LONG_TERM_LIABILITY
+  ACCOUNTS_PAYABLE
+  OTHER_LIABILITY
+  OWNERS_EQUITY
+  RETAINED_EARNINGS
+  OTHER_EQUITY
+  SALES_REVENUE
+  OTHER_REVENUE
+  COST_OF_GOODS_SOLD
+  OPERATING_EXPENSE
+  PAYROLL_EXPENSE
+  OTHER_EXPENSE
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+  VOID
+}
+
+enum JournalSourceType {
+  MANUAL
+  INVOICE
+  PURCHASE_INVOICE
+  PAYMENT
+  SUPPLIER_PAYMENT
+  EXPENSE
+  CREDIT_NOTE
+  DEBIT_NOTE
+  TRANSFER
+  OPENING_BALANCE
+}
+
+enum ExpenseStatus {
+  DRAFT
+  APPROVED
+  PAID
+  VOID
+}
+
+enum CashBankTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER_IN
+  TRANSFER_OUT
+  OPENING_BALANCE
+}
+
+// ==================== CHART OF ACCOUNTS ====================
+
+model Account {
+  id             String         @id @default(cuid())
+  code           String
+  name           String
+  accountType    AccountType
+  accountSubType AccountSubType
+  description    String?
+  parentId       String?
+  parent         Account?       @relation("AccountTree", fields: [parentId], references: [id])
+  children       Account[]      @relation("AccountTree")
+  isSystem       Boolean        @default(false)
+  isActive       Boolean        @default(true)
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  journalEntryLines JournalEntryLine[]
+  expenseItems      ExpenseItem[]
+  cashBankAccount   CashBankAccount?
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([parentId])
+  @@map("accounts")
+}
+
+// ==================== CASH & BANK ACCOUNTS ====================
+
+model CashBankAccount {
+  id             String         @id @default(cuid())
+  name           String
+  accountId      String         @unique
+  account        Account        @relation(fields: [accountId], references: [id])
+  accountSubType AccountSubType // BANK or CASH
+  bankName       String?
+  accountNumber  String?
+  balance        Decimal        @default(0) @db.Decimal(12, 2)
+  isDefault      Boolean        @default(false)
+  isActive       Boolean        @default(true)
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  transactions CashBankTransaction[]
+  expenses     Expense[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("cash_bank_accounts")
+}
+
+model CashBankTransaction {
+  id                String                  @id @default(cuid())
+  cashBankAccountId String
+  cashBankAccount   CashBankAccount         @relation(fields: [cashBankAccountId], references: [id])
+  transactionType   CashBankTransactionType
+  amount            Decimal                 @db.Decimal(12, 2)
+  runningBalance    Decimal                 @db.Decimal(12, 2)
+  description       String
+  referenceType     String?
+  referenceId       String?
+  transactionDate   DateTime
+  organizationId    String
+  organization      Organization            @relation(fields: [organizationId], references: [id])
+  createdAt         DateTime                @default(now())
+
+  @@index([cashBankAccountId, transactionDate])
+  @@index([organizationId])
+  @@map("cash_bank_transactions")
+}
+
+// ==================== EXPENSES ====================
+
+model Expense {
+  id                String        @id @default(cuid())
+  expenseNumber     String
+  status            ExpenseStatus @default(DRAFT)
+  supplierId        String?
+  supplier          Supplier?     @relation(fields: [supplierId], references: [id])
+  cashBankAccountId String?
+  cashBankAccount   CashBankAccount? @relation(fields: [cashBankAccountId], references: [id])
+  expenseDate       DateTime      @default(now())
+  description       String?
+  subtotal          Decimal       @db.Decimal(12, 2)
+  taxRate           Decimal       @default(0) @db.Decimal(5, 2)
+  taxAmount         Decimal       @default(0) @db.Decimal(12, 2)
+  total             Decimal       @db.Decimal(12, 2)
+  notes             String?
+  journalEntryId    String?
+  journalEntry      JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  organizationId    String
+  organization      Organization  @relation(fields: [organizationId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  items ExpenseItem[]
+
+  @@unique([organizationId, expenseNumber])
+  @@index([organizationId])
+  @@map("expenses")
+}
+
+model ExpenseItem {
+  id             String       @id @default(cuid())
+  expenseId      String
+  expense        Expense      @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
+  description    String
+  amount         Decimal      @db.Decimal(12, 2)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([expenseId])
+  @@index([organizationId])
+  @@map("expense_items")
+}
+
+// ==================== JOURNAL ENTRIES ====================
+
+model JournalEntry {
+  id             String             @id @default(cuid())
+  journalNumber  String
+  date           DateTime
+  description    String
+  status         JournalEntryStatus @default(DRAFT)
+  sourceType     JournalSourceType  @default(MANUAL)
+  sourceId       String?
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  lines    JournalEntryLine[]
+  expenses Expense[]
+
+  @@unique([organizationId, journalNumber])
+  @@index([organizationId])
+  @@index([sourceType, sourceId])
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id             String       @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
+  description    String?
+  debit          Decimal      @default(0) @db.Decimal(12, 2)
+  credit         Decimal      @default(0) @db.Decimal(12, 2)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@index([organizationId])
+  @@map("journal_entry_lines")
 }

@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber(organizationId: string) {
@@ -222,6 +223,22 @@ export async function POST(request: NextRequest) {
           `Invoice created with date ${invoiceDate.toISOString().split("T")[0]}`,
           organizationId
         );
+      }
+
+      // Create auto journal entry: DR Accounts Receivable, CR Sales Revenue
+      const arAccount = await getSystemAccount(tx, organizationId, "1300");
+      const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
+      if (arAccount && revenueAccount) {
+        await createAutoJournalEntry(tx, organizationId, {
+          date: invoiceDate,
+          description: `Sales Invoice ${invoiceNumber}`,
+          sourceType: "INVOICE",
+          sourceId: invoice.id,
+          lines: [
+            { accountId: arAccount.id, description: "Accounts Receivable", debit: total, credit: 0 },
+            { accountId: revenueAccount.id, description: "Sales Revenue", debit: 0, credit: total },
+          ],
+        });
       }
 
       // Fetch the updated invoice with COGS

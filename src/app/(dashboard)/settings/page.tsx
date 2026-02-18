@@ -3,6 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CompanySettings } from "@/components/settings/company-settings";
 import { UnitsSettings } from "@/components/settings/units-settings";
+import { AccountingSettings } from "@/components/settings/accounting-settings";
 
 export default function SettingsPage() {
   return (
@@ -18,12 +19,16 @@ export default function SettingsPage() {
         <TabsList>
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="units">Units of Measure</TabsTrigger>
+          <TabsTrigger value="accounting">Accounting</TabsTrigger>
         </TabsList>
         <TabsContent value="company" className="mt-6">
           <CompanySettings />
         </TabsContent>
         <TabsContent value="units" className="mt-6">
           <UnitsSettings />
+        </TabsContent>
+        <TabsContent value="accounting" className="mt-6">
+          <AccountingSettings />
         </TabsContent>
       </Tabs>
     </div>

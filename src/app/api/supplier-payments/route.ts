@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
 
 // Generate supplier payment number: SPAY-YYYYMMDD-XXX
 async function generateSupplierPaymentNumber(organizationId: string) {
@@ -105,6 +106,46 @@ export async function POST(request: NextRequest) {
           balance: { decrement: totalSettlement },
         },
       });
+
+      // Create auto journal entry: DR Accounts Payable, CR Cash/Bank
+      const apAccount = await getSystemAccount(tx, organizationId, "2100");
+      const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod || "CASH");
+      if (apAccount && cashBankInfo) {
+        await createAutoJournalEntry(tx, organizationId, {
+          date: parsedPaymentDate,
+          description: `Supplier Payment ${paymentNumber}`,
+          sourceType: "SUPPLIER_PAYMENT",
+          sourceId: newPayment.id,
+          lines: [
+            { accountId: apAccount.id, description: "Accounts Payable", debit: totalSettlement, credit: 0 },
+            { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: 0, credit: totalSettlement },
+          ],
+        });
+
+        // Update cash/bank account balance
+        await tx.cashBankAccount.update({
+          where: { id: cashBankInfo.cashBankAccountId },
+          data: { balance: { decrement: totalSettlement } },
+        });
+
+        // Create cash/bank transaction
+        const updatedCB = await tx.cashBankAccount.findUnique({
+          where: { id: cashBankInfo.cashBankAccountId },
+        });
+        await tx.cashBankTransaction.create({
+          data: {
+            cashBankAccountId: cashBankInfo.cashBankAccountId,
+            transactionType: "WITHDRAWAL",
+            amount: -totalSettlement,
+            runningBalance: Number(updatedCB?.balance || 0),
+            description: `Supplier Payment ${paymentNumber}`,
+            referenceType: "SUPPLIER_PAYMENT",
+            referenceId: newPayment.id,
+            transactionDate: parsedPaymentDate,
+            organizationId,
+          },
+        });
+      }
 
       // Create SupplierTransaction record for payment
       await tx.supplierTransaction.create({

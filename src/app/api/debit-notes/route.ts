@@ -8,6 +8,7 @@ import {
 } from "@/lib/inventory/returns";
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 // Generate debit note number: DN-YYYYMMDD-XXX
 async function generateDebitNoteNumber(organizationId: string) {
@@ -225,6 +226,24 @@ export async function POST(request: NextRequest) {
             runningBalance: 0, // Will be calculated when statement is generated
           },
         });
+      }
+
+      // Create auto journal entry: DR Accounts Payable, CR Inventory
+      if (appliedToBalance) {
+        const apAccount = await getSystemAccount(tx, organizationId, "2100");
+        const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+        if (apAccount && inventoryAccount) {
+          await createAutoJournalEntry(tx, organizationId, {
+            date: debitNoteDate,
+            description: `Debit Note ${debitNoteNumber}`,
+            sourceType: "DEBIT_NOTE",
+            sourceId: debitNote.id,
+            lines: [
+              { accountId: apAccount.id, description: "Accounts Payable", debit: total, credit: 0 },
+              { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: 0, credit: total },
+            ],
+          });
+        }
       }
 
       // If linked to purchase invoice, update invoice balanceDue

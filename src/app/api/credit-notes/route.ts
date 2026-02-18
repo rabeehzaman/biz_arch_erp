@@ -8,6 +8,7 @@ import {
 } from "@/lib/inventory/returns";
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 // Generate credit note number: CN-YYYYMMDD-XXX
 async function generateCreditNoteNumber(organizationId: string) {
@@ -244,6 +245,24 @@ export async function POST(request: NextRequest) {
             runningBalance: 0, // Will be calculated when statement is generated
           },
         });
+      }
+
+      // Create auto journal entry: DR Sales Revenue, CR Accounts Receivable
+      if (appliedToBalance) {
+        const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
+        const arAccount = await getSystemAccount(tx, organizationId, "1300");
+        if (revenueAccount && arAccount) {
+          await createAutoJournalEntry(tx, organizationId, {
+            date: creditNoteDate,
+            description: `Credit Note ${creditNoteNumber}`,
+            sourceType: "CREDIT_NOTE",
+            sourceId: creditNote.id,
+            lines: [
+              { accountId: revenueAccount.id, description: "Sales Revenue (Return)", debit: total, credit: 0 },
+              { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: total },
+            ],
+          });
+        }
       }
 
       // If linked to invoice, update invoice balanceDue

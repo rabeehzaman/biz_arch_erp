@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
 
 // Generate payment number: PAY-YYYYMMDD-XXX
 async function generatePaymentNumber(organizationId: string) {
@@ -179,6 +180,46 @@ export async function POST(request: NextRequest) {
           remainingAmount -= applyAmount;
         }
         // Any remaining amount just reduces customer balance (already done above)
+      }
+
+      // Create auto journal entry: DR Cash/Bank, CR Accounts Receivable
+      const arAccount = await getSystemAccount(tx, organizationId, "1300");
+      const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod || "CASH");
+      if (arAccount && cashBankInfo) {
+        await createAutoJournalEntry(tx, organizationId, {
+          date: parsedPaymentDate,
+          description: `Customer Payment ${paymentNumber}`,
+          sourceType: "PAYMENT",
+          sourceId: newPayment.id,
+          lines: [
+            { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: totalSettlement, credit: 0 },
+            { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: totalSettlement },
+          ],
+        });
+
+        // Update cash/bank account balance
+        await tx.cashBankAccount.update({
+          where: { id: cashBankInfo.cashBankAccountId },
+          data: { balance: { increment: totalSettlement } },
+        });
+
+        // Create cash/bank transaction
+        const updatedCB = await tx.cashBankAccount.findUnique({
+          where: { id: cashBankInfo.cashBankAccountId },
+        });
+        await tx.cashBankTransaction.create({
+          data: {
+            cashBankAccountId: cashBankInfo.cashBankAccountId,
+            transactionType: "DEPOSIT",
+            amount: totalSettlement,
+            runningBalance: Number(updatedCB?.balance || 0),
+            description: `Customer Payment ${paymentNumber}`,
+            referenceType: "PAYMENT",
+            referenceId: newPayment.id,
+            transactionDate: parsedPaymentDate,
+            organizationId,
+          },
+        });
       }
 
       // Create CustomerTransaction record for audit trail
