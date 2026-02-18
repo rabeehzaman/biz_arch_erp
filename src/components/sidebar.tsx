@@ -162,52 +162,41 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Main Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-        {navigation.map((item) => (
-          <NavItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
-        ))}
+        {isSuperadmin ? (
+          superadminNavigation.map((item) => (
+            <NavItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+          ))
+        ) : (
+          <>
+            {navigation.map((item) => (
+              <NavItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+            ))}
 
-        <Separator className="my-3 bg-slate-700" />
+            <Separator className="my-3 bg-slate-700" />
 
-        <CollapsibleSection
-          title="Accounting"
-          icon={BookOpen}
-          items={accountingNavigation}
-          pathname={pathname}
-          onNavigate={onNavigate}
-        />
+            <CollapsibleSection
+              title="Accounting"
+              icon={BookOpen}
+              items={accountingNavigation}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
 
-        <CollapsibleSection
-          title="Reports"
-          icon={BarChart3}
-          items={reportsNavigation}
-          pathname={pathname}
-          onNavigate={onNavigate}
-        />
+            <CollapsibleSection
+              title="Reports"
+              icon={BarChart3}
+              items={reportsNavigation}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
+          </>
+        )}
       </nav>
 
       {/* Bottom Navigation */}
       <div className="px-3 py-4">
         <Separator className="mb-4 bg-slate-700" />
-        {isSuperadmin && superadminNavigation.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-slate-800 text-white"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.name}
-            </Link>
-          );
-        })}
-        {bottomNavigation.map((item) => {
+        {!isSuperadmin && bottomNavigation.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

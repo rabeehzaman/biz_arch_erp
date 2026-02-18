@@ -23,9 +23,10 @@ export const authConfig: NextAuthConfig = {
       if (isAuthApi) return true;
 
       if (isOnLogin) {
-        // If logged in and on login page, redirect to dashboard
+        // If logged in and on login page, redirect to appropriate dashboard
         if (isLoggedIn) {
-          return Response.redirect(new URL("/", nextUrl));
+          const isSuperadmin = (auth?.user as { role?: string })?.role === "superadmin";
+          return Response.redirect(new URL(isSuperadmin ? "/admin/organizations" : "/", nextUrl));
         }
         return true; // Allow access to login page when not logged in
       }
@@ -35,13 +36,20 @@ export const authConfig: NextAuthConfig = {
         return Response.redirect(new URL("/login", nextUrl));
       }
 
+      // Superadmin should only access /admin/* paths (API routes are always allowed)
+      const isSuperadmin = (auth?.user as { role?: string })?.role === "superadmin";
+      const isApi = nextUrl.pathname.startsWith("/api");
+      if (isSuperadmin && !isApi && !nextUrl.pathname.startsWith("/admin")) {
+        return Response.redirect(new URL("/admin/organizations", nextUrl));
+      }
+
       return true;
     },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
-        token.organizationId = (user as { organizationId?: string }).organizationId;
+        token.organizationId = (user as { organizationId?: string | null }).organizationId ?? null;
       }
       return token;
     },

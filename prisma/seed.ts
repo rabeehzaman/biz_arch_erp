@@ -31,13 +31,12 @@ async function main() {
   const superadminPassword = await hash("superadmin123", 12);
   const superadmin = await prisma.user.upsert({
     where: { email: "superadmin@bizarch.com" },
-    update: {},
+    update: { organizationId: null },
     create: {
       email: "superadmin@bizarch.com",
       password: superadminPassword,
       name: "Super Admin",
       role: "superadmin",
-      organizationId: defaultOrg.id,
     },
   });
   console.log("Created superadmin user:", superadmin.email);
