@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, Search } from "lucide-react";
+import { Users, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 
 interface Customer {
@@ -36,9 +36,17 @@ interface Summary {
   customersWithAdvances: number;
 }
 
+interface Reconciliation {
+  glBalance: number;
+  ledgerBalance: number;
+  difference: number;
+  isReconciled: boolean;
+}
+
 interface ReportData {
   customers: Customer[];
   summary: Summary;
+  reconciliation: Reconciliation;
 }
 
 export default function CustomerBalancesPage() {
@@ -155,6 +163,24 @@ export default function CustomerBalancesPage() {
               <p className="text-xs text-slate-500">total outstanding</p>
             </CardContent>
           </Card>
+          {reportData.reconciliation && (
+            <Card className={reportData.reconciliation.isReconciled ? "border-green-200" : "border-orange-300"}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500 flex items-center gap-1">
+                  {reportData.reconciliation.isReconciled
+                    ? <CheckCircle className="h-4 w-4 text-green-500" />
+                    : <AlertTriangle className="h-4 w-4 text-orange-500" />}
+                  AR Reconciliation
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-sm font-bold ${reportData.reconciliation.isReconciled ? 'text-green-600' : 'text-orange-600'}`}>
+                  {reportData.reconciliation.isReconciled ? "Reconciled" : `Off by ${formatCurrency(Math.abs(reportData.reconciliation.difference))}`}
+                </div>
+                <p className="text-xs text-slate-500">GL: {formatCurrency(reportData.reconciliation.glBalance)}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 

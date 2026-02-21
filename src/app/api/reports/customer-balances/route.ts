@@ -41,12 +41,28 @@ export async function GET() {
       isActive: customer.isActive,
     }));
 
+    const ledgerBalance = formattedCustomers.reduce((sum, c) => sum + c.balance, 0);
+
+    // GL reconciliation: compute AR balance from journal entries on account 1300
+    const glARLines = await prisma.journalEntryLine.findMany({
+      where: {
+        organizationId,
+        journalEntry: { status: "POSTED" },
+        account: { code: "1300" },
+      },
+      select: { debit: true, credit: true },
+    });
+    const glBalance = glARLines.reduce(
+      (sum, line) => sum + Number(line.debit) - Number(line.credit),
+      0
+    );
+
     const summary = {
       totalCustomers: customers.length,
       activeCustomers: customers.filter((c) => c.isActive).length,
-      totalReceivable: formattedCustomers.reduce((sum, c) => sum + Math.max(0, c.balance), 0), // Only positive balances (receivables)
-      totalAdvances: formattedCustomers.reduce((sum, c) => sum + Math.abs(Math.min(0, c.balance)), 0), // Only negative balances (advances)
-      netBalance: formattedCustomers.reduce((sum, c) => sum + c.balance, 0), // Actual net balance
+      totalReceivable: formattedCustomers.reduce((sum, c) => sum + Math.max(0, c.balance), 0),
+      totalAdvances: formattedCustomers.reduce((sum, c) => sum + Math.abs(Math.min(0, c.balance)), 0),
+      netBalance: ledgerBalance,
       customersWithBalance: formattedCustomers.filter((c) => c.balance > 0).length,
       customersWithAdvances: formattedCustomers.filter((c) => c.balance < 0).length,
     };
@@ -54,6 +70,12 @@ export async function GET() {
     return NextResponse.json({
       customers: formattedCustomers,
       summary,
+      reconciliation: {
+        glBalance,
+        ledgerBalance,
+        difference: glBalance - ledgerBalance,
+        isReconciled: Math.abs(glBalance - ledgerBalance) < 0.01,
+      },
     });
   } catch (error) {
     console.error("Error fetching customer balances:", error);

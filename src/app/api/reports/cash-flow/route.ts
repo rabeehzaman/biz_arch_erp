@@ -60,6 +60,26 @@ export async function GET(request: NextRequest) {
       select: { id: true, name: true, balance: true, accountSubType: true },
     });
 
+    // GL reconciliation: compute cash balance from journal entries on accounts 1100 (Cash) and 1200 (Bank)
+    const glCashLines = await prisma.journalEntryLine.findMany({
+      where: {
+        organizationId,
+        journalEntry: {
+          status: "POSTED",
+          date: { lte: new Date(toDate) },
+        },
+        account: {
+          code: { in: ["1100", "1200"] },
+        },
+      },
+      select: { debit: true, credit: true },
+    });
+    const glCashBalance = glCashLines.reduce(
+      (sum, line) => sum + Number(line.debit) - Number(line.credit),
+      0
+    );
+    const subledgerBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+
     return NextResponse.json({
       fromDate,
       toDate,
@@ -72,6 +92,12 @@ export async function GET(request: NextRequest) {
         balance: Number(a.balance),
       })),
       transactionCount: transactions.length,
+      reconciliation: {
+        glCashBalance,
+        subledgerBalance,
+        difference: glCashBalance - subledgerBalance,
+        isReconciled: Math.abs(glCashBalance - subledgerBalance) < 0.01,
+      },
     });
   } catch (error) {
     console.error("Failed to generate cash flow:", error);

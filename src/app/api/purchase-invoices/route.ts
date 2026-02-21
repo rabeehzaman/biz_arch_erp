@@ -191,19 +191,30 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create auto journal entry: DR Inventory, CR Accounts Payable
+      // Create auto journal entry: DR Inventory [+ DR Tax Payable (input tax)], CR Accounts Payable
       const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
       const apAccount = await getSystemAccount(tx, organizationId, "2100");
       if (inventoryAccount && apAccount) {
+        const purchaseLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
+          { accountId: inventoryAccount.id, description: "Inventory", debit: subtotal, credit: 0 },
+          { accountId: apAccount.id, description: "Accounts Payable", debit: 0, credit: total },
+        ];
+        if (taxAmount > 0) {
+          const taxPayableAccount = await getSystemAccount(tx, organizationId, "2200");
+          if (taxPayableAccount) {
+            // Debit Tax Payable to record input tax (reduces VAT/GST liability)
+            purchaseLines.push({ accountId: taxPayableAccount.id, description: "Input Tax Recoverable", debit: taxAmount, credit: 0 });
+          } else {
+            // Fallback: lump tax into inventory if account 2200 not found
+            purchaseLines[0] = { accountId: inventoryAccount.id, description: "Inventory", debit: total, credit: 0 };
+          }
+        }
         await createAutoJournalEntry(tx, organizationId, {
           date: purchaseDate,
           description: `Purchase Invoice ${purchaseInvoiceNumber}`,
           sourceType: "PURCHASE_INVOICE",
           sourceId: invoice.id,
-          lines: [
-            { accountId: inventoryAccount.id, description: "Inventory", debit: total, credit: 0 },
-            { accountId: apAccount.id, description: "Accounts Payable", debit: 0, credit: total },
-          ],
+          lines: purchaseLines,
         });
       }
 

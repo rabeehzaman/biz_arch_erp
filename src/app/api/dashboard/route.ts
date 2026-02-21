@@ -19,6 +19,7 @@ export async function GET() {
       totalCustomers,
       totalProducts,
       revenueResult,
+      collectedResult,
       recentInvoices,
     ] = await Promise.all([
       prisma.invoice.count({ where: { organizationId } }),
@@ -27,6 +28,10 @@ export async function GET() {
       }),
       prisma.customer.count({ where: { organizationId, isActive: true } }),
       prisma.product.count({ where: { organizationId, isActive: true } }),
+      prisma.invoice.aggregate({
+        where: { organizationId },
+        _sum: { total: true },
+      }),
       prisma.invoice.aggregate({
         where: { organizationId },
         _sum: { amountPaid: true },
@@ -46,7 +51,8 @@ export async function GET() {
       pendingInvoices,
       totalCustomers,
       totalProducts,
-      totalRevenue: Number(revenueResult._sum.amountPaid || 0),
+      totalRevenue: Number(revenueResult._sum.total || 0),
+      totalCollected: Number(collectedResult._sum.amountPaid || 0),
       recentInvoices: recentInvoices.map((inv) => ({
         id: inv.id,
         invoiceNumber: inv.invoiceNumber,

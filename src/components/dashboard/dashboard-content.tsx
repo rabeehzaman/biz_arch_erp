@@ -106,7 +106,7 @@ export function DashboardContent() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Revenue
+                  Total Invoiced
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-slate-400" />
               </CardHeader>
@@ -114,7 +114,9 @@ export function DashboardContent() {
                 <div className="text-2xl font-bold">
                   ₹{(stats?.totalRevenue ?? 0).toLocaleString("en-IN")}
                 </div>
-                <p className="text-xs text-slate-500">Total collected</p>
+                <p className="text-xs text-slate-500">
+                  ₹{(stats?.totalCollected ?? 0).toLocaleString("en-IN")} collected
+                </p>
               </CardContent>
             </Card>
           </>

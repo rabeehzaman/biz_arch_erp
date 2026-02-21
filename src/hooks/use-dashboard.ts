@@ -8,6 +8,7 @@ export interface DashboardStats {
   totalCustomers: number;
   totalProducts: number;
   totalRevenue: number;
+  totalCollected: number;
   recentInvoices: Array<{
     id: string;
     invoiceNumber: string;

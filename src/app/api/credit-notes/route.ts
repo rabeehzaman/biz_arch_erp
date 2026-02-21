@@ -178,6 +178,7 @@ export async function POST(request: NextRequest) {
 
       // Create stock lots for each item with a productId
       const productsToRecalculate = new Set<string>();
+      let totalReturnedCOGS = 0;
 
       for (const creditNoteItem of creditNote.items) {
         if (creditNoteItem.productId) {
@@ -220,6 +221,9 @@ export async function POST(request: NextRequest) {
             organizationId
           );
 
+          // Accumulate COGS for the GL reversal entry
+          totalReturnedCOGS += Number(unitCost) * Number(creditNoteItem.quantity);
+
           productsToRecalculate.add(creditNoteItem.productId);
         }
       }
@@ -247,19 +251,48 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create auto journal entry: DR Sales Revenue, CR Accounts Receivable
+      // Create auto journal entry: DR Sales Revenue [+ DR Tax Payable], CR Accounts Receivable
       if (appliedToBalance) {
         const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
         const arAccount = await getSystemAccount(tx, organizationId, "1300");
         if (revenueAccount && arAccount) {
+          const returnLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
+            { accountId: revenueAccount.id, description: "Sales Revenue (Return)", debit: subtotal, credit: 0 },
+            { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: total },
+          ];
+          if (taxAmount > 0) {
+            const taxPayableAccount = await getSystemAccount(tx, organizationId, "2200");
+            if (taxPayableAccount) {
+              returnLines.push({ accountId: taxPayableAccount.id, description: "Tax Payable (Return)", debit: taxAmount, credit: 0 });
+            } else {
+              // Fallback: lump tax into revenue reversal
+              returnLines[0] = { accountId: revenueAccount.id, description: "Sales Revenue (Return)", debit: total, credit: 0 };
+            }
+          }
           await createAutoJournalEntry(tx, organizationId, {
             date: creditNoteDate,
             description: `Credit Note ${creditNoteNumber}`,
             sourceType: "CREDIT_NOTE",
             sourceId: creditNote.id,
+            lines: returnLines,
+          });
+        }
+      }
+
+      // Create COGS reversal journal entry for returned inventory items
+      // DR Inventory (1400), CR Cost of Goods Sold (5100)
+      if (totalReturnedCOGS > 0) {
+        const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+        const cogsAccount = await getSystemAccount(tx, organizationId, "5100");
+        if (inventoryAccount && cogsAccount) {
+          await createAutoJournalEntry(tx, organizationId, {
+            date: creditNoteDate,
+            description: `COGS Reversal - ${creditNoteNumber}`,
+            sourceType: "CREDIT_NOTE",
+            sourceId: creditNote.id,
             lines: [
-              { accountId: revenueAccount.id, description: "Sales Revenue (Return)", debit: total, credit: 0 },
-              { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: total },
+              { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: totalReturnedCOGS, credit: 0 },
+              { accountId: cogsAccount.id, description: "Cost of Goods Sold (Return)", debit: 0, credit: totalReturnedCOGS },
             ],
           });
         }

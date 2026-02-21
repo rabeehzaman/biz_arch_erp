@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createStockLotFromOpeningStock, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 export async function GET() {
   try {
@@ -95,6 +96,25 @@ export async function POST(request: NextRequest) {
         tx,
         organizationId
       );
+
+      // Create auto journal entry: DR Inventory, CR Owner's Capital (Opening Balance Equity)
+      const totalValue = parsedQuantity * parsedUnitCost;
+      if (totalValue > 0) {
+        const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+        const ownerCapitalAccount = await getSystemAccount(tx, organizationId, "3100");
+        if (inventoryAccount && ownerCapitalAccount) {
+          await createAutoJournalEntry(tx, organizationId, {
+            date: parsedStockDate,
+            description: `Opening Stock - ${openingStock.product.name}`,
+            sourceType: "OPENING_BALANCE",
+            sourceId: openingStock.id,
+            lines: [
+              { accountId: inventoryAccount.id, description: "Inventory", debit: totalValue, credit: 0 },
+              { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: totalValue },
+            ],
+          });
+        }
+      }
 
       // Check if this is backdated OR if there are zero-COGS items that need fixing
       const backdated = await isBackdated(productId, parsedStockDate, tx);

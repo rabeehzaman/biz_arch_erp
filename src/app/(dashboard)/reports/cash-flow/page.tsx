@@ -29,6 +29,13 @@ interface AccountBalance {
   accountSubType: string;
 }
 
+interface Reconciliation {
+  glCashBalance: number;
+  subledgerBalance: number;
+  difference: number;
+  isReconciled: boolean;
+}
+
 interface CashFlow {
   fromDate: string;
   toDate: string;
@@ -38,6 +45,7 @@ interface CashFlow {
   netCashFlow: number;
   accounts: AccountBalance[];
   transactionCount: number;
+  reconciliation: Reconciliation;
 }
 
 const fmt = (n: number) =>
@@ -197,6 +205,41 @@ export default function CashFlowPage() {
               </Table>
             </CardContent>
           </Card>
+
+          {data.reconciliation && (
+            <Card className={data.reconciliation.isReconciled ? "border-green-200" : "border-orange-300"}>
+              <CardHeader>
+                <CardTitle className="text-sm">GL Reconciliation (Cash Accounts 1100/1200)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="text-slate-500">GL Balance (Journal Entries)</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(data.reconciliation.glCashBalance)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="text-slate-500">Sub-ledger Balance (Cash Book)</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(data.reconciliation.subledgerBalance)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className={`font-medium ${data.reconciliation.isReconciled ? "text-green-600" : "text-orange-600"}`}>
+                        {data.reconciliation.isReconciled ? "✓ Reconciled" : "⚠ Difference"}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono font-bold ${data.reconciliation.isReconciled ? "text-green-600" : "text-orange-600"}`}>
+                        {fmt(data.reconciliation.difference)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+                {!data.reconciliation.isReconciled && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    Discrepancy detected. This may be caused by manual journal entries that posted directly to cash accounts (1100/1200) without a corresponding cash book transaction.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       ) : (
         <p className="text-center py-8 text-slate-500">No data available</p>
