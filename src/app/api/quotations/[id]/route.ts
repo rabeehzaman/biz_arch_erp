@@ -228,7 +228,7 @@ export async function DELETE(
 
     // Delete quotation (cascade will delete items)
     await prisma.quotation.delete({
-      where: { id },
+      where: { id, organizationId },
     });
 
     return NextResponse.json({ message: "Quotation deleted successfully" });

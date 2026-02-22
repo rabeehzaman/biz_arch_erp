@@ -163,7 +163,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.expense.delete({ where: { id } });
+    await prisma.expense.delete({ where: { id, organizationId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

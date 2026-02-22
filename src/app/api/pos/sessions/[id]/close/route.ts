@@ -67,7 +67,7 @@ export async function PUT(
 
     // Update session
     const updatedSession = await prisma.pOSSession.update({
-      where: { id },
+      where: { id, organizationId },
       data: {
         status: "CLOSED",
         closedAt: new Date(),

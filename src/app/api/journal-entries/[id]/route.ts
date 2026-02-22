@@ -160,7 +160,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.journalEntry.delete({ where: { id } });
+    await prisma.journalEntry.delete({ where: { id, organizationId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

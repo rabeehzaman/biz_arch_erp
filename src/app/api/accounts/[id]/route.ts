@@ -130,7 +130,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.account.delete({ where: { id } });
+    await prisma.account.delete({ where: { id, organizationId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

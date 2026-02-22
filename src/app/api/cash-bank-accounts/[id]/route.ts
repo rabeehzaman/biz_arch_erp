@@ -115,7 +115,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.cashBankAccount.delete({ where: { id } });
+    await prisma.cashBankAccount.delete({ where: { id, organizationId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
