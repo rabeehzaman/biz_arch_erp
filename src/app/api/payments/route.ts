@@ -197,8 +197,8 @@ export async function POST(request: NextRequest) {
           if (discountAccount) {
             paymentLines.push({ accountId: discountAccount.id, description: "Sales Discount Allowed", debit: Number(discountReceived), credit: 0 });
           } else {
-            // Fallback: lump discount into cash entry
-            paymentLines[0] = { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: totalSettlement, credit: 0 };
+            // Fallback: no discount account, reduce AR credit to actual cash only
+            paymentLines[1] = { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: Number(amount) };
           }
         }
 

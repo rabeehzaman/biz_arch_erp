@@ -115,6 +115,11 @@ export async function DELETE(
         });
       }
 
+      // Delete related SupplierTransaction
+      await tx.supplierTransaction.deleteMany({
+        where: { supplierPaymentId: id, organizationId },
+      });
+
       // Delete allocations and payment (allocations cascade delete)
       await tx.supplierPayment.delete({
         where: { id, organizationId },
