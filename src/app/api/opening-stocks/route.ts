@@ -122,10 +122,10 @@ export async function POST(request: NextRequest) {
 
       if (backdated) {
         // Recalculate from opening stock date if backdated
-        await recalculateFromDate(productId, parsedStockDate, tx);
+        await recalculateFromDate(productId, parsedStockDate, tx, "backdated_opening_stock", undefined, organizationId);
       } else if (zeroCOGSDate) {
         // Recalculate from earliest zero-COGS date to fix those items
-        await recalculateFromDate(productId, zeroCOGSDate, tx);
+        await recalculateFromDate(productId, zeroCOGSDate, tx, "zero_cogs_fix", undefined, organizationId);
       }
 
       return openingStock;

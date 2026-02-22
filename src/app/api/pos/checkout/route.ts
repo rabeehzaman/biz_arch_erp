@@ -342,6 +342,7 @@ export async function POST(request: NextRequest) {
 
       // ── 9. Process payments ──────────────────────────────────────────
       const createdPayments = [];
+      let remainingInvoiceBalance = total; // Track how much of the invoice is still unpaid
 
       for (const payment of payments) {
         const paymentNumber = await generatePaymentNumber(organizationId, tx);
@@ -365,12 +366,16 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        // Allocation is capped at remaining invoice balance to prevent over-allocation
+        const allocationAmount = Math.min(payment.amount, remainingInvoiceBalance);
+        remainingInvoiceBalance = Math.max(0, remainingInvoiceBalance - allocationAmount);
+
         // Create payment allocation
         await tx.paymentAllocation.create({
           data: {
             paymentId: newPayment.id,
             invoiceId: invoice.id,
-            amount: payment.amount,
+            amount: allocationAmount,
             organizationId,
           },
         });

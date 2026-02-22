@@ -113,7 +113,7 @@ export async function PUT(
 
       // Recalculate if date changed or quantity/cost changed
       const recalcDate = getRecalculationStartDate(oldDate, newDate);
-      await recalculateFromDate(existingOpeningStock.productId, recalcDate, tx);
+      await recalculateFromDate(existingOpeningStock.productId, recalcDate, tx, "recalculation", undefined, organizationId);
     });
 
     const updatedOpeningStock = await prisma.openingStock.findUnique({
@@ -188,7 +188,7 @@ export async function DELETE(
 
       // If there were consumptions, recalculate FIFO
       if (hasConsumptions) {
-        await recalculateFromDate(productId, stockDate, tx);
+        await recalculateFromDate(productId, stockDate, tx, "recalculation", undefined, organizationId);
       }
     });
 
