@@ -167,12 +167,12 @@ export async function PUT(
         if (supplierChanged) {
           // Remove old invoice impact from old supplier
           await tx.supplier.update({
-            where: { id: existingInvoice.supplierId },
+            where: { id: existingInvoice.supplierId, organizationId },
             data: { balance: { decrement: oldBalanceDue } },
           });
           // Add new invoice impact to new supplier
           await tx.supplier.update({
-            where: { id: newSupplierId },
+            where: { id: newSupplierId, organizationId },
             data: { balance: { increment: newBalanceDue } },
           });
           // Update and move SupplierTransaction to new supplier
@@ -183,7 +183,7 @@ export async function PUT(
         } else if (balanceChange !== 0) {
           // Same supplier, total changed — apply delta
           await tx.supplier.update({
-            where: { id: newSupplierId },
+            where: { id: newSupplierId, organizationId },
             data: { balance: { increment: balanceChange } },
           });
           await tx.supplierTransaction.updateMany({
@@ -330,7 +330,7 @@ export async function DELETE(
       const unpaidAmount = Number(invoice.total) - Number(invoice.amountPaid);
       if (unpaidAmount > 0) {
         await tx.supplier.update({
-          where: { id: invoice.supplierId },
+          where: { id: invoice.supplierId, organizationId },
           data: {
             balance: { decrement: unpaidAmount },
           },

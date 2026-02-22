@@ -212,12 +212,12 @@ export async function PUT(
       if (customerChanged) {
         // Remove old invoice impact from old customer
         await tx.customer.update({
-          where: { id: existingInvoice.customerId },
+          where: { id: existingInvoice.customerId, organizationId },
           data: { balance: { decrement: oldBalanceDue } },
         });
         // Add new invoice impact to new customer
         await tx.customer.update({
-          where: { id: customerId },
+          where: { id: customerId, organizationId },
           data: { balance: { increment: newBalanceDue } },
         });
         // Update and move CustomerTransaction to new customer
@@ -228,7 +228,7 @@ export async function PUT(
       } else if (balanceChange !== 0) {
         // Same customer, total changed — apply delta
         await tx.customer.update({
-          where: { id: customerId },
+          where: { id: customerId, organizationId },
           data: { balance: { increment: balanceChange } },
         });
         await tx.customerTransaction.updateMany({
@@ -429,13 +429,13 @@ export async function DELETE(
 
       // Delete invoice (cascade will delete items and their consumptions)
       await tx.invoice.delete({
-        where: { id },
+        where: { id, organizationId },
       });
 
       // Update customer balance (subtract the unpaid amount)
       const unpaidAmount = Number(invoice.total) - Number(invoice.amountPaid);
       await tx.customer.update({
-        where: { id: invoice.customerId },
+        where: { id: invoice.customerId, organizationId },
         data: {
           balance: { decrement: unpaidAmount },
         },
