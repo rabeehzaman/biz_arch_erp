@@ -48,11 +48,11 @@ export async function POST(request: NextRequest) {
 
       // Update balances
       await tx.cashBankAccount.update({
-        where: { id: fromAccountId },
+        where: { id: fromAccountId, organizationId },
         data: { balance: newFromBalance },
       });
       await tx.cashBankAccount.update({
-        where: { id: toAccountId },
+        where: { id: toAccountId, organizationId },
         data: { balance: newToBalance },
       });
 

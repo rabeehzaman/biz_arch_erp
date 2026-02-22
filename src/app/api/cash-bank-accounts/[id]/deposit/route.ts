@@ -37,7 +37,7 @@ export async function POST(
 
       // Update balance
       await tx.cashBankAccount.update({
-        where: { id },
+        where: { id, organizationId },
         data: { balance: newBalance },
       });
 
