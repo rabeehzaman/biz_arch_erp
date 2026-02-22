@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { restoreStockFromConsumptions, recalculateFromDate, consumeStockFIFO, isBackdated } from "@/lib/inventory/fifo";
+import { restoreStockFromConsumptions, recalculateFromDate, consumeStockFIFO, isBackdated, getRecalculationStartDate } from "@/lib/inventory/fifo";
 
 // Helper to check if user can access an invoice (based on customer assignment)
 async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean, organizationId: string) {
@@ -195,6 +195,7 @@ export async function PUT(
               unitPrice: item.unitPrice,
               discount: item.discount || 0,
               total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+              costOfGoodsSold: 0,
             })),
           },
         },
@@ -287,13 +288,17 @@ export async function PUT(
       // Recalculate FIFO for products that had consumptions or are backdated
       const allProductIds = new Set([
         ...productsWithConsumptions,
-        ...items.map((item: { productId: string }) => item.productId),
+        ...items
+          .filter((item: { productId?: string }) => item.productId)
+          .map((item: { productId: string }) => item.productId),
       ]);
+
+      const recalcDate = getRecalculationStartDate(existingInvoice.issueDate, new Date(issueDate));
 
       for (const productId of allProductIds) {
         const backdated = await isBackdated(productId, new Date(issueDate), tx);
         if (hasConsumptions || backdated) {
-          await recalculateFromDate(productId, existingInvoice.issueDate, tx, "recalculation", undefined, organizationId);
+          await recalculateFromDate(productId, recalcDate, tx, "recalculation", undefined, organizationId);
         }
       }
 

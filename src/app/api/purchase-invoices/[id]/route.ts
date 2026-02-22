@@ -251,7 +251,7 @@ export async function PUT(
     });
 
     const updatedInvoice = await prisma.purchaseInvoice.findUnique({
-      where: { id },
+      where: { id, organizationId },
       include: {
         supplier: true,
         items: {

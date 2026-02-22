@@ -182,28 +182,41 @@ export async function POST(request: NextRequest) {
         // Any remaining amount just reduces customer balance (already done above)
       }
 
-      // Create auto journal entry: DR Cash/Bank, CR Accounts Receivable
+      // Create auto journal entry: DR Cash/Bank [amount], DR Sales Discounts [discount], CR Accounts Receivable [totalSettlement]
       const arAccount = await getSystemAccount(tx, organizationId, "1300");
       const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod || "CASH");
       if (arAccount && cashBankInfo) {
+        const paymentLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
+          { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: Number(amount), credit: 0 },
+          { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: totalSettlement },
+        ];
+
+        // Record discount allowed as a debit to Sales Discounts if applicable
+        if (Number(discountReceived) > 0) {
+          const discountAccount = await getSystemAccount(tx, organizationId, "4200");
+          if (discountAccount) {
+            paymentLines.push({ accountId: discountAccount.id, description: "Sales Discount Allowed", debit: Number(discountReceived), credit: 0 });
+          } else {
+            // Fallback: lump discount into cash entry
+            paymentLines[0] = { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: totalSettlement, credit: 0 };
+          }
+        }
+
         await createAutoJournalEntry(tx, organizationId, {
           date: parsedPaymentDate,
           description: `Customer Payment ${paymentNumber}`,
           sourceType: "PAYMENT",
           sourceId: newPayment.id,
-          lines: [
-            { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: totalSettlement, credit: 0 },
-            { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: totalSettlement },
-          ],
+          lines: paymentLines,
         });
 
-        // Update cash/bank account balance
+        // Update cash/bank account balance — only actual cash received
         await tx.cashBankAccount.update({
           where: { id: cashBankInfo.cashBankAccountId },
-          data: { balance: { increment: totalSettlement } },
+          data: { balance: { increment: Number(amount) } },
         });
 
-        // Create cash/bank transaction
+        // Create cash/bank transaction for actual cash received
         const updatedCB = await tx.cashBankAccount.findUnique({
           where: { id: cashBankInfo.cashBankAccountId },
         });
@@ -211,7 +224,7 @@ export async function POST(request: NextRequest) {
           data: {
             cashBankAccountId: cashBankInfo.cashBankAccountId,
             transactionType: "DEPOSIT",
-            amount: totalSettlement,
+            amount: Number(amount),
             runningBalance: Number(updatedCB?.balance || 0),
             description: `Customer Payment ${paymentNumber}`,
             referenceType: "PAYMENT",
