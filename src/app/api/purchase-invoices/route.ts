@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
 
       // Update supplier balance (Accounts Payable)
       await tx.supplier.update({
-        where: { id: supplierId },
+        where: { id: supplierId, organizationId },
         data: {
           balance: { increment: total },
         },

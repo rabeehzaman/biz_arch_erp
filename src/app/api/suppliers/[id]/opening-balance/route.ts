@@ -54,7 +54,7 @@ export async function POST(
         const amountDifference = parsedAmount - Number(existingOpeningBalance.amount);
 
         await tx.supplierTransaction.update({
-          where: { id: existingOpeningBalance.id },
+          where: { id: existingOpeningBalance.id, organizationId },
           data: {
             amount: parsedAmount,
             transactionDate: date,
@@ -65,7 +65,7 @@ export async function POST(
 
         // Update supplier balance
         await tx.supplier.update({
-          where: { id },
+          where: { id, organizationId },
           data: {
             balance: { increment: amountDifference },
           },
@@ -85,7 +85,7 @@ export async function POST(
         for (const txn of transactions) {
           runningBalance = runningBalance + Number(txn.amount);
           await tx.supplierTransaction.update({
-            where: { id: txn.id },
+            where: { id: txn.id, organizationId },
             data: { runningBalance },
           });
         }
@@ -105,7 +105,7 @@ export async function POST(
 
         // Update supplier balance
         await tx.supplier.update({
-          where: { id },
+          where: { id, organizationId },
           data: {
             balance: { increment: parsedAmount },
           },

@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
 
       // Update customer balance
       await tx.customer.update({
-        where: { id: customerId },
+        where: { id: customerId, organizationId },
         data: {
           balance: { increment: total },
         },
