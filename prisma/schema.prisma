@@ -54,6 +54,9 @@ model Organization {
   expenseItems               ExpenseItem[]
   journalEntries             JournalEntry[]
   journalEntryLines          JournalEntryLine[]
+  productCategories          ProductCategory[]
+  posSessions                POSSession[]
+  posHeldOrders              POSHeldOrder[]
 
   @@map("organizations")
 }
@@ -74,6 +77,7 @@ model User {
   customerAssignments CustomerAssignment[]
   invoices            Invoice[]
   creditNotes         CreditNote[]
+  posSessions         POSSession[]
 
   @@index([organizationId])
   @@map("users")
@@ -112,9 +116,11 @@ model Product {
   sku            String?
   isActive       Boolean      @default(true)
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  categoryId     String?
+  category       ProductCategory? @relation(fields: [categoryId], references: [id])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   invoiceItems         InvoiceItem[]
   purchaseInvoiceItems PurchaseInvoiceItem[]
@@ -150,12 +156,13 @@ model Customer {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  invoices     Invoice[]
-  payments     Payment[]
-  transactions CustomerTransaction[]
-  quotations   Quotation[]
-  assignments  CustomerAssignment[]
-  creditNotes  CreditNote[]
+  invoices      Invoice[]
+  payments      Payment[]
+  transactions  CustomerTransaction[]
+  quotations    Quotation[]
+  assignments   CustomerAssignment[]
+  creditNotes   CreditNote[]
+  posHeldOrders POSHeldOrder[]
 
   @@index([organizationId])
   @@map("customers")
@@ -231,6 +238,10 @@ model Invoice {
 
   notes String?
   terms String?
+
+  sourceType   InvoiceSourceType @default(MANUAL)
+  posSessionId String?
+  posSession   POSSession?       @relation(fields: [posSessionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -670,6 +681,16 @@ enum PaymentMethod {
   OTHER
 }
 
+enum InvoiceSourceType {
+  MANUAL
+  POS
+}
+
+enum POSSessionStatus {
+  OPEN
+  CLOSED
+}
+
 // ==================== INVENTORY / STOCK ====================
 
 model StockLot {
@@ -850,6 +871,77 @@ enum SupplierTransactionType {
   PAYMENT
   DEBIT_NOTE
   ADJUSTMENT
+}
+
+// ==================== PRODUCT CATEGORIES ====================
+
+model ProductCategory {
+  id             String       @id @default(cuid())
+  name           String
+  slug           String
+  color          String?      @default("#6366f1")
+  sortOrder      Int          @default(0)
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  products Product[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("product_categories")
+}
+
+// ==================== POS (POINT OF SALE) ====================
+
+model POSSession {
+  id              String           @id @default(cuid())
+  sessionNumber   String
+  organizationId  String
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  status          POSSessionStatus @default(OPEN)
+  openedAt        DateTime         @default(now())
+  closedAt        DateTime?
+  openingCash     Decimal          @default(0) @db.Decimal(12, 2)
+  closingCash     Decimal?         @db.Decimal(12, 2)
+  expectedCash    Decimal?         @db.Decimal(12, 2)
+  cashDifference  Decimal?         @db.Decimal(12, 2)
+  totalSales      Decimal          @default(0) @db.Decimal(12, 2)
+  totalTransactions Int            @default(0)
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  invoices   Invoice[]
+  heldOrders POSHeldOrder[]
+
+  @@unique([organizationId, sessionNumber])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("pos_sessions")
+}
+
+model POSHeldOrder {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  sessionId      String
+  session        POSSession   @relation(fields: [sessionId], references: [id])
+  customerId     String?
+  customer       Customer?    @relation(fields: [customerId], references: [id])
+  customerName   String?
+  items          Json
+  subtotal       Decimal      @db.Decimal(12, 2)
+  notes          String?
+  heldAt         DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([sessionId])
+  @@map("pos_held_orders")
 }
 
 // ==================== SETTINGS ====================

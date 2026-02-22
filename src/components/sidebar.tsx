@@ -19,6 +19,7 @@ import {
   Receipt,
   Wallet,
   FileCheck,
+  Monitor,
   BarChart3,
   FileMinus,
   FileOutput,
@@ -45,6 +46,7 @@ import { useState } from "react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "POS Terminal", href: "/pos", icon: Monitor },
   { name: "Products", href: "/products", icon: Package },
   { name: "Inventory", href: "/inventory", icon: Warehouse },
   { name: "Customers", href: "/customers", icon: Users },
