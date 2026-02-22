@@ -53,7 +53,7 @@ export async function POST(
       // Update cash/bank account balance
       const newBalance = Number(cashBankAccount.balance) - totalAmount;
       await tx.cashBankAccount.update({
-        where: { id: cashBankAccountId },
+        where: { id: cashBankAccountId, organizationId },
         data: { balance: newBalance },
       });
 
@@ -114,7 +114,7 @@ export async function POST(
 
       // Update expense status and link
       const updated = await tx.expense.update({
-        where: { id },
+        where: { id, organizationId },
         data: {
           status: "PAID",
           cashBankAccountId,

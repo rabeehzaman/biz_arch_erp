@@ -37,7 +37,7 @@ export async function POST(
 
         // Reverse cash/bank balance
         await tx.cashBankAccount.update({
-          where: { id: expense.cashBankAccountId },
+          where: { id: expense.cashBankAccountId, organizationId },
           data: { balance: { increment: totalAmount } },
         });
 
@@ -64,7 +64,7 @@ export async function POST(
         // Void journal entry and create reversal
         if (expense.journalEntry) {
           await tx.journalEntry.update({
-            where: { id: expense.journalEntry.id },
+            where: { id: expense.journalEntry.id, organizationId },
             data: { status: "VOID" },
           });
 
@@ -86,7 +86,7 @@ export async function POST(
 
       // Update expense status
       const updated = await tx.expense.update({
-        where: { id },
+        where: { id, organizationId },
         data: { status: "VOID" },
       });
 
