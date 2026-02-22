@@ -89,7 +89,7 @@ export async function PUT(
       }
 
       return tx.journalEntry.update({
-        where: { id },
+        where: { id, organizationId },
         data: {
           ...(date && { date: new Date(date) }),
           ...(description && { description }),

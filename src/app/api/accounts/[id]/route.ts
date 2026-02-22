@@ -71,7 +71,7 @@ export async function PUT(
     }
 
     const account = await prisma.account.update({
-      where: { id },
+      where: { id, organizationId },
       data: updateData,
     });
 

@@ -94,7 +94,7 @@ export async function PUT(
       }
 
       return tx.expense.update({
-        where: { id },
+        where: { id, organizationId },
         data: {
           ...(supplierId !== undefined && { supplierId: supplierId || null }),
           ...(expenseDate && { expenseDate: new Date(expenseDate) }),

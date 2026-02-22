@@ -72,7 +72,7 @@ export async function PUT(
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const account = await prisma.cashBankAccount.update({
-      where: { id },
+      where: { id, organizationId },
       data: updateData,
     });
 
