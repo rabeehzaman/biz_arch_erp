@@ -45,6 +45,7 @@ export async function PUT(
     // Calculate expected cash: openingCash + sum of all CASH payments on invoices in this session
     const cashPayments = await prisma.payment.aggregate({
       where: {
+        organizationId,
         invoice: { posSessionId: id },
         paymentMethod: "CASH",
       },
@@ -57,7 +58,7 @@ export async function PUT(
 
     // Aggregate totals from invoices in this session
     const invoiceAggregates = await prisma.invoice.aggregate({
-      where: { posSessionId: id },
+      where: { organizationId, posSessionId: id },
       _sum: { total: true },
       _count: { id: true },
     });

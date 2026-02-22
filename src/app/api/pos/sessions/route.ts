@@ -3,13 +3,16 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
-// Generate session number: POS-YYYYMMDD-XXX
-async function generateSessionNumber(organizationId: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Tx = any;
+
+// Generate session number inside a transaction: POS-YYYYMMDD-XXX
+async function generateSessionNumber(organizationId: string, tx: Tx) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `POS-${dateStr}`;
 
-  const lastSession = await prisma.pOSSession.findFirst({
+  const lastSession = await tx.pOSSession.findFirst({
     where: { sessionNumber: { startsWith: prefix }, organizationId },
     orderBy: { sessionNumber: "desc" },
   });
@@ -65,40 +68,46 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
     const userId = session.user.id;
 
-    // Check if user already has an open session
-    const existingOpen = await prisma.pOSSession.findFirst({
-      where: { organizationId, userId, status: "OPEN" },
+    const body = await request.json();
+    const { openingCash = 0 } = body;
+
+    // Wrap in transaction to prevent race conditions (duplicate sessions/numbers)
+    const posSession = await prisma.$transaction(async (tx) => {
+      // Check if user already has an open session
+      const existingOpen = await tx.pOSSession.findFirst({
+        where: { organizationId, userId, status: "OPEN" },
+      });
+
+      if (existingOpen) {
+        throw new Error("ALREADY_OPEN");
+      }
+
+      const sessionNumber = await generateSessionNumber(organizationId, tx);
+
+      return tx.pOSSession.create({
+        data: {
+          organizationId,
+          sessionNumber,
+          userId,
+          status: "OPEN",
+          openingCash,
+        },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      });
     });
 
-    if (existingOpen) {
+    return NextResponse.json(posSession, { status: 201 });
+  } catch (error) {
+    if (error instanceof Error && error.message === "ALREADY_OPEN") {
       return NextResponse.json(
         { error: "You already have an open POS session. Please close it before opening a new one." },
         { status: 400 }
       );
     }
-
-    const body = await request.json();
-    const { openingCash = 0 } = body;
-
-    const sessionNumber = await generateSessionNumber(organizationId);
-
-    const posSession = await prisma.pOSSession.create({
-      data: {
-        organizationId,
-        sessionNumber,
-        userId,
-        status: "OPEN",
-        openingCash,
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
-        },
-      },
-    });
-
-    return NextResponse.json(posSession, { status: 201 });
-  } catch (error) {
     console.error("Failed to create POS session:", error);
     return NextResponse.json(
       { error: "Failed to create POS session" },

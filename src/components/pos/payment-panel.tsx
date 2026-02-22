@@ -37,9 +37,10 @@ export function PaymentPanel({
 
   const handleComplete = () => {
     if (mode === "single") {
+      // Send actual tendered amount — backend caps allocation and calculates change
       const amount =
         selectedMethod === "CASH"
-          ? Math.min(parseFloat(cashTendered) || 0, total)
+          ? parseFloat(cashTendered) || 0
           : total;
       onComplete([
         {

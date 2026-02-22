@@ -121,8 +121,10 @@ export async function POST(request: NextRequest) {
       let resolvedCustomerId = customerId;
 
       if (!resolvedCustomerId) {
+        // Always get the earliest Walk-in Customer to avoid ambiguity with duplicates
         let walkInCustomer = await tx.customer.findFirst({
           where: { organizationId, name: "Walk-in Customer" },
+          orderBy: { createdAt: "asc" },
         });
         if (!walkInCustomer) {
           walkInCustomer = await tx.customer.create({
@@ -145,6 +147,33 @@ export async function POST(request: NextRequest) {
       const total = subtotal + taxAmount;
       const totalPayment = payments.reduce((sum, p) => sum + p.amount, 0);
       const change = Math.max(0, totalPayment - total);
+
+      // ── 3b. Validate stock availability ─────────────────────────────
+      const stockWarnings: string[] = [];
+      for (const item of items) {
+        if (item.productId) {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId },
+            include: {
+              stockLots: {
+                where: { remainingQuantity: { gt: 0 } },
+                select: { remainingQuantity: true },
+              },
+            },
+          });
+          if (product) {
+            const availableStock = product.stockLots.reduce(
+              (sum: number, lot: { remainingQuantity: unknown }) => sum + Number(lot.remainingQuantity),
+              0
+            );
+            if (item.quantity > availableStock) {
+              stockWarnings.push(
+                `"${item.name}" has ${availableStock} units available but ${item.quantity} requested.`
+              );
+            }
+          }
+        }
+      }
 
       // ── 4. Generate invoice number ───────────────────────────────────
       const invoiceNumber = await generateInvoiceNumber(organizationId, tx);
@@ -190,7 +219,7 @@ export async function POST(request: NextRequest) {
       });
 
       // ── 6. FIFO stock consumption ────────────────────────────────────
-      const warnings: string[] = [];
+      const warnings: string[] = [...stockWarnings];
 
       for (const invoiceItem of invoice.items) {
         if (invoiceItem.productId) {
@@ -223,7 +252,18 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Get current customer balance for running balance calculation
+      const customerForBalance = await tx.customer.findUnique({
+        where: { id: resolvedCustomerId },
+        select: { balance: true },
+      });
+      let currentRunningBalance = Number(customerForBalance?.balance || 0);
+
       // Create CustomerTransaction for the invoice
+      // Running balance after invoice = previous balance + invoice total
+      // (balance was already incremented above for unpaid portion, but running balance
+      // tracks cumulative: previous + invoice total before payments)
+      const invoiceRunningBalance = currentRunningBalance;
       await tx.customerTransaction.create({
         data: {
           organizationId,
@@ -233,7 +273,7 @@ export async function POST(request: NextRequest) {
           amount: total,
           description: `POS Invoice ${invoiceNumber}`,
           invoiceId: invoice.id,
-          runningBalance: 0,
+          runningBalance: invoiceRunningBalance,
         },
       });
 
@@ -347,12 +387,16 @@ export async function POST(request: NextRequest) {
       for (const payment of payments) {
         const paymentNumber = await generatePaymentNumber(organizationId, tx);
 
+        // Allocation is capped at remaining invoice balance to prevent over-allocation
+        const allocationAmount = Math.min(payment.amount, remainingInvoiceBalance);
+        remainingInvoiceBalance = Math.max(0, remainingInvoiceBalance - allocationAmount);
+
         const newPayment = await tx.payment.create({
           data: {
             paymentNumber,
             customerId: resolvedCustomerId,
             invoiceId: invoice.id,
-            amount: payment.amount,
+            amount: allocationAmount, // Store only the amount applied to the invoice
             paymentDate: now,
             paymentMethod: payment.method as
               | "CASH"
@@ -366,88 +410,93 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Allocation is capped at remaining invoice balance to prevent over-allocation
-        const allocationAmount = Math.min(payment.amount, remainingInvoiceBalance);
-        remainingInvoiceBalance = Math.max(0, remainingInvoiceBalance - allocationAmount);
-
         // Create payment allocation
-        await tx.paymentAllocation.create({
-          data: {
-            paymentId: newPayment.id,
-            invoiceId: invoice.id,
-            amount: allocationAmount,
-            organizationId,
-          },
-        });
-
-        // Payment journal entry: DR Cash/Bank, CR Accounts Receivable
-        const cashBankInfo = await getDefaultCashBankAccount(
-          tx,
-          organizationId,
-          payment.method
-        );
-
-        if (arAccount && cashBankInfo) {
-          await createAutoJournalEntry(tx, organizationId, {
-            date: now,
-            description: `POS Payment ${paymentNumber}`,
-            sourceType: "PAYMENT",
-            sourceId: newPayment.id,
-            lines: [
-              {
-                accountId: cashBankInfo.accountId,
-                description: "Cash/Bank",
-                debit: payment.amount,
-                credit: 0,
-              },
-              {
-                accountId: arAccount.id,
-                description: "Accounts Receivable",
-                debit: 0,
-                credit: payment.amount,
-              },
-            ],
-          });
-
-          // Update CashBankAccount balance
-          await tx.cashBankAccount.update({
-            where: { id: cashBankInfo.cashBankAccountId },
-            data: { balance: { increment: payment.amount } },
-          });
-
-          // Create CashBankTransaction record
-          const updatedCB = await tx.cashBankAccount.findUnique({
-            where: { id: cashBankInfo.cashBankAccountId },
-          });
-
-          await tx.cashBankTransaction.create({
+        if (allocationAmount > 0) {
+          await tx.paymentAllocation.create({
             data: {
-              cashBankAccountId: cashBankInfo.cashBankAccountId,
-              transactionType: "DEPOSIT",
-              amount: payment.amount,
-              runningBalance: Number(updatedCB?.balance || 0),
-              description: `POS Payment ${paymentNumber}`,
-              referenceType: "PAYMENT",
-              referenceId: newPayment.id,
-              transactionDate: now,
+              paymentId: newPayment.id,
+              invoiceId: invoice.id,
+              amount: allocationAmount,
               organizationId,
             },
           });
         }
 
-        // Create CustomerTransaction for the payment (negative = credit)
-        await tx.customerTransaction.create({
-          data: {
+        // Payment journal entry: DR Cash/Bank, CR Accounts Receivable
+        // Use allocationAmount so AR is correctly reduced (not over-credited)
+        if (allocationAmount > 0) {
+          const cashBankInfo = await getDefaultCashBankAccount(
+            tx,
             organizationId,
-            customerId: resolvedCustomerId,
-            transactionType: "PAYMENT",
-            transactionDate: now,
-            amount: -payment.amount,
-            description: `POS Payment ${paymentNumber}`,
-            paymentId: newPayment.id,
-            runningBalance: 0,
-          },
-        });
+            payment.method
+          );
+
+          if (arAccount && cashBankInfo) {
+            await createAutoJournalEntry(tx, organizationId, {
+              date: now,
+              description: `POS Payment ${paymentNumber}`,
+              sourceType: "PAYMENT",
+              sourceId: newPayment.id,
+              lines: [
+                {
+                  accountId: cashBankInfo.accountId,
+                  description: "Cash/Bank",
+                  debit: allocationAmount,
+                  credit: 0,
+                },
+                {
+                  accountId: arAccount.id,
+                  description: "Accounts Receivable",
+                  debit: 0,
+                  credit: allocationAmount,
+                },
+              ],
+            });
+
+            // Update CashBankAccount balance (only the amount actually kept)
+            await tx.cashBankAccount.update({
+              where: { id: cashBankInfo.cashBankAccountId },
+              data: { balance: { increment: allocationAmount } },
+            });
+
+            // Create CashBankTransaction record
+            const updatedCB = await tx.cashBankAccount.findUnique({
+              where: { id: cashBankInfo.cashBankAccountId },
+            });
+
+            await tx.cashBankTransaction.create({
+              data: {
+                cashBankAccountId: cashBankInfo.cashBankAccountId,
+                transactionType: "DEPOSIT",
+                amount: allocationAmount,
+                runningBalance: Number(updatedCB?.balance || 0),
+                description: `POS Payment ${paymentNumber}`,
+                referenceType: "PAYMENT",
+                referenceId: newPayment.id,
+                transactionDate: now,
+                organizationId,
+              },
+            });
+          }
+        }
+
+        // Create CustomerTransaction for the payment (negative = credit)
+        if (allocationAmount > 0) {
+          // Decrement customer balance for the payment
+          currentRunningBalance = currentRunningBalance - allocationAmount;
+          await tx.customerTransaction.create({
+            data: {
+              organizationId,
+              customerId: resolvedCustomerId,
+              transactionType: "PAYMENT",
+              transactionDate: now,
+              amount: -allocationAmount,
+              description: `POS Payment ${paymentNumber}`,
+              paymentId: newPayment.id,
+              runningBalance: currentRunningBalance,
+            },
+          });
+        }
 
         createdPayments.push(newPayment);
       }

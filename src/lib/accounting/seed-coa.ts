@@ -53,7 +53,8 @@ const DEFAULT_ACCOUNTS: AccountDef[] = [
   // REVENUE
   { code: "4000", name: "Revenue", accountType: "REVENUE", accountSubType: "SALES_REVENUE", isSystem: true },
   { code: "4100", name: "Sales Revenue", accountType: "REVENUE", accountSubType: "SALES_REVENUE", parentCode: "4000", isSystem: true },
-  { code: "4200", name: "Sales Discounts", accountType: "REVENUE", accountSubType: "SALES_REVENUE", parentCode: "4000", isSystem: false },
+  // Sales Discounts is a contra-revenue account (debit-normal). In journal entries, DEBIT this account to record discounts given.
+  { code: "4200", name: "Sales Discounts", accountType: "REVENUE", accountSubType: "OTHER_REVENUE", parentCode: "4000", isSystem: false },
   { code: "4900", name: "Other Revenue", accountType: "REVENUE", accountSubType: "OTHER_REVENUE", parentCode: "4000", isSystem: false },
 
   // EXPENSES
@@ -69,7 +70,8 @@ const DEFAULT_ACCOUNTS: AccountDef[] = [
   { code: "5300", name: "Payroll", accountType: "EXPENSE", accountSubType: "PAYROLL_EXPENSE", parentCode: "5000", isSystem: false },
   { code: "5400", name: "Depreciation", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5000", isSystem: false },
   { code: "5500", name: "Bank Charges", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5000", isSystem: false },
-  { code: "5600", name: "Purchase Discounts", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5000", isSystem: false },
+  // Purchase Discounts is a contra-expense account (credit-normal). In journal entries, CREDIT this account to record discounts received.
+  { code: "5600", name: "Purchase Discounts", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: false },
   { code: "5900", name: "Other Expenses", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: false },
 ];
 

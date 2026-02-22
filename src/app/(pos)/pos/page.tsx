@@ -90,7 +90,7 @@ export default function POSPage() {
   const posSession: POSSessionData | null = sessionData?.session ?? null;
 
   // Products & categories
-  const { data: products = [] } = useSWR<POSProduct[]>(
+  const { data: products = [], mutate: mutateProducts } = useSWR<POSProduct[]>(
     posSession ? "/api/pos/products" : null,
     fetcher
   );
@@ -123,8 +123,13 @@ export default function POSPage() {
   const [isOpeningSession, setIsOpeningSession] = useState(false);
   const [isClosingSession, setIsClosingSession] = useState(false);
 
-  // Tax rate — default 0%
-  const taxRate = 0;
+  // Tax rate — fetched from org settings, editable per session
+  const { data: taxRateSetting } = useSWR<{ value: string }>(
+    posSession ? "/api/settings/pos-tax-rate" : null,
+    fetcher
+  );
+  const [taxRateOverride, setTaxRateOverride] = useState<number | null>(null);
+  const taxRate = taxRateOverride ?? (taxRateSetting?.value ? parseFloat(taxRateSetting.value) : 0);
 
   // ── Cart Handlers ──────────────────────────────────────────────────
 
@@ -168,6 +173,16 @@ export default function POSPage() {
     setCart((prev) =>
       prev.map((item) =>
         item.productId === productId ? { ...item, quantity: qty } : item
+      )
+    );
+  }, []);
+
+  const updateCartDiscount = useCallback((productId: string, discount: number) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.productId === productId
+          ? { ...item, discount: Math.max(0, Math.min(100, discount)) }
+          : item
       )
     );
   }, []);
@@ -271,7 +286,7 @@ export default function POSPage() {
 
       clearCart();
       setView("cart");
-      await Promise.all([mutateSession(), mutateHeldOrders()]);
+      await Promise.all([mutateSession(), mutateHeldOrders(), mutateProducts()]);
 
       if (change > 0) {
         toast.success(
@@ -320,7 +335,16 @@ export default function POSPage() {
   };
 
   const restoreHeldOrder = (order: HeldOrder) => {
-    setCart(order.items as CartItemData[]);
+    // Refresh stock quantities from current product data to avoid stale caps
+    const restoredItems = (order.items as CartItemData[]).map((item) => {
+      const currentProduct = products.find((p) => p.id === item.productId);
+      return {
+        ...item,
+        stockQuantity: currentProduct?.stockQuantity ?? item.stockQuantity,
+        price: currentProduct ? Number(currentProduct.price) : item.price,
+      };
+    });
+    setCart(restoredItems);
     setHeldOrderId(order.id);
     if (order.customerId && order.customer) {
       setSelectedCustomer({
@@ -459,7 +483,9 @@ export default function POSPage() {
                       onUpdateQuantity={(qty) =>
                         updateCartQuantity(item.productId, qty)
                       }
-                      onUpdateDiscount={() => {}}
+                      onUpdateDiscount={(discount) =>
+                        updateCartDiscount(item.productId, discount)
+                      }
                       onRemove={() => removeFromCart(item.productId)}
                     />
                   ))

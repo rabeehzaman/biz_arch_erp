@@ -49,6 +49,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate parent account belongs to same org and has same accountType
+    if (parentId) {
+      const parentAccount = await prisma.account.findFirst({
+        where: { id: parentId, organizationId },
+      });
+      if (!parentAccount) {
+        return NextResponse.json(
+          { error: "Parent account not found in this organization" },
+          { status: 400 }
+        );
+      }
+      if (parentAccount.accountType !== accountType) {
+        return NextResponse.json(
+          { error: `Parent account type (${parentAccount.accountType}) must match child account type (${accountType})` },
+          { status: 400 }
+        );
+      }
+    }
+
     const account = await prisma.account.create({
       data: {
         code,

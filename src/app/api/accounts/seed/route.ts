@@ -13,21 +13,26 @@ export async function POST() {
 
     const organizationId = getOrgId(session);
 
-    // Check if COA already exists
+    // seedDefaultCOA uses upserts, so it's safe to re-run
+    // This will create missing accounts without affecting existing ones
     const existingCount = await prisma.account.count({
       where: { organizationId },
     });
 
-    if (existingCount > 0) {
-      return NextResponse.json(
-        { error: "Chart of accounts already exists for this organization" },
-        { status: 409 }
-      );
-    }
-
     await seedDefaultCOA(prisma as never, organizationId);
 
-    return NextResponse.json({ success: true, message: "Chart of accounts seeded successfully" });
+    const newCount = await prisma.account.count({
+      where: { organizationId },
+    });
+
+    const created = newCount - existingCount;
+    const message = existingCount === 0
+      ? "Chart of accounts seeded successfully"
+      : created > 0
+        ? `${created} missing account(s) restored`
+        : "All default accounts already exist";
+
+    return NextResponse.json({ success: true, message });
   } catch (error) {
     console.error("Failed to seed COA:", error);
     return NextResponse.json(

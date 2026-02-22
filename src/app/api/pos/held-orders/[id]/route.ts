@@ -14,11 +14,20 @@ export async function DELETE(
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id;
     const { id } = await params;
 
-    // Verify the held order belongs to this organization
+    // Verify the held order belongs to this organization and the user's open session
+    const posSession = await prisma.pOSSession.findFirst({
+      where: { organizationId, userId, status: "OPEN" },
+    });
+
     const heldOrder = await prisma.pOSHeldOrder.findFirst({
-      where: { id, organizationId },
+      where: {
+        id,
+        organizationId,
+        ...(posSession ? { sessionId: posSession.id } : {}),
+      },
     });
 
     if (!heldOrder) {

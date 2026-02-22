@@ -61,11 +61,58 @@ export async function PUT(
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
-    // System accounts can only change name, description, isActive
+    // System accounts cannot be deactivated
+    if (existing.isSystem && isActive === false) {
+      return NextResponse.json(
+        { error: "System accounts cannot be deactivated" },
+        { status: 400 }
+      );
+    }
+
+    // Validate parentId if provided
+    if (!existing.isSystem && parentId !== undefined && parentId) {
+      // Verify parent belongs to same org
+      const parentAccount = await prisma.account.findFirst({
+        where: { id: parentId, organizationId },
+      });
+      if (!parentAccount) {
+        return NextResponse.json(
+          { error: "Parent account not found in this organization" },
+          { status: 400 }
+        );
+      }
+      // Verify parent has same accountType
+      if (parentAccount.accountType !== existing.accountType) {
+        return NextResponse.json(
+          { error: `Parent account type (${parentAccount.accountType}) must match this account's type (${existing.accountType})` },
+          { status: 400 }
+        );
+      }
+      // Check for circular reference: walk up the parent chain from parentId
+      let currentParentId: string | null = parentId;
+      const visited = new Set<string>();
+      while (currentParentId) {
+        if (currentParentId === id) {
+          return NextResponse.json(
+            { error: "Cannot set parent: this would create a circular reference" },
+            { status: 400 }
+          );
+        }
+        if (visited.has(currentParentId)) break; // safety: avoid infinite loop
+        visited.add(currentParentId);
+        const parent = await prisma.account.findFirst({
+          where: { id: currentParentId, organizationId },
+          select: { parentId: true },
+        });
+        currentParentId = parent?.parentId || null;
+      }
+    }
+
+    // System accounts can only change name, description
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
-    if (isActive !== undefined) updateData.isActive = isActive;
+    if (isActive !== undefined && !existing.isSystem) updateData.isActive = isActive;
     if (!existing.isSystem && parentId !== undefined) {
       updateData.parentId = parentId || null;
     }

@@ -129,13 +129,18 @@ function AccountTreeItem({
     node.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     node.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const childrenMatch = node.children.some(
-    (child) =>
-      child.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      child.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Recursively check all descendants, not just direct children
+  const hasDescendantMatch = (n: TreeNode): boolean => {
+    return n.children.some(
+      (child) =>
+        child.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        child.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        hasDescendantMatch(child)
+    );
+  };
+  const descendantsMatch = searchQuery ? hasDescendantMatch(node) : false;
 
-  if (searchQuery && !matchesSearch && !childrenMatch) return null;
+  if (searchQuery && !matchesSearch && !descendantsMatch) return null;
 
   return (
     <>
@@ -223,6 +228,7 @@ export default function ChartOfAccountsPage() {
     accountSubType: "",
     description: "",
     parentId: "",
+    isActive: true,
   });
 
   useEffect(() => {
@@ -282,7 +288,17 @@ export default function ChartOfAccountsPage() {
       accountSubType: node.accountSubType,
       description: "",
       parentId: node.parentId || "",
+      isActive: node.isActive,
     });
+    // Fetch full account details to get description
+    fetch(`/api/accounts/${node.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.description) {
+          setFormData((prev) => ({ ...prev, description: data.description }));
+        }
+      })
+      .catch(() => {});
     setIsDialogOpen(true);
   };
 
@@ -298,6 +314,7 @@ export default function ChartOfAccountsPage() {
             name: formData.name,
             description: formData.description || null,
             parentId: formData.parentId || null,
+            isActive: formData.isActive,
           }),
         });
         if (!response.ok) {
@@ -360,6 +377,7 @@ export default function ChartOfAccountsPage() {
       accountSubType: "",
       description: "",
       parentId: "",
+      isActive: true,
     });
   };
 
@@ -518,6 +536,20 @@ export default function ChartOfAccountsPage() {
                     placeholder="Optional description"
                   />
                 </div>
+                {editingAccount && !editingAccount.isSystem && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={formData.isActive}
+                      onChange={(e) =>
+                        setFormData({ ...formData, isActive: e.target.checked })
+                      }
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="isActive">Active</Label>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button type="submit">
