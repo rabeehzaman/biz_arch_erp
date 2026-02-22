@@ -108,6 +108,7 @@ export async function POST(
               unitPrice: item.unitPrice,
               discount: item.discount,
               total: item.total,
+              costOfGoodsSold: 0,
             })),
           },
         },
@@ -149,6 +150,20 @@ export async function POST(
         },
       });
 
+      // Create CustomerTransaction record for the converted invoice
+      await tx.customerTransaction.create({
+        data: {
+          organizationId,
+          customerId: quotation.customerId,
+          transactionType: "INVOICE",
+          transactionDate: invoiceDate,
+          amount: Number(quotation.total),
+          description: `Invoice ${invoiceNumber} (from Quotation ${quotation.quotationNumber})`,
+          invoiceId: newInvoice.id,
+          runningBalance: 0,
+        },
+      });
+
       // Update quotation status
       await tx.quotation.update({
         where: { id: quotation.id },
@@ -160,9 +175,11 @@ export async function POST(
       });
 
       // Check for backdated invoices and recalculate FIFO if needed
-      const productIds = newInvoice.items
-        .filter((item) => item.productId)
-        .map((item) => item.productId as string);
+      const productIds = [...new Set(
+        newInvoice.items
+          .filter((item) => item.productId)
+          .map((item) => item.productId as string)
+      )];
 
       for (const productId of productIds) {
         const backdated = await isBackdated(productId, invoiceDate, tx);
@@ -176,7 +193,7 @@ export async function POST(
 
     // Fetch complete invoice with relations
     const completeInvoice = await prisma.invoice.findUnique({
-      where: { id: invoice.id },
+      where: { id: invoice.id, organizationId },
       include: {
         customer: true,
         items: {
