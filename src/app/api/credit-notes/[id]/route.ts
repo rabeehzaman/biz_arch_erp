@@ -150,11 +150,7 @@ export async function PUT(
 
         // Delete old customer transaction
         await tx.customerTransaction.deleteMany({
-          where: {
-            customerId: oldCreditNote.customerId,
-            transactionType: "CREDIT_NOTE",
-            description: { contains: oldCreditNote.creditNoteNumber },
-          },
+          where: { creditNoteId: id },
         });
       }
 
@@ -278,6 +274,7 @@ export async function PUT(
             transactionDate: creditNoteDate,
             amount: -total,
             description: `Credit Note ${updatedCreditNote.creditNoteNumber}${invoiceId ? ` - Return for Invoice` : ""}`,
+            creditNoteId: id,
             runningBalance: 0,
           },
         });
@@ -382,11 +379,7 @@ export async function DELETE(
 
         // Delete customer transaction
         await tx.customerTransaction.deleteMany({
-          where: {
-            customerId: creditNote.customerId,
-            transactionType: "CREDIT_NOTE",
-            description: { contains: creditNote.creditNoteNumber },
-          },
+          where: { creditNoteId: id },
         });
       }
 

@@ -455,7 +455,8 @@ model CreditNote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items CreditNoteItem[]
+  items                CreditNoteItem[]
+  customerTransactions CustomerTransaction[]
 
   @@unique([organizationId, creditNoteNumber])
   @@index([organizationId])
@@ -520,7 +521,8 @@ model DebitNote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items DebitNoteItem[]
+  items                DebitNoteItem[]
+  supplierTransactions SupplierTransaction[]
 
   @@unique([organizationId, debitNoteNumber])
   @@index([organizationId])
@@ -819,8 +821,10 @@ model CustomerTransaction {
   amount          Decimal @db.Decimal(12, 2)
   description     String
 
-  invoiceId String?
-  paymentId String?
+  invoiceId    String?
+  paymentId    String?
+  creditNoteId String?
+  creditNote   CreditNote? @relation(fields: [creditNoteId], references: [id])
 
   runningBalance Decimal @db.Decimal(12, 2)
 
@@ -855,6 +859,8 @@ model SupplierTransaction {
 
   purchaseInvoiceId String?
   supplierPaymentId String?
+  debitNoteId       String?
+  debitNote         DebitNote? @relation(fields: [debitNoteId], references: [id])
 
   runningBalance Decimal @db.Decimal(12, 2)
 

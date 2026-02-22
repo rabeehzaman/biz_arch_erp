@@ -246,6 +246,7 @@ export async function POST(request: NextRequest) {
             transactionDate: creditNoteDate,
             amount: -total, // Negative for credit
             description: `Credit Note ${creditNoteNumber}${invoiceId ? ` - Return for Invoice` : ""}`,
+            creditNoteId: creditNote.id,
             runningBalance: 0, // Will be calculated when statement is generated
           },
         });

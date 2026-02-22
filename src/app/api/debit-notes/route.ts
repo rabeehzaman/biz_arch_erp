@@ -223,6 +223,7 @@ export async function POST(request: NextRequest) {
             transactionDate: debitNoteDate,
             amount: -total, // Negative for debit (reduces payable)
             description: `Debit Note ${debitNoteNumber}${purchaseInvoiceId ? ` - Return for Purchase Invoice` : ""}`,
+            debitNoteId: debitNote.id,
             runningBalance: 0, // Will be calculated when statement is generated
           },
         });

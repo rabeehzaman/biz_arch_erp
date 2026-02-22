@@ -145,11 +145,7 @@ export async function PUT(
 
         // Delete old supplier transaction
         await tx.supplierTransaction.deleteMany({
-          where: {
-            supplierId: oldDebitNote.supplierId,
-            transactionType: "DEBIT_NOTE",
-            description: { contains: oldDebitNote.debitNoteNumber },
-          },
+          where: { debitNoteId: id },
         });
       }
 
@@ -265,6 +261,7 @@ export async function PUT(
             transactionDate: debitNoteDate,
             amount: -total,
             description: `Debit Note ${updatedDebitNote.debitNoteNumber}${purchaseInvoiceId ? ` - Return for Purchase Invoice` : ""}`,
+            debitNoteId: id,
             runningBalance: 0,
           },
         });
@@ -368,11 +365,7 @@ export async function DELETE(
 
         // Delete supplier transaction
         await tx.supplierTransaction.deleteMany({
-          where: {
-            supplierId: debitNote.supplierId,
-            transactionType: "DEBIT_NOTE",
-            description: { contains: debitNote.debitNoteNumber },
-          },
+          where: { debitNoteId: id },
         });
       }
 

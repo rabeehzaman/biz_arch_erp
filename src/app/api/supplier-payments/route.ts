@@ -107,28 +107,41 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create auto journal entry: DR Accounts Payable, CR Cash/Bank
+      // Create auto journal entry: DR Accounts Payable [totalSettlement], CR Cash/Bank [amount], CR Purchase Discounts [discount]
       const apAccount = await getSystemAccount(tx, organizationId, "2100");
       const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod || "CASH");
       if (apAccount && cashBankInfo) {
+        const paymentLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
+          { accountId: apAccount.id, description: "Accounts Payable", debit: totalSettlement, credit: 0 },
+          { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: 0, credit: Number(amount) },
+        ];
+
+        // Record purchase discount received from supplier
+        if (Number(discountGiven) > 0) {
+          const discountAccount = await getSystemAccount(tx, organizationId, "5600");
+          if (discountAccount) {
+            paymentLines.push({ accountId: discountAccount.id, description: "Purchase Discount Received", debit: 0, credit: Number(discountGiven) });
+          } else {
+            // Fallback: lump discount into cash entry
+            paymentLines[1] = { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: 0, credit: totalSettlement };
+          }
+        }
+
         await createAutoJournalEntry(tx, organizationId, {
           date: parsedPaymentDate,
           description: `Supplier Payment ${paymentNumber}`,
           sourceType: "SUPPLIER_PAYMENT",
           sourceId: newPayment.id,
-          lines: [
-            { accountId: apAccount.id, description: "Accounts Payable", debit: totalSettlement, credit: 0 },
-            { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: 0, credit: totalSettlement },
-          ],
+          lines: paymentLines,
         });
 
-        // Update cash/bank account balance
+        // Update cash/bank account balance — only actual cash paid
         await tx.cashBankAccount.update({
           where: { id: cashBankInfo.cashBankAccountId },
-          data: { balance: { decrement: totalSettlement } },
+          data: { balance: { decrement: Number(amount) } },
         });
 
-        // Create cash/bank transaction
+        // Create cash/bank transaction for actual cash paid
         const updatedCB = await tx.cashBankAccount.findUnique({
           where: { id: cashBankInfo.cashBankAccountId },
         });
@@ -136,7 +149,7 @@ export async function POST(request: NextRequest) {
           data: {
             cashBankAccountId: cashBankInfo.cashBankAccountId,
             transactionType: "WITHDRAWAL",
-            amount: -totalSettlement,
+            amount: -Number(amount),
             runningBalance: Number(updatedCB?.balance || 0),
             description: `Supplier Payment ${paymentNumber}`,
             referenceType: "SUPPLIER_PAYMENT",
