@@ -32,7 +32,7 @@ export async function POST(
     }
 
     const updated = await prisma.expense.update({
-      where: { id },
+      where: { id, organizationId },
       data: { status: "APPROVED" },
     });
 

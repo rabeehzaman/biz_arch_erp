@@ -44,7 +44,7 @@ export async function POST(
     }
 
     const updated = await prisma.journalEntry.update({
-      where: { id },
+      where: { id, organizationId },
       data: { status: "POSTED" },
       include: {
         lines: {

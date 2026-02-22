@@ -37,7 +37,7 @@ export async function POST(
     const result = await prisma.$transaction(async (tx) => {
       // Void original
       await tx.journalEntry.update({
-        where: { id },
+        where: { id, organizationId },
         data: { status: "VOID" },
       });
 

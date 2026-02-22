@@ -144,6 +144,11 @@ export async function PUT(
         }
       }
 
+      // Delete old auto journal entries so they get recreated with updated amounts
+      await tx.journalEntry.deleteMany({
+        where: { sourceType: "INVOICE", sourceId: id, organizationId },
+      });
+
       // Delete old items
       await tx.invoiceItem.deleteMany({
         where: { invoiceId: id },
