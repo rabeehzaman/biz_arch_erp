@@ -142,7 +142,7 @@ export async function PUT(
       // Reverse old customer balance change
       if (oldCreditNote.appliedToBalance) {
         await tx.customer.update({
-          where: { id: oldCreditNote.customerId },
+          where: { id: oldCreditNote.customerId, organizationId },
           data: {
             balance: { increment: oldCreditNote.total },
           },
@@ -157,12 +157,17 @@ export async function PUT(
       // Reverse old invoice balance change
       if (oldCreditNote.invoiceId) {
         await tx.invoice.update({
-          where: { id: oldCreditNote.invoiceId },
+          where: { id: oldCreditNote.invoiceId, organizationId },
           data: {
             balanceDue: { increment: oldCreditNote.total },
           },
         });
       }
+
+      // Delete old journal entries so new ones can be created fresh
+      await tx.journalEntry.deleteMany({
+        where: { sourceType: "CREDIT_NOTE", sourceId: id, organizationId },
+      });
 
       // Delete old items
       await tx.creditNoteItem.deleteMany({
@@ -371,7 +376,7 @@ export async function DELETE(
       // Restore customer balance
       if (creditNote.appliedToBalance) {
         await tx.customer.update({
-          where: { id: creditNote.customerId },
+          where: { id: creditNote.customerId, organizationId },
           data: {
             balance: { increment: creditNote.total },
           },
@@ -386,16 +391,21 @@ export async function DELETE(
       // Restore invoice balance
       if (creditNote.invoiceId) {
         await tx.invoice.update({
-          where: { id: creditNote.invoiceId },
+          where: { id: creditNote.invoiceId, organizationId },
           data: {
             balanceDue: { increment: creditNote.total },
           },
         });
       }
 
+      // Delete auto journal entries created for this credit note
+      await tx.journalEntry.deleteMany({
+        where: { sourceType: "CREDIT_NOTE", sourceId: id, organizationId },
+      });
+
       // Delete the credit note (cascade will delete items)
       await tx.creditNote.delete({
-        where: { id },
+        where: { id, organizationId },
       });
 
       // Recalculate FIFO for affected products

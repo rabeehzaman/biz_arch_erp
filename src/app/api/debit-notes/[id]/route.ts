@@ -137,7 +137,7 @@ export async function PUT(
       // Reverse old supplier balance change
       if (oldDebitNote.appliedToBalance) {
         await tx.supplier.update({
-          where: { id: oldDebitNote.supplierId },
+          where: { id: oldDebitNote.supplierId, organizationId },
           data: {
             balance: { increment: oldDebitNote.total },
           },
@@ -152,12 +152,17 @@ export async function PUT(
       // Reverse old purchase invoice balance change
       if (oldDebitNote.purchaseInvoiceId) {
         await tx.purchaseInvoice.update({
-          where: { id: oldDebitNote.purchaseInvoiceId },
+          where: { id: oldDebitNote.purchaseInvoiceId, organizationId },
           data: {
             balanceDue: { increment: oldDebitNote.total },
           },
         });
       }
+
+      // Delete old journal entries so new ones can be created fresh
+      await tx.journalEntry.deleteMany({
+        where: { sourceType: "DEBIT_NOTE", sourceId: id, organizationId },
+      });
 
       // Delete old items (cascade will delete lot consumptions)
       await tx.debitNoteItem.deleteMany({
@@ -357,7 +362,7 @@ export async function DELETE(
       // Restore supplier balance
       if (debitNote.appliedToBalance) {
         await tx.supplier.update({
-          where: { id: debitNote.supplierId },
+          where: { id: debitNote.supplierId, organizationId },
           data: {
             balance: { increment: debitNote.total },
           },
@@ -372,12 +377,17 @@ export async function DELETE(
       // Restore purchase invoice balance
       if (debitNote.purchaseInvoiceId) {
         await tx.purchaseInvoice.update({
-          where: { id: debitNote.purchaseInvoiceId },
+          where: { id: debitNote.purchaseInvoiceId, organizationId },
           data: {
             balanceDue: { increment: debitNote.total },
           },
         });
       }
+
+      // Delete auto journal entries created for this debit note
+      await tx.journalEntry.deleteMany({
+        where: { sourceType: "DEBIT_NOTE", sourceId: id, organizationId },
+      });
 
       // Delete the debit note (cascade will delete items and lot consumptions)
       await tx.debitNote.delete({
