@@ -114,7 +114,7 @@ export async function POST(
     });
 
     const updatedCustomer = await prisma.customer.findUnique({
-      where: { id },
+      where: { id, organizationId },
     });
 
     return NextResponse.json({

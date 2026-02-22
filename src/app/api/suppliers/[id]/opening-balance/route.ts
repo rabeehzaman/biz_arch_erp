@@ -114,7 +114,7 @@ export async function POST(
     });
 
     const updatedSupplier = await prisma.supplier.findUnique({
-      where: { id },
+      where: { id, organizationId },
     });
 
     return NextResponse.json({
