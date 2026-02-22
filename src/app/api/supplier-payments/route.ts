@@ -110,6 +110,12 @@ export async function POST(request: NextRequest) {
       // Create auto journal entry: DR Accounts Payable [totalSettlement], CR Cash/Bank [amount], CR Purchase Discounts [discount]
       const apAccount = await getSystemAccount(tx, organizationId, "2100");
       const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod || "CASH");
+      if (!apAccount) {
+        console.error(`[supplier-payments] No AP account (2100) found for org ${organizationId} — journal entry skipped for payment ${paymentNumber}. Ensure COA is seeded.`);
+      }
+      if (!cashBankInfo) {
+        console.error(`[supplier-payments] No active cash/bank account found for method "${paymentMethod || "CASH"}" in org ${organizationId} — journal entry and cash balance update skipped for payment ${paymentNumber}.`);
+      }
       if (apAccount && cashBankInfo) {
         const paymentLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
           { accountId: apAccount.id, description: "Accounts Payable", debit: totalSettlement, credit: 0 },

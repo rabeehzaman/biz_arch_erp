@@ -78,11 +78,18 @@ export async function POST(request: NextRequest) {
       data: { name, slug },
     });
 
-    // Seed default chart of accounts for the new organization
+    // Seed default chart of accounts for the new organization.
+    // On failure, delete the org and surface the error — an org with no COA
+    // will silently fail to create journal entries for all transactions.
     try {
       await seedDefaultCOA(prisma as never, organization.id);
     } catch (coaError) {
       console.error("Failed to seed COA for new org:", coaError);
+      await prisma.organization.delete({ where: { id: organization.id } });
+      return NextResponse.json(
+        { error: "Organization created but failed to seed chart of accounts. Please try again." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(organization, { status: 201 });

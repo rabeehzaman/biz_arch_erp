@@ -93,6 +93,13 @@ export async function POST(
             debit: Number(expense.taxAmount),
             credit: 0,
           });
+        } else {
+          // Fallback: account 2200 not found — roll tax into first expense debit line
+          // to keep the journal entry balanced (debit total must equal credit total)
+          journalLines[0] = {
+            ...journalLines[0],
+            debit: journalLines[0].debit + Number(expense.taxAmount),
+          };
         }
       }
 

@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
     const expenses = await prisma.expense.findMany({
       where: {
         organizationId,
-        status: { not: "VOID" },
+        // Only include PAID expenses — these are the only ones with journal entries,
+        // so only they appear in P&L. PENDING/APPROVED expenses are not yet in the GL.
+        status: "PAID",
         expenseDate: {
           gte: new Date(fromDate),
           lte: new Date(toDate),
