@@ -41,9 +41,12 @@ export function CustomerSelect({
 
   if (!isOpen) {
     return (
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setIsOpen(true)}
-        className="flex w-full items-center gap-2 rounded-lg border bg-white p-2 text-sm hover:bg-slate-50 transition-colors"
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setIsOpen(true); }}
+        className="flex w-full items-center gap-2 rounded-lg border bg-white p-2 text-sm hover:bg-slate-50 transition-colors cursor-pointer"
       >
         <UserCircle className="h-4 w-4 text-muted-foreground" />
         <span className={selectedCustomer ? "font-medium" : "text-muted-foreground"}>
@@ -62,7 +65,7 @@ export function CustomerSelect({
             <X className="h-3 w-3" />
           </Button>
         )}
-      </button>
+      </div>
     );
   }
 
