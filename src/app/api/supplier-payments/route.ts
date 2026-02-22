@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
         // Update cash/bank account balance — only actual cash paid
         await tx.cashBankAccount.update({
-          where: { id: cashBankInfo.cashBankAccountId },
+          where: { id: cashBankInfo.cashBankAccountId, organizationId },
           data: { balance: { decrement: Number(amount) } },
         });
 

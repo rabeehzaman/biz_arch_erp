@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
 
         // Update cash/bank account balance — only actual cash received
         await tx.cashBankAccount.update({
-          where: { id: cashBankInfo.cashBankAccountId },
+          where: { id: cashBankInfo.cashBankAccountId, organizationId },
           data: { balance: { increment: Number(amount) } },
         });
 
