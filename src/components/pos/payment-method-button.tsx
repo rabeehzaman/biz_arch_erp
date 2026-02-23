@@ -35,7 +35,7 @@ export function PaymentMethodButton({
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all min-h-[80px]",
+        "flex flex-col items-center justify-center rounded-xl border-2 p-2 min-h-[60px] sm:p-4 sm:min-h-[80px] transition-all",
         isSelected
           ? "border-primary bg-primary/5 text-primary"
           : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"

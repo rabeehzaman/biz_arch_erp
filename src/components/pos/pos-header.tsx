@@ -33,7 +33,7 @@ export function POSHeader({
   }, []);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-slate-900 px-3 text-white gap-2">
+    <header className="flex h-14 items-center justify-between border-b bg-slate-900 px-2 sm:px-3 text-white gap-1 sm:gap-2">
       <div className="flex items-center gap-2 min-w-0">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
           <Building2 className="h-5 w-5 text-primary-foreground" />

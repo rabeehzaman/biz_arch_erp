@@ -25,7 +25,7 @@ export function ProductTile({ product, onAdd }: ProductTileProps) {
       onClick={onAdd}
       disabled={outOfStock}
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border bg-white p-3 text-center transition-all min-h-[120px]",
+        "flex flex-col items-center justify-center rounded-xl border bg-white p-3 text-center transition-all min-h-[100px] sm:min-h-[120px]",
         outOfStock
           ? "opacity-50 cursor-not-allowed"
           : "hover:shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"

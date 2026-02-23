@@ -85,7 +85,7 @@ export function CartItem({
             <Plus className="h-3 w-3" />
           </Button>
         </div>
-        <span className="w-20 text-right text-sm font-semibold">
+        <span className="w-16 sm:w-20 text-right text-sm font-semibold">
           {lineTotal.toLocaleString("en-IN", {
             style: "currency",
             currency: "INR",

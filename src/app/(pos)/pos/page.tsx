@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, ShoppingCart, PauseCircle, Trash2 } from "lucide-react";
+import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
+import { cn } from "@/lib/utils";
 import { POSHeader } from "@/components/pos/pos-header";
 import { ProductSearch } from "@/components/pos/product-search";
 import { CategoryTabs } from "@/components/pos/category-tabs";
@@ -112,6 +113,7 @@ export default function POSPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [view, setView] = useState<"cart" | "payment">("cart");
+  const [mobileView, setMobileView] = useState<"products" | "cart" | "payment">("products");
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Dialog state
@@ -195,6 +197,7 @@ export default function POSPage() {
     setCart([]);
     setHeldOrderId(null);
     setSelectedCustomer(null);
+    setMobileView("products");
   }, []);
 
   // ── Session Handlers ───────────────────────────────────────────────
@@ -286,6 +289,7 @@ export default function POSPage() {
 
       clearCart();
       setView("cart");
+      setMobileView("products");
       await Promise.all([mutateSession(), mutateHeldOrders(), mutateProducts()]);
 
       if (change > 0) {
@@ -354,6 +358,7 @@ export default function POSPage() {
       });
     }
     setShowHeldSheet(false);
+    setMobileView("cart");
     toast.success("Order restored to cart");
   };
 
@@ -439,8 +444,11 @@ export default function POSPage() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel — Products */}
-        <div className="flex flex-1 flex-col gap-3 p-4 overflow-hidden">
+        {/* Left Panel — Products (always visible on desktop, conditional on mobile) */}
+        <div className={cn(
+          "flex-1 flex-col gap-3 p-4 overflow-hidden",
+          mobileView === "products" ? "flex" : "hidden md:flex"
+        )}>
           <ProductSearch value={searchQuery} onChange={setSearchQuery} />
           <CategoryTabs
             categories={categories}
@@ -455,8 +463,32 @@ export default function POSPage() {
           />
         </div>
 
-        {/* Right Panel — Cart / Payment */}
-        <div className="w-[400px] flex-shrink-0 border-l bg-white flex flex-col">
+        {/* Right Panel — Cart / Payment (always visible on desktop, conditional on mobile) */}
+        <div className={cn(
+          "flex flex-col bg-white",
+          "md:w-[400px] md:flex-shrink-0 md:border-l",
+          mobileView !== "products" ? "flex-1" : "hidden md:flex"
+        )}>
+          {/* Mobile back header */}
+          <div className="flex items-center gap-2 border-b p-3 md:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setMobileView(mobileView === "payment" ? "cart" : "products")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h2 className="text-lg font-bold">
+              {mobileView === "payment" ? "Payment" : "Cart"}
+            </h2>
+            {cart.length > 0 && (
+              <div className="ml-auto text-sm font-bold text-primary">
+                {total.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+              </div>
+            )}
+          </div>
+
           {view === "cart" ? (
             <>
               {/* Customer Select */}
@@ -516,7 +548,10 @@ export default function POSPage() {
                   </div>
                   <Button
                     className="w-full h-12 text-lg font-bold"
-                    onClick={() => setView("payment")}
+                    onClick={() => {
+                      setView("payment");
+                      setMobileView("payment");
+                    }}
                   >
                     Pay{" "}
                     {total.toLocaleString("en-IN", {
@@ -530,12 +565,28 @@ export default function POSPage() {
           ) : (
             <PaymentPanel
               total={total}
-              onBack={() => setView("cart")}
+              onBack={() => {
+                setView("cart");
+                setMobileView("cart");
+              }}
               onComplete={handleCheckout}
               isProcessing={isProcessing}
             />
           )}
         </div>
+
+        {/* Floating cart FAB — mobile only, visible when browsing products */}
+        {mobileView === "products" && cart.length > 0 && (
+          <button
+            className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform md:hidden"
+            onClick={() => setMobileView("cart")}
+          >
+            <ShoppingCart className="h-6 w-6" />
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+              {cart.reduce((s, i) => s + i.quantity, 0)}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Close Session Dialog */}
@@ -601,7 +652,7 @@ export default function POSPage() {
 
       {/* Held Orders Sheet */}
       <Sheet open={showHeldSheet} onOpenChange={setShowHeldSheet}>
-        <SheetContent side="right" className="w-[400px] sm:w-[450px] p-0">
+        <SheetContent side="right" className="w-full sm:w-[400px] sm:max-w-[450px] p-0">
           <SheetHeader className="p-4 border-b">
             <SheetTitle>Held Orders ({heldOrders.length})</SheetTitle>
           </SheetHeader>
