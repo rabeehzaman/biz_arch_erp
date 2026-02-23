@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
           },
         },
       });
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

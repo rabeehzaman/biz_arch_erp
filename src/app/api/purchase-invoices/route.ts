@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
-import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { syncPurchaseJournal } from "@/lib/accounting/journal";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
 async function generatePurchaseInvoiceNumber(organizationId: string) {
@@ -191,32 +191,8 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create auto journal entry: DR Inventory [+ DR Tax Payable (input tax)], CR Accounts Payable
-      const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
-      const apAccount = await getSystemAccount(tx, organizationId, "2100");
-      if (inventoryAccount && apAccount) {
-        const purchaseLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
-          { accountId: inventoryAccount.id, description: "Inventory", debit: subtotal, credit: 0 },
-          { accountId: apAccount.id, description: "Accounts Payable", debit: 0, credit: total },
-        ];
-        if (taxAmount > 0) {
-          const taxPayableAccount = await getSystemAccount(tx, organizationId, "2200");
-          if (taxPayableAccount) {
-            // Debit Tax Payable to record input tax (reduces VAT/GST liability)
-            purchaseLines.push({ accountId: taxPayableAccount.id, description: "Input Tax Recoverable", debit: taxAmount, credit: 0 });
-          } else {
-            // Fallback: lump tax into inventory if account 2200 not found
-            purchaseLines[0] = { accountId: inventoryAccount.id, description: "Inventory", debit: total, credit: 0 };
-          }
-        }
-        await createAutoJournalEntry(tx, organizationId, {
-          date: purchaseDate,
-          description: `Purchase Invoice ${purchaseInvoiceNumber}`,
-          sourceType: "PURCHASE_INVOICE",
-          sourceId: invoice.id,
-          lines: purchaseLines,
-        });
-      }
+      // Create purchase journal entry using shared helper
+      await syncPurchaseJournal(tx, organizationId, invoice.id);
 
       // Check if this is a backdated purchase OR if there are zero-COGS items that need fixing
       const productIds = [...new Set(items.map((item: { productId: string }) => item.productId))];
@@ -251,7 +227,7 @@ export async function POST(request: NextRequest) {
       }
 
       return invoice;
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

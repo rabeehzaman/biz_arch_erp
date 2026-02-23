@@ -8,6 +8,7 @@ import {
   checkReturnableStock,
 } from "@/lib/inventory/returns";
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 import { Decimal } from "@prisma/client/runtime/client";
 
 export async function GET(
@@ -296,6 +297,24 @@ export async function PUT(
         }
       }
 
+      // Recreate journal entries (were deleted above)
+      if (appliedToBalance) {
+        const apAccount = await getSystemAccount(tx, organizationId, "2100");
+        const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+        if (apAccount && inventoryAccount) {
+          await createAutoJournalEntry(tx, organizationId, {
+            date: debitNoteDate,
+            description: `Debit Note ${updatedDebitNote.debitNoteNumber}`,
+            sourceType: "DEBIT_NOTE",
+            sourceId: id,
+            lines: [
+              { accountId: apAccount.id, description: "Accounts Payable", debit: total, credit: 0 },
+              { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: 0, credit: total },
+            ],
+          });
+        }
+      }
+
       // Fetch complete updated debit note
       return tx.debitNote.findUnique({
         where: { id },
@@ -314,7 +333,7 @@ export async function PUT(
           },
         },
       });
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result);
   } catch (error) {
@@ -403,7 +422,7 @@ export async function DELETE(
       }
 
       return { success: true };
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result);
   } catch (error) {

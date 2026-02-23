@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { restoreStockFromConsumptions, recalculateFromDate, consumeStockFIFO, isBackdated, getRecalculationStartDate } from "@/lib/inventory/fifo";
+import { syncInvoiceRevenueJournal, syncInvoiceCOGSJournal } from "@/lib/accounting/journal";
 
 // Helper to check if user can access an invoice (based on customer assignment)
 async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean, organizationId: string) {
@@ -307,6 +308,10 @@ export async function PUT(
         }
       }
 
+      // Recreate journal entries that were deleted at the start
+      await syncInvoiceRevenueJournal(tx, organizationId, id);
+      await syncInvoiceCOGSJournal(tx, organizationId, id);
+
       // Fetch the final updated invoice
       const finalInvoice = await tx.invoice.findUnique({
         where: { id },
@@ -319,7 +324,7 @@ export async function PUT(
       });
 
       return { invoice: finalInvoice, warnings };
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result);
   } catch (error) {
@@ -457,6 +462,11 @@ export async function DELETE(
         data: { convertedInvoiceId: null, convertedAt: null },
       });
 
+      // Delete journal entries for this invoice
+      await tx.journalEntry.deleteMany({
+        where: { sourceType: "INVOICE", sourceId: id, organizationId },
+      });
+
       // Delete invoice (cascade will delete items and their consumptions)
       await tx.invoice.delete({
         where: { id, organizationId },
@@ -475,7 +485,7 @@ export async function DELETE(
       for (const { productId } of productsWithConsumptions) {
         await recalculateFromDate(productId, invoice.issueDate, tx, "recalculation", undefined, organizationId);
       }
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json({ success: true });
   } catch (error) {

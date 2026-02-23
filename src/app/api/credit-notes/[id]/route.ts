@@ -8,6 +8,7 @@ import {
   getOriginalCOGSForInvoiceItem,
 } from "@/lib/inventory/returns";
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 import { Decimal } from "@prisma/client/runtime/client";
 
 export async function GET(
@@ -105,6 +106,11 @@ export async function PUT(
     const creditNoteDate = issueDate ? new Date(issueDate) : new Date();
 
     // Calculate new totals
+    const totalReturnedCOGS = items.reduce(
+      (sum: number, item: { quantity: number; unitCOGS?: number; originalCOGS?: number }) =>
+        sum + item.quantity * (item.unitCOGS || item.originalCOGS || 0),
+      0
+    );
     const subtotal = items.reduce(
       (
         sum: number,
@@ -309,6 +315,49 @@ export async function PUT(
         }
       }
 
+      // Recreate journal entries (were deleted above)
+      if (appliedToBalance) {
+        const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
+        const arAccount = await getSystemAccount(tx, organizationId, "1300");
+        if (revenueAccount && arAccount) {
+          const returnLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
+            { accountId: revenueAccount.id, description: "Sales Revenue (Return)", debit: subtotal, credit: 0 },
+            { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: total },
+          ];
+          if (taxAmount > 0) {
+            const taxPayableAccount = await getSystemAccount(tx, organizationId, "2200");
+            if (taxPayableAccount) {
+              returnLines.push({ accountId: taxPayableAccount.id, description: "Tax Payable (Return)", debit: taxAmount, credit: 0 });
+            } else {
+              returnLines[0] = { accountId: revenueAccount.id, description: "Sales Revenue (Return)", debit: total, credit: 0 };
+            }
+          }
+          await createAutoJournalEntry(tx, organizationId, {
+            date: creditNoteDate,
+            description: `Credit Note ${updatedCreditNote.creditNoteNumber}`,
+            sourceType: "CREDIT_NOTE",
+            sourceId: id,
+            lines: returnLines,
+          });
+        }
+      }
+      if (totalReturnedCOGS > 0) {
+        const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+        const cogsAccount = await getSystemAccount(tx, organizationId, "5100");
+        if (inventoryAccount && cogsAccount) {
+          await createAutoJournalEntry(tx, organizationId, {
+            date: creditNoteDate,
+            description: `COGS Reversal - ${updatedCreditNote.creditNoteNumber}`,
+            sourceType: "CREDIT_NOTE",
+            sourceId: id,
+            lines: [
+              { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: totalReturnedCOGS, credit: 0 },
+              { accountId: cogsAccount.id, description: "Cost of Goods Sold (Return)", debit: 0, credit: totalReturnedCOGS },
+            ],
+          });
+        }
+      }
+
       // Fetch complete updated credit note
       return tx.creditNote.findUnique({
         where: { id },
@@ -326,7 +375,7 @@ export async function PUT(
           },
         },
       });
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result);
   } catch (error) {
@@ -422,7 +471,7 @@ export async function DELETE(
       }
 
       return { success: true };
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result);
   } catch (error) {

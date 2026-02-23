@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
+import { syncPurchaseJournal } from "@/lib/accounting/journal";
 
 export async function GET(
   request: NextRequest,
@@ -97,6 +98,17 @@ export async function PUT(
     await prisma.$transaction(async (tx) => {
       // If items are being updated
       if (items) {
+        // Delete consumptions on these lots first (no cascade in schema)
+        const lots = await tx.stockLot.findMany({
+          where: { purchaseInvoiceId: id },
+          select: { id: true },
+        });
+        if (lots.length > 0) {
+          await tx.stockLotConsumption.deleteMany({
+            where: { stockLotId: { in: lots.map((l) => l.id) } },
+          });
+        }
+
         // Delete old stock lots for this purchase
         await tx.stockLot.deleteMany({
           where: { purchaseInvoiceId: id },
@@ -225,6 +237,9 @@ export async function PUT(
           }
         }
 
+        // Recreate purchase journal entry
+        await syncPurchaseJournal(tx, organizationId, id);
+
         // Recalculate FIFO for affected products
         const productIds = [...new Set(items.map((item: { productId: string }) => item.productId))];
         const recalcDate = getRecalculationStartDate(oldDate, newDate);
@@ -253,7 +268,7 @@ export async function PUT(
           await recalculateFromDate(productId, recalcDate, tx, "recalculation", undefined, organizationId);
         }
       }
-    });
+    }, { timeout: 30000 });
 
     const updatedInvoice = await prisma.purchaseInvoice.findUnique({
       where: { id, organizationId },
@@ -321,7 +336,18 @@ export async function DELETE(
         where: { purchaseInvoiceId: id },
       });
 
-      // Delete stock lots (will cascade delete consumptions)
+      // Delete consumptions on these lots first (no cascade in schema)
+      const lots = await tx.stockLot.findMany({
+        where: { purchaseInvoiceId: id },
+        select: { id: true },
+      });
+      if (lots.length > 0) {
+        await tx.stockLotConsumption.deleteMany({
+          where: { stockLotId: { in: lots.map((l) => l.id) } },
+        });
+      }
+
+      // Delete stock lots
       await tx.stockLot.deleteMany({
         where: { purchaseInvoiceId: id },
       });
@@ -337,6 +363,11 @@ export async function DELETE(
         });
       }
 
+      // Delete journal entries for this purchase invoice
+      await tx.journalEntry.deleteMany({
+        where: { sourceType: "PURCHASE_INVOICE", sourceId: id, organizationId },
+      });
+
       // Delete the invoice (items will cascade)
       await tx.purchaseInvoice.delete({
         where: { id, organizationId },
@@ -348,7 +379,7 @@ export async function DELETE(
           await recalculateFromDate(productId, invoiceDate, tx, "recalculation", undefined, organizationId);
         }
       }
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json({ success: true });
   } catch (error) {

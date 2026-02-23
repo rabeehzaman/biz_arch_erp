@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
-import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { syncInvoiceRevenueJournal, syncInvoiceCOGSJournal } from "@/lib/accounting/journal";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber(organizationId: string) {
@@ -237,53 +237,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Re-fetch all invoice items to get final COGS values (includes backdated recalculations)
-      const finalItems = await tx.invoiceItem.findMany({ where: { invoiceId: invoice.id } });
-      const totalCOGS = finalItems.reduce((sum, item) => sum + Number(item.costOfGoodsSold), 0);
-
-      // Create auto journal entry: DR Accounts Receivable, CR Sales Revenue [+ CR Tax Payable]
-      const arAccount = await getSystemAccount(tx, organizationId, "1300");
-      const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
-      if (arAccount && revenueAccount) {
-        const revenueLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
-          { accountId: arAccount.id, description: "Accounts Receivable", debit: total, credit: 0 },
-          { accountId: revenueAccount.id, description: "Sales Revenue", debit: 0, credit: subtotal },
-        ];
-        if (taxAmount > 0) {
-          const taxPayableAccount = await getSystemAccount(tx, organizationId, "2200");
-          if (taxPayableAccount) {
-            revenueLines.push({ accountId: taxPayableAccount.id, description: "Tax Payable", debit: 0, credit: taxAmount });
-          } else {
-            // Fallback: lump tax into revenue if account 2200 not found
-            revenueLines[1] = { accountId: revenueAccount.id, description: "Sales Revenue", debit: 0, credit: total };
-          }
-        }
-        await createAutoJournalEntry(tx, organizationId, {
-          date: invoiceDate,
-          description: `Sales Invoice ${invoiceNumber}`,
-          sourceType: "INVOICE",
-          sourceId: invoice.id,
-          lines: revenueLines,
-        });
-      }
-
-      // Create COGS journal entry: DR Cost of Goods Sold, CR Inventory
-      if (totalCOGS > 0) {
-        const cogsAccount = await getSystemAccount(tx, organizationId, "5100");
-        const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
-        if (cogsAccount && inventoryAccount) {
-          await createAutoJournalEntry(tx, organizationId, {
-            date: invoiceDate,
-            description: `COGS - ${invoiceNumber}`,
-            sourceType: "INVOICE",
-            sourceId: invoice.id,
-            lines: [
-              { accountId: cogsAccount.id, description: "Cost of Goods Sold", debit: totalCOGS, credit: 0 },
-              { accountId: inventoryAccount.id, description: "Inventory", debit: 0, credit: totalCOGS },
-            ],
-          });
-        }
-      }
+      // Create journal entries using shared helpers
+      await syncInvoiceRevenueJournal(tx, organizationId, invoice.id);
+      await syncInvoiceCOGSJournal(tx, organizationId, invoice.id);
 
       // Fetch the updated invoice with COGS
       const updatedInvoice = await tx.invoice.findUnique({
@@ -295,7 +251,7 @@ export async function POST(request: NextRequest) {
       });
 
       return { invoice: updatedInvoice, warnings };
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

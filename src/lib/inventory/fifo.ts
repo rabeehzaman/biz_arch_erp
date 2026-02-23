@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/client";
+import { syncInvoiceCOGSJournal } from "@/lib/accounting/journal";
 
 // Type for transaction client (allows use within $transaction)
 type PrismaTransaction = Omit<
@@ -463,6 +464,8 @@ export async function recalculateFromDate(
   }
 
   // 5. Re-process each sale in date order and log cost changes
+  const affectedInvoiceIds = new Set<string>();
+
   for (const item of salesItems) {
     if (!item.productId) continue;
 
@@ -487,6 +490,8 @@ export async function recalculateFromDate(
 
     // Log cost change if COGS changed
     if (!oldCOGS.equals(newCOGS)) {
+      affectedInvoiceIds.add(item.invoice.id);
+
       const auditData: any = {
         productId: item.productId,
         invoiceItemId: item.id,
@@ -501,6 +506,13 @@ export async function recalculateFromDate(
       await tx.costAuditLog.create({
         data: auditData,
       });
+    }
+  }
+
+  // 6. Sync COGS journal entries for all invoices whose COGS changed
+  if (organizationId) {
+    for (const invoiceId of affectedInvoiceIds) {
+      await syncInvoiceCOGSJournal(tx, organizationId, invoiceId);
     }
   }
 }
