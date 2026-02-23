@@ -542,7 +542,7 @@ export async function POST(request: NextRequest) {
         change,
         warnings,
       };
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

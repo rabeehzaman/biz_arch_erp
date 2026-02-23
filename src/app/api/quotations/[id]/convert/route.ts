@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
+import { syncInvoiceRevenueJournal, syncInvoiceCOGSJournal } from "@/lib/accounting/journal";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber(organizationId: string) {
@@ -188,8 +189,12 @@ export async function POST(
         }
       }
 
+      // Create revenue and COGS journal entries
+      await syncInvoiceRevenueJournal(tx, organizationId, newInvoice.id);
+      await syncInvoiceCOGSJournal(tx, organizationId, newInvoice.id);
+
       return newInvoice;
-    });
+    }, { timeout: 30000 });
 
     // Fetch complete invoice with relations
     const completeInvoice = await prisma.invoice.findUnique({
