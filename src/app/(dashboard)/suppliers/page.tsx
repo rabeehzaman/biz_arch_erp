@@ -273,7 +273,7 @@ export default function SuppliersPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="name">Name *</Label>
                     <Input
@@ -297,7 +297,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="phone">Phone</Label>
                     <Input
@@ -329,7 +329,7 @@ export default function SuppliersPage() {
                     }
                   />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="city">City</Label>
                     <Input

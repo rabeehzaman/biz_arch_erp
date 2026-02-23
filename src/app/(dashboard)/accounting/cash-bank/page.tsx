@@ -183,7 +183,7 @@ export default function CashBankPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-2">
                       <Label>Amount *</Label>
                       <Input type="number" step="0.01" value={transferData.amount} onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })} required />
@@ -223,7 +223,7 @@ export default function CashBankPage() {
                     <Label>Name *</Label>
                     <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. HDFC Current Account" required />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-2">
                       <Label>Type *</Label>
                       <Select value={formData.accountSubType} onValueChange={(v) => setFormData({ ...formData, accountSubType: v })}>
@@ -247,7 +247,7 @@ export default function CashBankPage() {
                     </div>
                   </div>
                   {formData.accountSubType === "BANK" && (
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="grid gap-2">
                         <Label>Bank Name</Label>
                         <Input value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })} />
@@ -298,7 +298,7 @@ export default function CashBankPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           {accounts.map((account) => (
             <Link key={account.id} href={`/accounting/cash-bank/${account.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer">

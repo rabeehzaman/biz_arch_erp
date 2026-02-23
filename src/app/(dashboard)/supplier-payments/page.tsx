@@ -289,7 +289,7 @@ export default function SupplierPaymentsPage() {
                     </Select>
                   </div>
                 )}
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="amount">Amount *</Label>
                     <Input
@@ -317,7 +317,7 @@ export default function SupplierPaymentsPage() {
                     />
                   </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="paymentDate">Payment Date *</Label>
                     <Input
@@ -331,7 +331,7 @@ export default function SupplierPaymentsPage() {
                     />
                   </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="paymentMethod">Payment Method</Label>
                     <Select
