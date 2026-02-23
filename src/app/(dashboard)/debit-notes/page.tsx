@@ -103,8 +103,8 @@ export default function DebitNotesPage() {
             Manage purchase returns and supplier debits
           </p>
         </div>
-        <Link href="/debit-notes/new">
-          <Button>
+        <Link href="/debit-notes/new" className="w-full sm:w-auto">
+          <Button className="w-full">
             <Plus className="mr-2 h-4 w-4" />
             New Debit Note
           </Button>

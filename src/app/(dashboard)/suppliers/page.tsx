@@ -255,7 +255,7 @@ export default function SuppliersPage() {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Add Supplier
             </Button>
@@ -468,14 +468,15 @@ export default function SuppliersPage() {
               </p>
             </div>
           ) : (
-            <Table>
+            <div className="overflow-x-auto">
+          <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Balance (Payable)</TableHead>
-                  <TableHead>Purchase Invoices</TableHead>
+                  <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                  <TableHead className="hidden sm:table-cell">Location</TableHead>
+                  <TableHead>Balance</TableHead>
+                  <TableHead className="hidden sm:table-cell">Invoices</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -486,7 +487,7 @@ export default function SuppliersPage() {
                     <TableCell>
                       <div className="font-medium">{supplier.name}</div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="text-sm">
                         {supplier.email && <div>{supplier.email}</div>}
                         {supplier.phone && (
@@ -494,7 +495,7 @@ export default function SuppliersPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="text-sm">
                         {supplier.city && supplier.state
                           ? `${supplier.city}, ${supplier.state}`
@@ -514,7 +515,7 @@ export default function SuppliersPage() {
                         ₹{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
                       </span>
                     </TableCell>
-                    <TableCell>{supplier._count?.purchaseInvoices || 0}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{supplier._count?.purchaseInvoices || 0}</TableCell>
                     <TableCell>
                       <Badge
                         variant={supplier.isActive ? "default" : "secondary"}
@@ -553,6 +554,7 @@ export default function SuppliersPage() {
                 ))}
               </TableBody>
             </Table>
+          </div>
           )}
         </CardContent>
       </Card>

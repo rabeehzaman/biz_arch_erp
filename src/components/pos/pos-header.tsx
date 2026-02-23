@@ -33,21 +33,21 @@ export function POSHeader({
   }, []);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-slate-900 px-4 text-white">
-      <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+    <header className="flex h-14 items-center justify-between border-b bg-slate-900 px-3 text-white gap-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
           <Building2 className="h-5 w-5 text-primary-foreground" />
         </div>
-        <span className="text-lg font-bold">BizArch POS</span>
+        <span className="text-base font-bold whitespace-nowrap">BizArch POS</span>
         {session && (
-          <Badge variant="secondary" className="ml-2">
+          <Badge variant="secondary" className="hidden xs:inline-flex shrink-0 text-xs">
             {session.sessionNumber}
           </Badge>
         )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-sm text-slate-300">
+      <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+        <div className="hidden sm:flex items-center gap-2 text-sm text-slate-300">
           <Clock className="h-4 w-4" />
           {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
@@ -55,11 +55,11 @@ export function POSHeader({
         <Button
           variant="ghost"
           size="sm"
-          className="text-slate-300 hover:text-white hover:bg-slate-800 relative"
+          className="text-slate-300 hover:text-white hover:bg-slate-800 relative px-2"
           onClick={onHeldOrdersClick}
         >
-          <PauseCircle className="h-4 w-4 mr-1" />
-          Held
+          <PauseCircle className="h-4 w-4" />
+          <span className="hidden sm:inline ml-1">Held</span>
           {heldOrdersCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold">
               {heldOrdersCount}
@@ -67,23 +67,24 @@ export function POSHeader({
           )}
         </Button>
 
-        <div className="text-sm text-slate-300">
+        <div className="hidden sm:block text-sm text-slate-300 truncate max-w-[100px]">
           {authSession?.user?.name}
         </div>
 
         <Button
           variant="ghost"
           size="sm"
-          className="text-slate-300 hover:text-white hover:bg-slate-800"
+          className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
           onClick={onCloseSession}
         >
-          End Session
+          <LogOut className="h-4 w-4 sm:hidden" />
+          <span className="hidden sm:inline">End Session</span>
         </Button>
 
         <Button
           variant="ghost"
           size="icon"
-          className="text-slate-300 hover:text-white hover:bg-slate-800"
+          className="hidden sm:inline-flex text-slate-300 hover:text-white hover:bg-slate-800"
           onClick={() => router.push("/")}
           title="Exit POS"
         >

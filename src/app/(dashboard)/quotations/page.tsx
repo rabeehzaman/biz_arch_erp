@@ -113,8 +113,8 @@ export default function QuotationsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Quotations</h2>
           <p className="text-slate-500">Create and manage quotations</p>
         </div>
-        <Link href="/quotations/new">
-          <Button>
+        <Link href="/quotations/new" className="w-full sm:w-auto">
+          <Button className="w-full">
             <Plus className="mr-2 h-4 w-4" />
             New Quotation
           </Button>

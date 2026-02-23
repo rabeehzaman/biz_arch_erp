@@ -41,10 +41,10 @@ export function Header() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <MobileSidebar />
-        <div>
-          <h1 className="text-base md:text-lg font-semibold text-slate-900">
+        <div className="min-w-0">
+          <h1 className="text-base md:text-lg font-semibold text-slate-900 truncate">
             Welcome, {session?.user?.name?.split(" ")[0] || "User"}
           </h1>
           <p className="text-xs md:text-sm text-slate-500 hidden sm:block">

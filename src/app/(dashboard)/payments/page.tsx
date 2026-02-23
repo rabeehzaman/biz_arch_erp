@@ -240,7 +240,7 @@ export default function PaymentsPage() {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Record Payment
             </Button>
@@ -433,16 +433,17 @@ export default function PaymentsPage() {
               </p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Payment #</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Invoice</TableHead>
+                  <TableHead className="hidden sm:table-cell">Invoice</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Method</TableHead>
+                  <TableHead className="hidden sm:table-cell">Method</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">Discount</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -453,13 +454,13 @@ export default function PaymentsPage() {
                       {payment.paymentNumber}
                     </TableCell>
                     <TableCell>{payment.customer.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {payment.invoice?.invoiceNumber || "-"}
                     </TableCell>
                     <TableCell>
                       {format(new Date(payment.paymentDate), "dd MMM yyyy")}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="outline">
                         {methodLabels[payment.paymentMethod]}
                       </Badge>
@@ -467,7 +468,7 @@ export default function PaymentsPage() {
                     <TableCell className="text-right font-medium text-green-600">
                       ₹{Number(payment.amount).toLocaleString("en-IN")}
                     </TableCell>
-                    <TableCell className="text-right text-slate-500">
+                    <TableCell className="hidden sm:table-cell text-right text-slate-500">
                       {Number(payment.discountReceived) > 0
                         ? `₹${Number(payment.discountReceived).toLocaleString("en-IN")}`
                         : "-"}
@@ -486,6 +487,7 @@ export default function PaymentsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

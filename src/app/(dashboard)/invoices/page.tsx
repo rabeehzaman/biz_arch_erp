@@ -94,8 +94,8 @@ export default function InvoicesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Invoices</h2>
           <p className="text-slate-500">Create and manage invoices</p>
         </div>
-        <Link href="/invoices/new">
-          <Button>
+        <Link href="/invoices/new" className="w-full sm:w-auto">
+          <Button className="w-full">
             <Plus className="mr-2 h-4 w-4" />
             New Invoice
           </Button>

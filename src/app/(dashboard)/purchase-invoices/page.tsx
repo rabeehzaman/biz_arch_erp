@@ -116,8 +116,8 @@ export default function PurchaseInvoicesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Purchase Invoices</h2>
           <p className="text-slate-500">Manage purchases from suppliers</p>
         </div>
-        <Link href="/purchase-invoices/new">
-          <Button>
+        <Link href="/purchase-invoices/new" className="w-full sm:w-auto">
+          <Button className="w-full">
             <Plus className="mr-2 h-4 w-4" />
             New Purchase
           </Button>

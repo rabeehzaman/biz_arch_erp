@@ -416,7 +416,7 @@ export default function ChartOfAccountsPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Add Account
             </Button>
@@ -570,8 +570,8 @@ export default function ChartOfAccountsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <div className="relative flex-1 sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 placeholder="Search accounts..."
@@ -580,12 +580,14 @@ export default function ChartOfAccountsPage() {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={expandAll}>
-              Expand All
-            </Button>
-            <Button variant="outline" size="sm" onClick={collapseAll}>
-              Collapse All
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={expandAll} className="flex-1 sm:flex-none">
+                Expand All
+              </Button>
+              <Button variant="outline" size="sm" onClick={collapseAll} className="flex-1 sm:flex-none">
+                Collapse All
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

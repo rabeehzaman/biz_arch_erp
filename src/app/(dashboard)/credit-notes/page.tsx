@@ -103,8 +103,8 @@ export default function CreditNotesPage() {
             Manage sales returns and customer credits
           </p>
         </div>
-        <Link href="/credit-notes/new">
-          <Button>
+        <Link href="/credit-notes/new" className="w-full sm:w-auto">
+          <Button className="w-full">
             <Plus className="mr-2 h-4 w-4" />
             New Credit Note
           </Button>

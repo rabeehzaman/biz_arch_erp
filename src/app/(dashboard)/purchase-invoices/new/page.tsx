@@ -335,7 +335,7 @@ export default function NewPurchaseInvoicePage() {
                           onSelect={() => focusQuantity(item.id)}
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-2 sm:contents">
+                      <div className="grid grid-cols-1 gap-2 sm:contents">
                       <div className="sm:col-span-2">
                         <Label>Quantity *</Label>
                         <Input

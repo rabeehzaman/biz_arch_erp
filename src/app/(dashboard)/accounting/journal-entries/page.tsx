@@ -97,8 +97,8 @@ export default function JournalEntriesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Journal Entries</h2>
           <p className="text-slate-500">Double-entry accounting records</p>
         </div>
-        <Link href="/accounting/journal-entries/new">
-          <Button>
+        <Link href="/accounting/journal-entries/new" className="w-full sm:w-auto">
+          <Button className="w-full">
             <Plus className="mr-2 h-4 w-4" />
             New Journal Entry
           </Button>
@@ -133,16 +133,17 @@ export default function JournalEntriesPage() {
               </p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Number</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden sm:table-cell">Source</TableHead>
+                  <TableHead className="hidden sm:table-cell">Status</TableHead>
                   <TableHead className="text-right">Debit</TableHead>
-                  <TableHead className="text-right">Credit</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">Credit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -161,15 +162,15 @@ export default function JournalEntriesPage() {
                       <TableCell>
                         {format(new Date(entry.date), "dd MMM yyyy")}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
+                      <TableCell className="max-w-[120px] truncate">
                         {entry.description}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <Badge variant="outline">
                           {sourceLabels[entry.sourceType] || entry.sourceType}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <Badge className={statusColors[entry.status]}>
                           {entry.status}
                         </Badge>
@@ -179,7 +180,7 @@ export default function JournalEntriesPage() {
                           minimumFractionDigits: 2,
                         })}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="hidden sm:table-cell text-right font-mono">
                         {totals.credit.toLocaleString("en-IN", {
                           minimumFractionDigits: 2,
                         })}
@@ -189,6 +190,7 @@ export default function JournalEntriesPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

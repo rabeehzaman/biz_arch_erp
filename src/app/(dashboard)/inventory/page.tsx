@@ -136,8 +136,8 @@ export default function InventoryPage() {
           <h2 className="text-2xl font-bold text-slate-900">Inventory</h2>
           <p className="text-slate-500">Track your product stock levels</p>
         </div>
-        <Link href="/inventory/opening-stock">
-          <Button variant="outline">
+        <Link href="/inventory/opening-stock" className="w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto min-h-[44px]">
             Opening Stock
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>

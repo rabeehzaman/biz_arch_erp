@@ -16,11 +16,13 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="company">
-        <TabsList>
-          <TabsTrigger value="company">Company</TabsTrigger>
-          <TabsTrigger value="units">Units of Measure</TabsTrigger>
-          <TabsTrigger value="accounting">Accounting</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1">
+          <TabsList>
+            <TabsTrigger value="company">Company</TabsTrigger>
+            <TabsTrigger value="units">Units of Measure</TabsTrigger>
+            <TabsTrigger value="accounting">Accounting</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="company" className="mt-6">
           <CompanySettings />
         </TabsContent>
