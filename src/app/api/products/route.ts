@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, description, price, unitId, sku } = body;
+    const { name, description, price, unitId, sku, isService } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
         price,
         unitId,
         sku: sku || null,
+        isService: isService ?? false,
       },
       include: {
         unit: true,

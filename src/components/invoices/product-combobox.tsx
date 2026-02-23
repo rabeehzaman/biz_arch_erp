@@ -8,6 +8,7 @@ interface Product {
   price: number;
   unit: string;
   sku?: string;
+  isService?: boolean;
   availableStock?: number;
 }
 
@@ -39,8 +40,8 @@ export function ProductCombobox({
       }
       renderItem={(product) => {
         const stock = product.availableStock ?? 0;
-        const isOutOfStock = stock === 0;
-        const isLowStock = stock > 0 && stock <= 5;
+        const isOutOfStock = !product.isService && stock === 0;
+        const isLowStock = !product.isService && stock > 0 && stock <= 5;
 
         return (
           <div className="flex flex-col">
@@ -60,9 +61,13 @@ export function ProductCombobox({
             <div className="text-sm text-slate-500">
               {product.sku && <span>SKU: {product.sku} | </span>}
               ₹{Number(product.price).toLocaleString("en-IN")}
-              <span className="ml-2">
-                Stock: <span className={isOutOfStock ? "text-red-600 font-medium" : isLowStock ? "text-yellow-600 font-medium" : ""}>{stock}</span> units
-              </span>
+              {product.isService ? (
+                <span className="ml-2 text-blue-600">Service</span>
+              ) : (
+                <span className="ml-2">
+                  Stock: <span className={isOutOfStock ? "text-red-600 font-medium" : isLowStock ? "text-yellow-600 font-medium" : ""}>{stock}</span> units
+                </span>
+              )}
             </div>
           </div>
         );

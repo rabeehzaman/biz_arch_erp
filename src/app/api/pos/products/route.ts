@@ -33,6 +33,7 @@ export async function GET() {
       categoryId: p.categoryId,
       category: p.category,
       unit: p.unit,
+      isService: p.isService,
       stockQuantity: p.stockLots.reduce(
         (sum, lot) => sum + Number(lot.remainingQuantity),
         0

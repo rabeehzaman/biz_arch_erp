@@ -41,6 +41,7 @@ interface Product {
     name: string;
   } | null;
   sku: string | null;
+  isService: boolean;
   isActive: boolean;
   createdAt: string;
 }
@@ -51,12 +52,14 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     unitId: "",
     sku: "",
+    isService: false,
   });
 
   useEffect(() => {
@@ -80,12 +83,23 @@ export default function ProductsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) errors.name = "Name is required";
+    if (!formData.price || parseFloat(formData.price) < 0) errors.price = "A valid price is required";
+    if (!formData.unitId) errors.unitId = "Unit is required";
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+
     const payload = {
       name: formData.name,
       description: formData.description || null,
       price: parseFloat(formData.price),
       unitId: formData.unitId,
       sku: formData.sku || null,
+      isService: formData.isService,
     };
 
     try {
@@ -121,6 +135,7 @@ export default function ProductsPage() {
       price: product.price.toString(),
       unitId: product.unit?.id || "",
       sku: product.sku || "",
+      isService: product.isService || false,
     });
     setIsDialogOpen(true);
   };
@@ -141,12 +156,14 @@ export default function ProductsPage() {
 
   const resetForm = () => {
     setEditingProduct(null);
+    setFormErrors({});
     setFormData({
       name: "",
       description: "",
       price: "",
       unitId: "",
       sku: "",
+      isService: false,
     });
   };
 
@@ -163,7 +180,7 @@ export default function ProductsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Products</h2>
           <p className="text-slate-500">Manage your product catalog</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        <Dialog modal={false} open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
           if (!open) resetForm();
         }}>
@@ -191,11 +208,13 @@ export default function ProductsPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      if (e.target.value) setFormErrors((prev) => ({ ...prev, name: "" }));
+                    }}
+                    className={formErrors.name ? "border-red-500" : ""}
                   />
+                  {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
@@ -215,19 +234,25 @@ export default function ProductsPage() {
                       type="number"
                       step="0.01"
                       value={formData.price}
-                      onChange={(e) =>
-                        setFormData({ ...formData, price: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setFormData({ ...formData, price: e.target.value });
+                        if (e.target.value) setFormErrors((prev) => ({ ...prev, price: "" }));
+                      }}
+                      className={formErrors.price ? "border-red-500" : ""}
+                    />
+                    {formErrors.price && <p className="text-sm text-red-500">{formErrors.price}</p>}
+                  </div>
+                  <div>
+                    <UnitSelect
+                      value={formData.unitId}
+                      onValueChange={(value) => {
+                        setFormData({ ...formData, unitId: value });
+                        if (value) setFormErrors((prev) => ({ ...prev, unitId: "" }));
+                      }}
                       required
+                      error={formErrors.unitId}
                     />
                   </div>
-                  <UnitSelect
-                    value={formData.unitId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, unitId: value })
-                    }
-                    required
-                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="sku">SKU</Label>
@@ -239,6 +264,18 @@ export default function ProductsPage() {
                     }
                     placeholder="Optional product code"
                   />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isService"
+                    checked={formData.isService}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isService: e.target.checked })
+                    }
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="isService">Service product (no inventory tracking)</Label>
                 </div>
               </div>
               <DialogFooter>

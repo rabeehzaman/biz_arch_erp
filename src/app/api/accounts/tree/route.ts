@@ -20,6 +20,26 @@ export async function GET() {
       },
     });
 
+    // Calculate balance for each account
+    const balanceResults = await Promise.all(
+      accounts.map(async (account) => {
+        const [debits, credits] = await Promise.all([
+          prisma.journalEntryLine.aggregate({
+            where: { accountId: account.id, organizationId },
+            _sum: { debit: true },
+          }),
+          prisma.journalEntryLine.aggregate({
+            where: { accountId: account.id, organizationId },
+            _sum: { credit: true },
+          }),
+        ]);
+        const balance = Number(debits._sum.debit ?? 0) - Number(credits._sum.credit ?? 0);
+        return { accountId: account.id, balance };
+      })
+    );
+
+    const balanceMap = new Map(balanceResults.map((r) => [r.accountId, r.balance]));
+
     // Build tree structure
     interface TreeNode {
       id: string;
@@ -31,6 +51,7 @@ export async function GET() {
       isActive: boolean;
       parentId: string | null;
       transactionCount: number;
+      balance: number;
       children: TreeNode[];
     }
 
@@ -48,6 +69,7 @@ export async function GET() {
         isActive: account.isActive,
         parentId: account.parentId,
         transactionCount: account._count.journalEntryLines,
+        balance: balanceMap.get(account.id) ?? 0,
         children: [],
       });
     }

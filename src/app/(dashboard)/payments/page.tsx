@@ -96,6 +96,7 @@ export default function PaymentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletePayment, setDeletePayment] = useState<Payment | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     customerId: "",
     invoiceId: "",
@@ -146,6 +147,16 @@ export default function PaymentsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const errors: Record<string, string> = {};
+    if (!formData.customerId) errors.customerId = "Customer is required";
+    if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = "A valid amount is required";
+    if (!formData.paymentDate) errors.paymentDate = "Payment date is required";
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+
     try {
       const response = await fetch("/api/payments", {
         method: "POST",
@@ -187,6 +198,7 @@ export default function PaymentsPage() {
       reference: "",
       notes: "",
     });
+    setFormErrors({});
   };
 
   const handleDelete = async () => {
@@ -247,9 +259,10 @@ export default function PaymentsPage() {
                   <Combobox
                     items={customers}
                     value={formData.customerId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, customerId: value, invoiceId: "" })
-                    }
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, customerId: value, invoiceId: "" });
+                      if (value) setFormErrors((prev) => ({ ...prev, customerId: "" }));
+                    }}
                     getId={(customer) => customer.id}
                     getLabel={(customer) => customer.name}
                     filterFn={(customer, query) =>
@@ -266,15 +279,21 @@ export default function PaymentsPage() {
                     placeholder="Search customer..."
                     emptyText="No customers found."
                   />
+                  {formErrors.customerId && <p className="text-sm text-red-500">{formErrors.customerId}</p>}
                 </div>
                 {formData.customerId && customerInvoices.length > 0 && (
                   <div className="grid gap-2">
                     <Label htmlFor="invoice">Link to Invoice (Optional)</Label>
                     <Select
                       value={formData.invoiceId}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, invoiceId: value })
-                      }
+                      onValueChange={(value) => {
+                        const inv = invoices.find((i) => i.id === value);
+                        setFormData({
+                          ...formData,
+                          invoiceId: value,
+                          amount: inv ? Number(inv.balanceDue).toFixed(2) : formData.amount,
+                        });
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select invoice" />
@@ -297,11 +316,13 @@ export default function PaymentsPage() {
                       type="number"
                       step="0.01"
                       value={formData.amount}
-                      onChange={(e) =>
-                        setFormData({ ...formData, amount: e.target.value })
-                      }
-                      required
+                      onChange={(e) => {
+                        setFormData({ ...formData, amount: e.target.value });
+                        if (e.target.value) setFormErrors((prev) => ({ ...prev, amount: "" }));
+                      }}
+                      className={formErrors.amount ? "border-red-500" : ""}
                     />
+                    {formErrors.amount && <p className="text-sm text-red-500">{formErrors.amount}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="discountReceived">Discount Received</Label>

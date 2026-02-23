@@ -72,11 +72,17 @@ export function UnitSelect({
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {units.map((unit) => (
-            <SelectItem key={unit.id} value={unit.id}>
-              {unit.name} ({unit.code.toUpperCase()})
-            </SelectItem>
-          ))}
+          {units.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">
+              No units found. Add units in Settings → Units first.
+            </div>
+          ) : (
+            units.map((unit) => (
+              <SelectItem key={unit.id} value={unit.id}>
+                {unit.name} ({unit.code.toUpperCase()})
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
       {error && <p className="text-sm text-red-500">{error}</p>}

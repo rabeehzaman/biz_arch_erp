@@ -45,6 +45,7 @@ interface TreeNode {
   isActive: boolean;
   parentId: string | null;
   transactionCount: number;
+  balance: number;
   children: TreeNode[];
 }
 
@@ -177,6 +178,12 @@ function AccountTreeItem({
             System
           </Badge>
         )}
+
+        <span className={`text-sm font-mono w-28 text-right ${node.balance < 0 ? "text-red-600" : node.balance > 0 ? "text-slate-800" : "text-slate-400"}`}>
+          {node.balance !== 0
+            ? `₹${Math.abs(node.balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${node.balance < 0 ? " Cr" : " Dr"}`
+            : "—"}
+        </span>
 
         <div className="opacity-0 group-hover:opacity-100 flex gap-1">
           <Button variant="ghost" size="sm" onClick={() => onEdit(node)}>

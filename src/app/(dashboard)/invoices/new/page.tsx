@@ -24,6 +24,7 @@ interface Product {
   name: string;
   price: number;
   unit: string;
+  isService?: boolean;
   availableStock?: number;
 }
 
@@ -306,7 +307,7 @@ export default function NewInvoicePage() {
                   {lineItems.map((item, index) => {
                     const product = products.find((p) => p.id === item.productId);
                     const availableStock = product?.availableStock ?? 0;
-                    const hasStockShortfall = item.productId && item.quantity > availableStock;
+                    const hasStockShortfall = item.productId && !product?.isService && item.quantity > availableStock;
                     const shortfall = item.quantity - availableStock;
 
                     return (

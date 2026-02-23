@@ -6,6 +6,23 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Table,
   TableBody,
   TableCell,
@@ -13,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Download, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, Building2, Download, Pencil, Printer, CreditCard, Send } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -50,6 +67,7 @@ interface Invoice {
   total: number;
   amountPaid: number;
   balanceDue: number;
+  sentAt: string | null;
   notes: string | null;
   terms: string | null;
   items: InvoiceItem[];
@@ -64,10 +82,24 @@ export default function InvoiceDetailPage({
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "",
+    paymentMethod: "CASH",
+    paymentDate: new Date().toISOString().split("T")[0],
+    reference: "",
+  });
+  const [isMarkingSent, setIsMarkingSent] = useState(false);
 
   useEffect(() => {
     fetchInvoice();
   }, [id]);
+
+  useEffect(() => {
+    if (invoice && Number(invoice.balanceDue) > 0) {
+      setPaymentForm((prev) => ({ ...prev, amount: Number(invoice.balanceDue).toFixed(2) }));
+    }
+  }, [invoice]);
 
   const fetchInvoice = async () => {
     try {
@@ -107,6 +139,56 @@ export default function InvoiceDetailPage({
     } catch (error) {
       toast.error("Failed to download PDF");
       console.error(error);
+    }
+  };
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invoice) return;
+
+    try {
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: invoice.customer.id,
+          invoiceId: invoice.id,
+          amount: parseFloat(paymentForm.amount),
+          paymentDate: paymentForm.paymentDate,
+          paymentMethod: paymentForm.paymentMethod,
+          reference: paymentForm.reference || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to record payment");
+      }
+
+      toast.success("Payment recorded");
+      setIsPaymentDialogOpen(false);
+      fetchInvoice();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to record payment");
+    }
+  };
+
+  const handleMarkAsSent = async () => {
+    if (!invoice) return;
+    setIsMarkingSent(true);
+    try {
+      const response = await fetch(`/api/invoices/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "markSent" }),
+      });
+      if (!response.ok) throw new Error("Failed to mark as sent");
+      toast.success("Invoice marked as sent");
+      fetchInvoice();
+    } catch {
+      toast.error("Failed to mark invoice as sent");
+    } finally {
+      setIsMarkingSent(false);
     }
   };
 
@@ -167,6 +249,23 @@ export default function InvoiceDetailPage({
               Edit
             </Button>
           </Link>
+          {invoice && Number(invoice.balanceDue) > 0 && (
+            <Button onClick={() => setIsPaymentDialogOpen(true)}>
+              <CreditCard className="mr-2 h-4 w-4" />
+              Record Payment
+            </Button>
+          )}
+          {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
+            <Button variant="outline" onClick={handleMarkAsSent} disabled={isMarkingSent}>
+              <Send className="mr-2 h-4 w-4" />
+              Mark as Sent
+            </Button>
+          )}
+          {invoice?.sentAt && (
+            <span className="text-sm text-slate-500">
+              Sent {format(new Date(invoice.sentAt), "dd MMM yyyy")}
+            </span>
+          )}
           <Button variant="outline" onClick={handleDownloadPDF}>
             <Download className="mr-2 h-4 w-4" />
             Download PDF
@@ -328,6 +427,80 @@ export default function InvoiceDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Record Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent>
+          <form onSubmit={handleRecordPayment}>
+            <DialogHeader>
+              <DialogTitle>Record Payment</DialogTitle>
+              <DialogDescription>
+                Record a payment for invoice {invoice.invoiceNumber}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Customer</Label>
+                <p className="text-sm font-medium">{invoice.customer.name}</p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pay-amount">Amount *</Label>
+                <Input
+                  id="pay-amount"
+                  type="number"
+                  step="0.01"
+                  value={paymentForm.amount}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="pay-date">Payment Date *</Label>
+                  <Input
+                    id="pay-date"
+                    type="date"
+                    value={paymentForm.paymentDate}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Payment Method</Label>
+                  <Select
+                    value={paymentForm.paymentMethod}
+                    onValueChange={(v) => setPaymentForm({ ...paymentForm, paymentMethod: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CASH">Cash</SelectItem>
+                      <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                      <SelectItem value="CHECK">Check</SelectItem>
+                      <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
+                      <SelectItem value="UPI">UPI</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pay-ref">Reference</Label>
+                <Input
+                  id="pay-ref"
+                  value={paymentForm.reference}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                  placeholder="Transaction ID, check #..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Record Payment</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -47,6 +47,7 @@ export async function POST(
       });
 
       if (!cashBankAccount) throw new Error("Cash/bank account not found");
+      if (!cashBankAccount.accountId) throw new Error("Cash/bank account is not linked to a GL account");
 
       const totalAmount = Number(expense.total);
 

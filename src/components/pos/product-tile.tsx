@@ -10,14 +10,15 @@ interface ProductTileProps {
     sku: string | null;
     price: number;
     stockQuantity: number;
+    isService?: boolean;
     category: { color: string | null } | null;
   };
   onAdd: () => void;
 }
 
 export function ProductTile({ product, onAdd }: ProductTileProps) {
-  const outOfStock = product.stockQuantity <= 0;
-  const lowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;
+  const outOfStock = !product.isService && product.stockQuantity <= 0;
+  const lowStock = !product.isService && product.stockQuantity > 0 && product.stockQuantity <= 5;
 
   return (
     <button

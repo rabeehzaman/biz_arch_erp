@@ -114,6 +114,7 @@ model Product {
   unitId         String?
   unit           Unit?        @relation(fields: [unitId], references: [id])
   sku            String?
+  isService      Boolean      @default(false)
   isActive       Boolean      @default(true)
   organizationId String
   organization   Organization     @relation(fields: [organizationId], references: [id])
@@ -235,6 +236,15 @@ model Invoice {
   total      Decimal @db.Decimal(12, 2)
   amountPaid Decimal @default(0) @db.Decimal(12, 2)
   balanceDue Decimal @db.Decimal(12, 2)
+
+  cgstRate   Decimal @default(0) @db.Decimal(5, 2)
+  sgstRate   Decimal @default(0) @db.Decimal(5, 2)
+  igstRate   Decimal @default(0) @db.Decimal(5, 2)
+  cgstAmount Decimal @default(0) @db.Decimal(12, 2)
+  sgstAmount Decimal @default(0) @db.Decimal(12, 2)
+  igstAmount Decimal @default(0) @db.Decimal(12, 2)
+
+  sentAt DateTime?
 
   notes String?
   terms String?

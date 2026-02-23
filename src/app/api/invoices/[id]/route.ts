@@ -331,6 +331,36 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
+    const { id } = await params;
+    const body = await request.json();
+    const { action } = body;
+
+    if (action === "markSent") {
+      const invoice = await prisma.invoice.update({
+        where: { id, organizationId },
+        data: { sentAt: new Date() },
+      });
+      return NextResponse.json(invoice);
+    }
+
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  } catch (error) {
+    console.error("Failed to patch invoice:", error);
+    return NextResponse.json({ error: "Failed to update invoice" }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

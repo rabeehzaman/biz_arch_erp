@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Search, FileText, Eye, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -34,6 +35,12 @@ interface Invoice {
   _count: {
     items: number;
   };
+}
+
+function getInvoiceStatus(balanceDue: number, dueDate: string) {
+  if (balanceDue <= 0) return { label: "PAID", className: "bg-green-100 text-green-700" };
+  if (new Date(dueDate) < new Date()) return { label: "OVERDUE", className: "bg-red-100 text-red-700" };
+  return { label: "UNPAID", className: "bg-yellow-100 text-yellow-700" };
 }
 
 export default function InvoicesPage() {
@@ -131,6 +138,7 @@ export default function InvoicesPage() {
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
                   <TableHead>Customer</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="hidden sm:table-cell">Issue Date</TableHead>
                   <TableHead className="hidden sm:table-cell">Due Date</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -157,6 +165,16 @@ export default function InvoicesPage() {
                           </div>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate);
+                        return (
+                          <Badge variant="outline" className={status.className}>
+                            {status.label}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {format(new Date(invoice.issueDate), "dd MMM yyyy")}

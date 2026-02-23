@@ -67,6 +67,9 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const userId = session.user.id;
+    if (!userId) {
+      return NextResponse.json({ error: "User ID not found in session" }, { status: 401 });
+    }
 
     const body = await request.json();
     const { openingCash = 0 } = body;

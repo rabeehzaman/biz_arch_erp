@@ -77,12 +77,24 @@ export async function POST(request: NextRequest) {
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id;
+    if (!userId) {
+      return NextResponse.json({ error: "User ID not found in session" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { customerId, issueDate, dueDate, items, taxRate, notes, terms } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
         { error: "Customer and items are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!issueDate || !dueDate) {
+      return NextResponse.json(
+        { error: "Issue date and due date are required" },
         { status: 400 }
       );
     }
@@ -108,7 +120,7 @@ export async function POST(request: NextRequest) {
           organizationId,
           invoiceNumber,
           customerId,
-          createdById: session.user.id,
+          createdById: userId,
           issueDate: invoiceDate,
           dueDate: new Date(dueDate),
           subtotal,
@@ -287,9 +299,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    console.error("Failed to create invoice:", error);
+    const message = error instanceof Error ? error.message : "Failed to create invoice";
+    console.error("Failed to create invoice:", message);
     return NextResponse.json(
-      { error: "Failed to create invoice" },
+      { error: message },
       { status: 500 }
     );
   }
