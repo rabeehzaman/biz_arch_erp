@@ -23,6 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +86,7 @@ function ProductsPageContent() {
   const [productSearch, setProductSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   // — Inventory tab state —
   const [inventory, setInventory] = useState<InventoryProduct[]>([]);
@@ -177,16 +179,21 @@ function ProductsPageContent() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-    try {
-      const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Failed to delete");
-      fetchProducts();
-      toast.success("Product deleted");
-    } catch (error) {
-      toast.error("Failed to delete product");
-      console.error("Failed to delete product:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Product",
+      description: "Are you sure you want to delete this product?",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
+          if (!response.ok) throw new Error("Failed to delete");
+          fetchProducts();
+          toast.success("Product deleted");
+        } catch (error) {
+          toast.error("Failed to delete product");
+          console.error("Failed to delete product:", error);
+        }
+      },
+    });
   };
 
 
@@ -538,6 +545,15 @@ function ProductsPageContent() {
             </StaggerContainer>
           </div>
         )}
+      {confirmDialog && (
+        <ConfirmDialog
+          open={!!confirmDialog}
+          onOpenChange={(open) => !open && setConfirmDialog(null)}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+        />
+      )}
       </div>
     </PageAnimation>
   );

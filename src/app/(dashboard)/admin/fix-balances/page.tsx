@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-react";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ProductCostIssue {
   id: string;
@@ -84,6 +85,7 @@ export default function FixBalancesPage() {
     message: string;
   } | null>(null);
   const [costError, setCostError] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   const handleCheck = async () => {
     setIsChecking(true);
@@ -107,31 +109,33 @@ export default function FixBalancesPage() {
   };
 
   const handleFix = async () => {
-    if (!confirm("Are you sure you want to fix all customer balances? This will update the database.")) {
-      return;
-    }
+    setConfirmDialog({
+      title: "Fix All Customer Balances",
+      description: "Are you sure you want to fix all customer balances? This will update the database.",
+      onConfirm: async () => {
+        setIsFixing(true);
+        setError(null);
 
-    setIsFixing(true);
-    setError(null);
+        try {
+          const response = await fetch("/api/admin/fix-customer-balances", {
+            method: "POST",
+          });
 
-    try {
-      const response = await fetch("/api/admin/fix-customer-balances", {
-        method: "POST",
-      });
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Failed to fix balances");
+          }
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to fix balances");
-      }
-
-      const data = await response.json();
-      setFixResult(data);
-      setCheckResult(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fix balances");
-    } finally {
-      setIsFixing(false);
-    }
+          const data = await response.json();
+          setFixResult(data);
+          setCheckResult(null);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Failed to fix balances");
+        } finally {
+          setIsFixing(false);
+        }
+      },
+    });
   };
 
   const handleCheckCosts = async () => {
@@ -154,26 +158,28 @@ export default function FixBalancesPage() {
   };
 
   const handleFixCosts = async () => {
-    if (!confirm("Are you sure you want to fix all product costs to MRP? This will update the database.")) {
-      return;
-    }
+    setConfirmDialog({
+      title: "Fix All Product Costs",
+      description: "Are you sure you want to fix all product costs to MRP? This will update the database.",
+      onConfirm: async () => {
+        setIsFixingCosts(true);
+        setCostError(null);
 
-    setIsFixingCosts(true);
-    setCostError(null);
-
-    try {
-      const response = await fetch("/api/admin/fix-product-costs", { method: "POST" });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to fix product costs");
-      }
-      setCostFixResult(await response.json());
-      setCostCheckResult(null);
-    } catch (err) {
-      setCostError(err instanceof Error ? err.message : "Failed to fix product costs");
-    } finally {
-      setIsFixingCosts(false);
-    }
+        try {
+          const response = await fetch("/api/admin/fix-product-costs", { method: "POST" });
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Failed to fix product costs");
+          }
+          setCostFixResult(await response.json());
+          setCostCheckResult(null);
+        } catch (err) {
+          setCostError(err instanceof Error ? err.message : "Failed to fix product costs");
+        } finally {
+          setIsFixingCosts(false);
+        }
+      },
+    });
   };
 
   const formatCurrency = (amount: number) => {
@@ -497,6 +503,15 @@ export default function FixBalancesPage() {
               </CardContent>
             </Card>
           )}
+        {confirmDialog && (
+          <ConfirmDialog
+            open={!!confirmDialog}
+            onOpenChange={(open) => !open && setConfirmDialog(null)}
+            title={confirmDialog.title}
+            description={confirmDialog.description}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          />
+        )}
         </div>
         </PageAnimation>
       );

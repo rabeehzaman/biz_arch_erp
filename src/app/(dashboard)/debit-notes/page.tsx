@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface DebitNote {
   id: string;
@@ -45,6 +46,7 @@ export default function DebitNotesPage() {
   const [debitNotes, setDebitNotes] = useState<DebitNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     fetchDebitNotes();
@@ -65,24 +67,23 @@ export default function DebitNotesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this debit note? This will restore supplier balance and restore stock."
-      )
-    )
-      return;
-
-    try {
-      const response = await fetch(`/api/debit-notes/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete");
-      fetchDebitNotes();
-      toast.success("Debit note deleted");
-    } catch (error) {
-      toast.error("Failed to delete debit note");
-      console.error("Failed to delete debit note:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Debit Note",
+      description: "Are you sure you want to delete this debit note? This will restore supplier balance and restore stock.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/debit-notes/${id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) throw new Error("Failed to delete");
+          fetchDebitNotes();
+          toast.success("Debit note deleted");
+        } catch (error) {
+          toast.error("Failed to delete debit note");
+          console.error("Failed to delete debit note:", error);
+        }
+      },
+    });
   };
 
   const filteredDebitNotes = debitNotes.filter(
@@ -222,6 +223,15 @@ export default function DebitNotesPage() {
               )}
             </CardContent>
           </Card>
+        {confirmDialog && (
+          <ConfirmDialog
+            open={!!confirmDialog}
+            onOpenChange={(open) => !open && setConfirmDialog(null)}
+            title={confirmDialog.title}
+            description={confirmDialog.description}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          />
+        )}
         </div>
         </PageAnimation>
       );

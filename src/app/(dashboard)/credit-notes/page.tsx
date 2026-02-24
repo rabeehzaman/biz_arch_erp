@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface CreditNote {
   id: string;
@@ -45,6 +46,7 @@ export default function CreditNotesPage() {
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     fetchCreditNotes();
@@ -65,24 +67,23 @@ export default function CreditNotesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this credit note? This will restore customer balance and remove stock lots."
-      )
-    )
-      return;
-
-    try {
-      const response = await fetch(`/api/credit-notes/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete");
-      fetchCreditNotes();
-      toast.success("Credit note deleted");
-    } catch (error) {
-      toast.error("Failed to delete credit note");
-      console.error("Failed to delete credit note:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Credit Note",
+      description: "Are you sure you want to delete this credit note? This will restore customer balance and remove stock lots.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/credit-notes/${id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) throw new Error("Failed to delete");
+          fetchCreditNotes();
+          toast.success("Credit note deleted");
+        } catch (error) {
+          toast.error("Failed to delete credit note");
+          console.error("Failed to delete credit note:", error);
+        }
+      },
+    });
   };
 
   const filteredCreditNotes = creditNotes.filter(
@@ -222,6 +223,15 @@ export default function CreditNotesPage() {
               )}
             </CardContent>
           </Card>
+        {confirmDialog && (
+          <ConfirmDialog
+            open={!!confirmDialog}
+            onOpenChange={(open) => !open && setConfirmDialog(null)}
+            title={confirmDialog.title}
+            description={confirmDialog.description}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          />
+        )}
         </div>
         </PageAnimation>
       );

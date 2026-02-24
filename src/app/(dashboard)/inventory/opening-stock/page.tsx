@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Product {
   id: string;
@@ -64,6 +65,7 @@ export default function OpeningStockPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStock, setEditingStock] = useState<OpeningStock | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const [formData, setFormData] = useState({
     productId: "",
     quantity: "",
@@ -152,20 +154,24 @@ export default function OpeningStockPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this opening stock entry? This will affect stock calculations.")) return;
-
-    try {
-      const response = await fetch(`/api/opening-stocks/${id}`, { method: "DELETE" });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to delete");
-      }
-      fetchData();
-      toast.success("Opening stock deleted");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete opening stock");
-      console.error("Failed to delete opening stock:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Opening Stock",
+      description: "Are you sure you want to delete this opening stock entry? This will affect stock calculations.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/opening-stocks/${id}`, { method: "DELETE" });
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Failed to delete");
+          }
+          fetchData();
+          toast.success("Opening stock deleted");
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Failed to delete opening stock");
+          console.error("Failed to delete opening stock:", error);
+        }
+      },
+    });
   };
 
   const resetForm = () => {
@@ -384,6 +390,15 @@ export default function OpeningStockPage() {
             )}
           </CardContent>
         </Card>
+      {confirmDialog && (
+        <ConfirmDialog
+          open={!!confirmDialog}
+          onOpenChange={(open) => !open && setConfirmDialog(null)}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+        />
+      )}
       </div>
     </PageAnimation>
   );

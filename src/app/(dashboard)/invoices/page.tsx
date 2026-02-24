@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Invoice {
   id: string;
@@ -49,6 +50,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -69,17 +71,21 @@ export default function InvoicesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this invoice?")) return;
-
-    try {
-      const response = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Failed to delete");
-      fetchInvoices();
-      toast.success("Invoice deleted");
-    } catch (error) {
-      toast.error("Failed to delete invoice");
-      console.error("Failed to delete invoice:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Invoice",
+      description: "Are you sure you want to delete this invoice?",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
+          if (!response.ok) throw new Error("Failed to delete");
+          fetchInvoices();
+          toast.success("Invoice deleted");
+        } catch (error) {
+          toast.error("Failed to delete invoice");
+          console.error("Failed to delete invoice:", error);
+        }
+      },
+    });
   };
 
   const filteredInvoices = invoices.filter(
@@ -222,6 +228,15 @@ export default function InvoicesPage() {
           </Card>
         </StaggerItem>
       </StaggerContainer>
+      {confirmDialog && (
+        <ConfirmDialog
+          open={!!confirmDialog}
+          onOpenChange={(open) => !open && setConfirmDialog(null)}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+        />
+      )}
     </PageAnimation>
   );
 }

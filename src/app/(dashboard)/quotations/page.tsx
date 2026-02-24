@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Quotation {
   id: string;
@@ -43,6 +44,7 @@ export default function QuotationsPage() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     fetchQuotations();
@@ -63,20 +65,24 @@ export default function QuotationsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this quotation?")) return;
-
-    try {
-      const response = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete");
-      }
-      fetchQuotations();
-      toast.success("Quotation deleted");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete quotation");
-      console.error("Failed to delete quotation:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Quotation",
+      description: "Are you sure you want to delete this quotation?",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Failed to delete");
+          }
+          fetchQuotations();
+          toast.success("Quotation deleted");
+        } catch (error: any) {
+          toast.error(error.message || "Failed to delete quotation");
+          console.error("Failed to delete quotation:", error);
+        }
+      },
+    });
   };
 
   const filteredQuotations = quotations.filter(
@@ -221,6 +227,15 @@ export default function QuotationsPage() {
           </Card>
         </StaggerItem>
       </StaggerContainer>
+      {confirmDialog && (
+        <ConfirmDialog
+          open={!!confirmDialog}
+          onOpenChange={(open) => !open && setConfirmDialog(null)}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+        />
+      )}
     </PageAnimation>
   );
 }

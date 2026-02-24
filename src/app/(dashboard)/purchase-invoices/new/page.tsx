@@ -43,10 +43,16 @@ export default function NewPurchaseInvoicePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getDefaultDueDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split("T")[0];
+  };
+
   const [formData, setFormData] = useState({
     supplierId: "",
     invoiceDate: new Date().toISOString().split("T")[0],
-    dueDate: "",
+    dueDate: getDefaultDueDate(),
     supplierInvoiceRef: "",
     taxRate: "0",
     notes: "",

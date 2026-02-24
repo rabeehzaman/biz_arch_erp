@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,7 @@ export default function SuppliersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isOpeningBalanceDialogOpen, setIsOpeningBalanceDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const [selectedSupplierForBalance, setSelectedSupplierForBalance] = useState<Supplier | null>(null);
   const [openingBalanceData, setOpeningBalanceData] = useState({
     amount: "",
@@ -155,20 +157,24 @@ export default function SuppliersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this supplier?")) return;
-
-    try {
-      const response = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to delete");
-      }
-      fetchSuppliers();
-      toast.success("Supplier deleted");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete supplier");
-      console.error("Failed to delete supplier:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Supplier",
+      description: "Are you sure you want to delete this supplier?",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Failed to delete");
+          }
+          fetchSuppliers();
+          toast.success("Supplier deleted");
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Failed to delete supplier");
+          console.error("Failed to delete supplier:", error);
+        }
+      },
+    });
   };
 
   const resetForm = () => {
@@ -565,6 +571,15 @@ export default function SuppliersPage() {
           </Card>
         </StaggerItem>
       </StaggerContainer>
+      {confirmDialog && (
+        <ConfirmDialog
+          open={!!confirmDialog}
+          onOpenChange={(open) => !open && setConfirmDialog(null)}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+        />
+      )}
     </PageAnimation>
   );
 }

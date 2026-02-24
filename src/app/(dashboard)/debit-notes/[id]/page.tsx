@@ -17,6 +17,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface DebitNote {
   id: string;
@@ -58,6 +59,7 @@ export default function DebitNoteDetailPage() {
   const router = useRouter();
   const [debitNote, setDebitNote] = useState<DebitNote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     fetchDebitNote();
@@ -78,24 +80,23 @@ export default function DebitNoteDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this debit note? This will restore supplier balance and restore stock."
-      )
-    )
-      return;
-
-    try {
-      const response = await fetch(`/api/debit-notes/${params.id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete");
-      toast.success("Debit note deleted");
-      router.push("/debit-notes");
-    } catch (error) {
-      toast.error("Failed to delete debit note");
-      console.error("Failed to delete debit note:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Debit Note",
+      description: "Are you sure you want to delete this debit note? This will restore supplier balance and restore stock.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/debit-notes/${params.id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) throw new Error("Failed to delete");
+          toast.success("Debit note deleted");
+          router.push("/debit-notes");
+        } catch (error) {
+          toast.error("Failed to delete debit note");
+          console.error("Failed to delete debit note:", error);
+        }
+      },
+    });
   };
 
   if (isLoading) {
@@ -277,6 +278,15 @@ export default function DebitNoteDetailPage() {
               </CardContent>
             </Card>
           )}
+        {confirmDialog && (
+          <ConfirmDialog
+            open={!!confirmDialog}
+            onOpenChange={(open) => !open && setConfirmDialog(null)}
+            title={confirmDialog.title}
+            description={confirmDialog.description}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          />
+        )}
         </div>
         </PageAnimation>
       );

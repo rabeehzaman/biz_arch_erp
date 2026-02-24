@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface QuotationItem {
   id: string;
@@ -72,6 +73,7 @@ export default function QuotationDetailPage({
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConverting, setIsConverting] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void; variant?: "default" | "destructive"; confirmLabel?: string } | null>(null);
 
   useEffect(() => {
     fetchQuotation();
@@ -138,48 +140,58 @@ export default function QuotationDetailPage({
   };
 
   const handleConvertToInvoice = async () => {
-    if (!confirm("Convert this quotation to an invoice? This action cannot be undone.")) return;
+    setConfirmDialog({
+      title: "Convert to Invoice",
+      description: "Convert this quotation to an invoice? This action cannot be undone.",
+      variant: "default",
+      confirmLabel: "Convert to Invoice",
+      onConfirm: async () => {
+        setIsConverting(true);
+        try {
+          const response = await fetch(`/api/quotations/${id}/convert`, {
+            method: "POST",
+          });
 
-    setIsConverting(true);
-    try {
-      const response = await fetch(`/api/quotations/${id}/convert`, {
-        method: "POST",
-      });
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Failed to convert");
+          }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to convert");
-      }
-
-      const invoice = await response.json();
-      toast.success("Quotation converted to invoice");
-      router.push(`/invoices/${invoice.id}`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to convert quotation");
-      console.error(error);
-    } finally {
-      setIsConverting(false);
-    }
+          const invoice = await response.json();
+          toast.success("Quotation converted to invoice");
+          router.push(`/invoices/${invoice.id}`);
+        } catch (error: any) {
+          toast.error(error.message || "Failed to convert quotation");
+          console.error(error);
+        } finally {
+          setIsConverting(false);
+        }
+      },
+    });
   };
 
   const handleCancelQuotation = async () => {
-    if (!confirm("Cancel this quotation? This action cannot be undone.")) return;
+    setConfirmDialog({
+      title: "Cancel Quotation",
+      description: "Cancel this quotation? This action cannot be undone.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/quotations/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "CANCELLED" }),
+          });
 
-    try {
-      const response = await fetch(`/api/quotations/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "CANCELLED" }),
-      });
+          if (!response.ok) throw new Error("Failed to cancel");
 
-      if (!response.ok) throw new Error("Failed to cancel");
-
-      fetchQuotation();
-      toast.success("Quotation cancelled");
-    } catch (error) {
-      toast.error("Failed to cancel quotation");
-      console.error(error);
-    }
+          fetchQuotation();
+          toast.success("Quotation cancelled");
+        } catch (error) {
+          toast.error("Failed to cancel quotation");
+          console.error(error);
+        }
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -445,6 +457,17 @@ export default function QuotationDetailPage({
               )}
             </CardContent>
           </Card>
+        {confirmDialog && (
+          <ConfirmDialog
+            open={!!confirmDialog}
+            onOpenChange={(open) => !open && setConfirmDialog(null)}
+            title={confirmDialog.title}
+            description={confirmDialog.description}
+            variant={confirmDialog.variant}
+            confirmLabel={confirmDialog.confirmLabel}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          />
+        )}
         </div>
         </PageAnimation>
       );

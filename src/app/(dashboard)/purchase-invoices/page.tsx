@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface PurchaseInvoice {
   id: string;
@@ -67,6 +68,7 @@ export default function PurchaseInvoicesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -90,17 +92,21 @@ export default function PurchaseInvoicesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this purchase invoice? This will also remove the stock entries.")) return;
-
-    try {
-      const response = await fetch(`/api/purchase-invoices/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Failed to delete");
-      fetchInvoices();
-      toast.success("Purchase invoice deleted");
-    } catch (error) {
-      toast.error("Failed to delete purchase invoice");
-      console.error("Failed to delete purchase invoice:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Purchase Invoice",
+      description: "Are you sure you want to delete this purchase invoice? This will also remove the stock entries.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/purchase-invoices/${id}`, { method: "DELETE" });
+          if (!response.ok) throw new Error("Failed to delete");
+          fetchInvoices();
+          toast.success("Purchase invoice deleted");
+        } catch (error) {
+          toast.error("Failed to delete purchase invoice");
+          console.error("Failed to delete purchase invoice:", error);
+        }
+      },
+    });
   };
 
   const filteredInvoices = invoices.filter(
@@ -251,6 +257,15 @@ export default function PurchaseInvoicesPage() {
               )}
             </CardContent>
           </Card>
+        {confirmDialog && (
+          <ConfirmDialog
+            open={!!confirmDialog}
+            onOpenChange={(open) => !open && setConfirmDialog(null)}
+            title={confirmDialog.title}
+            description={confirmDialog.description}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          />
+        )}
         </div>
         </PageAnimation>
       );

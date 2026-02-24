@@ -44,9 +44,16 @@ export default function NewInvoicePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getDefaultDueDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split("T")[0];
+  };
+
   const [formData, setFormData] = useState({
     customerId: "",
     date: new Date().toISOString().split("T")[0],
+    dueDate: getDefaultDueDate(),
     taxRate: "0",
     notes: "",
     terms: "",
@@ -214,7 +221,7 @@ export default function NewInvoicePage() {
         body: JSON.stringify({
           customerId: formData.customerId,
           issueDate: formData.date,
-          dueDate: formData.date,
+          dueDate: formData.dueDate,
           taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
           terms: formData.terms || null,
@@ -278,7 +285,7 @@ export default function NewInvoicePage() {
               <CardHeader>
                 <CardTitle>Invoice Details</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
+              <CardContent className="grid gap-4 sm:grid-cols-3">
                 <div className="grid gap-2">
                   <Label htmlFor="customer">Customer *</Label>
                   <CustomerCombobox
@@ -294,13 +301,25 @@ export default function NewInvoicePage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="date">Date *</Label>
+                  <Label htmlFor="date">Issue Date *</Label>
                   <Input
                     id="date"
                     type="date"
                     value={formData.date}
                     onChange={(e) =>
                       setFormData({ ...formData, date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="dueDate">Due Date *</Label>
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    value={formData.dueDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dueDate: e.target.value })
                     }
                     required
                   />

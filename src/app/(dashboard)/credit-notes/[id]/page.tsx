@@ -17,6 +17,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface CreditNote {
   id: string;
@@ -60,6 +61,7 @@ export default function CreditNoteDetailPage() {
   const router = useRouter();
   const [creditNote, setCreditNote] = useState<CreditNote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     fetchCreditNote();
@@ -80,24 +82,23 @@ export default function CreditNoteDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this credit note? This will restore customer balance and remove stock lots."
-      )
-    )
-      return;
-
-    try {
-      const response = await fetch(`/api/credit-notes/${params.id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete");
-      toast.success("Credit note deleted");
-      router.push("/credit-notes");
-    } catch (error) {
-      toast.error("Failed to delete credit note");
-      console.error("Failed to delete credit note:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Credit Note",
+      description: "Are you sure you want to delete this credit note? This will restore customer balance and remove stock lots.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/credit-notes/${params.id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) throw new Error("Failed to delete");
+          toast.success("Credit note deleted");
+          router.push("/credit-notes");
+        } catch (error) {
+          toast.error("Failed to delete credit note");
+          console.error("Failed to delete credit note:", error);
+        }
+      },
+    });
   };
 
   if (isLoading) {
@@ -275,6 +276,15 @@ export default function CreditNoteDetailPage() {
               </CardContent>
             </Card>
           )}
+        {confirmDialog && (
+          <ConfirmDialog
+            open={!!confirmDialog}
+            onOpenChange={(open) => !open && setConfirmDialog(null)}
+            title={confirmDialog.title}
+            description={confirmDialog.description}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          />
+        )}
         </div>
         </PageAnimation>
       );

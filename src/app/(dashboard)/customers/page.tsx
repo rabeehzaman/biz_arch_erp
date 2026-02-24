@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface User {
   id: string;
@@ -90,6 +91,7 @@ export default function CustomersPage() {
   const [selectedCustomerForAssign, setSelectedCustomerForAssign] = useState<Customer | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   const [openingBalanceData, setOpeningBalanceData] = useState({
     amount: "",
@@ -233,17 +235,21 @@ export default function CustomersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this customer?")) return;
-
-    try {
-      const response = await fetch(`/api/customers/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Failed to delete");
-      fetchCustomers();
-      toast.success("Customer deleted");
-    } catch (error) {
-      toast.error("Failed to delete customer");
-      console.error("Failed to delete customer:", error);
-    }
+    setConfirmDialog({
+      title: "Delete Customer",
+      description: "Are you sure you want to delete this customer?",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/customers/${id}`, { method: "DELETE" });
+          if (!response.ok) throw new Error("Failed to delete");
+          fetchCustomers();
+          toast.success("Customer deleted");
+        } catch (error) {
+          toast.error("Failed to delete customer");
+          console.error("Failed to delete customer:", error);
+        }
+      },
+    });
   };
 
 
@@ -540,6 +546,15 @@ export default function CustomersPage() {
           </Card>
         </StaggerItem>
       </StaggerContainer>
+      {confirmDialog && (
+        <ConfirmDialog
+          open={!!confirmDialog}
+          onOpenChange={(open) => !open && setConfirmDialog(null)}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+        />
+      )}
     </PageAnimation>
   );
 }
