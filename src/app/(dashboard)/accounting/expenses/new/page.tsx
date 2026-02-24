@@ -17,6 +17,7 @@ import {
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface Account {
   id: string;
@@ -134,202 +135,204 @@ export default function NewExpensePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/accounting/expenses">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">New Expense</h2>
-          <p className="text-slate-500">Record a business expense</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Expense Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="grid gap-2">
-                <Label>Date *</Label>
-                <Input
-                  type="date"
-                  value={expenseDate}
-                  onChange={(e) => setExpenseDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Supplier (optional)</Label>
-                <Select value={supplierId} onValueChange={setSupplierId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="No supplier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Tax Rate %</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={taxRate}
-                  onChange={(e) => setTaxRate(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Description</Label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What is this expense for?"
-              />
-            </div>
-
+        <PageAnimation>
+          <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Link href="/accounting/expenses">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <Label className="text-base font-semibold">Line Items</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addLine}
-                >
-                  <Plus className="mr-2 h-3 w-3" />
-                  Add Line
-                </Button>
-              </div>
+              <h2 className="text-2xl font-bold text-slate-900">New Expense</h2>
+              <p className="text-slate-500">Record a business expense</p>
+            </div>
+          </div>
 
-              <div className="space-y-3">
-                <div className="grid grid-cols-[1fr_1fr_120px_40px] gap-2 text-xs font-medium text-slate-500 px-1">
-                  <span>Expense Account</span>
-                  <span>Description</span>
-                  <span className="text-right">Amount</span>
-                  <span />
-                </div>
-
-                {lines.map((line, index) => (
-                  <div
-                    key={index}
-                    className="grid grid-cols-[1fr_1fr_120px_40px] gap-2 items-center"
-                  >
-                    <Select
-                      value={line.accountId}
-                      onValueChange={(v) =>
-                        updateLine(index, "accountId", v)
-                      }
-                    >
+          <form onSubmit={handleSubmit}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Expense Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-2">
+                    <Label>Date *</Label>
+                    <Input
+                      type="date"
+                      value={expenseDate}
+                      onChange={(e) => setExpenseDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Supplier (optional)</Label>
+                    <Select value={supplierId} onValueChange={setSupplierId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select account" />
+                        <SelectValue placeholder="No supplier" />
                       </SelectTrigger>
                       <SelectContent>
-                        {accounts.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.code} - {a.name}
+                        {suppliers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-
-                    <Input
-                      value={line.description}
-                      onChange={(e) =>
-                        updateLine(index, "description", e.target.value)
-                      }
-                      placeholder="Description"
-                    />
-
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Tax Rate %</Label>
                     <Input
                       type="number"
                       step="0.01"
-                      min="0"
-                      value={line.amount}
-                      onChange={(e) =>
-                        updateLine(index, "amount", e.target.value)
-                      }
-                      placeholder="0.00"
-                      className="text-right"
+                      value={taxRate}
+                      onChange={(e) => setTaxRate(e.target.value)}
+                      placeholder="0"
                     />
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeLine(index)}
-                      disabled={lines.length <= 1}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-
-                <div className="border-t pt-3 space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span className="font-mono">
-                      {subtotal.toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                  {taxAmount > 0 && (
-                    <div className="flex justify-between text-slate-500">
-                      <span>Tax ({taxRate}%):</span>
-                      <span className="font-mono">
-                        {taxAmount.toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-base">
-                    <span>Total:</span>
-                    <span className="font-mono">
-                      {total.toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="grid gap-2">
-              <Label>Notes</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes"
-              />
-            </div>
+                <div className="grid gap-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What is this expense for?"
+                  />
+                </div>
 
-            <div className="flex gap-3 justify-end">
-              <Link href="/accounting/expenses">
-                <Button type="button" variant="outline">
-                  Cancel
-                </Button>
-              </Link>
-              <Button type="submit" disabled={isSubmitting || subtotal === 0}>
-                {isSubmitting ? "Creating..." : "Create Expense"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
-    </div>
-  );
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <Label className="text-base font-semibold">Line Items</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addLine}
+                    >
+                      <Plus className="mr-2 h-3 w-3" />
+                      Add Line
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-[1fr_1fr_120px_40px] gap-2 text-xs font-medium text-slate-500 px-1">
+                      <span>Expense Account</span>
+                      <span>Description</span>
+                      <span className="text-right">Amount</span>
+                      <span />
+                    </div>
+
+                    {lines.map((line, index) => (
+                      <div
+                        key={index}
+                        className="grid grid-cols-[1fr_1fr_120px_40px] gap-2 items-center"
+                      >
+                        <Select
+                          value={line.accountId}
+                          onValueChange={(v) =>
+                            updateLine(index, "accountId", v)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {accounts.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.code} - {a.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Input
+                          value={line.description}
+                          onChange={(e) =>
+                            updateLine(index, "description", e.target.value)
+                          }
+                          placeholder="Description"
+                        />
+
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={line.amount}
+                          onChange={(e) =>
+                            updateLine(index, "amount", e.target.value)
+                          }
+                          placeholder="0.00"
+                          className="text-right"
+                        />
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeLine(index)}
+                          disabled={lines.length <= 1}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+
+                    <div className="border-t pt-3 space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span className="font-mono">
+                          {subtotal.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                      {taxAmount > 0 && (
+                        <div className="flex justify-between text-slate-500">
+                          <span>Tax ({taxRate}%):</span>
+                          <span className="font-mono">
+                            {taxAmount.toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-base">
+                        <span>Total:</span>
+                        <span className="font-mono">
+                          {total.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Notes</Label>
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Additional notes"
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <Link href="/accounting/expenses">
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  </Link>
+                  <Button type="submit" disabled={isSubmitting || subtotal === 0}>
+                    {isSubmitting ? "Creating..." : "Create Expense"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </form>
+        </div>
+        </PageAnimation>
+      );
 }

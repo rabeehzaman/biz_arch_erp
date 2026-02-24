@@ -26,6 +26,7 @@ import {
 import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface JournalLine {
   id: string;
@@ -124,171 +125,173 @@ export default function JournalEntryDetailPage({
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/accounting/journal-entries">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              {entry.journalNumber}
-            </h2>
-            <p className="text-slate-500">{entry.description}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge className={statusColors[entry.status]}>{entry.status}</Badge>
-          {entry.status === "DRAFT" && (
-            <Button onClick={() => setConfirmAction("post")}>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Post
-            </Button>
-          )}
-          {entry.status === "POSTED" && entry.sourceType === "MANUAL" && (
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmAction("void")}
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Void
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Entry Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-slate-500">Date</span>
-              <p className="font-medium">
-                {format(new Date(entry.date), "dd MMM yyyy")}
-              </p>
+        <PageAnimation>
+          <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/accounting/journal-entries">
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {entry.journalNumber}
+                </h2>
+                <p className="text-slate-500">{entry.description}</p>
+              </div>
             </div>
-            <div>
-              <span className="text-slate-500">Source</span>
-              <p className="font-medium">{entry.sourceType}</p>
-            </div>
-            <div>
-              <span className="text-slate-500">Total Debit</span>
-              <p className="font-medium font-mono">
-                {totalDebit.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })}
-              </p>
-            </div>
-            <div>
-              <span className="text-slate-500">Total Credit</span>
-              <p className="font-medium font-mono">
-                {totalCredit.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })}
-              </p>
+            <div className="flex items-center gap-3">
+              <Badge className={statusColors[entry.status]}>{entry.status}</Badge>
+              {entry.status === "DRAFT" && (
+                <Button onClick={() => setConfirmAction("post")}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Post
+                </Button>
+              )}
+              {entry.status === "POSTED" && entry.sourceType === "MANUAL" && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setConfirmAction("void")}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Void
+                </Button>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lines</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Account</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Debit</TableHead>
-                <TableHead className="text-right">Credit</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entry.lines.map((line) => (
-                <TableRow key={line.id}>
-                  <TableCell>
-                    <span className="font-mono text-slate-500 mr-2">
-                      {line.account.code}
-                    </span>
-                    {line.account.name}
-                  </TableCell>
-                  <TableCell className="text-slate-500">
-                    {line.description || "-"}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {Number(line.debit) > 0
-                      ? Number(line.debit).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                        })
-                      : "-"}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {Number(line.credit) > 0
-                      ? Number(line.credit).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                        })
-                      : "-"}
-                  </TableCell>
-                </TableRow>
-              ))}
-              <TableRow className="font-bold border-t-2">
-                <TableCell colSpan={2} className="text-right">
-                  Totals
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {totalDebit.toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {totalCredit.toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Entry Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-slate-500">Date</span>
+                  <p className="font-medium">
+                    {format(new Date(entry.date), "dd MMM yyyy")}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Source</span>
+                  <p className="font-medium">{entry.sourceType}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Total Debit</span>
+                  <p className="font-medium font-mono">
+                    {totalDebit.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Total Credit</span>
+                  <p className="font-medium font-mono">
+                    {totalCredit.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      <AlertDialog
-        open={!!confirmAction}
-        onOpenChange={() => setConfirmAction(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction === "post"
-                ? "Post Journal Entry"
-                : "Void Journal Entry"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmAction === "post"
-                ? "Once posted, this entry will affect account balances. Are you sure?"
-                : "This will create a reversal entry and mark the original as void. Are you sure?"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleAction}
-              className={
-                confirmAction === "void"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : undefined
-              }
-            >
-              {confirmAction === "post" ? "Post Entry" : "Void Entry"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
+          <Card>
+            <CardHeader>
+              <CardTitle>Lines</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Debit</TableHead>
+                    <TableHead className="text-right">Credit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {entry.lines.map((line) => (
+                    <TableRow key={line.id}>
+                      <TableCell>
+                        <span className="font-mono text-slate-500 mr-2">
+                          {line.account.code}
+                        </span>
+                        {line.account.name}
+                      </TableCell>
+                      <TableCell className="text-slate-500">
+                        {line.description || "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {Number(line.debit) > 0
+                          ? Number(line.debit).toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                            })
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {Number(line.credit) > 0
+                          ? Number(line.credit).toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                            })
+                          : "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="font-bold border-t-2">
+                    <TableCell colSpan={2} className="text-right">
+                      Totals
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {totalDebit.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {totalCredit.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <AlertDialog
+            open={!!confirmAction}
+            onOpenChange={() => setConfirmAction(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {confirmAction === "post"
+                    ? "Post Journal Entry"
+                    : "Void Journal Entry"}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {confirmAction === "post"
+                    ? "Once posted, this entry will affect account balances. Are you sure?"
+                    : "This will create a reversal entry and mark the original as void. Are you sure?"}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleAction}
+                  className={
+                    confirmAction === "void"
+                      ? "bg-red-600 hover:bg-red-700"
+                      : undefined
+                  }
+                >
+                  {confirmAction === "post" ? "Post Entry" : "Void Entry"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+        </PageAnimation>
+      );
 }

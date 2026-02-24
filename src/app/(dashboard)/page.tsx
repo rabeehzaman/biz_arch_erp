@@ -1,5 +1,10 @@
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 export default function DashboardPage() {
-  return <DashboardContent />;
+  return (
+    <PageAnimation>
+      <DashboardContent />
+    </PageAnimation>
+  );
 }

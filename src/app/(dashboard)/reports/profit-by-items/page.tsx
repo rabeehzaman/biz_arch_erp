@@ -18,6 +18,7 @@ import { FileText, X, ChevronRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface Product {
   id: string;
@@ -178,290 +179,292 @@ export default function ProfitByItemsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Profit by Invoice</h2>
-        <p className="text-slate-500">
-          View profit analysis by invoice with expandable item details
-        </p>
-      </div>
-
-      {/* Summary Cards */}
-      {reportData && (
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Total Invoices
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {reportData.summary.totalInvoices}
-              </div>
-              <p className="text-xs text-slate-500">
-                {reportData.summary.totalItems} items,{" "}
-                {reportData.summary.totalQuantity.toLocaleString("en-IN")} units
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Total Revenue
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(reportData.summary.totalRevenue)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Total COGS
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
-                {formatCurrency(reportData.summary.totalCOGS)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Total Profit
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className={`text-2xl font-bold ${reportData.summary.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}
-              >
-                {formatCurrency(reportData.summary.totalProfit)}
-              </div>
-              <p className="text-xs text-slate-500">
-                {reportData.summary.averageProfitPercent.toFixed(1)}% margin
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filter and Table Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <CardTitle>Invoice Details</CardTitle>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="w-64">
-                <ProductCombobox
-                  products={products}
-                  value={selectedProductId}
-                  onValueChange={setSelectedProductId}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="fromDate" className="text-sm">
-                  From
-                </Label>
-                <Input
-                  id="fromDate"
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="w-40"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="toDate" className="text-sm">
-                  To
-                </Label>
-                <Input
-                  id="toDate"
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="w-40"
-                />
-              </div>
-              <Button variant="outline" onClick={handleFilter}>
-                Filter
-              </Button>
-              {hasFilters && (
-                <Button variant="ghost" size="icon" onClick={handleClearFilters}>
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+        <PageAnimation>
+          <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Profit by Invoice</h2>
+            <p className="text-slate-500">
+              View profit analysis by invoice with expandable item details
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {!reportData || reportData.invoices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <FileText className="h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-semibold">No invoices found</h3>
-              <p className="text-sm text-slate-500">
-                {hasFilters
-                  ? "Try adjusting your filters"
-                  : "No invoices have been recorded yet"}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <div className="flex items-center justify-between mb-2 text-sm text-slate-500">
-                <span>
-                  Showing {Math.min(displayCount, reportData.invoices.length)} of{" "}
-                  {reportData.invoices.length} invoices
-                </span>
-                {reportData.invoices.length > displayCount && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-blue-600"
-                    onClick={() => setDisplayCount(reportData.invoices.length)}
+
+          {/* Summary Cards */}
+          {reportData && (
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">
+                    Total Invoices
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {reportData.summary.totalInvoices}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {reportData.summary.totalItems} items,{" "}
+                    {reportData.summary.totalQuantity.toLocaleString("en-IN")} units
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">
+                    Total Revenue
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {formatCurrency(reportData.summary.totalRevenue)}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">
+                    Total COGS
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {formatCurrency(reportData.summary.totalCOGS)}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">
+                    Total Profit
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className={`text-2xl font-bold ${reportData.summary.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}
                   >
-                    Show All
-                  </Button>
-                )}
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10"></TableHead>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead className="text-right">Total Qty</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">COGS</TableHead>
-                    <TableHead className="text-right">Profit</TableHead>
-                    <TableHead className="text-right">Profit %</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reportData.invoices.slice(0, displayCount).map((invoice) => (
-                    <React.Fragment key={invoice.invoiceId}>
-                      {/* Invoice Row */}
-                      <TableRow
-                        className="cursor-pointer hover:bg-slate-50"
-                        onClick={() => toggleInvoice(invoice.invoiceId)}
-                      >
-                        <TableCell className="w-10">
-                          {expandedInvoices.has(invoice.invoiceId) ? (
-                            <ChevronDown className="h-4 w-4 text-slate-500" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-slate-500" />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Link
-                            href={`/invoices/${invoice.invoiceId}`}
-                            className="text-blue-600 hover:underline font-mono"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {invoice.invoiceNumber}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell>{invoice.customerName}</TableCell>
-                        <TableCell className="text-right">
-                          {invoice.totalQty}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(invoice.totalRevenue)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(invoice.totalCOGS)}
-                        </TableCell>
-                        <TableCell
-                          className={`text-right font-medium ${invoice.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}
-                        >
-                          {formatCurrency(invoice.totalProfit)}
-                        </TableCell>
-                        <TableCell
-                          className={`text-right font-medium ${invoice.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}
-                        >
-                          {invoice.profitPercent.toFixed(1)}%
-                        </TableCell>
-                      </TableRow>
-                      {/* Item Rows (expanded) */}
-                      {expandedInvoices.has(invoice.invoiceId) &&
-                        invoice.items.map((item) => (
-                          <TableRow
-                            key={item.id}
-                            className="bg-slate-50/50"
-                          >
-                            <TableCell></TableCell>
-                            <TableCell colSpan={2} className="pl-8">
-                              <div>
-                                <div className="font-medium text-slate-700">
-                                  {item.productName}
-                                </div>
-                                {item.productSku && (
-                                  <div className="text-xs text-slate-500">
-                                    SKU: {item.productSku}
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right text-sm text-slate-600">
-                              {formatCurrency(item.unitPrice)} x {item.quantity}
-                              {item.discount > 0 && (
-                                <span className="text-orange-600 ml-1">
-                                  (-{item.discount}%)
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right text-sm text-slate-600">
-                              {item.quantity}
-                            </TableCell>
-                            <TableCell className="text-right text-sm text-slate-600">
-                              {formatCurrency(item.lineTotal)}
-                            </TableCell>
-                            <TableCell className="text-right text-sm text-slate-600">
-                              {formatCurrency(item.lineCOGS)}
-                            </TableCell>
-                            <TableCell
-                              className={`text-right text-sm ${item.lineProfit >= 0 ? "text-green-600" : "text-red-600"}`}
-                            >
-                              {formatCurrency(item.lineProfit)}
-                            </TableCell>
-                            <TableCell
-                              className={`text-right text-sm ${item.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}
-                            >
-                              {item.profitPercent.toFixed(1)}%
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-              {reportData.invoices.length > displayCount && (
-                <div className="flex items-center justify-center pt-4 pb-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setDisplayCount((prev) => prev + 20)}
-                  >
-                    Show More ({reportData.invoices.length - displayCount} remaining)
-                  </Button>
-                </div>
-              )}
+                    {formatCurrency(reportData.summary.totalProfit)}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {reportData.summary.averageProfitPercent.toFixed(1)}% margin
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {reportData && (
-        <div className="text-center text-sm text-slate-400">
-          Report generated on{" "}
-          {format(new Date(reportData.generatedAt), "dd MMM yyyy, hh:mm a")}
+          {/* Filter and Table Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <CardTitle>Invoice Details</CardTitle>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="w-64">
+                    <ProductCombobox
+                      products={products}
+                      value={selectedProductId}
+                      onValueChange={setSelectedProductId}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="fromDate" className="text-sm">
+                      From
+                    </Label>
+                    <Input
+                      id="fromDate"
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="w-40"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="toDate" className="text-sm">
+                      To
+                    </Label>
+                    <Input
+                      id="toDate"
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="w-40"
+                    />
+                  </div>
+                  <Button variant="outline" onClick={handleFilter}>
+                    Filter
+                  </Button>
+                  {hasFilters && (
+                    <Button variant="ghost" size="icon" onClick={handleClearFilters}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!reportData || reportData.invoices.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <FileText className="h-12 w-12 text-slate-300" />
+                  <h3 className="mt-4 text-lg font-semibold">No invoices found</h3>
+                  <p className="text-sm text-slate-500">
+                    {hasFilters
+                      ? "Try adjusting your filters"
+                      : "No invoices have been recorded yet"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <div className="flex items-center justify-between mb-2 text-sm text-slate-500">
+                    <span>
+                      Showing {Math.min(displayCount, reportData.invoices.length)} of{" "}
+                      {reportData.invoices.length} invoices
+                    </span>
+                    {reportData.invoices.length > displayCount && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-blue-600"
+                        onClick={() => setDisplayCount(reportData.invoices.length)}
+                      >
+                        Show All
+                      </Button>
+                    )}
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10"></TableHead>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead className="text-right">Total Qty</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                        <TableHead className="text-right">COGS</TableHead>
+                        <TableHead className="text-right">Profit</TableHead>
+                        <TableHead className="text-right">Profit %</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reportData.invoices.slice(0, displayCount).map((invoice) => (
+                        <React.Fragment key={invoice.invoiceId}>
+                          {/* Invoice Row */}
+                          <TableRow
+                            className="cursor-pointer hover:bg-slate-50"
+                            onClick={() => toggleInvoice(invoice.invoiceId)}
+                          >
+                            <TableCell className="w-10">
+                              {expandedInvoices.has(invoice.invoiceId) ? (
+                                <ChevronDown className="h-4 w-4 text-slate-500" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-slate-500" />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Link
+                                href={`/invoices/${invoice.invoiceId}`}
+                                className="text-blue-600 hover:underline font-mono"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {invoice.invoiceNumber}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell>{invoice.customerName}</TableCell>
+                            <TableCell className="text-right">
+                              {invoice.totalQty}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(invoice.totalRevenue)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(invoice.totalCOGS)}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-medium ${invoice.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {formatCurrency(invoice.totalProfit)}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-medium ${invoice.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {invoice.profitPercent.toFixed(1)}%
+                            </TableCell>
+                          </TableRow>
+                          {/* Item Rows (expanded) */}
+                          {expandedInvoices.has(invoice.invoiceId) &&
+                            invoice.items.map((item) => (
+                              <TableRow
+                                key={item.id}
+                                className="bg-slate-50/50"
+                              >
+                                <TableCell></TableCell>
+                                <TableCell colSpan={2} className="pl-8">
+                                  <div>
+                                    <div className="font-medium text-slate-700">
+                                      {item.productName}
+                                    </div>
+                                    {item.productSku && (
+                                      <div className="text-xs text-slate-500">
+                                        SKU: {item.productSku}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right text-sm text-slate-600">
+                                  {formatCurrency(item.unitPrice)} x {item.quantity}
+                                  {item.discount > 0 && (
+                                    <span className="text-orange-600 ml-1">
+                                      (-{item.discount}%)
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right text-sm text-slate-600">
+                                  {item.quantity}
+                                </TableCell>
+                                <TableCell className="text-right text-sm text-slate-600">
+                                  {formatCurrency(item.lineTotal)}
+                                </TableCell>
+                                <TableCell className="text-right text-sm text-slate-600">
+                                  {formatCurrency(item.lineCOGS)}
+                                </TableCell>
+                                <TableCell
+                                  className={`text-right text-sm ${item.lineProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                                >
+                                  {formatCurrency(item.lineProfit)}
+                                </TableCell>
+                                <TableCell
+                                  className={`text-right text-sm ${item.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}
+                                >
+                                  {item.profitPercent.toFixed(1)}%
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </React.Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {reportData.invoices.length > displayCount && (
+                    <div className="flex items-center justify-center pt-4 pb-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setDisplayCount((prev) => prev + 20)}
+                      >
+                        Show More ({reportData.invoices.length - displayCount} remaining)
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {reportData && (
+            <div className="text-center text-sm text-slate-400">
+              Report generated on{" "}
+              {format(new Date(reportData.generatedAt), "dd MMM yyyy, hh:mm a")}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
+        </PageAnimation>
+      );
 }

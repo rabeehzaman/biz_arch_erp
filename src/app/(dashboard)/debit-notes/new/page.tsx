@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Plus, Trash2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface Supplier {
   id: string;
@@ -206,250 +207,252 @@ export default function NewDebitNotePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/debit-notes">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">
-            New Debit Note
-          </h2>
-          <p className="text-slate-500">Create a new purchase return</p>
-        </div>
-      </div>
-
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex gap-3">
-        <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-orange-800">
-          <strong>Stock Validation:</strong> Debit notes will check if you have
-          sufficient stock available before processing the return. Make sure the
-          products you're returning are still in your inventory.
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Debit Note Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier *</Label>
-                <select
-                  id="supplier"
-                  value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
-                >
-                  <option value="">Select supplier</option>
-                  {suppliers.map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="issueDate">Issue Date</Label>
-                <Input
-                  id="issueDate"
-                  type="date"
-                  value={issueDate}
-                  onChange={(e) => setIssueDate(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="purchaseInvoiceId">
-                  Original Purchase Invoice (Optional)
-                </Label>
-                <Input
-                  id="purchaseInvoiceId"
-                  placeholder="Leave blank for standalone debit note"
-                  value={purchaseInvoiceId}
-                  onChange={(e) => setPurchaseInvoiceId(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reason">Reason for Return</Label>
-                <Input
-                  id="reason"
-                  placeholder="e.g., Defective items"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Items (Product ID Required)</CardTitle>
-              <Button type="button" onClick={addItem} variant="outline" size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Item
+        <PageAnimation>
+          <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Link href="/debit-notes">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
               </Button>
+            </Link>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">
+                New Debit Note
+              </h2>
+              <p className="text-slate-500">Create a new purchase return</p>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {items.map((item, index) => (
-                <div key={item.id} className="flex gap-2 items-start">
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
+          </div>
+
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-orange-800">
+              <strong>Stock Validation:</strong> Debit notes will check if you have
+              sufficient stock available before processing the return. Make sure the
+              products you're returning are still in your inventory.
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Debit Note Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="supplier">Supplier *</Label>
                     <select
-                      value={item.productId}
-                      onChange={(e) => handleProductSelect(index, e.target.value)}
-                      className="rounded-md border border-input bg-background px-3 py-2"
+                      id="supplier"
+                      value={supplierId}
+                      onChange={(e) => setSupplierId(e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2"
                       required
                     >
-                      <option value="">Select product *</option>
-                      {products.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} {product.sku ? `(${product.sku})` : ""}
+                      <option value="">Select supplier</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier.id} value={supplier.id}>
+                          {supplier.name}
                         </option>
                       ))}
                     </select>
-
-                    <div className="grid grid-cols-1 gap-2 sm:contents">
-                    <Input
-                      type="number"
-                      placeholder="Qty"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateItem(index, "quantity", parseFloat(e.target.value) || 0)
-                      }
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-
-                    <Input
-                      type="number"
-                      placeholder="Unit Cost"
-                      value={item.unitCost}
-                      onChange={(e) =>
-                        updateItem(index, "unitCost", parseFloat(e.target.value) || 0)
-                      }
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-
-                    <Input
-                      type="number"
-                      placeholder="Discount %"
-                      value={item.discount}
-                      onChange={(e) =>
-                        updateItem(index, "discount", parseFloat(e.target.value) || 0)
-                      }
-                      min="0"
-                      max="100"
-                      step="0.01"
-                    />
-                    </div>
-
-                    <div className="flex items-center justify-end">
-                      <span className="text-sm font-medium">
-                        ₹
-                        {(
-                          item.quantity *
-                          item.unitCost *
-                          (1 - item.discount / 100)
-                        ).toFixed(2)}
-                      </span>
-                    </div>
                   </div>
 
-                  {items.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeItem(index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="issueDate">Issue Date</Label>
+                    <Input
+                      id="issueDate"
+                      type="date"
+                      value={issueDate}
+                      onChange={(e) => setIssueDate(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="purchaseInvoiceId">
+                      Original Purchase Invoice (Optional)
+                    </Label>
+                    <Input
+                      id="purchaseInvoiceId"
+                      placeholder="Leave blank for standalone debit note"
+                      value={purchaseInvoiceId}
+                      onChange={(e) => setPurchaseInvoiceId(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reason">Reason for Return</Label>
+                    <Input
+                      id="reason"
+                      placeholder="e.g., Defective items"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="taxRate">Tax Rate (%)</Label>
-              <Input
-                id="taxRate"
-                type="number"
-                value={taxRate}
-                onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                min="0"
-                max="100"
-                step="0.01"
-              />
-            </div>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Items (Product ID Required)</CardTitle>
+                  <Button type="button" onClick={addItem} variant="outline" size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {items.map((item, index) => (
+                    <div key={item.id} className="flex gap-2 items-start">
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
+                        <select
+                          value={item.productId}
+                          onChange={(e) => handleProductSelect(index, e.target.value)}
+                          className="rounded-md border border-input bg-background px-3 py-2"
+                          required
+                        >
+                          <option value="">Select product *</option>
+                          {products.map((product) => (
+                            <option key={product.id} value={product.id}>
+                              {product.name} {product.sku ? `(${product.sku})` : ""}
+                            </option>
+                          ))}
+                        </select>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                placeholder="Additional notes..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
+                        <div className="grid grid-cols-1 gap-2 sm:contents">
+                        <Input
+                          type="number"
+                          placeholder="Qty"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateItem(index, "quantity", parseFloat(e.target.value) || 0)
+                          }
+                          min="0"
+                          step="0.01"
+                          required
+                        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span>₹{calculateSubtotal().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Tax ({taxRate}%):</span>
-                <span>₹{calculateTax().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>₹{calculateTotal().toFixed(2)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                        <Input
+                          type="number"
+                          placeholder="Unit Cost"
+                          value={item.unitCost}
+                          onChange={(e) =>
+                            updateItem(index, "unitCost", parseFloat(e.target.value) || 0)
+                          }
+                          min="0"
+                          step="0.01"
+                          required
+                        />
 
-        <div className="flex justify-end gap-4">
-          <Link href="/debit-notes">
-            <Button type="button" variant="outline">
-              Cancel
-            </Button>
-          </Link>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create Debit Note"}
-          </Button>
+                        <Input
+                          type="number"
+                          placeholder="Discount %"
+                          value={item.discount}
+                          onChange={(e) =>
+                            updateItem(index, "discount", parseFloat(e.target.value) || 0)
+                          }
+                          min="0"
+                          max="100"
+                          step="0.01"
+                        />
+                        </div>
+
+                        <div className="flex items-center justify-end">
+                          <span className="text-sm font-medium">
+                            ₹
+                            {(
+                              item.quantity *
+                              item.unitCost *
+                              (1 - item.discount / 100)
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {items.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeItem(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                  <Input
+                    id="taxRate"
+                    type="number"
+                    value={taxRate}
+                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                    min="0"
+                    max="100"
+                    step="0.01"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Additional notes..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>₹{calculateSubtotal().toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tax ({taxRate}%):</span>
+                    <span>₹{calculateTax().toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold border-t pt-2">
+                    <span>Total:</span>
+                    <span>₹{calculateTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end gap-4">
+              <Link href="/debit-notes">
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+              </Link>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Debit Note"}
+              </Button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
-  );
+        </PageAnimation>
+      );
 }

@@ -24,6 +24,7 @@ import {
 import { ArrowLeft, Building2, Download, Package, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface PurchaseInvoiceItem {
   id: string;
@@ -187,211 +188,213 @@ export default function PurchaseInvoiceDetailPage({
   }
 
   return (
-    <div className="space-y-6 print:space-y-4">
-      {/* Header - Hidden on print */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-        <div className="flex items-center gap-4">
-          <Link href="/purchase-invoices">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              Purchase Invoice {invoice.purchaseInvoiceNumber}
-            </h2>
-            <p className="text-slate-500">
-              Dated {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={invoice.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="DRAFT">Draft</SelectItem>
-              <SelectItem value="RECEIVED">Received</SelectItem>
-              <SelectItem value="PAID">Paid</SelectItem>
-              <SelectItem value="PARTIALLY_PAID">Partially Paid</SelectItem>
-              <SelectItem value="CANCELLED">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-          <Link href={`/purchase-invoices/${id}/edit`}>
-            <Button variant="outline">
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
-          </Link>
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
-        </div>
-      </div>
-
-      {/* Invoice Document */}
-      <Card className="print:shadow-none print:border-none">
-        <CardContent className="p-4 sm:p-8">
-          {/* Company & Invoice Info */}
-          <div className="flex justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-                <Building2 className="h-7 w-7 text-primary-foreground" />
-              </div>
+        <PageAnimation>
+          <div className="space-y-6 print:space-y-4">
+          {/* Header - Hidden on print */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
+            <div className="flex items-center gap-4">
+              <Link href="/purchase-invoices">
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
               <div>
-                <h1 className="text-2xl font-bold">BizArch ERP</h1>
-                <p className="text-sm text-slate-500">Purchase Invoice</p>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Purchase Invoice {invoice.purchaseInvoiceNumber}
+                </h2>
+                <p className="text-slate-500">
+                  Dated {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
+                </p>
               </div>
             </div>
-            <div className="text-right">
-              <h2 className="text-xl font-bold">{invoice.purchaseInvoiceNumber}</h2>
-              <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
-                {statusLabels[invoice.status]}
-              </Badge>
-              {invoice.supplierInvoiceRef && (
-                <p className="text-sm text-slate-500 mt-1">
-                  Ref: {invoice.supplierInvoiceRef}
-                </p>
-              )}
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={invoice.status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                  <SelectItem value="RECEIVED">Received</SelectItem>
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="PARTIALLY_PAID">Partially Paid</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Link href={`/purchase-invoices/${id}/edit`}>
+                <Button variant="outline">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              </Link>
+              <Button variant="outline" onClick={handleDownloadPDF}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </Button>
+              <Button variant="outline" onClick={handlePrint}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </Button>
             </div>
           </div>
 
-          {/* Supplier & Dates */}
-          <div className="grid sm:grid-cols-2 gap-8 mb-8">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                Supplier
-              </h3>
-              <div>
-                <p className="font-semibold">{invoice.supplier.name}</p>
-                {invoice.supplier.email && (
-                  <p className="text-sm text-slate-600">{invoice.supplier.email}</p>
-                )}
-                {invoice.supplier.phone && (
-                  <p className="text-sm text-slate-600">{invoice.supplier.phone}</p>
-                )}
-                {invoice.supplier.address && (
-                  <p className="text-sm text-slate-600">
-                    {invoice.supplier.address}
-                    {invoice.supplier.city && `, ${invoice.supplier.city}`}
-                    {invoice.supplier.state && `, ${invoice.supplier.state}`}
-                    {invoice.supplier.zipCode && ` - ${invoice.supplier.zipCode}`}
-                  </p>
-                )}
+          {/* Invoice Document */}
+          <Card className="print:shadow-none print:border-none">
+            <CardContent className="p-4 sm:p-8">
+              {/* Company & Invoice Info */}
+              <div className="flex justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
+                    <Building2 className="h-7 w-7 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold">BizArch ERP</h1>
+                    <p className="text-sm text-slate-500">Purchase Invoice</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <h2 className="text-xl font-bold">{invoice.purchaseInvoiceNumber}</h2>
+                  <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
+                    {statusLabels[invoice.status]}
+                  </Badge>
+                  {invoice.supplierInvoiceRef && (
+                    <p className="text-sm text-slate-500 mt-1">
+                      Ref: {invoice.supplierInvoiceRef}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="sm:text-right">
-              <div className="space-y-1">
-                <p className="text-sm">
-                  <span className="text-slate-500">Purchase Date:</span>{" "}
-                  <span className="font-medium">
-                    {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
-                  </span>
-                </p>
-                <p className="text-sm">
-                  <span className="text-slate-500">Due Date:</span>{" "}
-                  <span className="font-medium">
-                    {format(new Date(invoice.dueDate), "dd MMM yyyy")}
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
 
-          {/* Line Items */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[35%]">Description</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit Cost</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right print:hidden">Stock</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoice.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell className="text-right">{Number(item.quantity)}</TableCell>
-                  <TableCell className="text-right">
-                    ₹{Number(item.unitCost).toLocaleString("en-IN")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {Number(item.discount) > 0 ? (
-                      <span className="text-green-600">{Number(item.discount)}%</span>
-                    ) : (
-                      "-"
+              {/* Supplier & Dates */}
+              <div className="grid sm:grid-cols-2 gap-8 mb-8">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                    Supplier
+                  </h3>
+                  <div>
+                    <p className="font-semibold">{invoice.supplier.name}</p>
+                    {invoice.supplier.email && (
+                      <p className="text-sm text-slate-600">{invoice.supplier.email}</p>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    ₹{Number(item.total).toLocaleString("en-IN")}
-                  </TableCell>
-                  <TableCell className="text-right print:hidden">
-                    {item.stockLot && (
-                      <div className="flex items-center justify-end gap-1">
-                        <Package className="h-4 w-4 text-green-600" />
-                        <span className="text-green-600">
-                          {Number(item.stockLot.remainingQuantity)} remaining
-                        </span>
-                      </div>
+                    {invoice.supplier.phone && (
+                      <p className="text-sm text-slate-600">{invoice.supplier.phone}</p>
                     )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Totals */}
-          <div className="flex justify-end mt-6">
-            <div className="w-full sm:w-64 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal</span>
-                <span>₹{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
+                    {invoice.supplier.address && (
+                      <p className="text-sm text-slate-600">
+                        {invoice.supplier.address}
+                        {invoice.supplier.city && `, ${invoice.supplier.city}`}
+                        {invoice.supplier.state && `, ${invoice.supplier.state}`}
+                        {invoice.supplier.zipCode && ` - ${invoice.supplier.zipCode}`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="sm:text-right">
+                  <div className="space-y-1">
+                    <p className="text-sm">
+                      <span className="text-slate-500">Purchase Date:</span>{" "}
+                      <span className="font-medium">
+                        {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
+                      </span>
+                    </p>
+                    <p className="text-sm">
+                      <span className="text-slate-500">Due Date:</span>{" "}
+                      <span className="font-medium">
+                        {format(new Date(invoice.dueDate), "dd MMM yyyy")}
+                      </span>
+                    </p>
+                  </div>
+                </div>
               </div>
-              {Number(invoice.taxRate) > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>Tax ({Number(invoice.taxRate)}%)</span>
-                  <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
+
+              {/* Line Items */}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[35%]">Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Cost</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right print:hidden">Stock</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invoice.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell className="text-right">{Number(item.quantity)}</TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.unitCost).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {Number(item.discount) > 0 ? (
+                          <span className="text-green-600">{Number(item.discount)}%</span>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.total).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right print:hidden">
+                        {item.stockLot && (
+                          <div className="flex items-center justify-end gap-1">
+                            <Package className="h-4 w-4 text-green-600" />
+                            <span className="text-green-600">
+                              {Number(item.stockLot.remainingQuantity)} remaining
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Totals */}
+              <div className="flex justify-end mt-6">
+                <div className="w-full sm:w-64 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
+                  </div>
+                  {Number(invoice.taxRate) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Tax ({Number(invoice.taxRate)}%)</span>
+                      <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                    <span>Total</span>
+                    <span>₹{Number(invoice.total).toLocaleString("en-IN")}</span>
+                  </div>
+                  {Number(invoice.amountPaid) > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Amount Paid</span>
+                      <span>₹{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                    <span>Balance Due</span>
+                    <span className={Number(invoice.balanceDue) > 0 ? "text-orange-600" : "text-green-600"}>
+                      ₹{Number(invoice.balanceDue).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {invoice.notes && (
+                <div className="mt-8 pt-8 border-t">
+                  <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                    Notes
+                  </h3>
+                  <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-lg border-t pt-2">
-                <span>Total</span>
-                <span>₹{Number(invoice.total).toLocaleString("en-IN")}</span>
-              </div>
-              {Number(invoice.amountPaid) > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
-                  <span>Amount Paid</span>
-                  <span>₹{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold text-lg border-t pt-2">
-                <span>Balance Due</span>
-                <span className={Number(invoice.balanceDue) > 0 ? "text-orange-600" : "text-green-600"}>
-                  ₹{Number(invoice.balanceDue).toLocaleString("en-IN")}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          {invoice.notes && (
-            <div className="mt-8 pt-8 border-t">
-              <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                Notes
-              </h3>
-              <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+            </CardContent>
+          </Card>
+        </div>
+        </PageAnimation>
+      );
 }

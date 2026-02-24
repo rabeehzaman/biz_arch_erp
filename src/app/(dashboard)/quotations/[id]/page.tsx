@@ -18,6 +18,7 @@ import { ArrowLeft, Building2, Download, FileCheck, Ban, Info, Pencil, Printer }
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface QuotationItem {
   id: string;
@@ -211,238 +212,240 @@ export default function QuotationDetailPage({
   }
 
   return (
-    <div className="space-y-6 print:space-y-4">
-      {/* Header - Hidden on print */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-        <div className="flex items-center gap-4">
-          <Link href="/quotations">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              Quotation {quotation.quotationNumber}
-              {getStatusBadge(quotation.status)}
-            </h2>
-            <p className="text-slate-500">
-              Created on {format(new Date(quotation.issueDate), "dd MMM yyyy")}
-              {" • "}
-              Valid until {format(new Date(quotation.validUntil), "dd MMM yyyy")}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {quotation.status !== "CONVERTED" && (
-            <Link href={`/quotations/${id}/edit`}>
-              <Button variant="outline">
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            </Link>
-          )}
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
-          {quotation.status === "SENT" && !isExpired && (
-            <>
-              <Button onClick={handleConvertToInvoice} disabled={isConverting}>
-                <FileCheck className="mr-2 h-4 w-4" />
-                {isConverting ? "Converting..." : "Convert to Invoice"}
-              </Button>
-              <Button variant="destructive" onClick={handleCancelQuotation}>
-                <Ban className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Converted Invoice Alert */}
-      {quotation.status === "CONVERTED" && quotation.convertedInvoice && (
-        <Alert className="print:hidden">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            This quotation was converted to invoice{" "}
-            <Link
-              href={`/invoices/${quotation.convertedInvoice.id}`}
-              className="font-medium underline"
-            >
-              {quotation.convertedInvoice.invoiceNumber}
-            </Link>
-            {quotation.convertedAt &&
-              ` on ${format(new Date(quotation.convertedAt), "dd MMM yyyy")}`}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Expired Alert */}
-      {isExpired && quotation.status === "SENT" && (
-        <Alert variant="destructive" className="print:hidden">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            This quotation expired on {format(new Date(quotation.validUntil), "dd MMM yyyy")}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Quotation Document */}
-      <Card className="print:shadow-none print:border-0">
-        <CardContent className="p-4 sm:p-8 print:p-0">
-          {/* Company Header */}
-          <div className="flex items-start justify-between mb-8 print:mb-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-slate-100 p-3">
-                <Building2 className="h-6 w-6 text-slate-600" />
-              </div>
+        <PageAnimation>
+          <div className="space-y-6 print:space-y-4">
+          {/* Header - Hidden on print */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
+            <div className="flex items-center gap-4">
+              <Link href="/quotations">
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 print:text-xl">
-                  BizArch ERP
-                </h1>
-                <p className="text-slate-600">Quotation</p>
+                <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                  Quotation {quotation.quotationNumber}
+                  {getStatusBadge(quotation.status)}
+                </h2>
+                <p className="text-slate-500">
+                  Created on {format(new Date(quotation.issueDate), "dd MMM yyyy")}
+                  {" • "}
+                  Valid until {format(new Date(quotation.validUntil), "dd MMM yyyy")}
+                </p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-sm text-slate-600">Quotation Number</div>
-              <div className="text-lg font-bold">{quotation.quotationNumber}</div>
-            </div>
-          </div>
-
-          {/* Customer & Dates */}
-          <div className="grid grid-cols-2 gap-8 mb-8 print:mb-6">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-600 mb-2">
-                Quotation To
-              </h3>
-              <div className="text-slate-900">
-                <div className="font-semibold">{quotation.customer.name}</div>
-                {quotation.customer.email && (
-                  <div className="text-sm text-slate-600">
-                    {quotation.customer.email}
-                  </div>
-                )}
-                {quotation.customer.phone && (
-                  <div className="text-sm text-slate-600">
-                    {quotation.customer.phone}
-                  </div>
-                )}
-                {quotation.customer.address && (
-                  <div className="text-sm text-slate-600 mt-1">
-                    {quotation.customer.address}
-                    {quotation.customer.city && `, ${quotation.customer.city}`}
-                    {quotation.customer.state && `, ${quotation.customer.state}`}
-                    {quotation.customer.zipCode && ` ${quotation.customer.zipCode}`}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <div className="mb-4">
-                <div className="text-sm text-slate-600">Issue Date</div>
-                <div className="font-medium">
-                  {format(new Date(quotation.issueDate), "dd MMM yyyy")}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-slate-600">Valid Until</div>
-                <div className="font-medium">
-                  {format(new Date(quotation.validUntil), "dd MMM yyyy")}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Line Items */}
-          <Table className="print:text-sm">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {quotation.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell className="text-right">
-                    {Number(item.quantity).toLocaleString("en-IN")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    ₹{Number(item.unitPrice).toLocaleString("en-IN")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {Number(item.discount)}%
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    ₹{Number(item.total).toLocaleString("en-IN")}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Totals */}
-          <div className="flex justify-end mt-6 print:mt-4">
-            <div className="w-full sm:w-64 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Subtotal</span>
-                <span className="font-medium">
-                  ₹{Number(quotation.subtotal).toLocaleString("en-IN")}
-                </span>
-              </div>
-              {Number(quotation.taxRate) > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">
-                    Tax ({quotation.taxRate}%)
-                  </span>
-                  <span className="font-medium">
-                    ₹{Number(quotation.taxAmount).toLocaleString("en-IN")}
-                  </span>
-                </div>
+            <div className="flex flex-wrap gap-2">
+              {quotation.status !== "CONVERTED" && (
+                <Link href={`/quotations/${id}/edit`}>
+                  <Button variant="outline">
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                </Link>
               )}
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total</span>
-                <span>₹{Number(quotation.total).toLocaleString("en-IN")}</span>
-              </div>
+              <Button variant="outline" onClick={handleDownloadPDF}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </Button>
+              <Button variant="outline" onClick={handlePrint}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </Button>
+              {quotation.status === "SENT" && !isExpired && (
+                <>
+                  <Button onClick={handleConvertToInvoice} disabled={isConverting}>
+                    <FileCheck className="mr-2 h-4 w-4" />
+                    {isConverting ? "Converting..." : "Convert to Invoice"}
+                  </Button>
+                  <Button variant="destructive" onClick={handleCancelQuotation}>
+                    <Ban className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Notes and Terms */}
-          {(quotation.notes || quotation.terms) && (
-            <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t print:mt-6">
-              {quotation.notes && (
+          {/* Converted Invoice Alert */}
+          {quotation.status === "CONVERTED" && quotation.convertedInvoice && (
+            <Alert className="print:hidden">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                This quotation was converted to invoice{" "}
+                <Link
+                  href={`/invoices/${quotation.convertedInvoice.id}`}
+                  className="font-medium underline"
+                >
+                  {quotation.convertedInvoice.invoiceNumber}
+                </Link>
+                {quotation.convertedAt &&
+                  ` on ${format(new Date(quotation.convertedAt), "dd MMM yyyy")}`}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Expired Alert */}
+          {isExpired && quotation.status === "SENT" && (
+            <Alert variant="destructive" className="print:hidden">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                This quotation expired on {format(new Date(quotation.validUntil), "dd MMM yyyy")}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Quotation Document */}
+          <Card className="print:shadow-none print:border-0">
+            <CardContent className="p-4 sm:p-8 print:p-0">
+              {/* Company Header */}
+              <div className="flex items-start justify-between mb-8 print:mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-slate-100 p-3">
+                    <Building2 className="h-6 w-6 text-slate-600" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-900 print:text-xl">
+                      BizArch ERP
+                    </h1>
+                    <p className="text-slate-600">Quotation</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-slate-600">Quotation Number</div>
+                  <div className="text-lg font-bold">{quotation.quotationNumber}</div>
+                </div>
+              </div>
+
+              {/* Customer & Dates */}
+              <div className="grid grid-cols-2 gap-8 mb-8 print:mb-6">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-600 mb-2">
-                    Notes
+                    Quotation To
                   </h3>
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap">
-                    {quotation.notes}
-                  </p>
+                  <div className="text-slate-900">
+                    <div className="font-semibold">{quotation.customer.name}</div>
+                    {quotation.customer.email && (
+                      <div className="text-sm text-slate-600">
+                        {quotation.customer.email}
+                      </div>
+                    )}
+                    {quotation.customer.phone && (
+                      <div className="text-sm text-slate-600">
+                        {quotation.customer.phone}
+                      </div>
+                    )}
+                    {quotation.customer.address && (
+                      <div className="text-sm text-slate-600 mt-1">
+                        {quotation.customer.address}
+                        {quotation.customer.city && `, ${quotation.customer.city}`}
+                        {quotation.customer.state && `, ${quotation.customer.state}`}
+                        {quotation.customer.zipCode && ` ${quotation.customer.zipCode}`}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-              {quotation.terms && (
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-600 mb-2">
-                    Terms & Conditions
-                  </h3>
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap">
-                    {quotation.terms}
-                  </p>
+                  <div className="mb-4">
+                    <div className="text-sm text-slate-600">Issue Date</div>
+                    <div className="font-medium">
+                      {format(new Date(quotation.issueDate), "dd MMM yyyy")}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-slate-600">Valid Until</div>
+                    <div className="font-medium">
+                      {format(new Date(quotation.validUntil), "dd MMM yyyy")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line Items */}
+              <Table className="print:text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {quotation.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell className="text-right">
+                        {Number(item.quantity).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {Number(item.discount)}%
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        ₹{Number(item.total).toLocaleString("en-IN")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Totals */}
+              <div className="flex justify-end mt-6 print:mt-4">
+                <div className="w-full sm:w-64 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Subtotal</span>
+                    <span className="font-medium">
+                      ₹{Number(quotation.subtotal).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  {Number(quotation.taxRate) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">
+                        Tax ({quotation.taxRate}%)
+                      </span>
+                      <span className="font-medium">
+                        ₹{Number(quotation.taxAmount).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold border-t pt-2">
+                    <span>Total</span>
+                    <span>₹{Number(quotation.total).toLocaleString("en-IN")}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes and Terms */}
+              {(quotation.notes || quotation.terms) && (
+                <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t print:mt-6">
+                  {quotation.notes && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-600 mb-2">
+                        Notes
+                      </h3>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                        {quotation.notes}
+                      </p>
+                    </div>
+                  )}
+                  {quotation.terms && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-600 mb-2">
+                        Terms & Conditions
+                      </h3>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                        {quotation.terms}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+            </CardContent>
+          </Card>
+        </div>
+        </PageAnimation>
+      );
 }

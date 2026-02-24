@@ -23,6 +23,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 import { cn } from "@/lib/utils";
 import { POSHeader } from "@/components/pos/pos-header";
@@ -425,7 +426,7 @@ export default function POSPage() {
   const { total } = calculateCartTotal(cart, taxRate);
 
   return (
-    <div className="flex h-screen flex-col">
+    <PageAnimation className="flex h-screen flex-col">
       {/* Header */}
       <POSHeader
         session={posSession}
@@ -706,6 +707,6 @@ export default function POSPage() {
           </div>
         </SheetContent>
       </Sheet>
-    </div>
+    </PageAnimation>
   );
 }

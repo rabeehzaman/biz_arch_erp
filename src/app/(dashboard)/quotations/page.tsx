@@ -19,6 +19,7 @@ import { Plus, Search, FileText, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
+import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 
 interface Quotation {
   id: string;
@@ -107,115 +108,119 @@ export default function QuotationsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Quotations</h2>
-          <p className="text-slate-500">Create and manage quotations</p>
-        </div>
-        <Link href="/quotations/new" className="w-full sm:w-auto">
-          <Button className="w-full">
-            <Plus className="mr-2 h-4 w-4" />
-            New Quotation
-          </Button>
-        </Link>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="Search quotations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+    <PageAnimation>
+      <StaggerContainer className="space-y-6">
+        <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Quotations</h2>
+            <p className="text-slate-500">Create and manage quotations</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <TableSkeleton columns={7} rows={5} />
-          ) : filteredQuotations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <FileText className="h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-semibold">No quotations found</h3>
-              <p className="text-sm text-slate-500">
-                {searchQuery
-                  ? "Try a different search term"
-                  : "Create your first quotation to get started"}
-              </p>
-              {!searchQuery && (
-                <Link href="/quotations/new" className="mt-4">
-                  <Button variant="outline">Create Quotation</Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Quotation #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Issue Date</TableHead>
-                  <TableHead>Valid Until</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredQuotations.map((quotation) => (
-                  <TableRow
-                    key={quotation.id}
-                    onClick={() => router.push(`/quotations/${quotation.id}`)}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <TableCell className="font-medium">
-                      {quotation.quotationNumber}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{quotation.customer.name}</div>
-                        {quotation.customer.email && (
-                          <div className="text-sm text-slate-500">
-                            {quotation.customer.email}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(quotation.issueDate), "dd MMM yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(quotation.validUntil), "dd MMM yyyy")}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(quotation.status)}</TableCell>
-                    <TableCell className="text-right">
-                      ₹{Number(quotation.total).toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <Link href={`/quotations/${quotation.id}`}>
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(quotation.id)}
-                        disabled={quotation.status === "CONVERTED"}
+          <Link href="/quotations/new" className="w-full sm:w-auto">
+            <Button className="w-full">
+              <Plus className="mr-2 h-4 w-4" />
+              New Quotation
+            </Button>
+          </Link>
+        </StaggerItem>
+
+        <StaggerItem>
+          <Card>
+            <CardHeader>
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Search quotations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <TableSkeleton columns={7} rows={5} />
+              ) : filteredQuotations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <FileText className="h-12 w-12 text-slate-300" />
+                  <h3 className="mt-4 text-lg font-semibold">No quotations found</h3>
+                  <p className="text-sm text-slate-500">
+                    {searchQuery
+                      ? "Try a different search term"
+                      : "Create your first quotation to get started"}
+                  </p>
+                  {!searchQuery && (
+                    <Link href="/quotations/new" className="mt-4">
+                      <Button variant="outline">Create Quotation</Button>
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Quotation #</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Issue Date</TableHead>
+                      <TableHead>Valid Until</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredQuotations.map((quotation) => (
+                      <TableRow
+                        key={quotation.id}
+                        onClick={() => router.push(`/quotations/${quotation.id}`)}
+                        className="cursor-pointer hover:bg-muted/50"
                       >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                        <TableCell className="font-medium">
+                          {quotation.quotationNumber}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{quotation.customer.name}</div>
+                            {quotation.customer.email && (
+                              <div className="text-sm text-slate-500">
+                                {quotation.customer.email}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(quotation.issueDate), "dd MMM yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(quotation.validUntil), "dd MMM yyyy")}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(quotation.status)}</TableCell>
+                        <TableCell className="text-right">
+                          ₹{Number(quotation.total).toLocaleString("en-IN")}
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <Link href={`/quotations/${quotation.id}`}>
+                            <Button variant="ghost" size="icon">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(quotation.id)}
+                            disabled={quotation.status === "CONVERTED"}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </StaggerItem>
+      </StaggerContainer>
+    </PageAnimation>
   );
 }

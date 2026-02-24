@@ -16,6 +16,7 @@ import { ArrowLeft, Edit, Trash2, FileText } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface CreditNote {
   id: string;
@@ -125,154 +126,156 @@ export default function CreditNoteDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/credit-notes">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              {creditNote.creditNoteNumber}
-            </h2>
-            <p className="text-slate-500">Credit Note Details</p>
+        <PageAnimation>
+          <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/credit-notes">
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {creditNote.creditNoteNumber}
+                </h2>
+                <p className="text-slate-500">Credit Note Details</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/credit-notes/${creditNote.id}/edit`}>
+                <Button variant="outline">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              </Link>
+              <Button variant="destructive" onClick={handleDelete}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/credit-notes/${creditNote.id}/edit`}>
-            <Button variant="outline">
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
-          </Link>
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div>
-              <div className="text-sm text-slate-500">Customer Name</div>
-              <div className="font-medium">{creditNote.customer.name}</div>
-            </div>
-            {creditNote.customer.email && (
-              <div>
-                <div className="text-sm text-slate-500">Email</div>
-                <div className="font-medium">{creditNote.customer.email}</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div>
+                  <div className="text-sm text-slate-500">Customer Name</div>
+                  <div className="font-medium">{creditNote.customer.name}</div>
+                </div>
+                {creditNote.customer.email && (
+                  <div>
+                    <div className="text-sm text-slate-500">Email</div>
+                    <div className="font-medium">{creditNote.customer.email}</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Credit Note Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div>
-              <div className="text-sm text-slate-500">Issue Date</div>
-              <div className="font-medium">
-                {format(new Date(creditNote.issueDate), "dd MMMM yyyy")}
-              </div>
-            </div>
-            {creditNote.invoice && (
-              <div>
-                <div className="text-sm text-slate-500">Original Invoice</div>
-                <Link
-                  href={`/invoices/${creditNote.invoice.id}`}
-                  className="font-medium text-blue-600 hover:underline"
-                >
-                  {creditNote.invoice.invoiceNumber}
-                </Link>
-              </div>
-            )}
-            {creditNote.reason && (
-              <div>
-                <div className="text-sm text-slate-500">Reason</div>
-                <div className="font-medium">{creditNote.reason}</div>
-              </div>
-            )}
-            {creditNote.createdBy && (
-              <div>
-                <div className="text-sm text-slate-500">Created By</div>
-                <div className="font-medium">{creditNote.createdBy.name}</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Credit Note Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div>
+                  <div className="text-sm text-slate-500">Issue Date</div>
+                  <div className="font-medium">
+                    {format(new Date(creditNote.issueDate), "dd MMMM yyyy")}
+                  </div>
+                </div>
+                {creditNote.invoice && (
+                  <div>
+                    <div className="text-sm text-slate-500">Original Invoice</div>
+                    <Link
+                      href={`/invoices/${creditNote.invoice.id}`}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      {creditNote.invoice.invoiceNumber}
+                    </Link>
+                  </div>
+                )}
+                {creditNote.reason && (
+                  <div>
+                    <div className="text-sm text-slate-500">Reason</div>
+                    <div className="font-medium">{creditNote.reason}</div>
+                  </div>
+                )}
+                {creditNote.createdBy && (
+                  <div>
+                    <div className="text-sm text-slate-500">Created By</div>
+                    <div className="font-medium">{creditNote.createdBy.name}</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {creditNote.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{item.description}</div>
-                      {item.product?.sku && (
-                        <div className="text-sm text-slate-500">
-                          SKU: {item.product.sku}
+          <Card>
+            <CardHeader>
+              <CardTitle>Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {creditNote.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{item.description}</div>
+                          {item.product?.sku && (
+                            <div className="text-sm text-slate-500">
+                              SKU: {item.product.sku}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell className="text-right">
-                    ₹{Number(item.unitPrice).toLocaleString("en-IN")}
-                  </TableCell>
-                  <TableCell className="text-right">{item.discount}%</TableCell>
-                  <TableCell className="text-right font-medium">
-                    ₹{Number(item.total).toLocaleString("en-IN")}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">{item.discount}%</TableCell>
+                      <TableCell className="text-right font-medium">
+                        ₹{Number(item.total).toLocaleString("en-IN")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-          <div className="mt-4 space-y-2 max-w-xs ml-auto">
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total:</span>
-              <span className="text-green-600">
-                ₹{Number(creditNote.total).toLocaleString("en-IN")}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="mt-4 space-y-2 max-w-xs ml-auto">
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total:</span>
+                  <span className="text-green-600">
+                    ₹{Number(creditNote.total).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {creditNote.notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-slate-700 whitespace-pre-wrap">{creditNote.notes}</p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+          {creditNote.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-700 whitespace-pre-wrap">{creditNote.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+        </PageAnimation>
+      );
 }

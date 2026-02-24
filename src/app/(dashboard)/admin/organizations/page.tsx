@@ -34,6 +34,7 @@ import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, Sett
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { SidebarConfigDialog } from "./sidebar-config-dialog";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface Organization {
   id: string;
@@ -178,243 +179,245 @@ export default function OrganizationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
-          <p className="text-muted-foreground">Manage tenant organizations</p>
-        </div>
-        <div className="flex gap-2">
-          <Dialog open={userOpen} onOpenChange={(open) => { setUserOpen(open); if (!open) { setUserError(""); setUserSuccess(""); } }}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <UserPlus className="mr-2 h-4 w-4" />
-                Create User
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create User</DialogTitle>
-                <DialogDescription>
-                  Create a new user and assign them to an organization.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="userName">Full Name</Label>
-                  <Input
-                    id="userName"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="userEmail">Email</Label>
-                  <Input
-                    id="userEmail"
-                    type="email"
-                    value={userEmail}
-                    onChange={(e) => setUserEmail(e.target.value)}
-                    placeholder="john@example.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="userPassword">Password</Label>
-                  <Input
-                    id="userPassword"
-                    type="password"
-                    value={userPassword}
-                    onChange={(e) => setUserPassword(e.target.value)}
-                    placeholder="Enter password"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="userRole">Role</Label>
-                  <Select value={userRole} onValueChange={setUserRole}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="userOrg">Organization</Label>
-                  <Select value={userOrgId} onValueChange={setUserOrgId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select organization" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {organizations.map((org) => (
-                        <SelectItem key={org.id} value={org.id}>
-                          {org.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {userError && (
-                  <p className="text-sm text-red-500">{userError}</p>
-                )}
-                {userSuccess && (
-                  <p className="text-sm text-green-600">{userSuccess}</p>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setUserOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateUser} disabled={creatingUser}>
-                  {creatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create User
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Organization
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Organization</DialogTitle>
-                <DialogDescription>
-                  Add a new tenant organization to the system.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Organization Name</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="Acme Corp"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug">Slug</Label>
-                  <Input
-                    id="slug"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    placeholder="acme-corp"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Lowercase letters, numbers, and hyphens only
-                  </p>
-                </div>
-                {error && (
-                  <p className="text-sm text-red-500">{error}</p>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreate} disabled={creating}>
-                  {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Organizations</CardTitle>
-          <CardDescription>
-            {organizations.length} organization{organizations.length !== 1 ? "s" : ""} total
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <PageAnimation>
+          <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
+              <p className="text-muted-foreground">Manage tenant organizations</p>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead className="text-center">Users</TableHead>
-                  <TableHead className="text-center">Customers</TableHead>
-                  <TableHead className="text-center">Invoices</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {organizations.map((org) => (
-                  <TableRow key={org.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {org.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{org.slug}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Users className="h-3 w-3 text-muted-foreground" />
-                        {org._count.users}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <ShoppingCart className="h-3 w-3 text-muted-foreground" />
-                        {org._count.customers}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <FileText className="h-3 w-3 text-muted-foreground" />
-                        {org._count.invoices}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(org.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => setSidebarConfigOrg({ id: org.id, name: org.name })}>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Sidebar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {organizations.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No organizations found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+            <div className="flex gap-2">
+              <Dialog open={userOpen} onOpenChange={(open) => { setUserOpen(open); if (!open) { setUserError(""); setUserSuccess(""); } }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Create User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create User</DialogTitle>
+                    <DialogDescription>
+                      Create a new user and assign them to an organization.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="userName">Full Name</Label>
+                      <Input
+                        id="userName"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userEmail">Email</Label>
+                      <Input
+                        id="userEmail"
+                        type="email"
+                        value={userEmail}
+                        onChange={(e) => setUserEmail(e.target.value)}
+                        placeholder="john@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userPassword">Password</Label>
+                      <Input
+                        id="userPassword"
+                        type="password"
+                        value={userPassword}
+                        onChange={(e) => setUserPassword(e.target.value)}
+                        placeholder="Enter password"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userRole">Role</Label>
+                      <Select value={userRole} onValueChange={setUserRole}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="user">User</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userOrg">Organization</Label>
+                      <Select value={userOrgId} onValueChange={setUserOrgId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select organization" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizations.map((org) => (
+                            <SelectItem key={org.id} value={org.id}>
+                              {org.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {userError && (
+                      <p className="text-sm text-red-500">{userError}</p>
+                    )}
+                    {userSuccess && (
+                      <p className="text-sm text-green-600">{userSuccess}</p>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setUserOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateUser} disabled={creatingUser}>
+                      {creatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Create User
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Organization
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create Organization</DialogTitle>
+                    <DialogDescription>
+                      Add a new tenant organization to the system.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Organization Name</Label>
+                      <Input
+                        id="name"
+                        value={name}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        placeholder="Acme Corp"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="slug">Slug</Label>
+                      <Input
+                        id="slug"
+                        value={slug}
+                        onChange={(e) => setSlug(e.target.value)}
+                        placeholder="acme-corp"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Lowercase letters, numbers, and hyphens only
+                      </p>
+                    </div>
+                    {error && (
+                      <p className="text-sm text-red-500">{error}</p>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreate} disabled={creating}>
+                      {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Create
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
 
-      {sidebarConfigOrg && (
-        <SidebarConfigDialog
-          open={!!sidebarConfigOrg}
-          onOpenChange={(open) => !open && setSidebarConfigOrg(null)}
-          orgId={sidebarConfigOrg.id}
-          orgName={sidebarConfigOrg.name}
-        />
-      )}
-    </div>
-  );
+          <Card>
+            <CardHeader>
+              <CardTitle>All Organizations</CardTitle>
+              <CardDescription>
+                {organizations.length} organization{organizations.length !== 1 ? "s" : ""} total
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Organization</TableHead>
+                      <TableHead>Slug</TableHead>
+                      <TableHead className="text-center">Users</TableHead>
+                      <TableHead className="text-center">Customers</TableHead>
+                      <TableHead className="text-center">Invoices</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {organizations.map((org) => (
+                      <TableRow key={org.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            {org.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{org.slug}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Users className="h-3 w-3 text-muted-foreground" />
+                            {org._count.users}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <ShoppingCart className="h-3 w-3 text-muted-foreground" />
+                            {org._count.customers}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <FileText className="h-3 w-3 text-muted-foreground" />
+                            {org._count.invoices}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(org.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => setSidebarConfigOrg({ id: org.id, name: org.name })}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Sidebar
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {organizations.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          No organizations found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {sidebarConfigOrg && (
+            <SidebarConfigDialog
+              open={!!sidebarConfigOrg}
+              onOpenChange={(open) => !open && setSidebarConfigOrg(null)}
+              orgId={sidebarConfigOrg.id}
+              orgName={sidebarConfigOrg.name}
+            />
+          )}
+        </div>
+        </PageAnimation>
+      );
 }

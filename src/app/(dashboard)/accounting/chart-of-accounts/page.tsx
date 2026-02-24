@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface TreeNode {
   id: string;
@@ -99,11 +100,19 @@ const subTypesByType: Record<string, string[]> = {
 };
 
 const typeBadgeColors: Record<string, string> = {
-  ASSET: "bg-blue-100 text-blue-700",
-  LIABILITY: "bg-red-100 text-red-700",
-  EQUITY: "bg-purple-100 text-purple-700",
-  REVENUE: "bg-green-100 text-green-700",
-  EXPENSE: "bg-orange-100 text-orange-700",
+  ASSET: "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200",
+  LIABILITY: "bg-red-100 text-red-800 hover:bg-red-200 border-red-200",
+  EQUITY: "bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-200",
+  REVENUE: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200",
+  EXPENSE: "bg-orange-100 text-orange-800 hover:bg-orange-200 border-orange-200",
+};
+
+const typeBorderColors: Record<string, string> = {
+  ASSET: "border-blue-500",
+  LIABILITY: "border-red-500",
+  EQUITY: "border-purple-500",
+  REVENUE: "border-emerald-500",
+  EXPENSE: "border-orange-500",
 };
 
 function AccountTreeItem({
@@ -146,28 +155,42 @@ function AccountTreeItem({
   return (
     <>
       <div
-        className={`flex items-center gap-2 py-2 px-3 hover:bg-slate-50 rounded-lg group ${
-          !node.isActive ? "opacity-50" : ""
-        }`}
-        style={{ paddingLeft: `${level * 24 + 12}px` }}
+        className={`relative flex items-center gap-3 py-2 px-3 hover:bg-slate-50/80 rounded-lg group transition-colors border-l-4 ${level === 0 ? typeBorderColors[node.accountType] || "border-transparent" : "border-transparent"
+          } ${!node.isActive ? "opacity-50" : ""}`}
+        style={{ paddingLeft: `${Math.max(0, level * 32 + 12)}px` }}
       >
+        {/* Hierarchical Connecting Line */}
+        {level > 0 && (
+          <div
+            className="absolute border-l-2 border-b-2 border-slate-200/80 rounded-bl pointer-events-none"
+            style={{
+              left: `${(level - 1) * 32 + 24}px`,
+              top: '-10px',
+              height: 'calc(50% + 10px)',
+              width: '16px'
+            }}
+          />
+        )}
+
         <button
           onClick={() => hasChildren && onToggle(node.id)}
-          className="w-5 h-5 flex items-center justify-center"
+          className={`w-5 h-5 flex items-center justify-center rounded-sm transition-colors ${hasChildren ? "hover:bg-slate-200" : ""}`}
         >
           {hasChildren ? (
             isExpanded ? (
-              <ChevronDown className="h-4 w-4 text-slate-400" />
+              <ChevronDown className="h-4 w-4 text-slate-500" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-slate-400" />
+              <ChevronRight className="h-4 w-4 text-slate-500" />
             )
           ) : (
             <span className="w-4" />
           )}
         </button>
 
-        <span className="font-mono text-sm text-slate-500 w-16">{node.code}</span>
-        <span className="flex-1 text-sm font-medium">{node.name}</span>
+        <span className="font-mono text-sm text-slate-400 font-medium w-16">{node.code}</span>
+        <span className={`flex-1 text-sm ${level === 0 ? "font-bold text-slate-900" : "font-medium text-slate-700"}`}>
+          {node.name}
+        </span>
 
         <Badge variant="outline" className={typeBadgeColors[node.accountType]}>
           {accountTypeLabels[node.accountType]}
@@ -305,7 +328,7 @@ export default function ChartOfAccountsPage() {
           setFormData((prev) => ({ ...prev, description: data.description }));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     setIsDialogOpen(true);
   };
 
@@ -399,249 +422,251 @@ export default function ChartOfAccountsPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Chart of Accounts</h2>
-          <p className="text-slate-500">Manage your accounting structure</p>
-        </div>
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-              setEditingAccount(null);
-              resetForm();
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Account
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingAccount ? "Edit Account" : "Add Account"}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingAccount
-                    ? "Update account details."
-                    : "Create a new account in the chart of accounts."}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label>Code *</Label>
-                    <Input
-                      value={formData.code}
-                      onChange={(e) =>
-                        setFormData({ ...formData, code: e.target.value })
-                      }
-                      disabled={!!editingAccount}
-                      placeholder="e.g. 5210"
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Name *</Label>
-                    <Input
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      placeholder="e.g. Rent"
-                      required
-                    />
-                  </div>
-                </div>
-                {!editingAccount && (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label>Account Type *</Label>
-                        <Select
-                          value={formData.accountType}
-                          onValueChange={(value) =>
-                            setFormData({
-                              ...formData,
-                              accountType: value,
-                              accountSubType: "",
-                              parentId: "",
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(accountTypeLabels).map(([key, label]) => (
-                              <SelectItem key={key} value={key}>
-                                {label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Sub Type *</Label>
-                        <Select
-                          value={formData.accountSubType}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, accountSubType: value })
-                          }
-                          disabled={!formData.accountType}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select sub type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableSubTypes.map((key) => (
-                              <SelectItem key={key} value={key}>
-                                {accountSubTypeLabels[key]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    {parentOptions.length > 0 && (
-                      <div className="grid gap-2">
-                        <Label>Parent Account</Label>
-                        <Select
-                          value={formData.parentId}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, parentId: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="None (top-level)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {parentOptions.map((a) => (
-                              <SelectItem key={a.id} value={a.id}>
-                                {a.code} - {a.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </>
-                )}
-                <div className="grid gap-2">
-                  <Label>Description</Label>
-                  <Input
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    placeholder="Optional description"
-                  />
-                </div>
-                {editingAccount && !editingAccount.isSystem && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="isActive"
-                      checked={formData.isActive}
-                      onChange={(e) =>
-                        setFormData({ ...formData, isActive: e.target.checked })
-                      }
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <Label htmlFor="isActive">Active</Label>
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button type="submit">
-                  {editingAccount ? "Update" : "Create"} Account
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <div className="relative flex-1 sm:max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Search accounts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={expandAll} className="flex-1 sm:flex-none">
-                Expand All
-              </Button>
-              <Button variant="outline" size="sm" onClick={collapseAll} className="flex-1 sm:flex-none">
-                Collapse All
-              </Button>
-            </div>
+    <PageAnimation>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Chart of Accounts</h2>
+            <p className="text-slate-500">Manage your accounting structure</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : tree.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <BookOpen className="h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-semibold">No accounts found</h3>
-              <p className="text-sm text-slate-500">
-                Add your first account to get started
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {tree.map((node) => (
-                <AccountTreeItem
-                  key={node.id}
-                  node={node}
-                  level={0}
-                  expanded={expanded}
-                  onToggle={toggleExpand}
-                  onEdit={handleEdit}
-                  onDelete={setDeleteAccount}
-                  searchQuery={searchQuery}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setEditingAccount(null);
+                resetForm();
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Account
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingAccount ? "Edit Account" : "Add Account"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingAccount
+                      ? "Update account details."
+                      : "Create a new account in the chart of accounts."}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label>Code *</Label>
+                      <Input
+                        value={formData.code}
+                        onChange={(e) =>
+                          setFormData({ ...formData, code: e.target.value })
+                        }
+                        disabled={!!editingAccount}
+                        placeholder="e.g. 5210"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Name *</Label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        placeholder="e.g. Rent"
+                        required
+                      />
+                    </div>
+                  </div>
+                  {!editingAccount && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="grid gap-2">
+                          <Label>Account Type *</Label>
+                          <Select
+                            value={formData.accountType}
+                            onValueChange={(value) =>
+                              setFormData({
+                                ...formData,
+                                accountType: value,
+                                accountSubType: "",
+                                parentId: "",
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(accountTypeLabels).map(([key, label]) => (
+                                <SelectItem key={key} value={key}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Sub Type *</Label>
+                          <Select
+                            value={formData.accountSubType}
+                            onValueChange={(value) =>
+                              setFormData({ ...formData, accountSubType: value })
+                            }
+                            disabled={!formData.accountType}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select sub type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableSubTypes.map((key) => (
+                                <SelectItem key={key} value={key}>
+                                  {accountSubTypeLabels[key]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {parentOptions.length > 0 && (
+                        <div className="grid gap-2">
+                          <Label>Parent Account</Label>
+                          <Select
+                            value={formData.parentId}
+                            onValueChange={(value) =>
+                              setFormData({ ...formData, parentId: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="None (top-level)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {parentOptions.map((a) => (
+                                <SelectItem key={a.id} value={a.id}>
+                                  {a.code} - {a.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="grid gap-2">
+                    <Label>Description</Label>
+                    <Input
+                      value={formData.description}
+                      onChange={(e) =>
+                        setFormData({ ...formData, description: e.target.value })
+                      }
+                      placeholder="Optional description"
+                    />
+                  </div>
+                  {editingAccount && !editingAccount.isSystem && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="isActive"
+                        checked={formData.isActive}
+                        onChange={(e) =>
+                          setFormData({ ...formData, isActive: e.target.checked })
+                        }
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <Label htmlFor="isActive">Active</Label>
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button type="submit">
+                    {editingAccount ? "Update" : "Create"} Account
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-      <AlertDialog open={!!deleteAccount} onOpenChange={() => setDeleteAccount(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Account</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete account {deleteAccount?.code} - {deleteAccount?.name}?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <div className="relative flex-1 sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Search accounts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={expandAll} className="flex-1 sm:flex-none">
+                  Expand All
+                </Button>
+                <Button variant="outline" size="sm" onClick={collapseAll} className="flex-1 sm:flex-none">
+                  Collapse All
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : tree.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <BookOpen className="h-12 w-12 text-slate-300" />
+                <h3 className="mt-4 text-lg font-semibold">No accounts found</h3>
+                <p className="text-sm text-slate-500">
+                  Add your first account to get started
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {tree.map((node) => (
+                  <AccountTreeItem
+                    key={node.id}
+                    node={node}
+                    level={0}
+                    expanded={expanded}
+                    onToggle={toggleExpand}
+                    onEdit={handleEdit}
+                    onDelete={setDeleteAccount}
+                    searchQuery={searchQuery}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <AlertDialog open={!!deleteAccount} onOpenChange={() => setDeleteAccount(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Account</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete account {deleteAccount?.code} - {deleteAccount?.name}?
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </PageAnimation>
   );
 }

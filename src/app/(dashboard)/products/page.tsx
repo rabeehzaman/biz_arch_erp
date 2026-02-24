@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -201,15 +202,15 @@ function ProductsPageContent() {
     try {
       const response = editingProduct
         ? await fetch(`/api/products/${editingProduct.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
         : await fetch("/api/products", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       if (!response.ok) throw new Error("Failed to save");
       setIsDialogOpen(false);
       resetForm();
@@ -285,407 +286,423 @@ function ProductsPageContent() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Products</h2>
-        <p className="text-slate-500">Manage your product catalog and stock levels</p>
-      </div>
+    <PageAnimation>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Products</h2>
+          <p className="text-slate-500">Manage your product catalog and stock levels</p>
+        </div>
 
-      {/* Tab Bar */}
-      <div className="border-b border-slate-200">
-        <nav className="-mb-px flex gap-1">
-          <button
-            onClick={() => switchTab("products")}
-            className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
-              activeTab === "products"
-                ? "border-primary text-primary"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-            )}
-          >
-            Products
-          </button>
-          <button
-            onClick={() => switchTab("inventory")}
-            className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
-              activeTab === "inventory"
-                ? "border-primary text-primary"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
-            )}
-          >
-            Inventory
-          </button>
-        </nav>
-      </div>
-
-      {/* Products Tab */}
-      {activeTab === "products" && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <Dialog
-              modal={false}
-              open={isDialogOpen}
-              onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                if (!open) resetForm();
-              }}
+        {/* Tab Bar */}
+        <div className="border-b border-slate-200">
+          <nav className="-mb-px flex gap-1">
+            <button
+              onClick={() => switchTab("products")}
+              className={cn(
+                "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                activeTab === "products"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              )}
             >
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Product
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <form onSubmit={handleSubmit}>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingProduct ? "Edit Product" : "Add New Product"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingProduct
-                        ? "Update the product details below."
-                        : "Fill in the details to add a new product."}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => {
-                          setFormData({ ...formData, name: e.target.value });
-                          if (e.target.value) setFormErrors((prev) => ({ ...prev, name: "" }));
-                        }}
-                        className={formErrors.name ? "border-red-500" : ""}
-                      />
-                      {formErrors.name && (
-                        <p className="text-sm text-red-500">{formErrors.name}</p>
-                      )}
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={formData.description}
-                        onChange={(e) =>
-                          setFormData({ ...formData, description: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
+              Products
+            </button>
+            <button
+              onClick={() => switchTab("inventory")}
+              className={cn(
+                "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                activeTab === "inventory"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              )}
+            >
+              Inventory
+            </button>
+          </nav>
+        </div>
+
+        {/* Products Tab */}
+        {activeTab === "products" && (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Dialog
+                open={isDialogOpen}
+                onOpenChange={(open) => {
+                  setIsDialogOpen(open);
+                  if (!open) resetForm();
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button className="w-full sm:w-auto">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Product
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl overflow-y-auto max-h-[90vh]">
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingProduct ? "Edit Product" : "Add New Product"}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {editingProduct
+                          ? "Update the product details below."
+                          : "Fill in the details to add a new product."}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="price">Price *</Label>
+                        <Label htmlFor="name">Name *</Label>
                         <Input
-                          id="price"
-                          type="number"
-                          step="0.01"
-                          value={formData.price}
+                          id="name"
+                          value={formData.name}
                           onChange={(e) => {
-                            setFormData({ ...formData, price: e.target.value });
-                            if (e.target.value) setFormErrors((prev) => ({ ...prev, price: "" }));
+                            setFormData({ ...formData, name: e.target.value });
+                            if (e.target.value) setFormErrors((prev) => ({ ...prev, name: "" }));
                           }}
-                          className={formErrors.price ? "border-red-500" : ""}
+                          className={formErrors.name ? "border-red-500" : ""}
                         />
-                        {formErrors.price && (
-                          <p className="text-sm text-red-500">{formErrors.price}</p>
+                        {formErrors.name && (
+                          <p className="text-sm text-red-500">{formErrors.name}</p>
                         )}
                       </div>
-                      <div>
-                        <UnitSelect
-                          value={formData.unitId}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, unitId: value });
-                            if (value) setFormErrors((prev) => ({ ...prev, unitId: "" }));
-                          }}
-                          required
-                          error={formErrors.unitId}
+                      <div className="grid gap-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={formData.description}
+                          onChange={(e) =>
+                            setFormData({ ...formData, description: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="grid gap-2">
+                          <Label htmlFor="price">Price *</Label>
+                          <Input
+                            id="price"
+                            type="number"
+                            step="0.01"
+                            value={formData.price}
+                            onChange={(e) => {
+                              setFormData({ ...formData, price: e.target.value });
+                              if (e.target.value) setFormErrors((prev) => ({ ...prev, price: "" }));
+                            }}
+                            className={formErrors.price ? "border-red-500" : ""}
+                          />
+                          {formErrors.price && (
+                            <p className="text-sm text-red-500">{formErrors.price}</p>
+                          )}
+                        </div>
+                        <div>
+                          <UnitSelect
+                            value={formData.unitId}
+                            onValueChange={(value) => {
+                              setFormData({ ...formData, unitId: value });
+                              if (value) setFormErrors((prev) => ({ ...prev, unitId: "" }));
+                            }}
+                            required
+                            error={formErrors.unitId}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="sku">SKU</Label>
+                        <Input
+                          id="sku"
+                          value={formData.sku}
+                          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                          placeholder="Optional product code"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="isService"
+                          checked={formData.isService}
+                          onChange={(e) =>
+                            setFormData({ ...formData, isService: e.target.checked })
+                          }
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <Label htmlFor="isService">Service product (no inventory tracking)</Label>
+                      </div>
+                    </div>
+                    <DialogFooter className="mt-auto pt-4 border-t">
+                      <Button type="submit" className="w-full sm:w-auto">
+                        {editingProduct ? "Update Product" : "Add Product"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <StaggerContainer className="space-y-4">
+              <StaggerItem>
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Search products..."
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          className="pl-10"
                         />
                       </div>
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sku">SKU</Label>
-                      <Input
-                        id="sku"
-                        value={formData.sku}
-                        onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                        placeholder="Optional product code"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="isService"
-                        checked={formData.isService}
-                        onChange={(e) =>
-                          setFormData({ ...formData, isService: e.target.checked })
-                        }
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      <Label htmlFor="isService">Service product (no inventory tracking)</Label>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">
-                      {editingProduct ? "Update Product" : "Add Product"}
+                  </CardHeader>
+                  <CardContent>
+                    {isProductsLoading ? (
+                      <TableSkeleton columns={6} rows={5} />
+                    ) : filteredProducts.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Package className="h-12 w-12 text-slate-300" />
+                        <h3 className="mt-4 text-lg font-semibold">No products found</h3>
+                        <p className="text-sm text-slate-500">
+                          {productSearch
+                            ? "Try a different search term"
+                            : "Add your first product to get started"}
+                        </p>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead className="hidden sm:table-cell">SKU</TableHead>
+                            <TableHead>Price</TableHead>
+                            <TableHead className="hidden sm:table-cell">Unit</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredProducts.map((product) => (
+                            <TableRow key={product.id}>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{product.name}</div>
+                                  {product.description && (
+                                    <div className="text-sm text-slate-500 truncate max-w-xs">
+                                      {product.description}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                {product.sku || "-"}
+                              </TableCell>
+                              <TableCell>₹{Number(product.price).toLocaleString("en-IN")}</TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                {product.unit?.name || "-"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={product.isActive ? "default" : "secondary"}>
+                                  {product.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEdit(product)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(product.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </StaggerItem>
+            </StaggerContainer>
+          </div>
+        )}
+
+        {/* Inventory Tab */}
+        {activeTab === "inventory" && (
+          <div className="space-y-6">
+            <StaggerContainer className="space-y-6">
+              <StaggerItem>
+                <div className="flex justify-end">
+                  <Link href="/inventory/opening-stock" className="w-full sm:w-auto">
+                    <Button variant="outline" className="w-full sm:w-auto min-h-[44px]">
+                      Opening Stock
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                  </Link>
+                </div>
+              </StaggerItem>
+
+              {/* Summary Cards */}
+              <StaggerItem>
+                <div className="grid gap-4 md:grid-cols-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Total Products</CardDescription>
+                      <CardTitle className="text-3xl">{summary.totalProducts}</CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>In Stock</CardDescription>
+                      <CardTitle className="text-3xl text-green-600">
+                        {summary.productsWithStock}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Out of Stock</CardDescription>
+                      <CardTitle className="text-3xl text-red-600">
+                        {summary.productsOutOfStock}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Total Stock Value</CardDescription>
+                      <CardTitle className="text-3xl">
+                        ₹{summary.totalStockValue.toLocaleString("en-IN")}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                </div>
+              </StaggerItem>
+
+              {/* Stock Table */}
+              <StaggerItem>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Search products..."
+                          value={inventorySearch}
+                          onChange={(e) => setInventorySearch(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isInventoryLoading ? (
+                      <TableSkeleton columns={6} rows={5} />
+                    ) : filteredInventory.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Package className="h-12 w-12 text-slate-300" />
+                        <h3 className="mt-4 text-lg font-semibold">No products found</h3>
+                        <p className="text-sm text-slate-500">
+                          {inventorySearch
+                            ? "Try a different search term"
+                            : "Add products and stock to see inventory"}
+                        </p>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product</TableHead>
+                            <TableHead>SKU</TableHead>
+                            <TableHead className="text-right">Current Stock</TableHead>
+                            <TableHead className="text-right">Avg. Cost</TableHead>
+                            <TableHead className="text-right">Stock Value</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredInventory.map((product) => {
+                            const stockQty = getStockQuantity(product);
+                            const stockValue = getStockValue(product);
+                            const avgCost = getAverageCost(product);
+                            const isLowStock = stockQty > 0 && stockQty <= 5;
+                            const isOutOfStock = stockQty <= 0;
+
+                            return (
+                              <TableRow key={product.id}>
+                                <TableCell className="font-medium">{product.name}</TableCell>
+                                <TableCell className="text-slate-500">{product.sku || "-"}</TableCell>
+                                <TableCell className="text-right">
+                                  <span
+                                    className={
+                                      isOutOfStock
+                                        ? "text-red-600 font-medium"
+                                        : isLowStock
+                                          ? "text-orange-600 font-medium"
+                                          : ""
+                                    }
+                                  >
+                                    {stockQty} {product.unit}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  ₹{avgCost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  ₹{stockValue.toLocaleString("en-IN")}
+                                </TableCell>
+                                <TableCell>
+                                  {isOutOfStock ? (
+                                    <Badge variant="destructive">
+                                      <AlertTriangle className="mr-1 h-3 w-3" />
+                                      Out of Stock
+                                    </Badge>
+                                  ) : isLowStock ? (
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-orange-100 text-orange-800"
+                                    >
+                                      <AlertTriangle className="mr-1 h-3 w-3" />
+                                      Low Stock
+                                    </Badge>
+                                  ) : (
+                                    <Badge
+                                      variant="default"
+                                      className="bg-green-100 text-green-800"
+                                    >
+                                      In Stock
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </StaggerItem>
+            </StaggerContainer>
           </div>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    placeholder="Search products..."
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isProductsLoading ? (
-                <TableSkeleton columns={6} rows={5} />
-              ) : filteredProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Package className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No products found</h3>
-                  <p className="text-sm text-slate-500">
-                    {productSearch
-                      ? "Try a different search term"
-                      : "Add your first product to get started"}
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="hidden sm:table-cell">SKU</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead className="hidden sm:table-cell">Unit</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{product.name}</div>
-                            {product.description && (
-                              <div className="text-sm text-slate-500 truncate max-w-xs">
-                                {product.description}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {product.sku || "-"}
-                        </TableCell>
-                        <TableCell>₹{Number(product.price).toLocaleString("en-IN")}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {product.unit?.name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={product.isActive ? "default" : "secondary"}>
-                            {product.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(product)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(product.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Inventory Tab */}
-      {activeTab === "inventory" && (
-        <div className="space-y-6">
-          <div className="flex justify-end">
-            <Link href="/inventory/opening-stock" className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto min-h-[44px]">
-                Opening Stock
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Total Products</CardDescription>
-                <CardTitle className="text-3xl">{summary.totalProducts}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>In Stock</CardDescription>
-                <CardTitle className="text-3xl text-green-600">
-                  {summary.productsWithStock}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Out of Stock</CardDescription>
-                <CardTitle className="text-3xl text-red-600">
-                  {summary.productsOutOfStock}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Total Stock Value</CardDescription>
-                <CardTitle className="text-3xl">
-                  ₹{summary.totalStockValue.toLocaleString("en-IN")}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
-
-          {/* Stock Table */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    placeholder="Search products..."
-                    value={inventorySearch}
-                    onChange={(e) => setInventorySearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isInventoryLoading ? (
-                <TableSkeleton columns={6} rows={5} />
-              ) : filteredInventory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Package className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No products found</h3>
-                  <p className="text-sm text-slate-500">
-                    {inventorySearch
-                      ? "Try a different search term"
-                      : "Add products and stock to see inventory"}
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-right">Current Stock</TableHead>
-                      <TableHead className="text-right">Avg. Cost</TableHead>
-                      <TableHead className="text-right">Stock Value</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInventory.map((product) => {
-                      const stockQty = getStockQuantity(product);
-                      const stockValue = getStockValue(product);
-                      const avgCost = getAverageCost(product);
-                      const isLowStock = stockQty > 0 && stockQty <= 5;
-                      const isOutOfStock = stockQty <= 0;
-
-                      return (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell className="text-slate-500">{product.sku || "-"}</TableCell>
-                          <TableCell className="text-right">
-                            <span
-                              className={
-                                isOutOfStock
-                                  ? "text-red-600 font-medium"
-                                  : isLowStock
-                                    ? "text-orange-600 font-medium"
-                                    : ""
-                              }
-                            >
-                              {stockQty} {product.unit}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            ₹{avgCost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            ₹{stockValue.toLocaleString("en-IN")}
-                          </TableCell>
-                          <TableCell>
-                            {isOutOfStock ? (
-                              <Badge variant="destructive">
-                                <AlertTriangle className="mr-1 h-3 w-3" />
-                                Out of Stock
-                              </Badge>
-                            ) : isLowStock ? (
-                              <Badge
-                                variant="secondary"
-                                className="bg-orange-100 text-orange-800"
-                              >
-                                <AlertTriangle className="mr-1 h-3 w-3" />
-                                Low Stock
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="default"
-                                className="bg-green-100 text-green-800"
-                              >
-                                In Stock
-                              </Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </PageAnimation>
   );
 }
 
 export default function ProductsPage() {
   return (
-    <Suspense>
-      <ProductsPageContent />
-    </Suspense>
+    <PageAnimation>
+      <Suspense>
+        <ProductsPageContent />
+      </Suspense>
+    </PageAnimation>
   );
 }

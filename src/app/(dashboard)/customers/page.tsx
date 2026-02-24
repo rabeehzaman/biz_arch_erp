@@ -21,6 +21,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -198,15 +200,15 @@ export default function CustomersPage() {
     try {
       const response = editingCustomer
         ? await fetch(`/api/customers/${editingCustomer.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
         : await fetch("/api/customers", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
       if (!response.ok) throw new Error("Failed to save");
 
@@ -325,396 +327,401 @@ export default function CustomersPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Customers</h2>
-          <p className="text-slate-500">Manage your customer database</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Customer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingCustomer ? "Edit Customer" : "Add New Customer"}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingCustomer
-                    ? "Update the customer details below."
-                    : "Fill in the details to add a new customer."}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-3">
+    <PageAnimation>
+      <StaggerContainer className="space-y-6">
+        <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Customers</h2>
+            <p className="text-slate-500">Manage your customer database</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Customer
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl overflow-y-auto max-h-[90vh]">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingCustomer ? "Edit Customer" : "Add New Customer"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingCustomer
+                      ? "Update the customer details below."
+                      : "Fill in the details to add a new customer."}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="country">Country</Label>
+                      <Input
+                        id="country"
+                        value={formData.country}
+                        onChange={(e) =>
+                          setFormData({ ...formData, country: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="name">Name *</Label>
+                    <Label htmlFor="address">Address</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
+                      id="address"
+                      value={formData.address}
                       onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        value={formData.city}
+                        onChange={(e) =>
+                          setFormData({ ...formData, city: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="state">State</Label>
+                      <Input
+                        id="state"
+                        value={formData.state}
+                        onChange={(e) =>
+                          setFormData({ ...formData, state: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="zipCode">ZIP Code</Label>
+                      <Input
+                        id="zipCode"
+                        value={formData.zipCode}
+                        onChange={(e) =>
+                          setFormData({ ...formData, zipCode: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) =>
+                        setFormData({ ...formData, notes: e.target.value })
+                      }
+                      placeholder="Any additional notes..."
+                    />
+                  </div>
+                </div>
+                <DialogFooter className="mt-auto pt-4 border-t">
+                  <Button type="submit" className="w-full sm:w-auto">
+                    {editingCustomer ? "Update Customer" : "Add Customer"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </StaggerItem>
+
+        <StaggerItem>
+          <Dialog open={isOpeningBalanceDialogOpen} onOpenChange={(open) => {
+            setIsOpeningBalanceDialogOpen(open);
+            if (!open) {
+              setSelectedCustomerForBalance(null);
+              setOpeningBalanceData({
+                amount: "",
+                transactionDate: new Date().toISOString().split("T")[0],
+              });
+            }
+          }}>
+            <DialogContent>
+              <form onSubmit={handleOpeningBalanceSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Set Opening Balance</DialogTitle>
+                  <DialogDescription>
+                    Set the opening balance for {selectedCustomerForBalance?.name}. This represents the initial receivable amount.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="openingAmount">Opening Balance Amount *</Label>
+                    <Input
+                      id="openingAmount"
+                      type="number"
+                      step="0.01"
+                      value={openingBalanceData.amount}
+                      onChange={(e) =>
+                        setOpeningBalanceData({ ...openingBalanceData, amount: e.target.value })
+                      }
+                      placeholder="Enter amount (positive for receivable)"
+                      required
+                    />
+                    <p className="text-xs text-slate-500">
+                      Enter a positive amount for receivables (customer owes you), or negative for advances (you owe customer).
+                    </p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="balanceDate">As of Date *</Label>
+                    <Input
+                      id="balanceDate"
+                      type="date"
+                      value={openingBalanceData.transactionDate}
+                      onChange={(e) =>
+                        setOpeningBalanceData({ ...openingBalanceData, transactionDate: e.target.value })
                       }
                       required
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                    />
-                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                      id="country"
-                      value={formData.country}
-                      onChange={(e) =>
-                        setFormData({ ...formData, country: e.target.value })
-                      }
-                    />
-                  </div>
+                <DialogFooter>
+                  <Button type="submit">Set Opening Balance</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Assign Customer Dialog */}
+          <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
+            setIsAssignDialogOpen(open);
+            if (!open) {
+              setSelectedCustomerForAssign(null);
+              setSelectedUserIds([]);
+            }
+          }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Assign Customer</DialogTitle>
+                <DialogDescription>
+                  Select users to assign {selectedCustomerForAssign?.name} to. Only assigned users (and admins) will be able to see this customer.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="space-y-3">
+                  {users.filter(u => u.role !== "admin").map((user) => (
+                    <div key={user.id} className="flex items-center space-x-3">
+                      <Checkbox
+                        id={`user-${user.id}`}
+                        checked={selectedUserIds.includes(user.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedUserIds([...selectedUserIds, user.id]);
+                          } else {
+                            setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`user-${user.id}`}
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
+                        {user.name}
+                        <span className="text-slate-500 ml-2">({user.email})</span>
+                      </label>
+                    </div>
+                  ))}
+                  {users.filter(u => u.role !== "admin").length === 0 && (
+                    <p className="text-sm text-slate-500">No users available for assignment.</p>
+                  )}
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      value={formData.city}
-                      onChange={(e) =>
-                        setFormData({ ...formData, city: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="state">State</Label>
-                    <Input
-                      id="state"
-                      value={formData.state}
-                      onChange={(e) =>
-                        setFormData({ ...formData, state: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="zipCode">ZIP Code</Label>
-                    <Input
-                      id="zipCode"
-                      value={formData.zipCode}
-                      onChange={(e) =>
-                        setFormData({ ...formData, zipCode: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
-                    placeholder="Any additional notes..."
-                  />
-                </div>
+                {selectedUserIds.length === 0 && (
+                  <p className="mt-4 text-xs text-amber-600">
+                    Note: If no users are selected, only admins will be able to see this customer.
+                  </p>
+                )}
               </div>
               <DialogFooter>
-                <Button type="submit">
-                  {editingCustomer ? "Update Customer" : "Add Customer"}
+                <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAssignSubmit}>
+                  Save Assignments
                 </Button>
               </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogContent>
+          </Dialog>
+        </StaggerItem>
 
-      {/* Opening Balance Dialog */}
-      <Dialog open={isOpeningBalanceDialogOpen} onOpenChange={(open) => {
-        setIsOpeningBalanceDialogOpen(open);
-        if (!open) {
-          setSelectedCustomerForBalance(null);
-          setOpeningBalanceData({
-            amount: "",
-            transactionDate: new Date().toISOString().split("T")[0],
-          });
-        }
-      }}>
-        <DialogContent>
-          <form onSubmit={handleOpeningBalanceSubmit}>
-            <DialogHeader>
-              <DialogTitle>Set Opening Balance</DialogTitle>
-              <DialogDescription>
-                Set the opening balance for {selectedCustomerForBalance?.name}. This represents the initial receivable amount.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="openingAmount">Opening Balance Amount *</Label>
-                <Input
-                  id="openingAmount"
-                  type="number"
-                  step="0.01"
-                  value={openingBalanceData.amount}
-                  onChange={(e) =>
-                    setOpeningBalanceData({ ...openingBalanceData, amount: e.target.value })
-                  }
-                  placeholder="Enter amount (positive for receivable)"
-                  required
-                />
-                <p className="text-xs text-slate-500">
-                  Enter a positive amount for receivables (customer owes you), or negative for advances (you owe customer).
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="balanceDate">As of Date *</Label>
-                <Input
-                  id="balanceDate"
-                  type="date"
-                  value={openingBalanceData.transactionDate}
-                  onChange={(e) =>
-                    setOpeningBalanceData({ ...openingBalanceData, transactionDate: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Set Opening Balance</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Customer Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
-        setIsAssignDialogOpen(open);
-        if (!open) {
-          setSelectedCustomerForAssign(null);
-          setSelectedUserIds([]);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Customer</DialogTitle>
-            <DialogDescription>
-              Select users to assign {selectedCustomerForAssign?.name} to. Only assigned users (and admins) will be able to see this customer.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="space-y-3">
-              {users.filter(u => u.role !== "admin").map((user) => (
-                <div key={user.id} className="flex items-center space-x-3">
-                  <Checkbox
-                    id={`user-${user.id}`}
-                    checked={selectedUserIds.includes(user.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedUserIds([...selectedUserIds, user.id]);
-                      } else {
-                        setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
-                      }
-                    }}
+        <StaggerItem>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    placeholder="Search customers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
                   />
-                  <label
-                    htmlFor={`user-${user.id}`}
-                    className="text-sm font-medium leading-none cursor-pointer"
-                  >
-                    {user.name}
-                    <span className="text-slate-500 ml-2">({user.email})</span>
-                  </label>
                 </div>
-              ))}
-              {users.filter(u => u.role !== "admin").length === 0 && (
-                <p className="text-sm text-slate-500">No users available for assignment.</p>
-              )}
-            </div>
-            {selectedUserIds.length === 0 && (
-              <p className="mt-4 text-xs text-amber-600">
-                Note: If no users are selected, only admins will be able to see this customer.
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAssignSubmit}>
-              Save Assignments
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Search customers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <TableSkeleton columns={7} rows={5} />
-          ) : filteredCustomers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Users className="h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-semibold">No customers found</h3>
-              <p className="text-sm text-slate-500">
-                {searchQuery
-                  ? "Try a different search term"
-                  : "Add your first customer to get started"}
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Contact</TableHead>
-                  <TableHead className="hidden sm:table-cell">Assigned To</TableHead>
-                  <TableHead>Balance</TableHead>
-                  <TableHead>Invoices</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>
-                      <div className="font-medium">{customer.name}</div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="text-sm">
-                        {customer.email && <div>{customer.email}</div>}
-                        {customer.phone && (
-                          <div className="text-slate-500">{customer.phone}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {customer.assignments && customer.assignments.length > 0 ? (
-                          customer.assignments.map(a => (
-                            <Badge key={a.id} variant="outline" className="text-xs">
-                              {a.user.name}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-slate-400 text-sm">Unassigned</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={
-                          Number(customer.balance) > 0
-                            ? "text-green-600 font-medium"
-                            : Number(customer.balance) < 0
-                              ? "text-red-600 font-medium"
-                              : ""
-                        }
-                      >
-                        ₹{Math.abs(Number(customer.balance)).toLocaleString("en-IN")}
-                      </span>
-                    </TableCell>
-                    <TableCell>{customer._count?.invoices || 0}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={customer.isActive ? "default" : "secondary"}
-                      >
-                        {customer.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(customer)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(customer)}>
-                            <Wallet className="mr-2 h-4 w-4" />
-                            Opening Balance
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/customers/${customer.id}/statement`}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              View Statement
-                            </Link>
-                          </DropdownMenuItem>
-                          {isAdmin && (
-                            <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Assign
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDelete(customer.id)}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <TableSkeleton columns={7} rows={5} />
+              ) : filteredCustomers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Users className="h-12 w-12 text-slate-300" />
+                  <h3 className="mt-4 text-lg font-semibold">No customers found</h3>
+                  <p className="text-sm text-slate-500">
+                    {searchQuery
+                      ? "Try a different search term"
+                      : "Add your first customer to get started"}
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                      <TableHead className="hidden sm:table-cell">Assigned To</TableHead>
+                      <TableHead>Balance</TableHead>
+                      <TableHead>Invoices</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCustomers.map((customer) => (
+                      <TableRow key={customer.id}>
+                        <TableCell>
+                          <div className="font-medium">{customer.name}</div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="text-sm">
+                            {customer.email && <div>{customer.email}</div>}
+                            {customer.phone && (
+                              <div className="text-slate-500">{customer.phone}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="flex flex-wrap gap-1">
+                            {customer.assignments && customer.assignments.length > 0 ? (
+                              customer.assignments.map(a => (
+                                <Badge key={a.id} variant="outline" className="text-xs">
+                                  {a.user.name}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-slate-400 text-sm">Unassigned</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={
+                              Number(customer.balance) > 0
+                                ? "text-green-600 font-medium"
+                                : Number(customer.balance) < 0
+                                  ? "text-red-600 font-medium"
+                                  : ""
+                            }
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                            ₹{Math.abs(Number(customer.balance)).toLocaleString("en-IN")}
+                          </span>
+                        </TableCell>
+                        <TableCell>{customer._count?.invoices || 0}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={customer.isActive ? "default" : "secondary"}
+                          >
+                            {customer.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(customer)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(customer)}>
+                                <Wallet className="mr-2 h-4 w-4" />
+                                Opening Balance
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/customers/${customer.id}/statement`}>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  View Statement
+                                </Link>
+                              </DropdownMenuItem>
+                              {isAdmin && (
+                                <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
+                                  <UserPlus className="mr-2 h-4 w-4" />
+                                  Assign
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => handleDelete(customer.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </StaggerItem>
+      </StaggerContainer>
+    </PageAnimation>
   );
 }

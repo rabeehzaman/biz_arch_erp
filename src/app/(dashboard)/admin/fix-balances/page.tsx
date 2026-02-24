@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-react";
+import { PageAnimation } from "@/components/ui/page-animation";
 
 interface ProductCostIssue {
   id: string;
@@ -180,321 +181,323 @@ export default function FixBalancesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Fix Customer Balances</h2>
-        <p className="text-slate-500">
-          Check and fix customer balance discrepancies across the system
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Balance Checker</CardTitle>
-          <CardDescription>
-            This tool will check all customer balances against their transaction history and fix any
-            discrepancies.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4">
-            <Button onClick={handleCheck} disabled={isChecking || isFixing}>
-              {isChecking ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="mr-2 h-4 w-4" />
-              )}
-              Check Balances
-            </Button>
-
-            {checkResult && checkResult.customersWithIssues > 0 && (
-              <Button onClick={handleFix} disabled={isChecking || isFixing} variant="destructive">
-                {isFixing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                Fix All Balances
-              </Button>
-            )}
+        <PageAnimation>
+          <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Fix Customer Balances</h2>
+            <p className="text-slate-500">
+              Check and fix customer balance discrepancies across the system
+            </p>
           </div>
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {checkResult && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Check Results</AlertTitle>
-              <AlertDescription>
-                {checkResult.message}
-                <div className="mt-2 flex gap-4">
-                  <Badge variant="outline">Total Customers: {checkResult.totalCustomers}</Badge>
-                  <Badge variant={checkResult.customersWithIssues > 0 ? "destructive" : "default"}>
-                    Issues Found: {checkResult.customersWithIssues}
-                  </Badge>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {fixResult && (
-            <Alert className="border-green-600 bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-900">Success</AlertTitle>
-              <AlertDescription className="text-green-800">
-                {fixResult.message}
-                <div className="mt-2 flex gap-4">
-                  <Badge variant="outline">Total Customers: {fixResult.summary.totalCustomers}</Badge>
-                  <Badge className="bg-green-600">Fixed: {fixResult.summary.fixedCount}</Badge>
-                  {fixResult.summary.errorCount > 0 && (
-                    <Badge variant="destructive">Errors: {fixResult.summary.errorCount}</Badge>
+          <Card>
+            <CardHeader>
+              <CardTitle>Balance Checker</CardTitle>
+              <CardDescription>
+                This tool will check all customer balances against their transaction history and fix any
+                discrepancies.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-4">
+                <Button onClick={handleCheck} disabled={isChecking || isFixing}>
+                  {isChecking ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="mr-2 h-4 w-4" />
                   )}
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+                  Check Balances
+                </Button>
 
-      {checkResult && checkResult.issues.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Customers with Balance Issues</CardTitle>
-            <CardDescription>
-              The following customers have discrepancies between their stored balance and calculated
-              balance from transactions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer Name</TableHead>
-                  <TableHead className="text-right">Stored Balance</TableHead>
-                  <TableHead className="text-right">Calculated Balance</TableHead>
-                  <TableHead className="text-right">Difference</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {checkResult.issues.map((issue) => (
-                  <TableRow key={issue.id}>
-                    <TableCell className="font-medium">{issue.name}</TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(issue.storedBalance || 0)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-green-600">
-                      {formatCurrency(issue.calculatedBalance || 0)}
-                    </TableCell>
-                    <TableCell className="text-right text-red-600">
-                      {formatCurrency(issue.difference)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {fixResult && fixResult.fixes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Fixed Balances</CardTitle>
-            <CardDescription>
-              Successfully updated the following customer balances
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer Name</TableHead>
-                  <TableHead className="text-right">Old Balance</TableHead>
-                  <TableHead className="text-right">New Balance</TableHead>
-                  <TableHead className="text-right">Correction</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fixResult.fixes.map((fix) => (
-                  <TableRow key={fix.id}>
-                    <TableCell className="font-medium">{fix.name}</TableCell>
-                    <TableCell className="text-right text-red-600">
-                      {formatCurrency(fix.oldBalance || 0)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-green-600">
-                      {formatCurrency(fix.newBalance || 0)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(fix.difference)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Product Cost Fix Section */}
-      <div className="pt-6 border-t">
-        <h2 className="text-2xl font-bold text-slate-900">Fix Product Costs</h2>
-        <p className="text-slate-500">
-          Fix products whose cost was set to the discounted price instead of MRP
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Product Cost Checker</CardTitle>
-          <CardDescription>
-            This tool checks all products with purchase history and ensures their cost reflects the
-            original MRP (pre-discount), not the discounted price.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4">
-            <Button onClick={handleCheckCosts} disabled={isCheckingCosts || isFixingCosts}>
-              {isCheckingCosts ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="mr-2 h-4 w-4" />
-              )}
-              Check Product Costs
-            </Button>
-
-            {costCheckResult && costCheckResult.productsWithIssues > 0 && (
-              <Button onClick={handleFixCosts} disabled={isCheckingCosts || isFixingCosts} variant="destructive">
-                {isFixingCosts ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                {checkResult && checkResult.customersWithIssues > 0 && (
+                  <Button onClick={handleFix} disabled={isChecking || isFixing} variant="destructive">
+                    {isFixing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Fix All Balances
+                  </Button>
                 )}
-                Fix All Costs
-              </Button>
-            )}
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {checkResult && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Check Results</AlertTitle>
+                  <AlertDescription>
+                    {checkResult.message}
+                    <div className="mt-2 flex gap-4">
+                      <Badge variant="outline">Total Customers: {checkResult.totalCustomers}</Badge>
+                      <Badge variant={checkResult.customersWithIssues > 0 ? "destructive" : "default"}>
+                        Issues Found: {checkResult.customersWithIssues}
+                      </Badge>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {fixResult && (
+                <Alert className="border-green-600 bg-green-50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <AlertTitle className="text-green-900">Success</AlertTitle>
+                  <AlertDescription className="text-green-800">
+                    {fixResult.message}
+                    <div className="mt-2 flex gap-4">
+                      <Badge variant="outline">Total Customers: {fixResult.summary.totalCustomers}</Badge>
+                      <Badge className="bg-green-600">Fixed: {fixResult.summary.fixedCount}</Badge>
+                      {fixResult.summary.errorCount > 0 && (
+                        <Badge variant="destructive">Errors: {fixResult.summary.errorCount}</Badge>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+
+          {checkResult && checkResult.issues.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Customers with Balance Issues</CardTitle>
+                <CardDescription>
+                  The following customers have discrepancies between their stored balance and calculated
+                  balance from transactions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer Name</TableHead>
+                      <TableHead className="text-right">Stored Balance</TableHead>
+                      <TableHead className="text-right">Calculated Balance</TableHead>
+                      <TableHead className="text-right">Difference</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {checkResult.issues.map((issue) => (
+                      <TableRow key={issue.id}>
+                        <TableCell className="font-medium">{issue.name}</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(issue.storedBalance || 0)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-green-600">
+                          {formatCurrency(issue.calculatedBalance || 0)}
+                        </TableCell>
+                        <TableCell className="text-right text-red-600">
+                          {formatCurrency(issue.difference)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {fixResult && fixResult.fixes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Fixed Balances</CardTitle>
+                <CardDescription>
+                  Successfully updated the following customer balances
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer Name</TableHead>
+                      <TableHead className="text-right">Old Balance</TableHead>
+                      <TableHead className="text-right">New Balance</TableHead>
+                      <TableHead className="text-right">Correction</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fixResult.fixes.map((fix) => (
+                      <TableRow key={fix.id}>
+                        <TableCell className="font-medium">{fix.name}</TableCell>
+                        <TableCell className="text-right text-red-600">
+                          {formatCurrency(fix.oldBalance || 0)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-green-600">
+                          {formatCurrency(fix.newBalance || 0)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(fix.difference)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Product Cost Fix Section */}
+          <div className="pt-6 border-t">
+            <h2 className="text-2xl font-bold text-slate-900">Fix Product Costs</h2>
+            <p className="text-slate-500">
+              Fix products whose cost was set to the discounted price instead of MRP
+            </p>
           </div>
 
-          {costError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{costError}</AlertDescription>
-            </Alert>
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Cost Checker</CardTitle>
+              <CardDescription>
+                This tool checks all products with purchase history and ensures their cost reflects the
+                original MRP (pre-discount), not the discounted price.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-4">
+                <Button onClick={handleCheckCosts} disabled={isCheckingCosts || isFixingCosts}>
+                  {isCheckingCosts ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="mr-2 h-4 w-4" />
+                  )}
+                  Check Product Costs
+                </Button>
+
+                {costCheckResult && costCheckResult.productsWithIssues > 0 && (
+                  <Button onClick={handleFixCosts} disabled={isCheckingCosts || isFixingCosts} variant="destructive">
+                    {isFixingCosts ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Fix All Costs
+                  </Button>
+                )}
+              </div>
+
+              {costError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{costError}</AlertDescription>
+                </Alert>
+              )}
+
+              {costCheckResult && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Check Results</AlertTitle>
+                  <AlertDescription>
+                    {costCheckResult.message}
+                    <div className="mt-2 flex gap-4">
+                      <Badge variant="outline">Total Products: {costCheckResult.totalProducts}</Badge>
+                      <Badge variant={costCheckResult.productsWithIssues > 0 ? "destructive" : "default"}>
+                        Issues Found: {costCheckResult.productsWithIssues}
+                      </Badge>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {costFixResult && (
+                <Alert className="border-green-600 bg-green-50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <AlertTitle className="text-green-900">Success</AlertTitle>
+                  <AlertDescription className="text-green-800">
+                    {costFixResult.message}
+                    <div className="mt-2 flex gap-4">
+                      <Badge variant="outline">Total Products: {costFixResult.summary.totalProducts}</Badge>
+                      <Badge className="bg-green-600">Fixed: {costFixResult.summary.fixedCount}</Badge>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+
+          {costCheckResult && costCheckResult.issues.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Products with Incorrect Costs</CardTitle>
+                <CardDescription>
+                  These products have their cost set to the discounted price instead of MRP
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product Name</TableHead>
+                      <TableHead className="text-right">Current Cost</TableHead>
+                      <TableHead className="text-right">Correct MRP</TableHead>
+                      <TableHead className="text-right">Discount</TableHead>
+                      <TableHead>Latest Invoice</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {costCheckResult.issues.map((issue) => (
+                      <TableRow key={issue.id}>
+                        <TableCell className="font-medium">{issue.name}</TableCell>
+                        <TableCell className="text-right text-red-600">
+                          {formatCurrency(issue.currentCost)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-green-600">
+                          {formatCurrency(issue.correctCost)}
+                        </TableCell>
+                        <TableCell className="text-right">{issue.discount}%</TableCell>
+                        <TableCell>{issue.latestInvoice}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           )}
 
-          {costCheckResult && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Check Results</AlertTitle>
-              <AlertDescription>
-                {costCheckResult.message}
-                <div className="mt-2 flex gap-4">
-                  <Badge variant="outline">Total Products: {costCheckResult.totalProducts}</Badge>
-                  <Badge variant={costCheckResult.productsWithIssues > 0 ? "destructive" : "default"}>
-                    Issues Found: {costCheckResult.productsWithIssues}
-                  </Badge>
-                </div>
-              </AlertDescription>
-            </Alert>
+          {costFixResult && costFixResult.fixes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Fixed Product Costs</CardTitle>
+                <CardDescription>
+                  Successfully updated the following product costs to MRP
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product Name</TableHead>
+                      <TableHead className="text-right">Old Cost</TableHead>
+                      <TableHead className="text-right">New Cost (MRP)</TableHead>
+                      <TableHead className="text-right">Discount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {costFixResult.fixes.map((fix) => (
+                      <TableRow key={fix.id}>
+                        <TableCell className="font-medium">{fix.name}</TableCell>
+                        <TableCell className="text-right text-red-600">
+                          {formatCurrency(fix.oldCost)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-green-600">
+                          {formatCurrency(fix.newCost)}
+                        </TableCell>
+                        <TableCell className="text-right">{fix.discount}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           )}
-
-          {costFixResult && (
-            <Alert className="border-green-600 bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-900">Success</AlertTitle>
-              <AlertDescription className="text-green-800">
-                {costFixResult.message}
-                <div className="mt-2 flex gap-4">
-                  <Badge variant="outline">Total Products: {costFixResult.summary.totalProducts}</Badge>
-                  <Badge className="bg-green-600">Fixed: {costFixResult.summary.fixedCount}</Badge>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      {costCheckResult && costCheckResult.issues.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Products with Incorrect Costs</CardTitle>
-            <CardDescription>
-              These products have their cost set to the discounted price instead of MRP
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead className="text-right">Current Cost</TableHead>
-                  <TableHead className="text-right">Correct MRP</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
-                  <TableHead>Latest Invoice</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {costCheckResult.issues.map((issue) => (
-                  <TableRow key={issue.id}>
-                    <TableCell className="font-medium">{issue.name}</TableCell>
-                    <TableCell className="text-right text-red-600">
-                      {formatCurrency(issue.currentCost)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-green-600">
-                      {formatCurrency(issue.correctCost)}
-                    </TableCell>
-                    <TableCell className="text-right">{issue.discount}%</TableCell>
-                    <TableCell>{issue.latestInvoice}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {costFixResult && costFixResult.fixes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Fixed Product Costs</CardTitle>
-            <CardDescription>
-              Successfully updated the following product costs to MRP
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead className="text-right">Old Cost</TableHead>
-                  <TableHead className="text-right">New Cost (MRP)</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {costFixResult.fixes.map((fix) => (
-                  <TableRow key={fix.id}>
-                    <TableCell className="font-medium">{fix.name}</TableCell>
-                    <TableCell className="text-right text-red-600">
-                      {formatCurrency(fix.oldCost)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-green-600">
-                      {formatCurrency(fix.newCost)}
-                    </TableCell>
-                    <TableCell className="text-right">{fix.discount}%</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </div>
+        </PageAnimation>
+      );
 }
