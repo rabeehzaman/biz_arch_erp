@@ -22,6 +22,7 @@ interface ProductComboboxProps {
   onValueChange: (value: string) => void;
   required?: boolean;
   onSelect?: () => void;
+  onSelectFocusNext?: (triggerRef: React.RefObject<HTMLButtonElement | null>) => void;
   onProductCreated?: (product: Product) => void;
 }
 
@@ -31,6 +32,7 @@ export function ProductCombobox({
   onValueChange,
   required = false,
   onSelect,
+  onSelectFocusNext,
   onProductCreated,
 }: ProductComboboxProps) {
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
@@ -96,6 +98,7 @@ export function ProductCombobox({
           emptyText="No products found. Click + to add one."
           required={required}
           onSelect={onSelect}
+          onSelectFocusNext={onSelectFocusNext}
         />
       </div>
       <Button

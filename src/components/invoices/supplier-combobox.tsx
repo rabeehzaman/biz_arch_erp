@@ -14,6 +14,8 @@ interface SupplierComboboxProps {
   onValueChange: (value: string) => void;
   required?: boolean;
   onSelect?: () => void;
+  onSelectFocusNext?: (triggerRef: React.RefObject<HTMLButtonElement | null>) => void;
+  autoFocus?: boolean;
 }
 
 export function SupplierCombobox({
@@ -22,6 +24,8 @@ export function SupplierCombobox({
   onValueChange,
   required = false,
   onSelect,
+  onSelectFocusNext,
+  autoFocus = false,
 }: SupplierComboboxProps) {
   return (
     <Combobox
@@ -46,6 +50,8 @@ export function SupplierCombobox({
       emptyText="No suppliers found."
       required={required}
       onSelect={onSelect}
+      onSelectFocusNext={onSelectFocusNext}
+      autoFocus={autoFocus}
     />
   );
 }

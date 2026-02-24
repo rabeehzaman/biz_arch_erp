@@ -18,7 +18,9 @@ interface CustomerComboboxProps {
   onValueChange: (value: string) => void;
   required?: boolean;
   onSelect?: () => void;
+  onSelectFocusNext?: (triggerRef: React.RefObject<HTMLButtonElement | null>) => void;
   onCustomerCreated?: (customer: Customer) => void;
+  autoFocus?: boolean;
 }
 
 export function CustomerCombobox({
@@ -27,7 +29,9 @@ export function CustomerCombobox({
   onValueChange,
   required = false,
   onSelect,
+  onSelectFocusNext,
   onCustomerCreated,
+  autoFocus = false,
 }: CustomerComboboxProps) {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
 
@@ -64,6 +68,8 @@ export function CustomerCombobox({
           emptyText="No customers found. Click + to add one."
           required={required}
           onSelect={onSelect}
+          onSelectFocusNext={onSelectFocusNext}
+          autoFocus={autoFocus}
         />
       </div>
       <Button

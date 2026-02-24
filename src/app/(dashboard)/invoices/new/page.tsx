@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 
 interface Customer {
   id: string;
@@ -55,8 +56,9 @@ export default function NewInvoicePage() {
     { id: "1", productId: "", quantity: 1, unitPrice: 0, discount: 0 },
   ]);
 
-  const formRef = useRef<HTMLFormElement>(null);
+  const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   // Focus quantity input for a specific line item
   const focusQuantity = useCallback((itemId: string) => {
@@ -78,7 +80,7 @@ export default function NewInvoicePage() {
       // Alt+A: Add new line item
       if (e.altKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
-        addLineItem();
+        addLineItem(true);
       }
       // Ctrl+Enter: Submit form
       if (e.ctrlKey && e.key === "Enter") {
@@ -103,17 +105,27 @@ export default function NewInvoicePage() {
     setProducts(data);
   };
 
-  const addLineItem = () => {
+  const addLineItem = (focusNewProduct: boolean = false) => {
+    const newId = Date.now().toString();
     setLineItems([
       ...lineItems,
       {
-        id: Date.now().toString(),
+        id: newId,
         productId: "",
         quantity: 1,
         unitPrice: 0,
         discount: 0,
       },
     ]);
+
+    if (focusNewProduct) {
+      setTimeout(() => {
+        const productTrigger = productComboRefs.current.get(newId);
+        if (productTrigger) {
+          productTrigger.focus();
+        }
+      }, 50);
+    }
   };
 
   const removeLineItem = (id: string) => {
@@ -277,6 +289,8 @@ export default function NewInvoicePage() {
                     }
                     onCustomerCreated={fetchCustomers}
                     required
+                    onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                    autoFocus={true}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -299,7 +313,7 @@ export default function NewInvoicePage() {
               <CardHeader>
                 <CardTitle>Line Items</CardTitle>
                 <CardAction>
-                  <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => addLineItem(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Item
                   </Button>
@@ -320,15 +334,26 @@ export default function NewInvoicePage() {
                       >
                         <div className="sm:col-span-5">
                           <Label>Product *</Label>
-                          <ProductCombobox
-                            products={products}
-                            value={item.productId}
-                            onValueChange={(value) =>
-                              updateLineItem(item.id, "productId", value)
+                          <div ref={(el) => {
+                            if (el) {
+                              // Find the combobox trigger button inside
+                              const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
+                              if (button) productComboRefs.current.set(item.id, button);
+                            } else {
+                              productComboRefs.current.delete(item.id);
                             }
-                            onProductCreated={fetchProducts}
-                            onSelect={() => focusQuantity(item.id)}
-                          />
+                          }}>
+                            <ProductCombobox
+                              products={products}
+                              value={item.productId}
+                              onValueChange={(value) =>
+                                updateLineItem(item.id, "productId", value)
+                              }
+                              onProductCreated={fetchProducts}
+                              onSelect={() => focusQuantity(item.id)}
+                              onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                            />
+                          </div>
                         </div>
                         <div className="grid grid-cols-1 gap-2 sm:contents">
                           <div className="sm:col-span-2">
@@ -342,6 +367,7 @@ export default function NewInvoicePage() {
                                 }
                               }}
                               type="number"
+                              onFocus={(e) => e.target.select()}
                               min="1"
                               step="0.01"
                               value={item.quantity || ""}
@@ -367,6 +393,7 @@ export default function NewInvoicePage() {
                             <Label>Unit Price *</Label>
                             <Input
                               type="number"
+                              onFocus={(e) => e.target.select()}
                               min="0"
                               step="0.01"
                               value={item.unitPrice}
@@ -384,6 +411,7 @@ export default function NewInvoicePage() {
                             <Label>Disc %</Label>
                             <Input
                               type="number"
+                              onFocus={(e) => e.target.select()}
                               min="0"
                               max="100"
                               step="0.01"
@@ -395,6 +423,23 @@ export default function NewInvoicePage() {
                                   parseFloat(e.target.value) || 0
                                 )
                               }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+                                  e.preventDefault();
+                                  e.stopPropagation(); // Prevent useEnterToTab from also moving focus
+                                  const isLastItem = index === lineItems.length - 1;
+                                  if (isLastItem) {
+                                    addLineItem(true);
+                                  } else {
+                                    // Manually force focus to the next product row
+                                    const nextItemId = lineItems[index + 1].id;
+                                    const nextProductTrigger = productComboRefs.current.get(nextItemId);
+                                    if (nextProductTrigger) {
+                                      nextProductTrigger.focus();
+                                    }
+                                  }
+                                }
+                              }}
                               placeholder="0"
                             />
                           </div>

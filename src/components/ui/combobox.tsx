@@ -19,7 +19,9 @@ interface ComboboxProps<T> {
   disabled?: boolean;
   className?: string;
   onSelect?: () => void;
+  onSelectFocusNext?: (triggerRef: React.RefObject<HTMLButtonElement | null>) => void;
   autoOpenOnFocus?: boolean;
+  autoFocus?: boolean;
 }
 
 export function Combobox<T>({
@@ -36,7 +38,9 @@ export function Combobox<T>({
   disabled = false,
   className,
   onSelect,
+  onSelectFocusNext,
   autoOpenOnFocus = true,
+  autoFocus = false,
 }: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -83,6 +87,12 @@ export function Combobox<T>({
         e.preventDefault();
         if (filteredItems[highlightedIndex]) {
           handleSelect(getId(filteredItems[highlightedIndex]));
+          // When selected via Enter, request moving focus forward
+          if (onSelectFocusNext) {
+            setTimeout(() => {
+              onSelectFocusNext(triggerRef);
+            }, 10);
+          }
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
@@ -139,6 +149,9 @@ export function Combobox<T>({
           aria-expanded={open}
           aria-required={required}
           disabled={disabled}
+          autoFocus={autoFocus}
+          // Using onFocus allows standard tab cycling. 
+          // However, autoFocus will trigger this on mount, which is generally desired for the first field.
           onFocus={() => {
             if (justClosedRef.current) {
               justClosedRef.current = false;

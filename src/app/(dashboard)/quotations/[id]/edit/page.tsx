@@ -273,95 +273,95 @@ export default function EditQuotationPage({
   }
 
   return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Link href={`/quotations/${id}`}>
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Edit Quotation</h2>
-              <p className="text-slate-500">Update quotation details</p>
-            </div>
+    <PageAnimation>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href={`/quotations/${id}`}>
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Edit Quotation</h2>
+            <p className="text-slate-500">Update quotation details</p>
           </div>
+        </div>
 
-          <form ref={formRef} onSubmit={handleSubmit}>
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quotation Details</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="customer">Customer *</Label>
-                    <CustomerCombobox
-                      customers={customers}
-                      value={formData.customerId}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, customerId: value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="issueDate">Issue Date *</Label>
-                    <Input
-                      id="issueDate"
-                      type="date"
-                      value={formData.issueDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, issueDate: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="validUntil">Valid Until *</Label>
-                    <Input
-                      id="validUntil"
-                      type="date"
-                      value={formData.validUntil}
-                      min={formData.issueDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, validUntil: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+        <form ref={formRef} onSubmit={handleSubmit}>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quotation Details</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="customer">Customer *</Label>
+                  <CustomerCombobox
+                    customers={customers}
+                    value={formData.customerId}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, customerId: value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="issueDate">Issue Date *</Label>
+                  <Input
+                    id="issueDate"
+                    type="date"
+                    value={formData.issueDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, issueDate: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="validUntil">Valid Until *</Label>
+                  <Input
+                    id="validUntil"
+                    type="date"
+                    value={formData.validUntil}
+                    min={formData.issueDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, validUntil: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Line Items</CardTitle>
-                  <CardAction>
-                    <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Item
-                    </Button>
-                  </CardAction>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {lineItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="grid gap-4 sm:grid-cols-12 items-end p-4 border rounded-lg"
-                      >
-                        <div className="sm:col-span-5">
-                          <Label>Product *</Label>
-                          <ProductCombobox
-                            products={products}
-                            value={item.productId}
-                            onValueChange={(value) =>
-                              updateLineItem(item.id, "productId", value)
-                            }
-                            onSelect={() => focusQuantity(item.id)}
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 gap-2 sm:contents">
+            <Card>
+              <CardHeader>
+                <CardTitle>Line Items</CardTitle>
+                <CardAction>
+                  <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {lineItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="grid gap-4 sm:grid-cols-12 items-end p-4 border rounded-lg"
+                    >
+                      <div className="sm:col-span-5">
+                        <Label>Product *</Label>
+                        <ProductCombobox
+                          products={products}
+                          value={item.productId}
+                          onValueChange={(value) =>
+                            updateLineItem(item.id, "productId", value)
+                          }
+                          onSelect={() => focusQuantity(item.id)}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 sm:contents">
                         <div className="sm:col-span-2">
                           <Label>Quantity *</Label>
                           <Input
@@ -373,6 +373,7 @@ export default function EditQuotationPage({
                               }
                             }}
                             type="number"
+                            onFocus={(e) => e.target.select()}
                             min="1"
                             step="0.01"
                             value={item.quantity}
@@ -390,6 +391,7 @@ export default function EditQuotationPage({
                           <Label>Unit Price *</Label>
                           <Input
                             type="number"
+                            onFocus={(e) => e.target.select()}
                             min="0"
                             step="0.01"
                             value={item.unitPrice}
@@ -407,6 +409,7 @@ export default function EditQuotationPage({
                           <Label>Disc %</Label>
                           <Input
                             type="number"
+                            onFocus={(e) => e.target.select()}
                             min="0"
                             max="100"
                             step="0.01"
@@ -421,88 +424,88 @@ export default function EditQuotationPage({
                             placeholder="0"
                           />
                         </div>
-                        </div>
-                        <div className="sm:col-span-1 flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeLineItem(item.id)}
-                            disabled={lineItems.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                        <div className="sm:col-span-12 text-right text-sm text-slate-500">
-                          Line Total: ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                          {item.discount > 0 && (
-                            <span className="ml-2 text-green-600">(-{item.discount}%)</span>
-                          )}
-                        </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Additional Information</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
-                      }
-                      placeholder="Notes to the customer..."
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="terms">Terms & Conditions</Label>
-                    <Textarea
-                      id="terms"
-                      value={formData.terms}
-                      onChange={(e) =>
-                        setFormData({ ...formData, terms: e.target.value })
-                      }
-                      placeholder="Payment terms..."
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-w-xs ml-auto">
-                    <div className="flex justify-between text-sm">
-                      <span>Subtotal</span>
-                      <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
+                      <div className="sm:col-span-1 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeLineItem(item.id)}
+                          disabled={lineItems.length === 1}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                      <div className="sm:col-span-12 text-right text-sm text-slate-500">
+                        Line Total: ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                        {item.discount > 0 && (
+                          <span className="ml-2 text-green-600">(-{item.discount}%)</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex justify-between font-bold text-lg border-t pt-2">
-                      <span>Total</span>
-                      <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
-                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Information</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    placeholder="Notes to the customer..."
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="terms">Terms & Conditions</Label>
+                  <Textarea
+                    id="terms"
+                    value={formData.terms}
+                    onChange={(e) =>
+                      setFormData({ ...formData, terms: e.target.value })
+                    }
+                    placeholder="Payment terms..."
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-w-xs ml-auto">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
-                  <div className="mt-6 flex justify-end">
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting || !formData.customerId || !formData.issueDate || !formData.validUntil || !lineItems.some(item => item.productId)}
-                    >
-                      {isSubmitting ? "Updating..." : "Update Quotation"}
-                    </Button>
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                    <span>Total</span>
+                    <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </form>
-        </div>
-        </PageAnimation>
-      );
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !formData.customerId || !formData.issueDate || !formData.validUntil || !lineItems.some(item => item.productId)}
+                  >
+                    {isSubmitting ? "Updating..." : "Update Quotation"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </form>
+      </div>
+    </PageAnimation>
+  );
 }

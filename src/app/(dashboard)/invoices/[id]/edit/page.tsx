@@ -282,88 +282,88 @@ export default function EditInvoicePage({
   }
 
   return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Link href={`/invoices/${id}`}>
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Edit Invoice</h2>
-              <p className="text-slate-500">Update invoice details</p>
-            </div>
+    <PageAnimation>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href={`/invoices/${id}`}>
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Edit Invoice</h2>
+            <p className="text-slate-500">Update invoice details</p>
           </div>
+        </div>
 
-          <form ref={formRef} onSubmit={handleSubmit}>
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Invoice Details</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="customer">Customer *</Label>
-                    <CustomerCombobox
-                      customers={customers}
-                      value={formData.customerId}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, customerId: value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="date">Date *</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, date: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+        <form ref={formRef} onSubmit={handleSubmit}>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Invoice Details</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="customer">Customer *</Label>
+                  <CustomerCombobox
+                    customers={customers}
+                    value={formData.customerId}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, customerId: value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="date">Date *</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Line Items</CardTitle>
-                  <CardAction>
-                    <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Item
-                    </Button>
-                  </CardAction>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {lineItems.map((item) => {
-                      const product = products.find((p) => p.id === item.productId);
-                      const availableStock = product?.availableStock ?? 0;
-                      const hasStockShortfall = item.productId && item.quantity > availableStock;
-                      const shortfall = item.quantity - availableStock;
+            <Card>
+              <CardHeader>
+                <CardTitle>Line Items</CardTitle>
+                <CardAction>
+                  <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {lineItems.map((item) => {
+                    const product = products.find((p) => p.id === item.productId);
+                    const availableStock = product?.availableStock ?? 0;
+                    const hasStockShortfall = item.productId && item.quantity > availableStock;
+                    const shortfall = item.quantity - availableStock;
 
-                      return (
-                        <div
-                          key={item.id}
-                          className="grid gap-4 sm:grid-cols-12 items-end p-4 border rounded-lg"
-                        >
-                          <div className="sm:col-span-5">
-                            <Label>Product *</Label>
-                            <ProductCombobox
-                              products={products}
-                              value={item.productId}
-                              onValueChange={(value) =>
-                                updateLineItem(item.id, "productId", value)
-                              }
-                              onSelect={() => focusQuantity(item.id)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 gap-2 sm:contents">
+                    return (
+                      <div
+                        key={item.id}
+                        className="grid gap-4 sm:grid-cols-12 items-end p-4 border rounded-lg"
+                      >
+                        <div className="sm:col-span-5">
+                          <Label>Product *</Label>
+                          <ProductCombobox
+                            products={products}
+                            value={item.productId}
+                            onValueChange={(value) =>
+                              updateLineItem(item.id, "productId", value)
+                            }
+                            onSelect={() => focusQuantity(item.id)}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 sm:contents">
                           <div className="sm:col-span-2">
                             <Label>Quantity *</Label>
                             <Input
@@ -375,6 +375,7 @@ export default function EditInvoicePage({
                                 }
                               }}
                               type="number"
+                              onFocus={(e) => e.target.select()}
                               min="1"
                               step="0.01"
                               value={item.quantity || ""}
@@ -396,42 +397,44 @@ export default function EditInvoicePage({
                               </p>
                             )}
                           </div>
-                        <div className="sm:col-span-2">
-                          <Label>Unit Price *</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.unitPrice}
-                            onChange={(e) =>
-                              updateLineItem(
-                                item.id,
-                                "unitPrice",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            required
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Label>Disc %</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            value={item.discount || ""}
-                            onChange={(e) =>
-                              updateLineItem(
-                                item.id,
-                                "discount",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            placeholder="0"
-                          />
-                        </div>
+                          <div className="sm:col-span-2">
+                            <Label>Unit Price *</Label>
+                            <Input
+                              type="number"
+                              onFocus={(e) => e.target.select()}
+                              min="0"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  item.id,
+                                  "unitPrice",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              required
+                            />
                           </div>
+                          <div className="sm:col-span-2">
+                            <Label>Disc %</Label>
+                            <Input
+                              type="number"
+                              onFocus={(e) => e.target.select()}
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={item.discount || ""}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  item.id,
+                                  "discount",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
                         <div className="sm:col-span-1 flex justify-end">
                           <Button
                             type="button"
@@ -443,77 +446,77 @@ export default function EditInvoicePage({
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </div>
-                          <div className="sm:col-span-12 text-right text-sm text-slate-500">
-                            Line Total: ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                            {item.discount > 0 && (
-                              <span className="ml-2 text-green-600">(-{item.discount}%)</span>
-                            )}
-                          </div>
+                        <div className="sm:col-span-12 text-right text-sm text-slate-500">
+                          Line Total: ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                          {item.discount > 0 && (
+                            <span className="ml-2 text-green-600">(-{item.discount}%)</span>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Additional Information</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
-                      }
-                      placeholder="Notes to the customer..."
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="terms">Terms & Conditions</Label>
-                    <Textarea
-                      id="terms"
-                      value={formData.terms}
-                      onChange={(e) =>
-                        setFormData({ ...formData, terms: e.target.value })
-                      }
-                      placeholder="Payment terms..."
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Information</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    placeholder="Notes to the customer..."
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="terms">Terms & Conditions</Label>
+                  <Textarea
+                    id="terms"
+                    value={formData.terms}
+                    onChange={(e) =>
+                      setFormData({ ...formData, terms: e.target.value })
+                    }
+                    placeholder="Payment terms..."
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-w-xs ml-auto">
-                    <div className="flex justify-between text-sm">
-                      <span>Subtotal</span>
-                      <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-lg border-t pt-2">
-                      <span>Total</span>
-                      <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-w-xs ml-auto">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
-                  <div className="mt-6 flex justify-end">
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
-                    >
-                      {isSubmitting ? "Updating..." : "Update Invoice"}
-                    </Button>
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                    <span>Total</span>
+                    <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </form>
-        </div>
-        </PageAnimation>
-      );
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
+                  >
+                    {isSubmitting ? "Updating..." : "Update Invoice"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </form>
+      </div>
+    </PageAnimation>
+  );
 }
