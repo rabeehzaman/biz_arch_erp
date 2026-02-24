@@ -35,6 +35,8 @@ import { CartSummary, calculateCartTotal } from "@/components/pos/cart-summary";
 import { CustomerSelect } from "@/components/pos/customer-select";
 import { PaymentPanel } from "@/components/pos/payment-panel";
 import type { PaymentEntry } from "@/components/pos/split-payment-form";
+import type { ReceiptData } from "@/components/pos/receipt";
+import { generateReceiptHtml, printReceipt } from "@/lib/print-receipt";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -133,6 +135,18 @@ export default function POSPage() {
   );
   const [taxRateOverride, setTaxRateOverride] = useState<number | null>(null);
   const taxRate = taxRateOverride ?? (taxRateSetting?.value ? parseFloat(taxRateSetting.value) : 0);
+
+  // Receipt printing
+  const { data: receiptSetting } = useSWR<{ value: string }>(
+    posSession ? "/api/settings/pos-receipt-printing" : null,
+    fetcher
+  );
+  const { data: companySettings } = useSWR(
+    posSession ? "/api/settings" : null,
+    fetcher
+  );
+  const receiptPrintingEnabled = receiptSetting?.value === "true";
+  const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
 
   // ── Cart Handlers ──────────────────────────────────────────────────
 
@@ -280,6 +294,39 @@ export default function POSPage() {
       const result = await res.json();
       const change = result.change || 0;
 
+      // Build receipt data before clearing cart
+      const receiptData: ReceiptData = {
+        storeName: companySettings?.companyName || "Store",
+        storeAddress: companySettings?.companyAddress,
+        storeCity: companySettings?.companyCity,
+        storeState: companySettings?.companyState,
+        storePhone: companySettings?.companyPhone,
+        storeGstin: companySettings?.companyGstNumber,
+        invoiceNumber: result.invoice?.invoiceNumber || "",
+        date: new Date(),
+        customerName: selectedCustomer?.name,
+        items: cart.map((item) => {
+          const lineTotal = item.quantity * item.price * (1 - (item.discount || 0) / 100);
+          return {
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            discount: item.discount || 0,
+            lineTotal,
+          };
+        }),
+        subtotal: calculateCartTotal(cart, taxRate).subtotal,
+        taxRate,
+        taxAmount: calculateCartTotal(cart, taxRate).taxAmount,
+        total: calculateCartTotal(cart, taxRate).total,
+        payments: payments.map((p) => ({
+          method: p.method,
+          amount: parseFloat(p.amount),
+        })),
+        change,
+      };
+      setLastReceiptData(receiptData);
+
       clearCart();
       setView("cart");
       setMobileView("products");
@@ -295,6 +342,16 @@ export default function POSPage() {
 
       if (result.warnings?.length > 0) {
         result.warnings.forEach((w: string) => toast.warning(w));
+      }
+
+      // Auto-print receipt (fire-and-forget)
+      if (receiptPrintingEnabled) {
+        try {
+          const html = generateReceiptHtml(receiptData);
+          printReceipt(html);
+        } catch (e) {
+          console.error("Receipt printing failed:", e);
+        }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Checkout failed");
@@ -433,6 +490,14 @@ export default function POSPage() {
         heldOrdersCount={heldOrders.length}
         onHeldOrdersClick={() => setShowHeldSheet(true)}
         onCloseSession={() => setShowCloseDialog(true)}
+        onReprintReceipt={lastReceiptData ? () => {
+          try {
+            const html = generateReceiptHtml(lastReceiptData);
+            printReceipt(html);
+          } catch (e) {
+            console.error("Receipt reprint failed:", e);
+          }
+        } : undefined}
       />
 
       {/* Main Content */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Clock, LogOut, PauseCircle } from "lucide-react";
+import { Building2, Clock, LogOut, PauseCircle, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -15,6 +15,7 @@ interface POSHeaderProps {
   heldOrdersCount: number;
   onHeldOrdersClick: () => void;
   onCloseSession: () => void;
+  onReprintReceipt?: () => void;
 }
 
 export function POSHeader({
@@ -22,6 +23,7 @@ export function POSHeader({
   heldOrdersCount,
   onHeldOrdersClick,
   onCloseSession,
+  onReprintReceipt,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const router = useRouter();
@@ -51,6 +53,18 @@ export function POSHeader({
           <Clock className="h-4 w-4" />
           {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
+
+        {onReprintReceipt && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
+            onClick={onReprintReceipt}
+            title="Reprint last receipt"
+          >
+            <Printer className="h-4 w-4" />
+          </Button>
+        )}
 
         <Button
           variant="ghost"

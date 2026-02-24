@@ -49,6 +49,8 @@ export const SETTINGS_KEY_MAP: Record<keyof CompanySettingsFormData, string> = {
   bankBranch: "company_bankBranch",
 };
 
+export const POS_RECEIPT_PRINTING_KEY = "pos_receipt_printing";
+
 export const DEFAULT_SETTINGS: CompanySettingsFormData = {
   companyName: "",
   companyAddress: "",
