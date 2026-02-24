@@ -43,6 +43,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState } from "react";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -155,6 +158,21 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { data: session } = useSession();
   const isSuperadmin = session?.user?.role === "superadmin";
 
+  const { data: disabledItems = [] } = useSWR<string[]>(
+    !isSuperadmin && session?.user ? "/api/sidebar" : null,
+    fetcher
+  );
+
+  const filterItems = (items: { name: string; href: string; icon: any }[]) =>
+    items.filter((item) => !disabledItems.includes(item.name));
+
+  const visibleNav = filterItems(navigation);
+  const visibleSales = filterItems(salesNavigation);
+  const visiblePurchases = filterItems(purchasesNavigation);
+  const visibleAccounting = filterItems(accountingNavigation);
+  const visibleReports = filterItems(reportsNavigation);
+  const visibleBottom = filterItems(bottomNavigation);
+
   return (
     <>
       {/* Logo */}
@@ -175,41 +193,49 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           ))
         ) : (
           <>
-            {navigation.map((item) => (
+            {visibleNav.map((item) => (
               <NavItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
             ))}
 
-            <CollapsibleSection
-              title="Sales"
-              icon={ShoppingCart}
-              items={salesNavigation}
-              pathname={pathname}
-              onNavigate={onNavigate}
-            />
+            {visibleSales.length > 0 && (
+              <CollapsibleSection
+                title="Sales"
+                icon={ShoppingCart}
+                items={visibleSales}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            )}
 
-            <CollapsibleSection
-              title="Purchases"
-              icon={Truck}
-              items={purchasesNavigation}
-              pathname={pathname}
-              onNavigate={onNavigate}
-            />
+            {visiblePurchases.length > 0 && (
+              <CollapsibleSection
+                title="Purchases"
+                icon={Truck}
+                items={visiblePurchases}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            )}
 
-            <CollapsibleSection
-              title="Accounting"
-              icon={BookOpen}
-              items={accountingNavigation}
-              pathname={pathname}
-              onNavigate={onNavigate}
-            />
+            {visibleAccounting.length > 0 && (
+              <CollapsibleSection
+                title="Accounting"
+                icon={BookOpen}
+                items={visibleAccounting}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            )}
 
-            <CollapsibleSection
-              title="Reports"
-              icon={BarChart3}
-              items={reportsNavigation}
-              pathname={pathname}
-              onNavigate={onNavigate}
-            />
+            {visibleReports.length > 0 && (
+              <CollapsibleSection
+                title="Reports"
+                icon={BarChart3}
+                items={visibleReports}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            )}
           </>
         )}
       </nav>
@@ -217,7 +243,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Bottom Navigation */}
       <div className="px-3 py-4">
         <Separator className="mb-4 bg-slate-700" />
-        {!isSuperadmin && bottomNavigation.map((item) => {
+        {!isSuperadmin && visibleBottom.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

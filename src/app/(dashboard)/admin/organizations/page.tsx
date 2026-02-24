@@ -30,9 +30,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus } from "lucide-react";
+import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, Settings } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { SidebarConfigDialog } from "./sidebar-config-dialog";
 
 interface Organization {
   id: string;
@@ -67,6 +68,9 @@ export default function OrganizationsPage() {
   const [userOrgId, setUserOrgId] = useState("");
   const [userError, setUserError] = useState("");
   const [userSuccess, setUserSuccess] = useState("");
+
+  // Sidebar config state
+  const [sidebarConfigOrg, setSidebarConfigOrg] = useState<{ id: string, name: string } | null>(null);
 
   const fetchOrganizations = useCallback(async () => {
     try {
@@ -181,146 +185,146 @@ export default function OrganizationsPage() {
           <p className="text-muted-foreground">Manage tenant organizations</p>
         </div>
         <div className="flex gap-2">
-        <Dialog open={userOpen} onOpenChange={(open) => { setUserOpen(open); if (!open) { setUserError(""); setUserSuccess(""); } }}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <UserPlus className="mr-2 h-4 w-4" />
-              Create User
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create User</DialogTitle>
-              <DialogDescription>
-                Create a new user and assign them to an organization.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="userName">Full Name</Label>
-                <Input
-                  id="userName"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="John Doe"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="userEmail">Email</Label>
-                <Input
-                  id="userEmail"
-                  type="email"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  placeholder="john@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="userPassword">Password</Label>
-                <Input
-                  id="userPassword"
-                  type="password"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  placeholder="Enter password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="userRole">Role</Label>
-                <Select value={userRole} onValueChange={setUserRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="userOrg">Organization</Label>
-                <Select value={userOrgId} onValueChange={setUserOrgId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select organization" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {organizations.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {userError && (
-                <p className="text-sm text-red-500">{userError}</p>
-              )}
-              {userSuccess && (
-                <p className="text-sm text-green-600">{userSuccess}</p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setUserOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateUser} disabled={creatingUser}>
-                {creatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Dialog open={userOpen} onOpenChange={(open) => { setUserOpen(open); if (!open) { setUserError(""); setUserSuccess(""); } }}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <UserPlus className="mr-2 h-4 w-4" />
                 Create User
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Organization
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Organization</DialogTitle>
-              <DialogDescription>
-                Add a new tenant organization to the system.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Organization Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="Acme Corp"
-                />
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create User</DialogTitle>
+                <DialogDescription>
+                  Create a new user and assign them to an organization.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="userName">Full Name</Label>
+                  <Input
+                    id="userName"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="userEmail">Email</Label>
+                  <Input
+                    id="userEmail"
+                    type="email"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    placeholder="john@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="userPassword">Password</Label>
+                  <Input
+                    id="userPassword"
+                    type="password"
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
+                    placeholder="Enter password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="userRole">Role</Label>
+                  <Select value={userRole} onValueChange={setUserRole}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="userOrg">Organization</Label>
+                  <Select value={userOrgId} onValueChange={setUserOrgId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select organization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {organizations.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {userError && (
+                  <p className="text-sm text-red-500">{userError}</p>
+                )}
+                {userSuccess && (
+                  <p className="text-sm text-green-600">{userSuccess}</p>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="slug">Slug</Label>
-                <Input
-                  id="slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="acme-corp"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Lowercase letters, numbers, and hyphens only
-                </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setUserOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateUser} disabled={creatingUser}>
+                  {creatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create User
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Organization
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Organization</DialogTitle>
+                <DialogDescription>
+                  Add a new tenant organization to the system.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Organization Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder="Acme Corp"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="slug">Slug</Label>
+                  <Input
+                    id="slug"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    placeholder="acme-corp"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Lowercase letters, numbers, and hyphens only
+                  </p>
+                </div>
+                {error && (
+                  <p className="text-sm text-red-500">{error}</p>
+                )}
               </div>
-              {error && (
-                <p className="text-sm text-red-500">{error}</p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreate} disabled={creating}>
-                {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreate} disabled={creating}>
+                  {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -346,6 +350,7 @@ export default function OrganizationsPage() {
                   <TableHead className="text-center">Customers</TableHead>
                   <TableHead className="text-center">Invoices</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -381,11 +386,17 @@ export default function OrganizationsPage() {
                     <TableCell>
                       {new Date(org.createdAt).toLocaleDateString()}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setSidebarConfigOrg({ id: org.id, name: org.name })}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Sidebar
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {organizations.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       No organizations found
                     </TableCell>
                   </TableRow>
@@ -395,6 +406,15 @@ export default function OrganizationsPage() {
           )}
         </CardContent>
       </Card>
+
+      {sidebarConfigOrg && (
+        <SidebarConfigDialog
+          open={!!sidebarConfigOrg}
+          onOpenChange={(open) => !open && setSidebarConfigOrg(null)}
+          orgId={sidebarConfigOrg.id}
+          orgName={sidebarConfigOrg.name}
+        />
+      )}
     </div>
   );
 }
