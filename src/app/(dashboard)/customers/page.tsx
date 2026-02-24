@@ -39,6 +39,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 
 interface User {
   id: string;
@@ -89,17 +90,7 @@ export default function CustomersPage() {
   const [selectedCustomerForAssign, setSelectedCustomerForAssign] = useState<Customer | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "India",
-    notes: "",
-  });
+
   const [openingBalanceData, setOpeningBalanceData] = useState({
     amount: "",
     transactionDate: new Date().toISOString().split("T")[0],
@@ -182,45 +173,7 @@ export default function CustomersPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const payload = {
-      name: formData.name,
-      email: formData.email || null,
-      phone: formData.phone || null,
-      address: formData.address || null,
-      city: formData.city || null,
-      state: formData.state || null,
-      zipCode: formData.zipCode || null,
-      country: formData.country || "India",
-      notes: formData.notes || null,
-    };
-
-    try {
-      const response = editingCustomer
-        ? await fetch(`/api/customers/${editingCustomer.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-        : await fetch("/api/customers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-      if (!response.ok) throw new Error("Failed to save");
-
-      setIsDialogOpen(false);
-      resetForm();
-      fetchCustomers();
-      toast.success(editingCustomer ? "Customer updated" : "Customer added");
-    } catch (error) {
-      toast.error("Failed to save customer");
-      console.error("Failed to save customer:", error);
-    }
-  };
+  // Form logic moved to CustomerFormDialog
 
   const handleOpeningBalanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,17 +229,6 @@ export default function CustomersPage() {
 
   const handleEdit = (customer: Customer) => {
     setEditingCustomer(customer);
-    setFormData({
-      name: customer.name,
-      email: customer.email || "",
-      phone: customer.phone || "",
-      address: customer.address || "",
-      city: customer.city || "",
-      state: customer.state || "",
-      zipCode: customer.zipCode || "",
-      country: customer.country || "India",
-      notes: customer.notes || "",
-    });
     setIsDialogOpen(true);
   };
 
@@ -304,20 +246,7 @@ export default function CustomersPage() {
     }
   };
 
-  const resetForm = () => {
-    setEditingCustomer(null);
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      country: "India",
-      notes: "",
-    });
-  };
+
 
   const filteredCustomers = customers.filter(
     (customer) =>
@@ -334,137 +263,26 @@ export default function CustomersPage() {
             <h2 className="text-2xl font-bold text-slate-900">Customers</h2>
             <p className="text-slate-500">Manage your customer database</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Customer
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl overflow-y-auto max-h-[90vh]">
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingCustomer ? "Edit Customer" : "Add New Customer"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingCustomer
-                      ? "Update the customer details below."
-                      : "Fill in the details to add a new customer."}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="country">Country</Label>
-                      <Input
-                        id="country"
-                        value={formData.country}
-                        onChange={(e) =>
-                          setFormData({ ...formData, country: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) =>
-                        setFormData({ ...formData, address: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={formData.city}
-                        onChange={(e) =>
-                          setFormData({ ...formData, city: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        value={formData.state}
-                        onChange={(e) =>
-                          setFormData({ ...formData, state: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="zipCode">ZIP Code</Label>
-                      <Input
-                        id="zipCode"
-                        value={formData.zipCode}
-                        onChange={(e) =>
-                          setFormData({ ...formData, zipCode: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
-                      }
-                      placeholder="Any additional notes..."
-                    />
-                  </div>
-                </div>
-                <DialogFooter className="mt-auto pt-4 border-t">
-                  <Button type="submit" className="w-full sm:w-auto">
-                    {editingCustomer ? "Update Customer" : "Add Customer"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button className="w-full sm:w-auto" onClick={() => setIsDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Customer
+          </Button>
+
+          <CustomerFormDialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setEditingCustomer(null);
+              }
+            }}
+            customerToEdit={editingCustomer || undefined}
+            onSuccess={() => {
+              fetchCustomers();
+              setIsDialogOpen(false);
+              setEditingCustomer(null);
+            }}
+          />
         </StaggerItem>
 
         <StaggerItem>

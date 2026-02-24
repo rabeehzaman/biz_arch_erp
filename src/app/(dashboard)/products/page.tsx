@@ -31,6 +31,7 @@ import { Plus, Pencil, Trash2, Search, Package, ArrowRight, AlertTriangle } from
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { UnitSelect } from "@/components/units/unit-select";
+import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { cn } from "@/lib/utils";
 
 interface Product {
@@ -84,15 +85,6 @@ function ProductsPageContent() {
   const [productSearch, setProductSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: "",
-    unitId: "",
-    sku: "",
-    isService: false,
-  });
 
   // — Inventory tab state —
   const [inventory, setInventory] = useState<InventoryProduct[]>([]);
@@ -177,61 +169,10 @@ function ProductsPageContent() {
     setSummary(result);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors: Record<string, string> = {};
-    if (!formData.name.trim()) errors.name = "Name is required";
-    if (!formData.price || parseFloat(formData.price) < 0)
-      errors.price = "A valid price is required";
-    if (!formData.unitId) errors.unitId = "Unit is required";
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-    setFormErrors({});
-
-    const payload = {
-      name: formData.name,
-      description: formData.description || null,
-      price: parseFloat(formData.price),
-      unitId: formData.unitId,
-      sku: formData.sku || null,
-      isService: formData.isService,
-    };
-
-    try {
-      const response = editingProduct
-        ? await fetch(`/api/products/${editingProduct.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-        : await fetch("/api/products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      if (!response.ok) throw new Error("Failed to save");
-      setIsDialogOpen(false);
-      resetForm();
-      fetchProducts();
-      toast.success(editingProduct ? "Product updated" : "Product added");
-    } catch (error) {
-      toast.error("Failed to save product");
-      console.error("Failed to save product:", error);
-    }
-  };
+  // Form submission and state management has been extracted to ProductFormDialog
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      description: product.description || "",
-      price: product.price.toString(),
-      unitId: product.unit?.id || "",
-      sku: product.sku || "",
-      isService: product.isService || false,
-    });
     setIsDialogOpen(true);
   };
 
@@ -248,11 +189,7 @@ function ProductsPageContent() {
     }
   };
 
-  const resetForm = () => {
-    setEditingProduct(null);
-    setFormErrors({});
-    setFormData({ name: "", description: "", price: "", unitId: "", sku: "", isService: false });
-  };
+
 
   const getStockQuantity = (product: InventoryProduct) =>
     product.stockLots?.reduce((sum, lot) => sum + Number(lot.remainingQuantity), 0) || 0;
@@ -326,118 +263,27 @@ function ProductsPageContent() {
         {activeTab === "products" && (
           <div className="space-y-4">
             <div className="flex justify-end">
-              <Dialog
-                open={isDialogOpen}
-                onOpenChange={(open) => {
-                  setIsDialogOpen(open);
-                  if (!open) resetForm();
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button className="w-full sm:w-auto">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Product
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl overflow-y-auto max-h-[90vh]">
-                  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingProduct ? "Edit Product" : "Add New Product"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {editingProduct
-                          ? "Update the product details below."
-                          : "Fill in the details to add a new product."}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="name">Name *</Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => {
-                            setFormData({ ...formData, name: e.target.value });
-                            if (e.target.value) setFormErrors((prev) => ({ ...prev, name: "" }));
-                          }}
-                          className={formErrors.name ? "border-red-500" : ""}
-                        />
-                        {formErrors.name && (
-                          <p className="text-sm text-red-500">{formErrors.name}</p>
-                        )}
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                          id="description"
-                          value={formData.description}
-                          onChange={(e) =>
-                            setFormData({ ...formData, description: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="grid gap-2">
-                          <Label htmlFor="price">Price *</Label>
-                          <Input
-                            id="price"
-                            type="number"
-                            step="0.01"
-                            value={formData.price}
-                            onChange={(e) => {
-                              setFormData({ ...formData, price: e.target.value });
-                              if (e.target.value) setFormErrors((prev) => ({ ...prev, price: "" }));
-                            }}
-                            className={formErrors.price ? "border-red-500" : ""}
-                          />
-                          {formErrors.price && (
-                            <p className="text-sm text-red-500">{formErrors.price}</p>
-                          )}
-                        </div>
-                        <div>
-                          <UnitSelect
-                            value={formData.unitId}
-                            onValueChange={(value) => {
-                              setFormData({ ...formData, unitId: value });
-                              if (value) setFormErrors((prev) => ({ ...prev, unitId: "" }));
-                            }}
-                            required
-                            error={formErrors.unitId}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="sku">SKU</Label>
-                        <Input
-                          id="sku"
-                          value={formData.sku}
-                          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                          placeholder="Optional product code"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="isService"
-                          checked={formData.isService}
-                          onChange={(e) =>
-                            setFormData({ ...formData, isService: e.target.checked })
-                          }
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
-                        <Label htmlFor="isService">Service product (no inventory tracking)</Label>
-                      </div>
-                    </div>
-                    <DialogFooter className="mt-auto pt-4 border-t">
-                      <Button type="submit" className="w-full sm:w-auto">
-                        {editingProduct ? "Update Product" : "Add Product"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              <Button className="w-full sm:w-auto" onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
             </div>
+
+            <ProductFormDialog
+              open={isDialogOpen}
+              onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (!open) {
+                  setEditingProduct(null);
+                }
+              }}
+              productToEdit={editingProduct || undefined}
+              onSuccess={() => {
+                fetchProducts();
+                setIsDialogOpen(false);
+                setEditingProduct(null);
+              }}
+            />
 
             <StaggerContainer className="space-y-4">
               <StaggerItem>
