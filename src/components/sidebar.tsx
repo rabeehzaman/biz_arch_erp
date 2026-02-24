@@ -13,7 +13,6 @@ import {
   Settings,
   LogOut,
   Menu,
-  Warehouse,
   Wrench,
   Truck,
   Receipt,
@@ -33,6 +32,7 @@ import {
   PieChart,
   DollarSign,
   ArrowRightLeft,
+  ShoppingCart,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -48,15 +48,20 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "POS Terminal", href: "/pos", icon: Monitor },
   { name: "Products", href: "/products", icon: Package },
-  { name: "Inventory", href: "/inventory", icon: Warehouse },
+];
+
+const salesNavigation = [
   { name: "Customers", href: "/customers", icon: Users },
-  { name: "Suppliers", href: "/suppliers", icon: Truck },
   { name: "Quotations", href: "/quotations", icon: FileCheck },
   { name: "Sales Invoices", href: "/invoices", icon: FileText },
   { name: "Credit Notes", href: "/credit-notes", icon: FileMinus },
+  { name: "Customer Payments", href: "/payments", icon: CreditCard },
+];
+
+const purchasesNavigation = [
+  { name: "Suppliers", href: "/suppliers", icon: Truck },
   { name: "Purchase Invoices", href: "/purchase-invoices", icon: Receipt },
   { name: "Debit Notes", href: "/debit-notes", icon: FileOutput },
-  { name: "Customer Payments", href: "/payments", icon: CreditCard },
   { name: "Supplier Payments", href: "/supplier-payments", icon: Wallet },
 ];
 
@@ -174,7 +179,21 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               <NavItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
             ))}
 
-            <Separator className="my-3 bg-slate-700" />
+            <CollapsibleSection
+              title="Sales"
+              icon={ShoppingCart}
+              items={salesNavigation}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
+
+            <CollapsibleSection
+              title="Purchases"
+              icon={Truck}
+              items={purchasesNavigation}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
 
             <CollapsibleSection
               title="Accounting"
