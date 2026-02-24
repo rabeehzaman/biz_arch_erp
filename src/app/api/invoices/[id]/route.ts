@@ -426,6 +426,26 @@ export async function DELETE(
       });
       const paymentIds = linkedPayments.map((p) => p.id);
 
+      // Revert cashbook entries for these payments
+      if (paymentIds.length > 0) {
+        const cashTransactions = await tx.cashBankTransaction.findMany({
+          where: { referenceType: "PAYMENT", referenceId: { in: paymentIds } },
+        });
+
+        // Revert cash/bank account balances (deposits increased balance, so we decrement)
+        for (const cbTx of cashTransactions) {
+          await tx.cashBankAccount.update({
+            where: { id: cbTx.cashBankAccountId },
+            data: { balance: { decrement: cbTx.amount } },
+          });
+        }
+
+        // Delete the cash/bank transactions
+        await tx.cashBankTransaction.deleteMany({
+          where: { referenceType: "PAYMENT", referenceId: { in: paymentIds } },
+        });
+      }
+
       // Delete CustomerTransaction records for invoice and its payments
       await tx.customerTransaction.deleteMany({
         where: {

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -339,38 +340,43 @@ export default function NewPurchaseInvoicePage() {
                   </Button>
                 </CardAction>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {lineItems.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="grid gap-4 sm:grid-cols-12 items-end p-4 border rounded-lg"
-                    >
-                      <div className="sm:col-span-4">
-                        <Label>Product *</Label>
-                        <div ref={(el) => {
-                          if (el) {
-                            const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
-                            if (button) productComboRefs.current.set(item.id, button);
-                          } else {
-                            productComboRefs.current.delete(item.id);
-                          }
-                        }}>
-                          <ProductCombobox
-                            products={products}
-                            value={item.productId}
-                            onValueChange={(value) =>
-                              updateLineItem(item.id, "productId", value)
+              <CardContent className="p-0 border-t border-slate-200">
+                <Table>
+                  <TableHeader className="bg-slate-50">
+                    <TableRow>
+                      <TableHead className="w-[40%] font-semibold">Product *</TableHead>
+                      <TableHead className="w-[15%] font-semibold">Quantity *</TableHead>
+                      <TableHead className="w-[15%] font-semibold">Unit Cost *</TableHead>
+                      <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
+                      <TableHead className="text-right font-semibold">Line Total</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lineItems.map((item, index) => (
+                      <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
+                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                          <div ref={(el) => {
+                            if (el) {
+                              const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
+                              if (button) productComboRefs.current.set(item.id, button);
+                            } else {
+                              productComboRefs.current.delete(item.id);
                             }
-                            onProductCreated={fetchProducts}
-                            onSelect={() => focusQuantity(item.id)}
-                            onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2 sm:contents">
-                        <div className="sm:col-span-2">
-                          <Label>Quantity *</Label>
+                          }}>
+                            <ProductCombobox
+                              products={products}
+                              value={item.productId}
+                              onValueChange={(value) =>
+                                updateLineItem(item.id, "productId", value)
+                              }
+                              onProductCreated={fetchProducts}
+                              onSelect={() => focusQuantity(item.id)}
+                              onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0 relative">
                           <Input
                             ref={(el) => {
                               if (el) {
@@ -391,11 +397,11 @@ export default function NewPurchaseInvoicePage() {
                                 parseFloat(e.target.value) || 0
                               )
                             }
+                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                             required
                           />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Label>Unit Cost *</Label>
+                        </TableCell>
+                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                           <Input
                             type="number"
                             onFocus={(e) => e.target.select()}
@@ -409,11 +415,11 @@ export default function NewPurchaseInvoicePage() {
                                 parseFloat(e.target.value) || 0
                               )
                             }
+                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                             required
                           />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Label>Disc %</Label>
+                        </TableCell>
+                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                           <Input
                             type="number"
                             onFocus={(e) => e.target.select()}
@@ -431,7 +437,7 @@ export default function NewPurchaseInvoicePage() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
                                 e.preventDefault();
-                                e.stopPropagation(); // Prevent useEnterToTab from also running
+                                e.stopPropagation(); // Prevent useEnterToTab from also moving focus
                                 const isLastItem = index === lineItems.length - 1;
                                 if (isLastItem) {
                                   addLineItem(true);
@@ -444,30 +450,32 @@ export default function NewPurchaseInvoicePage() {
                                 }
                               }
                             }}
+                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                             placeholder="0"
                           />
-                        </div>
-                      </div>
-                      <div className="sm:col-span-1 flex justify-end">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeLineItem(item.id)}
-                          disabled={lineItems.length === 1}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                      <div className="sm:col-span-12 text-right text-sm text-slate-500">
-                        Line Total: ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                        {item.discount > 0 && (
-                          <span className="ml-2 text-green-600">(-{item.discount}%)</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                        </TableCell>
+                        <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                          ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                          {item.discount > 0 && (
+                            <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="align-middle p-2 text-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
+                            onClick={() => removeLineItem(item.id)}
+                            disabled={lineItems.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
 

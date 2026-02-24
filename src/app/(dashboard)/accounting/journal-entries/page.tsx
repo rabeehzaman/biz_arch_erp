@@ -14,7 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, BookOpen } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Search, BookOpen, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -91,51 +97,68 @@ export default function JournalEntriesPage() {
     return { debit, credit };
   };
 
-  return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Journal Entries</h2>
-              <p className="text-slate-500">Double-entry accounting records</p>
-            </div>
-            <Link href="/accounting/journal-entries/new" className="w-full sm:w-auto">
-              <Button className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                New Journal Entry
-              </Button>
-            </Link>
-          </div>
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this journal entry?")) return;
+    try {
+      const response = await fetch(`/api/journal-entries/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to delete");
+      }
+      toast.success("Journal entry deleted");
+      fetchEntries();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete");
+    }
+  };
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    placeholder="Search journal entries..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+  return (
+    <PageAnimation>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Journal Entries</h2>
+            <p className="text-slate-500">Double-entry accounting records</p>
+          </div>
+          <Link href="/accounting/journal-entries/new" className="w-full sm:w-auto">
+            <Button className="w-full">
+              <Plus className="mr-2 h-4 w-4" />
+              New Journal Entry
+            </Button>
+          </Link>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Search journal entries..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <TableSkeleton columns={6} rows={5} />
-              ) : filteredEntries.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <BookOpen className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No journal entries found</h3>
-                  <p className="text-sm text-slate-500">
-                    {searchQuery
-                      ? "Try a different search term"
-                      : "Create your first journal entry to get started"}
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <TableSkeleton columns={6} rows={5} />
+            ) : filteredEntries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <BookOpen className="h-12 w-12 text-slate-300" />
+                <h3 className="mt-4 text-lg font-semibold">No journal entries found</h3>
+                <p className="text-sm text-slate-500">
+                  {searchQuery
+                    ? "Try a different search term"
+                    : "Create your first journal entry to get started"}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -146,6 +169,7 @@ export default function JournalEntriesPage() {
                       <TableHead className="hidden sm:table-cell">Status</TableHead>
                       <TableHead className="text-right">Debit</TableHead>
                       <TableHead className="hidden sm:table-cell text-right">Credit</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -187,16 +211,40 @@ export default function JournalEntriesPage() {
                               minimumFractionDigits: 2,
                             })}
                           </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <Link href={`/accounting/journal-entries/${entry.id}/edit`}>
+                                  <DropdownMenuItem>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                </Link>
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                                  onClick={() => handleDelete(entry.id)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
                   </TableBody>
                 </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        </PageAnimation>
-      );
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </PageAnimation>
+  );
 }

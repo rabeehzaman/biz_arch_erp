@@ -100,9 +100,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!payments || payments.length === 0) {
+    if (!payments) {
       return NextResponse.json(
-        { error: "At least one payment is required" },
+        { error: "Payments array is missing" },
         { status: 400 }
       );
     }
@@ -288,19 +288,19 @@ export async function POST(request: NextRequest) {
           debit: number;
           credit: number;
         }> = [
-          {
-            accountId: arAccount.id,
-            description: "Accounts Receivable",
-            debit: total,
-            credit: 0,
-          },
-          {
-            accountId: revenueAccount.id,
-            description: "Sales Revenue",
-            debit: 0,
-            credit: subtotal,
-          },
-        ];
+            {
+              accountId: arAccount.id,
+              description: "Accounts Receivable",
+              debit: total,
+              credit: 0,
+            },
+            {
+              accountId: revenueAccount.id,
+              description: "Sales Revenue",
+              debit: 0,
+              credit: subtotal,
+            },
+          ];
 
         if (taxAmount > 0) {
           const taxPayableAccount = await getSystemAccount(

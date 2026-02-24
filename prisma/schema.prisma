@@ -115,6 +115,7 @@ model Product {
   unitId         String?
   unit           Unit?            @relation(fields: [unitId], references: [id])
   sku            String?
+  barcode        String?
   isService      Boolean          @default(false)
   isActive       Boolean          @default(true)
   organizationId String
@@ -134,6 +135,7 @@ model Product {
   costAuditLogs        CostAuditLog[]
 
   @@unique([organizationId, sku])
+  @@unique([organizationId, barcode])
   @@index([organizationId])
   @@index([organizationId, name])
   @@index([organizationId, categoryId])

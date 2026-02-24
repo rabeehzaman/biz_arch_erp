@@ -120,7 +120,33 @@ export async function DELETE(
         where: { supplierPaymentId: id, organizationId },
       });
 
-      // Delete allocations and payment (allocations cascade delete)
+      // Revert CashBankAccount balance and delete CashBankTransaction
+      const cashTransactions = await tx.cashBankTransaction.findMany({
+        where: { referenceType: "SUPPLIER_PAYMENT", referenceId: id, organizationId },
+      });
+
+      for (const cbTx of cashTransactions) {
+        await tx.cashBankAccount.update({
+          where: { id: cbTx.cashBankAccountId },
+          data: { balance: { decrement: cbTx.amount } },
+        });
+      }
+
+      await tx.cashBankTransaction.deleteMany({
+        where: { referenceType: "SUPPLIER_PAYMENT", referenceId: id, organizationId },
+      });
+
+      // Delete Journal Entries
+      await tx.journalEntry.deleteMany({
+        where: { sourceType: "SUPPLIER_PAYMENT", sourceId: id, organizationId },
+      });
+
+      // Delete payment allocations
+      await tx.supplierPaymentAllocation.deleteMany({
+        where: { supplierPaymentId: id, organizationId },
+      });
+
+      // Delete payment
       await tx.supplierPayment.delete({
         where: { id, organizationId },
       });

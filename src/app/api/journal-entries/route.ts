@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { date, description, lines } = body;
+    const { date, description, lines, status } = body;
 
     if (!date || !description || !lines || lines.length < 2) {
       return NextResponse.json(
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         journalNumber,
         date: new Date(date),
         description,
-        status: "DRAFT",
+        status: status === "POSTED" ? "POSTED" : "DRAFT",
         sourceType: "MANUAL",
         organizationId,
         lines: {

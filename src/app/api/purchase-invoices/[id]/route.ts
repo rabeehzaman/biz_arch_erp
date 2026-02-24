@@ -332,8 +332,50 @@ export async function DELETE(
       const invoiceDate = invoice.invoiceDate;
 
       // Delete SupplierTransaction record for purchase invoice
-      await tx.supplierTransaction.deleteMany({
+      // Find payments linked to this purchase invoice
+      const linkedPayments = await tx.supplierPayment.findMany({
         where: { purchaseInvoiceId: id },
+        select: { id: true },
+      });
+      const paymentIds = linkedPayments.map((p) => p.id);
+
+      // Revert cashbook entries for these supplier payments
+      if (paymentIds.length > 0) {
+        const cashTransactions = await tx.cashBankTransaction.findMany({
+          where: { referenceType: "SUPPLIER_PAYMENT", referenceId: { in: paymentIds } },
+        });
+
+        // Revert cash/bank account balances (withdrawals were negative, so we decrement a negative to add it back)
+        for (const cbTx of cashTransactions) {
+          await tx.cashBankAccount.update({
+            where: { id: cbTx.cashBankAccountId },
+            data: { balance: { decrement: cbTx.amount } },
+          });
+        }
+
+        // Delete the cash/bank transactions
+        await tx.cashBankTransaction.deleteMany({
+          where: { referenceType: "SUPPLIER_PAYMENT", referenceId: { in: paymentIds } },
+        });
+
+        // Delete payment allocations
+        await tx.supplierPaymentAllocation.deleteMany({
+          where: { purchaseInvoiceId: id },
+        });
+
+        // Delete payments
+        await tx.supplierPayment.deleteMany({
+          where: { id: { in: paymentIds } },
+        });
+      }
+
+      await tx.supplierTransaction.deleteMany({
+        where: {
+          OR: [
+            { purchaseInvoiceId: id },
+            ...(paymentIds.length > 0 ? [{ supplierPaymentId: { in: paymentIds } }] : [])
+          ]
+        },
       });
 
       // Delete consumptions on these lots first (no cascade in schema)
@@ -352,16 +394,17 @@ export async function DELETE(
         where: { purchaseInvoiceId: id },
       });
 
-      // Update supplier balance
-      const unpaidAmount = Number(invoice.total) - Number(invoice.amountPaid);
-      if (unpaidAmount > 0) {
-        await tx.supplier.update({
-          where: { id: invoice.supplierId, organizationId },
-          data: {
-            balance: { decrement: unpaidAmount },
-          },
-        });
-      }
+      // Update supplier balance (subtract the unpaid amount)
+      // Since we deleted the payments above, we must decrement the entire old balance impact 
+      // which was total - amountPaid (unpaidAmount). Actually wait, if we delete the payment too, 
+      // the unpaid amount and the paid amount both need to be reversed from the supplier balance.
+      // So we just decrement the full invoice total from the supplier balance!
+      await tx.supplier.update({
+        where: { id: invoice.supplierId, organizationId },
+        data: {
+          balance: { decrement: Number(invoice.total) },
+        },
+      });
 
       // Delete journal entries for this purchase invoice
       await tx.journalEntry.deleteMany({

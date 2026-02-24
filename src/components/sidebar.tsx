@@ -79,6 +79,7 @@ const reportsNavigation = [
   { name: "Profit by Items", href: "/reports/profit-by-items", icon: BarChart3 },
   { name: "Customer Balances", href: "/reports/customer-balances", icon: Users },
   { name: "Supplier Balances", href: "/reports/supplier-balances", icon: Truck },
+  { name: "Unified Ledger", href: "/reports/ledger", icon: BookOpen },
   { name: "Trial Balance", href: "/reports/trial-balance", icon: Scale },
   { name: "Profit & Loss", href: "/reports/profit-loss", icon: TrendingUp },
   { name: "Balance Sheet", href: "/reports/balance-sheet", icon: PieChart },

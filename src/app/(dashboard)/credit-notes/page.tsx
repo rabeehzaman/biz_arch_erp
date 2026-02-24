@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, FileText, Eye, Trash2 } from "lucide-react";
+import { Plus, Search, FileText, Eye, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -97,132 +97,138 @@ export default function CreditNotesPage() {
   );
 
   return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Credit Notes</h2>
-              <p className="text-slate-500">
-                Manage sales returns and customer credits
-              </p>
-            </div>
-            <Link href="/credit-notes/new" className="w-full sm:w-auto">
-              <Button className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                New Credit Note
-              </Button>
-            </Link>
+    <PageAnimation>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Credit Notes</h2>
+            <p className="text-slate-500">
+              Manage sales returns and customer credits
+            </p>
           </div>
+          <Link href="/credit-notes/new" className="w-full sm:w-auto">
+            <Button className="w-full">
+              <Plus className="mr-2 h-4 w-4" />
+              New Credit Note
+            </Button>
+          </Link>
+        </div>
 
-          <Card>
-            <CardHeader>
-              <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  placeholder="Search credit notes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+        <Card>
+          <CardHeader>
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search credit notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <TableSkeleton columns={6} rows={5} />
+            ) : filteredCreditNotes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <FileText className="h-12 w-12 text-slate-300" />
+                <h3 className="mt-4 text-lg font-semibold">
+                  No credit notes found
+                </h3>
+                <p className="text-sm text-slate-500">
+                  {searchQuery
+                    ? "Try a different search term"
+                    : "Create your first credit note to get started"}
+                </p>
+                {!searchQuery && (
+                  <Link href="/credit-notes/new" className="mt-4">
+                    <Button variant="outline">Create Credit Note</Button>
+                  </Link>
+                )}
               </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <TableSkeleton columns={6} rows={5} />
-              ) : filteredCreditNotes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <FileText className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">
-                    No credit notes found
-                  </h3>
-                  <p className="text-sm text-slate-500">
-                    {searchQuery
-                      ? "Try a different search term"
-                      : "Create your first credit note to get started"}
-                  </p>
-                  {!searchQuery && (
-                    <Link href="/credit-notes/new" className="mt-4">
-                      <Button variant="outline">Create Credit Note</Button>
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>CN #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Issue Date</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCreditNotes.map((creditNote) => (
-                      <TableRow
-                        key={creditNote.id}
-                        onClick={() => router.push(`/credit-notes/${creditNote.id}`)}
-                        className="cursor-pointer hover:bg-muted/50"
-                      >
-                        <TableCell className="font-medium">
-                          {creditNote.creditNoteNumber}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">
-                              {creditNote.customer.name}
-                            </div>
-                            {creditNote.customer.email && (
-                              <div className="text-sm text-slate-500">
-                                {creditNote.customer.email}
-                              </div>
-                            )}
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>CN #</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Invoice #</TableHead>
+                    <TableHead>Issue Date</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCreditNotes.map((creditNote) => (
+                    <TableRow
+                      key={creditNote.id}
+                      onClick={() => router.push(`/credit-notes/${creditNote.id}`)}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
+                      <TableCell className="font-medium">
+                        {creditNote.creditNoteNumber}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {creditNote.customer.name}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {creditNote.invoice ? (
-                            <Link
-                              href={`/invoices/${creditNote.invoice.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-blue-600 hover:underline"
-                            >
-                              {creditNote.invoice.invoiceNumber}
-                            </Link>
-                          ) : (
-                            <span className="text-slate-400">-</span>
+                          {creditNote.customer.email && (
+                            <div className="text-sm text-slate-500">
+                              {creditNote.customer.email}
+                            </div>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(creditNote.issueDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell className="text-right text-green-600 font-medium">
-                          ₹{Number(creditNote.total).toLocaleString("en-IN")}
-                        </TableCell>
-                        <TableCell
-                          className="text-right"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Link href={`/credit-notes/${creditNote.id}`}>
-                            <Button variant="ghost" size="icon">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(creditNote.id)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {creditNote.invoice ? (
+                          <Link
+                            href={`/invoices/${creditNote.invoice.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-blue-600 hover:underline"
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            {creditNote.invoice.invoiceNumber}
+                          </Link>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(creditNote.issueDate), "dd MMM yyyy")}
+                      </TableCell>
+                      <TableCell className="text-right text-green-600 font-medium">
+                        ₹{Number(creditNote.total).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Link href={`/credit-notes/${creditNote.id}`}>
+                          <Button variant="ghost" size="icon" title="View">
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                        </Link>
+                        <Link href={`/credit-notes/${creditNote.id}/edit`}>
+                          <Button variant="ghost" size="icon" title="Edit">
+                            <Edit className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(creditNote.id)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
         {confirmDialog && (
           <ConfirmDialog
             open={!!confirmDialog}
@@ -232,7 +238,7 @@ export default function CreditNotesPage() {
             onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
           />
         )}
-        </div>
-        </PageAnimation>
-      );
+      </div>
+    </PageAnimation>
+  );
 }

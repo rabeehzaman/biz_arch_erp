@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, description, price, unitId, sku, isService } = body;
+    const { name, description, price, unitId, sku, barcode, isService } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
         price,
         unitId,
         sku: sku || null,
+        barcode: barcode || null,
         isService: isService ?? false,
       },
       include: {

@@ -28,6 +28,7 @@ interface Product {
         name: string;
     } | null;
     sku: string | null;
+    barcode: string | null;
     isService: boolean;
     isActive: boolean;
     createdAt: string;
@@ -54,6 +55,7 @@ export function ProductFormDialog({
         price: "",
         unitId: "",
         sku: "",
+        barcode: "",
         isService: false,
     });
 
@@ -65,6 +67,7 @@ export function ProductFormDialog({
                 price: productToEdit.price.toString(),
                 unitId: productToEdit.unitId || productToEdit.unit?.id || "",
                 sku: productToEdit.sku || "",
+                barcode: productToEdit.barcode || "",
                 isService: productToEdit.isService || false,
             });
             setFormErrors({});
@@ -95,6 +98,7 @@ export function ProductFormDialog({
             price: parseFloat(formData.price),
             unitId: formData.unitId,
             sku: formData.sku || null,
+            barcode: formData.barcode || null,
             isService: formData.isService,
         };
 
@@ -140,6 +144,7 @@ export function ProductFormDialog({
             price: "",
             unitId: "",
             sku: "",
+            barcode: "",
             isService: false,
         });
     };
@@ -220,14 +225,25 @@ export function ProductFormDialog({
                                 />
                             </div>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="prod-sku">SKU</Label>
-                            <Input
-                                id="prod-sku"
-                                value={formData.sku}
-                                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                                placeholder="Optional product code"
-                            />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-2">
+                                <Label htmlFor="prod-sku">SKU</Label>
+                                <Input
+                                    id="prod-sku"
+                                    value={formData.sku}
+                                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                                    placeholder="Optional product code"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="prod-barcode">Barcode</Label>
+                                <Input
+                                    id="prod-barcode"
+                                    value={formData.barcode}
+                                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                                    placeholder="Scan barcode"
+                                />
+                            </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <input

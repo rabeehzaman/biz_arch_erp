@@ -47,6 +47,7 @@ interface Product {
     name: string;
   } | null;
   sku: string | null;
+  barcode: string | null;
   isService: boolean;
   isActive: boolean;
   createdAt: string;
@@ -545,15 +546,15 @@ function ProductsPageContent() {
             </StaggerContainer>
           </div>
         )}
-      {confirmDialog && (
-        <ConfirmDialog
-          open={!!confirmDialog}
-          onOpenChange={(open) => !open && setConfirmDialog(null)}
-          title={confirmDialog.title}
-          description={confirmDialog.description}
-          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
-        />
-      )}
+        {confirmDialog && (
+          <ConfirmDialog
+            open={!!confirmDialog}
+            onOpenChange={(open) => !open && setConfirmDialog(null)}
+            title={confirmDialog.title}
+            description={confirmDialog.description}
+            onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+          />
+        )}
       </div>
     </PageAnimation>
   );

@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 export async function GET(
   request: NextRequest,
@@ -114,6 +115,34 @@ export async function PUT(
       // Recalculate if date changed or quantity/cost changed
       const recalcDate = getRecalculationStartDate(oldDate, newDate);
       await recalculateFromDate(existingOpeningStock.productId, recalcDate, tx, "recalculation", undefined, organizationId);
+
+      // Sync Journal Entry
+      await tx.journalEntry.deleteMany({
+        where: {
+          sourceType: "OPENING_BALANCE",
+          sourceId: id,
+          organizationId,
+        },
+      });
+
+      const totalValue = newQuantity * newUnitCost;
+      if (totalValue > 0) {
+        const product = await tx.product.findUnique({ where: { id: existingOpeningStock.productId } });
+        const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+        const ownerCapitalAccount = await getSystemAccount(tx, organizationId, "3100");
+        if (inventoryAccount && ownerCapitalAccount && product) {
+          await createAutoJournalEntry(tx, organizationId, {
+            date: newDate,
+            description: `Opening Stock - ${product.name}`,
+            sourceType: "OPENING_BALANCE",
+            sourceId: id,
+            lines: [
+              { accountId: inventoryAccount.id, description: "Inventory", debit: totalValue, credit: 0 },
+              { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: totalValue },
+            ],
+          });
+        }
+      }
     });
 
     const updatedOpeningStock = await prisma.openingStock.findUnique({
@@ -190,6 +219,15 @@ export async function DELETE(
       if (hasConsumptions) {
         await recalculateFromDate(productId, stockDate, tx, "recalculation", undefined, organizationId);
       }
+
+      // Delete associated journal entry
+      await tx.journalEntry.deleteMany({
+        where: {
+          sourceType: "OPENING_BALANCE",
+          sourceId: id,
+          organizationId,
+        },
+      });
     });
 
     return NextResponse.json({ success: true });

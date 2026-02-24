@@ -66,12 +66,7 @@ export async function PUT(
       return NextResponse.json({ error: "Journal entry not found" }, { status: 404 });
     }
 
-    if (existing.status !== "DRAFT") {
-      return NextResponse.json(
-        { error: "Only draft entries can be edited" },
-        { status: 400 }
-      );
-    }
+    // Removed draft restriction to allow editing posted entries
 
     if (lines && !validateJournalBalance(lines)) {
       return NextResponse.json(
@@ -153,12 +148,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Journal entry not found" }, { status: 404 });
     }
 
-    if (existing.status !== "DRAFT") {
-      return NextResponse.json(
-        { error: "Only draft entries can be deleted" },
-        { status: 400 }
-      );
-    }
+    // Removed draft restriction to allow deleting posted entries
 
     await prisma.journalEntry.delete({ where: { id, organizationId } });
 

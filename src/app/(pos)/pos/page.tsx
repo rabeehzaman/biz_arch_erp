@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -53,6 +53,7 @@ interface POSProduct {
   id: string;
   name: string;
   sku: string | null;
+  barcode: string | null;
   price: number;
   stockQuantity: number;
   categoryId: string | null;
@@ -128,6 +129,19 @@ export default function POSPage() {
   const [isOpeningSession, setIsOpeningSession] = useState(false);
   const [isClosingSession, setIsClosingSession] = useState(false);
 
+  // POS Session Summary (for Expected Cash during closing)
+  const { data: sessionSummary, isLoading: isLoadingSummary } = useSWR<{ paymentBreakdown: { method: string; total: number }[] }>(
+    showCloseDialog && posSession?.id ? `/api/pos/sessions/${posSession.id}/summary` : null,
+    fetcher
+  );
+
+  const expectedCash = posSession
+    ? Number(posSession.openingCash) +
+    (sessionSummary?.paymentBreakdown?.find((p) => p.method === "CASH")?.total || 0)
+    : 0;
+
+  const cashDifference = parseFloat(closingCash || "0") - expectedCash;
+
   // Tax rate — fetched from org settings, editable per session
   const { data: taxRateSetting } = useSWR<{ value: string }>(
     posSession ? "/api/settings/pos-tax-rate" : null,
@@ -145,12 +159,14 @@ export default function POSPage() {
     posSession ? "/api/settings" : null,
     fetcher
   );
+
   const receiptPrintingEnabled = receiptSetting?.value === "true";
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
 
   // ── Cart Handlers ──────────────────────────────────────────────────
 
-  const addToCart = useCallback((product: POSProduct) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const addToCart = useCallback((product: any) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
@@ -173,6 +189,57 @@ export default function POSPage() {
       ];
     });
   }, []);
+
+  // ── Barcode Scanner Listener ───────────────────────────────────────
+  useEffect(() => {
+    if (!posSession || showCloseDialog || showOpenDialog || showHeldSheet || view === "payment") return;
+
+    let barcodeBuffer = "";
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input or textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      const currentTime = Date.now();
+
+      // If the time between keystrokes is too long (typing manually), reset buffer
+      if (currentTime - lastKeyTime > 50) { // 50ms threshold is good for most hardware scanners
+        barcodeBuffer = "";
+      }
+      lastKeyTime = currentTime;
+
+      if (e.key === "Enter") {
+        if (barcodeBuffer.length > 0) {
+          e.preventDefault();
+
+          // Look for product by barcode
+          const product = products.find(p => p.barcode === barcodeBuffer || p.sku === barcodeBuffer);
+
+          if (product) {
+            addToCart(product);
+            toast.success(`Added ${product.name}`);
+          } else {
+            toast.error(`Product not found for barcode: ${barcodeBuffer}`);
+          }
+
+          barcodeBuffer = "";
+        }
+      } else if (e.key.length === 1) {
+        // Collect alphanumeric characters
+        barcodeBuffer += e.key;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [posSession, products, showCloseDialog, showOpenDialog, showHeldSheet, view, addToCart]);
 
   const updateCartQuantity = useCallback((productId: string, qty: number) => {
     if (qty <= 0) {
@@ -629,6 +696,7 @@ export default function POSPage() {
               }}
               onComplete={handleCheckout}
               isProcessing={isProcessing}
+              hasCustomer={!!selectedCustomer}
             />
           )}
         </div>
@@ -681,9 +749,32 @@ export default function POSPage() {
                 <span className="text-muted-foreground">Transactions</span>
                 <p className="font-medium">{posSession.totalTransactions}</p>
               </div>
+              <div>
+                <span className="text-muted-foreground">Expected Cash</span>
+                <p className="font-medium">
+                  {isLoadingSummary ? (
+                    <Loader2 className="h-3 w-3 animate-spin inline" />
+                  ) : (
+                    expectedCash.toLocaleString("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                    })
+                  )}
+                </p>
+              </div>
             </div>
             <div>
-              <label className="text-sm font-medium">Closing Cash</label>
+              <div className="flex justify-between items-end mb-1">
+                <label className="text-sm font-medium">Counted Closing Cash</label>
+                {closingCash && !isLoadingSummary && (
+                  <span className={cn(
+                    "text-sm font-medium",
+                    cashDifference > 0 ? "text-green-600" : (cashDifference < 0 ? "text-red-600" : "text-slate-600")
+                  )}>
+                    Diff: {cashDifference > 0 ? "+" : ""}{cashDifference.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                  </span>
+                )}
+              </div>
               <Input
                 type="number"
                 placeholder="0.00"
@@ -691,7 +782,6 @@ export default function POSPage() {
                 onChange={(e) => setClosingCash(e.target.value)}
                 min={0}
                 step="0.01"
-                className="mt-1"
                 autoFocus
               />
             </div>

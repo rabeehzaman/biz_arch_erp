@@ -14,7 +14,12 @@ export async function GET() {
 
     const accounts = await prisma.account.findMany({
       where: { organizationId },
-      orderBy: { code: "asc" },
+      orderBy: [
+        { accountType: "asc" },
+        { accountSubType: "asc" },
+        { code: "asc" },
+        { name: "asc" }
+      ],
       include: {
         _count: { select: { journalEntryLines: true } },
       },

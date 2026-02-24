@@ -50,7 +50,7 @@ export default function NewDebitNotePage() {
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [taxRate, setTaxRate] = useState(18);
+  const [taxRate, setTaxRate] = useState(0);
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<LineItem[]>([
