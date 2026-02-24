@@ -155,14 +155,14 @@ function AccountTreeItem({
   return (
     <>
       <div
-        className={`relative flex items-center gap-3 py-2 px-3 hover:bg-slate-50/80 rounded-lg group transition-colors border-l-4 ${level === 0 ? typeBorderColors[node.accountType] || "border-transparent" : "border-transparent"
+        className={`relative flex items-start sm:items-center gap-2 sm:gap-3 py-3 sm:py-2 px-2 sm:px-3 hover:bg-slate-50/80 rounded-lg group transition-colors border-l-4 ${level === 0 ? typeBorderColors[node.accountType] || "border-transparent" : "border-transparent"
           } ${!node.isActive ? "opacity-50" : ""}`}
-        style={{ paddingLeft: `${Math.max(0, level * 32 + 12)}px` }}
+        style={{ paddingLeft: `max(8px, calc(${level} * clamp(12px, 4vw, 32px) + 8px))` }}
       >
         {/* Hierarchical Connecting Line */}
         {level > 0 && (
           <div
-            className="absolute border-l-2 border-b-2 border-slate-200/80 rounded-bl pointer-events-none"
+            className="absolute border-l-2 border-b-2 border-slate-200/80 rounded-bl pointer-events-none hidden sm:block"
             style={{
               left: `${(level - 1) * 32 + 24}px`,
               top: '-10px',
@@ -174,7 +174,7 @@ function AccountTreeItem({
 
         <button
           onClick={() => hasChildren && onToggle(node.id)}
-          className={`w-5 h-5 flex items-center justify-center rounded-sm transition-colors ${hasChildren ? "hover:bg-slate-200" : ""}`}
+          className={`shrink-0 mt-0.5 sm:mt-0 w-5 h-5 flex items-center justify-center rounded-sm transition-colors ${hasChildren ? "hover:bg-slate-200" : ""}`}
         >
           {hasChildren ? (
             isExpanded ? (
@@ -187,41 +187,51 @@ function AccountTreeItem({
           )}
         </button>
 
-        <span className="font-mono text-sm text-slate-400 font-medium w-16">{node.code}</span>
-        <span className={`flex-1 text-sm ${level === 0 ? "font-bold text-slate-900" : "font-medium text-slate-700"}`}>
-          {node.name}
-        </span>
+        <div className="flex flex-col sm:flex-row sm:items-center flex-1 min-w-0 gap-1 sm:gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="font-mono text-xs sm:text-sm text-slate-400 font-medium shrink-0 w-10 sm:w-16">{node.code}</span>
+            <span className={`truncate text-sm ${level === 0 ? "font-bold text-slate-900" : "font-medium text-slate-700"}`}>
+              {node.name}
+            </span>
+          </div>
 
-        <Badge variant="outline" className={typeBadgeColors[node.accountType]}>
-          {accountTypeLabels[node.accountType]}
-        </Badge>
+          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+            <Badge variant="outline" className={`text-[10px] sm:text-xs py-0 h-5 ${typeBadgeColors[node.accountType]}`}>
+              <span className="hidden sm:inline">{accountTypeLabels[node.accountType]}</span>
+              <span className="sm:hidden">{accountTypeLabels[node.accountType]?.substring(0, 3)}</span>
+            </Badge>
 
-        {node.isSystem && (
-          <Badge variant="secondary" className="text-xs">
-            System
-          </Badge>
-        )}
+            {node.isSystem && (
+              <Badge variant="secondary" className="text-[10px] sm:text-xs py-0 h-5">
+                <span className="hidden sm:inline">System</span>
+                <span className="sm:hidden">Sys</span>
+              </Badge>
+            )}
+          </div>
+        </div>
 
-        <span className={`text-sm font-mono w-28 text-right ${node.balance < 0 ? "text-red-600" : node.balance > 0 ? "text-slate-800" : "text-slate-400"}`}>
-          {node.balance !== 0
-            ? `₹${Math.abs(node.balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${node.balance < 0 ? " Cr" : " Dr"}`
-            : "—"}
-        </span>
+        <div className="flex flex-col items-end shrink-0 gap-1.5 sm:gap-0 sm:flex-row sm:items-center">
+          <span className={`text-xs sm:text-sm font-mono sm:w-28 text-right ${node.balance < 0 ? "text-red-600" : node.balance > 0 ? "text-slate-800" : "text-slate-400"}`}>
+            {node.balance !== 0
+              ? `₹${Math.abs(node.balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${node.balance < 0 ? " Cr" : " Dr"}`
+              : "—"}
+          </span>
 
-        <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => onEdit(node)}>
-            Edit
-          </Button>
-          {!node.isSystem && node.children.length === 0 && node.transactionCount === 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-600 hover:text-red-700"
-              onClick={() => onDelete(node)}
-            >
-              Delete
+          <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => onEdit(node)}>
+              Edit
             </Button>
-          )}
+            {!node.isSystem && node.children.length === 0 && node.transactionCount === 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => onDelete(node)}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -458,7 +468,7 @@ export default function ChartOfAccountsPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
                       <Label>Code *</Label>
                       <Input
@@ -485,7 +495,7 @@ export default function ChartOfAccountsPage() {
                   </div>
                   {!editingAccount && (
                     <>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="grid gap-2">
                           <Label>Account Type *</Label>
                           <Select
