@@ -648,7 +648,7 @@ function ProductsPageContent() {
                                           : ""
                                     }
                                   >
-                                    {stockQty} {product.unit}
+                                    {stockQty} {typeof product.unit === "object" ? (product.unit as any)?.code : product.unit}
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-right">

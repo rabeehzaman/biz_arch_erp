@@ -114,15 +114,15 @@ export default function OpeningStockPage() {
     try {
       const response = editingStock
         ? await fetch(`/api/opening-stocks/${editingStock.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
         : await fetch("/api/opening-stocks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
       if (!response.ok) {
         const data = await response.json();
@@ -185,206 +185,206 @@ export default function OpeningStockPage() {
   );
 
   return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Opening Stock</h2>
-              <p className="text-slate-500">Set initial stock quantities for your products</p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button disabled={availableProducts.length === 0}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Opening Stock
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <form onSubmit={handleSubmit}>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingStock ? "Edit Opening Stock" : "Add Opening Stock"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingStock
-                        ? "Update the opening stock details."
-                        : "Enter the initial stock for a product. This will create a stock lot."}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
+    <PageAnimation>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Opening Stock</h2>
+            <p className="text-slate-500">Set initial stock quantities for your products</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button disabled={availableProducts.length === 0}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Opening Stock
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingStock ? "Edit Opening Stock" : "Add Opening Stock"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingStock
+                      ? "Update the opening stock details."
+                      : "Enter the initial stock for a product. This will create a stock lot."}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="product">Product *</Label>
+                    <Select
+                      value={formData.productId}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, productId: value })
+                      }
+                      disabled={!!editingStock}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(editingStock ? products : availableProducts).map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} {product.sku && `(${product.sku})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label htmlFor="product">Product *</Label>
-                      <Select
-                        value={formData.productId}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, productId: value })
-                        }
-                        disabled={!!editingStock}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select product" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(editingStock ? products : availableProducts).map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} {product.sku && `(${product.sku})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="quantity">Quantity *</Label>
-                        <Input
-                          id="quantity"
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={formData.quantity}
-                          onChange={(e) =>
-                            setFormData({ ...formData, quantity: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="unitCost">Unit Cost</Label>
-                        <Input
-                          id="unitCost"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={formData.unitCost}
-                          onChange={(e) =>
-                            setFormData({ ...formData, unitCost: e.target.value })
-                          }
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="stockDate">Stock Date *</Label>
+                      <Label htmlFor="quantity">Quantity *</Label>
                       <Input
-                        id="stockDate"
-                        type="date"
-                        value={formData.stockDate}
+                        id="quantity"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={formData.quantity}
                         onChange={(e) =>
-                          setFormData({ ...formData, stockDate: e.target.value })
+                          setFormData({ ...formData, quantity: e.target.value })
                         }
                         required
                       />
-                      <p className="text-xs text-slate-500">
-                        This date is used for FIFO ordering. Stock from earlier dates will be consumed first.
-                      </p>
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="notes">Notes</Label>
-                      <Textarea
-                        id="notes"
-                        value={formData.notes}
+                      <Label htmlFor="unitCost">Unit Cost</Label>
+                      <Input
+                        id="unitCost"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.unitCost}
                         onChange={(e) =>
-                          setFormData({ ...formData, notes: e.target.value })
+                          setFormData({ ...formData, unitCost: e.target.value })
                         }
-                        placeholder="Any additional notes..."
+                        placeholder="0.00"
                       />
                     </div>
                   </div>
-                  <DialogFooter>
-                    <Button type="submit">
-                      {editingStock ? "Update" : "Add Opening Stock"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Opening Stock Entries</CardTitle>
-              <CardDescription>
-                These are the initial stock quantities that were set when the system started.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <TableSkeleton columns={7} rows={5} />
-              ) : openingStocks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Package className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No opening stock entries</h3>
-                  <p className="text-sm text-slate-500">
-                    Add opening stock to set initial quantities for your products
-                  </p>
+                  <div className="grid gap-2">
+                    <Label htmlFor="stockDate">Stock Date *</Label>
+                    <Input
+                      id="stockDate"
+                      type="date"
+                      value={formData.stockDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, stockDate: e.target.value })
+                      }
+                      required
+                    />
+                    <p className="text-xs text-slate-500">
+                      This date is used for FIFO ordering. Stock from earlier dates will be consumed first.
+                    </p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) =>
+                        setFormData({ ...formData, notes: e.target.value })
+                      }
+                      placeholder="Any additional notes..."
+                    />
+                  </div>
                 </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-right">Opening Qty</TableHead>
-                      <TableHead className="text-right">Remaining Qty</TableHead>
-                      <TableHead className="text-right">Unit Cost</TableHead>
-                      <TableHead>Stock Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {openingStocks.map((stock) => (
-                      <TableRow key={stock.id}>
-                        <TableCell className="font-medium">
-                          {stock.product.name}
-                        </TableCell>
-                        <TableCell className="text-slate-500">
-                          {stock.product.sku || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {Number(stock.quantity)} {stock.product.unit}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className={
-                            stock.stockLot && Number(stock.stockLot.remainingQuantity) < Number(stock.quantity)
-                              ? "text-orange-600"
-                              : ""
-                          }>
-                            {stock.stockLot ? Number(stock.stockLot.remainingQuantity) : 0} {stock.product.unit}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ₹{Number(stock.unitCost).toLocaleString("en-IN")}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(stock.stockDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(stock)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(stock.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                <DialogFooter>
+                  <Button type="submit">
+                    {editingStock ? "Update" : "Add Opening Stock"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
-        </PageAnimation>
-      );
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Opening Stock Entries</CardTitle>
+            <CardDescription>
+              These are the initial stock quantities that were set when the system started.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <TableSkeleton columns={7} rows={5} />
+            ) : openingStocks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Package className="h-12 w-12 text-slate-300" />
+                <h3 className="mt-4 text-lg font-semibold">No opening stock entries</h3>
+                <p className="text-sm text-slate-500">
+                  Add opening stock to set initial quantities for your products
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead className="text-right">Opening Qty</TableHead>
+                    <TableHead className="text-right">Remaining Qty</TableHead>
+                    <TableHead className="text-right">Unit Cost</TableHead>
+                    <TableHead>Stock Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {openingStocks.map((stock) => (
+                    <TableRow key={stock.id}>
+                      <TableCell className="font-medium">
+                        {stock.product.name}
+                      </TableCell>
+                      <TableCell className="text-slate-500">
+                        {stock.product.sku || "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {Number(stock.quantity)} {typeof stock.product.unit === "object" ? (stock.product.unit as any)?.code : stock.product.unit}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className={
+                          stock.stockLot && Number(stock.stockLot.remainingQuantity) < Number(stock.quantity)
+                            ? "text-orange-600"
+                            : ""
+                        }>
+                          {stock.stockLot ? Number(stock.stockLot.remainingQuantity) : 0} {typeof stock.product.unit === "object" ? (stock.product.unit as any)?.code : stock.product.unit}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(stock.unitCost).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(stock.stockDate), "dd MMM yyyy")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(stock)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(stock.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </PageAnimation>
+  );
 }
