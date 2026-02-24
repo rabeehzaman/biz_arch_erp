@@ -12,8 +12,12 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const { searchParams } = new URL(request.url);
-    const fromDate = searchParams.get("fromDate") || new Date(new Date().getFullYear(), 0, 1).toISOString();
-    const toDate = searchParams.get("toDate") || new Date().toISOString();
+    const fromDateParam = searchParams.get("fromDate") || new Date(new Date().getFullYear(), 0, 1).toISOString();
+    const toDateParam = searchParams.get("toDate") || new Date().toISOString();
+
+    const fromDate = new Date(fromDateParam);
+    const toDate = new Date(toDateParam);
+    toDate.setHours(23, 59, 59, 999);
 
     const lines = await prisma.journalEntryLine.findMany({
       where: {
@@ -21,8 +25,8 @@ export async function GET(request: NextRequest) {
         journalEntry: {
           status: "POSTED",
           date: {
-            gte: new Date(fromDate),
-            lte: new Date(toDate),
+            gte: fromDate,
+            lte: toDate,
           },
         },
         account: {
