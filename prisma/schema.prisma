@@ -64,15 +64,15 @@ model Organization {
 // ==================== AUTH ====================
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
+  id             String        @id @default(cuid())
+  email          String        @unique
   password       String
   name           String
-  role           String    @default("user") // superadmin, admin, user
+  role           String        @default("user") // superadmin, admin, user
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   customerAssignments CustomerAssignment[]
   invoices            Invoice[]
@@ -80,6 +80,7 @@ model User {
   posSessions         POSSession[]
 
   @@index([organizationId])
+  @@index([organizationId, name])
   @@map("users")
 }
 
@@ -105,17 +106,17 @@ model Unit {
 // ==================== PRODUCTS ====================
 
 model Product {
-  id             String       @id @default(cuid())
+  id             String           @id @default(cuid())
   name           String
   description    String?
-  price          Decimal      @db.Decimal(10, 2)
-  cost           Decimal      @default(0) @db.Decimal(10, 2)
+  price          Decimal          @db.Decimal(10, 2)
+  cost           Decimal          @default(0) @db.Decimal(10, 2)
   unitCode       String?
   unitId         String?
-  unit           Unit?        @relation(fields: [unitId], references: [id])
+  unit           Unit?            @relation(fields: [unitId], references: [id])
   sku            String?
-  isService      Boolean      @default(false)
-  isActive       Boolean      @default(true)
+  isService      Boolean          @default(false)
+  isActive       Boolean          @default(true)
   organizationId String
   organization   Organization     @relation(fields: [organizationId], references: [id])
   categoryId     String?
@@ -134,6 +135,8 @@ model Product {
 
   @@unique([organizationId, sku])
   @@index([organizationId])
+  @@index([organizationId, name])
+  @@index([organizationId, categoryId])
   @@map("products")
 }
 
@@ -166,6 +169,7 @@ model Customer {
   posHeldOrders POSHeldOrder[]
 
   @@index([organizationId])
+  @@index([organizationId, name])
   @@map("customers")
 }
 
@@ -212,6 +216,7 @@ model Supplier {
   expenses         Expense[]
 
   @@index([organizationId])
+  @@index([organizationId, name])
   @@map("suppliers")
 }
 
@@ -227,8 +232,8 @@ model Invoice {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  issueDate  DateTime @default(now())
-  dueDate    DateTime
+  issueDate DateTime @default(now())
+  dueDate   DateTime
 
   subtotal   Decimal @db.Decimal(12, 2)
   taxRate    Decimal @default(0) @db.Decimal(5, 2)
@@ -264,6 +269,9 @@ model Invoice {
 
   @@unique([organizationId, invoiceNumber])
   @@index([organizationId])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, issueDate(sort: Desc)])
+  @@index([organizationId, customerId])
   @@map("invoices")
 }
 
@@ -298,14 +306,14 @@ model InvoiceItem {
 // ==================== QUOTATIONS ====================
 
 model Quotation {
-  id              String          @id @default(cuid())
+  id              String       @id @default(cuid())
   quotationNumber String
   customerId      String
-  customer        Customer        @relation(fields: [customerId], references: [id])
+  customer        Customer     @relation(fields: [customerId], references: [id])
   organizationId  String
-  organization    Organization    @relation(fields: [organizationId], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id])
 
-  issueDate  DateTime        @default(now())
+  issueDate  DateTime @default(now())
   validUntil DateTime
 
   status QuotationStatus @default(SENT)
@@ -318,8 +326,8 @@ model Quotation {
   notes String?
   terms String?
 
-  convertedInvoiceId String?  @unique
-  convertedInvoice   Invoice? @relation(fields: [convertedInvoiceId], references: [id])
+  convertedInvoiceId String?   @unique
+  convertedInvoice   Invoice?  @relation(fields: [convertedInvoiceId], references: [id])
   convertedAt        DateTime?
 
   createdAt DateTime @default(now())
@@ -329,6 +337,8 @@ model Quotation {
 
   @@unique([organizationId, quotationNumber])
   @@index([organizationId])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
   @@map("quotations")
 }
 
@@ -365,14 +375,14 @@ model QuotationItem {
 // ==================== PURCHASE INVOICES ====================
 
 model PurchaseInvoice {
-  id                    String                @id @default(cuid())
+  id                    String       @id @default(cuid())
   purchaseInvoiceNumber String
   supplierId            String
-  supplier              Supplier              @relation(fields: [supplierId], references: [id])
+  supplier              Supplier     @relation(fields: [supplierId], references: [id])
   organizationId        String
-  organization          Organization          @relation(fields: [organizationId], references: [id])
+  organization          Organization @relation(fields: [organizationId], references: [id])
 
-  invoiceDate        DateTime              @default(now())
+  invoiceDate        DateTime @default(now())
   dueDate            DateTime
   supplierInvoiceRef String?
 
@@ -398,6 +408,10 @@ model PurchaseInvoice {
 
   @@unique([organizationId, purchaseInvoiceNumber])
   @@index([organizationId])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, invoiceDate(sort: Desc)])
+  @@index([organizationId, supplierId])
+  @@index([organizationId, status])
   @@map("purchase_invoices")
 }
 
@@ -442,8 +456,8 @@ model CreditNote {
   organizationId   String
   organization     Organization @relation(fields: [organizationId], references: [id])
 
-  invoiceId  String?
-  invoice    Invoice? @relation(fields: [invoiceId], references: [id])
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
 
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
@@ -493,7 +507,7 @@ model CreditNoteItem {
 
   originalCOGS Decimal @default(0) @db.Decimal(12, 2)
 
-  stockLotId String?    @unique
+  stockLotId String?   @unique
   stockLot   StockLot?
 
   createdAt DateTime @default(now())
@@ -567,14 +581,14 @@ model DebitNoteItem {
 }
 
 model DebitNoteLotConsumption {
-  id              String       @id @default(cuid())
+  id              String        @id @default(cuid())
   debitNoteItemId String
   debitNoteItem   DebitNoteItem @relation(fields: [debitNoteItemId], references: [id], onDelete: Cascade)
   organizationId  String
   organization    Organization  @relation(fields: [organizationId], references: [id])
 
-  stockLotId       String
-  stockLot         StockLot @relation(fields: [stockLotId], references: [id])
+  stockLotId String
+  stockLot   StockLot @relation(fields: [stockLotId], references: [id])
 
   quantityReturned Decimal @db.Decimal(10, 2)
   unitCost         Decimal @db.Decimal(10, 2)
@@ -616,6 +630,8 @@ model Payment {
 
   @@unique([organizationId, paymentNumber])
   @@index([organizationId])
+  @@index([organizationId, paymentDate(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
   @@map("payments")
 }
 
@@ -664,6 +680,8 @@ model SupplierPayment {
 
   @@unique([organizationId, paymentNumber])
   @@index([organizationId])
+  @@index([organizationId, paymentDate(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
   @@map("supplier_payments")
 }
 
@@ -723,9 +741,9 @@ model StockLot {
   creditNoteItem        CreditNoteItem?      @relation(fields: [creditNoteItemId], references: [id])
 
   lotDate           DateTime
-  unitCost          Decimal @db.Decimal(10, 2)
-  initialQuantity   Decimal @db.Decimal(10, 2)
-  remainingQuantity Decimal @db.Decimal(10, 2)
+  unitCost          Decimal  @db.Decimal(10, 2)
+  initialQuantity   Decimal  @db.Decimal(10, 2)
+  remainingQuantity Decimal  @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -736,6 +754,7 @@ model StockLot {
   @@index([productId, lotDate])
   @@index([productId, remainingQuantity])
   @@index([organizationId])
+  @@index([organizationId, lotDate(sort: Desc)])
   @@map("stock_lots")
 }
 
@@ -828,7 +847,7 @@ model CustomerTransaction {
 
   transactionType CustomerTransactionType
   transactionDate DateTime
-  amount          Decimal @db.Decimal(12, 2)
+  amount          Decimal                 @db.Decimal(12, 2)
   description     String
 
   invoiceId    String?
@@ -842,6 +861,7 @@ model CustomerTransaction {
 
   @@index([customerId, transactionDate])
   @@index([organizationId])
+  @@index([organizationId, transactionDate(sort: Desc)])
   @@map("customer_transactions")
 }
 
@@ -864,7 +884,7 @@ model SupplierTransaction {
 
   transactionType SupplierTransactionType
   transactionDate DateTime
-  amount          Decimal @db.Decimal(12, 2)
+  amount          Decimal                 @db.Decimal(12, 2)
   description     String
 
   purchaseInvoiceId String?
@@ -878,6 +898,7 @@ model SupplierTransaction {
 
   @@index([supplierId, transactionDate])
   @@index([organizationId])
+  @@index([organizationId, transactionDate(sort: Desc)])
   @@map("supplier_transactions")
 }
 
@@ -913,30 +934,31 @@ model ProductCategory {
 // ==================== POS (POINT OF SALE) ====================
 
 model POSSession {
-  id              String           @id @default(cuid())
-  sessionNumber   String
-  organizationId  String
-  organization    Organization     @relation(fields: [organizationId], references: [id])
-  userId          String
-  user            User             @relation(fields: [userId], references: [id])
-  status          POSSessionStatus @default(OPEN)
-  openedAt        DateTime         @default(now())
-  closedAt        DateTime?
-  openingCash     Decimal          @default(0) @db.Decimal(12, 2)
-  closingCash     Decimal?         @db.Decimal(12, 2)
-  expectedCash    Decimal?         @db.Decimal(12, 2)
-  cashDifference  Decimal?         @db.Decimal(12, 2)
-  totalSales      Decimal          @default(0) @db.Decimal(12, 2)
-  totalTransactions Int            @default(0)
-  notes           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                String           @id @default(cuid())
+  sessionNumber     String
+  organizationId    String
+  organization      Organization     @relation(fields: [organizationId], references: [id])
+  userId            String
+  user              User             @relation(fields: [userId], references: [id])
+  status            POSSessionStatus @default(OPEN)
+  openedAt          DateTime         @default(now())
+  closedAt          DateTime?
+  openingCash       Decimal          @default(0) @db.Decimal(12, 2)
+  closingCash       Decimal?         @db.Decimal(12, 2)
+  expectedCash      Decimal?         @db.Decimal(12, 2)
+  cashDifference    Decimal?         @db.Decimal(12, 2)
+  totalSales        Decimal          @default(0) @db.Decimal(12, 2)
+  totalTransactions Int              @default(0)
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   invoices   Invoice[]
   heldOrders POSHeldOrder[]
 
   @@unique([organizationId, sessionNumber])
   @@index([organizationId])
+  @@index([organizationId, openedAt(sort: Desc)])
   @@index([userId])
   @@map("pos_sessions")
 }
@@ -1115,37 +1137,40 @@ model CashBankTransaction {
 
   @@index([cashBankAccountId, transactionDate])
   @@index([organizationId])
+  @@index([organizationId, transactionDate(sort: Desc)])
   @@map("cash_bank_transactions")
 }
 
 // ==================== EXPENSES ====================
 
 model Expense {
-  id                String        @id @default(cuid())
+  id                String           @id @default(cuid())
   expenseNumber     String
-  status            ExpenseStatus @default(DRAFT)
+  status            ExpenseStatus    @default(DRAFT)
   supplierId        String?
-  supplier          Supplier?     @relation(fields: [supplierId], references: [id])
+  supplier          Supplier?        @relation(fields: [supplierId], references: [id])
   cashBankAccountId String?
   cashBankAccount   CashBankAccount? @relation(fields: [cashBankAccountId], references: [id])
-  expenseDate       DateTime      @default(now())
+  expenseDate       DateTime         @default(now())
   description       String?
-  subtotal          Decimal       @db.Decimal(12, 2)
-  taxRate           Decimal       @default(0) @db.Decimal(5, 2)
-  taxAmount         Decimal       @default(0) @db.Decimal(12, 2)
-  total             Decimal       @db.Decimal(12, 2)
+  subtotal          Decimal          @db.Decimal(12, 2)
+  taxRate           Decimal          @default(0) @db.Decimal(5, 2)
+  taxAmount         Decimal          @default(0) @db.Decimal(12, 2)
+  total             Decimal          @db.Decimal(12, 2)
   notes             String?
   journalEntryId    String?
-  journalEntry      JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  journalEntry      JournalEntry?    @relation(fields: [journalEntryId], references: [id])
   organizationId    String
-  organization      Organization  @relation(fields: [organizationId], references: [id])
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  organization      Organization     @relation(fields: [organizationId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   items ExpenseItem[]
 
   @@unique([organizationId, expenseNumber])
   @@index([organizationId])
+  @@index([organizationId, expenseDate(sort: Desc)])
+  @@index([organizationId, status])
   @@map("expenses")
 }
 
@@ -1187,6 +1212,8 @@ model JournalEntry {
 
   @@unique([organizationId, journalNumber])
   @@index([organizationId])
+  @@index([organizationId, date(sort: Desc)])
+  @@index([organizationId, status])
   @@index([sourceType, sourceId])
   @@map("journal_entries")
 }
