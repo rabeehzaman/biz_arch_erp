@@ -87,12 +87,6 @@ export function Combobox<T>({
         e.preventDefault();
         if (filteredItems[highlightedIndex]) {
           handleSelect(getId(filteredItems[highlightedIndex]));
-          // When selected via Enter, request moving focus forward
-          if (onSelectFocusNext) {
-            setTimeout(() => {
-              onSelectFocusNext(triggerRef);
-            }, 10);
-          }
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
@@ -127,10 +121,22 @@ export function Combobox<T>({
     justClosedRef.current = true;
     setOpen(false);
     setSearchQuery("");
-    // Call onSelect callback after a microtask to ensure state updates are applied
-    if (onSelect) {
-      setTimeout(() => onSelect(), 0);
-    }
+
+    // Manage focus uniformly after a selection is made
+    setTimeout(() => {
+      let focusHandled = false;
+      if (onSelect) {
+        onSelect();
+        focusHandled = true;
+      }
+      if (onSelectFocusNext) {
+        onSelectFocusNext(triggerRef);
+        focusHandled = true;
+      }
+      if (!focusHandled) {
+        triggerRef.current?.focus();
+      }
+    }, 10);
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -187,6 +193,9 @@ export function Combobox<T>({
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             inputRef.current?.focus();
+          }}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
           }}
         >
           <div className="flex items-center border-b border-slate-200 px-3">
