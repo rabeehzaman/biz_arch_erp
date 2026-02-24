@@ -139,19 +139,11 @@ export default function POSPage() {
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
-        if (existing.quantity >= product.stockQuantity) {
-          toast.error("Not enough stock available");
-          return prev;
-        }
         return prev.map((item) =>
           item.productId === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
-      }
-      if (product.stockQuantity <= 0) {
-        toast.error("Product is out of stock");
-        return prev;
       }
       return [
         ...prev,

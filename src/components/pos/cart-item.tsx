@@ -80,7 +80,6 @@ export function CartItem({
             size="icon"
             className="h-8 w-8"
             onClick={() => onUpdateQuantity(item.quantity + 1)}
-            disabled={item.quantity >= item.stockQuantity}
           >
             <Plus className="h-3 w-3" />
           </Button>
