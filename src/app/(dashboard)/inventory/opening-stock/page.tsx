@@ -80,7 +80,7 @@ export default function OpeningStockPage() {
     try {
       const [stocksResponse, productsResponse] = await Promise.all([
         fetch("/api/opening-stocks"),
-        fetch("/api/products"),
+        fetch("/api/products?excludeServices=true"),
       ]);
 
       const stocksData = await stocksResponse.json();

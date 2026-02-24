@@ -13,7 +13,7 @@ export async function GET() {
     const organizationId = getOrgId(session);
 
     const products = await prisma.product.findMany({
-      where: { isActive: true, organizationId },
+      where: { isActive: true, organizationId, isService: false },
       orderBy: { name: "asc" },
       include: {
         stockLots: {
