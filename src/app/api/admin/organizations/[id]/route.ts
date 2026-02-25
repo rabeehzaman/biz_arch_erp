@@ -117,19 +117,24 @@ export async function PUT(
       updateData.gstStateCode = gstin.substring(0, 2);
     }
 
-    const organization = await prisma.$transaction(async (tx) => {
-      const org = await tx.organization.update({
-        where: { id },
-        data: updateData,
-      });
+    const organization = await prisma.$transaction(
+      async (tx) => {
+        const org = await tx.organization.update({
+          where: { id },
+          data: updateData,
+        });
 
-      // Seed GST accounts if enabling GST
-      if (gstEnabled) {
-        await seedDefaultCOA(tx as never, id);
+        // Seed GST accounts if enabling GST
+        if (gstEnabled) {
+          await seedDefaultCOA(tx as never, id);
+        }
+
+        return org;
+      },
+      {
+        timeout: 30000, // Increase timeout to 30s to allow multiple upserts on poor network/Neon
       }
-
-      return org;
-    });
+    );
 
     return NextResponse.json(organization);
   } catch (error) {
