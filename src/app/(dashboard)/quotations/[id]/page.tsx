@@ -52,6 +52,9 @@ interface Quotation {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
+  totalCgst: number;
+  totalSgst: number;
+  totalIgst: number;
   total: number;
   notes: string | null;
   terms: string | null;
@@ -413,14 +416,28 @@ export default function QuotationDetailPage({
                       ₹{Number(quotation.subtotal).toLocaleString("en-IN")}
                     </span>
                   </div>
-                  {Number(quotation.taxRate) > 0 && (
+                  {Number(quotation.totalCgst) > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">
-                        Tax ({quotation.taxRate}%)
-                      </span>
-                      <span className="font-medium">
-                        ₹{Number(quotation.taxAmount).toLocaleString("en-IN")}
-                      </span>
+                      <span className="text-slate-600">CGST</span>
+                      <span className="font-medium">₹{Number(quotation.totalCgst).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  {Number(quotation.totalSgst) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">SGST</span>
+                      <span className="font-medium">₹{Number(quotation.totalSgst).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  {Number(quotation.totalIgst) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">IGST</span>
+                      <span className="font-medium">₹{Number(quotation.totalIgst).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  {Number(quotation.totalCgst) === 0 && Number(quotation.totalSgst) === 0 && Number(quotation.totalIgst) === 0 && Number(quotation.taxAmount) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Tax</span>
+                      <span className="font-medium">₹{Number(quotation.taxAmount).toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-lg font-bold border-t pt-2">

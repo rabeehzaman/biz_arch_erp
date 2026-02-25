@@ -58,7 +58,6 @@ export default function EditPurchaseInvoicePage({
     invoiceDate: "",
     dueDate: "",
     supplierInvoiceRef: "",
-    taxRate: "",
     notes: "",
   });
 
@@ -119,18 +118,17 @@ export default function EditPurchaseInvoicePage({
           invoiceDate: data.invoiceDate.split("T")[0],
           dueDate: data.dueDate.split("T")[0],
           supplierInvoiceRef: data.supplierInvoiceRef || "",
-          taxRate: String(data.taxRate),
           notes: data.notes || "",
         });
         setLineItems(
-          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitCost: number; discount: number }) => ({
+          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitCost: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
             id: item.id,
             productId: item.product?.id || "",
             quantity: Number(item.quantity),
             unitCost: Number(item.unitCost),
             discount: Number(item.discount),
-            gstRate: (item as any).gstRate ? Number((item as any).gstRate) : 0,
-            hsnCode: (item as any).hsnCode || "",
+            gstRate: Number(item.gstRate) || 0,
+            hsnCode: item.hsnCode || "",
           }))
         );
       } else {
@@ -184,6 +182,8 @@ export default function EditPurchaseInvoicePage({
             ...item,
             productId: value as string,
             unitCost: Number(product.cost) || Number(product.price),
+            gstRate: Number(product.gstRate) || 0,
+            hsnCode: product.hsnCode || "",
           };
         }
       }
@@ -219,7 +219,10 @@ export default function EditPurchaseInvoicePage({
   };
 
   const calculateTax = () => {
-    return (calculateSubtotal() * parseFloat(formData.taxRate || "0")) / 100;
+    return lineItems.reduce((sum, item) => {
+      const lineTotal = item.quantity * item.unitCost * (1 - item.discount / 100);
+      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+    }, 0);
   };
 
   const calculateTotal = () => {
@@ -247,7 +250,6 @@ export default function EditPurchaseInvoicePage({
           invoiceDate: formData.invoiceDate,
           dueDate: formData.dueDate,
           supplierInvoiceRef: formData.supplierInvoiceRef || null,
-          taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
@@ -257,6 +259,8 @@ export default function EditPurchaseInvoicePage({
               quantity: item.quantity,
               unitCost: item.unitCost,
               discount: item.discount,
+              gstRate: item.gstRate,
+              hsnCode: item.hsnCode,
             };
           }),
         }),
@@ -513,6 +517,12 @@ export default function EditPurchaseInvoicePage({
                     <span>Subtotal</span>
                     <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
+                  {calculateTax() > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>GST</span>
+                      <span>₹{calculateTax().toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
                     <span>₹{calculateTotal().toLocaleString("en-IN")}</span>

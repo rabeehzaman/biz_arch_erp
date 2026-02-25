@@ -60,6 +60,9 @@ interface Expense {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
+  totalCgst: number;
+  totalSgst: number;
+  totalIgst: number;
   total: number;
   notes: string | null;
   supplier: { id: string; name: string } | null;
@@ -294,15 +297,35 @@ export default function ExpenseDetailPage({
                       })}
                     </TableCell>
                   </TableRow>
-                  {Number(expense.taxAmount) > 0 && (
+                  {Number(expense.totalCgst) > 0 && (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-right text-slate-500">
-                        Tax ({Number(expense.taxRate)}%)
-                      </TableCell>
+                      <TableCell colSpan={2} className="text-right text-slate-500">CGST</TableCell>
                       <TableCell className="text-right font-mono text-slate-500">
-                        {Number(expense.taxAmount).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                        })}
+                        {Number(expense.totalCgst).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {Number(expense.totalSgst) > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-right text-slate-500">SGST</TableCell>
+                      <TableCell className="text-right font-mono text-slate-500">
+                        {Number(expense.totalSgst).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {Number(expense.totalIgst) > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-right text-slate-500">IGST</TableCell>
+                      <TableCell className="text-right font-mono text-slate-500">
+                        {Number(expense.totalIgst).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {Number(expense.totalCgst) === 0 && Number(expense.totalSgst) === 0 && Number(expense.totalIgst) === 0 && Number(expense.taxAmount) > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-right text-slate-500">Tax</TableCell>
+                      <TableCell className="text-right font-mono text-slate-500">
+                        {Number(expense.taxAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   )}

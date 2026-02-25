@@ -88,7 +88,9 @@ export async function GET(
       },
       items: pdfItems,
       subtotal: Number(invoice.subtotal),
-      taxAmount: Number(invoice.totalCgst) + Number(invoice.totalSgst) + Number(invoice.totalIgst),
+      totalCgst: Number(invoice.totalCgst),
+      totalSgst: Number(invoice.totalSgst),
+      totalIgst: Number(invoice.totalIgst),
       total: Number(invoice.total),
     };
 

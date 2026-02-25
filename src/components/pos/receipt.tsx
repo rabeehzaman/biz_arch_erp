@@ -110,9 +110,9 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
           <span>Subtotal</span>
           <span>{formatCurrency(data.subtotal)}</span>
         </div>
-        {data.taxRate > 0 && (
+        {data.taxAmount > 0 && (
           <div style={rowStyle}>
-            <span>Tax ({data.taxRate}%)</span>
+            <span>GST</span>
             <span>{formatCurrency(data.taxAmount)}</span>
           </div>
         )}

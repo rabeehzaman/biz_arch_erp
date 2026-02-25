@@ -47,7 +47,6 @@ export default function NewExpensePage() {
   );
   const [description, setDescription] = useState("");
   const [supplierId, setSupplierId] = useState("");
-  const [taxRate, setTaxRate] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<ExpenseLine[]>([
     { accountId: "", description: "", amount: "" },
@@ -70,8 +69,6 @@ export default function NewExpensePage() {
     (sum, l) => sum + (parseFloat(l.amount) || 0),
     0
   );
-  const taxAmount = (subtotal * (parseFloat(taxRate) || 0)) / 100;
-  const total = subtotal + taxAmount;
 
   const addLine = () => {
     setLines([...lines, { accountId: "", description: "", amount: "" }]);
@@ -108,7 +105,6 @@ export default function NewExpensePage() {
           supplierId: supplierId || null,
           expenseDate,
           description,
-          taxRate: parseFloat(taxRate) || 0,
           notes: notes || null,
           items: validLines.map((l) => ({
             accountId: l.accountId,
@@ -179,16 +175,6 @@ export default function NewExpensePage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Tax Rate %</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={taxRate}
-                      onChange={(e) => setTaxRate(e.target.value)}
-                      placeholder="0"
-                    />
                   </div>
                 </div>
 
@@ -280,28 +266,10 @@ export default function NewExpensePage() {
                     ))}
 
                     <div className="border-t pt-3 space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span className="font-mono">
-                          {subtotal.toLocaleString("en-IN", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                      {taxAmount > 0 && (
-                        <div className="flex justify-between text-slate-500">
-                          <span>Tax ({taxRate}%):</span>
-                          <span className="font-mono">
-                            {taxAmount.toLocaleString("en-IN", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
-                      )}
                       <div className="flex justify-between font-bold text-base">
                         <span>Total:</span>
                         <span className="font-mono">
-                          {total.toLocaleString("en-IN", {
+                          {subtotal.toLocaleString("en-IN", {
                             minimumFractionDigits: 2,
                           })}
                         </span>
@@ -325,7 +293,7 @@ export default function NewExpensePage() {
                       Cancel
                     </Button>
                   </Link>
-                  <Button type="submit" disabled={isSubmitting || subtotal === 0}>
+                  <Button type="submit" disabled={isSubmitting || subtotal <= 0}>
                     {isSubmitting ? "Creating..." : "Create Expense"}
                   </Button>
                 </div>

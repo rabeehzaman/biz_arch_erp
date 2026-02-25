@@ -50,7 +50,6 @@ export default function NewDebitNotePage() {
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [taxRate, setTaxRate] = useState(0);
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<LineItem[]>([
@@ -112,6 +111,8 @@ export default function NewDebitNotePage() {
             productId,
             description: product.name,
             unitCost: product.cost,
+            gstRate: (product as any).gstRate || 0,
+            hsnCode: (product as any).hsnCode || "",
           }
           : item
       )
@@ -178,7 +179,11 @@ export default function NewDebitNotePage() {
   };
 
   const calculateTax = () => {
-    return (calculateSubtotal() * taxRate) / 100;
+    return items.reduce((sum, item) => {
+      if (!item.productId) return sum;
+      const lineTotal = item.quantity * item.unitCost * (1 - item.discount / 100);
+      return sum + (lineTotal * ((item as any).gstRate || 0)) / 100;
+    }, 0);
   };
 
   const calculateTotal = () => {
@@ -215,8 +220,9 @@ export default function NewDebitNotePage() {
             quantity: item.quantity,
             unitCost: item.unitCost,
             discount: item.discount,
+            gstRate: (item as any).gstRate || 0,
+            hsnCode: (item as any).hsnCode || null,
           })),
-          taxRate,
           reason: reason || null,
           notes: notes || null,
         }),
@@ -464,20 +470,6 @@ export default function NewDebitNotePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                <Input
-                  id="taxRate"
-                  type="number"
-                  onFocus={(e) => e.target.select()}
-                  value={taxRate}
-                  onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                  min="0"
-                  max="100"
-                  step="0.01"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
@@ -500,10 +492,12 @@ export default function NewDebitNotePage() {
                   <span>Subtotal:</span>
                   <span>₹{calculateSubtotal().toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Tax ({taxRate}%):</span>
-                  <span>₹{calculateTax().toFixed(2)}</span>
-                </div>
+                {calculateTax() > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>GST:</span>
+                    <span>₹{calculateTax().toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
                   <span>₹{calculateTotal().toFixed(2)}</span>

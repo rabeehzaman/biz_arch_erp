@@ -118,6 +118,8 @@ export default function SuppliersPage() {
       state: formData.state || null,
       zipCode: formData.zipCode || null,
       country: formData.country || "India",
+      gstin: formData.gstin || null,
+      gstStateCode: formData.gstStateCode || null,
       notes: formData.notes || null,
     };
 

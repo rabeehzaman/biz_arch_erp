@@ -68,7 +68,9 @@ export async function GET(
       },
       items: pdfItems,
       subtotal: Number(quotation.subtotal),
-      taxAmount: Number(quotation.totalCgst) + Number(quotation.totalSgst) + Number(quotation.totalIgst),
+      totalCgst: Number(quotation.totalCgst),
+      totalSgst: Number(quotation.totalSgst),
+      totalIgst: Number(quotation.totalIgst),
       total: Number(quotation.total),
     };
 

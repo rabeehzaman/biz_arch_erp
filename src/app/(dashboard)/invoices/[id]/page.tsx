@@ -65,6 +65,9 @@ interface Invoice {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
+  totalCgst: number;
+  totalSgst: number;
+  totalIgst: number;
   total: number;
   amountPaid: number;
   balanceDue: number;
@@ -381,9 +384,27 @@ export default function InvoiceDetailPage({
                     <span>Subtotal</span>
                     <span>₹{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
                   </div>
-                  {Number(invoice.taxRate) > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Tax ({Number(invoice.taxRate)}%)</span>
+                  {Number(invoice.totalCgst) > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>CGST</span>
+                      <span>₹{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  {Number(invoice.totalSgst) > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>SGST</span>
+                      <span>₹{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  {Number(invoice.totalIgst) > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>IGST</span>
+                      <span>₹{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>Tax</span>
                       <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
                     </div>
                   )}

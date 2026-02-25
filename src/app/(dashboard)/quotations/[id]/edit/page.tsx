@@ -56,7 +56,6 @@ export default function EditQuotationPage({
     customerId: "",
     issueDate: "",
     validUntil: "",
-    taxRate: "0",
     notes: "",
     terms: "",
   });
@@ -117,17 +116,18 @@ export default function EditQuotationPage({
           customerId: data.customer.id,
           issueDate: data.issueDate.split("T")[0],
           validUntil: data.validUntil.split("T")[0],
-          taxRate: String(data.taxRate),
           notes: data.notes || "",
           terms: data.terms || "",
         });
         setLineItems(
-          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitPrice: number; discount: number }) => ({
+          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitPrice: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
             id: item.id,
             productId: item.product?.id || "",
             quantity: Number(item.quantity),
             unitPrice: Number(item.unitPrice),
             discount: Number(item.discount),
+            gstRate: Number(item.gstRate) || 0,
+            hsnCode: item.hsnCode || "",
           }))
         );
       } else {
@@ -181,6 +181,8 @@ export default function EditQuotationPage({
             ...item,
             productId: value as string,
             unitPrice: Number(product.price),
+            gstRate: Number(product.gstRate) || 0,
+            hsnCode: product.hsnCode || "",
           };
         }
       }
@@ -216,7 +218,10 @@ export default function EditQuotationPage({
   };
 
   const calculateTax = () => {
-    return (calculateSubtotal() * parseFloat(formData.taxRate || "0")) / 100;
+    return lineItems.reduce((sum, item) => {
+      const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+    }, 0);
   };
 
   const calculateTotal = () => {
@@ -243,7 +248,6 @@ export default function EditQuotationPage({
           customerId: formData.customerId,
           issueDate: formData.issueDate,
           validUntil: formData.validUntil,
-          taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
           terms: formData.terms || null,
           items: validItems.map((item) => {
@@ -254,6 +258,8 @@ export default function EditQuotationPage({
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               discount: item.discount,
+              gstRate: item.gstRate,
+              hsnCode: item.hsnCode,
             };
           }),
         }),
@@ -504,6 +510,12 @@ export default function EditQuotationPage({
                     <span>Subtotal</span>
                     <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
+                  {calculateTax() > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>GST</span>
+                      <span>₹{calculateTax().toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
                     <span>₹{calculateTotal().toLocaleString("en-IN")}</span>

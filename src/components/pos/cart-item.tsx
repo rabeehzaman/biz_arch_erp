@@ -12,6 +12,8 @@ export interface CartItemData {
   quantity: number;
   discount: number;
   stockQuantity: number;
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 interface CartItemProps {

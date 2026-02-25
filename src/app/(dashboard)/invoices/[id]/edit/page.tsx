@@ -57,7 +57,6 @@ export default function EditInvoicePage({
     customerId: "",
     date: "",
     dueDate: "",
-    taxRate: "",
     notes: "",
     terms: "",
   });
@@ -118,7 +117,6 @@ export default function EditInvoicePage({
           customerId: data.customer.id,
           date: data.issueDate.split("T")[0],
           dueDate: data.dueDate.split("T")[0],
-          taxRate: data.taxRate?.toString() || "",
           notes: data.notes || "",
           terms: data.terms || "",
         });
@@ -221,7 +219,10 @@ export default function EditInvoicePage({
   };
 
   const calculateTax = () => {
-    return (calculateSubtotal() * parseFloat(formData.taxRate || "0")) / 100;
+    return lineItems.reduce((sum, item) => {
+      const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+    }, 0);
   };
 
   const calculateTotal = () => {
@@ -248,7 +249,6 @@ export default function EditInvoicePage({
           customerId: formData.customerId,
           issueDate: formData.date,
           dueDate: formData.dueDate,
-          taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
           terms: formData.terms || null,
           items: validItems.map((item) => {
@@ -259,6 +259,8 @@ export default function EditInvoicePage({
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               discount: item.discount,
+              gstRate: item.gstRate,
+              hsnCode: item.hsnCode,
             };
           }),
         }),
@@ -532,6 +534,12 @@ export default function EditInvoicePage({
                     <span>Subtotal</span>
                     <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
+                  {calculateTax() > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>GST</span>
+                      <span>₹{calculateTax().toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
                     <span>₹{calculateTotal().toLocaleString("en-IN")}</span>

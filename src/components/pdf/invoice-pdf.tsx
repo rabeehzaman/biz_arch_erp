@@ -239,7 +239,9 @@ interface InvoicePDFProps {
     };
     items: InvoiceItem[];
     subtotal: number;
-    taxAmount: number;
+    totalCgst: number;
+    totalSgst: number;
+    totalIgst: number;
     total: number;
   };
   type: "SALES" | "PURCHASE";
@@ -426,10 +428,34 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
                 {formatCurrency(totalDiscount)}
               </Text>
             </View>
+            {invoice.totalCgst > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>CGST</Text>
+                <Text style={styles.totalValue}>
+                  {formatCurrency(invoice.totalCgst)}
+                </Text>
+              </View>
+            )}
+            {invoice.totalSgst > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>SGST</Text>
+                <Text style={styles.totalValue}>
+                  {formatCurrency(invoice.totalSgst)}
+                </Text>
+              </View>
+            )}
+            {invoice.totalIgst > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>IGST</Text>
+                <Text style={styles.totalValue}>
+                  {formatCurrency(invoice.totalIgst)}
+                </Text>
+              </View>
+            )}
             <View style={styles.netAmountRow}>
               <Text style={styles.netAmountLabel}>Net Total</Text>
               <Text style={styles.netAmountValue}>
-                {formatCurrency(netAmount)}
+                {formatCurrency(invoice.total)}
               </Text>
             </View>
           </View>

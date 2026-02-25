@@ -55,6 +55,8 @@ interface POSProduct {
   sku: string | null;
   barcode: string | null;
   price: number;
+  gstRate: number;
+  hsnCode: string | null;
   stockQuantity: number;
   categoryId: string | null;
   category: { id: string; name: string; slug: string; color: string | null } | null;
@@ -142,14 +144,6 @@ export default function POSPage() {
 
   const cashDifference = parseFloat(closingCash || "0") - expectedCash;
 
-  // Tax rate — fetched from org settings, editable per session
-  const { data: taxRateSetting } = useSWR<{ value: string }>(
-    posSession ? "/api/settings/pos-tax-rate" : null,
-    fetcher
-  );
-  const [taxRateOverride, setTaxRateOverride] = useState<number | null>(null);
-  const taxRate = taxRateOverride ?? (taxRateSetting?.value ? parseFloat(taxRateSetting.value) : 0);
-
   // Receipt printing
   const { data: receiptSetting } = useSWR<{ value: string }>(
     posSession ? "/api/settings/pos-receipt-printing" : null,
@@ -185,6 +179,8 @@ export default function POSPage() {
           quantity: 1,
           discount: 0,
           stockQuantity: product.stockQuantity,
+          gstRate: Number(product.gstRate) || 0,
+          hsnCode: product.hsnCode || undefined,
         },
       ];
     });
@@ -329,7 +325,7 @@ export default function POSPage() {
   const handleCheckout = async (payments: PaymentEntry[]) => {
     setIsProcessing(true);
     try {
-      const { subtotal } = calculateCartTotal(cart, taxRate);
+      const { subtotal } = calculateCartTotal(cart);
       const res = await fetch("/api/pos/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -341,8 +337,9 @@ export default function POSPage() {
             quantity: item.quantity,
             unitPrice: item.price,
             discount: item.discount,
+            gstRate: item.gstRate || 0,
+            hsnCode: item.hsnCode || undefined,
           })),
-          taxRate,
           payments: payments.map((p) => ({
             method: p.method,
             amount: parseFloat(p.amount),
@@ -382,10 +379,10 @@ export default function POSPage() {
             lineTotal,
           };
         }),
-        subtotal: calculateCartTotal(cart, taxRate).subtotal,
-        taxRate,
-        taxAmount: calculateCartTotal(cart, taxRate).taxAmount,
-        total: calculateCartTotal(cart, taxRate).total,
+        subtotal: calculateCartTotal(cart).subtotal,
+        taxRate: 0,
+        taxAmount: calculateCartTotal(cart).taxAmount,
+        total: calculateCartTotal(cart).total,
         payments: payments.map((p) => ({
           method: p.method,
           amount: parseFloat(p.amount),
@@ -432,7 +429,7 @@ export default function POSPage() {
   const holdOrder = async () => {
     if (cart.length === 0) return;
     try {
-      const { subtotal } = calculateCartTotal(cart, taxRate);
+      const { subtotal } = calculateCartTotal(cart);
       const res = await fetch("/api/pos/held-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -547,7 +544,7 @@ export default function POSPage() {
 
   // ── Active Session → Full POS Interface ────────────────────────────
 
-  const { total } = calculateCartTotal(cart, taxRate);
+  const { total } = calculateCartTotal(cart);
 
   return (
     <PageAnimation className="flex h-screen flex-col">
@@ -652,7 +649,7 @@ export default function POSPage() {
               {/* Cart Summary & Actions */}
               {cart.length > 0 && (
                 <div className="border-t p-3 space-y-3">
-                  <CartSummary items={cart} taxRate={taxRate} />
+                  <CartSummary items={cart} />
                   <div className="flex gap-2">
                     <Button
                       variant="outline"

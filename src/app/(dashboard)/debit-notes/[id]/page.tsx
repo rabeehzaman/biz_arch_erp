@@ -35,6 +35,9 @@ interface DebitNote {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
+  totalCgst: number;
+  totalSgst: number;
+  totalIgst: number;
   total: number;
   reason: string | null;
   notes: string | null;
@@ -254,10 +257,30 @@ export default function DebitNoteDetailPage() {
                   <span>Subtotal:</span>
                   <span>₹{Number(debitNote.subtotal).toLocaleString("en-IN")}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Tax ({debitNote.taxRate}%):</span>
-                  <span>₹{Number(debitNote.taxAmount).toLocaleString("en-IN")}</span>
-                </div>
+                {Number(debitNote.totalCgst) > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>CGST:</span>
+                    <span>₹{Number(debitNote.totalCgst).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                {Number(debitNote.totalSgst) > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>SGST:</span>
+                    <span>₹{Number(debitNote.totalSgst).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                {Number(debitNote.totalIgst) > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>IGST:</span>
+                    <span>₹{Number(debitNote.totalIgst).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                {Number(debitNote.totalCgst) === 0 && Number(debitNote.totalSgst) === 0 && Number(debitNote.totalIgst) === 0 && Number(debitNote.taxAmount) > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>Tax:</span>
+                    <span>₹{Number(debitNote.taxAmount).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
                   <span className="text-orange-600">
