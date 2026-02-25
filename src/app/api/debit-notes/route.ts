@@ -9,6 +9,7 @@ import {
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 // Generate debit note number: DN-YYYYMMDD-XXX
 async function generateDebitNoteNumber(organizationId: string) {
@@ -79,7 +80,6 @@ export async function POST(request: NextRequest) {
       purchaseInvoiceId,
       issueDate,
       items,
-      taxRate,
       reason,
       notes,
       appliedToBalance = true,
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     const debitNoteNumber = await generateDebitNoteNumber(organizationId);
     const debitNoteDate = issueDate ? new Date(issueDate) : new Date();
 
-    // Calculate totals with item-level discounts
+    // Calculate subtotal with item-level discounts
     const subtotal = items.reduce(
       (
         sum: number,
@@ -115,8 +115,6 @@ export async function POST(request: NextRequest) {
         sum + item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
       0
     );
-    const taxAmount = (subtotal * (taxRate || 0)) / 100;
-    const total = subtotal + taxAmount;
 
     // Check stock availability for all items before proceeding
     for (const item of items) {
@@ -145,6 +143,20 @@ export async function POST(request: NextRequest) {
 
     // Use a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
+      // Compute GST
+      const orgGST = await getOrgGSTInfo(tx, organizationId);
+      const supplier = await tx.supplier.findUnique({
+        where: { id: supplierId },
+        select: { gstin: true, gstStateCode: true },
+      });
+      const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+        taxableAmount: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+        gstRate: item.gstRate || 0,
+        hsnCode: item.hsnCode || null,
+      }));
+      const gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplier?.gstin, supplier?.gstStateCode);
+      const total = subtotal + gstResult.totalTax;
+
       // Create the debit note
       const debitNote = await tx.debitNote.create({
         data: {
@@ -154,9 +166,12 @@ export async function POST(request: NextRequest) {
           purchaseInvoiceId: purchaseInvoiceId || null,
           issueDate: debitNoteDate,
           subtotal,
-          taxRate: taxRate || 0,
-          taxAmount,
           total,
+          totalCgst: gstResult.totalCgst,
+          totalSgst: gstResult.totalSgst,
+          totalIgst: gstResult.totalIgst,
+          placeOfSupply: gstResult.placeOfSupply,
+          isInterState: gstResult.isInterState,
           appliedToBalance,
           reason: reason || null,
           notes: notes || null,
@@ -169,7 +184,9 @@ export async function POST(request: NextRequest) {
                 quantity: number;
                 unitCost: number;
                 discount?: number;
-              }) => ({
+                gstRate?: number;
+                hsnCode?: string;
+              }, idx: number) => ({
                 organizationId,
                 purchaseInvoiceItemId: item.purchaseInvoiceItemId || null,
                 productId: item.productId,
@@ -179,6 +196,14 @@ export async function POST(request: NextRequest) {
                 discount: item.discount || 0,
                 total:
                   item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+                hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+                gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+                cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+                sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+                igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+                cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+                sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+                igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
               })
             ),
           },
@@ -229,20 +254,34 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create auto journal entry: DR Accounts Payable, CR Inventory
+      // Create auto journal entry: DR Accounts Payable, CR Inventory [+ CR GST Input]
       if (appliedToBalance) {
         const apAccount = await getSystemAccount(tx, organizationId, "2100");
         const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
         if (apAccount && inventoryAccount) {
+          const journalLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
+            { accountId: apAccount.id, description: "Accounts Payable", debit: total, credit: 0 },
+            { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: 0, credit: subtotal },
+          ];
+          // Reverse GST Input
+          if (gstResult.totalCgst > 0) {
+            const cgstInput = await getSystemAccount(tx, organizationId, "1350");
+            if (cgstInput) journalLines.push({ accountId: cgstInput.id, description: "CGST Input (Return)", debit: 0, credit: gstResult.totalCgst });
+          }
+          if (gstResult.totalSgst > 0) {
+            const sgstInput = await getSystemAccount(tx, organizationId, "1360");
+            if (sgstInput) journalLines.push({ accountId: sgstInput.id, description: "SGST Input (Return)", debit: 0, credit: gstResult.totalSgst });
+          }
+          if (gstResult.totalIgst > 0) {
+            const igstInput = await getSystemAccount(tx, organizationId, "1370");
+            if (igstInput) journalLines.push({ accountId: igstInput.id, description: "IGST Input (Return)", debit: 0, credit: gstResult.totalIgst });
+          }
           await createAutoJournalEntry(tx, organizationId, {
             date: debitNoteDate,
             description: `Debit Note ${debitNoteNumber}`,
             sourceType: "DEBIT_NOTE",
             sourceId: debitNote.id,
-            lines: [
-              { accountId: apAccount.id, description: "Accounts Payable", debit: total, credit: 0 },
-              { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: 0, credit: total },
-            ],
+            lines: journalLines,
           });
         }
       }

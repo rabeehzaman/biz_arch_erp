@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,6 +26,8 @@ interface Customer {
     state: string | null;
     zipCode: string | null;
     country: string | null;
+    gstin: string | null;
+    gstStateCode: string | null;
     notes: string | null;
 }
 
@@ -41,6 +44,7 @@ export function CustomerFormDialog({
     onSuccess,
     customerToEdit,
 }: CustomerFormDialogProps) {
+    const { data: session } = useSession();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
@@ -51,6 +55,8 @@ export function CustomerFormDialog({
         state: "",
         zipCode: "",
         country: "India",
+        gstin: "",
+        gstStateCode: "",
         notes: "",
     });
 
@@ -65,6 +71,8 @@ export function CustomerFormDialog({
                 state: customerToEdit.state || "",
                 zipCode: customerToEdit.zipCode || "",
                 country: customerToEdit.country || "India",
+                gstin: customerToEdit.gstin || "",
+                gstStateCode: customerToEdit.gstStateCode || "",
                 notes: customerToEdit.notes || "",
             });
         } else if (!open) {
@@ -85,6 +93,8 @@ export function CustomerFormDialog({
             state: formData.state || null,
             zipCode: formData.zipCode || null,
             country: formData.country || "India",
+            gstin: formData.gstin || null,
+            gstStateCode: formData.gstStateCode || null,
             notes: formData.notes || null,
         };
 
@@ -131,6 +141,8 @@ export function CustomerFormDialog({
             state: "",
             zipCode: "",
             country: "India",
+            gstin: "",
+            gstStateCode: "",
             notes: "",
         });
     };
@@ -202,6 +214,38 @@ export function CustomerFormDialog({
                                 />
                             </div>
                         </div>
+                        {session?.user?.gstEnabled && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="cust-gstin">GSTIN</Label>
+                                    <Input
+                                        id="cust-gstin"
+                                        value={formData.gstin}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase();
+                                            setFormData({
+                                                ...formData,
+                                                gstin: val,
+                                                gstStateCode: val.length >= 2 ? val.slice(0, 2) : "",
+                                            });
+                                        }}
+                                        placeholder="15-digit GSTIN"
+                                        maxLength={15}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="cust-gstStateCode">GST State Code</Label>
+                                    <Input
+                                        id="cust-gstStateCode"
+                                        value={formData.gstStateCode}
+                                        onChange={(e) => setFormData({ ...formData, gstStateCode: e.target.value })}
+                                        placeholder="e.g. 27"
+                                        maxLength={2}
+                                        disabled={!!formData.gstin}
+                                    />
+                                </div>
+                            </div>
+                        )}
                         <div className="grid gap-2">
                             <Label htmlFor="cust-address">Address</Label>
                             <Input

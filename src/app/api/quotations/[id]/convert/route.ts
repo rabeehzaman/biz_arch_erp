@@ -85,7 +85,7 @@ export async function POST(
       const invoiceDate = new Date(); // Use current date for invoice
       const dueDate = new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
 
-      // Create invoice from quotation
+      // Create invoice from quotation (carry GST fields)
       const newInvoice = await tx.invoice.create({
         data: {
           organizationId,
@@ -94,10 +94,13 @@ export async function POST(
           issueDate: invoiceDate,
           dueDate: dueDate,
           subtotal: quotation.subtotal,
-          taxRate: quotation.taxRate,
-          taxAmount: quotation.taxAmount,
           total: quotation.total,
-          balanceDue: quotation.total, // Initially, full amount is due
+          balanceDue: quotation.total,
+          totalCgst: quotation.totalCgst,
+          totalSgst: quotation.totalSgst,
+          totalIgst: quotation.totalIgst,
+          placeOfSupply: quotation.placeOfSupply,
+          isInterState: quotation.isInterState,
           notes: quotation.notes,
           terms: quotation.terms,
           items: {
@@ -109,6 +112,14 @@ export async function POST(
               unitPrice: item.unitPrice,
               discount: item.discount,
               total: item.total,
+              hsnCode: item.hsnCode,
+              gstRate: item.gstRate,
+              cgstRate: item.cgstRate,
+              sgstRate: item.sgstRate,
+              igstRate: item.igstRate,
+              cgstAmount: item.cgstAmount,
+              sgstAmount: item.sgstAmount,
+              igstAmount: item.igstAmount,
               costOfGoodsSold: 0,
             })),
           },

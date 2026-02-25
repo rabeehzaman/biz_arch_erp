@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { generateAutoNumber } from "@/lib/accounting/auto-number";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 export async function GET() {
   try {
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { supplierId, expenseDate, description, items, taxRate, notes } = body;
+    const { supplierId, expenseDate, description, items, notes } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -67,8 +68,26 @@ export async function POST(request: NextRequest) {
       (sum: number, item: { amount: number }) => sum + item.amount,
       0
     );
-    const taxAmount = (subtotal * (taxRate || 0)) / 100;
-    const total = subtotal + taxAmount;
+
+    // Compute GST for expense items
+    const orgGST = await getOrgGSTInfo(prisma, organizationId);
+    let supplierGstin: string | null = null;
+    let supplierStateCode: string | null = null;
+    if (supplierId) {
+      const supplier = await prisma.supplier.findUnique({
+        where: { id: supplierId },
+        select: { gstin: true, gstStateCode: true },
+      });
+      supplierGstin = supplier?.gstin ?? null;
+      supplierStateCode = supplier?.gstStateCode ?? null;
+    }
+    const lineItemsForGST = items.map((item: { amount: number; gstRate?: number }) => ({
+      taxableAmount: item.amount,
+      gstRate: item.gstRate || 0,
+      hsnCode: null,
+    }));
+    const gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplierGstin, supplierStateCode);
+    const total = subtotal + gstResult.totalTax;
 
     const expense = await prisma.expense.create({
       data: {
@@ -77,17 +96,24 @@ export async function POST(request: NextRequest) {
         expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
         description: description || null,
         subtotal,
-        taxRate: taxRate || 0,
-        taxAmount,
         total,
+        totalCgst: gstResult.totalCgst,
+        totalSgst: gstResult.totalSgst,
+        totalIgst: gstResult.totalIgst,
+        placeOfSupply: gstResult.placeOfSupply,
+        isInterState: gstResult.isInterState,
         notes: notes || null,
         organizationId,
         items: {
           create: items.map(
-            (item: { accountId: string; description: string; amount: number }) => ({
+            (item: { accountId: string; description: string; amount: number; gstRate?: number }, idx: number) => ({
               accountId: item.accountId,
               description: item.description,
               amount: item.amount,
+              gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+              cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+              sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+              igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
               organizationId,
             })
           ),

@@ -48,6 +48,8 @@ interface Product {
   } | null;
   sku: string | null;
   barcode: string | null;
+  gstRate: number | null;
+  hsnCode: string | null;
   isService: boolean;
   isActive: boolean;
   createdAt: string;

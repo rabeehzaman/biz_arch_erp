@@ -5,6 +5,7 @@ import { getOrgId } from "@/lib/auth-utils";
 import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
 async function generatePurchaseInvoiceNumber(organizationId: string) {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { supplierId, invoiceDate, dueDate, supplierInvoiceRef, items, taxRate, notes } = body;
+    const { supplierId, invoiceDate, dueDate, supplierInvoiceRef, items, notes } = body;
 
     if (!supplierId || !items || items.length === 0) {
       return NextResponse.json(
@@ -94,18 +95,42 @@ export async function POST(request: NextRequest) {
     const purchaseInvoiceNumber = await generatePurchaseInvoiceNumber(organizationId);
     const purchaseDate = invoiceDate ? new Date(invoiceDate) : new Date();
 
-    // Calculate totals with item-level discounts
+    // Calculate subtotal with item-level discounts
     const subtotal = items.reduce(
       (sum: number, item: { quantity: number; unitCost: number; discount?: number }) =>
         sum + item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
       0
     );
-    const taxAmount = (subtotal * (taxRate || 0)) / 100;
-    const total = subtotal + taxAmount;
-    const balanceDue = total;
 
     // Use a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
+      // Fetch org GST info and supplier GST details
+      const orgGST = await getOrgGSTInfo(tx, organizationId);
+      const supplier = await tx.supplier.findUnique({
+        where: { id: supplierId },
+        select: { gstin: true, gstStateCode: true },
+      });
+
+      // Build line items for GST computation
+      const lineItemsForGST = items.map(
+        (item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+          taxableAmount: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+          gstRate: item.gstRate || 0,
+          hsnCode: item.hsnCode || null,
+        })
+      );
+
+      // Compute GST
+      const gstResult = computeDocumentGST(
+        orgGST,
+        lineItemsForGST,
+        supplier?.gstin,
+        supplier?.gstStateCode
+      );
+
+      const total = subtotal + gstResult.totalTax;
+      const balanceDue = total;
+
       // Create the purchase invoice
       const invoice = await tx.purchaseInvoice.create({
         data: {
@@ -117,8 +142,11 @@ export async function POST(request: NextRequest) {
           supplierInvoiceRef: supplierInvoiceRef || null,
           status: "RECEIVED",
           subtotal,
-          taxRate: taxRate || 0,
-          taxAmount,
+          totalCgst: gstResult.totalCgst,
+          totalSgst: gstResult.totalSgst,
+          totalIgst: gstResult.totalIgst,
+          placeOfSupply: gstResult.placeOfSupply,
+          isInterState: gstResult.isInterState,
           total,
           balanceDue,
           notes: notes || null,
@@ -129,7 +157,9 @@ export async function POST(request: NextRequest) {
               quantity: number;
               unitCost: number;
               discount?: number;
-            }) => ({
+              gstRate?: number;
+              hsnCode?: string;
+            }, index: number) => ({
               organizationId,
               productId: item.productId,
               description: item.description,
@@ -137,6 +167,14 @@ export async function POST(request: NextRequest) {
               unitCost: item.unitCost,
               discount: item.discount || 0,
               total: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+              hsnCode: gstResult.lineGST[index].hsnCode,
+              gstRate: gstResult.lineGST[index].gstRate,
+              cgstRate: gstResult.lineGST[index].cgstRate,
+              sgstRate: gstResult.lineGST[index].sgstRate,
+              igstRate: gstResult.lineGST[index].igstRate,
+              cgstAmount: gstResult.lineGST[index].cgstAmount,
+              sgstAmount: gstResult.lineGST[index].sgstAmount,
+              igstAmount: gstResult.lineGST[index].igstAmount,
             })),
           },
         },

@@ -27,6 +27,8 @@ interface Product {
   price: number;
   cost: number;
   unit: string;
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 interface LineItem {
@@ -35,6 +37,8 @@ interface LineItem {
   quantity: number;
   unitCost: number;
   discount: number;
+  gstRate: number;
+  hsnCode: string;
 }
 
 export default function EditPurchaseInvoicePage({
@@ -54,7 +58,7 @@ export default function EditPurchaseInvoicePage({
     invoiceDate: "",
     dueDate: "",
     supplierInvoiceRef: "",
-    taxRate: "0",
+    taxRate: "",
     notes: "",
   });
 
@@ -125,6 +129,8 @@ export default function EditPurchaseInvoicePage({
             quantity: Number(item.quantity),
             unitCost: Number(item.unitCost),
             discount: Number(item.discount),
+            gstRate: (item as any).gstRate ? Number((item as any).gstRate) : 0,
+            hsnCode: (item as any).hsnCode || "",
           }))
         );
       } else {
@@ -149,6 +155,8 @@ export default function EditPurchaseInvoicePage({
         quantity: 1,
         unitCost: 0,
         discount: 0,
+        gstRate: 0,
+        hsnCode: "",
       },
     ]);
   };
@@ -195,6 +203,8 @@ export default function EditPurchaseInvoicePage({
             quantity: 1,
             unitCost: 0,
             discount: 0,
+            gstRate: 0,
+            hsnCode: "",
           },
         ]);
       }, 0);

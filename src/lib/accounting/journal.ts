@@ -161,16 +161,21 @@ export async function syncInvoiceRevenueJournal(
       invoiceNumber: true,
       issueDate: true,
       subtotal: true,
-      taxAmount: true,
       total: true,
+      totalCgst: true,
+      totalSgst: true,
+      totalIgst: true,
     },
   });
 
   if (!invoice) return;
 
   const subtotal = Number(invoice.subtotal);
-  const taxAmount = Number(invoice.taxAmount);
   const total = Number(invoice.total);
+  const totalCgst = Number(invoice.totalCgst);
+  const totalSgst = Number(invoice.totalSgst);
+  const totalIgst = Number(invoice.totalIgst);
+  const totalTax = totalCgst + totalSgst + totalIgst;
 
   // Delete existing revenue journal entries for this invoice
   await tx.journalEntry.deleteMany({
@@ -189,14 +194,29 @@ export async function syncInvoiceRevenueJournal(
       { accountId: arAccount.id, description: "Accounts Receivable", debit: total, credit: 0 },
       { accountId: revenueAccount.id, description: "Sales Revenue", debit: 0, credit: subtotal },
     ];
-    if (taxAmount > 0) {
-      const taxPayableAccount = await getSystemAccount(tx, organizationId, "2200");
-      if (taxPayableAccount) {
-        revenueLines.push({ accountId: taxPayableAccount.id, description: "Tax Payable", debit: 0, credit: taxAmount });
-      } else {
-        revenueLines[1] = { accountId: revenueAccount.id, description: "Sales Revenue", debit: 0, credit: total };
+
+    // GST journal lines
+    if (totalTax > 0) {
+      if (totalCgst > 0) {
+        const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
+        if (cgstAccount) {
+          revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: totalCgst });
+        }
+      }
+      if (totalSgst > 0) {
+        const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
+        if (sgstAccount) {
+          revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: totalSgst });
+        }
+      }
+      if (totalIgst > 0) {
+        const igstAccount = await getSystemAccount(tx, organizationId, "2230");
+        if (igstAccount) {
+          revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: totalIgst });
+        }
       }
     }
+
     await createAutoJournalEntry(tx, organizationId, {
       date: invoice.issueDate,
       description: `Sales Invoice ${invoice.invoiceNumber}`,
@@ -222,16 +242,20 @@ export async function syncPurchaseJournal(
       purchaseInvoiceNumber: true,
       invoiceDate: true,
       subtotal: true,
-      taxAmount: true,
       total: true,
+      totalCgst: true,
+      totalSgst: true,
+      totalIgst: true,
     },
   });
 
   if (!invoice) return;
 
   const subtotal = Number(invoice.subtotal);
-  const taxAmount = Number(invoice.taxAmount);
   const total = Number(invoice.total);
+  const totalCgst = Number(invoice.totalCgst);
+  const totalSgst = Number(invoice.totalSgst);
+  const totalIgst = Number(invoice.totalIgst);
 
   // Delete existing purchase journal entries
   await tx.journalEntry.deleteMany({
@@ -249,14 +273,27 @@ export async function syncPurchaseJournal(
       { accountId: inventoryAccount.id, description: "Inventory", debit: subtotal, credit: 0 },
       { accountId: apAccount.id, description: "Accounts Payable", debit: 0, credit: total },
     ];
-    if (taxAmount > 0) {
-      const taxPayableAccount = await getSystemAccount(tx, organizationId, "2200");
-      if (taxPayableAccount) {
-        purchaseLines.push({ accountId: taxPayableAccount.id, description: "Input Tax Recoverable", debit: taxAmount, credit: 0 });
-      } else {
-        purchaseLines[0] = { accountId: inventoryAccount.id, description: "Inventory", debit: total, credit: 0 };
+
+    // GST Input journal lines
+    if (totalCgst > 0) {
+      const cgstInput = await getSystemAccount(tx, organizationId, "1350");
+      if (cgstInput) {
+        purchaseLines.push({ accountId: cgstInput.id, description: "CGST Input", debit: totalCgst, credit: 0 });
       }
     }
+    if (totalSgst > 0) {
+      const sgstInput = await getSystemAccount(tx, organizationId, "1360");
+      if (sgstInput) {
+        purchaseLines.push({ accountId: sgstInput.id, description: "SGST Input", debit: totalSgst, credit: 0 });
+      }
+    }
+    if (totalIgst > 0) {
+      const igstInput = await getSystemAccount(tx, organizationId, "1370");
+      if (igstInput) {
+        purchaseLines.push({ accountId: igstInput.id, description: "IGST Input", debit: totalIgst, credit: 0 });
+      }
+    }
+
     await createAutoJournalEntry(tx, organizationId, {
       date: invoice.invoiceDate,
       description: `Purchase Invoice ${invoice.purchaseInvoiceNumber}`,

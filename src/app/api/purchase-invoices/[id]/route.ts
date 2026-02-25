@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 export async function GET(
   request: NextRequest,
@@ -67,7 +68,7 @@ export async function PUT(
     const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
-    const { status, supplierId, invoiceDate, dueDate, supplierInvoiceRef, taxRate, notes, items } = body;
+    const { status, supplierId, invoiceDate, dueDate, supplierInvoiceRef, notes, items } = body;
 
     const existingInvoice = await prisma.purchaseInvoice.findUnique({
       where: { id, organizationId },
@@ -82,7 +83,7 @@ export async function PUT(
     }
 
     // If only status is being updated
-    if (status && !invoiceDate && !items && !supplierId && !dueDate && taxRate === undefined && notes === undefined) {
+    if (status && !invoiceDate && !items && !supplierId && !dueDate && notes === undefined) {
       const invoice = await prisma.purchaseInvoice.update({
         where: { id, organizationId },
         data: { status },
@@ -93,7 +94,6 @@ export async function PUT(
     // If date or items are being updated, we need to recalculate
     const oldDate = existingInvoice.invoiceDate;
     const newDate = invoiceDate ? new Date(invoiceDate) : oldDate;
-    const newTaxRate = taxRate !== undefined ? taxRate : Number(existingInvoice.taxRate);
 
     await prisma.$transaction(async (tx) => {
       // If items are being updated
@@ -130,14 +130,26 @@ export async function PUT(
             sum + item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
           0
         );
-        const taxAmount = (subtotal * newTaxRate) / 100;
-        const total = subtotal + taxAmount;
+
+        // Compute GST
+        const newSupplierId = supplierId || existingInvoice.supplierId;
+        const orgGST = await getOrgGSTInfo(tx, organizationId);
+        const supplierData = await tx.supplier.findUnique({
+          where: { id: newSupplierId },
+          select: { gstin: true, gstStateCode: true },
+        });
+        const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+          taxableAmount: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+          gstRate: item.gstRate || 0,
+          hsnCode: item.hsnCode || null,
+        }));
+        const gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplierData?.gstin, supplierData?.gstStateCode);
+        const total = subtotal + gstResult.totalTax;
         const newBalanceDue = total - Number(existingInvoice.amountPaid);
 
         // Calculate balance change for supplier
         const oldBalanceDue = Number(existingInvoice.balanceDue);
         const balanceChange = newBalanceDue - oldBalanceDue;
-        const newSupplierId = supplierId || existingInvoice.supplierId;
 
         // Update invoice with new items
         await tx.purchaseInvoice.update({
@@ -147,11 +159,14 @@ export async function PUT(
             invoiceDate: newDate,
             dueDate: dueDate ? new Date(dueDate) : existingInvoice.dueDate,
             supplierInvoiceRef: supplierInvoiceRef !== undefined ? supplierInvoiceRef : existingInvoice.supplierInvoiceRef,
-            taxRate: newTaxRate,
             notes: notes !== undefined ? notes : existingInvoice.notes,
             subtotal,
-            taxAmount,
             total,
+            totalCgst: gstResult.totalCgst,
+            totalSgst: gstResult.totalSgst,
+            totalIgst: gstResult.totalIgst,
+            placeOfSupply: gstResult.placeOfSupply,
+            isInterState: gstResult.isInterState,
             balanceDue: newBalanceDue,
             items: {
               create: items.map((item: {
@@ -160,7 +175,9 @@ export async function PUT(
                 quantity: number;
                 unitCost: number;
                 discount?: number;
-              }) => ({
+                gstRate?: number;
+                hsnCode?: string;
+              }, idx: number) => ({
                 organizationId,
                 productId: item.productId,
                 description: item.description,
@@ -168,6 +185,14 @@ export async function PUT(
                 unitCost: item.unitCost,
                 discount: item.discount || 0,
                 total: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+                hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+                gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+                cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+                sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+                igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+                cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+                sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+                igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
               })),
             },
           },

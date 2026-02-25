@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,6 +30,8 @@ interface Product {
     } | null;
     sku: string | null;
     barcode: string | null;
+    hsnCode: string | null;
+    gstRate: number | null;
     isService: boolean;
     isActive: boolean;
     createdAt: string;
@@ -47,6 +50,7 @@ export function ProductFormDialog({
     onSuccess,
     productToEdit
 }: ProductFormDialogProps) {
+    const { data: session } = useSession();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [formData, setFormData] = useState({
@@ -56,6 +60,8 @@ export function ProductFormDialog({
         unitId: "",
         sku: "",
         barcode: "",
+        hsnCode: "",
+        gstRate: "0",
         isService: false,
     });
 
@@ -68,6 +74,8 @@ export function ProductFormDialog({
                 unitId: productToEdit.unitId || productToEdit.unit?.id || "",
                 sku: productToEdit.sku || "",
                 barcode: productToEdit.barcode || "",
+                hsnCode: productToEdit.hsnCode || "",
+                gstRate: productToEdit.gstRate?.toString() || "0",
                 isService: productToEdit.isService || false,
             });
             setFormErrors({});
@@ -99,6 +107,8 @@ export function ProductFormDialog({
             unitId: formData.unitId,
             sku: formData.sku || null,
             barcode: formData.barcode || null,
+            hsnCode: formData.hsnCode || null,
+            gstRate: parseFloat(formData.gstRate) || 0,
             isService: formData.isService,
         };
 
@@ -145,6 +155,8 @@ export function ProductFormDialog({
             unitId: "",
             sku: "",
             barcode: "",
+            hsnCode: "",
+            gstRate: "0",
             isService: false,
         });
     };
@@ -245,6 +257,32 @@ export function ProductFormDialog({
                                 />
                             </div>
                         </div>
+                        {session?.user?.gstEnabled && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="prod-hsnCode">HSN Code</Label>
+                                    <Input
+                                        id="prod-hsnCode"
+                                        value={formData.hsnCode}
+                                        onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
+                                        placeholder="e.g. 8471"
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="prod-gstRate">GST Rate</Label>
+                                    <select
+                                        id="prod-gstRate"
+                                        value={formData.gstRate}
+                                        onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    >
+                                        {[0, 5, 12, 18, 28].map((rate) => (
+                                            <option key={rate} value={rate}>{rate}%</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2">
                             <input
                                 type="checkbox"

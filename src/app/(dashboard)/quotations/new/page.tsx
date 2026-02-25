@@ -27,6 +27,8 @@ interface Product {
   name: string;
   price: number;
   unit: string;
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 interface LineItem {
@@ -35,6 +37,8 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   discount: number;
+  gstRate: number;
+  hsnCode: string;
 }
 
 export default function NewQuotationPage() {
@@ -54,13 +58,12 @@ export default function NewQuotationPage() {
     customerId: "",
     issueDate: new Date().toISOString().split("T")[0],
     validUntil: getDefaultValidUntil(),
-    taxRate: "0",
     notes: "",
     terms: "",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { id: "1", productId: "", quantity: 1, unitPrice: 0, discount: 0, gstRate: 0, hsnCode: "" },
   ]);
 
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
@@ -122,6 +125,8 @@ export default function NewQuotationPage() {
         quantity: 1,
         unitPrice: 0,
         discount: 0,
+        gstRate: 0,
+        hsnCode: "",
       },
     ]);
 
@@ -159,6 +164,8 @@ export default function NewQuotationPage() {
             ...item,
             productId: value as string,
             unitPrice: Number(product.price),
+            gstRate: Number(product.gstRate) || 0,
+            hsnCode: product.hsnCode || "",
           };
         }
       }
@@ -179,6 +186,8 @@ export default function NewQuotationPage() {
             quantity: 1,
             unitPrice: 0,
             discount: 0,
+            gstRate: 0,
+            hsnCode: "",
           },
         ]);
       }, 0);
@@ -193,7 +202,10 @@ export default function NewQuotationPage() {
   };
 
   const calculateTax = () => {
-    return (calculateSubtotal() * parseFloat(formData.taxRate || "0")) / 100;
+    return lineItems.reduce((sum, item) => {
+      const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+    }, 0);
   };
 
   const calculateTotal = () => {
@@ -212,7 +224,6 @@ export default function NewQuotationPage() {
           customerId: formData.customerId,
           issueDate: formData.issueDate,
           validUntil: formData.validUntil,
-          taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
           terms: formData.terms || null,
           items: lineItems
@@ -225,6 +236,8 @@ export default function NewQuotationPage() {
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 discount: item.discount,
+                gstRate: item.gstRate,
+                hsnCode: item.hsnCode,
               };
             }),
         }),
@@ -502,6 +515,12 @@ export default function NewQuotationPage() {
                     <span>Subtotal</span>
                     <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
+                  {calculateTax() > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>GST</span>
+                      <span>₹{calculateTax().toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
                     <span>₹{calculateTotal().toLocaleString("en-IN")}</span>

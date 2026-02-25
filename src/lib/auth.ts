@@ -26,6 +26,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const prisma = await getPrisma();
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
+          include: {
+            organization: {
+              select: {
+                gstEnabled: true,
+                eInvoicingEnabled: true,
+                gstStateCode: true,
+              },
+            },
+          },
         });
 
         if (!user) {
@@ -47,6 +56,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role,
           organizationId: user.organizationId,
+          gstEnabled: user.organization?.gstEnabled ?? false,
+          eInvoicingEnabled: user.organization?.eInvoicingEnabled ?? false,
+          gstStateCode: user.organization?.gstStateCode ?? null,
         };
       },
     }),

@@ -28,6 +28,8 @@ interface Product {
   price: number;
   cost: number;
   unit: string;
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 interface LineItem {
@@ -36,6 +38,8 @@ interface LineItem {
   quantity: number;
   unitCost: number;
   discount: number;
+  gstRate: number;
+  hsnCode: string;
 }
 
 export default function NewPurchaseInvoicePage() {
@@ -55,12 +59,11 @@ export default function NewPurchaseInvoicePage() {
     invoiceDate: new Date().toISOString().split("T")[0],
     dueDate: getDefaultDueDate(),
     supplierInvoiceRef: "",
-    taxRate: "0",
     notes: "",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", quantity: 1, unitCost: 0, discount: 0 },
+    { id: "1", productId: "", quantity: 1, unitCost: 0, discount: 0, gstRate: 0, hsnCode: "" },
   ]);
 
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
@@ -122,6 +125,8 @@ export default function NewPurchaseInvoicePage() {
         quantity: 1,
         unitCost: 0,
         discount: 0,
+        gstRate: 0,
+        hsnCode: "",
       },
     ]);
 
@@ -160,6 +165,8 @@ export default function NewPurchaseInvoicePage() {
             productId: value as string,
             // Use product cost if available, otherwise use selling price
             unitCost: Number(product.cost) || Number(product.price),
+            gstRate: Number(product.gstRate) || 0,
+            hsnCode: product.hsnCode || "",
           };
         }
       }
@@ -180,6 +187,8 @@ export default function NewPurchaseInvoicePage() {
             quantity: 1,
             unitCost: 0,
             discount: 0,
+            gstRate: 0,
+            hsnCode: "",
           },
         ]);
       }, 0);
@@ -194,7 +203,10 @@ export default function NewPurchaseInvoicePage() {
   };
 
   const calculateTax = () => {
-    return (calculateSubtotal() * parseFloat(formData.taxRate || "0")) / 100;
+    return lineItems.reduce((sum, item) => {
+      const lineTotal = item.quantity * item.unitCost * (1 - item.discount / 100);
+      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+    }, 0);
   };
 
   const calculateTotal = () => {
@@ -224,7 +236,6 @@ export default function NewPurchaseInvoicePage() {
           invoiceDate: formData.invoiceDate,
           dueDate: formData.dueDate,
           supplierInvoiceRef: formData.supplierInvoiceRef || null,
-          taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
@@ -234,6 +245,8 @@ export default function NewPurchaseInvoicePage() {
               quantity: item.quantity,
               unitCost: item.unitCost,
               discount: item.discount,
+              gstRate: item.gstRate,
+              hsnCode: item.hsnCode,
             };
           }),
         }),
@@ -516,6 +529,12 @@ export default function NewPurchaseInvoicePage() {
                     <span>Subtotal</span>
                     <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
+                  {calculateTax() > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>GST</span>
+                      <span>₹{calculateTax().toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
                     <span>₹{calculateTotal().toLocaleString("en-IN")}</span>

@@ -26,6 +26,8 @@ interface Product {
   name: string;
   price: number;
   unit: string;
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 interface LineItem {
@@ -34,6 +36,8 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   discount: number;
+  gstRate: number;
+  hsnCode: string;
 }
 
 export default function EditQuotationPage({
@@ -148,6 +152,8 @@ export default function EditQuotationPage({
         quantity: 1,
         unitPrice: 0,
         discount: 0,
+        gstRate: 0,
+        hsnCode: "",
       },
     ]);
   };
@@ -194,6 +200,8 @@ export default function EditQuotationPage({
             quantity: 1,
             unitPrice: 0,
             discount: 0,
+            gstRate: 0,
+            hsnCode: "",
           },
         ]);
       }, 0);

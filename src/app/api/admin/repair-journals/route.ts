@@ -51,7 +51,9 @@ export async function POST(request: NextRequest) {
 
       const arAccount = await getSystemAccount(tx, targetOrgId, "1300");
       const revenueAccount = await getSystemAccount(tx, targetOrgId, "4100");
-      const taxPayableAccount = await getSystemAccount(tx, targetOrgId, "2200");
+      const cgstOutAccount = await getSystemAccount(tx, targetOrgId, "2210");
+      const sgstOutAccount = await getSystemAccount(tx, targetOrgId, "2220");
+      const igstOutAccount = await getSystemAccount(tx, targetOrgId, "2230");
 
       for (const invoice of invoices) {
         const existing = await tx.journalEntry.findFirst({
@@ -70,7 +72,9 @@ export async function POST(request: NextRequest) {
 
         const total = Number(invoice.total);
         const subtotal = Number(invoice.subtotal);
-        const taxAmount = Number(invoice.taxAmount);
+        const totalCgst = Number(invoice.totalCgst);
+        const totalSgst = Number(invoice.totalSgst);
+        const totalIgst = Number(invoice.totalIgst);
 
         const revenueLines: Array<{
           accountId: string;
@@ -92,22 +96,14 @@ export async function POST(request: NextRequest) {
           },
         ];
 
-        if (taxAmount > 0) {
-          if (taxPayableAccount) {
-            revenueLines.push({
-              accountId: taxPayableAccount.id,
-              description: "Tax Payable",
-              debit: 0,
-              credit: taxAmount,
-            });
-          } else {
-            revenueLines[1] = {
-              accountId: revenueAccount.id,
-              description: "Sales Revenue",
-              debit: 0,
-              credit: total,
-            };
-          }
+        if (totalCgst > 0 && cgstOutAccount) {
+          revenueLines.push({ accountId: cgstOutAccount.id, description: "CGST Output", debit: 0, credit: totalCgst });
+        }
+        if (totalSgst > 0 && sgstOutAccount) {
+          revenueLines.push({ accountId: sgstOutAccount.id, description: "SGST Output", debit: 0, credit: totalSgst });
+        }
+        if (totalIgst > 0 && igstOutAccount) {
+          revenueLines.push({ accountId: igstOutAccount.id, description: "IGST Output", debit: 0, credit: totalIgst });
         }
 
         const entry = await createAutoJournalEntry(tx, targetOrgId, {
@@ -132,7 +128,9 @@ export async function POST(request: NextRequest) {
 
       const inventoryAccount = await getSystemAccount(tx, targetOrgId, "1400");
       const apAccount = await getSystemAccount(tx, targetOrgId, "2100");
-      const taxAccount2200 = await getSystemAccount(tx, targetOrgId, "2200");
+      const cgstInAccount = await getSystemAccount(tx, targetOrgId, "1350");
+      const sgstInAccount = await getSystemAccount(tx, targetOrgId, "1360");
+      const igstInAccount = await getSystemAccount(tx, targetOrgId, "1370");
 
       for (const pi of purchaseInvoices) {
         const existing = await tx.journalEntry.findFirst({
@@ -151,7 +149,9 @@ export async function POST(request: NextRequest) {
 
         const total = Number(pi.total);
         const subtotal = Number(pi.subtotal);
-        const taxAmount = Number(pi.taxAmount);
+        const piCgst = Number(pi.totalCgst);
+        const piSgst = Number(pi.totalSgst);
+        const piIgst = Number(pi.totalIgst);
 
         const purchaseLines: Array<{
           accountId: string;
@@ -173,22 +173,14 @@ export async function POST(request: NextRequest) {
           },
         ];
 
-        if (taxAmount > 0) {
-          if (taxAccount2200) {
-            purchaseLines.push({
-              accountId: taxAccount2200.id,
-              description: "Input Tax Recoverable",
-              debit: taxAmount,
-              credit: 0,
-            });
-          } else {
-            purchaseLines[0] = {
-              accountId: inventoryAccount.id,
-              description: "Inventory",
-              debit: total,
-              credit: 0,
-            };
-          }
+        if (piCgst > 0 && cgstInAccount) {
+          purchaseLines.push({ accountId: cgstInAccount.id, description: "CGST Input", debit: piCgst, credit: 0 });
+        }
+        if (piSgst > 0 && sgstInAccount) {
+          purchaseLines.push({ accountId: sgstInAccount.id, description: "SGST Input", debit: piSgst, credit: 0 });
+        }
+        if (piIgst > 0 && igstInAccount) {
+          purchaseLines.push({ accountId: igstInAccount.id, description: "IGST Input", debit: piIgst, credit: 0 });
         }
 
         const entry = await createAutoJournalEntry(tx, targetOrgId, {
@@ -415,7 +407,9 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const taxAmount = Number(expense.taxAmount);
+        const expCgst = Number(expense.totalCgst);
+        const expSgst = Number(expense.totalSgst);
+        const expIgst = Number(expense.totalIgst);
 
         const expenseLines: Array<{
           accountId: string;
@@ -429,24 +423,17 @@ export async function POST(request: NextRequest) {
           credit: 0,
         }));
 
-        if (taxAmount > 0) {
-          const taxAcc = await tx.account.findFirst({
-            where: { organizationId: targetOrgId, code: "2200" },
-          });
-          if (taxAcc) {
-            expenseLines.push({
-              accountId: taxAcc.id,
-              description: "Tax",
-              debit: taxAmount,
-              credit: 0,
-            });
-          } else {
-            // Fallback: roll into first expense line
-            expenseLines[0] = {
-              ...expenseLines[0],
-              debit: expenseLines[0].debit + taxAmount,
-            };
-          }
+        if (expCgst > 0) {
+          const cgstAcc = await tx.account.findFirst({ where: { organizationId: targetOrgId, code: "1350" } });
+          if (cgstAcc) expenseLines.push({ accountId: cgstAcc.id, description: "CGST Input", debit: expCgst, credit: 0 });
+        }
+        if (expSgst > 0) {
+          const sgstAcc = await tx.account.findFirst({ where: { organizationId: targetOrgId, code: "1360" } });
+          if (sgstAcc) expenseLines.push({ accountId: sgstAcc.id, description: "SGST Input", debit: expSgst, credit: 0 });
+        }
+        if (expIgst > 0) {
+          const igstAcc = await tx.account.findFirst({ where: { organizationId: targetOrgId, code: "1370" } });
+          if (igstAcc) expenseLines.push({ accountId: igstAcc.id, description: "IGST Input", debit: expIgst, credit: 0 });
         }
 
         expenseLines.push({

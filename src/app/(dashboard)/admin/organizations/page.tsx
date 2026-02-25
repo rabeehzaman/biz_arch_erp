@@ -34,12 +34,15 @@ import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, Sett
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { SidebarConfigDialog } from "./sidebar-config-dialog";
+import { GSTConfigDialog } from "./gst-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
 
 interface Organization {
   id: string;
   name: string;
   slug: string;
+  gstEnabled: boolean;
+  gstin: string | null;
   createdAt: string;
   _count: {
     users: number;
@@ -72,6 +75,9 @@ export default function OrganizationsPage() {
 
   // Sidebar config state
   const [sidebarConfigOrg, setSidebarConfigOrg] = useState<{ id: string, name: string } | null>(null);
+
+  // GST config state
+  const [gstConfigOrg, setGstConfigOrg] = useState<{ id: string, name: string } | null>(null);
 
   const fetchOrganizations = useCallback(async () => {
     try {
@@ -352,6 +358,7 @@ export default function OrganizationsPage() {
                       <TableHead className="text-center">Customers</TableHead>
                       <TableHead className="text-center">Invoices</TableHead>
                       <TableHead>Created</TableHead>
+                      <TableHead>GST</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -388,17 +395,29 @@ export default function OrganizationsPage() {
                         <TableCell>
                           {new Date(org.createdAt).toLocaleDateString()}
                         </TableCell>
+                        <TableCell>
+                          {org.gstEnabled ? (
+                            <Badge variant="default" className="text-xs">GST</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">No GST</Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => setSidebarConfigOrg({ id: org.id, name: org.name })}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Sidebar
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => setGstConfigOrg({ id: org.id, name: org.name })}>
+                              GST
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setSidebarConfigOrg({ id: org.id, name: org.name })}>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Sidebar
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
                     {organizations.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                           No organizations found
                         </TableCell>
                       </TableRow>
@@ -408,6 +427,15 @@ export default function OrganizationsPage() {
               )}
             </CardContent>
           </Card>
+
+          {gstConfigOrg && (
+            <GSTConfigDialog
+              open={!!gstConfigOrg}
+              onOpenChange={(open) => { if (!open) { setGstConfigOrg(null); fetchOrganizations(); } }}
+              orgId={gstConfigOrg.id}
+              orgName={gstConfigOrg.name}
+            />
+          )}
 
           {sidebarConfigOrg && (
             <SidebarConfigDialog

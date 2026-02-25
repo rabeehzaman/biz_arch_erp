@@ -8,6 +8,7 @@ import {
   getSystemAccount,
   getDefaultCashBankAccount,
 } from "@/lib/accounting/journal";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Tx = any;
@@ -62,6 +63,8 @@ interface CheckoutItem {
   quantity: number;
   unitPrice: number;
   discount?: number;
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 interface CheckoutPayment {
@@ -73,7 +76,6 @@ interface CheckoutPayment {
 interface CheckoutBody {
   customerId?: string;
   items: CheckoutItem[];
-  taxRate: number;
   payments: CheckoutPayment[];
   heldOrderId?: string;
   notes?: string;
@@ -90,7 +92,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     const body: CheckoutBody = await request.json();
-    const { customerId, items, taxRate, payments, heldOrderId, notes } = body;
+    const { customerId, items, payments, heldOrderId, notes } = body;
 
     // Validate required fields
     if (!items || items.length === 0) {
@@ -143,8 +145,27 @@ export async function POST(request: NextRequest) {
           item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
         0
       );
-      const taxAmount = (subtotal * (taxRate || 0)) / 100;
-      const total = subtotal + taxAmount;
+
+      // Compute GST (POS is typically intra-state B2C)
+      const orgGST = await getOrgGSTInfo(tx, organizationId);
+      let customerGstin: string | null = null;
+      let customerStateCode: string | null = null;
+      if (resolvedCustomerId) {
+        const cust = await tx.customer.findUnique({
+          where: { id: resolvedCustomerId },
+          select: { gstin: true, gstStateCode: true },
+        });
+        customerGstin = cust?.gstin ?? null;
+        customerStateCode = cust?.gstStateCode ?? null;
+      }
+      const lineItemsForGST = items.map((item) => ({
+        taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+        gstRate: item.gstRate || 0,
+        hsnCode: item.hsnCode || null,
+      }));
+      const gstResult = computeDocumentGST(orgGST, lineItemsForGST, customerGstin, customerStateCode);
+      const totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
+      const total = subtotal + totalTax;
       const totalPayment = payments.reduce((sum, p) => sum + p.amount, 0);
       const change = Math.max(0, totalPayment - total);
 
@@ -190,14 +211,17 @@ export async function POST(request: NextRequest) {
           issueDate: now,
           dueDate: now,
           subtotal,
-          taxRate: taxRate || 0,
-          taxAmount,
           total,
           amountPaid: Math.min(totalPayment, total),
           balanceDue: Math.max(0, total - totalPayment),
+          totalCgst: gstResult.totalCgst,
+          totalSgst: gstResult.totalSgst,
+          totalIgst: gstResult.totalIgst,
+          placeOfSupply: gstResult.placeOfSupply,
+          isInterState: gstResult.isInterState,
           notes: notes || null,
           items: {
-            create: items.map((item) => ({
+            create: items.map((item, idx) => ({
               organizationId,
               productId: item.productId || null,
               description: item.name,
@@ -208,6 +232,14 @@ export async function POST(request: NextRequest) {
                 item.quantity *
                 item.unitPrice *
                 (1 - (item.discount || 0) / 100),
+              hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+              gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+              cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+              sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+              igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+              cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+              sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+              igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
               costOfGoodsSold: 0,
             })),
           },
@@ -302,28 +334,18 @@ export async function POST(request: NextRequest) {
             },
           ];
 
-        if (taxAmount > 0) {
-          const taxPayableAccount = await getSystemAccount(
-            tx,
-            organizationId,
-            "2200"
-          );
-          if (taxPayableAccount) {
-            revenueLines.push({
-              accountId: taxPayableAccount.id,
-              description: "Tax Payable",
-              debit: 0,
-              credit: taxAmount,
-            });
-          } else {
-            // Fallback: lump tax into revenue if account 2200 not found
-            revenueLines[1] = {
-              accountId: revenueAccount.id,
-              description: "Sales Revenue",
-              debit: 0,
-              credit: total,
-            };
-          }
+        // GST journal lines
+        if (gstResult.totalCgst > 0) {
+          const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
+          if (cgstAccount) revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: gstResult.totalCgst });
+        }
+        if (gstResult.totalSgst > 0) {
+          const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
+          if (sgstAccount) revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: gstResult.totalSgst });
+        }
+        if (gstResult.totalIgst > 0) {
+          const igstAccount = await getSystemAccount(tx, organizationId, "2230");
+          if (igstAccount) revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: gstResult.totalIgst });
         }
 
         await createAutoJournalEntry(tx, organizationId, {

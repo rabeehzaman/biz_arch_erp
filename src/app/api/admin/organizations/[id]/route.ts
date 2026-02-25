@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { seedDefaultCOA } from "@/lib/accounting/seed-coa";
 
 export async function GET(
   request: NextRequest,
@@ -61,15 +62,9 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, slug } = body;
+    const { name, slug, gstEnabled, eInvoicingEnabled, gstin, gstStateCode } = body;
 
-    if (!name && !slug) {
-      return NextResponse.json(
-        { error: "At least one field (name or slug) is required" },
-        { status: 400 }
-      );
-    }
-
+    // Basic field update validation
     if (slug && !/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json(
         { error: "Slug must contain only lowercase letters, numbers, and hyphens" },
@@ -90,13 +85,50 @@ export async function PUT(
       }
     }
 
-    const updateData: { name?: string; slug?: string } = {};
-    if (name) updateData.name = name;
-    if (slug) updateData.slug = slug;
+    // GST validation
+    if (gstEnabled && gstin) {
+      const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstinRegex.test(gstin)) {
+        return NextResponse.json(
+          { error: "Invalid GSTIN format" },
+          { status: 400 }
+        );
+      }
+    }
 
-    const organization = await prisma.organization.update({
-      where: { id },
-      data: updateData,
+    if (eInvoicingEnabled && !gstEnabled) {
+      return NextResponse.json(
+        { error: "GST must be enabled before enabling e-invoicing" },
+        { status: 400 }
+      );
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (slug !== undefined) updateData.slug = slug;
+    if (gstEnabled !== undefined) updateData.gstEnabled = gstEnabled;
+    if (eInvoicingEnabled !== undefined) updateData.eInvoicingEnabled = gstEnabled ? eInvoicingEnabled : false;
+    if (gstin !== undefined) updateData.gstin = gstin || null;
+    if (gstStateCode !== undefined) updateData.gstStateCode = gstStateCode || null;
+
+    // Auto-derive state code from GSTIN
+    if (gstin && gstin.length >= 2 && gstEnabled) {
+      updateData.gstStateCode = gstin.substring(0, 2);
+    }
+
+    const organization = await prisma.$transaction(async (tx) => {
+      const org = await tx.organization.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Seed GST accounts if enabling GST
+      if (gstEnabled) {
+        await seedDefaultCOA(tx as never, id);
+      }
+
+      return org;
     });
 
     return NextResponse.json(organization);

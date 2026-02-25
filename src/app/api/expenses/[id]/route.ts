@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 export async function GET(
   _request: NextRequest,
@@ -79,14 +80,34 @@ export async function PUT(
       );
     }
 
-    const { supplierId, expenseDate, description, items, taxRate, notes } = body;
+    const { supplierId, expenseDate, description, items, notes } = body;
 
     const subtotal = items
       ? items.reduce((sum: number, item: { amount: number }) => sum + item.amount, 0)
       : Number(existing.subtotal);
-    const rate = taxRate !== undefined ? taxRate : Number(existing.taxRate);
-    const taxAmount = (subtotal * rate) / 100;
-    const total = subtotal + taxAmount;
+
+    // Compute GST
+    const orgGST = await getOrgGSTInfo(prisma, organizationId);
+    let supplierGstin: string | null = null;
+    let supplierStateCode: string | null = null;
+    const sid = supplierId !== undefined ? supplierId : existing.supplierId;
+    if (sid) {
+      const supplier = await prisma.supplier.findUnique({
+        where: { id: sid },
+        select: { gstin: true, gstStateCode: true },
+      });
+      supplierGstin = supplier?.gstin ?? null;
+      supplierStateCode = supplier?.gstStateCode ?? null;
+    }
+    const lineItemsForGST = items
+      ? items.map((item: { amount: number; gstRate?: number }) => ({
+          taxableAmount: item.amount,
+          gstRate: item.gstRate || 0,
+          hsnCode: null,
+        }))
+      : [{ taxableAmount: subtotal, gstRate: 0, hsnCode: null }];
+    const gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplierGstin, supplierStateCode);
+    const total = subtotal + gstResult.totalTax;
 
     const expense = await prisma.$transaction(async (tx) => {
       if (items) {
@@ -101,16 +122,23 @@ export async function PUT(
           ...(description !== undefined && { description }),
           ...(notes !== undefined && { notes }),
           subtotal,
-          taxRate: rate,
-          taxAmount,
           total,
+          totalCgst: gstResult.totalCgst,
+          totalSgst: gstResult.totalSgst,
+          totalIgst: gstResult.totalIgst,
+          placeOfSupply: gstResult.placeOfSupply,
+          isInterState: gstResult.isInterState,
           ...(items && {
             items: {
               create: items.map(
-                (item: { accountId: string; description: string; amount: number }) => ({
+                (item: { accountId: string; description: string; amount: number; gstRate?: number }, idx: number) => ({
                   accountId: item.accountId,
                   description: item.description,
                   amount: item.amount,
+                  gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+                  cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+                  sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+                  igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
                   organizationId,
                 })
               ),

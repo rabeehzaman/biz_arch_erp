@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 // Generate quotation number: QUO-YYYYMMDD-XXX
 async function generateQuotationNumber(organizationId: string) {
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { customerId, issueDate, validUntil, items, taxRate, notes, terms } = body;
+    const { customerId, issueDate, validUntil, items, notes, terms } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -77,14 +78,26 @@ export async function POST(request: NextRequest) {
     const quotationIssueDate = issueDate ? new Date(issueDate) : new Date();
     const quotationValidUntil = validUntil ? new Date(validUntil) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    // Calculate totals with item-level discounts
+    // Calculate subtotal with item-level discounts
     const subtotal = items.reduce(
       (sum: number, item: { quantity: number; unitPrice: number; discount?: number }) =>
         sum + item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       0
     );
-    const taxAmount = (subtotal * (taxRate || 0)) / 100;
-    const total = subtotal + taxAmount;
+
+    // Compute GST
+    const orgGST = await getOrgGSTInfo(prisma, organizationId);
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { gstin: true, gstStateCode: true },
+    });
+    const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+      taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+      gstRate: item.gstRate || 0,
+      hsnCode: item.hsnCode || null,
+    }));
+    const gstResult = computeDocumentGST(orgGST, lineItemsForGST, customer?.gstin, customer?.gstStateCode);
+    const total = subtotal + gstResult.totalTax;
 
     // Create the quotation
     const quotation = await prisma.quotation.create({
@@ -94,11 +107,14 @@ export async function POST(request: NextRequest) {
         customerId,
         issueDate: quotationIssueDate,
         validUntil: quotationValidUntil,
-        status: "SENT", // Default status
+        status: "SENT",
         subtotal,
-        taxRate: taxRate || 0,
-        taxAmount,
         total,
+        totalCgst: gstResult.totalCgst,
+        totalSgst: gstResult.totalSgst,
+        totalIgst: gstResult.totalIgst,
+        placeOfSupply: gstResult.placeOfSupply,
+        isInterState: gstResult.isInterState,
         notes: notes || null,
         terms: terms || null,
         items: {
@@ -108,7 +124,9 @@ export async function POST(request: NextRequest) {
             quantity: number;
             unitPrice: number;
             discount?: number;
-          }) => ({
+            gstRate?: number;
+            hsnCode?: string;
+          }, idx: number) => ({
             organizationId,
             productId: item.productId || null,
             description: item.description,
@@ -116,6 +134,14 @@ export async function POST(request: NextRequest) {
             unitPrice: item.unitPrice,
             discount: item.discount || 0,
             total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+            hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+            gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+            cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+            sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+            igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+            cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+            sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+            igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
           })),
         },
       },

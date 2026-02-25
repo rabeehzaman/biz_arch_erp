@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { restoreStockFromConsumptions, recalculateFromDate, consumeStockFIFO, isBackdated, getRecalculationStartDate } from "@/lib/inventory/fifo";
 import { syncInvoiceRevenueJournal, syncInvoiceCOGSJournal } from "@/lib/accounting/journal";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 // Helper to check if user can access an invoice (based on customer assignment)
 async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean, organizationId: string) {
@@ -103,7 +104,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, taxRate, notes, terms, items } = body;
+    const { customerId, issueDate, dueDate, notes, terms, items } = body;
 
     const existingInvoice = await prisma.invoice.findUnique({
       where: { id, organizationId },
@@ -161,9 +162,21 @@ export async function PUT(
           sum + item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
         0
       );
-      const taxRateNum = taxRate || 0;
-      const taxAmount = (subtotal * taxRateNum) / 100;
-      const total = subtotal + taxAmount;
+
+      // Compute GST
+      const orgGST = await getOrgGSTInfo(tx, organizationId);
+      const customer = await tx.customer.findUnique({
+        where: { id: customerId },
+        select: { gstin: true, gstStateCode: true },
+      });
+      const lineItems = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+        taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+        gstRate: item.gstRate || 0,
+        hsnCode: item.hsnCode || null,
+      }));
+      const gstResult = computeDocumentGST(orgGST, lineItems, customer?.gstin, customer?.gstStateCode);
+      const totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
+      const total = subtotal + totalTax;
 
       // Calculate balance change for customer
       const oldTotal = Number(existingInvoice.total);
@@ -179,13 +192,16 @@ export async function PUT(
           customerId,
           issueDate: new Date(issueDate),
           dueDate: new Date(dueDate),
-          taxRate: taxRateNum,
           notes,
           terms,
           subtotal,
-          taxAmount,
           total,
           balanceDue: newBalanceDue,
+          totalCgst: gstResult.totalCgst,
+          totalSgst: gstResult.totalSgst,
+          totalIgst: gstResult.totalIgst,
+          placeOfSupply: gstResult.placeOfSupply,
+          isInterState: gstResult.isInterState,
           items: {
             create: items.map((item: {
               productId: string;
@@ -193,7 +209,9 @@ export async function PUT(
               quantity: number;
               unitPrice: number;
               discount?: number;
-            }) => ({
+              gstRate?: number;
+              hsnCode?: string;
+            }, idx: number) => ({
               organizationId,
               productId: item.productId,
               description: item.description,
@@ -201,6 +219,14 @@ export async function PUT(
               unitPrice: item.unitPrice,
               discount: item.discount || 0,
               total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+              hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+              gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+              cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+              sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+              igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+              cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+              sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+              igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
               costOfGoodsSold: 0,
             })),
           },

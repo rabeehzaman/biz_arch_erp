@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 export async function GET(
   request: NextRequest,
@@ -127,21 +128,36 @@ export async function PUT(
     // Handle items update
     if (body.items !== undefined) {
       const items = body.items;
-      const taxRate = body.taxRate !== undefined ? body.taxRate : existingQuotation.taxRate;
+      const customerId = body.customerId || existingQuotation.customerId;
 
-      // Calculate totals
+      // Calculate subtotal
       const subtotal = items.reduce(
         (sum: number, item: { quantity: number; unitPrice: number; discount?: number }) =>
           sum + item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
         0
       );
-      const taxAmount = (Number(subtotal) * Number(taxRate)) / 100;
-      const total = subtotal + taxAmount;
+
+      // Compute GST
+      const orgGST = await getOrgGSTInfo(prisma, organizationId);
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        select: { gstin: true, gstStateCode: true },
+      });
+      const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+        taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+        gstRate: item.gstRate || 0,
+        hsnCode: item.hsnCode || null,
+      }));
+      const gstResult = computeDocumentGST(orgGST, lineItemsForGST, customer?.gstin, customer?.gstStateCode);
+      const total = subtotal + gstResult.totalTax;
 
       updateData.subtotal = subtotal;
-      updateData.taxRate = taxRate;
-      updateData.taxAmount = taxAmount;
       updateData.total = total;
+      updateData.totalCgst = gstResult.totalCgst;
+      updateData.totalSgst = gstResult.totalSgst;
+      updateData.totalIgst = gstResult.totalIgst;
+      updateData.placeOfSupply = gstResult.placeOfSupply;
+      updateData.isInterState = gstResult.isInterState;
 
       // Delete existing items and create new ones
       updateData.items = {
@@ -152,7 +168,9 @@ export async function PUT(
           quantity: number;
           unitPrice: number;
           discount?: number;
-        }) => ({
+          gstRate?: number;
+          hsnCode?: string;
+        }, idx: number) => ({
           organizationId,
           productId: item.productId || null,
           description: item.description,
@@ -160,14 +178,16 @@ export async function PUT(
           unitPrice: item.unitPrice,
           discount: item.discount || 0,
           total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+          hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+          gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+          cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+          sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+          igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+          cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+          sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+          igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
         })),
       };
-    } else if (body.taxRate !== undefined && body.taxRate !== existingQuotation.taxRate) {
-      // If only tax rate changed, recalculate tax
-      const taxAmount = (Number(existingQuotation.subtotal) * Number(body.taxRate)) / 100;
-      updateData.taxRate = body.taxRate;
-      updateData.taxAmount = taxAmount;
-      updateData.total = Number(existingQuotation.subtotal) + taxAmount;
     }
 
     const quotation = await prisma.quotation.update({

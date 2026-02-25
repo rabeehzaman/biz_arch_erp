@@ -66,6 +66,8 @@ interface Customer {
   state: string | null;
   zipCode: string | null;
   country: string | null;
+  gstin: string | null;
+  gstStateCode: string | null;
   balance: number;
   notes: string | null;
   isActive: boolean;

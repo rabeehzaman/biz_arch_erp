@@ -36,13 +36,18 @@ const DEFAULT_ACCOUNTS: AccountDef[] = [
   { code: "1100", name: "Cash", accountType: "ASSET", accountSubType: "CASH", parentCode: "1000", isSystem: true },
   { code: "1200", name: "Bank Accounts", accountType: "ASSET", accountSubType: "BANK", parentCode: "1000", isSystem: true },
   { code: "1300", name: "Accounts Receivable", accountType: "ASSET", accountSubType: "ACCOUNTS_RECEIVABLE", parentCode: "1000", isSystem: true },
+  { code: "1350", name: "CGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "1360", name: "SGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "1370", name: "IGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
   { code: "1400", name: "Inventory", accountType: "ASSET", accountSubType: "INVENTORY", parentCode: "1000", isSystem: true },
   { code: "1500", name: "Fixed Assets", accountType: "ASSET", accountSubType: "FIXED_ASSET", parentCode: "1000", isSystem: false },
 
   // LIABILITIES
   { code: "2000", name: "Liabilities", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", isSystem: true },
   { code: "2100", name: "Accounts Payable", accountType: "LIABILITY", accountSubType: "ACCOUNTS_PAYABLE", parentCode: "2000", isSystem: true },
-  { code: "2200", name: "Taxes Payable", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2210", name: "CGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2220", name: "SGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2230", name: "IGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
   { code: "2500", name: "Long-Term Liabilities", accountType: "LIABILITY", accountSubType: "LONG_TERM_LIABILITY", parentCode: "2000", isSystem: false },
 
   // EQUITY

@@ -81,26 +81,27 @@ export async function POST(
         credit: 0,
       }));
 
-      // Add tax as debit if applicable
-      if (Number(expense.taxAmount) > 0) {
-        // Find taxes payable account
-        const taxAccount = await tx.account.findFirst({
-          where: { organizationId, code: "2200" },
-        });
-        if (taxAccount) {
-          journalLines.push({
-            accountId: taxAccount.id,
-            description: "Tax",
-            debit: Number(expense.taxAmount),
-            credit: 0,
-          });
-        } else {
-          // Fallback: account 2200 not found — roll tax into first expense debit line
-          // to keep the journal entry balanced (debit total must equal credit total)
-          journalLines[0] = {
-            ...journalLines[0],
-            debit: journalLines[0].debit + Number(expense.taxAmount),
-          };
+      // Add GST input tax as debit if applicable
+      const totalCgst = Number(expense.totalCgst);
+      const totalSgst = Number(expense.totalSgst);
+      const totalIgst = Number(expense.totalIgst);
+
+      if (totalCgst > 0) {
+        const cgstAccount = await tx.account.findFirst({ where: { organizationId, code: "1350" } });
+        if (cgstAccount) {
+          journalLines.push({ accountId: cgstAccount.id, description: "CGST Input", debit: totalCgst, credit: 0 });
+        }
+      }
+      if (totalSgst > 0) {
+        const sgstAccount = await tx.account.findFirst({ where: { organizationId, code: "1360" } });
+        if (sgstAccount) {
+          journalLines.push({ accountId: sgstAccount.id, description: "SGST Input", debit: totalSgst, credit: 0 });
+        }
+      }
+      if (totalIgst > 0) {
+        const igstAccount = await tx.account.findFirst({ where: { organizationId, code: "1370" } });
+        if (igstAccount) {
+          journalLines.push({ accountId: igstAccount.id, description: "IGST Input", debit: totalIgst, credit: 0 });
         }
       }
 

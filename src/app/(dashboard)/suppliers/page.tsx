@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   Table,
   TableBody,
@@ -48,6 +49,8 @@ interface Supplier {
   state: string | null;
   zipCode: string | null;
   country: string | null;
+  gstin: string | null;
+  gstStateCode: string | null;
   balance: number;
   notes: string | null;
   isActive: boolean;
@@ -58,6 +61,7 @@ interface Supplier {
 }
 
 export default function SuppliersPage() {
+  const { data: session } = useSession();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,6 +83,8 @@ export default function SuppliersPage() {
     state: "",
     zipCode: "",
     country: "India",
+    gstin: "",
+    gstStateCode: "",
     notes: "",
   });
 
@@ -151,6 +157,8 @@ export default function SuppliersPage() {
       state: supplier.state || "",
       zipCode: supplier.zipCode || "",
       country: supplier.country || "India",
+      gstin: supplier.gstin || "",
+      gstStateCode: supplier.gstStateCode || "",
       notes: supplier.notes || "",
     });
     setIsDialogOpen(true);
@@ -188,6 +196,8 @@ export default function SuppliersPage() {
       state: "",
       zipCode: "",
       country: "India",
+      gstin: "",
+      gstStateCode: "",
       notes: "",
     });
   };

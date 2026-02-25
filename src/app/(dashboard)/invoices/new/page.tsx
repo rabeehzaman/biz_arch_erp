@@ -29,6 +29,8 @@ interface Product {
   unit: string;
   isService?: boolean;
   availableStock?: number;
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 interface LineItem {
@@ -37,6 +39,8 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   discount: number;
+  gstRate: number;
+  hsnCode: string;
 }
 
 export default function NewInvoicePage() {
@@ -55,13 +59,12 @@ export default function NewInvoicePage() {
     customerId: "",
     date: new Date().toISOString().split("T")[0],
     dueDate: getDefaultDueDate(),
-    taxRate: "0",
     notes: "",
     terms: "",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { id: "1", productId: "", quantity: 1, unitPrice: 0, discount: 0, gstRate: 0, hsnCode: "" },
   ]);
 
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
@@ -123,6 +126,8 @@ export default function NewInvoicePage() {
         quantity: 1,
         unitPrice: 0,
         discount: 0,
+        gstRate: 0,
+        hsnCode: "",
       },
     ]);
 
@@ -160,6 +165,8 @@ export default function NewInvoicePage() {
             ...item,
             productId: value as string,
             unitPrice: Number(product.price),
+            gstRate: Number(product.gstRate) || 0,
+            hsnCode: product.hsnCode || "",
           };
         }
       }
@@ -180,6 +187,8 @@ export default function NewInvoicePage() {
             quantity: 1,
             unitPrice: 0,
             discount: 0,
+            gstRate: 0,
+            hsnCode: "",
           },
         ]);
       }, 0);
@@ -194,7 +203,10 @@ export default function NewInvoicePage() {
   };
 
   const calculateTax = () => {
-    return (calculateSubtotal() * parseFloat(formData.taxRate || "0")) / 100;
+    return lineItems.reduce((sum, item) => {
+      const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+    }, 0);
   };
 
   const calculateTotal = () => {
@@ -223,7 +235,6 @@ export default function NewInvoicePage() {
           customerId: formData.customerId,
           issueDate: formData.date,
           dueDate: formData.dueDate,
-          taxRate: parseFloat(formData.taxRate) || 0,
           notes: formData.notes || null,
           terms: formData.terms || null,
           items: validItems.map((item) => {
@@ -234,6 +245,8 @@ export default function NewInvoicePage() {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               discount: item.discount,
+              gstRate: item.gstRate,
+              hsnCode: item.hsnCode,
             };
           }),
         }),
@@ -536,6 +549,12 @@ export default function NewInvoicePage() {
                     <span>Subtotal</span>
                     <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
+                  {calculateTax() > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>GST</span>
+                      <span>₹{calculateTax().toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
                     <span>₹{calculateTotal().toLocaleString("en-IN")}</span>

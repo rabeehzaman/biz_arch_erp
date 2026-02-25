@@ -27,6 +27,8 @@ interface Product {
   price: number;
   unit: string;
   availableStock?: number;
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 interface LineItem {
@@ -35,6 +37,8 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   discount: number;
+  gstRate: number;
+  hsnCode: string;
 }
 
 export default function EditInvoicePage({
@@ -53,7 +57,7 @@ export default function EditInvoicePage({
     customerId: "",
     date: "",
     dueDate: "",
-    taxRate: "0",
+    taxRate: "",
     notes: "",
     terms: "",
   });
@@ -114,17 +118,19 @@ export default function EditInvoicePage({
           customerId: data.customer.id,
           date: data.issueDate.split("T")[0],
           dueDate: data.dueDate.split("T")[0],
-          taxRate: String(data.taxRate),
+          taxRate: data.taxRate?.toString() || "",
           notes: data.notes || "",
           terms: data.terms || "",
         });
         setLineItems(
-          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitPrice: number; discount: number }) => ({
+          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitPrice: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
             id: item.id,
             productId: item.product?.id || "",
             quantity: Number(item.quantity),
             unitPrice: Number(item.unitPrice),
             discount: Number(item.discount),
+            gstRate: Number(item.gstRate) || 0,
+            hsnCode: item.hsnCode || "",
           }))
         );
       } else {
@@ -149,6 +155,8 @@ export default function EditInvoicePage({
         quantity: 1,
         unitPrice: 0,
         discount: 0,
+        gstRate: 0,
+        hsnCode: "",
       },
     ]);
   };
@@ -176,6 +184,8 @@ export default function EditInvoicePage({
             ...item,
             productId: value as string,
             unitPrice: Number(product.price),
+            gstRate: Number(product.gstRate) || 0,
+            hsnCode: product.hsnCode || "",
           };
         }
       }
@@ -195,6 +205,8 @@ export default function EditInvoicePage({
             quantity: 1,
             unitPrice: 0,
             discount: 0,
+            gstRate: 0,
+            hsnCode: "",
           },
         ]);
       }, 0);

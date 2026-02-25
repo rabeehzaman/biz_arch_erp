@@ -10,6 +10,7 @@ import {
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 import { Decimal } from "@prisma/client/runtime/client";
+import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 
 export async function GET(
   request: NextRequest,
@@ -77,7 +78,6 @@ export async function PUT(
       purchaseInvoiceId,
       issueDate,
       items,
-      taxRate,
       reason,
       notes,
       appliedToBalance = true,
@@ -112,8 +112,20 @@ export async function PUT(
         sum + item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
       0
     );
-    const taxAmount = (subtotal * (taxRate || 0)) / 100;
-    const total = subtotal + taxAmount;
+
+    // Compute GST
+    const orgGST = await getOrgGSTInfo(prisma, organizationId);
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: supplierId },
+      select: { gstin: true, gstStateCode: true },
+    });
+    const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+      taxableAmount: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+      gstRate: item.gstRate || 0,
+      hsnCode: item.hsnCode || null,
+    }));
+    const gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplier?.gstin, supplier?.gstStateCode);
+    const total = subtotal + gstResult.totalTax;
 
     const result = await prisma.$transaction(async (tx) => {
       // Get the old debit note
@@ -199,9 +211,12 @@ export async function PUT(
           purchaseInvoiceId: purchaseInvoiceId || null,
           issueDate: debitNoteDate,
           subtotal,
-          taxRate: taxRate || 0,
-          taxAmount,
           total,
+          totalCgst: gstResult.totalCgst,
+          totalSgst: gstResult.totalSgst,
+          totalIgst: gstResult.totalIgst,
+          placeOfSupply: gstResult.placeOfSupply,
+          isInterState: gstResult.isInterState,
           appliedToBalance,
           reason: reason || null,
           notes: notes || null,
@@ -214,7 +229,9 @@ export async function PUT(
                 quantity: number;
                 unitCost: number;
                 discount?: number;
-              }) => ({
+                gstRate?: number;
+                hsnCode?: string;
+              }, idx: number) => ({
                 organizationId,
                 purchaseInvoiceItemId: item.purchaseInvoiceItemId || null,
                 productId: item.productId,
@@ -226,6 +243,14 @@ export async function PUT(
                   item.quantity *
                   item.unitCost *
                   (1 - (item.discount || 0) / 100),
+                hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+                gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+                cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+                sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+                igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+                cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+                sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+                igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
               })
             ),
           },
@@ -302,15 +327,28 @@ export async function PUT(
         const apAccount = await getSystemAccount(tx, organizationId, "2100");
         const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
         if (apAccount && inventoryAccount) {
+          const dnLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
+            { accountId: apAccount.id, description: "Accounts Payable", debit: total, credit: 0 },
+            { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: 0, credit: subtotal },
+          ];
+          if (gstResult.totalCgst > 0) {
+            const cgstAccount = await getSystemAccount(tx, organizationId, "1350");
+            if (cgstAccount) dnLines.push({ accountId: cgstAccount.id, description: "CGST Input (Return)", debit: 0, credit: gstResult.totalCgst });
+          }
+          if (gstResult.totalSgst > 0) {
+            const sgstAccount = await getSystemAccount(tx, organizationId, "1360");
+            if (sgstAccount) dnLines.push({ accountId: sgstAccount.id, description: "SGST Input (Return)", debit: 0, credit: gstResult.totalSgst });
+          }
+          if (gstResult.totalIgst > 0) {
+            const igstAccount = await getSystemAccount(tx, organizationId, "1370");
+            if (igstAccount) dnLines.push({ accountId: igstAccount.id, description: "IGST Input (Return)", debit: 0, credit: gstResult.totalIgst });
+          }
           await createAutoJournalEntry(tx, organizationId, {
             date: debitNoteDate,
             description: `Debit Note ${updatedDebitNote.debitNoteNumber}`,
             sourceType: "DEBIT_NOTE",
             sourceId: id,
-            lines: [
-              { accountId: apAccount.id, description: "Accounts Payable", debit: total, credit: 0 },
-              { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: 0, credit: total },
-            ],
+            lines: dnLines,
           });
         }
       }
