@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useSession } from "next-auth/react";
 
 interface Customer {
   id: string;
@@ -48,6 +49,7 @@ export default function EditInvoicePage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { data: session } = useSession();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -376,6 +378,7 @@ export default function EditInvoicePage({
                       <TableHead className="w-[15%] font-semibold">Quantity *</TableHead>
                       <TableHead className="w-[15%] font-semibold">Unit Price *</TableHead>
                       <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
+                      {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
                       <TableHead className="text-right font-semibold">Line Total</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -468,6 +471,23 @@ export default function EditInvoicePage({
                               placeholder="0"
                             />
                           </TableCell>
+                          {session?.user?.gstEnabled && (
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <Input
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={item.gstRate || ""}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
+                                }
+                                className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                placeholder="0"
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                             ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
                             {item.discount > 0 && (

@@ -52,7 +52,7 @@ export async function PUT(
     const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
-    const { name, description, price, unitId, sku, barcode, isActive, isService } = body;
+    const { name, description, price, unitId, sku, barcode, isActive, isService, gstRate, hsnCode } = body;
 
     const product = await prisma.product.update({
       where: { id, organizationId },
@@ -65,6 +65,8 @@ export async function PUT(
         barcode,
         isActive,
         ...(isService !== undefined && { isService }),
+        ...(hsnCode !== undefined && { hsnCode: hsnCode || null }),
+        ...(gstRate !== undefined && { gstRate }),
       },
       include: {
         unit: true,
