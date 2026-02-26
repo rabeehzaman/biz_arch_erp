@@ -93,7 +93,14 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, email, phone, address, city, state, zipCode, country, notes, isActive } = body;
+    const { name, email, phone, address, city, state, zipCode, country, notes, isActive, gstin, gstStateCode } = body;
+
+    if (gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
+      return NextResponse.json(
+        { error: "Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5" },
+        { status: 400 }
+      );
+    }
 
     const customer = await prisma.customer.update({
       where: { id, organizationId },
@@ -108,6 +115,8 @@ export async function PUT(
         country,
         notes,
         isActive,
+        gstin: gstin !== undefined ? gstin : undefined,
+        gstStateCode: gstStateCode !== undefined ? gstStateCode : undefined,
       },
       include: {
         assignments: {

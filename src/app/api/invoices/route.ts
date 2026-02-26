@@ -100,6 +100,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
+    for (const item of items) {
+      if (item.gstRate !== undefined && item.gstRate !== null && !VALID_GST_RATES.includes(Number(item.gstRate))) {
+        return NextResponse.json(
+          { error: `Invalid GST rate: ${item.gstRate}. Valid rates are: ${VALID_GST_RATES.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
     const invoiceNumber = await generateInvoiceNumber(organizationId);
     const invoiceDate = issueDate ? new Date(issueDate) : new Date();
 

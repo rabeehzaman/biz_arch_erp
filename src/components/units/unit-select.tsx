@@ -65,11 +65,6 @@ export function UnitSelect({
     // Auto-select the newly created unit
     onValueChange(newUnit.id);
   };
-  const selectedUnit = units.find((u) => u.id === value);
-  const displayValue = selectedUnit
-    ? `${selectedUnit.name} (${selectedUnit.code.toUpperCase()})`
-    : undefined;
-
   return (
     <div className={`grid gap-2 ${className || ""}`}>
       {label && (
@@ -81,9 +76,7 @@ export function UnitSelect({
       <div className="flex items-center gap-2">
         <Select value={value} onValueChange={onValueChange} disabled={loading}>
           <SelectTrigger id="unit" className={error ? "border-red-500 flex-1" : "flex-1"}>
-            <SelectValue placeholder={loading ? "Loading..." : "Select a unit"}>
-              {displayValue}
-            </SelectValue>
+            <SelectValue placeholder={loading ? "Loading..." : "Select a unit"} />
           </SelectTrigger>
           <SelectContent>
             {units.length === 0 ? (

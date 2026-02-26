@@ -40,11 +40,18 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, email, phone, address, city, state, zipCode, country, notes } = body;
+    const { name, email, phone, address, city, state, zipCode, country, notes, gstin, gstStateCode } = body;
 
     if (!name) {
       return NextResponse.json(
         { error: "Name is required" },
+        { status: 400 }
+      );
+    }
+
+    if (gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
+      return NextResponse.json(
+        { error: "Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5" },
         { status: 400 }
       );
     }
@@ -61,6 +68,8 @@ export async function POST(request: NextRequest) {
         zipCode: zipCode || null,
         country: country || "India",
         notes: notes || null,
+        gstin: gstin || null,
+        gstStateCode: gstStateCode || null,
       },
     });
 
