@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useSession } from "next-auth/react";
 
 interface Customer {
   id: string;
@@ -61,6 +62,7 @@ export default function EditQuotationPage({
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const { data: session } = useSession();
 
   const formRef = useRef<HTMLFormElement>(null);
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -366,7 +368,15 @@ export default function EditQuotationPage({
                       <TableHead className="w-[15%] font-semibold">Quantity *</TableHead>
                       <TableHead className="w-[15%] font-semibold">Unit Price *</TableHead>
                       <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
-                      <TableHead className="text-right font-semibold">Line Total</TableHead>
+                      {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
+                      {session?.user?.gstEnabled ? (
+                        <>
+                          <TableHead className="text-right font-semibold">Gross Amount</TableHead>
+                          <TableHead className="text-right font-semibold">Net Amount</TableHead>
+                        </>
+                      ) : (
+                        <TableHead className="text-right font-semibold">Line Total</TableHead>
+                      )}
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -445,12 +455,43 @@ export default function EditQuotationPage({
                             placeholder="0"
                           />
                         </TableCell>
-                        <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                          ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                          {item.discount > 0 && (
-                            <div className="text-xs text-green-600">(-{item.discount}%)</div>
-                          )}
-                        </TableCell>
+                        {session?.user?.gstEnabled && (
+                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                            <Input
+                              type="number"
+                              onFocus={(e) => e.target.select()}
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={item.gstRate || ""}
+                              onChange={(e) =>
+                                updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
+                              }
+                              className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                              placeholder="0"
+                            />
+                          </TableCell>
+                        )}
+                        {session?.user?.gstEnabled ? (
+                          <>
+                            <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                              ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                              {item.discount > 0 && (
+                                <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
+                              ₹{((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                            </TableCell>
+                          </>
+                        ) : (
+                          <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                            ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                            {item.discount > 0 && (
+                              <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell className="align-middle p-2 text-center">
                           <Button
                             type="button"

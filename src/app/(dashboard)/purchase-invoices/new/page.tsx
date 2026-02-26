@@ -364,7 +364,14 @@ export default function NewPurchaseInvoicePage() {
                       <TableHead className="w-[15%] font-semibold">Unit Cost *</TableHead>
                       <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
                       {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
-                      <TableHead className="text-right font-semibold">Line Total</TableHead>
+                      {session?.user?.gstEnabled ? (
+                        <>
+                          <TableHead className="text-right font-semibold">Gross Amount</TableHead>
+                          <TableHead className="text-right font-semibold">Net Amount</TableHead>
+                        </>
+                      ) : (
+                        <TableHead className="text-right font-semibold">Line Total</TableHead>
+                      )}
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -487,12 +494,26 @@ export default function NewPurchaseInvoicePage() {
                             />
                           </TableCell>
                         )}
-                        <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                          ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                          {item.discount > 0 && (
-                            <div className="text-xs text-green-600">(-{item.discount}%)</div>
-                          )}
-                        </TableCell>
+                        {session?.user?.gstEnabled ? (
+                          <>
+                            <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                              ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                              {item.discount > 0 && (
+                                <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
+                              ₹{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                            </TableCell>
+                          </>
+                        ) : (
+                          <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                            ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                            {item.discount > 0 && (
+                              <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell className="align-middle p-2 text-center">
                           <Button
                             type="button"
