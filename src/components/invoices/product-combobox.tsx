@@ -12,6 +12,7 @@ interface Product {
   price: number;
   unit: string;
   sku?: string;
+  barcode?: string;
   isService?: boolean;
   availableStock?: number;
 }
@@ -56,10 +57,14 @@ export function ProductCombobox({
           onValueChange={onValueChange}
           getId={(product) => product.id}
           getLabel={(product) => product.name}
-          filterFn={(product, query) =>
-            product.name.toLowerCase().includes(query) ||
-            (product.sku?.toLowerCase().includes(query) ?? false)
-          }
+          filterFn={(product, query) => {
+            const lowerQuery = query.toLowerCase();
+            return (
+              product.name.toLowerCase().includes(lowerQuery) ||
+              (product.sku?.toLowerCase().includes(lowerQuery) ?? false) ||
+              (product.barcode?.toLowerCase().includes(lowerQuery) ?? false)
+            );
+          }}
           renderItem={(product) => {
             const stock = product.availableStock ?? 0;
             const isOutOfStock = !product.isService && stock === 0;

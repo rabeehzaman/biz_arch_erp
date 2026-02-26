@@ -127,7 +127,8 @@ export async function PUT(
       where: { id: customerId },
       select: { gstin: true, gstStateCode: true },
     });
-    const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+    // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
+    const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
       taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       gstRate: item.gstRate || 0,
       hsnCode: item.hsnCode || null,
@@ -221,12 +222,16 @@ export async function PUT(
                 originalCOGS?: number;
                 gstRate?: number;
                 hsnCode?: string;
+                unitId?: string;
+                conversionFactor?: number;
               }, idx: number) => ({
                 organizationId,
                 invoiceItemId: item.invoiceItemId || null,
                 productId: item.productId || null,
                 description: item.description,
                 quantity: item.quantity,
+                unitId: item.unitId || null,
+                conversionFactor: item.conversionFactor || 1,
                 unitPrice: item.unitPrice,
                 discount: item.discount || 0,
                 total:
@@ -278,10 +283,13 @@ export async function PUT(
             }
           }
 
+          // Create stock lot with base quantity
+          const baseQuantity = Number(creditNoteItem.quantity) * Number(creditNoteItem.conversionFactor);
+
           await createStockLotFromCreditNote(
             creditNoteItem.id,
             creditNoteItem.productId,
-            creditNoteItem.quantity,
+            baseQuantity,
             unitCost,
             creditNoteDate,
             tx,

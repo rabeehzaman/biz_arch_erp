@@ -141,7 +141,8 @@ export async function POST(request: NextRequest) {
         where: { id: customerId },
         select: { gstin: true, gstStateCode: true },
       });
-      const lineItems = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+      // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
+      const lineItems = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
         taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
         gstRate: item.gstRate || 0,
         hsnCode: item.hsnCode || null,
@@ -181,12 +182,16 @@ export async function POST(request: NextRequest) {
                 originalCOGS?: number;
                 gstRate?: number;
                 hsnCode?: string;
+                unitId?: string;
+                conversionFactor?: number;
               }, idx: number) => ({
                 organizationId,
                 invoiceItemId: item.invoiceItemId || null,
                 productId: item.productId || null,
                 description: item.description,
                 quantity: item.quantity,
+                unitId: item.unitId || null,
+                conversionFactor: item.conversionFactor || 1,
                 unitPrice: item.unitPrice,
                 discount: item.discount || 0,
                 total:
@@ -246,19 +251,21 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Create stock lot
+          // Create stock lot with base quantity
+          const baseQuantity = Number(creditNoteItem.quantity) * Number(creditNoteItem.conversionFactor);
+
           await createStockLotFromCreditNote(
             creditNoteItem.id,
             creditNoteItem.productId,
-            creditNoteItem.quantity,
+            baseQuantity,
             unitCost,
             creditNoteDate,
             tx,
             organizationId
           );
 
-          // Accumulate COGS for the GL reversal entry
-          totalReturnedCOGS += Number(unitCost) * Number(creditNoteItem.quantity);
+          // Accumulate COGS for the GL reversal entry (using base quantity)
+          totalReturnedCOGS += Number(unitCost) * baseQuantity;
 
           productsToRecalculate.add(creditNoteItem.productId);
         }

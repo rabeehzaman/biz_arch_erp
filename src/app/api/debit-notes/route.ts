@@ -128,9 +128,12 @@ export async function POST(request: NextRequest) {
 
     // Check stock availability for all items before proceeding
     for (const item of items) {
+      // Calculate base quantity to return based on conversionFactor
+      const baseQuantity = Number(item.quantity) * Number(item.conversionFactor || 1);
+
       const stockCheck = await checkReturnableStock(
         item.productId,
-        item.quantity,
+        baseQuantity,
         prisma
       );
 
@@ -159,7 +162,8 @@ export async function POST(request: NextRequest) {
         where: { id: supplierId },
         select: { gstin: true, gstStateCode: true },
       });
-      const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+      // NOTE: We do not multiply discount amount by conversionFactor here because unitCost should conceptually be for the selected unit.
+      const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
         taxableAmount: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
         gstRate: item.gstRate || 0,
         hsnCode: item.hsnCode || null,
@@ -196,12 +200,16 @@ export async function POST(request: NextRequest) {
                 discount?: number;
                 gstRate?: number;
                 hsnCode?: string;
+                unitId?: string;
+                conversionFactor?: number;
               }, idx: number) => ({
                 organizationId,
                 purchaseInvoiceItemId: item.purchaseInvoiceItemId || null,
                 productId: item.productId,
                 description: item.description,
                 quantity: item.quantity,
+                unitId: item.unitId || null,
+                conversionFactor: item.conversionFactor || 1,
                 unitCost: item.unitCost,
                 discount: item.discount || 0,
                 total:
@@ -228,9 +236,12 @@ export async function POST(request: NextRequest) {
       const productsToRecalculate = new Set<string>();
 
       for (const debitNoteItem of debitNote.items) {
+        // Calculate base quantity to return based on conversionFactor
+        const baseQuantity = Number(debitNoteItem.quantity) * Number(debitNoteItem.conversionFactor);
+
         await consumeStockForDebitNote(
           debitNoteItem.productId,
-          debitNoteItem.quantity,
+          baseQuantity,
           debitNoteItem.id,
           debitNoteDate,
           tx,

@@ -31,6 +31,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               select: {
                 gstEnabled: true,
                 eInvoicingEnabled: true,
+                multiUnitEnabled: true,
                 gstStateCode: true,
               },
             },
@@ -58,6 +59,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           organizationId: user.organizationId,
           gstEnabled: user.organization?.gstEnabled ?? false,
           eInvoicingEnabled: user.organization?.eInvoicingEnabled ?? false,
+          multiUnitEnabled: user.organization?.multiUnitEnabled ?? false,
           gstStateCode: user.organization?.gstStateCode ?? null,
         };
       },

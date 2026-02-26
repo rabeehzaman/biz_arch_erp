@@ -16,7 +16,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt } from "lucide-react";
-import { GSTConfigDialog } from "../gst-config-dialog";
+import { OrgSettingsDialog } from "../gst-config-dialog";
 import { SidebarConfigDialog } from "../sidebar-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
 import Link from "next/link";
@@ -194,8 +194,8 @@ export default function OrganizationDetailsPage() {
                                         <Receipt className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <h4 className="font-semibold text-sm">GST Settings</h4>
-                                        <p className="text-sm text-muted-foreground">Enable and configure GST details</p>
+                                        <h4 className="font-semibold text-sm">Organization Settings</h4>
+                                        <p className="text-sm text-muted-foreground">Configure GST, alternate units, and other settings</p>
                                     </div>
                                 </div>
                                 <Button variant="outline" onClick={() => setGstConfigOpen(true)}>Configure</Button>
@@ -241,7 +241,7 @@ export default function OrganizationDetailsPage() {
                 </div>
 
                 {gstConfigOpen && (
-                    <GSTConfigDialog
+                    <OrgSettingsDialog
                         open={gstConfigOpen}
                         onOpenChange={(open) => {
                             setGstConfigOpen(open);

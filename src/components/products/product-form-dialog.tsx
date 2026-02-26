@@ -295,6 +295,7 @@ export function ProductFormDialog({
                             />
                             <Label htmlFor="prod-isService">Service product (no inventory tracking)</Label>
                         </div>
+
                     </div>
                     <DialogFooter className="mt-auto pt-4 border-t">
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>

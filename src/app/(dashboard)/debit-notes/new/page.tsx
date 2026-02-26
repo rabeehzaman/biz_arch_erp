@@ -14,6 +14,9 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
+import { useSession } from "next-auth/react";
+import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
+import { useUnitConversions } from "@/hooks/use-unit-conversions";
 
 interface Supplier {
   id: string;
@@ -26,6 +29,7 @@ interface Product {
   name: string;
   cost: number;
   sku: string | null;
+  unit: string;
 }
 
 interface LineItem {
@@ -33,6 +37,8 @@ interface LineItem {
   productId: string;
   description: string;
   quantity: number;
+  unitId: string;
+  conversionFactor: number;
   unitCost: number;
   discount: number;
 }
@@ -58,10 +64,14 @@ export default function NewDebitNotePage() {
       productId: "",
       description: "",
       quantity: 1,
+      unitId: "",
+      conversionFactor: 1,
       unitCost: 0,
       discount: 0,
     },
   ]);
+  const { data: session } = useSession();
+  const { unitConversions } = useUnitConversions();
 
   useEffect(() => {
     fetchSuppliers();
@@ -110,6 +120,8 @@ export default function NewDebitNotePage() {
             ...item,
             productId,
             description: product.name,
+            unitId: product.unit || "",
+            conversionFactor: 1,
             unitCost: product.cost,
             gstRate: (product as any).gstRate || 0,
             hsnCode: (product as any).hsnCode || "",
@@ -133,9 +145,34 @@ export default function NewDebitNotePage() {
     value: string | number
   ) => {
     setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId ? { ...item, [field]: value } : item
-      )
+      prevItems.map((item) => {
+        if (item.id !== itemId) return item;
+
+        if (field === "unitId") {
+          const product = products.find((p) => p.id === item.productId);
+          if (product) {
+            if (value === product.unit) {
+              return {
+                ...item,
+                unitId: value as string,
+                conversionFactor: 1,
+                unitCost: Number(product.cost),
+              };
+            }
+            const altConversion = unitConversions.find(uc => uc.toUnitId === product.unit && uc.fromUnitId === value);
+            if (altConversion) {
+              return {
+                ...item,
+                unitId: value as string,
+                conversionFactor: Number(altConversion.conversionFactor),
+                unitCost: Number(product.cost) * Number(altConversion.conversionFactor),
+              };
+            }
+          }
+        }
+
+        return { ...item, [field]: value };
+      })
     );
   };
 
@@ -148,6 +185,8 @@ export default function NewDebitNotePage() {
         productId: "",
         description: "",
         quantity: 1,
+        unitId: "",
+        conversionFactor: 1,
         unitCost: 0,
         discount: 0,
       },
@@ -218,6 +257,8 @@ export default function NewDebitNotePage() {
             productId: item.productId,
             description: item.description,
             quantity: item.quantity,
+            unitId: item.unitId || null,
+            conversionFactor: item.conversionFactor || 1,
             unitCost: item.unitCost,
             discount: item.discount,
             gstRate: (item as any).gstRate || 0,
@@ -387,6 +428,27 @@ export default function NewDebitNotePage() {
                             else quantityRefs.current.delete(item.id);
                           }}
                         />
+
+                        {session?.user?.multiUnitEnabled && (
+                          <ItemUnitSelect
+                            value={item.unitId}
+                            onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                            options={(() => {
+                              const product = products.find((p) => p.id === item.productId);
+                              if (!product) return [];
+                              const baseOption = { id: product.unit, name: "Base Unit", conversionFactor: 1 };
+                              const alternateOptions = unitConversions
+                                .filter(uc => uc.toUnitId === product.unit)
+                                .map(uc => ({
+                                  id: uc.fromUnitId,
+                                  name: uc.fromUnit.name,
+                                  conversionFactor: Number(uc.conversionFactor)
+                                }));
+                              return [baseOption, ...alternateOptions];
+                            })()}
+                            disabled={!item.productId}
+                          />
+                        )}
 
                         <Input
                           type="number"

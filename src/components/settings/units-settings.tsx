@@ -27,6 +27,9 @@ import { Plus, Pencil, XCircle, Ruler } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 
+import { useSession } from "next-auth/react";
+import { UnitConversionsSettings } from "./unit-conversions-settings";
+
 interface Unit {
   id: string;
   code: string;
@@ -39,6 +42,7 @@ interface Unit {
 }
 
 export function UnitsSettings() {
+  const { data: session } = useSession();
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -77,15 +81,15 @@ export function UnitsSettings() {
     try {
       const response = editingUnit
         ? await fetch(`/api/units/${editingUnit.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
         : await fetch("/api/units", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
       if (!response.ok) {
         const error = await response.json();
@@ -301,6 +305,8 @@ export function UnitsSettings() {
           )}
         </CardContent>
       </Card>
+
+      {session?.user?.multiUnitEnabled && <UnitConversionsSettings />}
     </div>
   );
 }

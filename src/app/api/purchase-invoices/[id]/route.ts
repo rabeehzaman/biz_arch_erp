@@ -138,7 +138,8 @@ export async function PUT(
           where: { id: newSupplierId },
           select: { gstin: true, gstStateCode: true },
         });
-        const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+        // NOTE: We do not multiply discount amount by conversionFactor here because unitCost should conceptually be for the selected unit.
+        const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
           taxableAmount: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
           gstRate: item.gstRate || 0,
           hsnCode: item.hsnCode || null,
@@ -177,11 +178,15 @@ export async function PUT(
                 discount?: number;
                 gstRate?: number;
                 hsnCode?: string;
+                unitId?: string;
+                conversionFactor?: number;
               }, idx: number) => ({
                 organizationId,
                 productId: item.productId,
                 description: item.description,
                 quantity: item.quantity,
+                unitId: item.unitId || null,
+                conversionFactor: item.conversionFactor || 1,
                 unitCost: item.unitCost,
                 discount: item.discount || 0,
                 total: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
@@ -240,6 +245,12 @@ export async function PUT(
             // Calculate net unit cost after discount
             const netUnitCost = Number(item.unitCost) * (1 - (Number(item.discount) || 0) / 100);
 
+            // Calculate base unit cost (purchase price / conversion factor)
+            const baseUnitCost = netUnitCost / Number(item.conversionFactor);
+
+            // Create stock lot with base quantity
+            const baseQuantity = Number(item.quantity) * Number(item.conversionFactor);
+
             await tx.stockLot.create({
               data: {
                 organizationId,
@@ -248,9 +259,9 @@ export async function PUT(
                 purchaseInvoiceItemId: item.id,
                 purchaseInvoiceId: id,
                 lotDate: newDate,
-                unitCost: netUnitCost,
-                initialQuantity: item.quantity,
-                remainingQuantity: item.quantity,
+                unitCost: baseUnitCost, // Store base unit cost for accurate COGS
+                initialQuantity: baseQuantity,
+                remainingQuantity: baseQuantity,
               },
             });
 

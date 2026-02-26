@@ -52,6 +52,7 @@ export const authConfig: NextAuthConfig = {
         token.organizationId = (user as { organizationId?: string | null }).organizationId ?? null;
         token.gstEnabled = (user as { gstEnabled?: boolean }).gstEnabled ?? false;
         token.eInvoicingEnabled = (user as { eInvoicingEnabled?: boolean }).eInvoicingEnabled ?? false;
+        token.multiUnitEnabled = (user as { multiUnitEnabled?: boolean }).multiUnitEnabled ?? false;
         token.gstStateCode = (user as { gstStateCode?: string | null }).gstStateCode ?? null;
       }
       return token;
@@ -63,6 +64,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as { organizationId?: string }).organizationId = token.organizationId as string;
         (session.user as { gstEnabled?: boolean }).gstEnabled = token.gstEnabled as boolean;
         (session.user as { eInvoicingEnabled?: boolean }).eInvoicingEnabled = token.eInvoicingEnabled as boolean;
+        (session.user as { multiUnitEnabled?: boolean }).multiUnitEnabled = token.multiUnitEnabled as boolean;
         (session.user as { gstStateCode?: string | null }).gstStateCode = token.gstStateCode as string | null;
       }
       return session;

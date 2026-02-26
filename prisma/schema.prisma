@@ -18,6 +18,7 @@ model Organization {
   slug              String   @unique
   gstEnabled        Boolean  @default(false)
   eInvoicingEnabled Boolean  @default(false)
+  multiUnitEnabled  Boolean  @default(false)
   gstin             String?
   gstStateCode      String?
   createdAt         DateTime @default(now())
@@ -61,6 +62,7 @@ model Organization {
   productCategories          ProductCategory[]
   posSessions                POSSession[]
   posHeldOrders              POSHeldOrder[]
+  unitConversions            UnitConversion[]
 
   @@map("organizations")
 }
@@ -100,7 +102,14 @@ model Unit {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  products Product[]
+  products             Product[]
+  invoiceItems         InvoiceItem[]
+  purchaseInvoiceItems PurchaseInvoiceItem[]
+  quotationItems       QuotationItem[]
+  creditNoteItems      CreditNoteItem[]
+  debitNoteItems       DebitNoteItem[]
+  conversionsFrom      UnitConversion[]      @relation("FromUnit")
+  conversionsTo        UnitConversion[]      @relation("ToUnit")
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -146,6 +155,29 @@ model Product {
   @@index([organizationId, name])
   @@index([organizationId, categoryId])
   @@map("products")
+}
+
+model UnitConversion {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  fromUnitId String
+  fromUnit   Unit   @relation("FromUnit", fields: [fromUnitId], references: [id])
+
+  toUnitId String
+  toUnit   Unit   @relation("ToUnit", fields: [toUnitId], references: [id])
+
+  conversionFactor Decimal @db.Decimal(10, 4)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, fromUnitId, toUnitId])
+  @@index([organizationId])
+  @@index([fromUnitId])
+  @@index([toUnitId])
+  @@map("unit_conversions")
 }
 
 // ==================== CUSTOMERS ====================
@@ -252,11 +284,11 @@ model Invoice {
   amountPaid Decimal @default(0) @db.Decimal(12, 2)
   balanceDue Decimal @db.Decimal(12, 2)
 
-  totalCgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalSgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalIgst     Decimal  @default(0) @db.Decimal(12, 2)
+  totalCgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalSgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalIgst     Decimal @default(0) @db.Decimal(12, 2)
   placeOfSupply String?
-  isInterState  Boolean  @default(false)
+  isInterState  Boolean @default(false)
 
   eInvoiceIrn      String?
   eInvoiceAckNo    String?
@@ -299,6 +331,10 @@ model InvoiceItem {
 
   productId String?
   product   Product? @relation(fields: [productId], references: [id])
+  unitId    String?
+  unit      Unit?    @relation(fields: [unitId], references: [id])
+
+  conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
   quantity    Decimal @db.Decimal(10, 2)
@@ -342,14 +378,14 @@ model Quotation {
 
   status QuotationStatus @default(SENT)
 
-  subtotal  Decimal @db.Decimal(12, 2)
-  total     Decimal @db.Decimal(12, 2)
+  subtotal Decimal @db.Decimal(12, 2)
+  total    Decimal @db.Decimal(12, 2)
 
-  totalCgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalSgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalIgst     Decimal  @default(0) @db.Decimal(12, 2)
+  totalCgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalSgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalIgst     Decimal @default(0) @db.Decimal(12, 2)
   placeOfSupply String?
-  isInterState  Boolean  @default(false)
+  isInterState  Boolean @default(false)
 
   notes String?
   terms String?
@@ -386,6 +422,10 @@ model QuotationItem {
 
   productId String?
   product   Product? @relation(fields: [productId], references: [id])
+  unitId    String?
+  unit      Unit?    @relation(fields: [unitId], references: [id])
+
+  conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
   quantity    Decimal @db.Decimal(10, 2)
@@ -430,11 +470,11 @@ model PurchaseInvoice {
   amountPaid Decimal @default(0) @db.Decimal(12, 2)
   balanceDue Decimal @db.Decimal(12, 2)
 
-  totalCgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalSgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalIgst     Decimal  @default(0) @db.Decimal(12, 2)
+  totalCgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalSgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalIgst     Decimal @default(0) @db.Decimal(12, 2)
   placeOfSupply String?
-  isInterState  Boolean  @default(false)
+  isInterState  Boolean @default(false)
 
   notes String?
 
@@ -473,6 +513,10 @@ model PurchaseInvoiceItem {
 
   productId String
   product   Product @relation(fields: [productId], references: [id])
+  unitId    String?
+  unit      Unit?   @relation(fields: [unitId], references: [id])
+
+  conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
   quantity    Decimal @db.Decimal(10, 2)
@@ -517,14 +561,14 @@ model CreditNote {
 
   issueDate DateTime @default(now())
 
-  subtotal  Decimal @db.Decimal(12, 2)
-  total     Decimal @db.Decimal(12, 2)
+  subtotal Decimal @db.Decimal(12, 2)
+  total    Decimal @db.Decimal(12, 2)
 
-  totalCgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalSgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalIgst     Decimal  @default(0) @db.Decimal(12, 2)
+  totalCgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalSgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalIgst     Decimal @default(0) @db.Decimal(12, 2)
   placeOfSupply String?
-  isInterState  Boolean  @default(false)
+  isInterState  Boolean @default(false)
 
   appliedToBalance Boolean @default(true)
   reason           String?
@@ -552,6 +596,10 @@ model CreditNoteItem {
 
   productId String?
   product   Product? @relation(fields: [productId], references: [id])
+  unitId    String?
+  unit      Unit?    @relation(fields: [unitId], references: [id])
+
+  conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
   quantity    Decimal @db.Decimal(10, 2)
@@ -596,14 +644,14 @@ model DebitNote {
 
   issueDate DateTime @default(now())
 
-  subtotal  Decimal @db.Decimal(12, 2)
-  total     Decimal @db.Decimal(12, 2)
+  subtotal Decimal @db.Decimal(12, 2)
+  total    Decimal @db.Decimal(12, 2)
 
-  totalCgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalSgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalIgst     Decimal  @default(0) @db.Decimal(12, 2)
+  totalCgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalSgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalIgst     Decimal @default(0) @db.Decimal(12, 2)
   placeOfSupply String?
-  isInterState  Boolean  @default(false)
+  isInterState  Boolean @default(false)
 
   appliedToBalance Boolean @default(true)
   reason           String?
@@ -631,6 +679,10 @@ model DebitNoteItem {
 
   productId String
   product   Product @relation(fields: [productId], references: [id])
+  unitId    String?
+  unit      Unit?   @relation(fields: [unitId], references: [id])
+
+  conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
   quantity    Decimal @db.Decimal(10, 2)
@@ -1232,19 +1284,19 @@ model Expense {
   subtotal          Decimal          @db.Decimal(12, 2)
   total             Decimal          @db.Decimal(12, 2)
 
-  totalCgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalSgst     Decimal  @default(0) @db.Decimal(12, 2)
-  totalIgst     Decimal  @default(0) @db.Decimal(12, 2)
+  totalCgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalSgst     Decimal @default(0) @db.Decimal(12, 2)
+  totalIgst     Decimal @default(0) @db.Decimal(12, 2)
   placeOfSupply String?
-  isInterState  Boolean  @default(false)
+  isInterState  Boolean @default(false)
 
-  notes             String?
-  journalEntryId    String?
-  journalEntry      JournalEntry?    @relation(fields: [journalEntryId], references: [id])
-  organizationId    String
-  organization      Organization     @relation(fields: [organizationId], references: [id])
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  notes          String?
+  journalEntryId String?
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   items ExpenseItem[]
 
@@ -1256,13 +1308,13 @@ model Expense {
 }
 
 model ExpenseItem {
-  id             String       @id @default(cuid())
-  expenseId      String
-  expense        Expense      @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  accountId      String
-  account        Account      @relation(fields: [accountId], references: [id])
-  description    String
-  amount         Decimal      @db.Decimal(12, 2)
+  id          String  @id @default(cuid())
+  expenseId   String
+  expense     Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     Account @relation(fields: [accountId], references: [id])
+  description String
+  amount      Decimal @db.Decimal(12, 2)
 
   gstRate    Decimal @default(0) @db.Decimal(5, 2)
   cgstAmount Decimal @default(0) @db.Decimal(12, 2)

@@ -122,8 +122,9 @@ export async function POST(request: NextRequest) {
       });
 
       // Build line items for GST computation
+      // NOTE: We do not multiply discount amount by conversionFactor here because unitCost should conceptually be for the selected unit.
       const lineItemsForGST = items.map(
-        (item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+        (item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
           taxableAmount: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
           gstRate: item.gstRate || 0,
           hsnCode: item.hsnCode || null,
@@ -169,11 +170,15 @@ export async function POST(request: NextRequest) {
               discount?: number;
               gstRate?: number;
               hsnCode?: string;
+              unitId?: string;
+              conversionFactor?: number;
             }, index: number) => ({
               organizationId,
               productId: item.productId,
               description: item.description,
               quantity: item.quantity,
+              unitId: item.unitId || null,
+              conversionFactor: item.conversionFactor || 1,
               unitCost: item.unitCost,
               discount: item.discount || 0,
               total: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
@@ -200,19 +205,25 @@ export async function POST(request: NextRequest) {
 
       // Create stock lots for each item
       for (const item of invoice.items) {
-        // Calculate net unit cost after discount
+        // Calculate net unit cost after discount (per unit purchased)
         const discountFactor = new Decimal(1).minus(new Decimal(item.discount || 0).div(100));
         const netUnitCost = new Decimal(item.unitCost).mul(discountFactor);
+
+        // Calculate base unit cost (purchase price / conversion factor)
+        const baseUnitCost = netUnitCost.div(new Decimal(item.conversionFactor));
+
+        // Create stock lot with base quantity
+        const baseQuantity = Number(item.quantity) * Number(item.conversionFactor);
 
         await createStockLotFromPurchase(
           item.id,
           invoice.id,
           item.productId,
-          item.quantity,
-          netUnitCost,
+          baseQuantity,
+          baseUnitCost, // Store base unit cost for accurate COGS
           purchaseDate,
           tx,
-          item.unitCost,
+          Number(baseUnitCost), // Original gross base unit cost equivalent (less important but passing down)
           organizationId
         );
       }

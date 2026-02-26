@@ -130,7 +130,8 @@ export async function POST(request: NextRequest) {
       });
 
       // Compute GST per line item
-      const lineItems = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+      // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
+      const lineItems = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
         taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
         gstRate: item.gstRate || 0,
         hsnCode: item.hsnCode || null,
@@ -168,11 +169,15 @@ export async function POST(request: NextRequest) {
               discount?: number;
               gstRate?: number;
               hsnCode?: string;
+              unitId?: string;
+              conversionFactor?: number;
             }, idx: number) => ({
               organizationId,
               productId: item.productId || null,
               description: item.description,
               quantity: item.quantity,
+              unitId: item.unitId || null,
+              conversionFactor: item.conversionFactor || 1,
               unitPrice: item.unitPrice,
               discount: item.discount || 0,
               total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
@@ -217,10 +222,13 @@ export async function POST(request: NextRequest) {
       for (const invoiceItem of invoice.items) {
         if (invoiceItem.productId) {
           if (!backdatedProducts.has(invoiceItem.productId)) {
+            // Calculate base quantity to consume based on conversionFactor
+            const baseQuantity = Number(invoiceItem.quantity) * Number(invoiceItem.conversionFactor);
+
             // Normal flow: consume stock and update COGS
             const fifoResult = await consumeStockFIFO(
               invoiceItem.productId,
-              invoiceItem.quantity,
+              baseQuantity,
               invoiceItem.id,
               invoiceDate,
               tx,

@@ -23,7 +23,7 @@ interface GSTConfigDialogProps {
   orgName: string;
 }
 
-export function GSTConfigDialog({
+export function OrgSettingsDialog({
   open,
   onOpenChange,
   orgId,
@@ -35,6 +35,7 @@ export function GSTConfigDialog({
 
   const [gstEnabled, setGstEnabled] = useState(false);
   const [eInvoicingEnabled, setEInvoicingEnabled] = useState(false);
+  const [multiUnitEnabled, setMultiUnitEnabled] = useState(false);
   const [gstin, setGstin] = useState("");
   const [gstStateCode, setGstStateCode] = useState("");
 
@@ -47,6 +48,7 @@ export function GSTConfigDialog({
         .then((data) => {
           setGstEnabled(data.gstEnabled || false);
           setEInvoicingEnabled(data.eInvoicingEnabled || false);
+          setMultiUnitEnabled(data.multiUnitEnabled || false);
           setGstin(data.gstin || "");
           setGstStateCode(data.gstStateCode || "");
         })
@@ -99,6 +101,7 @@ export function GSTConfigDialog({
         body: JSON.stringify({
           gstEnabled,
           eInvoicingEnabled: gstEnabled ? eInvoicingEnabled : false,
+          multiUnitEnabled,
           gstin: gstEnabled ? gstin : null,
           gstStateCode: gstEnabled ? gstStateCode : null,
         }),
@@ -108,10 +111,10 @@ export function GSTConfigDialog({
         onOpenChange(false);
       } else {
         const data = await res.json();
-        setError(data.error || "Failed to save GST settings");
+        setError(data.error || "Failed to save organization settings");
       }
     } catch {
-      setError("Failed to save GST settings");
+      setError("Failed to save organization settings");
     } finally {
       setSaving(false);
     }
@@ -123,9 +126,9 @@ export function GSTConfigDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>GST Configuration</DialogTitle>
+          <DialogTitle>Organization Settings</DialogTitle>
           <DialogDescription>
-            Configure GST settings for <strong>{orgName}</strong>.
+            Configure settings for <strong>{orgName}</strong>.
           </DialogDescription>
         </DialogHeader>
 
@@ -197,6 +200,20 @@ export function GSTConfigDialog({
                 </div>
               </>
             )}
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="space-y-0.5">
+                <Label htmlFor="multiUnitEnabled">Enable Alternate Units</Label>
+                <p className="text-xs text-muted-foreground">
+                  Allow defining products with multiple units of measurement (e.g. Cartons vs Pieces)
+                </p>
+              </div>
+              <Switch
+                id="multiUnitEnabled"
+                checked={multiUnitEnabled}
+                onCheckedChange={setMultiUnitEnabled}
+              />
+            </div>
           </div>
         )}
 

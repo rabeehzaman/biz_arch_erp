@@ -16,6 +16,8 @@ import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
+import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
+import { useUnitConversions } from "@/hooks/use-unit-conversions";
 
 interface Customer {
   id: string;
@@ -38,6 +40,8 @@ interface LineItem {
   id: string;
   productId: string;
   quantity: number;
+  unitId: string;
+  conversionFactor: number;
   unitPrice: number;
   discount: number;
   gstRate: number;
@@ -65,10 +69,11 @@ export default function NewInvoicePage() {
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", quantity: 1, unitPrice: 0, discount: 0, gstRate: 0, hsnCode: "" },
+    { id: "1", productId: "", quantity: 1, unitId: "", conversionFactor: 1, unitPrice: 0, discount: 0, gstRate: 0, hsnCode: "" },
   ]);
 
   const { data: session } = useSession();
+  const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -126,6 +131,8 @@ export default function NewInvoicePage() {
         id: newId,
         productId: "",
         quantity: 1,
+        unitId: "",
+        conversionFactor: 1,
         unitPrice: 0,
         discount: 0,
         gstRate: 0,
@@ -166,10 +173,35 @@ export default function NewInvoicePage() {
           return {
             ...item,
             productId: value as string,
+            unitId: product.unit || "",
+            conversionFactor: 1,
             unitPrice: Number(product.price),
             gstRate: Number(product.gstRate) || 0,
             hsnCode: product.hsnCode || "",
           };
+        }
+      }
+
+      if (field === "unitId") {
+        const product = products.find((p) => p.id === item.productId);
+        if (product) {
+          if (value === product.unit) {
+            return {
+              ...item,
+              unitId: value as string,
+              conversionFactor: 1,
+              unitPrice: Number(product.price),
+            };
+          }
+          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unit && uc.fromUnitId === value);
+          if (altConversion) {
+            return {
+              ...item,
+              unitId: value as string,
+              conversionFactor: Number(altConversion.conversionFactor),
+              unitPrice: Number(product.price) * Number(altConversion.conversionFactor),
+            };
+          }
         }
       }
 
@@ -187,6 +219,8 @@ export default function NewInvoicePage() {
             id: Date.now().toString(),
             productId: "",
             quantity: 1,
+            unitId: "",
+            conversionFactor: 1,
             unitPrice: 0,
             discount: 0,
             gstRate: 0,
@@ -245,6 +279,8 @@ export default function NewInvoicePage() {
               productId: item.productId,
               description: product?.name || "",
               quantity: item.quantity,
+              unitId: item.unitId || null,
+              conversionFactor: item.conversionFactor || 1,
               unitPrice: item.unitPrice,
               discount: item.discount,
               gstRate: item.gstRate,
@@ -307,12 +343,12 @@ export default function NewInvoicePage() {
                   <CustomerCombobox
                     customers={customers}
                     value={formData.customerId}
-                    onValueChange={(value) =>
+                    onValueChange={(value: string) =>
                       setFormData({ ...formData, customerId: value })
                     }
                     onCustomerCreated={fetchCustomers}
                     required
-                    onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                    onSelectFocusNext={(triggerRef: any) => focusNextFocusable(triggerRef)}
                     autoFocus={true}
                   />
                 </div>
@@ -358,9 +394,12 @@ export default function NewInvoicePage() {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="w-[40%] font-semibold">Product *</TableHead>
-                      <TableHead className="w-[15%] font-semibold">Quantity *</TableHead>
-                      <TableHead className="w-[15%] font-semibold">Unit Price *</TableHead>
+                      <TableHead className="w-[30%] font-semibold">Product *</TableHead>
+                      <TableHead className="w-[10%] font-semibold">Quantity *</TableHead>
+                      {session?.user?.multiUnitEnabled && (
+                        <TableHead className="w-[12%] font-semibold">Unit</TableHead>
+                      )}
+                      <TableHead className="w-[12%] font-semibold">Unit Price *</TableHead>
                       <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
                       {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
                       {session?.user?.gstEnabled ? (
@@ -396,12 +435,12 @@ export default function NewInvoicePage() {
                               <ProductCombobox
                                 products={products}
                                 value={item.productId}
-                                onValueChange={(value) =>
+                                onValueChange={(value: string) =>
                                   updateLineItem(item.id, "productId", value)
                                 }
                                 onProductCreated={fetchProducts}
                                 onSelect={() => focusQuantity(item.id)}
-                                onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                                onSelectFocusNext={(triggerRef: any) => focusNextFocusable(triggerRef)}
                               />
                             </div>
                           </TableCell>
@@ -437,6 +476,28 @@ export default function NewInvoicePage() {
                               </p>
                             )}
                           </TableCell>
+                          {session?.user?.multiUnitEnabled && (
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <ItemUnitSelect
+                                value={item.unitId}
+                                onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                                options={(() => {
+                                  const product = products.find((p) => p.id === item.productId);
+                                  if (!product) return [];
+                                  const baseOption = { id: product.unit, name: "Base Unit", conversionFactor: 1 };
+                                  const alternateOptions = unitConversions
+                                    .filter(uc => uc.toUnitId === product.unit)
+                                    .map(uc => ({
+                                      id: uc.fromUnitId,
+                                      name: uc.fromUnit.name,
+                                      conversionFactor: Number(uc.conversionFactor)
+                                    }));
+                                  return [baseOption, ...alternateOptions];
+                                })()}
+                                disabled={!item.productId}
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                             <Input
                               type="number"

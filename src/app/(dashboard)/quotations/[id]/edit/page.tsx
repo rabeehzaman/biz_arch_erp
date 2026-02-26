@@ -15,6 +15,8 @@ import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useSession } from "next-auth/react";
+import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
+import { useUnitConversions } from "@/hooks/use-unit-conversions";
 
 interface Customer {
   id: string;
@@ -35,6 +37,8 @@ interface LineItem {
   id: string;
   productId: string;
   quantity: number;
+  unitId: string;
+  conversionFactor: number;
   unitPrice: number;
   discount: number;
   gstRate: number;
@@ -63,6 +67,7 @@ export default function EditQuotationPage({
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const { data: session } = useSession();
+  const { unitConversions } = useUnitConversions();
 
   const formRef = useRef<HTMLFormElement>(null);
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -122,10 +127,12 @@ export default function EditQuotationPage({
           terms: data.terms || "",
         });
         setLineItems(
-          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitPrice: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
+          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitPrice: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
             id: item.id,
             productId: item.product?.id || "",
             quantity: Number(item.quantity),
+            unitId: item.unitId || "",
+            conversionFactor: Number(item.conversionFactor) || 1,
             unitPrice: Number(item.unitPrice),
             discount: Number(item.discount),
             gstRate: Number(item.gstRate) || 0,
@@ -152,6 +159,8 @@ export default function EditQuotationPage({
         id: Date.now().toString(),
         productId: "",
         quantity: 1,
+        unitId: "",
+        conversionFactor: 1,
         unitPrice: 0,
         discount: 0,
         gstRate: 0,
@@ -182,10 +191,35 @@ export default function EditQuotationPage({
           return {
             ...item,
             productId: value as string,
+            unitId: product.unit || "",
+            conversionFactor: 1,
             unitPrice: Number(product.price),
             gstRate: Number(product.gstRate) || 0,
             hsnCode: product.hsnCode || "",
           };
+        }
+      }
+
+      if (field === "unitId") {
+        const product = products.find((p) => p.id === item.productId);
+        if (product) {
+          if (value === product.unit) {
+            return {
+              ...item,
+              unitId: value as string,
+              conversionFactor: 1,
+              unitPrice: Number(product.price),
+            };
+          }
+          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unit && uc.fromUnitId === value);
+          if (altConversion) {
+            return {
+              ...item,
+              unitId: value as string,
+              conversionFactor: Number(altConversion.conversionFactor),
+              unitPrice: Number(product.price) * Number(altConversion.conversionFactor),
+            };
+          }
         }
       }
 
@@ -202,6 +236,8 @@ export default function EditQuotationPage({
             id: Date.now().toString(),
             productId: "",
             quantity: 1,
+            unitId: "",
+            conversionFactor: 1,
             unitPrice: 0,
             discount: 0,
             gstRate: 0,
@@ -258,6 +294,8 @@ export default function EditQuotationPage({
               productId: item.productId,
               description: product?.name || "",
               quantity: item.quantity,
+              unitId: item.unitId || null,
+              conversionFactor: item.conversionFactor || 1,
               unitPrice: item.unitPrice,
               discount: item.discount,
               gstRate: item.gstRate,
@@ -364,9 +402,12 @@ export default function EditQuotationPage({
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="w-[40%] font-semibold">Product *</TableHead>
-                      <TableHead className="w-[15%] font-semibold">Quantity *</TableHead>
-                      <TableHead className="w-[15%] font-semibold">Unit Price *</TableHead>
+                      <TableHead className="w-[30%] font-semibold">Product *</TableHead>
+                      <TableHead className="w-[10%] font-semibold">Quantity *</TableHead>
+                      {session?.user?.multiUnitEnabled && (
+                        <TableHead className="w-[12%] font-semibold">Unit</TableHead>
+                      )}
+                      <TableHead className="w-[12%] font-semibold">Unit Price *</TableHead>
                       <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
                       {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
                       {session?.user?.gstEnabled ? (
@@ -381,81 +422,85 @@ export default function EditQuotationPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {lineItems.map((item) => (
-                      <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
-                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                          <ProductCombobox
-                            products={products}
-                            value={item.productId}
-                            onValueChange={(value) =>
-                              updateLineItem(item.id, "productId", value)
-                            }
-                            onSelect={() => focusQuantity(item.id)}
-                          />
-                        </TableCell>
-                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0 relative">
-                          <Input
-                            ref={(el) => {
-                              if (el) {
-                                quantityRefs.current.set(item.id, el);
-                              } else {
-                                quantityRefs.current.delete(item.id);
+                    {lineItems.map((item) => {
+                      const product = products.find((p) => p.id === item.productId);
+                      return (
+                        <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
+                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                            <ProductCombobox
+                              products={products}
+                              value={item.productId}
+                              onValueChange={(value) =>
+                                updateLineItem(item.id, "productId", value)
                               }
-                            }}
-                            type="number"
-                            onFocus={(e) => e.target.select()}
-                            min="1"
-                            step="0.01"
-                            value={item.quantity}
-                            onChange={(e) =>
-                              updateLineItem(
-                                item.id,
-                                "quantity",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
-                            required
-                          />
-                        </TableCell>
-                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                          <Input
-                            type="number"
-                            onFocus={(e) => e.target.select()}
-                            min="0"
-                            step="0.01"
-                            value={item.unitPrice}
-                            onChange={(e) =>
-                              updateLineItem(
-                                item.id,
-                                "unitPrice",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
-                            required
-                          />
-                        </TableCell>
-                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                          <Input
-                            type="number"
-                            onFocus={(e) => e.target.select()}
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            value={item.discount || ""}
-                            onChange={(e) =>
-                              updateLineItem(
-                                item.id,
-                                "discount",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
-                            placeholder="0"
-                          />
-                        </TableCell>
-                        {session?.user?.gstEnabled && (
+                              onSelect={() => focusQuantity(item.id)}
+                            />
+                          </TableCell>
+                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0 relative">
+                            <Input
+                              ref={(el) => {
+                                if (el) {
+                                  quantityRefs.current.set(item.id, el);
+                                } else {
+                                  quantityRefs.current.delete(item.id);
+                                }
+                              }}
+                              type="number"
+                              onFocus={(e) => e.target.select()}
+                              min="1"
+                              step="0.01"
+                              value={item.quantity}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  item.id,
+                                  "quantity",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                              required
+                            />
+                          </TableCell>
+                          {session?.user?.multiUnitEnabled && (
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <ItemUnitSelect
+                                value={item.unitId}
+                                onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                                options={(() => {
+                                  const product = products.find((p) => p.id === item.productId);
+                                  if (!product) return [];
+                                  const baseOption = { id: product.unit, name: "Base Unit", conversionFactor: 1 };
+                                  const alternateOptions = unitConversions
+                                    .filter(uc => uc.toUnitId === product.unit)
+                                    .map(uc => ({
+                                      id: uc.fromUnitId,
+                                      name: uc.fromUnit.name,
+                                      conversionFactor: Number(uc.conversionFactor)
+                                    }));
+                                  return [baseOption, ...alternateOptions];
+                                })()}
+                                disabled={!item.productId}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                            <Input
+                              type="number"
+                              onFocus={(e) => e.target.select()}
+                              min="0"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  item.id,
+                                  "unitPrice",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                              required
+                            />
+                          </TableCell>
                           <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                             <Input
                               type="number"
@@ -463,49 +508,70 @@ export default function EditQuotationPage({
                               min="0"
                               max="100"
                               step="0.01"
-                              value={item.gstRate || ""}
+                              value={item.discount || ""}
                               onChange={(e) =>
-                                updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
+                                updateLineItem(
+                                  item.id,
+                                  "discount",
+                                  parseFloat(e.target.value) || 0
+                                )
                               }
                               className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                               placeholder="0"
                             />
                           </TableCell>
-                        )}
-                        {session?.user?.gstEnabled ? (
-                          <>
+                          {session?.user?.gstEnabled && (
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <Input
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={item.gstRate || ""}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
+                                }
+                                className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                placeholder="0"
+                              />
+                            </TableCell>
+                          )}
+                          {session?.user?.gstEnabled ? (
+                            <>
+                              <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                                ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                {item.discount > 0 && (
+                                  <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
+                                ₹{((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                              </TableCell>
+                            </>
+                          ) : (
                             <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                               ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
                               {item.discount > 0 && (
                                 <div className="text-xs text-green-600">(-{item.discount}%)</div>
                               )}
                             </TableCell>
-                            <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                              ₹{((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
-                            </TableCell>
-                          </>
-                        ) : (
-                          <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                            ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                            {item.discount > 0 && (
-                              <div className="text-xs text-green-600">(-{item.discount}%)</div>
-                            )}
+                          )}
+                          <TableCell className="align-middle p-2 text-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
+                              onClick={() => removeLineItem(item.id)}
+                              disabled={lineItems.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
-                        )}
-                        <TableCell className="align-middle p-2 text-center">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
-                            onClick={() => removeLineItem(item.id)}
-                            disabled={lineItems.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>

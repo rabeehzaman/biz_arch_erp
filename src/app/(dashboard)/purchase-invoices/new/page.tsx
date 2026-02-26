@@ -16,6 +16,8 @@ import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
+import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
+import { useUnitConversions } from "@/hooks/use-unit-conversions";
 
 interface Supplier {
   id: string;
@@ -37,6 +39,8 @@ interface LineItem {
   id: string;
   productId: string;
   quantity: number;
+  unitId: string;
+  conversionFactor: number;
   unitCost: number;
   discount: number;
   gstRate: number;
@@ -64,10 +68,11 @@ export default function NewPurchaseInvoicePage() {
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", quantity: 1, unitCost: 0, discount: 0, gstRate: 0, hsnCode: "" },
+    { id: "1", productId: "", quantity: 1, unitId: "", conversionFactor: 1, unitCost: 0, discount: 0, gstRate: 0, hsnCode: "" },
   ]);
 
   const { data: session } = useSession();
+  const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -125,6 +130,8 @@ export default function NewPurchaseInvoicePage() {
         id: newId,
         productId: "",
         quantity: 1,
+        unitId: "",
+        conversionFactor: 1,
         unitCost: 0,
         discount: 0,
         gstRate: 0,
@@ -165,11 +172,37 @@ export default function NewPurchaseInvoicePage() {
           return {
             ...item,
             productId: value as string,
+            unitId: product.unit || "",
+            conversionFactor: 1,
             // Use product cost if available, otherwise use selling price
             unitCost: Number(product.cost) || Number(product.price),
             gstRate: Number(product.gstRate) || 0,
             hsnCode: product.hsnCode || "",
           };
+        }
+      }
+
+      if (field === "unitId") {
+        const product = products.find((p) => p.id === item.productId);
+        if (product) {
+          if (value === product.unit) {
+            return {
+              ...item,
+              unitId: value as string,
+              conversionFactor: 1,
+              unitCost: Number(product.cost) || Number(product.price),
+            };
+          }
+          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unit && uc.fromUnitId === value);
+          if (altConversion) {
+            const baseCost = Number(product.cost) || Number(product.price);
+            return {
+              ...item,
+              unitId: value as string,
+              conversionFactor: Number(altConversion.conversionFactor),
+              unitCost: baseCost * Number(altConversion.conversionFactor),
+            };
+          }
         }
       }
 
@@ -187,6 +220,8 @@ export default function NewPurchaseInvoicePage() {
             id: Date.now().toString(),
             productId: "",
             quantity: 1,
+            unitId: "",
+            conversionFactor: 1,
             unitCost: 0,
             discount: 0,
             gstRate: 0,
@@ -245,6 +280,8 @@ export default function NewPurchaseInvoicePage() {
               productId: item.productId,
               description: product?.name || "",
               quantity: item.quantity,
+              unitId: item.unitId || null,
+              conversionFactor: item.conversionFactor || 1,
               unitCost: item.unitCost,
               discount: item.discount,
               gstRate: item.gstRate,
@@ -359,9 +396,12 @@ export default function NewPurchaseInvoicePage() {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="w-[40%] font-semibold">Product *</TableHead>
-                      <TableHead className="w-[15%] font-semibold">Quantity *</TableHead>
-                      <TableHead className="w-[15%] font-semibold">Unit Cost *</TableHead>
+                      <TableHead className="w-[30%] font-semibold">Product *</TableHead>
+                      <TableHead className="w-[10%] font-semibold">Quantity *</TableHead>
+                      {session?.user?.multiUnitEnabled && (
+                        <TableHead className="w-[12%] font-semibold">Unit</TableHead>
+                      )}
+                      <TableHead className="w-[12%] font-semibold">Unit Cost *</TableHead>
                       <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
                       {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
                       {session?.user?.gstEnabled ? (
@@ -376,108 +416,96 @@ export default function NewPurchaseInvoicePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {lineItems.map((item, index) => (
-                      <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
-                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                          <div ref={(el) => {
-                            if (el) {
-                              const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
-                              if (button) productComboRefs.current.set(item.id, button);
-                            } else {
-                              productComboRefs.current.delete(item.id);
-                            }
-                          }}>
-                            <ProductCombobox
-                              products={products}
-                              value={item.productId}
-                              onValueChange={(value) =>
-                                updateLineItem(item.id, "productId", value)
-                              }
-                              onProductCreated={fetchProducts}
-                              onSelect={() => focusQuantity(item.id)}
-                              onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0 relative">
-                          <Input
-                            ref={(el) => {
+                    {lineItems.map((item, index) => {
+                      const product = products.find((p) => p.id === item.productId);
+                      return (
+                        <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
+                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                            <div ref={(el) => {
                               if (el) {
-                                quantityRefs.current.set(item.id, el);
+                                const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
+                                if (button) productComboRefs.current.set(item.id, button);
                               } else {
-                                quantityRefs.current.delete(item.id);
+                                productComboRefs.current.delete(item.id);
                               }
-                            }}
-                            type="number"
-                            onFocus={(e) => e.target.select()}
-                            min="0.01"
-                            step="0.01"
-                            value={item.quantity || ""}
-                            onChange={(e) =>
-                              updateLineItem(
-                                item.id,
-                                "quantity",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
-                            required
-                          />
-                        </TableCell>
-                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                          <Input
-                            type="number"
-                            onFocus={(e) => e.target.select()}
-                            min="0"
-                            step="0.01"
-                            value={item.unitCost}
-                            onChange={(e) =>
-                              updateLineItem(
-                                item.id,
-                                "unitCost",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
-                            required
-                          />
-                        </TableCell>
-                        <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                          <Input
-                            type="number"
-                            onFocus={(e) => e.target.select()}
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            value={item.discount || ""}
-                            onChange={(e) =>
-                              updateLineItem(
-                                item.id,
-                                "discount",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-                                e.preventDefault();
-                                e.stopPropagation(); // Prevent useEnterToTab from also moving focus
-                                const isLastItem = index === lineItems.length - 1;
-                                if (isLastItem) {
-                                  addLineItem(true);
-                                } else {
-                                  const nextItemId = lineItems[index + 1].id;
-                                  const nextProductTrigger = productComboRefs.current.get(nextItemId);
-                                  if (nextProductTrigger) {
-                                    nextProductTrigger.focus();
-                                  }
+                            }}>
+                              <ProductCombobox
+                                products={products}
+                                value={item.productId}
+                                onValueChange={(value) =>
+                                  updateLineItem(item.id, "productId", value)
                                 }
+                                onProductCreated={fetchProducts}
+                                onSelect={() => focusQuantity(item.id)}
+                                onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0 relative">
+                            <Input
+                              ref={(el) => {
+                                if (el) {
+                                  quantityRefs.current.set(item.id, el);
+                                } else {
+                                  quantityRefs.current.delete(item.id);
+                                }
+                              }}
+                              type="number"
+                              onFocus={(e) => e.target.select()}
+                              min="0.01"
+                              step="0.01"
+                              value={item.quantity || ""}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  item.id,
+                                  "quantity",
+                                  parseFloat(e.target.value) || 0
+                                )
                               }
-                            }}
-                            className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
-                            placeholder="0"
-                          />
-                        </TableCell>
-                        {session?.user?.gstEnabled && (
+                              className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                              required
+                            />
+                          </TableCell>
+                          {session?.user?.multiUnitEnabled && (
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <ItemUnitSelect
+                                value={item.unitId}
+                                onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                                options={(() => {
+                                  const product = products.find((p) => p.id === item.productId);
+                                  if (!product) return [];
+                                  const baseOption = { id: product.unit, name: "Base Unit", conversionFactor: 1 };
+                                  const alternateOptions = unitConversions
+                                    .filter(uc => uc.toUnitId === product.unit)
+                                    .map(uc => ({
+                                      id: uc.fromUnitId,
+                                      name: uc.fromUnit.name,
+                                      conversionFactor: Number(uc.conversionFactor)
+                                    }));
+                                  return [baseOption, ...alternateOptions];
+                                })()}
+                                disabled={!item.productId}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                            <Input
+                              type="number"
+                              onFocus={(e) => e.target.select()}
+                              min="0"
+                              step="0.01"
+                              value={item.unitCost}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  item.id,
+                                  "unitCost",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                              required
+                            />
+                          </TableCell>
                           <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                             <Input
                               type="number"
@@ -485,49 +513,86 @@ export default function NewPurchaseInvoicePage() {
                               min="0"
                               max="100"
                               step="0.01"
-                              value={item.gstRate || ""}
+                              value={item.discount || ""}
                               onChange={(e) =>
-                                updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
+                                updateLineItem(
+                                  item.id,
+                                  "discount",
+                                  parseFloat(e.target.value) || 0
+                                )
                               }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+                                  e.preventDefault();
+                                  e.stopPropagation(); // Prevent useEnterToTab from also moving focus
+                                  const isLastItem = index === lineItems.length - 1;
+                                  if (isLastItem) {
+                                    addLineItem(true);
+                                  } else {
+                                    const nextItemId = lineItems[index + 1].id;
+                                    const nextProductTrigger = productComboRefs.current.get(nextItemId);
+                                    if (nextProductTrigger) {
+                                      nextProductTrigger.focus();
+                                    }
+                                  }
+                                }
+                              }}
                               className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                               placeholder="0"
                             />
                           </TableCell>
-                        )}
-                        {session?.user?.gstEnabled ? (
-                          <>
+                          {session?.user?.gstEnabled && (
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <Input
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={item.gstRate || ""}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
+                                }
+                                className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                placeholder="0"
+                              />
+                            </TableCell>
+                          )}
+                          {session?.user?.gstEnabled ? (
+                            <>
+                              <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                                ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                {item.discount > 0 && (
+                                  <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
+                                ₹{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                              </TableCell>
+                            </>
+                          ) : (
                             <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                               ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
                               {item.discount > 0 && (
                                 <div className="text-xs text-green-600">(-{item.discount}%)</div>
                               )}
                             </TableCell>
-                            <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                              ₹{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
-                            </TableCell>
-                          </>
-                        ) : (
-                          <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                            ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                            {item.discount > 0 && (
-                              <div className="text-xs text-green-600">(-{item.discount}%)</div>
-                            )}
+                          )}
+                          <TableCell className="align-middle p-2 text-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
+                              onClick={() => removeLineItem(item.id)}
+                              disabled={lineItems.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
-                        )}
-                        <TableCell className="align-middle p-2 text-center">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
-                            onClick={() => removeLineItem(item.id)}
-                            disabled={lineItems.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>

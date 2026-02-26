@@ -14,6 +14,9 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
+import { useSession } from "next-auth/react";
+import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
+import { useUnitConversions } from "@/hooks/use-unit-conversions";
 
 interface Customer {
   id: string;
@@ -26,6 +29,7 @@ interface Product {
   name: string;
   price: number;
   sku: string | null;
+  unit: string;
 }
 
 interface LineItem {
@@ -33,6 +37,8 @@ interface LineItem {
   productId: string;
   description: string;
   quantity: number;
+  unitId: string;
+  conversionFactor: number;
   unitPrice: number;
   discount: number;
 }
@@ -58,10 +64,14 @@ export default function NewCreditNotePage() {
       productId: "",
       description: "",
       quantity: 1,
+      unitId: "",
+      conversionFactor: 1,
       unitPrice: 0,
       discount: 0,
     },
   ]);
+  const { data: session } = useSession();
+  const { unitConversions } = useUnitConversions();
 
   useEffect(() => {
     fetchCustomers();
@@ -98,22 +108,49 @@ export default function NewCreditNotePage() {
     value: string | number
   ) => {
     setLineItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === id
-          ? {
-            ...item,
-            [field]: value,
-            ...(field === "productId" && typeof value === "string"
-              ? (() => {
-                const product = products.find((p) => p.id === value);
-                return product
-                  ? { description: product.name, unitPrice: product.price }
-                  : { description: "", unitPrice: 0 };
-              })()
-              : {}),
+      prevItems.map((item) => {
+        if (item.id !== id) return item;
+
+        if (field === "productId") {
+          const product = products.find((p) => p.id === value);
+          if (product) {
+            return {
+              ...item,
+              productId: value as string,
+              description: product.name,
+              unitId: product.unit || "",
+              conversionFactor: 1,
+              unitPrice: Number(product.price),
+            };
           }
-          : item
-      )
+          return { ...item, productId: value as string, description: "", unitPrice: 0 };
+        }
+
+        if (field === "unitId") {
+          const product = products.find((p) => p.id === item.productId);
+          if (product) {
+            if (value === product.unit) {
+              return {
+                ...item,
+                unitId: value as string,
+                conversionFactor: 1,
+                unitPrice: Number(product.price),
+              };
+            }
+            const altConversion = unitConversions.find(uc => uc.toUnitId === product.unit && uc.fromUnitId === value);
+            if (altConversion) {
+              return {
+                ...item,
+                unitId: value as string,
+                conversionFactor: Number(altConversion.conversionFactor),
+                unitPrice: Number(product.price) * Number(altConversion.conversionFactor),
+              };
+            }
+          }
+        }
+
+        return { ...item, [field]: value };
+      })
     );
   };
 
@@ -126,6 +163,8 @@ export default function NewCreditNotePage() {
         productId: "",
         description: "",
         quantity: 1,
+        unitId: "",
+        conversionFactor: 1,
         unitPrice: 0,
         discount: 0,
       },
@@ -195,6 +234,8 @@ export default function NewCreditNotePage() {
             productId: item.productId,
             description: item.description,
             quantity: item.quantity,
+            unitId: item.unitId || null,
+            conversionFactor: item.conversionFactor || 1,
             unitPrice: item.unitPrice,
             discount: item.discount,
             gstRate: (item as any).gstRate || 0,
@@ -352,6 +393,27 @@ export default function NewCreditNotePage() {
                             else quantityRefs.current.delete(item.id);
                           }}
                         />
+
+                        {session?.user?.multiUnitEnabled && (
+                          <ItemUnitSelect
+                            value={item.unitId}
+                            onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                            options={(() => {
+                              const product = products.find((p) => p.id === item.productId);
+                              if (!product) return [];
+                              const baseOption = { id: product.unit, name: "Base Unit", conversionFactor: 1 };
+                              const alternateOptions = unitConversions
+                                .filter(uc => uc.toUnitId === product.unit)
+                                .map(uc => ({
+                                  id: uc.fromUnitId,
+                                  name: uc.fromUnit.name,
+                                  conversionFactor: Number(uc.conversionFactor)
+                                }));
+                              return [baseOption, ...alternateOptions];
+                            })()}
+                            disabled={!item.productId}
+                          />
+                        )}
 
                         <Input
                           type="number"

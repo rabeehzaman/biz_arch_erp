@@ -101,7 +101,8 @@ export async function POST(request: NextRequest) {
       where: { id: customerId },
       select: { gstin: true, gstStateCode: true },
     });
-    const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string }) => ({
+    // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
+    const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
       taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       gstRate: item.gstRate || 0,
       hsnCode: item.hsnCode || null,
@@ -136,11 +137,15 @@ export async function POST(request: NextRequest) {
             discount?: number;
             gstRate?: number;
             hsnCode?: string;
+            unitId?: string;
+            conversionFactor?: number;
           }, idx: number) => ({
             organizationId,
             productId: item.productId || null,
             description: item.description,
             quantity: item.quantity,
+            unitId: item.unitId || null,
+            conversionFactor: item.conversionFactor || 1,
             unitPrice: item.unitPrice,
             discount: item.discount || 0,
             total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),

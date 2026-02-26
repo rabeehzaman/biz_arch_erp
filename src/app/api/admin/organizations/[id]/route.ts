@@ -62,7 +62,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, slug, gstEnabled, eInvoicingEnabled, gstin, gstStateCode } = body;
+    const { name, slug, gstEnabled, eInvoicingEnabled, multiUnitEnabled, gstin, gstStateCode } = body;
 
     // Basic field update validation
     if (slug && !/^[a-z0-9-]+$/.test(slug)) {
@@ -109,6 +109,7 @@ export async function PUT(
     if (slug !== undefined) updateData.slug = slug;
     if (gstEnabled !== undefined) updateData.gstEnabled = gstEnabled;
     if (eInvoicingEnabled !== undefined) updateData.eInvoicingEnabled = gstEnabled ? eInvoicingEnabled : false;
+    if (multiUnitEnabled !== undefined) updateData.multiUnitEnabled = multiUnitEnabled;
     if (gstin !== undefined) updateData.gstin = gstin || null;
     if (gstStateCode !== undefined) updateData.gstStateCode = gstStateCode || null;
 

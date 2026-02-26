@@ -382,6 +382,28 @@ export default function SuppliersPage() {
                       />
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="gstin">GSTIN</Label>
+                      <Input
+                        id="gstin"
+                        value={formData.gstin}
+                        onChange={(e) =>
+                          setFormData({ ...formData, gstin: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="gstStateCode">GST State Code</Label>
+                      <Input
+                        id="gstStateCode"
+                        value={formData.gstStateCode}
+                        onChange={(e) =>
+                          setFormData({ ...formData, gstStateCode: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
                   <div className="grid gap-2">
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea
