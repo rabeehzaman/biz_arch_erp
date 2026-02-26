@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,21 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, Settings, Trash2 } from "lucide-react";
+import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, ChevronRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { SidebarConfigDialog } from "./sidebar-config-dialog";
-import { GSTConfigDialog } from "./gst-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
 
 interface Organization {
@@ -83,39 +71,7 @@ export default function OrganizationsPage() {
   const [userError, setUserError] = useState("");
   const [userSuccess, setUserSuccess] = useState("");
 
-  // Sidebar config state
-  const [sidebarConfigOrg, setSidebarConfigOrg] = useState<{ id: string, name: string } | null>(null);
 
-  // GST config state
-  const [gstConfigOrg, setGstConfigOrg] = useState<{ id: string, name: string } | null>(null);
-
-  // Delete config state
-  const [deletingOrg, setDeletingOrg] = useState<{ id: string, name: string } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
-
-  const handleDeleteOrg = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!deletingOrg) return;
-    setDeleteError("");
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/admin/organizations/${deletingOrg.id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setDeletingOrg(null);
-        fetchOrganizations();
-      } else {
-        const data = await res.json();
-        setDeleteError(data.error || "Failed to delete organization");
-      }
-    } catch {
-      setDeleteError("Failed to delete organization");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   const fetchOrganizations = useCallback(async () => {
     try {
@@ -390,6 +346,7 @@ export default function OrganizationsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]"></TableHead>
                     <TableHead>Organization</TableHead>
                     <TableHead>Slug</TableHead>
                     <TableHead className="text-center">Users</TableHead>
@@ -397,12 +354,18 @@ export default function OrganizationsPage() {
                     <TableHead className="text-center">Invoices</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>GST</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {organizations.map((org) => (
-                    <TableRow key={org.id}>
+                    <TableRow
+                      key={org.id}
+                      onClick={() => router.push(`/admin/organizations/${org.id}`)}
+                      className="cursor-pointer transition-colors hover:bg-muted/50"
+                    >
+                      <TableCell>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground mr-2" />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -440,21 +403,6 @@ export default function OrganizationsPage() {
                           <Badge variant="outline" className="text-xs text-muted-foreground">No GST</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => setGstConfigOrg({ id: org.id, name: org.name })}>
-                            GST
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setSidebarConfigOrg({ id: org.id, name: org.name })}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Sidebar
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => { setDeletingOrg({ id: org.id, name: org.name }); setDeleteError(""); }}>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
                     </TableRow>
                   ))}
                   {organizations.length === 0 && (
@@ -470,47 +418,7 @@ export default function OrganizationsPage() {
           </CardContent>
         </Card>
 
-        {gstConfigOrg && (
-          <GSTConfigDialog
-            open={!!gstConfigOrg}
-            onOpenChange={(open) => { if (!open) { setGstConfigOrg(null); fetchOrganizations(); } }}
-            orgId={gstConfigOrg.id}
-            orgName={gstConfigOrg.name}
-          />
-        )}
 
-        {sidebarConfigOrg && (
-          <SidebarConfigDialog
-            open={!!sidebarConfigOrg}
-            onOpenChange={(open) => !open && setSidebarConfigOrg(null)}
-            orgId={sidebarConfigOrg.id}
-            orgName={sidebarConfigOrg.name}
-          />
-        )}
-
-        <AlertDialog open={!!deletingOrg} onOpenChange={(open) => !open && !isDeleting && setDeletingOrg(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the organization <strong className="text-foreground">{deletingOrg?.name}</strong>.
-                This action cannot be undone. You can only delete organizations that have no associated data (customers, invoices, products, etc).
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            {deleteError && (
-              <div className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
-                {deleteError}
-              </div>
-            )}
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-              <Button variant="destructive" onClick={handleDeleteOrg} disabled={isDeleting}>
-                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                Delete Organization
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </PageAnimation>
   );
