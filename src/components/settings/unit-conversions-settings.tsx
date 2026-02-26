@@ -49,7 +49,7 @@ interface UnitConversion {
     toUnit: Unit;
 }
 
-export function UnitConversionsSettings() {
+export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: number }) {
     const [conversions, setConversions] = useState<UnitConversion[]>([]);
     const [units, setUnits] = useState<Unit[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +64,7 @@ export function UnitConversionsSettings() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [unitRefreshKey]);
 
     const fetchData = async () => {
         setIsLoading(true);

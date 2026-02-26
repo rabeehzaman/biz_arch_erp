@@ -43,6 +43,11 @@ export async function GET(
                 unit: true,
               },
             },
+            unit: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -74,6 +79,7 @@ export async function GET(
       discount: Number(item.discount),
       total: Number(item.total),
       product: item.product,
+      unit: item.unit,
     }));
 
     // Prepare invoice data for PDF

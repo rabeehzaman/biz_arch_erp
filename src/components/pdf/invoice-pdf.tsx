@@ -219,6 +219,9 @@ interface InvoiceItem {
   unitPrice: number;
   discount: number;
   total: number;
+  unit?: {
+    code: string;
+  } | null;
   product?: {
     unit?: {
       code: string;
@@ -352,7 +355,7 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
               </Text>
               <Text style={styles.colQty}>
                 {item
-                  ? `${formatCurrency(item.quantity)}${item.product?.unit ? " " + item.product.unit.code.toUpperCase() : ""}`
+                  ? `${formatCurrency(item.quantity)}${(item.unit?.code || item.product?.unit?.code) ? " " + (item.unit?.code || item.product?.unit?.code)!.toUpperCase() : ""}`
                   : ""}
               </Text>
               <Text style={styles.colRate}>

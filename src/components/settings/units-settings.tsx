@@ -46,6 +46,7 @@ export function UnitsSettings() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [unitRefreshKey, setUnitRefreshKey] = useState(0);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [formData, setFormData] = useState({
     code: "",
@@ -99,6 +100,7 @@ export function UnitsSettings() {
       setIsDialogOpen(false);
       resetForm();
       fetchUnits();
+      setUnitRefreshKey(k => k + 1);
       toast.success(editingUnit ? "Unit updated" : "Unit added");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save unit");
@@ -122,6 +124,7 @@ export function UnitsSettings() {
       const response = await fetch(`/api/units/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to deactivate");
       fetchUnits();
+      setUnitRefreshKey(k => k + 1);
       toast.success("Unit deactivated");
     } catch (error) {
       toast.error("Failed to deactivate unit");
@@ -138,6 +141,7 @@ export function UnitsSettings() {
       });
       if (!response.ok) throw new Error("Failed to activate");
       fetchUnits();
+      setUnitRefreshKey(k => k + 1);
       toast.success("Unit activated");
     } catch (error) {
       toast.error("Failed to activate unit");
@@ -306,7 +310,7 @@ export function UnitsSettings() {
         </CardContent>
       </Card>
 
-      {session?.user?.multiUnitEnabled && <UnitConversionsSettings />}
+      {session?.user?.multiUnitEnabled && <UnitConversionsSettings unitRefreshKey={unitRefreshKey} />}
     </div>
   );
 }
