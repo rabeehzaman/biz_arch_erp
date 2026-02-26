@@ -24,7 +24,8 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  unit: string;
+  unitId?: string | null;
+  unit?: { id: string; name: string; code: string } | null;
   sku?: string;
 }
 

@@ -29,7 +29,8 @@ interface Product {
   name: string;
   price: number;
   cost: number;
-  unit: string;
+  unitId: string | null;
+  unit: { id: string; name: string; code: string } | null;
   gstRate?: number;
   hsnCode?: string;
 }
@@ -192,7 +193,7 @@ export default function EditPurchaseInvoicePage({
           return {
             ...item,
             productId: value as string,
-            unitId: product.unit || "",
+            unitId: product.unitId || "",
             conversionFactor: 1,
             unitCost: Number(product.cost) || Number(product.price),
             gstRate: Number(product.gstRate) || 0,
@@ -204,7 +205,7 @@ export default function EditPurchaseInvoicePage({
       if (field === "unitId") {
         const product = products.find((p) => p.id === item.productId);
         if (product) {
-          if (value === product.unit) {
+          if (value === product.unitId) {
             return {
               ...item,
               unitId: value as string,
@@ -212,7 +213,7 @@ export default function EditPurchaseInvoicePage({
               unitCost: Number(product.cost) || Number(product.price),
             };
           }
-          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unit && uc.fromUnitId === value);
+          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unitId && uc.fromUnitId === value);
           if (altConversion) {
             const baseCost = Number(product.cost) || Number(product.price);
             return {
@@ -482,9 +483,9 @@ export default function EditPurchaseInvoicePage({
                                 options={(() => {
                                   const product = products.find((p) => p.id === item.productId);
                                   if (!product) return [];
-                                  const baseOption = { id: product.unit, name: "Base Unit", conversionFactor: 1 };
+                                  const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
                                   const alternateOptions = unitConversions
-                                    .filter(uc => uc.toUnitId === product.unit)
+                                    .filter(uc => uc.toUnitId === product.unitId)
                                     .map(uc => ({
                                       id: uc.fromUnitId,
                                       name: uc.fromUnit.name,

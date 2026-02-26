@@ -29,7 +29,8 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  unit: string;
+  unitId: string | null;
+  unit: { id: string; name: string; code: string } | null;
   gstRate?: number;
   hsnCode?: string;
 }
@@ -172,7 +173,7 @@ export default function NewQuotationPage() {
           return {
             ...item,
             productId: value as string,
-            unitId: product.unit || "",
+            unitId: product.unitId || "",
             conversionFactor: 1,
             unitPrice: Number(product.price),
             gstRate: Number(product.gstRate) || 0,
@@ -184,7 +185,7 @@ export default function NewQuotationPage() {
       if (field === "unitId") {
         const product = products.find((p) => p.id === item.productId);
         if (product) {
-          if (value === product.unit) {
+          if (value === product.unitId) {
             return {
               ...item,
               unitId: value as string,
@@ -192,7 +193,7 @@ export default function NewQuotationPage() {
               unitPrice: Number(product.price),
             };
           }
-          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unit && uc.fromUnitId === value);
+          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unitId && uc.fromUnitId === value);
           if (altConversion) {
             return {
               ...item,
@@ -446,6 +447,28 @@ export default function NewQuotationPage() {
                               required
                             />
                           </TableCell>
+                          {session?.user?.multiUnitEnabled && (
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <ItemUnitSelect
+                                value={item.unitId}
+                                onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                                options={(() => {
+                                  const product = products.find((p) => p.id === item.productId);
+                                  if (!product) return [];
+                                  const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
+                                  const alternateOptions = unitConversions
+                                    .filter(uc => uc.toUnitId === product.unitId)
+                                    .map(uc => ({
+                                      id: uc.fromUnitId,
+                                      name: uc.fromUnit.name,
+                                      conversionFactor: Number(uc.conversionFactor)
+                                    }));
+                                  return [baseOption, ...alternateOptions];
+                                })()}
+                                disabled={!item.productId}
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                             <Input
                               type="number"
