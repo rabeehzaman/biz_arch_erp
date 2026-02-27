@@ -55,6 +55,8 @@ interface DebitNote {
       sku: string | null;
     };
   }[];
+  branch?: { id: string; name: string; code: string } | null;
+  warehouse?: { id: string; name: string; code: string } | null;
 }
 
 export default function DebitNoteDetailPage() {
@@ -128,179 +130,191 @@ export default function DebitNoteDetailPage() {
   }
 
   return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/debit-notes">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </Link>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  {debitNote.debitNoteNumber}
-                </h2>
-                <p className="text-slate-500">Debit Note Details</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/debit-notes/${debitNote.id}/edit`}>
-                <Button variant="outline">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              </Link>
-              <Button variant="destructive" onClick={handleDelete}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+    <PageAnimation>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/debit-notes">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
               </Button>
+            </Link>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">
+                {debitNote.debitNoteNumber}
+              </h2>
+              <p className="text-slate-500">Debit Note Details</p>
             </div>
           </div>
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Supplier Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <div className="text-sm text-slate-500">Supplier Name</div>
-                  <div className="font-medium">{debitNote.supplier.name}</div>
-                </div>
-                {debitNote.supplier.email && (
-                  <div>
-                    <div className="text-sm text-slate-500">Email</div>
-                    <div className="font-medium">{debitNote.supplier.email}</div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Debit Note Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <div className="text-sm text-slate-500">Issue Date</div>
-                  <div className="font-medium">
-                    {format(new Date(debitNote.issueDate), "dd MMMM yyyy")}
-                  </div>
-                </div>
-                {debitNote.purchaseInvoice && (
-                  <div>
-                    <div className="text-sm text-slate-500">
-                      Original Purchase Invoice
-                    </div>
-                    <Link
-                      href={`/purchase-invoices/${debitNote.purchaseInvoice.id}`}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
-                      {debitNote.purchaseInvoice.purchaseInvoiceNumber}
-                    </Link>
-                  </div>
-                )}
-                {debitNote.reason && (
-                  <div>
-                    <div className="text-sm text-slate-500">Reason</div>
-                    <div className="font-medium">{debitNote.reason}</div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/debit-notes/${debitNote.id}/edit`}>
+              <Button variant="outline">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+            <Button variant="destructive" onClick={handleDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
           </div>
+        </div>
 
+        <div className="grid gap-6 sm:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Items</CardTitle>
+              <CardTitle>Supplier Information</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Cost</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {debitNote.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{item.description}</div>
-                          {item.product?.sku && (
-                            <div className="text-sm text-slate-500">
-                              SKU: {item.product.sku}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">
-                        ₹{Number(item.unitCost).toLocaleString("en-IN")}
-                      </TableCell>
-                      <TableCell className="text-right">{item.discount}%</TableCell>
-                      <TableCell className="text-right font-medium">
-                        ₹{Number(item.total).toLocaleString("en-IN")}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              <div className="mt-4 space-y-2 max-w-xs ml-auto">
-                <div className="flex justify-between text-sm">
-                  <span>Subtotal:</span>
-                  <span>₹{Number(debitNote.subtotal).toLocaleString("en-IN")}</span>
-                </div>
-                {Number(debitNote.totalCgst) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>CGST:</span>
-                    <span>₹{Number(debitNote.totalCgst).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(debitNote.totalSgst) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>SGST:</span>
-                    <span>₹{Number(debitNote.totalSgst).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(debitNote.totalIgst) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>IGST:</span>
-                    <span>₹{Number(debitNote.totalIgst).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(debitNote.totalCgst) === 0 && Number(debitNote.totalSgst) === 0 && Number(debitNote.totalIgst) === 0 && Number(debitNote.taxAmount) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>Tax:</span>
-                    <span>₹{Number(debitNote.taxAmount).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-lg font-bold border-t pt-2">
-                  <span>Total:</span>
-                  <span className="text-orange-600">
-                    ₹{Number(debitNote.total).toLocaleString("en-IN")}
-                  </span>
-                </div>
+            <CardContent className="space-y-2">
+              <div>
+                <div className="text-sm text-slate-500">Supplier Name</div>
+                <div className="font-medium">{debitNote.supplier.name}</div>
               </div>
+              {debitNote.supplier.email && (
+                <div>
+                  <div className="text-sm text-slate-500">Email</div>
+                  <div className="font-medium">{debitNote.supplier.email}</div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {debitNote.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-700 whitespace-pre-wrap">{debitNote.notes}</p>
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Debit Note Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div>
+                <div className="text-sm text-slate-500">Issue Date</div>
+                <div className="font-medium">
+                  {format(new Date(debitNote.issueDate), "dd MMMM yyyy")}
+                </div>
+              </div>
+              {debitNote.purchaseInvoice && (
+                <div>
+                  <div className="text-sm text-slate-500">
+                    Original Purchase Invoice
+                  </div>
+                  <Link
+                    href={`/purchase-invoices/${debitNote.purchaseInvoice.id}`}
+                    className="font-medium text-blue-600 hover:underline"
+                  >
+                    {debitNote.purchaseInvoice.purchaseInvoiceNumber}
+                  </Link>
+                </div>
+              )}
+              {debitNote.reason && (
+                <div>
+                  <div className="text-sm text-slate-500">Reason</div>
+                  <div className="font-medium">{debitNote.reason}</div>
+                </div>
+              )}
+              {debitNote.branch && (
+                <div>
+                  <div className="text-sm text-slate-500">Branch</div>
+                  <div className="font-medium">{debitNote.branch.name}</div>
+                </div>
+              )}
+              {debitNote.warehouse && (
+                <div>
+                  <div className="text-sm text-slate-500">Warehouse</div>
+                  <div className="font-medium">{debitNote.warehouse.name}</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Unit Cost</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {debitNote.items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{item.description}</div>
+                        {item.product?.sku && (
+                          <div className="text-sm text-slate-500">
+                            SKU: {item.product.sku}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">
+                      ₹{Number(item.unitCost).toLocaleString("en-IN")}
+                    </TableCell>
+                    <TableCell className="text-right">{item.discount}%</TableCell>
+                    <TableCell className="text-right font-medium">
+                      ₹{Number(item.total).toLocaleString("en-IN")}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <div className="mt-4 space-y-2 max-w-xs ml-auto">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal:</span>
+                <span>₹{Number(debitNote.subtotal).toLocaleString("en-IN")}</span>
+              </div>
+              {Number(debitNote.totalCgst) > 0 && (
+                <div className="flex justify-between text-sm text-slate-500">
+                  <span>CGST:</span>
+                  <span>₹{Number(debitNote.totalCgst).toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              {Number(debitNote.totalSgst) > 0 && (
+                <div className="flex justify-between text-sm text-slate-500">
+                  <span>SGST:</span>
+                  <span>₹{Number(debitNote.totalSgst).toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              {Number(debitNote.totalIgst) > 0 && (
+                <div className="flex justify-between text-sm text-slate-500">
+                  <span>IGST:</span>
+                  <span>₹{Number(debitNote.totalIgst).toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              {Number(debitNote.totalCgst) === 0 && Number(debitNote.totalSgst) === 0 && Number(debitNote.totalIgst) === 0 && Number(debitNote.taxAmount) > 0 && (
+                <div className="flex justify-between text-sm text-slate-500">
+                  <span>Tax:</span>
+                  <span>₹{Number(debitNote.taxAmount).toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <span>Total:</span>
+                <span className="text-orange-600">
+                  ₹{Number(debitNote.total).toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {debitNote.notes && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-slate-700 whitespace-pre-wrap">{debitNote.notes}</p>
+            </CardContent>
+          </Card>
+        )}
         {confirmDialog && (
           <ConfirmDialog
             open={!!confirmDialog}
@@ -310,7 +324,7 @@ export default function DebitNoteDetailPage() {
             onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
           />
         )}
-        </div>
-        </PageAnimation>
-      );
+      </div>
+    </PageAnimation>
+  );
 }

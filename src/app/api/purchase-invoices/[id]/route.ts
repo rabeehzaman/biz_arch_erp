@@ -35,6 +35,8 @@ export async function GET(
         payments: {
           orderBy: { createdAt: "desc" },
         },
+        branch: { select: { id: true, name: true, code: true } },
+        warehouse: { select: { id: true, name: true, code: true } },
       },
     });
 

@@ -40,6 +40,8 @@ export async function GET(
             },
           },
         },
+        branch: { select: { id: true, name: true, code: true } },
+        warehouse: { select: { id: true, name: true, code: true } },
       },
     });
 

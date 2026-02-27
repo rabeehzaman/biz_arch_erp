@@ -88,6 +88,7 @@ const reportsNavigation = [
   { name: "Cash Flow", href: "/reports/cash-flow", icon: ArrowRightLeft },
   { name: "Expense Report", href: "/reports/expense-report", icon: DollarSign },
   { name: "Stock Summary", href: "/reports/stock-summary", icon: Package },
+  { name: "Branch P&L", href: "/reports/branch-pl", icon: GitBranch },
 ];
 
 const bottomNavigation = [
