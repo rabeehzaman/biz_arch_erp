@@ -23,6 +23,9 @@ export async function GET() {
         stockLot: {
           select: { id: true, remainingQuantity: true },
         },
+        warehouse: {
+          select: { id: true, name: true, code: true },
+        },
       },
     });
     return NextResponse.json(openingStocks);
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { productId, quantity, unitCost, stockDate, notes } = body;
+    const { productId, quantity, unitCost, stockDate, notes, warehouseId } = body;
 
     if (!productId || !quantity || quantity <= 0 || !stockDate) {
       return NextResponse.json(
@@ -57,9 +60,9 @@ export async function POST(request: NextRequest) {
     const parsedQuantity = parseFloat(quantity);
     const parsedUnitCost = parseFloat(unitCost) || 0;
 
-    // Check if opening stock already exists for this product
+    // Check if opening stock already exists for this product+warehouse combo
     const existingOpeningStock = await prisma.openingStock.findFirst({
-      where: { productId, organizationId },
+      where: { productId, organizationId, warehouseId: warehouseId || null },
     });
 
     if (existingOpeningStock) {
@@ -80,6 +83,7 @@ export async function POST(request: NextRequest) {
           stockDate: parsedStockDate,
           notes: notes || null,
           organizationId,
+          warehouseId: warehouseId || null,
         },
         include: {
           product: true,
@@ -94,7 +98,8 @@ export async function POST(request: NextRequest) {
         parsedUnitCost,
         parsedStockDate,
         tx,
-        organizationId
+        organizationId,
+        warehouseId || null
       );
 
       // Create auto journal entry: DR Inventory, CR Owner's Capital (Opening Balance Equity)
