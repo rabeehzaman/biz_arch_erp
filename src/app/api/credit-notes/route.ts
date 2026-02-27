@@ -100,6 +100,8 @@ export async function POST(request: NextRequest) {
       reason,
       notes,
       appliedToBalance = true,
+      branchId,
+      warehouseId,
     } = body;
 
     if (!customerId || !items || items.length === 0) {
@@ -156,6 +158,8 @@ export async function POST(request: NextRequest) {
         data: {
           organizationId,
           creditNoteNumber,
+          branchId: branchId || null,
+          warehouseId: warehouseId || null,
           customerId,
           createdById: session.user.id,
           invoiceId: invoiceId || null,
@@ -261,7 +265,8 @@ export async function POST(request: NextRequest) {
             unitCost,
             creditNoteDate,
             tx,
-            organizationId
+            organizationId,
+            warehouseId || null
           );
 
           // Accumulate COGS for the GL reversal entry (using base quantity)
@@ -322,6 +327,7 @@ export async function POST(request: NextRequest) {
             description: `Credit Note ${creditNoteNumber}`,
             sourceType: "CREDIT_NOTE",
             sourceId: creditNote.id,
+            branchId: branchId || null,
             lines: returnLines,
           });
         }
@@ -338,6 +344,7 @@ export async function POST(request: NextRequest) {
             description: `COGS Reversal - ${creditNoteNumber}`,
             sourceType: "CREDIT_NOTE",
             sourceId: creditNote.id,
+            branchId: branchId || null,
             lines: [
               { accountId: inventoryAccount.id, description: "Inventory (Return)", debit: totalReturnedCOGS, credit: 0 },
               { accountId: cogsAccount.id, description: "Cost of Goods Sold (Return)", debit: 0, credit: totalReturnedCOGS },

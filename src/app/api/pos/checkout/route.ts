@@ -214,6 +214,8 @@ export async function POST(request: NextRequest) {
         data: {
           organizationId,
           invoiceNumber,
+          branchId: posSession.branchId,
+          warehouseId: posSession.warehouseId,
           customerId: resolvedCustomerId,
           createdById: userId,
           sourceType: "POS",
@@ -271,7 +273,8 @@ export async function POST(request: NextRequest) {
             invoiceItem.id,
             now,
             tx,
-            organizationId
+            organizationId,
+            posSession.warehouseId
           );
 
           await tx.invoiceItem.update({
@@ -363,6 +366,7 @@ export async function POST(request: NextRequest) {
           description: `POS Sale ${invoiceNumber}`,
           sourceType: "INVOICE",
           sourceId: invoice.id,
+          branchId: posSession.branchId,
           lines: revenueLines,
         });
       }
@@ -394,6 +398,7 @@ export async function POST(request: NextRequest) {
             description: `COGS - ${invoiceNumber}`,
             sourceType: "INVOICE",
             sourceId: invoice.id,
+            branchId: posSession.branchId,
             lines: [
               {
                 accountId: cogsAccount.id,
@@ -469,6 +474,7 @@ export async function POST(request: NextRequest) {
               description: `POS Payment ${paymentNumber}`,
               sourceType: "PAYMENT",
               sourceId: newPayment.id,
+              branchId: posSession.branchId,
               lines: [
                 {
                   accountId: cashBankInfo.accountId,

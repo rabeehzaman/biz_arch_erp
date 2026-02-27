@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
       reason,
       notes,
       appliedToBalance = true,
+      branchId,
+      warehouseId,
     } = body;
 
     if (!supplierId || !items || items.length === 0) {
@@ -134,7 +136,8 @@ export async function POST(request: NextRequest) {
       const stockCheck = await checkReturnableStock(
         item.productId,
         baseQuantity,
-        prisma
+        prisma,
+        warehouseId || null
       );
 
       if (!stockCheck.canReturn) {
@@ -176,6 +179,8 @@ export async function POST(request: NextRequest) {
         data: {
           organizationId,
           debitNoteNumber,
+          branchId: branchId || null,
+          warehouseId: warehouseId || null,
           supplierId,
           purchaseInvoiceId: purchaseInvoiceId || null,
           issueDate: debitNoteDate,
@@ -245,7 +250,8 @@ export async function POST(request: NextRequest) {
           debitNoteItem.id,
           debitNoteDate,
           tx,
-          organizationId
+          organizationId,
+          warehouseId || null
         );
 
         productsToRecalculate.add(debitNoteItem.productId);
@@ -302,6 +308,7 @@ export async function POST(request: NextRequest) {
             description: `Debit Note ${debitNoteNumber}`,
             sourceType: "DEBIT_NOTE",
             sourceId: debitNote.id,
+            branchId: branchId || null,
             lines: journalLines,
           });
         }

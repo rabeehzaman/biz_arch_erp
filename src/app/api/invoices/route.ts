@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, items, notes, terms } = body;
+    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -146,6 +146,8 @@ export async function POST(request: NextRequest) {
         data: {
           organizationId,
           invoiceNumber,
+          branchId: branchId || null,
+          warehouseId: warehouseId || null,
           customerId,
           createdById: userId,
           issueDate: invoiceDate,
@@ -232,7 +234,8 @@ export async function POST(request: NextRequest) {
               invoiceItem.id,
               invoiceDate,
               tx,
-              organizationId
+              organizationId,
+              warehouseId || null
             );
 
             // Update the invoice item with COGS

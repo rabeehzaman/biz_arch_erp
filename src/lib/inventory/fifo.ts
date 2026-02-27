@@ -48,13 +48,17 @@ export interface StockInfo {
  */
 export async function getProductStock(
   productId: string,
-  tx: PrismaTransaction = prisma
+  tx: PrismaTransaction = prisma,
+  warehouseId?: string | null
 ): Promise<StockInfo | null> {
+  const lotWhere: any = { remainingQuantity: { gt: 0 } };
+  if (warehouseId) lotWhere.warehouseId = warehouseId;
+
   const product = await tx.product.findUnique({
     where: { id: productId },
     include: {
       stockLots: {
-        where: { remainingQuantity: { gt: 0 } },
+        where: lotWhere,
         orderBy: { lotDate: "asc" },
       },
     },
@@ -100,7 +104,8 @@ export async function calculateFIFOConsumption(
   productId: string,
   quantityNeeded: Decimal | number,
   asOfDate: Date,
-  tx: PrismaTransaction = prisma
+  tx: PrismaTransaction = prisma,
+  warehouseId?: string | null
 ): Promise<FIFOConsumptionResult> {
   const qty =
     quantityNeeded instanceof Decimal
@@ -108,12 +113,15 @@ export async function calculateFIFOConsumption(
       : new Decimal(quantityNeeded);
 
   // Get all lots with remaining quantity, ordered by lotDate ASC (FIFO)
+  const lotWhere: any = {
+    productId,
+    remainingQuantity: { gt: 0 },
+    lotDate: { lte: asOfDate },
+  };
+  if (warehouseId) lotWhere.warehouseId = warehouseId;
+
   const lots = await tx.stockLot.findMany({
-    where: {
-      productId,
-      remainingQuantity: { gt: 0 },
-      lotDate: { lte: asOfDate }, // Only consider lots dated on or before the sale
-    },
+    where: lotWhere,
     orderBy: { lotDate: "asc" },
   });
 
@@ -164,7 +172,8 @@ export async function consumeStockFIFO(
   invoiceItemId: string,
   asOfDate: Date,
   tx: PrismaTransaction,
-  organizationId?: string
+  organizationId?: string,
+  warehouseId?: string | null
 ): Promise<FIFOConsumptionResult> {
   const qty =
     quantityNeeded instanceof Decimal
@@ -172,7 +181,7 @@ export async function consumeStockFIFO(
       : new Decimal(quantityNeeded);
 
   // Calculate what will be consumed
-  const result = await calculateFIFOConsumption(productId, qty, asOfDate, tx);
+  const result = await calculateFIFOConsumption(productId, qty, asOfDate, tx, warehouseId);
 
   // If there's nothing to consume, return early
   if (result.consumptions.length === 0) {
@@ -310,7 +319,8 @@ export async function createStockLotFromPurchase(
   lotDate: Date,
   tx: PrismaTransaction,
   originalUnitCost?: Decimal | number,
-  organizationId?: string
+  organizationId?: string,
+  warehouseId?: string | null
 ): Promise<void> {
   const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
   const cost = unitCost instanceof Decimal ? unitCost : new Decimal(unitCost);
@@ -326,6 +336,7 @@ export async function createStockLotFromPurchase(
     remainingQuantity: qty,
   };
   if (organizationId) lotData.organizationId = organizationId;
+  if (warehouseId) lotData.warehouseId = warehouseId;
 
   await tx.stockLot.create({
     data: lotData,
@@ -352,7 +363,8 @@ export async function createStockLotFromOpeningStock(
   unitCost: Decimal | number,
   stockDate: Date,
   tx: PrismaTransaction,
-  organizationId?: string
+  organizationId?: string,
+  warehouseId?: string | null
 ): Promise<void> {
   const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
   const cost = unitCost instanceof Decimal ? unitCost : new Decimal(unitCost);
@@ -367,6 +379,7 @@ export async function createStockLotFromOpeningStock(
     remainingQuantity: qty,
   };
   if (organizationId) lotData.organizationId = organizationId;
+  if (warehouseId) lotData.warehouseId = warehouseId;
 
   await tx.stockLot.create({
     data: lotData,

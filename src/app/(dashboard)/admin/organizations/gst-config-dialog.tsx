@@ -36,6 +36,7 @@ export function OrgSettingsDialog({
   const [gstEnabled, setGstEnabled] = useState(false);
   const [eInvoicingEnabled, setEInvoicingEnabled] = useState(false);
   const [multiUnitEnabled, setMultiUnitEnabled] = useState(false);
+  const [multiBranchEnabled, setMultiBranchEnabled] = useState(false);
   const [gstin, setGstin] = useState("");
   const [gstStateCode, setGstStateCode] = useState("");
 
@@ -49,6 +50,7 @@ export function OrgSettingsDialog({
           setGstEnabled(data.gstEnabled || false);
           setEInvoicingEnabled(data.eInvoicingEnabled || false);
           setMultiUnitEnabled(data.multiUnitEnabled || false);
+          setMultiBranchEnabled(data.multiBranchEnabled || false);
           setGstin(data.gstin || "");
           setGstStateCode(data.gstStateCode || "");
         })
@@ -102,6 +104,7 @@ export function OrgSettingsDialog({
           gstEnabled,
           eInvoicingEnabled: gstEnabled ? eInvoicingEnabled : false,
           multiUnitEnabled,
+          multiBranchEnabled,
           gstin: gstEnabled ? gstin : null,
           gstStateCode: gstEnabled ? gstStateCode : null,
         }),
@@ -212,6 +215,20 @@ export function OrgSettingsDialog({
                 id="multiUnitEnabled"
                 checked={multiUnitEnabled}
                 onCheckedChange={setMultiUnitEnabled}
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="space-y-0.5">
+                <Label htmlFor="multiBranchEnabled">Enable Multi-Branch</Label>
+                <p className="text-xs text-muted-foreground">
+                  Manage multiple branches, warehouses, and stock transfers across locations
+                </p>
+              </div>
+              <Switch
+                id="multiBranchEnabled"
+                checked={multiBranchEnabled}
+                onCheckedChange={setMultiBranchEnabled}
               />
             </div>
           </div>

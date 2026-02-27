@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { supplierId, invoiceDate, dueDate, supplierInvoiceRef, items, notes } = body;
+    const { supplierId, invoiceDate, dueDate, supplierInvoiceRef, items, notes, branchId, warehouseId } = body;
 
     if (!supplierId || !items || items.length === 0) {
       return NextResponse.json(
@@ -147,6 +147,8 @@ export async function POST(request: NextRequest) {
         data: {
           organizationId,
           purchaseInvoiceNumber,
+          branchId: branchId || null,
+          warehouseId: warehouseId || null,
           supplierId,
           invoiceDate: purchaseDate,
           dueDate: new Date(dueDate),
@@ -224,7 +226,8 @@ export async function POST(request: NextRequest) {
           purchaseDate,
           tx,
           Number(baseUnitCost), // Original gross base unit cost equivalent (less important but passing down)
-          organizationId
+          organizationId,
+          warehouseId || null
         );
       }
 

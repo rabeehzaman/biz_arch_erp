@@ -33,6 +33,8 @@ import {
   DollarSign,
   ArrowRightLeft,
   ShoppingCart,
+  Warehouse,
+  GitBranch,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -90,6 +92,12 @@ const reportsNavigation = [
 const bottomNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Fix Balances", href: "/admin/fix-balances", icon: Wrench },
+];
+
+const inventoryNavigation = [
+  { name: "Branches", href: "/inventory/branches", icon: GitBranch },
+  { name: "Stock Transfers", href: "/inventory/stock-transfers", icon: ArrowRightLeft },
+  { name: "Opening Stock", href: "/inventory/opening-stock", icon: Package },
 ];
 
 const superadminNavigation = [
@@ -173,6 +181,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const visibleAccounting = filterItems(accountingNavigation);
   const visibleReports = filterItems(reportsNavigation);
   const visibleBottom = filterItems(bottomNavigation);
+  const visibleInventory = filterItems(inventoryNavigation);
+  const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
   return (
     <>
@@ -223,6 +233,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 title="Accounting"
                 icon={BookOpen}
                 items={visibleAccounting}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            )}
+
+            {multiBranchEnabled && visibleInventory.length > 0 && (
+              <CollapsibleSection
+                title="Inventory"
+                icon={Warehouse}
+                items={visibleInventory}
                 pathname={pathname}
                 onNavigate={onNavigate}
               />

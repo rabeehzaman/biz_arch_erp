@@ -44,9 +44,10 @@ export async function createAutoJournalEntry(
     sourceType: string;
     sourceId: string;
     lines: JournalLine[];
+    branchId?: string | null;
   }
 ): Promise<{ id: string; journalNumber: string } | null> {
-  const { date, description, sourceType, sourceId, lines } = options;
+  const { date, description, sourceType, sourceId, lines, branchId } = options;
 
   // Validate all account IDs are present
   if (lines.some((l) => !l.accountId)) {
@@ -75,6 +76,7 @@ export async function createAutoJournalEntry(
       sourceType,
       sourceId,
       organizationId,
+      branchId: branchId || null,
       lines: {
         create: lines.map((line) => ({
           accountId: line.accountId,
@@ -106,6 +108,7 @@ export async function syncInvoiceCOGSJournal(
     select: {
       invoiceNumber: true,
       issueDate: true,
+      branchId: true,
       items: { select: { costOfGoodsSold: true } },
     },
   });
@@ -137,6 +140,7 @@ export async function syncInvoiceCOGSJournal(
         description: `COGS - ${invoice.invoiceNumber}`,
         sourceType: "INVOICE",
         sourceId: invoiceId,
+        branchId: invoice.branchId,
         lines: [
           { accountId: cogsAccount.id, description: "Cost of Goods Sold", debit: totalCOGS, credit: 0 },
           { accountId: inventoryAccount.id, description: "Inventory", debit: 0, credit: totalCOGS },
@@ -165,6 +169,7 @@ export async function syncInvoiceRevenueJournal(
       totalCgst: true,
       totalSgst: true,
       totalIgst: true,
+      branchId: true,
     },
   });
 
@@ -222,6 +227,7 @@ export async function syncInvoiceRevenueJournal(
       description: `Sales Invoice ${invoice.invoiceNumber}`,
       sourceType: "INVOICE",
       sourceId: invoiceId,
+      branchId: invoice.branchId,
       lines: revenueLines,
     });
   }
@@ -246,6 +252,7 @@ export async function syncPurchaseJournal(
       totalCgst: true,
       totalSgst: true,
       totalIgst: true,
+      branchId: true,
     },
   });
 
@@ -299,6 +306,7 @@ export async function syncPurchaseJournal(
       description: `Purchase Invoice ${invoice.purchaseInvoiceNumber}`,
       sourceType: "PURCHASE_INVOICE",
       sourceId: purchaseInvoiceId,
+      branchId: invoice.branchId,
       lines: purchaseLines,
     });
   }
@@ -308,17 +316,36 @@ export async function syncPurchaseJournal(
 export async function getDefaultCashBankAccount(
   tx: Tx,
   organizationId: string,
-  paymentMethod: string
+  paymentMethod: string,
+  branchId?: string | null
 ): Promise<{ accountId: string; cashBankAccountId: string } | null> {
   const subType =
     paymentMethod === "CASH" ? "CASH" : "BANK";
 
+  const where: any = {
+    organizationId,
+    accountSubType: subType,
+    isActive: true,
+  };
+
+  // If branchId is provided, prefer branch-specific accounts first
+  if (branchId) {
+    const branchAccount = await tx.cashBankAccount.findFirst({
+      where: { ...where, branchId },
+      orderBy: { isDefault: "desc" },
+      select: { id: true, accountId: true },
+    });
+    if (branchAccount) {
+      return {
+        accountId: branchAccount.accountId,
+        cashBankAccountId: branchAccount.id,
+      };
+    }
+  }
+
+  // Fallback to any org-wide account
   const cashBankAccount = await tx.cashBankAccount.findFirst({
-    where: {
-      organizationId,
-      accountSubType: subType,
-      isActive: true,
-    },
+    where,
     orderBy: { isDefault: "desc" },
     select: { id: true, accountId: true },
   });

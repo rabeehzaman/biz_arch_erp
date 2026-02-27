@@ -9,6 +9,7 @@ declare module "next-auth" {
       gstEnabled?: boolean;
       eInvoicingEnabled?: boolean;
       multiUnitEnabled?: boolean;
+      multiBranchEnabled?: boolean;
       gstStateCode?: string | null;
     } & DefaultSession["user"];
   }
@@ -19,6 +20,7 @@ declare module "next-auth" {
     gstEnabled?: boolean;
     eInvoicingEnabled?: boolean;
     multiUnitEnabled?: boolean;
+    multiBranchEnabled?: boolean;
     gstStateCode?: string | null;
   }
 }
@@ -31,6 +33,7 @@ declare module "next-auth/jwt" {
     gstEnabled?: boolean;
     eInvoicingEnabled?: boolean;
     multiUnitEnabled?: boolean;
+    multiBranchEnabled?: boolean;
     gstStateCode?: string | null;
   }
 }

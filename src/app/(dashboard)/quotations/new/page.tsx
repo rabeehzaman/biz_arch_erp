@@ -18,6 +18,7 @@ import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 
 interface Customer {
   id: string;
@@ -66,6 +67,8 @@ export default function NewQuotationPage() {
     validUntil: getDefaultValidUntil(),
     notes: "",
     terms: "",
+    branchId: "",
+    warehouseId: "",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
@@ -263,6 +266,8 @@ export default function NewQuotationPage() {
           validUntil: formData.validUntil,
           notes: formData.notes || null,
           terms: formData.terms || null,
+          branchId: formData.branchId || undefined,
+          warehouseId: formData.warehouseId || undefined,
           items: lineItems
             .filter((item) => item.productId)
             .map((item) => {
@@ -319,45 +324,53 @@ export default function NewQuotationPage() {
               <CardHeader>
                 <CardTitle>Quotation Details</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="customer">Customer *</Label>
-                  <CustomerCombobox
-                    customers={customers}
-                    value={formData.customerId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, customerId: value })
-                    }
-                    onCustomerCreated={fetchCustomers}
-                    required
-                    onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
-                    autoFocus={true}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="issueDate">Issue Date *</Label>
-                  <Input
-                    id="issueDate"
-                    type="date"
-                    value={formData.issueDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, issueDate: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="validUntil">Valid Until *</Label>
-                  <Input
-                    id="validUntil"
-                    type="date"
-                    value={formData.validUntil}
-                    onChange={(e) =>
-                      setFormData({ ...formData, validUntil: e.target.value })
-                    }
-                    min={formData.issueDate}
-                    required
-                  />
+              <CardContent>
+                <BranchWarehouseSelector
+                  branchId={formData.branchId}
+                  warehouseId={formData.warehouseId}
+                  onBranchChange={(id) => setFormData({ ...formData, branchId: id })}
+                  onWarehouseChange={(id) => setFormData({ ...formData, warehouseId: id })}
+                />
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="customer">Customer *</Label>
+                    <CustomerCombobox
+                      customers={customers}
+                      value={formData.customerId}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, customerId: value })
+                      }
+                      onCustomerCreated={fetchCustomers}
+                      required
+                      onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                      autoFocus={true}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="issueDate">Issue Date *</Label>
+                    <Input
+                      id="issueDate"
+                      type="date"
+                      value={formData.issueDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, issueDate: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="validUntil">Valid Until *</Label>
+                    <Input
+                      id="validUntil"
+                      type="date"
+                      value={formData.validUntil}
+                      onChange={(e) =>
+                        setFormData({ ...formData, validUntil: e.target.value })
+                      }
+                      min={formData.issueDate}
+                      required
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

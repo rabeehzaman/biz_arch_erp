@@ -62,7 +62,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, slug, gstEnabled, eInvoicingEnabled, multiUnitEnabled, gstin, gstStateCode } = body;
+    const { name, slug, gstEnabled, eInvoicingEnabled, multiUnitEnabled, multiBranchEnabled, gstin, gstStateCode } = body;
 
     // Basic field update validation
     if (slug && !/^[a-z0-9-]+$/.test(slug)) {
@@ -110,6 +110,7 @@ export async function PUT(
     if (gstEnabled !== undefined) updateData.gstEnabled = gstEnabled;
     if (eInvoicingEnabled !== undefined) updateData.eInvoicingEnabled = gstEnabled ? eInvoicingEnabled : false;
     if (multiUnitEnabled !== undefined) updateData.multiUnitEnabled = multiUnitEnabled;
+    if (multiBranchEnabled !== undefined) updateData.multiBranchEnabled = multiBranchEnabled;
     if (gstin !== undefined) updateData.gstin = gstin || null;
     if (gstStateCode !== undefined) updateData.gstStateCode = gstStateCode || null;
 
@@ -128,6 +129,53 @@ export async function PUT(
         // Seed GST accounts if enabling GST
         if (gstEnabled) {
           await seedDefaultCOA(tx as never, id);
+        }
+
+        // Seed default branch + warehouse when enabling multi-branch
+        if (multiBranchEnabled) {
+          const existingBranch = await tx.branch.findFirst({
+            where: { organizationId: id },
+          });
+
+          if (!existingBranch) {
+            const branch = await tx.branch.create({
+              data: {
+                organizationId: id,
+                name: "Head Office",
+                code: "HO",
+                isActive: true,
+              },
+            });
+
+            const warehouse = await tx.warehouse.create({
+              data: {
+                organizationId: id,
+                branchId: branch.id,
+                name: "Main Warehouse",
+                code: "MW",
+                isActive: true,
+              },
+            });
+
+            // Grant all existing users access to the default warehouse
+            const orgUsers = await tx.user.findMany({
+              where: { organizationId: id },
+              select: { id: true },
+            });
+
+            if (orgUsers.length > 0) {
+              await tx.userWarehouseAccess.createMany({
+                data: orgUsers.map((u) => ({
+                  userId: u.id,
+                  branchId: branch.id,
+                  warehouseId: warehouse.id,
+                  isDefault: true,
+                  organizationId: id,
+                })),
+                skipDuplicates: true,
+              });
+            }
+          }
         }
 
         return org;

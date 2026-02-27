@@ -22,7 +22,8 @@ export async function createStockLotFromCreditNote(
   unitCost: Decimal | number,
   lotDate: Date,
   tx: PrismaTransaction,
-  organizationId?: string
+  organizationId?: string,
+  warehouseId?: string | null
 ): Promise<string> {
   const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
   const cost = unitCost instanceof Decimal ? unitCost : new Decimal(unitCost);
@@ -37,6 +38,7 @@ export async function createStockLotFromCreditNote(
     remainingQuantity: qty,
   };
   if (organizationId) lotData.organizationId = organizationId;
+  if (warehouseId) lotData.warehouseId = warehouseId;
 
   const stockLot = await tx.stockLot.create({
     data: lotData,
@@ -54,7 +56,8 @@ export async function consumeStockForDebitNote(
   debitNoteItemId: string,
   asOfDate: Date,
   tx: PrismaTransaction,
-  organizationId?: string
+  organizationId?: string,
+  warehouseId?: string | null
 ): Promise<FIFOConsumptionResult> {
   const qty =
     quantityNeeded instanceof Decimal
@@ -62,13 +65,13 @@ export async function consumeStockForDebitNote(
       : new Decimal(quantityNeeded);
 
   // Calculate what will be consumed using the same FIFO logic
-  const result = await calculateFIFOConsumption(productId, qty, asOfDate, tx);
+  const result = await calculateFIFOConsumption(productId, qty, asOfDate, tx, warehouseId);
 
   if (result.insufficientStock) {
     throw new Error(
       `Insufficient stock to process debit note for product ${productId}. ` +
-        `Requested: ${qty.toString()}, Available: ${result.availableQuantity.toString()}, ` +
-        `Shortfall: ${result.shortfall.toString()}`
+      `Requested: ${qty.toString()}, Available: ${result.availableQuantity.toString()}, ` +
+      `Shortfall: ${result.shortfall.toString()}`
     );
   }
 
@@ -179,7 +182,8 @@ export async function getOriginalCOGSForInvoiceItem(
 export async function checkReturnableStock(
   productId: string,
   requestedQuantity: Decimal | number,
-  tx: PrismaTransaction = prisma
+  tx: PrismaTransaction = prisma,
+  warehouseId?: string | null
 ): Promise<{
   available: Decimal;
   canReturn: boolean;
@@ -191,11 +195,14 @@ export async function checkReturnableStock(
       : new Decimal(requestedQuantity);
 
   // Get all lots with remaining quantity
+  const lotWhere: any = {
+    productId,
+    remainingQuantity: { gt: 0 },
+  };
+  if (warehouseId) lotWhere.warehouseId = warehouseId;
+
   const lots = await tx.stockLot.findMany({
-    where: {
-      productId,
-      remainingQuantity: { gt: 0 },
-    },
+    where: lotWhere,
   });
 
   const totalAvailable = lots.reduce(
