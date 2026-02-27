@@ -87,6 +87,7 @@ const reportsNavigation = [
   { name: "Balance Sheet", href: "/reports/balance-sheet", icon: PieChart },
   { name: "Cash Flow", href: "/reports/cash-flow", icon: ArrowRightLeft },
   { name: "Expense Report", href: "/reports/expense-report", icon: DollarSign },
+  { name: "Stock Summary", href: "/reports/stock-summary", icon: Package },
 ];
 
 const bottomNavigation = [

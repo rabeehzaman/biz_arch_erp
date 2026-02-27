@@ -1,12 +1,13 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Users, Package, TrendingUp, Clock, CreditCard } from "lucide-react";
+import { FileText, Users, Package, TrendingUp, Clock, CreditCard, GitBranch, Warehouse } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { useDashboardStats } from "@/hooks/use-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "next-auth/react";
 
 function StatCardSkeleton() {
   return (
@@ -25,6 +26,8 @@ function StatCardSkeleton() {
 
 export function DashboardContent() {
   const { stats, isLoading, isError } = useDashboardStats();
+  const { data: session } = useSession();
+  const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
   if (isError) {
     return (
@@ -122,6 +125,51 @@ export function DashboardContent() {
           </>
         )}
       </div>
+
+      {/* Multi-Branch Section */}
+      {multiBranchEnabled && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="border-purple-200 bg-purple-50/50">
+            <CardContent className="p-5 flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <GitBranch className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Active Branches</p>
+                <p className="text-2xl font-bold">
+                  {isLoading ? <Skeleton className="h-8 w-10" /> : (stats as any)?.totalBranches ?? 0}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-indigo-200 bg-indigo-50/50">
+            <CardContent className="p-5 flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <Warehouse className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Active Warehouses</p>
+                <p className="text-2xl font-bold">
+                  {isLoading ? <Skeleton className="h-8 w-10" /> : (stats as any)?.totalWarehouses ?? 0}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:border-primary/50 transition-colors">
+            <Link href="/reports/stock-summary">
+              <CardContent className="flex items-center gap-4 p-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
+                  <Package className="h-6 w-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Stock Summary</h3>
+                  <p className="text-sm text-slate-500">View inventory by warehouse</p>
+                </div>
+              </CardContent>
+            </Link>
+          </Card>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

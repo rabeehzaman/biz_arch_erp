@@ -21,6 +21,8 @@ export async function GET() {
       revenueResult,
       collectedResult,
       recentInvoices,
+      totalBranches,
+      totalWarehouses,
     ] = await Promise.all([
       prisma.invoice.count({ where: { organizationId } }),
       prisma.invoice.count({
@@ -44,6 +46,8 @@ export async function GET() {
           customer: { select: { name: true } },
         },
       }),
+      prisma.branch.count({ where: { organizationId, isActive: true } }),
+      prisma.warehouse.count({ where: { organizationId, isActive: true } }),
     ]);
 
     return NextResponse.json({
@@ -53,6 +57,8 @@ export async function GET() {
       totalProducts,
       totalRevenue: Number(revenueResult._sum.total || 0),
       totalCollected: Number(collectedResult._sum.amountPaid || 0),
+      totalBranches,
+      totalWarehouses,
       recentInvoices: recentInvoices.map((inv) => ({
         id: inv.id,
         invoiceNumber: inv.invoiceNumber,

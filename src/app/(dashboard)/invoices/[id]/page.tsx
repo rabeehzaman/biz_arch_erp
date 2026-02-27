@@ -75,6 +75,8 @@ interface Invoice {
   notes: string | null;
   terms: string | null;
   items: InvoiceItem[];
+  branch?: { id: string; name: string; code: string } | null;
+  warehouse?: { id: string; name: string; code: string } | null;
 }
 
 export default function InvoiceDetailPage({
@@ -228,303 +230,315 @@ export default function InvoiceDetailPage({
   }
 
   return (
-        <PageAnimation>
-          <div className="space-y-6 print:space-y-4">
-          {/* Header - Hidden on print */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-            <div className="flex items-center gap-4">
-              <Link href="/invoices">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </Link>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  Invoice {invoice.invoiceNumber}
-                </h2>
-                <p className="text-slate-500">
-                  Created on {format(new Date(invoice.issueDate), "dd MMM yyyy")}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Link href={`/invoices/${id}/edit`}>
-                <Button variant="outline">
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              </Link>
-              {invoice && Number(invoice.balanceDue) > 0 && (
-                <Button onClick={() => setIsPaymentDialogOpen(true)}>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Record Payment
-                </Button>
-              )}
-              {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
-                <Button variant="outline" onClick={handleMarkAsSent} disabled={isMarkingSent}>
-                  <Send className="mr-2 h-4 w-4" />
-                  Mark as Sent
-                </Button>
-              )}
-              {invoice?.sentAt && (
-                <span className="text-sm text-slate-500">
-                  Sent {format(new Date(invoice.sentAt), "dd MMM yyyy")}
-                </span>
-              )}
-              <Button variant="outline" onClick={handleDownloadPDF}>
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
+    <PageAnimation>
+      <div className="space-y-6 print:space-y-4">
+        {/* Header - Hidden on print */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
+          <div className="flex items-center gap-4">
+            <Link href="/invoices">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" onClick={handlePrint}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </Button>
+            </Link>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Invoice {invoice.invoiceNumber}
+              </h2>
+              <p className="text-slate-500">
+                Created on {format(new Date(invoice.issueDate), "dd MMM yyyy")}
+              </p>
             </div>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/invoices/${id}/edit`}>
+              <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+            {invoice && Number(invoice.balanceDue) > 0 && (
+              <Button onClick={() => setIsPaymentDialogOpen(true)}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Record Payment
+              </Button>
+            )}
+            {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
+              <Button variant="outline" onClick={handleMarkAsSent} disabled={isMarkingSent}>
+                <Send className="mr-2 h-4 w-4" />
+                Mark as Sent
+              </Button>
+            )}
+            {invoice?.sentAt && (
+              <span className="text-sm text-slate-500">
+                Sent {format(new Date(invoice.sentAt), "dd MMM yyyy")}
+              </span>
+            )}
+            <Button variant="outline" onClick={handleDownloadPDF}>
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+          </div>
+        </div>
 
-          {/* Invoice Document */}
-          <Card className="print:shadow-none print:border-none">
-            <CardContent className="p-4 sm:p-8">
-              {/* Company & Invoice Info */}
-              <div className="flex justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-                    <Building2 className="h-7 w-7 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold">BizArch ERP</h1>
-                    <p className="text-sm text-slate-500">Invoice</p>
-                  </div>
+        {/* Invoice Document */}
+        <Card className="print:shadow-none print:border-none">
+          <CardContent className="p-4 sm:p-8">
+            {/* Company & Invoice Info */}
+            <div className="flex justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
+                  <Building2 className="h-7 w-7 text-primary-foreground" />
                 </div>
-                <div className="text-right">
-                  <h2 className="text-xl font-bold">{invoice.invoiceNumber}</h2>
-                </div>
-              </div>
-
-              {/* Bill To & Dates */}
-              <div className="grid sm:grid-cols-2 gap-8 mb-8">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                    Bill To
-                  </h3>
-                  <div>
-                    <p className="font-semibold">{invoice.customer.name}</p>
-                    {invoice.customer.email && (
-                      <p className="text-sm text-slate-600">{invoice.customer.email}</p>
-                    )}
-                    {invoice.customer.phone && (
-                      <p className="text-sm text-slate-600">{invoice.customer.phone}</p>
-                    )}
-                    {invoice.customer.address && (
-                      <p className="text-sm text-slate-600">
-                        {invoice.customer.address}
-                        {invoice.customer.city && `, ${invoice.customer.city}`}
-                        {invoice.customer.state && `, ${invoice.customer.state}`}
-                        {invoice.customer.zipCode && ` - ${invoice.customer.zipCode}`}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="sm:text-right">
-                  <div className="space-y-1">
-                    <p className="text-sm">
-                      <span className="text-slate-500">Issue Date:</span>{" "}
-                      <span className="font-medium">
-                        {format(new Date(invoice.issueDate), "dd MMM yyyy")}
-                      </span>
-                    </p>
-                    <p className="text-sm">
-                      <span className="text-slate-500">Due Date:</span>{" "}
-                      <span className="font-medium">
-                        {format(new Date(invoice.dueDate), "dd MMM yyyy")}
-                      </span>
-                    </p>
-                  </div>
+                  <h1 className="text-2xl font-bold">BizArch ERP</h1>
+                  <p className="text-sm text-slate-500">Invoice</p>
                 </div>
               </div>
+              <div className="text-right">
+                <h2 className="text-xl font-bold">{invoice.invoiceNumber}</h2>
+              </div>
+            </div>
 
-              {/* Line Items */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40%]">Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoice.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell className="text-right">{Number(item.quantity)}</TableCell>
-                      <TableCell className="text-right">
-                        ₹{Number(item.unitPrice).toLocaleString("en-IN")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {Number(item.discount) > 0 ? (
-                          <span className="text-green-600">{Number(item.discount)}%</span>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ₹{Number(item.total).toLocaleString("en-IN")}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* Totals */}
-              <div className="flex justify-end mt-6">
-                <div className="w-full sm:w-64 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
-                    <span>₹{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
-                  </div>
-                  {Number(invoice.totalCgst) > 0 && (
-                    <div className="flex justify-between text-sm text-slate-500">
-                      <span>CGST</span>
-                      <span>₹{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
-                    </div>
+            {/* Bill To & Dates */}
+            <div className="grid sm:grid-cols-2 gap-8 mb-8">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                  Bill To
+                </h3>
+                <div>
+                  <p className="font-semibold">{invoice.customer.name}</p>
+                  {invoice.customer.email && (
+                    <p className="text-sm text-slate-600">{invoice.customer.email}</p>
                   )}
-                  {Number(invoice.totalSgst) > 0 && (
-                    <div className="flex justify-between text-sm text-slate-500">
-                      <span>SGST</span>
-                      <span>₹{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
-                    </div>
+                  {invoice.customer.phone && (
+                    <p className="text-sm text-slate-600">{invoice.customer.phone}</p>
                   )}
-                  {Number(invoice.totalIgst) > 0 && (
-                    <div className="flex justify-between text-sm text-slate-500">
-                      <span>IGST</span>
-                      <span>₹{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
-                    </div>
+                  {invoice.customer.address && (
+                    <p className="text-sm text-slate-600">
+                      {invoice.customer.address}
+                      {invoice.customer.city && `, ${invoice.customer.city}`}
+                      {invoice.customer.state && `, ${invoice.customer.state}`}
+                      {invoice.customer.zipCode && ` - ${invoice.customer.zipCode}`}
+                    </p>
                   )}
-                  {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
-                    <div className="flex justify-between text-sm text-slate-500">
-                      <span>Tax</span>
-                      <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Total</span>
-                    <span>₹{Number(invoice.total).toLocaleString("en-IN")}</span>
-                  </div>
-                  {Number(invoice.amountPaid) > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Amount Paid</span>
-                      <span>₹{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Balance Due</span>
-                    <span className={Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"}>
-                      ₹{Number(invoice.balanceDue).toLocaleString("en-IN")}
+                </div>
+              </div>
+              <div className="sm:text-right">
+                <div className="space-y-1">
+                  <p className="text-sm">
+                    <span className="text-slate-500">Issue Date:</span>{" "}
+                    <span className="font-medium">
+                      {format(new Date(invoice.issueDate), "dd MMM yyyy")}
                     </span>
-                  </div>
+                  </p>
+                  <p className="text-sm">
+                    <span className="text-slate-500">Due Date:</span>{" "}
+                    <span className="font-medium">
+                      {format(new Date(invoice.dueDate), "dd MMM yyyy")}
+                    </span>
+                  </p>
+                  {invoice.branch && (
+                    <p className="text-sm">
+                      <span className="text-slate-500">Branch:</span>{" "}
+                      <span className="font-medium">{invoice.branch.name}</span>
+                    </p>
+                  )}
+                  {invoice.warehouse && (
+                    <p className="text-sm">
+                      <span className="text-slate-500">Warehouse:</span>{" "}
+                      <span className="font-medium">{invoice.warehouse.name}</span>
+                    </p>
+                  )}
                 </div>
               </div>
+            </div>
 
-              {/* Notes */}
-              {(invoice.notes || invoice.terms) && (
-                <div className="mt-8 pt-8 border-t grid sm:grid-cols-2 gap-8">
-                  {invoice.notes && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                        Notes
-                      </h3>
-                      <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
-                    </div>
-                  )}
-                  {invoice.terms && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                        Terms & Conditions
-                      </h3>
-                      <p className="text-sm whitespace-pre-wrap">{invoice.terms}</p>
-                    </div>
-                  )}
+            {/* Line Items */}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40%]">Description</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoice.items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.description}</TableCell>
+                    <TableCell className="text-right">{Number(item.quantity)}</TableCell>
+                    <TableCell className="text-right">
+                      ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {Number(item.discount) > 0 ? (
+                        <span className="text-green-600">{Number(item.discount)}%</span>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      ₹{Number(item.total).toLocaleString("en-IN")}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {/* Totals */}
+            <div className="flex justify-end mt-6">
+              <div className="w-full sm:w-64 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
+                  <span>₹{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Record Payment Dialog */}
-          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogContent>
-              <form onSubmit={handleRecordPayment}>
-                <DialogHeader>
-                  <DialogTitle>Record Payment</DialogTitle>
-                  <DialogDescription>
-                    Record a payment for invoice {invoice.invoiceNumber}.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label>Customer</Label>
-                    <p className="text-sm font-medium">{invoice.customer.name}</p>
+                {Number(invoice.totalCgst) > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>CGST</span>
+                    <span>₹{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
                   </div>
+                )}
+                {Number(invoice.totalSgst) > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>SGST</span>
+                    <span>₹{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                {Number(invoice.totalIgst) > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>IGST</span>
+                    <span>₹{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>Tax</span>
+                    <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-lg border-t pt-2">
+                  <span>Total</span>
+                  <span>₹{Number(invoice.total).toLocaleString("en-IN")}</span>
+                </div>
+                {Number(invoice.amountPaid) > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Amount Paid</span>
+                    <span>₹{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-lg border-t pt-2">
+                  <span>Balance Due</span>
+                  <span className={Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"}>
+                    ₹{Number(invoice.balanceDue).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {(invoice.notes || invoice.terms) && (
+              <div className="mt-8 pt-8 border-t grid sm:grid-cols-2 gap-8">
+                {invoice.notes && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                      Notes
+                    </h3>
+                    <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
+                  </div>
+                )}
+                {invoice.terms && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                      Terms & Conditions
+                    </h3>
+                    <p className="text-sm whitespace-pre-wrap">{invoice.terms}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Record Payment Dialog */}
+        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+          <DialogContent>
+            <form onSubmit={handleRecordPayment}>
+              <DialogHeader>
+                <DialogTitle>Record Payment</DialogTitle>
+                <DialogDescription>
+                  Record a payment for invoice {invoice.invoiceNumber}.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Customer</Label>
+                  <p className="text-sm font-medium">{invoice.customer.name}</p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="pay-amount">Amount *</Label>
+                  <Input
+                    id="pay-amount"
+                    type="number"
+                    step="0.01"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="pay-amount">Amount *</Label>
+                    <Label htmlFor="pay-date">Payment Date *</Label>
                     <Input
-                      id="pay-amount"
-                      type="number"
-                      step="0.01"
-                      value={paymentForm.amount}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                      id="pay-date"
+                      type="date"
+                      value={paymentForm.paymentDate}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
                       required
                     />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label htmlFor="pay-date">Payment Date *</Label>
-                      <Input
-                        id="pay-date"
-                        type="date"
-                        value={paymentForm.paymentDate}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Payment Method</Label>
-                      <Select
-                        value={paymentForm.paymentMethod}
-                        onValueChange={(v) => setPaymentForm({ ...paymentForm, paymentMethod: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CASH">Cash</SelectItem>
-                          <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                          <SelectItem value="CHECK">Check</SelectItem>
-                          <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                          <SelectItem value="UPI">UPI</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="pay-ref">Reference</Label>
-                    <Input
-                      id="pay-ref"
-                      value={paymentForm.reference}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                      placeholder="Transaction ID, check #..."
-                    />
+                    <Label>Payment Method</Label>
+                    <Select
+                      value={paymentForm.paymentMethod}
+                      onValueChange={(v) => setPaymentForm({ ...paymentForm, paymentMethod: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CASH">Cash</SelectItem>
+                        <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                        <SelectItem value="CHECK">Check</SelectItem>
+                        <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
+                        <SelectItem value="UPI">UPI</SelectItem>
+                        <SelectItem value="OTHER">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit">Record Payment</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-        </PageAnimation>
-      );
+                <div className="grid gap-2">
+                  <Label htmlFor="pay-ref">Reference</Label>
+                  <Input
+                    id="pay-ref"
+                    value={paymentForm.reference}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                    placeholder="Transaction ID, check #..."
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Record Payment</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageAnimation>
+  );
 }
