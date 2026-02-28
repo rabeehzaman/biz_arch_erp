@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { PaymentMethod } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     const { supplierId, purchaseInvoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountGiven: rawDiscount } = body;
     const discountGiven = rawDiscount || 0;
     // Normalize paymentMethod to uppercase enum value
-    const paymentMethod = rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH";
+    const paymentMethod = (rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH") as PaymentMethod;
 
     if (!supplierId || !amount) {
       return NextResponse.json(
