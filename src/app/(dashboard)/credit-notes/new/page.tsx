@@ -17,6 +17,7 @@ import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 
 interface Customer {
   id: string;
@@ -59,6 +60,8 @@ export default function NewCreditNotePage() {
   );
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [warehouseId, setWarehouseId] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([
     {
       id: Date.now().toString(),
@@ -76,8 +79,11 @@ export default function NewCreditNotePage() {
 
   useEffect(() => {
     fetchCustomers();
-    fetchProducts();
   }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [warehouseId]);
 
   const fetchCustomers = async () => {
     try {
@@ -93,7 +99,8 @@ export default function NewCreditNotePage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch("/api/products");
+      const url = warehouseId ? `/api/products?warehouseId=${warehouseId}` : "/api/products";
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setProducts(data);
@@ -244,6 +251,8 @@ export default function NewCreditNotePage() {
           })),
           reason: reason || null,
           notes: notes || null,
+          branchId: branchId || undefined,
+          warehouseId: warehouseId || undefined,
         }),
       });
 
@@ -286,7 +295,13 @@ export default function NewCreditNotePage() {
               <CardTitle>Credit Note Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <BranchWarehouseSelector
+                branchId={branchId}
+                warehouseId={warehouseId}
+                onBranchChange={setBranchId}
+                onWarehouseChange={setWarehouseId}
+              />
+              <div className="grid gap-4 sm:grid-cols-2 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="customer">Customer *</Label>
                   <select

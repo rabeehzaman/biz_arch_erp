@@ -17,6 +17,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 
 interface Supplier {
   id: string;
@@ -67,6 +68,8 @@ export default function EditPurchaseInvoicePage({
     dueDate: "",
     supplierInvoiceRef: "",
     notes: "",
+    branchId: "",
+    warehouseId: "",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -84,9 +87,12 @@ export default function EditPurchaseInvoicePage({
 
   useEffect(() => {
     fetchSuppliers();
-    fetchProducts();
     fetchInvoice();
   }, [id]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [formData.warehouseId]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -111,7 +117,10 @@ export default function EditPurchaseInvoicePage({
   };
 
   const fetchProducts = async () => {
-    const response = await fetch("/api/products");
+    const url = formData.warehouseId
+      ? `/api/products?warehouseId=${formData.warehouseId}`
+      : "/api/products";
+    const response = await fetch(url);
     const data = await response.json();
     setProducts(data);
   };
@@ -127,6 +136,8 @@ export default function EditPurchaseInvoicePage({
           dueDate: data.dueDate.split("T")[0],
           supplierInvoiceRef: data.supplierInvoiceRef || "",
           notes: data.notes || "",
+          branchId: data.branchId || "",
+          warehouseId: data.warehouseId || "",
         });
         setLineItems(
           data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitCost: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
@@ -291,6 +302,8 @@ export default function EditPurchaseInvoicePage({
           dueDate: formData.dueDate,
           supplierInvoiceRef: formData.supplierInvoiceRef || null,
           notes: formData.notes || null,
+          branchId: formData.branchId || undefined,
+          warehouseId: formData.warehouseId || undefined,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -352,52 +365,60 @@ export default function EditPurchaseInvoicePage({
               <CardHeader>
                 <CardTitle>Purchase Details</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="supplier">Supplier *</Label>
-                  <SupplierCombobox
-                    suppliers={suppliers}
-                    value={formData.supplierId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, supplierId: value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="supplierInvoiceRef">Supplier Invoice Ref</Label>
-                  <Input
-                    id="supplierInvoiceRef"
-                    value={formData.supplierInvoiceRef}
-                    onChange={(e) =>
-                      setFormData({ ...formData, supplierInvoiceRef: e.target.value })
-                    }
-                    placeholder="Supplier's invoice number"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="invoiceDate">Purchase Date *</Label>
-                  <Input
-                    id="invoiceDate"
-                    type="date"
-                    value={formData.invoiceDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, invoiceDate: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="dueDate">Payment Due Date *</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dueDate: e.target.value })
-                    }
-                    required
-                  />
+              <CardContent>
+                <BranchWarehouseSelector
+                  branchId={formData.branchId}
+                  warehouseId={formData.warehouseId}
+                  onBranchChange={(id) => setFormData(prev => ({ ...prev, branchId: id }))}
+                  onWarehouseChange={(id) => setFormData(prev => ({ ...prev, warehouseId: id }))}
+                />
+                <div className="grid gap-4 sm:grid-cols-2 mt-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="supplier">Supplier *</Label>
+                    <SupplierCombobox
+                      suppliers={suppliers}
+                      value={formData.supplierId}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, supplierId: value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="supplierInvoiceRef">Supplier Invoice Ref</Label>
+                    <Input
+                      id="supplierInvoiceRef"
+                      value={formData.supplierInvoiceRef}
+                      onChange={(e) =>
+                        setFormData({ ...formData, supplierInvoiceRef: e.target.value })
+                      }
+                      placeholder="Supplier's invoice number"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="invoiceDate">Purchase Date *</Label>
+                    <Input
+                      id="invoiceDate"
+                      type="date"
+                      value={formData.invoiceDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, invoiceDate: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="dueDate">Payment Due Date *</Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={formData.dueDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dueDate: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

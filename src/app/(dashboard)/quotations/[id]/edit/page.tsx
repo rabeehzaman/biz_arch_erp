@@ -17,6 +17,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 
 interface Customer {
   id: string;
@@ -64,6 +65,8 @@ export default function EditQuotationPage({
     validUntil: "",
     notes: "",
     terms: "",
+    branchId: "",
+    warehouseId: "",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -83,9 +86,12 @@ export default function EditQuotationPage({
 
   useEffect(() => {
     fetchCustomers();
-    fetchProducts();
     fetchQuotation();
   }, [id]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [formData.warehouseId]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,7 +116,10 @@ export default function EditQuotationPage({
   };
 
   const fetchProducts = async () => {
-    const response = await fetch("/api/products");
+    const url = formData.warehouseId
+      ? `/api/products?warehouseId=${formData.warehouseId}`
+      : "/api/products";
+    const response = await fetch(url);
     const data = await response.json();
     setProducts(data);
   };
@@ -126,6 +135,8 @@ export default function EditQuotationPage({
           validUntil: data.validUntil.split("T")[0],
           notes: data.notes || "",
           terms: data.terms || "",
+          branchId: data.branchId || "",
+          warehouseId: data.warehouseId || "",
         });
         setLineItems(
           data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitPrice: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
@@ -289,6 +300,8 @@ export default function EditQuotationPage({
           validUntil: formData.validUntil,
           notes: formData.notes || null,
           terms: formData.terms || null,
+          branchId: formData.branchId || undefined,
+          warehouseId: formData.warehouseId || undefined,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -349,42 +362,50 @@ export default function EditQuotationPage({
               <CardHeader>
                 <CardTitle>Quotation Details</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="customer">Customer *</Label>
-                  <CustomerCombobox
-                    customers={customers}
-                    value={formData.customerId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, customerId: value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="issueDate">Issue Date *</Label>
-                  <Input
-                    id="issueDate"
-                    type="date"
-                    value={formData.issueDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, issueDate: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="validUntil">Valid Until *</Label>
-                  <Input
-                    id="validUntil"
-                    type="date"
-                    value={formData.validUntil}
-                    min={formData.issueDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, validUntil: e.target.value })
-                    }
-                    required
-                  />
+              <CardContent>
+                <BranchWarehouseSelector
+                  branchId={formData.branchId}
+                  warehouseId={formData.warehouseId}
+                  onBranchChange={(id) => setFormData(prev => ({ ...prev, branchId: id }))}
+                  onWarehouseChange={(id) => setFormData(prev => ({ ...prev, warehouseId: id }))}
+                />
+                <div className="grid gap-4 sm:grid-cols-3 mt-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="customer">Customer *</Label>
+                    <CustomerCombobox
+                      customers={customers}
+                      value={formData.customerId}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, customerId: value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="issueDate">Issue Date *</Label>
+                    <Input
+                      id="issueDate"
+                      type="date"
+                      value={formData.issueDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, issueDate: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="validUntil">Valid Until *</Label>
+                    <Input
+                      id="validUntil"
+                      type="date"
+                      value={formData.validUntil}
+                      min={formData.issueDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, validUntil: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -116,6 +116,23 @@ export async function PUT(
       updateData.outwardDate = new Date();
     }
 
+    if (body.createProduct && body.productName) {
+      const newProduct = await prisma.product.create({
+        data: {
+          organizationId,
+          name: body.productName,
+          price: body.sellingPrice || 0,
+          cost: body.costPrice || 0,
+          unitId: body.unitId || null,
+          categoryId: body.categoryId || null,
+          hsnCode: body.hsnCode || null,
+          gstRate: parseFloat(body.gstRate) || 0,
+          isImeiTracked: true,
+        }
+      });
+      updateData.productId = newProduct.id;
+    }
+
     const device = await prisma.mobileDevice.update({
       where: { id },
       data: updateData,

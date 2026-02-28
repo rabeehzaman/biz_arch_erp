@@ -92,8 +92,11 @@ export default function NewQuotationPage() {
 
   useEffect(() => {
     fetchCustomers();
-    fetchProducts();
   }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [formData.warehouseId]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -121,7 +124,10 @@ export default function NewQuotationPage() {
   };
 
   const fetchProducts = async () => {
-    const response = await fetch("/api/products");
+    const url = formData.warehouseId
+      ? `/api/products?warehouseId=${formData.warehouseId}`
+      : "/api/products";
+    const response = await fetch(url);
     const data = await response.json();
     setProducts(data);
   };

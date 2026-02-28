@@ -23,6 +23,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 
 interface Product {
   id: string;
@@ -30,6 +31,24 @@ interface Product {
   sku: string | null;
   cost: number;
   unit: { id: string; name: string; code: string } | null;
+  isImeiTracked: boolean;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
+interface ImeiEntry {
+  imei1: string;
+  imei2: string;
+  brand: string;
+  model: string;
+  color: string;
+  storageCapacity: string;
+  ram: string;
+  conditionGrade: string;
 }
 
 interface Branch {
@@ -74,6 +93,8 @@ const emptyForm = {
   notes: "",
   warehouseId: "",
   selectedBranchId: "",
+  supplierId: "",
+  imeiNumbers: [] as ImeiEntry[],
 };
 
 export default function OpeningStockPage() {
@@ -84,6 +105,7 @@ export default function OpeningStockPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseItem[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [search, setSearch] = useState("");
@@ -103,11 +125,12 @@ export default function OpeningStockPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [stocksRes, productsRes, branchesRes, warehousesRes] = await Promise.all([
+      const [stocksRes, productsRes, branchesRes, warehousesRes, suppliersRes] = await Promise.all([
         fetch("/api/opening-stocks"),
         fetch("/api/products"),
         fetch("/api/branches"),
         fetch("/api/warehouses"),
+        fetch("/api/suppliers"),
       ]);
 
       if (stocksRes.ok) setOpeningStocks(await stocksRes.json());
@@ -119,6 +142,9 @@ export default function OpeningStockPage() {
       if (warehousesRes.ok) {
         const w = await warehousesRes.json();
         setWarehouses(w.filter((x: WarehouseItem) => x.isActive));
+      }
+      if (suppliersRes.ok) {
+        setSuppliers(await suppliersRes.json());
       }
     } catch {
       toast.error("Failed to load data");
@@ -157,10 +183,42 @@ export default function OpeningStockPage() {
   );
   const uniqueWarehouses = new Set(openingStocks.map((s) => s.warehouseId).filter(Boolean)).size;
 
+  const selectedProduct = products.find((p) => p.id === formData.productId);
+  const isImeiTracked = selectedProduct?.isImeiTracked || false;
+
   function openDialog() {
     setFormData({ ...emptyForm, stockDate: new Date().toISOString().split("T")[0] });
     setIsDialogOpen(true);
   }
+
+  const makeEmptyImei = (): ImeiEntry => ({
+    imei1: "", imei2: "", brand: "", model: "", color: "", storageCapacity: "", ram: "", conditionGrade: "NEW",
+  });
+
+  const syncImeiCount = (qty: string, prodId: string) => {
+    const isTracked = products.find((p) => p.id === prodId)?.isImeiTracked;
+    if (!isTracked) return;
+    const count = Math.max(0, Math.floor(parseFloat(qty) || 0));
+    setFormData((prev) => {
+      const current = prev.imeiNumbers;
+      if (current.length === count) return prev;
+      if (current.length < count) {
+        return {
+          ...prev,
+          imeiNumbers: [...current, ...Array(count - current.length).fill(null).map(() => makeEmptyImei())],
+        };
+      }
+      return { ...prev, imeiNumbers: current.slice(0, count) };
+    });
+  };
+
+  const updateImeiField = (idx: number, field: keyof ImeiEntry, value: string) => {
+    setFormData((prev) => {
+      const updated = [...prev.imeiNumbers];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return { ...prev, imeiNumbers: updated };
+    });
+  };
 
   async function handleSave() {
     if (!formData.productId || !formData.quantity || !formData.stockDate) {
@@ -171,6 +229,19 @@ export default function OpeningStockPage() {
       toast.error("Quantity must be greater than 0");
       return;
     }
+
+    if (isImeiTracked) {
+      if (!formData.supplierId) {
+        toast.error("Supplier is required for IMEI tracked products");
+        return;
+      }
+      const missingImei = formData.imeiNumbers.some((imei) => !imei.imei1 || !imei.brand || !imei.model);
+      if (missingImei || formData.imeiNumbers.length === 0) {
+        toast.error("Please fill in all required IMEI fields (IMEI 1, Brand, Model)");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const res = await fetch("/api/opening-stocks", {
@@ -183,6 +254,10 @@ export default function OpeningStockPage() {
           stockDate: formData.stockDate,
           notes: formData.notes || null,
           warehouseId: formData.warehouseId || null,
+          deviceDetails: isImeiTracked ? {
+            supplierId: formData.supplierId,
+            imeiNumbers: formData.imeiNumbers,
+          } : undefined,
         }),
       });
       if (res.ok) {
@@ -426,7 +501,7 @@ export default function OpeningStockPage() {
 
       {/* Add Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setIsDialogOpen(false); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={isImeiTracked ? "max-w-3xl" : "max-w-md"}>
           <DialogHeader>
             <DialogTitle>Add Opening Stock</DialogTitle>
             <DialogDescription>
@@ -490,6 +565,7 @@ export default function OpeningStockPage() {
                     productId: v,
                     unitCost: p ? String(Number(p.cost)) : f.unitCost,
                   }));
+                  syncImeiCount(formData.quantity, v);
                 }}
               >
                 <SelectTrigger>
@@ -522,7 +598,10 @@ export default function OpeningStockPage() {
                   step="0.01"
                   placeholder="0"
                   value={formData.quantity}
-                  onChange={(e) => setFormData((f) => ({ ...f, quantity: e.target.value }))}
+                  onChange={(e) => {
+                    setFormData((f) => ({ ...f, quantity: e.target.value }));
+                    syncImeiCount(e.target.value, formData.productId);
+                  }}
                   onFocus={(e) => e.target.select()}
                 />
               </div>
@@ -571,6 +650,90 @@ export default function OpeningStockPage() {
                 rows={2}
               />
             </div>
+
+            {/* IMEI Details */}
+            {isImeiTracked && (
+              <div className="space-y-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label>Supplier *</Label>
+                  <SupplierCombobox
+                    suppliers={suppliers}
+                    value={formData.supplierId}
+                    onValueChange={(v) => setFormData((f) => ({ ...f, supplierId: v }))}
+                  />
+                </div>
+                {formData.imeiNumbers.length > 0 && (
+                  <div className="space-y-3">
+                    <Label>Device Details *</Label>
+                    <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3">
+                      {formData.imeiNumbers.map((imei, idx) => (
+                        <div key={idx} className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-slate-50 border rounded-lg">
+                          <Input
+                            placeholder={`IMEI 1 (Device ${idx + 1}) *`}
+                            value={imei.imei1}
+                            onChange={(e) => updateImeiField(idx, "imei1", e.target.value)}
+                            className="font-mono text-xs"
+                            maxLength={15}
+                            required
+                          />
+                          <Input
+                            placeholder="IMEI 2"
+                            value={imei.imei2}
+                            onChange={(e) => updateImeiField(idx, "imei2", e.target.value)}
+                            className="font-mono text-xs"
+                            maxLength={15}
+                          />
+                          <Input
+                            placeholder="Brand *"
+                            value={imei.brand}
+                            onChange={(e) => updateImeiField(idx, "brand", e.target.value)}
+                            className="text-xs"
+                            required
+                          />
+                          <Input
+                            placeholder="Model *"
+                            value={imei.model}
+                            onChange={(e) => updateImeiField(idx, "model", e.target.value)}
+                            className="text-xs"
+                            required
+                          />
+                          <Input
+                            placeholder="Color"
+                            value={imei.color}
+                            onChange={(e) => updateImeiField(idx, "color", e.target.value)}
+                            className="text-xs"
+                          />
+                          <Input
+                            placeholder="Storage"
+                            value={imei.storageCapacity}
+                            onChange={(e) => updateImeiField(idx, "storageCapacity", e.target.value)}
+                            className="text-xs"
+                          />
+                          <Input
+                            placeholder="RAM"
+                            value={imei.ram}
+                            onChange={(e) => updateImeiField(idx, "ram", e.target.value)}
+                            className="text-xs"
+                          />
+                          <select
+                            value={imei.conditionGrade}
+                            onChange={(e) => updateImeiField(idx, "conditionGrade", e.target.value)}
+                            className="text-xs h-9 rounded-md border border-input bg-transparent px-3 py-1 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          >
+                            <option value="NEW">New</option>
+                            <option value="OPEN_BOX">Open Box</option>
+                            <option value="GRADE_A">Grade A</option>
+                            <option value="GRADE_B">Grade B</option>
+                            <option value="GRADE_C">Grade C</option>
+                            <option value="REFURBISHED">Refurbished</option>
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>

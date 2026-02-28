@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       batteryHealthPercentage, includedAccessories,
       productId, supplierId, costPrice, landedCost, sellingPrice,
       supplierWarrantyExpiry, customerWarrantyExpiry, notes,
+      createProduct, productName, categoryId, unitId, hsnCode, gstRate,
     } = body;
 
     if (!imei1 || !brand || !model || !supplierId || costPrice === undefined) {
@@ -109,8 +110,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create device + optional OPENING_BALANCE stock lot in a transaction
+    // Create device + optional product + optional OPENING_BALANCE stock lot in a transaction
     const device = await prisma.$transaction(async (tx) => {
+      let finalProductId = productId || null;
+
+      if (createProduct && productName) {
+        const newProduct = await tx.product.create({
+          data: {
+            organizationId,
+            name: productName,
+            price: sellingPrice || 0,
+            cost: costPrice,
+            unitId: unitId || null,
+            categoryId: categoryId || null,
+            hsnCode: hsnCode || null,
+            gstRate: gstRate || 0,
+            isImeiTracked: true,
+          }
+        });
+        finalProductId = newProduct.id;
+      }
+
       const newDevice = await tx.mobileDevice.create({
         data: {
           organizationId,
@@ -126,7 +146,7 @@ export async function POST(request: NextRequest) {
           conditionGrade: conditionGrade || "NEW",
           batteryHealthPercentage: batteryHealthPercentage ?? null,
           includedAccessories: includedAccessories || null,
-          productId: productId || null,
+          productId: finalProductId,
           supplierId,
           costPrice,
           landedCost: landedCost || 0,
@@ -142,10 +162,10 @@ export async function POST(request: NextRequest) {
       });
 
       // If product is linked, create Opening Stock lot
-      if (productId) {
+      if (finalProductId) {
         const openingStock = await tx.openingStock.create({
           data: {
-            productId,
+            productId: finalProductId,
             quantity: 1,
             unitCost: costPrice,
             stockDate: new Date(),
@@ -158,7 +178,7 @@ export async function POST(request: NextRequest) {
         await tx.stockLot.create({
           data: {
             organizationId,
-            productId,
+            productId: finalProductId,
             sourceType: "OPENING_STOCK",
             openingStockId: openingStock.id,
             lotDate: new Date(),

@@ -17,6 +17,7 @@ import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 
 interface Customer {
     id: string;
@@ -71,17 +72,23 @@ export default function EditCreditNotePage({
     );
     const [reason, setReason] = useState("");
     const [notes, setNotes] = useState("");
+    const [branchId, setBranchId] = useState("");
+    const [warehouseId, setWarehouseId] = useState("");
     const [appliedToBalance, setAppliedToBalance] = useState(true);
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     const { data: session } = useSession();
     const { unitConversions } = useUnitConversions();
 
     useEffect(() => {
-        Promise.all([fetchCustomers(), fetchProducts()]).then(() => {
+        Promise.all([fetchCustomers()]).then(() => {
             fetchCreditNote();
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
+
+    useEffect(() => {
+        fetchProducts();
+    }, [warehouseId]);
 
     const fetchCustomers = async () => {
         try {
@@ -97,7 +104,8 @@ export default function EditCreditNotePage({
 
     const fetchProducts = async () => {
         try {
-            const response = await fetch("/api/products");
+            const url = warehouseId ? `/api/products?warehouseId=${warehouseId}` : "/api/products";
+            const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
                 setProducts(data);
@@ -118,6 +126,8 @@ export default function EditCreditNotePage({
             setIssueDate(data.issueDate.split("T")[0]);
             setReason(data.reason || "");
             setNotes(data.notes || "");
+            setBranchId(data.branchId || "");
+            setWarehouseId(data.warehouseId || "");
             setAppliedToBalance(data.appliedToBalance);
 
             if (data.items && data.items.length > 0) {
@@ -287,6 +297,8 @@ export default function EditCreditNotePage({
                     })),
                     reason: reason || null,
                     notes: notes || null,
+                    branchId: branchId || undefined,
+                    warehouseId: warehouseId || undefined,
                     appliedToBalance,
                 }),
             });
@@ -337,7 +349,13 @@ export default function EditCreditNotePage({
                             <CardTitle>Credit Note Details</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid gap-4 sm:grid-cols-2">
+                            <BranchWarehouseSelector
+                                branchId={branchId}
+                                warehouseId={warehouseId}
+                                onBranchChange={setBranchId}
+                                onWarehouseChange={setWarehouseId}
+                            />
+                            <div className="grid gap-4 sm:grid-cols-2 mt-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="customer">Customer *</Label>
                                     <select

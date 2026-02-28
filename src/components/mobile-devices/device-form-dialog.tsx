@@ -26,6 +26,17 @@ interface Product {
   name: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Unit {
+  id: string;
+  code: string;
+  name: string;
+}
+
 interface DeviceFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -37,6 +48,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
   const [saving, setSaving] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
 
   const [formData, setFormData] = useState({
     imei1: "",
@@ -58,7 +71,28 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     supplierWarrantyExpiry: "",
     customerWarrantyExpiry: "",
     notes: "",
+    createProduct: false,
+    productName: "",
+    categoryId: "",
+    unitId: "",
+    hsnCode: "",
+    gstRate: "18",
   });
+
+  useEffect(() => {
+    if (formData.createProduct && formData.brand && formData.model) {
+      const parts = [
+        editDevice ? formData.brand : formData.model.split(" ")[0] || "Unknown",
+        editDevice ? formData.model : formData.model.split(" ").slice(1).join(" ") || formData.model,
+        formData.color,
+        formData.storageCapacity
+      ].filter(Boolean);
+      const newName = parts.join(" ");
+      if (formData.productName !== newName) {
+        setFormData((prev) => ({ ...prev, productName: newName }));
+      }
+    }
+  }, [formData.createProduct, formData.brand, formData.model, formData.color, formData.storageCapacity, editDevice]);
 
   useEffect(() => {
     if (open) {
@@ -72,12 +106,15 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           landedCost: editDevice.landedCost !== undefined ? String(editDevice.landedCost) : "", sellingPrice: editDevice.sellingPrice !== undefined ? String(editDevice.sellingPrice) : "",
           supplierWarrantyExpiry: editDevice.supplierWarrantyExpiry ? new Date(editDevice.supplierWarrantyExpiry).toISOString().split('T')[0] : "",
           customerWarrantyExpiry: editDevice.customerWarrantyExpiry ? new Date(editDevice.customerWarrantyExpiry).toISOString().split('T')[0] : "", notes: editDevice.notes || "",
+          createProduct: false, productName: "", categoryId: "", unitId: "", hsnCode: "", gstRate: "18",
         });
       } else {
         resetForm();
       }
-      fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers).catch(() => {});
-      fetch("/api/products?excludeServices=true").then((r) => r.json()).then(setProducts).catch(() => {});
+      fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers).catch(() => { });
+      fetch("/api/products?excludeServices=true").then((r) => r.json()).then(setProducts).catch(() => { });
+      fetch("/api/product-categories").then((r) => r.json()).then(setCategories).catch(() => { });
+      fetch("/api/units").then((r) => r.json()).then(setUnits).catch(() => { });
     }
   }, [open, editDevice]);
 
@@ -88,6 +125,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
       conditionGrade: "NEW", batteryHealthPercentage: "", productId: "",
       supplierId: "", costPrice: "", landedCost: "", sellingPrice: "",
       supplierWarrantyExpiry: "", customerWarrantyExpiry: "", notes: "",
+      createProduct: false, productName: "", categoryId: "", unitId: "", hsnCode: "", gstRate: "18",
     });
   };
 
@@ -95,6 +133,10 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     e.preventDefault();
     if (!formData.imei1 || !formData.model || !formData.supplierId || !formData.costPrice) {
       toast.error("IMEI 1, Model, Supplier, and Cost Price are required");
+      return;
+    }
+    if (formData.createProduct && !formData.productName) {
+      toast.error("Product name is required when creating a new product");
       return;
     }
 
@@ -113,9 +155,15 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           landedCost: parseFloat(formData.landedCost) || 0,
           sellingPrice: parseFloat(formData.sellingPrice) || 0,
           batteryHealthPercentage: formData.batteryHealthPercentage ? parseInt(formData.batteryHealthPercentage) : null,
-          productId: formData.productId || null,
+          productId: formData.productId === "CREATE_NEW" ? null : (formData.productId || null),
           supplierWarrantyExpiry: formData.supplierWarrantyExpiry || null,
           customerWarrantyExpiry: formData.customerWarrantyExpiry || null,
+          createProduct: formData.createProduct,
+          productName: formData.productName,
+          categoryId: formData.categoryId || null,
+          unitId: formData.unitId || null,
+          hsnCode: formData.hsnCode || null,
+          gstRate: parseFloat(formData.gstRate) || 0,
         }),
       });
 
@@ -261,10 +309,18 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                 <Label>Product</Label>
                 <select
                   value={formData.productId}
-                  onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "CREATE_NEW") {
+                      setFormData({ ...formData, productId: value, createProduct: true });
+                    } else {
+                      setFormData({ ...formData, productId: value, createProduct: false });
+                    }
+                  }}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                 >
                   <option value="">-- Select Product --</option>
+                  <option value="CREATE_NEW">-- Create New Product --</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
@@ -285,6 +341,74 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                 </select>
               </div>
             </div>
+
+            {formData.createProduct && (
+              <div className="rounded-md border p-4 space-y-4 bg-muted/20">
+                <h4 className="text-sm font-medium border-b pb-2">New Product Details</h4>
+                <div className="grid gap-2">
+                  <Label>Product Name *</Label>
+                  <Input
+                    value={formData.productName}
+                    onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                    placeholder="e.g. Samsung Galaxy S24 Black 128GB"
+                    required={formData.createProduct}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label>Category</Label>
+                    <select
+                      value={formData.categoryId}
+                      onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm bg-background"
+                    >
+                      <option value="">-- None --</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Unit</Label>
+                    <select
+                      value={formData.unitId}
+                      onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm bg-background"
+                    >
+                      <option value="">-- Select Unit --</option>
+                      {units.map((u) => (
+                        <option key={u.id} value={u.id}>{u.code}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label>HSN Code</Label>
+                    <Input
+                      value={formData.hsnCode}
+                      onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
+                      placeholder="e.g. 8517"
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>GST Rate (%)</Label>
+                    <select
+                      value={formData.gstRate}
+                      onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm bg-background"
+                    >
+                      <option value="0">0</option>
+                      <option value="5">5</option>
+                      <option value="12">12</option>
+                      <option value="18">18</option>
+                      <option value="28">28</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-3">
               <div className="grid gap-2">

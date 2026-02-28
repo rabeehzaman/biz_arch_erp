@@ -107,10 +107,6 @@ export default function DeviceInventoryPage() {
             </h2>
             <p className="text-slate-500">Manage individual mobile devices</p>
           </div>
-          <Button onClick={() => { setEditDevice(null); setDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Device
-          </Button>
         </div>
 
         <Card>

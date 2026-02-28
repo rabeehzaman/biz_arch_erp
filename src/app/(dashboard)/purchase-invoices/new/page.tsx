@@ -105,8 +105,11 @@ export default function NewPurchaseInvoicePage() {
 
   useEffect(() => {
     fetchSuppliers();
-    fetchProducts();
   }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [formData.warehouseId]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -134,7 +137,10 @@ export default function NewPurchaseInvoicePage() {
   };
 
   const fetchProducts = async () => {
-    const response = await fetch("/api/products");
+    const url = formData.warehouseId
+      ? `/api/products?warehouseId=${formData.warehouseId}`
+      : "/api/products";
+    const response = await fetch(url);
     const data = await response.json();
     setProducts(data);
   };
@@ -666,76 +672,76 @@ export default function NewPurchaseInvoicePage() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                        {isImeiTracked && item.imeiNumbers.length > 0 && (
-                          <TableRow key={`${item.id}-imei`} className="bg-blue-50/50">
-                            <TableCell colSpan={99} className="p-3">
-                              <div className="space-y-2">
-                                <p className="text-xs font-medium text-blue-700">IMEI Details ({item.imeiNumbers.length} device{item.imeiNumbers.length > 1 ? "s" : ""})</p>
-                                {item.imeiNumbers.map((imei, idx) => (
-                                  <div key={idx} className="grid grid-cols-4 gap-2 p-2 bg-white rounded border">
-                                    <Input
-                                      placeholder={`IMEI 1 *`}
-                                      value={imei.imei1}
-                                      onChange={(e) => updateImeiField(item.id, idx, "imei1", e.target.value)}
-                                      className="font-mono text-xs h-8"
-                                      maxLength={15}
-                                      required
-                                    />
-                                    <Input
-                                      placeholder="IMEI 2"
-                                      value={imei.imei2}
-                                      onChange={(e) => updateImeiField(item.id, idx, "imei2", e.target.value)}
-                                      className="font-mono text-xs h-8"
-                                      maxLength={15}
-                                    />
-                                    <Input
-                                      placeholder="Brand"
-                                      value={imei.brand}
-                                      onChange={(e) => updateImeiField(item.id, idx, "brand", e.target.value)}
-                                      className="text-xs h-8"
-                                    />
-                                    <Input
-                                      placeholder="Model"
-                                      value={imei.model}
-                                      onChange={(e) => updateImeiField(item.id, idx, "model", e.target.value)}
-                                      className="text-xs h-8"
-                                    />
-                                    <Input
-                                      placeholder="Color"
-                                      value={imei.color}
-                                      onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
-                                      className="text-xs h-8"
-                                    />
-                                    <Input
-                                      placeholder="Storage (e.g. 128GB)"
-                                      value={imei.storageCapacity}
-                                      onChange={(e) => updateImeiField(item.id, idx, "storageCapacity", e.target.value)}
-                                      className="text-xs h-8"
-                                    />
-                                    <Input
-                                      placeholder="RAM (e.g. 8GB)"
-                                      value={imei.ram}
-                                      onChange={(e) => updateImeiField(item.id, idx, "ram", e.target.value)}
-                                      className="text-xs h-8"
-                                    />
-                                    <select
-                                      value={imei.conditionGrade}
-                                      onChange={(e) => updateImeiField(item.id, idx, "conditionGrade", e.target.value)}
-                                      className="text-xs h-8 rounded border px-2"
-                                    >
-                                      <option value="NEW">New</option>
-                                      <option value="OPEN_BOX">Open Box</option>
-                                      <option value="GRADE_A">Grade A</option>
-                                      <option value="GRADE_B">Grade B</option>
-                                      <option value="GRADE_C">Grade C</option>
-                                      <option value="REFURBISHED">Refurbished</option>
-                                    </select>
-                                  </div>
-                                ))}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
+                          {isImeiTracked && item.imeiNumbers.length > 0 && (
+                            <TableRow key={`${item.id}-imei`} className="bg-blue-50/50">
+                              <TableCell colSpan={99} className="p-3">
+                                <div className="space-y-2">
+                                  <p className="text-xs font-medium text-blue-700">IMEI Details ({item.imeiNumbers.length} device{item.imeiNumbers.length > 1 ? "s" : ""})</p>
+                                  {item.imeiNumbers.map((imei, idx) => (
+                                    <div key={idx} className="grid grid-cols-4 gap-2 p-2 bg-white rounded border">
+                                      <Input
+                                        placeholder={`IMEI 1 *`}
+                                        value={imei.imei1}
+                                        onChange={(e) => updateImeiField(item.id, idx, "imei1", e.target.value)}
+                                        className="font-mono text-xs h-8"
+                                        maxLength={15}
+                                        required
+                                      />
+                                      <Input
+                                        placeholder="IMEI 2"
+                                        value={imei.imei2}
+                                        onChange={(e) => updateImeiField(item.id, idx, "imei2", e.target.value)}
+                                        className="font-mono text-xs h-8"
+                                        maxLength={15}
+                                      />
+                                      <Input
+                                        placeholder="Brand"
+                                        value={imei.brand}
+                                        onChange={(e) => updateImeiField(item.id, idx, "brand", e.target.value)}
+                                        className="text-xs h-8"
+                                      />
+                                      <Input
+                                        placeholder="Model"
+                                        value={imei.model}
+                                        onChange={(e) => updateImeiField(item.id, idx, "model", e.target.value)}
+                                        className="text-xs h-8"
+                                      />
+                                      <Input
+                                        placeholder="Color"
+                                        value={imei.color}
+                                        onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
+                                        className="text-xs h-8"
+                                      />
+                                      <Input
+                                        placeholder="Storage (e.g. 128GB)"
+                                        value={imei.storageCapacity}
+                                        onChange={(e) => updateImeiField(item.id, idx, "storageCapacity", e.target.value)}
+                                        className="text-xs h-8"
+                                      />
+                                      <Input
+                                        placeholder="RAM (e.g. 8GB)"
+                                        value={imei.ram}
+                                        onChange={(e) => updateImeiField(item.id, idx, "ram", e.target.value)}
+                                        className="text-xs h-8"
+                                      />
+                                      <select
+                                        value={imei.conditionGrade}
+                                        onChange={(e) => updateImeiField(item.id, idx, "conditionGrade", e.target.value)}
+                                        className="text-xs h-8 rounded border px-2"
+                                      >
+                                        <option value="NEW">New</option>
+                                        <option value="OPEN_BOX">Open Box</option>
+                                        <option value="GRADE_A">Grade A</option>
+                                        <option value="GRADE_B">Grade B</option>
+                                        <option value="GRADE_C">Grade C</option>
+                                        <option value="REFURBISHED">Refurbished</option>
+                                      </select>
+                                    </div>
+                                  ))}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </Fragment>
                       );
                     })}

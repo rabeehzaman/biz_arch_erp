@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { productId, quantity, unitCost, stockDate, notes, warehouseId } = body;
+    const { productId, quantity, unitCost, stockDate, notes, warehouseId, deviceDetails } = body;
 
     if (!productId || !quantity || quantity <= 0 || !stockDate) {
       return NextResponse.json(
@@ -101,6 +101,31 @@ export async function POST(request: NextRequest) {
         organizationId,
         warehouseId || null
       );
+
+      // Create MobileDevice records if device details are provided
+      if (deviceDetails && deviceDetails.imeiNumbers?.length > 0) {
+        for (const imeiEntry of deviceDetails.imeiNumbers) {
+          await tx.mobileDevice.create({
+            data: {
+              organizationId,
+              imei1: imeiEntry.imei1,
+              imei2: imeiEntry.imei2 || null,
+              brand: imeiEntry.brand,
+              model: imeiEntry.model,
+              color: imeiEntry.color || null,
+              storageCapacity: imeiEntry.storageCapacity || null,
+              ram: imeiEntry.ram || null,
+              networkStatus: "UNLOCKED",
+              conditionGrade: imeiEntry.conditionGrade || "NEW",
+              productId,
+              supplierId: deviceDetails.supplierId,
+              inwardDate: parsedStockDate,
+              costPrice: parsedUnitCost,
+              currentStatus: "IN_STOCK",
+            },
+          });
+        }
+      }
 
       // Create auto journal entry: DR Inventory, CR Owner's Capital (Opening Balance Equity)
       const totalValue = parsedQuantity * parsedUnitCost;
