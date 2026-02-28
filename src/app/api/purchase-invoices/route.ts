@@ -102,6 +102,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate warehouse is provided when multi-branch is enabled
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { multiBranchEnabled: true },
+    });
+    if (org?.multiBranchEnabled && !warehouseId) {
+      return NextResponse.json(
+        { error: "Warehouse is required when multi-branch is enabled" },
+        { status: 400 }
+      );
+    }
+
     const purchaseInvoiceNumber = await generatePurchaseInvoiceNumber(organizationId);
     const purchaseDate = invoiceDate ? new Date(invoiceDate) : new Date();
 
