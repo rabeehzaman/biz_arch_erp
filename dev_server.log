@@ -2332,3 +2332,4 @@ Unique constraint failed on the fields: (`"organizationId"`, `code`)
  GET /api/auth/session 200 in 389ms (compile: 324ms, proxy.ts: 10ms, render: 55ms)
  GET /api/sidebar 200 in 625ms (compile: 11ms, proxy.ts: 342ms, render: 271ms)
  GET /api/settings 200 in 811ms (compile: 272ms, proxy.ts: 336ms, render: 203ms)
+✓ Compiled in 208ms

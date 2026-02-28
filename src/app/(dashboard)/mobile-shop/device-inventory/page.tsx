@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { PageAnimation } from "@/components/ui/page-animation";
-import { Plus, Smartphone, Loader2, Trash2 } from "lucide-react";
+import { Plus, Smartphone, Loader2, Trash2, Pencil } from "lucide-react";
 import { DeviceFormDialog } from "@/components/mobile-devices/device-form-dialog";
 import { toast } from "sonner";
 
@@ -51,6 +51,7 @@ export default function DeviceInventoryPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDevice, setEditDevice] = useState<Device | null>(null);
 
   const fetchDevices = async () => {
     setLoading(true);
@@ -106,7 +107,7 @@ export default function DeviceInventoryPage() {
             </h2>
             <p className="text-slate-500">Manage individual mobile devices</p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => { setEditDevice(null); setDialogOpen(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             Add Device
           </Button>
@@ -200,16 +201,29 @@ export default function DeviceInventoryPage() {
                         {device.supplier?.name || "-"}
                       </TableCell>
                       <TableCell>
-                        {device.currentStatus === "IN_STOCK" && (
+                        <div className="flex items-center gap-1 justify-end">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-red-500"
-                            onClick={() => handleDelete(device.id)}
+                            className="h-8 w-8 text-slate-400 hover:text-blue-500"
+                            onClick={() => {
+                              setEditDevice(device);
+                              setDialogOpen(true);
+                            }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                        )}
+                          {device.currentStatus === "IN_STOCK" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-400 hover:text-red-500"
+                              onClick={() => handleDelete(device.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -221,8 +235,12 @@ export default function DeviceInventoryPage() {
 
         <DeviceFormDialog
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setEditDevice(null);
+          }}
           onSuccess={fetchDevices}
+          editDevice={editDevice}
         />
       </div>
     </PageAnimation>
