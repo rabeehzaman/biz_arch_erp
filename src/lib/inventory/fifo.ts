@@ -484,13 +484,17 @@ export async function recalculateFromDate(
 
     const oldCOGS = item.costOfGoodsSold;
 
+    // Apply conversionFactor to get base quantity (e.g. 2 BOX * 10 = 20 PCS)
+    const baseQty = new Decimal(item.quantity).mul(new Decimal(item.conversionFactor || 1));
+
     const fifoResult = await consumeStockFIFO(
       item.productId,
-      item.quantity,
+      baseQty,
       item.id,
       item.invoice.issueDate,
       tx,
-      organizationId
+      organizationId,
+      item.invoice.warehouseId || null
     );
 
     const newCOGS = fifoResult.totalCOGS;
