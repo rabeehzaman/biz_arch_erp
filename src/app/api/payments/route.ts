@@ -65,8 +65,10 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { customerId, invoiceId, amount, paymentDate, paymentMethod, reference, notes, discountReceived: rawDiscount } = body;
+    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount } = body;
     const discountReceived = rawDiscount || 0;
+    // Normalize paymentMethod to uppercase enum value
+    const paymentMethod = rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH";
 
     if (!customerId || !amount) {
       return NextResponse.json(
@@ -89,7 +91,7 @@ export async function POST(request: NextRequest) {
           amount,
           discountReceived,
           paymentDate: parsedPaymentDate,
-          paymentMethod: paymentMethod || "CASH",
+          paymentMethod: paymentMethod,
           reference: reference || null,
           notes: notes || null,
           organizationId,
@@ -184,7 +186,7 @@ export async function POST(request: NextRequest) {
 
       // Create auto journal entry: DR Cash/Bank [amount], DR Sales Discounts [discount], CR Accounts Receivable [totalSettlement]
       const arAccount = await getSystemAccount(tx, organizationId, "1300");
-      const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod || "CASH");
+      const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod);
       if (!arAccount) {
         console.error(`[payments] No AR account (1300) found for org ${organizationId} — journal entry skipped for payment ${paymentNumber}. Ensure COA is seeded.`);
       }

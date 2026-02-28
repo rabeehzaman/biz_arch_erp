@@ -65,8 +65,10 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { supplierId, purchaseInvoiceId, amount, paymentDate, paymentMethod, reference, notes, discountGiven: rawDiscount } = body;
+    const { supplierId, purchaseInvoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountGiven: rawDiscount } = body;
     const discountGiven = rawDiscount || 0;
+    // Normalize paymentMethod to uppercase enum value
+    const paymentMethod = rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH";
 
     if (!supplierId || !amount) {
       return NextResponse.json(
@@ -89,7 +91,7 @@ export async function POST(request: NextRequest) {
           amount,
           discountGiven,
           paymentDate: parsedPaymentDate,
-          paymentMethod: paymentMethod || "CASH",
+          paymentMethod: paymentMethod,
           reference: reference || null,
           notes: notes || null,
           organizationId,
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
 
       // Create auto journal entry: DR Accounts Payable [totalSettlement], CR Cash/Bank [amount], CR Purchase Discounts [discount]
       const apAccount = await getSystemAccount(tx, organizationId, "2100");
-      const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod || "CASH");
+      const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod);
       if (!apAccount) {
         console.error(`[supplier-payments] No AP account (2100) found for org ${organizationId} — journal entry skipped for payment ${paymentNumber}. Ensure COA is seeded.`);
       }
