@@ -43,10 +43,11 @@ export async function POST(request: NextRequest) {
         }
 
         const organizationId = session.user.organizationId;
+        const normalizedCode = code.toUpperCase();
 
-        // Check code uniqueness
+        // Check code uniqueness (compare uppercase to catch case variants)
         const existing = await prisma.branch.findFirst({
-            where: { organizationId, code },
+            where: { organizationId, code: normalizedCode },
         });
         if (existing) {
             return NextResponse.json({ error: "A branch with this code already exists" }, { status: 409 });
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
             data: {
                 organizationId,
                 name,
-                code: code.toUpperCase(),
+                code: normalizedCode,
                 address: address || null,
                 city: city || null,
                 state: state || null,

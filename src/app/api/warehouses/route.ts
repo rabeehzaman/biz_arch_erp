@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         }
 
         const organizationId = session.user.organizationId;
+        const normalizedCode = code.toUpperCase();
 
         // Verify branch belongs to org
         const branch = await prisma.branch.findFirst({
@@ -59,9 +60,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Branch not found" }, { status: 404 });
         }
 
-        // Check code uniqueness
+        // Check code uniqueness (compare uppercase to catch case variants)
         const existing = await prisma.warehouse.findFirst({
-            where: { organizationId, code },
+            where: { organizationId, code: normalizedCode },
         });
         if (existing) {
             return NextResponse.json({ error: "A warehouse with this code already exists" }, { status: 409 });
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
                 organizationId,
                 branchId,
                 name,
-                code: code.toUpperCase(),
+                code: normalizedCode,
                 address: address || null,
             },
             include: {

@@ -59,7 +59,7 @@ export function UnitsSettings() {
 
   const fetchUnits = async () => {
     try {
-      const response = await fetch("/api/units");
+      const response = await fetch("/api/units?includeInactive=true");
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
       setUnits(data);

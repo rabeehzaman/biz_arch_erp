@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -11,9 +11,14 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const { searchParams } = new URL(request.url);
+    const includeInactive = searchParams.get("includeInactive") === "true";
 
     const units = await prisma.unit.findMany({
-      where: { isActive: true, organizationId },
+      where: {
+        organizationId,
+        ...(includeInactive ? {} : { isActive: true }),
+      },
       orderBy: { code: "asc" },
       include: {
         _count: {

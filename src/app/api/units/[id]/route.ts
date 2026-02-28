@@ -108,12 +108,16 @@ export async function DELETE(
     const organizationId = getOrgId(session);
     const { id } = await params;
 
-    // Check if unit has associated products
+    // Check if unit has associated products or conversions
     const unit = await prisma.unit.findUnique({
       where: { id, organizationId },
       include: {
         _count: {
-          select: { products: true },
+          select: {
+            products: true,
+            conversionsFrom: true,
+            conversionsTo: true,
+          },
         },
       },
     });
@@ -122,19 +126,27 @@ export async function DELETE(
       return NextResponse.json({ error: "Unit not found" }, { status: 404 });
     }
 
-    if (unit._count.products > 0) {
+    const hasProducts = unit._count.products > 0;
+    const hasConversions = unit._count.conversionsFrom > 0 || unit._count.conversionsTo > 0;
+
+    if (hasProducts || hasConversions) {
       // Soft delete - just deactivate
       const updated = await prisma.unit.update({
         where: { id, organizationId },
         data: { isActive: false },
       });
+      const reason = hasProducts && hasConversions
+        ? "has associated products and conversion rules"
+        : hasProducts
+          ? "has associated products"
+          : "has associated conversion rules";
       return NextResponse.json({
-        message: "Unit deactivated (has associated products)",
+        message: `Unit deactivated (${reason})`,
         unit: updated,
       });
     }
 
-    // Hard delete if no products
+    // Hard delete if no products and no conversions
     await prisma.unit.delete({
       where: { id, organizationId },
     });

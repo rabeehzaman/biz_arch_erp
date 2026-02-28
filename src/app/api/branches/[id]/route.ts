@@ -63,10 +63,10 @@ export async function PUT(
             return NextResponse.json({ error: "Branch not found" }, { status: 404 });
         }
 
-        // Check code uniqueness if changing
-        if (code && code !== existing.code) {
+        // Check code uniqueness if changing (normalize to uppercase before comparing)
+        if (code && code.toUpperCase() !== existing.code) {
             const duplicate = await prisma.branch.findFirst({
-                where: { organizationId, code, id: { not: id } },
+                where: { organizationId, code: code.toUpperCase(), id: { not: id } },
             });
             if (duplicate) {
                 return NextResponse.json({ error: "A branch with this code already exists" }, { status: 409 });

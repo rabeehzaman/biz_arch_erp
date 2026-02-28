@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         const json = await req.json();
         const { fromUnitId, toUnitId, conversionFactor } = json;
 
-        if (!fromUnitId || !toUnitId || !conversionFactor) {
+        if (!fromUnitId || !toUnitId || conversionFactor === undefined || conversionFactor === null || conversionFactor === "") {
             return NextResponse.json(
                 { error: "Missing required fields" },
                 { status: 400 }
