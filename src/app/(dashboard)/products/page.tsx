@@ -51,6 +51,7 @@ interface Product {
   gstRate: number | null;
   hsnCode: string | null;
   isService: boolean;
+  isImeiTracked: boolean;
   isActive: boolean;
   createdAt: string;
 }

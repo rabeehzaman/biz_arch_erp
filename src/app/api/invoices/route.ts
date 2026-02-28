@@ -265,6 +265,31 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Mark MobileDevices as SOLD for IMEI-tracked items
+      for (let i = 0; i < invoice.items.length; i++) {
+        const invoiceItem = invoice.items[i];
+        const originalItem = items[i];
+        if (invoiceItem.productId && originalItem.selectedImeis?.length > 0) {
+          for (const imei of originalItem.selectedImeis) {
+            await tx.mobileDevice.updateMany({
+              where: {
+                organizationId,
+                imei1: imei,
+                currentStatus: "IN_STOCK",
+              },
+              data: {
+                currentStatus: "SOLD",
+                customerId,
+                salesInvoiceId: invoice.id,
+                outwardDate: invoiceDate,
+                soldPrice: invoiceItem.unitPrice,
+                salespersonId: userId,
+              },
+            });
+          }
+        }
+      }
+
       // Update customer balance
       await tx.customer.update({
         where: { id: customerId, organizationId },

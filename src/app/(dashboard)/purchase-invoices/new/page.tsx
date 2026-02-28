@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,18 @@ interface Product {
   unit: { id: string; name: string; code: string } | null;
   gstRate?: number;
   hsnCode?: string;
+  isImeiTracked?: boolean;
+}
+
+interface ImeiEntry {
+  imei1: string;
+  imei2: string;
+  brand: string;
+  model: string;
+  color: string;
+  storageCapacity: string;
+  ram: string;
+  conditionGrade: string;
 }
 
 interface LineItem {
@@ -47,6 +59,7 @@ interface LineItem {
   discount: number;
   gstRate: number;
   hsnCode: string;
+  imeiNumbers: ImeiEntry[];
 }
 
 export default function NewPurchaseInvoicePage() {
@@ -72,7 +85,7 @@ export default function NewPurchaseInvoicePage() {
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", quantity: 1, unitId: "", conversionFactor: 1, unitCost: 0, discount: 0, gstRate: 0, hsnCode: "" },
+    { id: "1", productId: "", quantity: 1, unitId: "", conversionFactor: 1, unitCost: 0, discount: 0, gstRate: 0, hsnCode: "", imeiNumbers: [] },
   ]);
 
   const { data: session } = useSession();
@@ -140,6 +153,7 @@ export default function NewPurchaseInvoicePage() {
         discount: 0,
         gstRate: 0,
         hsnCode: "",
+        imeiNumbers: [],
       },
     ]);
 
@@ -215,6 +229,17 @@ export default function NewPurchaseInvoicePage() {
 
     setLineItems(updatedItems);
 
+    // Sync IMEI count when quantity or product changes
+    if (field === "quantity" || field === "productId") {
+      const updatedItem = updatedItems.find((i) => i.id === id);
+      if (updatedItem) {
+        const prod = products.find((p) => p.id === updatedItem.productId);
+        if (prod?.isImeiTracked) {
+          setTimeout(() => syncImeiCount(id, updatedItem.quantity), 0);
+        }
+      }
+    }
+
     // Add new line after state update if needed
     if (shouldAddNewLine) {
       setTimeout(() => {
@@ -230,10 +255,39 @@ export default function NewPurchaseInvoicePage() {
             discount: 0,
             gstRate: 0,
             hsnCode: "",
+            imeiNumbers: [],
           },
         ]);
       }, 0);
     }
+  };
+
+  const makeEmptyImei = (): ImeiEntry => ({
+    imei1: "", imei2: "", brand: "", model: "", color: "", storageCapacity: "", ram: "", conditionGrade: "NEW",
+  });
+
+  const syncImeiCount = (itemId: string, qty: number) => {
+    setLineItems((prev) => prev.map((item) => {
+      if (item.id !== itemId) return item;
+      const product = products.find((p) => p.id === item.productId);
+      if (!product?.isImeiTracked) return item;
+      const count = Math.max(0, Math.floor(qty));
+      const current = item.imeiNumbers;
+      if (current.length === count) return item;
+      if (current.length < count) {
+        return { ...item, imeiNumbers: [...current, ...Array(count - current.length).fill(null).map(() => makeEmptyImei())] };
+      }
+      return { ...item, imeiNumbers: current.slice(0, count) };
+    }));
+  };
+
+  const updateImeiField = (itemId: string, imeiIndex: number, field: keyof ImeiEntry, value: string) => {
+    setLineItems((prev) => prev.map((item) => {
+      if (item.id !== itemId) return item;
+      const updated = [...item.imeiNumbers];
+      updated[imeiIndex] = { ...updated[imeiIndex], [field]: value };
+      return { ...item, imeiNumbers: updated };
+    }));
   };
 
   const calculateSubtotal = () => {
@@ -297,6 +351,7 @@ export default function NewPurchaseInvoicePage() {
               discount: item.discount,
               gstRate: item.gstRate,
               hsnCode: item.hsnCode,
+              ...(product?.isImeiTracked && item.imeiNumbers.length > 0 && { imeiNumbers: item.imeiNumbers }),
             };
           }),
         }),
@@ -437,8 +492,9 @@ export default function NewPurchaseInvoicePage() {
                   <TableBody>
                     {lineItems.map((item, index) => {
                       const product = products.find((p) => p.id === item.productId);
+                      const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
                       return (
-                        <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
+                        <Fragment key={item.id}><TableRow className="group hover:bg-slate-50 border-b">
                           <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                             <div ref={(el) => {
                               if (el) {
@@ -610,6 +666,77 @@ export default function NewPurchaseInvoicePage() {
                             </Button>
                           </TableCell>
                         </TableRow>
+                        {isImeiTracked && item.imeiNumbers.length > 0 && (
+                          <TableRow key={`${item.id}-imei`} className="bg-blue-50/50">
+                            <TableCell colSpan={99} className="p-3">
+                              <div className="space-y-2">
+                                <p className="text-xs font-medium text-blue-700">IMEI Details ({item.imeiNumbers.length} device{item.imeiNumbers.length > 1 ? "s" : ""})</p>
+                                {item.imeiNumbers.map((imei, idx) => (
+                                  <div key={idx} className="grid grid-cols-4 gap-2 p-2 bg-white rounded border">
+                                    <Input
+                                      placeholder={`IMEI 1 *`}
+                                      value={imei.imei1}
+                                      onChange={(e) => updateImeiField(item.id, idx, "imei1", e.target.value)}
+                                      className="font-mono text-xs h-8"
+                                      maxLength={15}
+                                      required
+                                    />
+                                    <Input
+                                      placeholder="IMEI 2"
+                                      value={imei.imei2}
+                                      onChange={(e) => updateImeiField(item.id, idx, "imei2", e.target.value)}
+                                      className="font-mono text-xs h-8"
+                                      maxLength={15}
+                                    />
+                                    <Input
+                                      placeholder="Brand"
+                                      value={imei.brand}
+                                      onChange={(e) => updateImeiField(item.id, idx, "brand", e.target.value)}
+                                      className="text-xs h-8"
+                                    />
+                                    <Input
+                                      placeholder="Model"
+                                      value={imei.model}
+                                      onChange={(e) => updateImeiField(item.id, idx, "model", e.target.value)}
+                                      className="text-xs h-8"
+                                    />
+                                    <Input
+                                      placeholder="Color"
+                                      value={imei.color}
+                                      onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
+                                      className="text-xs h-8"
+                                    />
+                                    <Input
+                                      placeholder="Storage (e.g. 128GB)"
+                                      value={imei.storageCapacity}
+                                      onChange={(e) => updateImeiField(item.id, idx, "storageCapacity", e.target.value)}
+                                      className="text-xs h-8"
+                                    />
+                                    <Input
+                                      placeholder="RAM (e.g. 8GB)"
+                                      value={imei.ram}
+                                      onChange={(e) => updateImeiField(item.id, idx, "ram", e.target.value)}
+                                      className="text-xs h-8"
+                                    />
+                                    <select
+                                      value={imei.conditionGrade}
+                                      onChange={(e) => updateImeiField(item.id, idx, "conditionGrade", e.target.value)}
+                                      className="text-xs h-8 rounded border px-2"
+                                    >
+                                      <option value="NEW">New</option>
+                                      <option value="OPEN_BOX">Open Box</option>
+                                      <option value="GRADE_A">Grade A</option>
+                                      <option value="GRADE_B">Grade B</option>
+                                      <option value="GRADE_C">Grade C</option>
+                                      <option value="REFURBISHED">Refurbished</option>
+                                    </select>
+                                  </div>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        </Fragment>
                       );
                     })}
                   </TableBody>

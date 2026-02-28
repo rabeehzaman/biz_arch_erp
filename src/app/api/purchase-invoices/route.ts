@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
           supplier: true,
           items: {
             include: {
-              product: true,
+              product: { select: { id: true, name: true, isImeiTracked: true } },
             },
           },
         },
@@ -241,6 +241,38 @@ export async function POST(request: NextRequest) {
           organizationId,
           warehouseId || null
         );
+      }
+
+      // Create MobileDevice records for IMEI-tracked items
+      for (let i = 0; i < invoice.items.length; i++) {
+        const item = invoice.items[i];
+        const originalItem = items[i];
+        if (item.product?.isImeiTracked && originalItem.imeiNumbers?.length > 0) {
+          for (const imeiEntry of originalItem.imeiNumbers) {
+            await tx.mobileDevice.create({
+              data: {
+                organizationId,
+                imei1: imeiEntry.imei1,
+                imei2: imeiEntry.imei2 || null,
+                serialNumber: imeiEntry.serialNumber || null,
+                brand: imeiEntry.brand || item.product.name,
+                model: imeiEntry.model || item.product.name,
+                color: imeiEntry.color || null,
+                storageCapacity: imeiEntry.storageCapacity || null,
+                ram: imeiEntry.ram || null,
+                networkStatus: imeiEntry.networkStatus || "UNLOCKED",
+                conditionGrade: imeiEntry.conditionGrade || "NEW",
+                batteryHealthPercentage: imeiEntry.batteryHealthPercentage ?? null,
+                productId: item.productId,
+                supplierId,
+                purchaseInvoiceId: invoice.id,
+                inwardDate: purchaseDate,
+                costPrice: Number(item.unitCost),
+                currentStatus: "IN_STOCK",
+              },
+            });
+          }
+        }
       }
 
       // Update supplier balance (Accounts Payable)

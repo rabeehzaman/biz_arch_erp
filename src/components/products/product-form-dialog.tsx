@@ -33,6 +33,7 @@ interface Product {
     hsnCode: string | null;
     gstRate: number | null;
     isService: boolean;
+    isImeiTracked: boolean;
     isActive: boolean;
     createdAt: string;
 }
@@ -63,6 +64,7 @@ export function ProductFormDialog({
         hsnCode: "",
         gstRate: "0",
         isService: false,
+        isImeiTracked: false,
     });
 
     useEffect(() => {
@@ -77,6 +79,7 @@ export function ProductFormDialog({
                 hsnCode: productToEdit.hsnCode || "",
                 gstRate: productToEdit.gstRate?.toString() || "0",
                 isService: productToEdit.isService || false,
+                isImeiTracked: productToEdit.isImeiTracked || false,
             });
             setFormErrors({});
         } else if (!open) {
@@ -110,6 +113,7 @@ export function ProductFormDialog({
             hsnCode: formData.hsnCode || null,
             gstRate: parseFloat(formData.gstRate) || 0,
             isService: formData.isService,
+            isImeiTracked: formData.isImeiTracked,
         };
 
         try {
@@ -158,6 +162,7 @@ export function ProductFormDialog({
             hsnCode: "",
             gstRate: "0",
             isService: false,
+            isImeiTracked: false,
         });
     };
 
@@ -289,12 +294,27 @@ export function ProductFormDialog({
                                 id="prod-isService"
                                 checked={formData.isService}
                                 onChange={(e) =>
-                                    setFormData({ ...formData, isService: e.target.checked })
+                                    setFormData({ ...formData, isService: e.target.checked, ...(e.target.checked && { isImeiTracked: false }) })
                                 }
                                 className="h-4 w-4 rounded border-gray-300"
                             />
                             <Label htmlFor="prod-isService">Service product (no inventory tracking)</Label>
                         </div>
+
+                        {session?.user?.isMobileShopModuleEnabled && !formData.isService && (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="prod-isImeiTracked"
+                                    checked={formData.isImeiTracked}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, isImeiTracked: e.target.checked })
+                                    }
+                                    className="h-4 w-4 rounded border-gray-300"
+                                />
+                                <Label htmlFor="prod-isImeiTracked">Track by IMEI (individual device tracking)</Label>
+                            </div>
+                        )}
 
                     </div>
                     <DialogFooter className="mt-auto pt-4 border-t">

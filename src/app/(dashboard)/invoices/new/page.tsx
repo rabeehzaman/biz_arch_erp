@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +33,20 @@ interface Product {
   unitId: string | null;
   unit: { id: string; name: string; code: string } | null;
   isService?: boolean;
+  isImeiTracked?: boolean;
   availableStock?: number;
   gstRate?: number;
   hsnCode?: string;
+}
+
+interface MobileDeviceOption {
+  id: string;
+  imei1: string;
+  imei2: string | null;
+  brand: string;
+  model: string;
+  color: string | null;
+  storageCapacity: string | null;
 }
 
 interface LineItem {
@@ -48,6 +59,7 @@ interface LineItem {
   discount: number;
   gstRate: number;
   hsnCode: string;
+  selectedImeis: string[];
 }
 
 export default function NewInvoicePage() {
@@ -73,8 +85,9 @@ export default function NewInvoicePage() {
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", quantity: 1, unitId: "", conversionFactor: 1, unitPrice: 0, discount: 0, gstRate: 0, hsnCode: "" },
+    { id: "1", productId: "", quantity: 1, unitId: "", conversionFactor: 1, unitPrice: 0, discount: 0, gstRate: 0, hsnCode: "", selectedImeis: [] },
   ]);
+  const [availableDevices, setAvailableDevices] = useState<Record<string, MobileDeviceOption[]>>({});
 
   const { data: session } = useSession();
   const { unitConversions } = useUnitConversions();
@@ -141,6 +154,7 @@ export default function NewInvoicePage() {
         discount: 0,
         gstRate: 0,
         hsnCode: "",
+        selectedImeis: [],
       },
     ]);
 
@@ -214,6 +228,14 @@ export default function NewInvoicePage() {
 
     setLineItems(updatedItems);
 
+    // Fetch available devices for IMEI-tracked products
+    if (field === "productId") {
+      const prod = products.find((p) => p.id === value);
+      if (prod?.isImeiTracked && session?.user?.isMobileShopModuleEnabled) {
+        fetchDevicesForProduct(value as string);
+      }
+    }
+
     // Add new line after state update if needed
     if (shouldAddNewLine) {
       setTimeout(() => {
@@ -229,10 +251,35 @@ export default function NewInvoicePage() {
             discount: 0,
             gstRate: 0,
             hsnCode: "",
+            selectedImeis: [],
           },
         ]);
       }, 0);
     }
+  };
+
+  const fetchDevicesForProduct = async (productId: string) => {
+    if (availableDevices[productId]) return;
+    try {
+      const res = await fetch(`/api/mobile-devices?productId=${productId}&status=IN_STOCK`);
+      if (res.ok) {
+        const devices = await res.json();
+        setAvailableDevices((prev) => ({ ...prev, [productId]: devices }));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const toggleImei = (itemId: string, imei: string) => {
+    setLineItems((prev) => prev.map((item) => {
+      if (item.id !== itemId) return item;
+      const exists = item.selectedImeis.includes(imei);
+      const newImeis = exists
+        ? item.selectedImeis.filter((i) => i !== imei)
+        : [...item.selectedImeis, imei];
+      return { ...item, selectedImeis: newImeis, quantity: newImeis.length || 1 };
+    }));
   };
 
   const calculateSubtotal = () => {
@@ -296,6 +343,7 @@ export default function NewInvoicePage() {
               discount: item.discount,
               gstRate: item.gstRate,
               hsnCode: item.hsnCode,
+              ...(product?.isImeiTracked && item.selectedImeis.length > 0 && { selectedImeis: item.selectedImeis }),
             };
           }),
         }),
@@ -438,9 +486,12 @@ export default function NewInvoicePage() {
                       const availableStock = product?.availableStock ?? 0;
                       const hasStockShortfall = item.productId && !product?.isService && item.quantity > availableStock;
                       const shortfall = item.quantity - availableStock;
+                      const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
+                      const devices = isImeiTracked ? (availableDevices[item.productId] || []) : [];
 
                       return (
-                        <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
+                        <Fragment key={item.id}>
+                        <TableRow className="group hover:bg-slate-50 border-b">
                           <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                             <div ref={(el) => {
                               if (el) {
@@ -621,6 +672,44 @@ export default function NewInvoicePage() {
                             </Button>
                           </TableCell>
                         </TableRow>
+                        {isImeiTracked && devices.length > 0 && (
+                          <TableRow className="bg-green-50/50">
+                            <TableCell colSpan={99} className="p-3">
+                              <p className="text-xs font-medium text-green-700 mb-2">
+                                Select IMEIs to sell ({item.selectedImeis.length} selected, {devices.length} available)
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {devices.map((device) => {
+                                  const selected = item.selectedImeis.includes(device.imei1);
+                                  return (
+                                    <button
+                                      key={device.id}
+                                      type="button"
+                                      onClick={() => toggleImei(item.id, device.imei1)}
+                                      className={`px-3 py-1.5 rounded text-xs font-mono border transition-colors ${
+                                        selected
+                                          ? "bg-green-600 text-white border-green-700"
+                                          : "bg-white text-slate-700 border-slate-300 hover:border-green-400"
+                                      }`}
+                                    >
+                                      {device.imei1}
+                                      {device.color && ` · ${device.color}`}
+                                      {device.storageCapacity && ` · ${device.storageCapacity}`}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {isImeiTracked && devices.length === 0 && item.productId && (
+                          <TableRow className="bg-yellow-50/50">
+                            <TableCell colSpan={99} className="p-2">
+                              <p className="text-xs text-yellow-700">No devices in stock for this product</p>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        </Fragment>
                       );
                     })}
                   </TableBody>

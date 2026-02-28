@@ -37,6 +37,7 @@ export function OrgSettingsDialog({
   const [eInvoicingEnabled, setEInvoicingEnabled] = useState(false);
   const [multiUnitEnabled, setMultiUnitEnabled] = useState(false);
   const [multiBranchEnabled, setMultiBranchEnabled] = useState(false);
+  const [isMobileShopModuleEnabled, setIsMobileShopModuleEnabled] = useState(false);
   const [gstin, setGstin] = useState("");
   const [gstStateCode, setGstStateCode] = useState("");
 
@@ -51,6 +52,7 @@ export function OrgSettingsDialog({
           setEInvoicingEnabled(data.eInvoicingEnabled || false);
           setMultiUnitEnabled(data.multiUnitEnabled || false);
           setMultiBranchEnabled(data.multiBranchEnabled || false);
+          setIsMobileShopModuleEnabled(data.isMobileShopModuleEnabled || false);
           setGstin(data.gstin || "");
           setGstStateCode(data.gstStateCode || "");
         })
@@ -105,6 +107,7 @@ export function OrgSettingsDialog({
           eInvoicingEnabled: gstEnabled ? eInvoicingEnabled : false,
           multiUnitEnabled,
           multiBranchEnabled,
+          isMobileShopModuleEnabled,
           gstin: gstEnabled ? gstin : null,
           gstStateCode: gstEnabled ? gstStateCode : null,
         }),
@@ -229,6 +232,20 @@ export function OrgSettingsDialog({
                 id="multiBranchEnabled"
                 checked={multiBranchEnabled}
                 onCheckedChange={setMultiBranchEnabled}
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="space-y-0.5">
+                <Label htmlFor="isMobileShopModuleEnabled">Enable Mobile Shop</Label>
+                <p className="text-xs text-muted-foreground">
+                  Track individual mobile devices by IMEI from purchase to sale
+                </p>
+              </div>
+              <Switch
+                id="isMobileShopModuleEnabled"
+                checked={isMobileShopModuleEnabled}
+                onCheckedChange={setIsMobileShopModuleEnabled}
               />
             </div>
           </div>

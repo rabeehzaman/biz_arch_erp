@@ -51,8 +51,11 @@ export async function getProductStock(
   tx: PrismaTransaction = prisma,
   warehouseId?: string | null
 ): Promise<StockInfo | null> {
-  const lotWhere: any = { remainingQuantity: { gt: 0 } };
-  if (warehouseId) lotWhere.warehouseId = warehouseId;
+  // Include both the specific warehouse's lots AND null-warehouse lots (legacy stock)
+  const lotWhere: any = {
+    remainingQuantity: { gt: 0 },
+    ...(warehouseId ? { OR: [{ warehouseId }, { warehouseId: null }] } : {}),
+  };
 
   const product = await tx.product.findUnique({
     where: { id: productId },
@@ -113,12 +116,17 @@ export async function calculateFIFOConsumption(
       : new Decimal(quantityNeeded);
 
   // Get all lots with remaining quantity, ordered by lotDate ASC (FIFO)
+  // When a warehouseId is provided, include both that warehouse's lots AND
+  // lots with warehouseId=NULL (legacy stock created before multi-branch was enabled).
+  // This prevents COGS = $0 on invoices that should consume pre-existing unassigned stock.
   const lotWhere: any = {
     productId,
     remainingQuantity: { gt: 0 },
     lotDate: { lte: asOfDate },
+    ...(warehouseId
+      ? { OR: [{ warehouseId }, { warehouseId: null }] }
+      : {}),
   };
-  if (warehouseId) lotWhere.warehouseId = warehouseId;
 
   const lots = await tx.stockLot.findMany({
     where: lotWhere,

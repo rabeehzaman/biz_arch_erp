@@ -19,7 +19,8 @@ model Organization {
   gstEnabled         Boolean  @default(false)
   eInvoicingEnabled  Boolean  @default(false)
   multiUnitEnabled   Boolean  @default(false)
-  multiBranchEnabled Boolean  @default(false)
+  multiBranchEnabled         Boolean  @default(false)
+  isMobileShopModuleEnabled  Boolean  @default(false)
   gstin              String?
   gstStateCode       String?
   createdAt          DateTime @default(now())
@@ -69,6 +70,7 @@ model Organization {
   stockTransfers             StockTransfer[]
   stockTransferItems         StockTransferItem[]
   userWarehouseAccess        UserWarehouseAccess[]
+  mobileDevices              MobileDevice[]
 
   @@map("organizations")
 }
@@ -91,6 +93,7 @@ model User {
   creditNotes         CreditNote[]
   posSessions         POSSession[]
   warehouseAccess     UserWarehouseAccess[]
+  soldDevices         MobileDevice[]     @relation("SoldDevices")
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -139,6 +142,7 @@ model Product {
   hsnCode        String?
   gstRate        Decimal          @default(0) @db.Decimal(5, 2)
   isService      Boolean          @default(false)
+  isImeiTracked  Boolean          @default(false)
   isActive       Boolean          @default(true)
   organizationId String
   organization   Organization     @relation(fields: [organizationId], references: [id])
@@ -156,6 +160,7 @@ model Product {
   debitNoteItems       DebitNoteItem[]
   costAuditLogs        CostAuditLog[]
   stockTransferItems   StockTransferItem[]
+  mobileDevices        MobileDevice[]
 
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])
@@ -217,6 +222,7 @@ model Customer {
   assignments   CustomerAssignment[]
   creditNotes   CreditNote[]
   posHeldOrders POSHeldOrder[]
+  mobileDevices MobileDevice[]
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -266,6 +272,7 @@ model Supplier {
   transactions     SupplierTransaction[]
   debitNotes       DebitNote[]
   expenses         Expense[]
+  mobileDevices    MobileDevice[]
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -326,6 +333,7 @@ model Invoice {
   paymentAllocations PaymentAllocation[]
   quotation          Quotation?
   creditNotes        CreditNote[]
+  mobileDevices      MobileDevice[]
 
   @@unique([organizationId, invoiceNumber])
   @@index([organizationId])
@@ -509,6 +517,7 @@ model PurchaseInvoice {
   paymentAllocations SupplierPaymentAllocation[]
   stockLots          StockLot[]
   debitNotes         DebitNote[]
+  mobileDevices      MobileDevice[]
 
   @@unique([organizationId, purchaseInvoiceNumber])
   @@index([organizationId])
@@ -1606,4 +1615,91 @@ model UserWarehouseAccess {
   @@index([userId])
   @@index([organizationId])
   @@map("user_warehouse_access")
+}
+
+// ==================== MOBILE DEVICE TRACKING ====================
+
+enum DeviceStatus {
+  IN_STOCK
+  RESERVED
+  SOLD
+  IN_REPAIR
+  RMA
+}
+
+enum ConditionGrade {
+  NEW
+  OPEN_BOX
+  GRADE_A
+  GRADE_B
+  GRADE_C
+  REFURBISHED
+}
+
+enum NetworkStatus {
+  UNLOCKED
+  LOCKED
+}
+
+model MobileDevice {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // Identification
+  imei1            String
+  imei2            String?
+  serialNumber     String?
+  brand            String
+  model            String
+  color            String?
+  storageCapacity  String?
+  ram              String?
+  networkStatus    NetworkStatus  @default(UNLOCKED)
+
+  // Inventory & Condition
+  currentStatus            DeviceStatus   @default(IN_STOCK)
+  conditionGrade           ConditionGrade @default(NEW)
+  batteryHealthPercentage  Int?
+  includedAccessories      Json?
+
+  // Product link
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  // Sourcing & Cost
+  supplierId        String
+  supplier          Supplier         @relation(fields: [supplierId], references: [id])
+  purchaseInvoiceId String?
+  purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+  inwardDate        DateTime         @default(now())
+  costPrice         Decimal          @db.Decimal(10, 2)
+  landedCost        Decimal          @default(0) @db.Decimal(10, 2)
+  sellingPrice      Decimal          @default(0) @db.Decimal(10, 2)
+
+  // Sale Details
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id])
+  salesInvoiceId String?
+  salesInvoice   Invoice?  @relation(fields: [salesInvoiceId], references: [id])
+  outwardDate    DateTime?
+  soldPrice      Decimal?  @db.Decimal(10, 2)
+  salespersonId  String?
+  salesperson    User?     @relation("SoldDevices", fields: [salespersonId], references: [id])
+
+  // Warranty
+  supplierWarrantyExpiry  DateTime?
+  customerWarrantyExpiry  DateTime?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, imei1])
+  @@index([organizationId])
+  @@index([organizationId, imei2])
+  @@index([organizationId, currentStatus])
+  @@index([organizationId, supplierId])
+  @@index([organizationId, salesInvoiceId])
+  @@map("mobile_devices")
 }

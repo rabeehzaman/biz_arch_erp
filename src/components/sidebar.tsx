@@ -35,6 +35,8 @@ import {
   ShoppingCart,
   Warehouse,
   GitBranch,
+  Smartphone,
+  Search,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -100,6 +102,11 @@ const inventoryNavigation = [
   { name: "Branches", href: "/inventory/branches", icon: GitBranch },
   { name: "Stock Transfers", href: "/inventory/stock-transfers", icon: ArrowRightLeft },
   { name: "Opening Stock", href: "/inventory/opening-stock", icon: Package },
+];
+
+const mobileShopNavigation = [
+  { name: "IMEI Lookup", href: "/mobile-shop/imei-lookup", icon: Search },
+  { name: "Device Inventory", href: "/mobile-shop/device-inventory", icon: Smartphone },
 ];
 
 const superadminNavigation = [
@@ -184,7 +191,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const visibleReports = filterItems(reportsNavigation);
   const visibleBottom = filterItems(bottomNavigation);
   const visibleInventory = filterItems(inventoryNavigation);
+  const visibleMobileShop = filterItems(mobileShopNavigation);
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
+  const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
 
   return (
     <>
@@ -245,6 +254,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 title="Inventory"
                 icon={Warehouse}
                 items={visibleInventory}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            )}
+
+            {isMobileShopEnabled && visibleMobileShop.length > 0 && (
+              <CollapsibleSection
+                title="Mobile Shop"
+                icon={Smartphone}
+                items={visibleMobileShop}
                 pathname={pathname}
                 onNavigate={onNavigate}
               />

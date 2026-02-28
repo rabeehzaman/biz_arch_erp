@@ -62,7 +62,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, slug, gstEnabled, eInvoicingEnabled, multiUnitEnabled, multiBranchEnabled, gstin, gstStateCode } = body;
+    const { name, slug, gstEnabled, eInvoicingEnabled, multiUnitEnabled, multiBranchEnabled, isMobileShopModuleEnabled, gstin, gstStateCode } = body;
 
     // Basic field update validation
     if (slug && !/^[a-z0-9-]+$/.test(slug)) {
@@ -111,6 +111,7 @@ export async function PUT(
     if (eInvoicingEnabled !== undefined) updateData.eInvoicingEnabled = gstEnabled ? eInvoicingEnabled : false;
     if (multiUnitEnabled !== undefined) updateData.multiUnitEnabled = multiUnitEnabled;
     if (multiBranchEnabled !== undefined) updateData.multiBranchEnabled = multiBranchEnabled;
+    if (isMobileShopModuleEnabled !== undefined) updateData.isMobileShopModuleEnabled = isMobileShopModuleEnabled;
     if (gstin !== undefined) updateData.gstin = gstin || null;
     if (gstStateCode !== undefined) updateData.gstStateCode = gstStateCode || null;
 

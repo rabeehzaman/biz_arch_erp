@@ -17,3 +17,7 @@ export function getOrgStateCode(session: Session): string | null {
 export function isEInvoicingEnabled(session: Session): boolean {
   return (session.user as { eInvoicingEnabled?: boolean }).eInvoicingEnabled === true;
 }
+
+export function isMobileShopModuleEnabled(session: Session): boolean {
+  return (session.user as { isMobileShopModuleEnabled?: boolean }).isMobileShopModuleEnabled === true;
+}
