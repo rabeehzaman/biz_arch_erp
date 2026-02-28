@@ -79,6 +79,7 @@ interface CheckoutBody {
   payments: CheckoutPayment[];
   heldOrderId?: string;
   notes?: string;
+  sessionId?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     const body: CheckoutBody = await request.json();
-    const { customerId, items, payments, heldOrderId, notes } = body;
+    const { customerId, items, payments, heldOrderId, notes, sessionId } = body;
 
     // Validate required fields
     if (!items || items.length === 0) {
@@ -121,9 +122,13 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       // ── 1. Validate POS session ──────────────────────────────────────
-      const posSession = await tx.pOSSession.findFirst({
-        where: { organizationId, userId, status: "OPEN" },
-      });
+      const posSession = sessionId
+        ? await tx.pOSSession.findFirst({
+            where: { id: sessionId, organizationId, status: "OPEN" },
+          })
+        : await tx.pOSSession.findFirst({
+            where: { organizationId, userId, status: "OPEN" },
+          });
 
       if (!posSession) {
         throw new Error("NO_OPEN_SESSION");

@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Clock, LogOut, PauseCircle, Printer } from "lucide-react";
+import { ArrowLeft, Building2, Clock, LogOut, MapPin, PauseCircle, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -12,17 +12,23 @@ interface POSHeaderProps {
     id: string;
     sessionNumber: string;
   } | null;
+  branchName?: string;
+  warehouseName?: string;
   heldOrdersCount: number;
   onHeldOrdersClick: () => void;
   onCloseSession: () => void;
+  onBackToSessions?: () => void;
   onReprintReceipt?: () => void;
 }
 
 export function POSHeader({
   session,
+  branchName,
+  warehouseName,
   heldOrdersCount,
   onHeldOrdersClick,
   onCloseSession,
+  onBackToSessions,
   onReprintReceipt,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
@@ -34,9 +40,22 @@ export function POSHeader({
     return () => clearInterval(timer);
   }, []);
 
+  const locationLabel = [branchName, warehouseName].filter(Boolean).join(" / ");
+
   return (
     <header className="flex h-14 items-center justify-between border-b bg-slate-900 px-2 sm:px-3 text-white gap-1 sm:gap-2">
       <div className="flex items-center gap-2 min-w-0">
+        {onBackToSessions && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-slate-300 hover:text-white hover:bg-slate-800"
+            onClick={onBackToSessions}
+            title="Back to Sessions"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
           <Building2 className="h-5 w-5 text-primary-foreground" />
         </div>
@@ -45,6 +64,12 @@ export function POSHeader({
           <Badge variant="secondary" className="hidden xs:inline-flex shrink-0 text-xs">
             {session.sessionNumber}
           </Badge>
+        )}
+        {locationLabel && (
+          <div className="hidden sm:flex items-center gap-1 text-sm text-slate-300 truncate max-w-[200px]">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{locationLabel}</span>
+          </div>
         )}
       </div>
 

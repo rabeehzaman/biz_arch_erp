@@ -1151,6 +1151,7 @@ model POSSession {
   @@unique([organizationId, sessionNumber])
   @@index([organizationId])
   @@index([organizationId, openedAt(sort: Desc)])
+  @@index([organizationId, branchId, warehouseId, status])
   @@index([userId])
   @@index([warehouseId])
   @@map("pos_sessions")

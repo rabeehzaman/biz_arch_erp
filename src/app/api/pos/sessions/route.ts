@@ -26,7 +26,7 @@ async function generateSessionNumber(organizationId: string, tx: Tx) {
   return `${prefix}-${sequence.toString().padStart(3, "0")}`;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -34,13 +34,27 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = { organizationId };
+    if (status) {
+      where.status = status;
+    }
 
     const sessions = await prisma.pOSSession.findMany({
-      where: { organizationId },
+      where,
       orderBy: { openedAt: "desc" },
       include: {
         user: {
           select: { id: true, name: true, email: true },
+        },
+        branch: {
+          select: { id: true, name: true, code: true },
+        },
+        warehouse: {
+          select: { id: true, name: true, code: true },
         },
         _count: {
           select: { invoices: true, heldOrders: true },
@@ -72,13 +86,38 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { openingCash = 0 } = body;
+    const { openingCash = 0, branchId, warehouseId } = body;
 
     // Wrap in transaction to prevent race conditions (duplicate sessions/numbers)
     const posSession = await prisma.$transaction(async (tx) => {
-      // Check if user already has an open session
+      // Validate branch exists and belongs to org (if provided)
+      if (branchId) {
+        const branch = await tx.branch.findFirst({
+          where: { id: branchId, organizationId },
+        });
+        if (!branch) {
+          throw new Error("INVALID_BRANCH");
+        }
+      }
+
+      // Validate warehouse exists and belongs to org (if provided)
+      if (warehouseId) {
+        const warehouse = await tx.warehouse.findFirst({
+          where: { id: warehouseId, organizationId },
+        });
+        if (!warehouse) {
+          throw new Error("INVALID_WAREHOUSE");
+        }
+      }
+
+      // Check if there's already an open session for this branch+warehouse
       const existingOpen = await tx.pOSSession.findFirst({
-        where: { organizationId, userId, status: "OPEN" },
+        where: {
+          organizationId,
+          status: "OPEN",
+          branchId: branchId || null,
+          warehouseId: warehouseId || null,
+        },
       });
 
       if (existingOpen) {
@@ -94,10 +133,18 @@ export async function POST(request: NextRequest) {
           userId,
           status: "OPEN",
           openingCash,
+          branchId: branchId || null,
+          warehouseId: warehouseId || null,
         },
         include: {
           user: {
             select: { id: true, name: true, email: true },
+          },
+          branch: {
+            select: { id: true, name: true, code: true },
+          },
+          warehouse: {
+            select: { id: true, name: true, code: true },
           },
         },
       });
@@ -105,9 +152,21 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(posSession, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_BRANCH") {
+      return NextResponse.json(
+        { error: "Invalid branch selected." },
+        { status: 400 }
+      );
+    }
+    if (error instanceof Error && error.message === "INVALID_WAREHOUSE") {
+      return NextResponse.json(
+        { error: "Invalid warehouse selected." },
+        { status: 400 }
+      );
+    }
     if (error instanceof Error && error.message === "ALREADY_OPEN") {
       return NextResponse.json(
-        { error: "You already have an open POS session. Please close it before opening a new one." },
+        { error: "There is already an open POS session for this register. Please close it first or continue selling." },
         { status: 400 }
       );
     }
