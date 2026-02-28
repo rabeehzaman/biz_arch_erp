@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,11 +64,22 @@ function isWarrantyActive(date: string | null) {
 }
 
 export default function ImeiLookupPage() {
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get("imei") ?? "");
   const [loading, setLoading] = useState(false);
   const [device, setDevice] = useState<DeviceResult | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [searched, setSearched] = useState(false);
+
+  // Auto-search when navigated from command palette with ?imei= param
+  useEffect(() => {
+    const imeiParam = searchParams.get("imei");
+    if (imeiParam) {
+      handleSearch(imeiParam);
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearch = async (imei?: string) => {
     const searchImei = imei || query.trim();

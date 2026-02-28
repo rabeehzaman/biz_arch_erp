@@ -11,12 +11,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "next-auth/react";
-import { LogOut, User, Building2 } from "lucide-react";
+import { LogOut, User, Building2, Search } from "lucide-react";
 import { MobileSidebar } from "./sidebar";
 import { useEffect, useState } from "react";
+import { useCommandPalette } from "@/components/command-palette/command-palette-provider";
 
 export function Header() {
   const { data: session } = useSession();
+  const { setOpen } = useCommandPalette();
   const [orgName, setOrgName] = useState<string>("");
   const [mounted, setMounted] = useState(false);
 
@@ -64,6 +66,18 @@ export function Header() {
           </p>
         </div>
       </div>
+
+      {/* Spotlight search trigger */}
+      <button
+        onClick={() => setOpen(true)}
+        className="hidden md:flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-white transition-colors mx-4 flex-1 max-w-xs"
+      >
+        <Search className="h-4 w-4 shrink-0" />
+        <span className="flex-1 text-left">Search or jump to...</span>
+        <kbd className="pointer-events-none hidden sm:inline-flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
+          <span className="text-[10px]">⌘</span>K
+        </kbd>
+      </button>
 
       {mounted ? (
         <DropdownMenu>
