@@ -328,8 +328,8 @@ export default function NewQuotationPage() {
                 <BranchWarehouseSelector
                   branchId={formData.branchId}
                   warehouseId={formData.warehouseId}
-                  onBranchChange={(id) => setFormData({ ...formData, branchId: id })}
-                  onWarehouseChange={(id) => setFormData({ ...formData, warehouseId: id })}
+                  onBranchChange={(id) => setFormData(prev => ({ ...prev, branchId: id }))}
+                  onWarehouseChange={(id) => setFormData(prev => ({ ...prev, warehouseId: id }))}
                 />
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="grid gap-2">
