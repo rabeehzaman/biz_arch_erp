@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isMobileShopModuleEnabled } from "@/lib/auth-utils";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 export async function GET(request: NextRequest) {
   try {
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create device + optional ADJUSTMENT stock lot in a transaction
+    // Create device + optional OPENING_BALANCE stock lot in a transaction
     const device = await prisma.$transaction(async (tx) => {
       const newDevice = await tx.mobileDevice.create({
         data: {
@@ -140,19 +141,49 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // If product is linked, create ADJUSTMENT stock lot to keep FIFO in sync
+      // If product is linked, create Opening Stock lot
       if (productId) {
+        const openingStock = await tx.openingStock.create({
+          data: {
+            productId,
+            quantity: 1,
+            unitCost: costPrice,
+            stockDate: new Date(),
+            notes: "Created from Mobile Shop",
+            organizationId,
+          },
+          include: { product: true }
+        });
+
         await tx.stockLot.create({
           data: {
             organizationId,
             productId,
-            sourceType: "ADJUSTMENT",
+            sourceType: "OPENING_STOCK",
+            openingStockId: openingStock.id,
             lotDate: new Date(),
             unitCost: costPrice,
             initialQuantity: 1,
             remainingQuantity: 1,
           },
         });
+
+        if (costPrice > 0) {
+          const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+          const ownerCapitalAccount = await getSystemAccount(tx, organizationId, "3100");
+          if (inventoryAccount && ownerCapitalAccount) {
+            await createAutoJournalEntry(tx, organizationId, {
+              date: new Date(),
+              description: `Opening Stock - ${openingStock.product.name}`,
+              sourceType: "OPENING_STOCK",
+              sourceId: openingStock.id,
+              lines: [
+                { accountId: inventoryAccount.id, description: "Inventory", debit: costPrice, credit: 0 },
+                { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: costPrice },
+              ],
+            });
+          }
+        }
       }
 
       return newDevice;

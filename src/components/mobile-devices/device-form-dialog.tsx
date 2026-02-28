@@ -30,9 +30,10 @@ interface DeviceFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  editDevice?: any;
 }
 
-export function DeviceFormDialog({ open, onOpenChange, onSuccess }: DeviceFormDialogProps) {
+export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: DeviceFormDialogProps) {
   const [saving, setSaving] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -61,10 +62,24 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess }: DeviceFormDi
 
   useEffect(() => {
     if (open) {
+      if (editDevice) {
+        setFormData({
+          imei1: editDevice.imei1 || "", imei2: editDevice.imei2 || "", serialNumber: editDevice.serialNumber || "",
+          brand: editDevice.brand || "", model: editDevice.brand && editDevice.model ? `${editDevice.brand} ${editDevice.model}`.trim() : (editDevice.model || editDevice.brand || ""), color: editDevice.color || "",
+          storageCapacity: editDevice.storageCapacity || "", ram: editDevice.ram || "", networkStatus: editDevice.networkStatus || "UNLOCKED",
+          conditionGrade: editDevice.conditionGrade || "NEW", batteryHealthPercentage: editDevice.batteryHealthPercentage ? String(editDevice.batteryHealthPercentage) : "",
+          productId: editDevice.productId || "", supplierId: editDevice.supplierId || "", costPrice: editDevice.costPrice !== undefined ? String(editDevice.costPrice) : "",
+          landedCost: editDevice.landedCost !== undefined ? String(editDevice.landedCost) : "", sellingPrice: editDevice.sellingPrice !== undefined ? String(editDevice.sellingPrice) : "",
+          supplierWarrantyExpiry: editDevice.supplierWarrantyExpiry ? new Date(editDevice.supplierWarrantyExpiry).toISOString().split('T')[0] : "",
+          customerWarrantyExpiry: editDevice.customerWarrantyExpiry ? new Date(editDevice.customerWarrantyExpiry).toISOString().split('T')[0] : "", notes: editDevice.notes || "",
+        });
+      } else {
+        resetForm();
+      }
       fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers).catch(() => {});
       fetch("/api/products?excludeServices=true").then((r) => r.json()).then(setProducts).catch(() => {});
     }
-  }, [open]);
+  }, [open, editDevice]);
 
   const resetForm = () => {
     setFormData({
@@ -78,18 +93,22 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess }: DeviceFormDi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.imei1 || !formData.brand || !formData.model || !formData.supplierId || !formData.costPrice) {
-      toast.error("IMEI 1, Brand, Model, Supplier, and Cost Price are required");
+    if (!formData.imei1 || !formData.model || !formData.supplierId || !formData.costPrice) {
+      toast.error("IMEI 1, Model, Supplier, and Cost Price are required");
       return;
     }
 
     setSaving(true);
     try {
-      const res = await fetch("/api/mobile-devices", {
-        method: "POST",
+      const url = editDevice ? `/api/mobile-devices/${editDevice.id}` : "/api/mobile-devices";
+      const method = editDevice ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          brand: formData.model.split(" ")[0] || "Unknown",
+          model: formData.model.split(" ").slice(1).join(" ") || formData.model,
           costPrice: parseFloat(formData.costPrice),
           landedCost: parseFloat(formData.landedCost) || 0,
           sellingPrice: parseFloat(formData.sellingPrice) || 0,
@@ -101,7 +120,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess }: DeviceFormDi
       });
 
       if (res.ok) {
-        toast.success("Device added successfully");
+        toast.success(editDevice ? "Device updated successfully" : "Device added successfully");
         resetForm();
         onOpenChange(false);
         onSuccess?.();
@@ -121,8 +140,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess }: DeviceFormDi
       <DialogContent className="sm:max-w-2xl overflow-y-auto max-h-[90vh]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Device</DialogTitle>
-            <DialogDescription>Manually add a mobile device to inventory</DialogDescription>
+            <DialogTitle>{editDevice ? "Edit Device" : "Add Device"}</DialogTitle>
+            <DialogDescription>{editDevice ? "Update details for this mobile device" : "Manually add a mobile device to inventory"}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
@@ -151,21 +170,12 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess }: DeviceFormDi
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="grid gap-2">
-                <Label>Brand *</Label>
-                <Input
-                  value={formData.brand}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  placeholder="e.g. Samsung"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Model *</Label>
+              <div className="grid gap-2 col-span-2">
+                <Label>Brand & Model *</Label>
                 <Input
                   value={formData.model}
                   onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  placeholder="e.g. Galaxy S24"
+                  placeholder="e.g. Samsung Galaxy S24"
                   required
                 />
               </div>
@@ -345,7 +355,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess }: DeviceFormDi
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Device
+              {editDevice ? "Update Device" : "Add Device"}
             </Button>
           </DialogFooter>
         </form>
