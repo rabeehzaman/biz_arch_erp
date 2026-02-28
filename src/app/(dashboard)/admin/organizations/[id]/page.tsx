@@ -54,6 +54,13 @@ export default function OrganizationDetailsPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState("");
 
+    // Reset state
+    const [resetTxOpen, setResetTxOpen] = useState(false);
+    const [resetFullOpen, setResetFullOpen] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
+    const [resetError, setResetError] = useState("");
+    const [resetSuccess, setResetSuccess] = useState("");
+
     const fetchOrganization = useCallback(async () => {
         try {
             const res = await fetch(`/api/admin/organizations/${id}`);
@@ -96,6 +103,32 @@ export default function OrganizationDetailsPage() {
             setDeleteError("Failed to delete organization");
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleReset = async (type: "transactions_only" | "complete_reset") => {
+        setResetError("");
+        setResetSuccess("");
+        setIsResetting(true);
+        try {
+            const res = await fetch(`/api/admin/organizations/${id}/reset`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type }),
+            });
+            if (res.ok) {
+                setResetSuccess(`Successfully performed ${type === "transactions_only" ? "transaction reset" : "complete reset"}.`);
+                fetchOrganization();
+                setResetTxOpen(false);
+                setResetFullOpen(false);
+            } else {
+                const data = await res.json();
+                setResetError(data.error || "Failed to reset organization");
+            }
+        } catch {
+            setResetError("Failed to reset organization");
+        } finally {
+            setIsResetting(false);
         }
     };
 
@@ -224,11 +257,40 @@ export default function OrganizationDetailsPage() {
                             </CardTitle>
                             <CardDescription>Irreversible actions for this organization</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between flex-wrap gap-4">
-                                <div>
+                        <CardContent className="space-y-6">
+                            {resetSuccess && (
+                                <div className="text-sm font-medium text-green-700 bg-green-50 p-3 rounded-md border border-green-200">
+                                    {resetSuccess}
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between flex-wrap gap-4 pt-2">
+                                <div className="max-w-[70%]">
+                                    <h4 className="font-semibold text-sm text-foreground">Reset Transactions Only</h4>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Permanently remove all transactions (invoices, bills, payments, journals) but keep master data such as products, customers, suppliers, chart of accounts, and settings.
+                                    </p>
+                                </div>
+                                <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => setResetTxOpen(true)}>
+                                    Reset Transactions
+                                </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between flex-wrap gap-4 pt-4 border-t border-border/50">
+                                <div className="max-w-[70%]">
+                                    <h4 className="font-semibold text-sm text-foreground">Complete Reset</h4>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Permanently remove all data (transactions AND master data) associated with this organization. Administrative users will be kept, but the organization will be essentially new.
+                                    </p>
+                                </div>
+                                <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => setResetFullOpen(true)}>
+                                    Complete Reset
+                                </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between flex-wrap gap-4 pt-4 border-t border-border/50">
+                                <div className="max-w-[70%]">
                                     <h4 className="font-semibold text-sm text-foreground">Delete Organization</h4>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-muted-foreground mt-1">
                                         Permanently remove this organization and all its data. Only possible if the organization has no existing customers or invoices.
                                     </p>
                                 </div>
@@ -280,6 +342,58 @@ export default function OrganizationDetailsPage() {
                             <Button variant="destructive" onClick={handleDeleteOrg} disabled={isDeleting}>
                                 {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
                                 Delete Organization
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog open={resetTxOpen} onOpenChange={(open) => !open && !isResetting && setResetTxOpen(false)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Reset Transactions?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to delete all transactions for <strong className="text-foreground">{organization.name}</strong>?
+                                Master data like products, customers, and suppliers will be kept.
+                                <br />
+                                <span className="text-red-600 font-semibold mt-2 block">This action is irreversible and should be done with caution.</span>
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        {resetError && (
+                            <div className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                                {resetError}
+                            </div>
+                        )}
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                            <Button variant="destructive" onClick={() => handleReset("transactions_only")} disabled={isResetting}>
+                                {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                                Confirm Reset
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog open={resetFullOpen} onOpenChange={(open) => !open && !isResetting && setResetFullOpen(false)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Complete Reset?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to perform a complete reset for <strong className="text-foreground">{organization.name}</strong>?
+                                This will wipe ALL transactions and master data, effectively emptying the organization.
+                                <br />
+                                <span className="text-red-600 font-semibold mt-2 block">This action is irreversible and should be done with extreme caution.</span>
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        {resetError && (
+                            <div className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                                {resetError}
+                            </div>
+                        )}
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                            <Button variant="destructive" onClick={() => handleReset("complete_reset")} disabled={isResetting}>
+                                {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                                Confirm Full Reset
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
