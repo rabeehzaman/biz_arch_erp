@@ -66,10 +66,7 @@ export function ProductFormDialog({
         isService: false,
         isImeiTracked: false,
         // Mobile Device fields
-        imei1: "",
-        imei2: "",
-        brand: "",
-        model: "",
+        imeisList: "",
         color: "",
         storageCapacity: "",
         ram: "",
@@ -108,7 +105,7 @@ export function ProductFormDialog({
                 gstRate: productToEdit.gstRate?.toString() || "0",
                 isService: productToEdit.isService || false,
                 isImeiTracked: productToEdit.isImeiTracked || false,
-                imei1: "", imei2: "", brand: "", model: "", color: "",
+                imeisList: "", color: "",
                 storageCapacity: "", ram: "", networkStatus: "UNLOCKED",
                 conditionGrade: "NEW", batteryHealthPercentage: "",
                 supplierId: "", costPrice: "", landedCost: "",
@@ -130,9 +127,8 @@ export function ProductFormDialog({
         if (!formData.unitId) errors.unitId = "Unit is required";
 
         if (formData.isImeiTracked && !productToEdit) {
-            if (!formData.imei1.trim()) errors.imei1 = "IMEI 1 is required";
-            if (!formData.brand.trim()) errors.brand = "Brand is required";
-            if (!formData.model.trim()) errors.model = "Model is required";
+            const imeiArray = formData.imeisList.split(/[\n,]+/).map(i => i.trim()).filter(Boolean);
+            if (imeiArray.length === 0) errors.imeisList = "At least one IMEI is required";
             if (!formData.supplierId) errors.supplierId = "Supplier is required";
             if (!formData.costPrice || parseFloat(formData.costPrice) < 0) errors.costPrice = "Cost Price is required";
         }
@@ -156,10 +152,7 @@ export function ProductFormDialog({
             isService: formData.isService,
             isImeiTracked: formData.isImeiTracked,
             deviceDetails: (formData.isImeiTracked && !productToEdit) ? {
-                imei1: formData.imei1,
-                imei2: formData.imei2,
-                brand: formData.brand,
-                model: formData.model,
+                imeisList: formData.imeisList.split(/[\n,]+/).map(i => i.trim()).filter(Boolean),
                 color: formData.color,
                 storageCapacity: formData.storageCapacity,
                 ram: formData.ram,
@@ -223,7 +216,7 @@ export function ProductFormDialog({
             gstRate: "0",
             isService: false,
             isImeiTracked: false,
-            imei1: "", imei2: "", brand: "", model: "", color: "",
+            imeisList: "", color: "",
             storageCapacity: "", ram: "", networkStatus: "UNLOCKED",
             conditionGrade: "NEW", batteryHealthPercentage: "",
             supplierId: "", costPrice: "", landedCost: "",
@@ -384,54 +377,20 @@ export function ProductFormDialog({
                         {formData.isImeiTracked && !productToEdit && (
                             <div className="rounded-md border p-4 space-y-4 bg-muted/20 mt-4">
                                 <h4 className="text-sm font-medium border-b pb-2">Mobile Device Details (Initial Stock)</h4>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="grid gap-2">
-                                        <Label>IMEI 1 *</Label>
-                                        <Input
-                                            value={formData.imei1}
-                                            onChange={(e) => setFormData({ ...formData, imei1: e.target.value })}
-                                            placeholder="15-digit IMEI"
-                                            maxLength={15}
-                                            className={`font-mono bg-background ${formErrors.imei1 ? "border-red-500" : ""}`}
-                                            required={formData.isImeiTracked}
-                                        />
-                                        {formErrors.imei1 && <p className="text-sm text-red-500">{formErrors.imei1}</p>}
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>IMEI 2</Label>
-                                        <Input
-                                            value={formData.imei2}
-                                            onChange={(e) => setFormData({ ...formData, imei2: e.target.value })}
-                                            placeholder="Optional"
-                                            maxLength={15}
-                                            className="font-mono bg-background"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="grid gap-2">
-                                        <Label>Brand *</Label>
-                                        <Input
-                                            value={formData.brand}
-                                            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                                            placeholder="e.g. Samsung"
-                                            className={`bg-background ${formErrors.brand ? "border-red-500" : ""}`}
-                                            required={formData.isImeiTracked}
-                                        />
-                                        {formErrors.brand && <p className="text-sm text-red-500">{formErrors.brand}</p>}
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>Model *</Label>
-                                        <Input
-                                            value={formData.model}
-                                            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                                            placeholder="e.g. Galaxy S24"
-                                            className={`bg-background ${formErrors.model ? "border-red-500" : ""}`}
-                                            required={formData.isImeiTracked}
-                                        />
-                                        {formErrors.model && <p className="text-sm text-red-500">{formErrors.model}</p>}
-                                    </div>
+                                <div className="grid gap-2">
+                                    <Label>IMEI(s) *</Label>
+                                    <Textarea
+                                        value={formData.imeisList}
+                                        onChange={(e) => setFormData({ ...formData, imeisList: e.target.value })}
+                                        placeholder="Enter IMEIs (one per line or comma-separated)"
+                                        className={`font-mono bg-background min-h-[100px] ${formErrors.imeisList ? "border-red-500" : ""}`}
+                                        required={formData.isImeiTracked}
+                                    />
+                                    {formErrors.imeisList && <p className="text-sm text-red-500">{formErrors.imeisList}</p>}
+                                    <p className="text-xs text-muted-foreground">
+                                        Note: Brand and Model will be automatically extracted from the Product Name.
+                                        Adding multiple IMEIs will create multiple device records in stock.
+                                    </p>
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-3">

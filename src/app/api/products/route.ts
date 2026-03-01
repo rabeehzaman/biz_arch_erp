@@ -111,46 +111,60 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Deduce brand and model from product name
+      const nameParts = name.trim().split(/\s+/);
+      const deducedBrand = nameParts.length > 0 ? nameParts[0] : "Unknown";
+      const deducedModel = nameParts.length > 1 ? nameParts.slice(1).join(" ") : name;
+
       if (isImeiTracked && deviceDetails) {
         const {
-          imei1, imei2, brand, model, color, storageCapacity, ram,
+          imeisList, color, storageCapacity, ram,
           networkStatus, conditionGrade, batteryHealthPercentage,
           supplierId, costPrice, landedCost, sellingPrice,
           supplierWarrantyExpiry, customerWarrantyExpiry, notes
         } = deviceDetails;
 
-        if (imei1 && brand && model && supplierId) {
-          const newDevice = await tx.mobileDevice.create({
-            data: {
-              organizationId,
-              imei1,
-              imei2: imei2 || null,
-              brand,
-              model,
-              color: color || null,
-              storageCapacity: storageCapacity || null,
-              ram: ram || null,
-              networkStatus: networkStatus || "UNLOCKED",
-              conditionGrade: conditionGrade || "NEW",
-              batteryHealthPercentage: batteryHealthPercentage ?? null,
-              productId: newProduct.id,
-              supplierId,
-              costPrice: costPrice || 0,
-              landedCost: landedCost || 0,
-              sellingPrice: sellingPrice || price || 0,
-              supplierWarrantyExpiry: supplierWarrantyExpiry ? new Date(supplierWarrantyExpiry) : null,
-              customerWarrantyExpiry: customerWarrantyExpiry ? new Date(customerWarrantyExpiry) : null,
-              notes: notes || null,
-            },
-          });
+        if (!supplierId) {
+          throw new Error("SUPPLIER_REQUIRED");
+        }
+
+        if (imeisList && Array.isArray(imeisList) && imeisList.length > 0) {
+          const quantity = imeisList.length;
+          const totalCost = (costPrice || 0) * quantity;
+
+          // Create all mobile devices
+          for (const imei of imeisList) {
+            await tx.mobileDevice.create({
+              data: {
+                organizationId,
+                imei1: imei,
+                brand: deducedBrand,
+                model: deducedModel,
+                color: color || null,
+                storageCapacity: storageCapacity || null,
+                ram: ram || null,
+                networkStatus: networkStatus || "UNLOCKED",
+                conditionGrade: conditionGrade || "NEW",
+                batteryHealthPercentage: batteryHealthPercentage ?? null,
+                productId: newProduct.id,
+                supplierId,
+                costPrice: costPrice || 0,
+                landedCost: landedCost || 0,
+                sellingPrice: sellingPrice || price || 0,
+                supplierWarrantyExpiry: supplierWarrantyExpiry ? new Date(supplierWarrantyExpiry) : null,
+                customerWarrantyExpiry: customerWarrantyExpiry ? new Date(customerWarrantyExpiry) : null,
+                notes: notes || null,
+              },
+            });
+          }
 
           const openingStock = await tx.openingStock.create({
             data: {
               productId: newProduct.id,
-              quantity: 1,
+              quantity: quantity,
               unitCost: costPrice || 0,
               stockDate: new Date(),
-              notes: "Created from Product Form",
+              notes: `Created from Product Form (${quantity} devices)`,
               organizationId,
             },
           });
@@ -163,8 +177,8 @@ export async function POST(request: NextRequest) {
               openingStockId: openingStock.id,
               lotDate: new Date(),
               unitCost: costPrice || 0,
-              initialQuantity: 1,
-              remainingQuantity: 1,
+              initialQuantity: quantity,
+              remainingQuantity: quantity,
             },
           });
 
@@ -178,12 +192,14 @@ export async function POST(request: NextRequest) {
                 sourceType: "OPENING_STOCK",
                 sourceId: openingStock.id,
                 lines: [
-                  { accountId: inventoryAccount.id, description: "Inventory", debit: costPrice, credit: 0 },
-                  { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: costPrice },
+                  { accountId: inventoryAccount.id, description: "Inventory", debit: totalCost, credit: 0 },
+                  { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: totalCost },
                 ],
               });
             }
           }
+        } else {
+          throw new Error("IMEI_REQUIRED");
         }
       }
 
@@ -191,11 +207,25 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(product, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to create product:", error);
+
+    let errorMessage = "Failed to create product";
+    if (error.code === 'P2002') {
+      if (error.meta?.target?.includes('imei1')) {
+        errorMessage = "One or more IMEIs already exist in the database.";
+      } else {
+        errorMessage = "A product with this SKU or Barcode already exists.";
+      }
+    } else if (error.message === "SUPPLIER_REQUIRED") {
+      errorMessage = "Supplier is required when tracking by IMEI.";
+    } else if (error.message === "IMEI_REQUIRED") {
+      errorMessage = "At least one IMEI is required when tracking by IMEI.";
+    }
+
     return NextResponse.json(
-      { error: "Failed to create product" },
-      { status: 500 }
+      { error: errorMessage },
+      { status: error.code === 'P2002' || error.message.includes("REQUIRED") ? 400 : 500 }
     );
   }
 }
