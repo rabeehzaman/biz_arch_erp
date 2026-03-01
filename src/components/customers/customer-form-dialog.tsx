@@ -168,7 +168,7 @@ export function CustomerFormDialog({
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="cust-name">Name *</Label>
                                 <Input
@@ -192,7 +192,7 @@ export function CustomerFormDialog({
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="cust-phone">Phone</Label>
                                 <Input
@@ -215,7 +215,7 @@ export function CustomerFormDialog({
                             </div>
                         </div>
                         {session?.user?.gstEnabled && (
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
                                     <Label htmlFor="cust-gstin">GSTIN</Label>
                                     <Input
@@ -256,7 +256,7 @@ export function CustomerFormDialog({
                                 }
                             />
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="cust-city">City</Label>
                                 <Input

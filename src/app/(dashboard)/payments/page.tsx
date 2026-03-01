@@ -317,7 +317,7 @@ export default function PaymentsPage() {
                       </Select>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
                       <Label htmlFor="amount">{t("common.amount")} *</Label>
                       <Input
@@ -347,7 +347,7 @@ export default function PaymentsPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
                       <Label htmlFor="paymentDate">{t("payments.paymentDate")} *</Label>
                       <Input
@@ -361,7 +361,7 @@ export default function PaymentsPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
                       <Label htmlFor="paymentMethod">{t("payments.paymentMethod")}</Label>
                       <Select

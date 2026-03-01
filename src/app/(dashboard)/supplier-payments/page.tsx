@@ -218,281 +218,281 @@ export default function SupplierPaymentsPage() {
   );
 
   return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Supplier Payments</h2>
-              <p className="text-slate-500">Record payments to suppliers</p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Record Payment
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <form onSubmit={handleSubmit}>
-                  <DialogHeader>
-                    <DialogTitle>Record Supplier Payment</DialogTitle>
-                    <DialogDescription>
-                      Record a payment to a supplier.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
+    <PageAnimation>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Supplier Payments</h2>
+            <p className="text-slate-500">Record payments to suppliers</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Record Payment
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Record Supplier Payment</DialogTitle>
+                  <DialogDescription>
+                    Record a payment to a supplier.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="supplier">Supplier *</Label>
+                    <Combobox
+                      items={suppliers}
+                      value={formData.supplierId}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, supplierId: value, purchaseInvoiceId: "" })
+                      }
+                      getId={(supplier) => supplier.id}
+                      getLabel={(supplier) => supplier.name}
+                      filterFn={(supplier, query) =>
+                        supplier.name.toLowerCase().includes(query)
+                      }
+                      renderItem={(supplier) => (
+                        <div className="flex justify-between w-full">
+                          <span>{supplier.name}</span>
+                          <span className="text-slate-500 text-xs">
+                            Payable: ₹{Number(supplier.balance).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      )}
+                      placeholder="Search supplier..."
+                      emptyText="No suppliers found."
+                    />
+                  </div>
+                  {formData.supplierId && supplierInvoices.length > 0 && (
                     <div className="grid gap-2">
-                      <Label htmlFor="supplier">Supplier *</Label>
-                      <Combobox
-                        items={suppliers}
-                        value={formData.supplierId}
+                      <Label htmlFor="invoice">Link to Purchase Invoice (Optional)</Label>
+                      <Select
+                        value={formData.purchaseInvoiceId}
                         onValueChange={(value) =>
-                          setFormData({ ...formData, supplierId: value, purchaseInvoiceId: "" })
+                          setFormData({ ...formData, purchaseInvoiceId: value })
                         }
-                        getId={(supplier) => supplier.id}
-                        getLabel={(supplier) => supplier.name}
-                        filterFn={(supplier, query) =>
-                          supplier.name.toLowerCase().includes(query)
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select invoice" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {supplierInvoices.map((invoice) => (
+                            <SelectItem key={invoice.id} value={invoice.id}>
+                              {invoice.purchaseInvoiceNumber} (Due: ₹{Number(invoice.balanceDue).toLocaleString("en-IN")})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="amount">Amount *</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        value={formData.amount}
+                        onChange={(e) =>
+                          setFormData({ ...formData, amount: e.target.value })
                         }
-                        renderItem={(supplier) => (
-                          <div className="flex justify-between w-full">
-                            <span>{supplier.name}</span>
-                            <span className="text-slate-500 text-xs">
-                              Payable: ₹{Number(supplier.balance).toLocaleString("en-IN")}
-                            </span>
-                          </div>
-                        )}
-                        placeholder="Search supplier..."
-                        emptyText="No suppliers found."
+                        required
                       />
                     </div>
-                    {formData.supplierId && supplierInvoices.length > 0 && (
-                      <div className="grid gap-2">
-                        <Label htmlFor="invoice">Link to Purchase Invoice (Optional)</Label>
-                        <Select
-                          value={formData.purchaseInvoiceId}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, purchaseInvoiceId: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select invoice" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {supplierInvoices.map((invoice) => (
-                              <SelectItem key={invoice.id} value={invoice.id}>
-                                {invoice.purchaseInvoiceNumber} (Due: ₹{Number(invoice.balanceDue).toLocaleString("en-IN")})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="amount">Amount *</Label>
-                        <Input
-                          id="amount"
-                          type="number"
-                          step="0.01"
-                          value={formData.amount}
-                          onChange={(e) =>
-                            setFormData({ ...formData, amount: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="discountGiven">Discount Given</Label>
-                        <Input
-                          id="discountGiven"
-                          type="number"
-                          step="0.01"
-                          value={formData.discountGiven}
-                          onChange={(e) =>
-                            setFormData({ ...formData, discountGiven: e.target.value })
-                          }
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="paymentDate">Payment Date *</Label>
-                        <Input
-                          id="paymentDate"
-                          type="date"
-                          value={formData.paymentDate}
-                          onChange={(e) =>
-                            setFormData({ ...formData, paymentDate: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="paymentMethod">Payment Method</Label>
-                        <Select
-                          value={formData.paymentMethod}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, paymentMethod: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CASH">Cash</SelectItem>
-                            <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                            <SelectItem value="CHECK">Check</SelectItem>
-                            <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                            <SelectItem value="UPI">UPI</SelectItem>
-                            <SelectItem value="OTHER">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="reference">Reference</Label>
-                        <Input
-                          id="reference"
-                          value={formData.reference}
-                          onChange={(e) =>
-                            setFormData({ ...formData, reference: e.target.value })
-                          }
-                          placeholder="Check #, Transaction ID..."
-                        />
-                      </div>
-                    </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="notes">Notes</Label>
-                      <Textarea
-                        id="notes"
-                        value={formData.notes}
+                      <Label htmlFor="discountGiven">Discount Given</Label>
+                      <Input
+                        id="discountGiven"
+                        type="number"
+                        step="0.01"
+                        value={formData.discountGiven}
                         onChange={(e) =>
-                          setFormData({ ...formData, notes: e.target.value })
+                          setFormData({ ...formData, discountGiven: e.target.value })
                         }
+                        placeholder="0.00"
                       />
                     </div>
                   </div>
-                  <DialogFooter>
-                    <Button type="submit">Record Payment</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    placeholder="Search payments..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="paymentDate">Payment Date *</Label>
+                      <Input
+                        id="paymentDate"
+                        type="date"
+                        value={formData.paymentDate}
+                        onChange={(e) =>
+                          setFormData({ ...formData, paymentDate: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="paymentMethod">Payment Method</Label>
+                      <Select
+                        value={formData.paymentMethod}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, paymentMethod: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CASH">Cash</SelectItem>
+                          <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                          <SelectItem value="CHECK">Check</SelectItem>
+                          <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
+                          <SelectItem value="UPI">UPI</SelectItem>
+                          <SelectItem value="OTHER">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="reference">Reference</Label>
+                      <Input
+                        id="reference"
+                        value={formData.reference}
+                        onChange={(e) =>
+                          setFormData({ ...formData, reference: e.target.value })
+                        }
+                        placeholder="Check #, Transaction ID..."
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) =>
+                        setFormData({ ...formData, notes: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <TableSkeleton columns={6} rows={5} />
-              ) : filteredPayments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Wallet className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No payments found</h3>
-                  <p className="text-sm text-slate-500">
-                    {searchQuery
-                      ? "Try a different search term"
-                      : "Record your first supplier payment to get started"}
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Payment #</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Purchase Invoice</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Discount</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayments.map((payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell className="font-medium">
-                          {payment.paymentNumber}
-                        </TableCell>
-                        <TableCell>{payment.supplier.name}</TableCell>
-                        <TableCell>
-                          {payment.purchaseInvoice?.purchaseInvoiceNumber || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(payment.paymentDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {methodLabels[payment.paymentMethod]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-orange-600">
-                          ₹{Number(payment.amount).toLocaleString("en-IN")}
-                        </TableCell>
-                        <TableCell className="text-right text-slate-500">
-                          {Number(payment.discountGiven) > 0
-                            ? `₹${Number(payment.discountGiven).toLocaleString("en-IN")}`
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletePayment(payment)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-
-          <AlertDialog open={!!deletePayment} onOpenChange={() => setDeletePayment(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Payment</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete payment {deletePayment?.paymentNumber}?
-                  This will reverse the supplier balance and any invoice allocations.
-                  This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                <DialogFooter>
+                  <Button type="submit">Record Payment</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
-        </PageAnimation>
-      );
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Search payments..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <TableSkeleton columns={6} rows={5} />
+            ) : filteredPayments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Wallet className="h-12 w-12 text-slate-300" />
+                <h3 className="mt-4 text-lg font-semibold">No payments found</h3>
+                <p className="text-sm text-slate-500">
+                  {searchQuery
+                    ? "Try a different search term"
+                    : "Record your first supplier payment to get started"}
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Payment #</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead className="hidden sm:table-cell">Purchase Invoice</TableHead>
+                    <TableHead className="hidden sm:table-cell">Date</TableHead>
+                    <TableHead className="hidden sm:table-cell">Method</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">
+                        {payment.paymentNumber}
+                      </TableCell>
+                      <TableCell>{payment.supplier.name}</TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {payment.purchaseInvoice?.purchaseInvoiceNumber || "-"}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {format(new Date(payment.paymentDate), "dd MMM yyyy")}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <Badge variant="outline">
+                          {methodLabels[payment.paymentMethod]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-orange-600">
+                        ₹{Number(payment.amount).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right text-slate-500">
+                        {Number(payment.discountGiven) > 0
+                          ? `₹${Number(payment.discountGiven).toLocaleString("en-IN")}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeletePayment(payment)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <AlertDialog open={!!deletePayment} onOpenChange={() => setDeletePayment(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Payment</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete payment {deletePayment?.paymentNumber}?
+                This will reverse the supplier balance and any invoice allocations.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </PageAnimation>
+  );
 }

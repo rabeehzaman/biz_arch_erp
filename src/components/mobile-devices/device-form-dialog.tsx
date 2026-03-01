@@ -368,7 +368,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
             {/* Pricing — always 3 cols, shortened labels fit on small screens */}
             <fieldset className="space-y-3">
               <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pricing</legend>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="grid gap-1.5">
                   <Label>Cost *</Label>
                   <Input

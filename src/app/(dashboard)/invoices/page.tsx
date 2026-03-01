@@ -157,7 +157,7 @@ export default function InvoicesPage() {
                       <TableHead>{t("common.status")}</TableHead>
                       <TableHead className="hidden sm:table-cell">{t("sales.issueDate")}</TableHead>
                       <TableHead className="hidden sm:table-cell">{t("sales.dueDate")}</TableHead>
-                      <TableHead className="text-right">{t("common.total")}</TableHead>
+                      <TableHead className="hidden sm:table-cell text-right">{t("common.total")}</TableHead>
                       <TableHead className="text-right">{t("common.balance")}</TableHead>
                       <TableHead className="text-right">{t("common.actions")}</TableHead>
                     </TableRow>
@@ -198,7 +198,7 @@ export default function InvoicesPage() {
                         <TableCell className="hidden sm:table-cell">
                           {format(new Date(invoice.dueDate), "dd MMM yyyy")}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="hidden sm:table-cell text-right">
                           {formatAmount(Number(invoice.total))}
                         </TableCell>
                         <TableCell className="text-right">

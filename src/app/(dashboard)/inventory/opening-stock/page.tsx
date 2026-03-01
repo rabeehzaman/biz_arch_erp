@@ -416,11 +416,11 @@ export default function OpeningStockPage() {
                   <TableRow>
                     <TableHead>Product</TableHead>
                     <TableHead className="text-right">Opening Qty</TableHead>
-                    <TableHead className="text-right">Remaining</TableHead>
-                    <TableHead className="text-right">Unit Cost</TableHead>
-                    <TableHead className="text-right">Total Value</TableHead>
-                    {multiBranchEnabled && <TableHead>Warehouse</TableHead>}
-                    <TableHead>Date</TableHead>
+                    <TableHead className="hidden sm:table-cell text-right">Remaining</TableHead>
+                    <TableHead className="hidden md:table-cell text-right">Unit Cost</TableHead>
+                    <TableHead className="hidden sm:table-cell text-right">Total Value</TableHead>
+                    {multiBranchEnabled && <TableHead className="hidden sm:table-cell">Warehouse</TableHead>}
+                    <TableHead className="hidden sm:table-cell">Date</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -442,7 +442,7 @@ export default function OpeningStockPage() {
                             <span className="text-xs text-slate-400 ml-1">{stock.product.unit.code}</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="hidden sm:table-cell text-right">
                           <div className="flex flex-col items-end gap-1">
                             <span className="tabular-nums text-sm">
                               {remaining.toLocaleString("en-IN")}
@@ -461,14 +461,14 @@ export default function OpeningStockPage() {
                             </Badge>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className="hidden md:table-cell text-right tabular-nums">
                           ₹{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
+                        <TableCell className="hidden sm:table-cell text-right font-medium tabular-nums">
                           ₹{(Number(stock.quantity) * Number(stock.unitCost)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </TableCell>
                         {multiBranchEnabled && (
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             {stock.warehouse ? (
                               <span className="text-sm text-slate-600">{stock.warehouse.name}</span>
                             ) : (
@@ -476,7 +476,7 @@ export default function OpeningStockPage() {
                             )}
                           </TableCell>
                         )}
-                        <TableCell className="text-sm text-slate-600">
+                        <TableCell className="hidden sm:table-cell text-sm text-slate-600">
                           {format(new Date(stock.stockDate), "dd MMM yyyy")}
                         </TableCell>
                         <TableCell>
@@ -513,7 +513,7 @@ export default function OpeningStockPage() {
             {multiBranchEnabled && (
               <div className="border rounded-lg p-3 bg-slate-50 space-y-3">
                 <p className="text-sm font-medium text-slate-700">Warehouse (optional)</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Branch</Label>
                     <Select
@@ -589,7 +589,7 @@ export default function OpeningStockPage() {
             </div>
 
             {/* Quantity & Cost */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Quantity *</Label>
                 <Input
@@ -667,7 +667,7 @@ export default function OpeningStockPage() {
                     <Label>Device Details *</Label>
                     <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3">
                       {formData.imeiNumbers.map((imei, idx) => (
-                        <div key={idx} className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-slate-50 border rounded-lg">
+                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-slate-50 border rounded-lg">
                           <Input
                             placeholder={`IMEI 1 (Device ${idx + 1}) *`}
                             value={imei.imei1}

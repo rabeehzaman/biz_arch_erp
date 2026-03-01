@@ -227,7 +227,7 @@ export function ProductFormDialog({
                                 }
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-price">Price *</Label>
                                 <Input
@@ -257,7 +257,7 @@ export function ProductFormDialog({
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-sku">SKU</Label>
                                 <Input
@@ -278,7 +278,7 @@ export function ProductFormDialog({
                             </div>
                         </div>
                         {session?.user?.gstEnabled && (
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
                                     <Label htmlFor="prod-hsnCode">HSN Code</Label>
                                     <Input

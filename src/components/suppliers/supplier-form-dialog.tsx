@@ -171,7 +171,7 @@ export function SupplierFormDialog({
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-name">Name *</Label>
                                 <Input
@@ -195,7 +195,7 @@ export function SupplierFormDialog({
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-phone">Phone</Label>
                                 <Input
@@ -218,7 +218,7 @@ export function SupplierFormDialog({
                             </div>
                         </div>
                         {session?.user?.gstEnabled && (
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
                                     <Label htmlFor="sup-gstin">GSTIN</Label>
                                     <Input
@@ -259,7 +259,7 @@ export function SupplierFormDialog({
                                 }
                             />
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-city">City</Label>
                                 <Input
