@@ -32,6 +32,9 @@ model Organization {
   arabicAddress         String?   // Arabic address
   arabicCity            String?   // Arabic city
 
+  // Localization
+  language              String   @default("en")  // "en" or "ar" — org-wide UI language
+
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -1759,8 +1762,9 @@ model MobileDevice {
   supplierWarrantyExpiry  DateTime?
   customerWarrantyExpiry  DateTime?
 
-  notes     String?
-  createdAt DateTime @default(now())
+  notes      String?
+  photoUrls  String[]
+  createdAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, imei1])

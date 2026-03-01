@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       storageCapacity, ram, networkStatus, conditionGrade,
       batteryHealthPercentage, includedAccessories,
       productId, supplierId, costPrice, landedCost, sellingPrice,
-      supplierWarrantyExpiry, customerWarrantyExpiry, notes,
+      supplierWarrantyExpiry, customerWarrantyExpiry, notes, photoUrls,
       createProduct, productName, categoryId, unitId, hsnCode, gstRate,
     } = body;
 
@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
           supplierWarrantyExpiry: supplierWarrantyExpiry ? new Date(supplierWarrantyExpiry) : null,
           customerWarrantyExpiry: customerWarrantyExpiry ? new Date(customerWarrantyExpiry) : null,
           notes: notes || null,
+          photoUrls: Array.isArray(photoUrls) ? photoUrls : [],
         },
         include: {
           supplier: { select: { id: true, name: true } },

@@ -23,7 +23,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, ImageIcon, X } from "lucide-react";
 import { ImeiCameraScanner } from "./imei-camera-scanner";
 
 interface Supplier {
@@ -49,6 +49,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
   const [saving, setSaving] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     imei1: "",
@@ -68,6 +69,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     supplierWarrantyExpiry: "",
     customerWarrantyExpiry: "",
     notes: "",
+    photoUrls: [] as string[],
   });
 
   useEffect(() => {
@@ -82,6 +84,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           landedCost: editDevice.landedCost !== undefined ? String(editDevice.landedCost) : "", sellingPrice: editDevice.sellingPrice !== undefined ? String(editDevice.sellingPrice) : "",
           supplierWarrantyExpiry: editDevice.supplierWarrantyExpiry ? new Date(editDevice.supplierWarrantyExpiry).toISOString().split('T')[0] : "",
           customerWarrantyExpiry: editDevice.customerWarrantyExpiry ? new Date(editDevice.customerWarrantyExpiry).toISOString().split('T')[0] : "", notes: editDevice.notes || "",
+          photoUrls: Array.isArray(editDevice.photoUrls) ? editDevice.photoUrls : [],
         });
       } else {
         resetForm();
@@ -97,8 +100,33 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
       color: "", storageCapacity: "", ram: "", networkStatus: "UNLOCKED",
       conditionGrade: "NEW", batteryHealthPercentage: "", productId: "",
       supplierId: "", costPrice: "", landedCost: "", sellingPrice: "",
-      supplierWarrantyExpiry: "", customerWarrantyExpiry: "", notes: "",
+      supplierWarrantyExpiry: "", customerWarrantyExpiry: "", notes: "", photoUrls: [],
     });
+  };
+
+  const handlePhotoUpload = async (file: File) => {
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: fd }
+      );
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setFormData((prev) => ({ ...prev, photoUrls: [...prev.photoUrls, data.secure_url] }));
+      toast.success("Photo uploaded");
+    } catch {
+      toast.error("Photo upload failed");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setFormData((prev) => ({ ...prev, photoUrls: prev.photoUrls.filter((_, i) => i !== index) }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -371,6 +399,49 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   onChange={(e) => setFormData({ ...formData, customerWarrantyExpiry: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Device Photos</Label>
+              <div className="flex flex-wrap gap-2">
+                {formData.photoUrls.map((url, index) => (
+                  <div key={url} className="relative h-24 w-24 shrink-0 rounded-md border overflow-hidden bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Photo ${index + 1}`} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index)}
+                      className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
+                      aria-label="Remove photo"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                <label className={`h-24 w-24 shrink-0 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${photoUploading ? "cursor-not-allowed opacity-50" : "hover:bg-accent cursor-pointer"}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="sr-only"
+                    disabled={photoUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handlePhotoUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  {photoUploading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Add Photo</span>
+                    </>
+                  )}
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">JPG, PNG or WEBP. Camera opens on mobile.</p>
             </div>
 
             <div className="grid gap-2">

@@ -96,7 +96,7 @@ export async function PUT(
       "batteryHealthPercentage", "includedAccessories", "productId",
       "supplierId", "costPrice", "landedCost", "sellingPrice",
       "currentStatus", "customerId", "salesInvoiceId", "soldPrice",
-      "salespersonId", "notes",
+      "salespersonId", "notes", "photoUrls",
     ];
     for (const f of fields) {
       if (body[f] !== undefined) updateData[f] = body[f];
