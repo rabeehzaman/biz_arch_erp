@@ -422,7 +422,6 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   <input
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     className="sr-only"
                     disabled={photoUploading}
                     onChange={(e) => {
@@ -441,7 +440,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   )}
                 </label>
               </div>
-              <p className="text-xs text-muted-foreground">JPG, PNG or WEBP. Camera opens on mobile.</p>
+              <p className="text-xs text-muted-foreground">JPG, PNG or WEBP. Choose from gallery or take a photo.</p>
             </div>
 
             <div className="grid gap-2">
