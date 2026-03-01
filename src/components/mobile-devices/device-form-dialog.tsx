@@ -159,7 +159,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="grid gap-2">
                 <Label>IMEI 1 *</Label>
                 <div className="flex gap-1">
@@ -201,7 +201,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="grid gap-2">
                 <Label>Color</Label>
                 <Input
@@ -228,7 +228,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="grid gap-2">
                 <Label>Network Status</Label>
                 <Select
@@ -276,7 +276,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Product {!editDevice && "*"}</Label>
                 <Combobox
@@ -304,7 +304,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="grid gap-2">
                 <Label>Cost Price *</Label>
                 <Input
@@ -338,7 +338,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Supplier Warranty Expiry</Label>
                 <Input

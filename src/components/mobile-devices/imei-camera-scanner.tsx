@@ -182,7 +182,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
                 {/* Dark surround */}
                 <div className="absolute inset-0 bg-black/40" />
                 {/* Scan window */}
-                <div className="relative z-10 h-24 w-80 rounded-lg border-2 border-white shadow-lg">
+                <div className="relative z-10 h-24 w-[min(320px,85vw)] rounded-lg border-2 border-white shadow-lg">
                   {/* Corner accents */}
                   <span className="absolute -left-0.5 -top-0.5 h-5 w-5 rounded-tl-lg border-l-4 border-t-4 border-emerald-400" />
                   <span className="absolute -right-0.5 -top-0.5 h-5 w-5 rounded-tr-lg border-r-4 border-t-4 border-emerald-400" />

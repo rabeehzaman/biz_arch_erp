@@ -114,15 +114,15 @@ export default function DeviceInventoryPage() {
           <CardHeader>
             <CardTitle>Devices</CardTitle>
             <CardAction>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Input
                   placeholder="Search IMEI, brand, model..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-64"
+                  className="w-full sm:w-64"
                 />
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-full sm:w-[160px]">
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
@@ -134,7 +134,7 @@ export default function DeviceInventoryPage() {
                     <SelectItem value="RMA">RMA</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button size="sm" onClick={() => { setEditDevice(null); setDialogOpen(true); }}>
+                <Button size="sm" className="w-full sm:w-auto" onClick={() => { setEditDevice(null); setDialogOpen(true); }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Device
                 </Button>
@@ -152,26 +152,27 @@ export default function DeviceInventoryPage() {
                 <p>No devices found</p>
               </div>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>IMEI</TableHead>
+                    <TableHead className="max-w-[120px]">IMEI</TableHead>
                     <TableHead>Brand / Model</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Condition</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Selling</TableHead>
-                    <TableHead>Supplier</TableHead>
+                    <TableHead className="hidden sm:table-cell">Condition</TableHead>
+                    <TableHead className="hidden md:table-cell text-right">Cost</TableHead>
+                    <TableHead className="hidden md:table-cell text-right">Selling</TableHead>
+                    <TableHead className="hidden sm:table-cell">Supplier</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {devices.map((device) => (
                     <TableRow key={device.id}>
-                      <TableCell className="font-mono text-xs">
+                      <TableCell className="max-w-[120px] truncate font-mono text-xs">
                         {device.imei1}
                         {device.imei2 && (
-                          <div className="text-muted-foreground">{device.imei2}</div>
+                          <div className="text-muted-foreground truncate">{device.imei2}</div>
                         )}
                       </TableCell>
                       <TableCell>
@@ -188,18 +189,18 @@ export default function DeviceInventoryPage() {
                           {device.currentStatus.replace("_", " ")}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="hidden sm:table-cell text-sm">
                         {conditionLabels[device.conditionGrade] || device.conditionGrade}
                       </TableCell>
-                      <TableCell className="text-right text-sm">
+                      <TableCell className="hidden md:table-cell text-right text-sm">
                         &#8377;{Number(device.costPrice).toLocaleString("en-IN")}
                       </TableCell>
-                      <TableCell className="text-right text-sm">
+                      <TableCell className="hidden md:table-cell text-right text-sm">
                         {Number(device.sellingPrice) > 0
                           ? `₹${Number(device.sellingPrice).toLocaleString("en-IN")}`
                           : "-"}
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="hidden sm:table-cell text-sm">
                         {device.supplier?.name || "-"}
                       </TableCell>
                       <TableCell>
@@ -231,6 +232,7 @@ export default function DeviceInventoryPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

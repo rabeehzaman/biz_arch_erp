@@ -376,7 +376,7 @@ export default function ImeiLookupPage() {
                   <CardTitle className="text-base">Warranty</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Supplier Warranty</span>
                       {device.supplierWarrantyExpiry ? (
