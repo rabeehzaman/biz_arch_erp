@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { Loader2, AlertTriangle, Search, Smartphone } from "lucide-react";
 import Link from "next/link";
+import { ImeiCameraScanner } from "@/components/mobile-devices/imei-camera-scanner";
 
 interface DeviceResult {
   id: string;
@@ -118,22 +119,30 @@ export default function ImeiLookupPage() {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="max-w-lg mx-auto">
-              <Input
-                autoFocus
-                placeholder="Scan or enter IMEI number..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSearch();
-                  }
-                }}
-                className="font-mono text-lg h-12 text-center"
-              />
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Press Enter or scan a barcode to search
+            <div className="max-w-lg mx-auto space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  autoFocus
+                  placeholder="Scan or enter IMEI number..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
+                  className="font-mono text-lg h-12 text-center"
+                />
+                <ImeiCameraScanner
+                  onScan={(imei) => {
+                    setQuery(imei);
+                    handleSearch(imei);
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Press Enter, tap the camera icon, or scan a barcode to search
               </p>
             </div>
           </CardContent>

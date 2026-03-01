@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@keyframes scan-line {
+  0%   { top: 4px; }
+  50%  { top: calc(100% - 4px); }
+  100% { top: 4px; }
+}
+
+@utility animate-scan-line {
+  animation: scan-line 1.8s ease-in-out infinite;
+  position: absolute;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

@@ -24,6 +24,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ImeiCameraScanner } from "./imei-camera-scanner";
 
 interface Supplier {
   id: string;
@@ -161,24 +162,34 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
             <div className="grid grid-cols-3 gap-3">
               <div className="grid gap-2">
                 <Label>IMEI 1 *</Label>
-                <Input
-                  value={formData.imei1}
-                  onChange={(e) => setFormData({ ...formData, imei1: e.target.value })}
-                  placeholder="15-digit IMEI"
-                  maxLength={15}
-                  className="font-mono"
-                  required
-                />
+                <div className="flex gap-1">
+                  <Input
+                    value={formData.imei1}
+                    onChange={(e) => setFormData({ ...formData, imei1: e.target.value })}
+                    placeholder="15-digit IMEI"
+                    maxLength={15}
+                    className="font-mono"
+                    required
+                  />
+                  <ImeiCameraScanner
+                    onScan={(imei) => setFormData((prev) => ({ ...prev, imei1: imei }))}
+                  />
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label>IMEI 2</Label>
-                <Input
-                  value={formData.imei2}
-                  onChange={(e) => setFormData({ ...formData, imei2: e.target.value })}
-                  placeholder="Optional"
-                  maxLength={15}
-                  className="font-mono"
-                />
+                <div className="flex gap-1">
+                  <Input
+                    value={formData.imei2}
+                    onChange={(e) => setFormData({ ...formData, imei2: e.target.value })}
+                    placeholder="Optional"
+                    maxLength={15}
+                    className="font-mono"
+                  />
+                  <ImeiCameraScanner
+                    onScan={(imei) => setFormData((prev) => ({ ...prev, imei2: imei }))}
+                  />
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label>Serial Number</Label>
