@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { INDIAN_STATES } from "@/lib/gst/constants";
 
@@ -41,6 +42,14 @@ export function OrgSettingsDialog({
   const [gstin, setGstin] = useState("");
   const [gstStateCode, setGstStateCode] = useState("");
 
+  const [saudiEInvoiceEnabled, setSaudiEInvoiceEnabled] = useState(false);
+  const [vatNumber, setVatNumber] = useState("");
+  const [commercialRegNumber, setCommercialRegNumber] = useState("");
+  const [arabicName, setArabicName] = useState("");
+  const [arabicAddress, setArabicAddress] = useState("");
+  const [arabicCity, setArabicCity] = useState("");
+  const [invoicePdfFormat, setInvoicePdfFormat] = useState("A5_LANDSCAPE");
+
   useEffect(() => {
     if (open && orgId) {
       setLoading(true);
@@ -55,6 +64,13 @@ export function OrgSettingsDialog({
           setIsMobileShopModuleEnabled(data.isMobileShopModuleEnabled || false);
           setGstin(data.gstin || "");
           setGstStateCode(data.gstStateCode || "");
+          setSaudiEInvoiceEnabled(data.saudiEInvoiceEnabled || false);
+          setVatNumber(data.vatNumber || "");
+          setCommercialRegNumber(data.commercialRegNumber || "");
+          setArabicName(data.arabicName || "");
+          setArabicAddress(data.arabicAddress || "");
+          setArabicCity(data.arabicCity || "");
+          setInvoicePdfFormat(data.invoicePdfFormat || "A5_LANDSCAPE");
         })
         .catch(() => setError("Failed to load organization"))
         .finally(() => setLoading(false));
@@ -98,6 +114,18 @@ export function OrgSettingsDialog({
       return;
     }
 
+    if (saudiEInvoiceEnabled && gstEnabled) {
+      setError("Cannot enable both GST and Saudi E-Invoice simultaneously");
+      setSaving(false);
+      return;
+    }
+
+    if (saudiEInvoiceEnabled && vatNumber && !/^3\d{14}$/.test(vatNumber)) {
+      setError("Invalid VAT Number (TRN). Must be 15 digits starting with 3.");
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/admin/organizations/${orgId}`, {
         method: "PUT",
@@ -110,6 +138,13 @@ export function OrgSettingsDialog({
           isMobileShopModuleEnabled,
           gstin: gstEnabled ? gstin : null,
           gstStateCode: gstEnabled ? gstStateCode : null,
+          saudiEInvoiceEnabled,
+          vatNumber: saudiEInvoiceEnabled ? vatNumber || null : null,
+          commercialRegNumber: saudiEInvoiceEnabled ? commercialRegNumber || null : null,
+          arabicName: saudiEInvoiceEnabled ? arabicName || null : null,
+          arabicAddress: saudiEInvoiceEnabled ? arabicAddress || null : null,
+          arabicCity: saudiEInvoiceEnabled ? arabicCity || null : null,
+          invoicePdfFormat,
         }),
       });
 
@@ -130,7 +165,7 @@ export function OrgSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Organization Settings</DialogTitle>
           <DialogDescription>
@@ -161,6 +196,7 @@ export function OrgSettingsDialog({
                 onCheckedChange={(checked) => {
                   setGstEnabled(checked);
                   if (!checked) setEInvoicingEnabled(false);
+                  if (checked) setSaudiEInvoiceEnabled(false);
                 }}
               />
             </div>
@@ -248,6 +284,101 @@ export function OrgSettingsDialog({
                 onCheckedChange={setIsMobileShopModuleEnabled}
               />
             </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="space-y-0.5">
+                <Label htmlFor="saudiEInvoiceEnabled">Enable Saudi E-Invoice (ZATCA)</Label>
+                <p className="text-xs text-muted-foreground">
+                  ZATCA Phase 1 e-invoicing with VAT at 15% and QR codes. Disables GST.
+                </p>
+              </div>
+              <Switch
+                id="saudiEInvoiceEnabled"
+                checked={saudiEInvoiceEnabled}
+                onCheckedChange={(checked) => {
+                  setSaudiEInvoiceEnabled(checked);
+                  if (checked) {
+                    setGstEnabled(false);
+                    setEInvoicingEnabled(false);
+                  }
+                }}
+              />
+            </div>
+
+            {saudiEInvoiceEnabled && (
+              <div className="space-y-4 pl-2">
+                <div className="space-y-2">
+                  <Label htmlFor="vatNumber">
+                    VAT Number (TRN) <span className="text-xs text-muted-foreground">رقم التسجيل الضريبي</span>
+                  </Label>
+                  <Input
+                    id="vatNumber"
+                    value={vatNumber}
+                    onChange={(e) => setVatNumber(e.target.value)}
+                    placeholder="3XXXXXXXXXXXXXX (15 digits)"
+                    maxLength={15}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="commercialRegNumber">
+                    Commercial Registration No. <span className="text-xs text-muted-foreground">رقم السجل التجاري</span>
+                  </Label>
+                  <Input
+                    id="commercialRegNumber"
+                    value={commercialRegNumber}
+                    onChange={(e) => setCommercialRegNumber(e.target.value)}
+                    placeholder="1010XXXXXX"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="arabicName">Arabic Company Name <span className="text-xs text-muted-foreground">(اسم الشركة)</span></Label>
+                  <Input
+                    id="arabicName"
+                    value={arabicName}
+                    onChange={(e) => setArabicName(e.target.value)}
+                    placeholder="اسم الشركة بالعربية"
+                    dir="rtl"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="arabicAddress">Arabic Address <span className="text-xs text-muted-foreground">(العنوان)</span></Label>
+                  <Input
+                    id="arabicAddress"
+                    value={arabicAddress}
+                    onChange={(e) => setArabicAddress(e.target.value)}
+                    placeholder="العنوان بالكامل"
+                    dir="rtl"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="arabicCity">Arabic City <span className="text-xs text-muted-foreground">(المدينة)</span></Label>
+                  <Input
+                    id="arabicCity"
+                    value={arabicCity}
+                    onChange={(e) => setArabicCity(e.target.value)}
+                    placeholder="المدينة"
+                    dir="rtl"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Invoice PDF Format</Label>
+                  <Select value={invoicePdfFormat} onValueChange={setInvoicePdfFormat}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A5_LANDSCAPE">A5 Landscape (Default)</SelectItem>
+                      <SelectItem value="A4_PORTRAIT">A4 Portrait</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { UnitSelect } from "@/components/units/unit-select";
+import { Trash2, PlusCircle } from "lucide-react";
 
 interface Product {
     id: string;
@@ -38,11 +39,33 @@ interface Product {
     createdAt: string;
 }
 
+interface DeviceRow {
+    imei: string;
+    color: string;
+    storageCapacity: string;
+    ram: string;
+    conditionGrade: string;
+    networkStatus: string;
+    batteryHealthPercentage: string;
+}
+
 interface ProductFormDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSuccess?: (product: Product) => void;
     productToEdit?: Product;
+}
+
+function makeEmptyDevice(): DeviceRow {
+    return {
+        imei: "",
+        color: "",
+        storageCapacity: "",
+        ram: "",
+        conditionGrade: "NEW",
+        networkStatus: "UNLOCKED",
+        batteryHealthPercentage: "",
+    };
 }
 
 export function ProductFormDialog({
@@ -65,14 +88,7 @@ export function ProductFormDialog({
         gstRate: "0",
         isService: false,
         isImeiTracked: false,
-        // Mobile Device fields
-        imeisList: "",
-        color: "",
-        storageCapacity: "",
-        ram: "",
-        networkStatus: "UNLOCKED",
-        conditionGrade: "NEW",
-        batteryHealthPercentage: "",
+        // Shared device fields
         supplierId: "",
         costPrice: "",
         landedCost: "",
@@ -81,6 +97,7 @@ export function ProductFormDialog({
         deviceNotes: "",
     });
 
+    const [devices, setDevices] = useState<DeviceRow[]>([makeEmptyDevice()]);
     const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
 
     useEffect(() => {
@@ -105,17 +122,30 @@ export function ProductFormDialog({
                 gstRate: productToEdit.gstRate?.toString() || "0",
                 isService: productToEdit.isService || false,
                 isImeiTracked: productToEdit.isImeiTracked || false,
-                imeisList: "", color: "",
-                storageCapacity: "", ram: "", networkStatus: "UNLOCKED",
-                conditionGrade: "NEW", batteryHealthPercentage: "",
-                supplierId: "", costPrice: "", landedCost: "",
-                supplierWarrantyExpiry: "", customerWarrantyExpiry: "", deviceNotes: "",
+                supplierId: "",
+                costPrice: "",
+                landedCost: "",
+                supplierWarrantyExpiry: "",
+                customerWarrantyExpiry: "",
+                deviceNotes: "",
             });
+            setDevices([makeEmptyDevice()]);
             setFormErrors({});
         } else if (!open) {
             resetForm();
         }
     }, [productToEdit, open]);
+
+    const updateDevice = (idx: number, field: keyof DeviceRow, value: string) => {
+        setDevices(prev => prev.map((d, i) => i === idx ? { ...d, [field]: value } : d));
+        if (field === "imei") setFormErrors(prev => ({ ...prev, devices: "" }));
+    };
+
+    const addDevice = () => setDevices(prev => [...prev, makeEmptyDevice()]);
+
+    const removeDevice = (idx: number) => {
+        setDevices(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -127,8 +157,8 @@ export function ProductFormDialog({
         if (!formData.unitId) errors.unitId = "Unit is required";
 
         if (formData.isImeiTracked && !productToEdit) {
-            const imeiArray = formData.imeisList.split(/[\n,]+/).map(i => i.trim()).filter(Boolean);
-            if (imeiArray.length === 0) errors.imeisList = "At least one IMEI is required";
+            if (devices.length === 0) errors.devices = "At least one device is required";
+            else if (devices.some(d => !d.imei.trim())) errors.devices = "IMEI is required for all devices";
             if (!formData.supplierId) errors.supplierId = "Supplier is required";
             if (!formData.costPrice || parseFloat(formData.costPrice) < 0) errors.costPrice = "Cost Price is required";
         }
@@ -152,13 +182,15 @@ export function ProductFormDialog({
             isService: formData.isService,
             isImeiTracked: formData.isImeiTracked,
             deviceDetails: (formData.isImeiTracked && !productToEdit) ? {
-                imeisList: formData.imeisList.split(/[\n,]+/).map(i => i.trim()).filter(Boolean),
-                color: formData.color,
-                storageCapacity: formData.storageCapacity,
-                ram: formData.ram,
-                networkStatus: formData.networkStatus,
-                conditionGrade: formData.conditionGrade,
-                batteryHealthPercentage: formData.batteryHealthPercentage ? parseInt(formData.batteryHealthPercentage) : null,
+                devices: devices.map(d => ({
+                    imei: d.imei.trim(),
+                    color: d.color,
+                    storageCapacity: d.storageCapacity,
+                    ram: d.ram,
+                    conditionGrade: d.conditionGrade,
+                    networkStatus: d.networkStatus,
+                    batteryHealthPercentage: d.batteryHealthPercentage ? parseInt(d.batteryHealthPercentage) : null,
+                })),
                 supplierId: formData.supplierId,
                 costPrice: parseFloat(formData.costPrice) || 0,
                 landedCost: parseFloat(formData.landedCost) || 0,
@@ -182,7 +214,10 @@ export function ProductFormDialog({
                     body: JSON.stringify(payload),
                 });
 
-            if (!response.ok) throw new Error("Failed to save product");
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || "Failed to save product");
+            }
 
             const rawData = await response.json();
             const newProduct = productToEdit ? rawData : (rawData.product || rawData);
@@ -195,8 +230,8 @@ export function ProductFormDialog({
             if (onSuccess) {
                 onSuccess(newProduct);
             }
-        } catch (error) {
-            toast.error("Failed to save product");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to save product");
             console.error("Failed to save product:", error);
         } finally {
             setIsSubmitting(false);
@@ -205,6 +240,7 @@ export function ProductFormDialog({
 
     const resetForm = () => {
         setFormErrors({});
+        setDevices([makeEmptyDevice()]);
         setFormData({
             name: "",
             description: "",
@@ -216,13 +252,16 @@ export function ProductFormDialog({
             gstRate: "0",
             isService: false,
             isImeiTracked: false,
-            imeisList: "", color: "",
-            storageCapacity: "", ram: "", networkStatus: "UNLOCKED",
-            conditionGrade: "NEW", batteryHealthPercentage: "",
-            supplierId: "", costPrice: "", landedCost: "",
-            supplierWarrantyExpiry: "", customerWarrantyExpiry: "", deviceNotes: "",
+            supplierId: "",
+            costPrice: "",
+            landedCost: "",
+            supplierWarrantyExpiry: "",
+            customerWarrantyExpiry: "",
+            deviceNotes: "",
         });
     };
+
+    const selectClass = "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
     return (
         <Dialog
@@ -232,7 +271,7 @@ export function ProductFormDialog({
                 if (!isOpen) resetForm();
             }}
         >
-            <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh]">
+            <DialogContent className="sm:max-w-lg md:max-w-2xl overflow-y-auto max-h-[90vh]">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     <DialogHeader>
                         <DialogTitle>
@@ -337,7 +376,7 @@ export function ProductFormDialog({
                                         id="prod-gstRate"
                                         value={formData.gstRate}
                                         onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className={selectClass}
                                     >
                                         {[0, 5, 12, 18, 28].map((rate) => (
                                             <option key={rate} value={rate}>{rate}%</option>
@@ -375,118 +414,197 @@ export function ProductFormDialog({
                         )}
 
                         {formData.isImeiTracked && !productToEdit && (
-                            <div className="rounded-md border p-4 space-y-4 bg-muted/20 mt-4">
-                                <h4 className="text-sm font-medium border-b pb-2">Mobile Device Details (Initial Stock)</h4>
-                                <div className="grid gap-2">
-                                    <Label>IMEI(s) *</Label>
-                                    <Textarea
-                                        value={formData.imeisList}
-                                        onChange={(e) => setFormData({ ...formData, imeisList: e.target.value })}
-                                        placeholder="Enter IMEIs (one per line or comma-separated)"
-                                        className={`font-mono bg-background min-h-[100px] ${formErrors.imeisList ? "border-red-500" : ""}`}
-                                        required={formData.isImeiTracked}
-                                    />
-                                    {formErrors.imeisList && <p className="text-sm text-red-500">{formErrors.imeisList}</p>}
-                                    <p className="text-xs text-muted-foreground">
-                                        Note: Brand and Model will be automatically extracted from the Product Name.
-                                        Adding multiple IMEIs will create multiple device records in stock.
-                                    </p>
+                            <div className="rounded-md border p-4 space-y-4 bg-muted/20 mt-2">
+                                <h4 className="text-sm font-semibold border-b pb-2">Mobile Device Details (Initial Stock)</h4>
+
+                                {/* Per-device rows */}
+                                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                                    {devices.map((device, idx) => (
+                                        <div key={idx} className="rounded-md border bg-background p-3 space-y-2">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-xs font-medium text-muted-foreground">Device #{idx + 1}</span>
+                                                {devices.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-destructive hover:text-destructive"
+                                                        onClick={() => removeDevice(idx)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                <div className="col-span-2 sm:col-span-3 grid gap-1">
+                                                    <Label className="text-xs">IMEI *</Label>
+                                                    <Input
+                                                        value={device.imei}
+                                                        onChange={(e) => updateDevice(idx, "imei", e.target.value)}
+                                                        placeholder="15-digit IMEI"
+                                                        maxLength={20}
+                                                        className={`font-mono text-sm ${formErrors.devices ? "border-red-500" : ""}`}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-xs">Color</Label>
+                                                    <Input
+                                                        value={device.color}
+                                                        onChange={(e) => updateDevice(idx, "color", e.target.value)}
+                                                        placeholder="e.g. Black"
+                                                        className="text-sm"
+                                                    />
+                                                </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-xs">Storage</Label>
+                                                    <Input
+                                                        value={device.storageCapacity}
+                                                        onChange={(e) => updateDevice(idx, "storageCapacity", e.target.value)}
+                                                        placeholder="e.g. 128GB"
+                                                        className="text-sm"
+                                                    />
+                                                </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-xs">RAM</Label>
+                                                    <Input
+                                                        value={device.ram}
+                                                        onChange={(e) => updateDevice(idx, "ram", e.target.value)}
+                                                        placeholder="e.g. 8GB"
+                                                        className="text-sm"
+                                                    />
+                                                </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-xs">Condition</Label>
+                                                    <select
+                                                        value={device.conditionGrade}
+                                                        onChange={(e) => updateDevice(idx, "conditionGrade", e.target.value)}
+                                                        className={`${selectClass} text-sm h-8`}
+                                                    >
+                                                        <option value="NEW">New</option>
+                                                        <option value="OPEN_BOX">Open Box</option>
+                                                        <option value="GRADE_A">Grade A</option>
+                                                        <option value="GRADE_B">Grade B</option>
+                                                        <option value="GRADE_C">Grade C</option>
+                                                        <option value="REFURBISHED">Refurbished</option>
+                                                    </select>
+                                                </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-xs">Network</Label>
+                                                    <select
+                                                        value={device.networkStatus}
+                                                        onChange={(e) => updateDevice(idx, "networkStatus", e.target.value)}
+                                                        className={`${selectClass} text-sm h-8`}
+                                                    >
+                                                        <option value="UNLOCKED">Unlocked</option>
+                                                        <option value="LOCKED">Locked</option>
+                                                    </select>
+                                                </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-xs">Battery %</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        value={device.batteryHealthPercentage}
+                                                        onChange={(e) => updateDevice(idx, "batteryHealthPercentage", e.target.value)}
+                                                        placeholder="Optional"
+                                                        className="text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="grid gap-2">
-                                        <Label>Color</Label>
-                                        <Input
-                                            value={formData.color}
-                                            onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                                            className="bg-background"
-                                            placeholder="Optional"
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>Storage</Label>
-                                        <Input
-                                            value={formData.storageCapacity}
-                                            onChange={(e) => setFormData({ ...formData, storageCapacity: e.target.value })}
-                                            className="bg-background"
-                                            placeholder="e.g. 128GB"
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>RAM</Label>
-                                        <Input
-                                            value={formData.ram}
-                                            onChange={(e) => setFormData({ ...formData, ram: e.target.value })}
-                                            className="bg-background"
-                                            placeholder="e.g. 8GB"
-                                        />
-                                    </div>
-                                </div>
+                                {formErrors.devices && (
+                                    <p className="text-sm text-red-500">{formErrors.devices}</p>
+                                )}
 
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="grid gap-2">
-                                        <Label>Condition</Label>
-                                        <select
-                                            value={formData.conditionGrade}
-                                            onChange={(e) => setFormData({ ...formData, conditionGrade: e.target.value })}
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm bg-background"
-                                        >
-                                            <option value="NEW">New</option>
-                                            <option value="OPEN_BOX">Open Box</option>
-                                            <option value="GRADE_A">Grade A</option>
-                                            <option value="GRADE_B">Grade B</option>
-                                            <option value="GRADE_C">Grade C</option>
-                                            <option value="REFURBISHED">Refurbished</option>
-                                        </select>
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>Network Status</Label>
-                                        <select
-                                            value={formData.networkStatus}
-                                            onChange={(e) => setFormData({ ...formData, networkStatus: e.target.value })}
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm bg-background"
-                                        >
-                                            <option value="UNLOCKED">Unlocked</option>
-                                            <option value="LOCKED">Locked</option>
-                                        </select>
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>Battery Health %</Label>
-                                        <Input
-                                            type="number" min="0" max="100"
-                                            value={formData.batteryHealthPercentage}
-                                            onChange={(e) => setFormData({ ...formData, batteryHealthPercentage: e.target.value })}
-                                            className="bg-background"
-                                            placeholder="Optional"
-                                        />
-                                    </div>
-                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full"
+                                    onClick={addDevice}
+                                >
+                                    <PlusCircle className="h-4 w-4 mr-2" />
+                                    Add Another Device
+                                </Button>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="grid gap-2">
-                                        <Label>Supplier *</Label>
-                                        <select
-                                            value={formData.supplierId}
-                                            onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
-                                            className={`flex h-9 w-full rounded-md border border-input text-sm bg-background px-3 py-1 ${formErrors.supplierId ? "border-red-500" : ""}`}
-                                            required={formData.isImeiTracked}
-                                        >
-                                            <option value="">-- Select Supplier --</option>
-                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
-                                        {formErrors.supplierId && <p className="text-sm text-red-500">{formErrors.supplierId}</p>}
+                                <p className="text-xs text-muted-foreground">
+                                    Brand and Model are automatically extracted from the Product Name. Each device gets its own specs.
+                                </p>
+
+                                {/* Shared purchase fields */}
+                                <div className="border-t pt-3 space-y-3">
+                                    <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Purchase Details (shared)</h5>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid gap-2">
+                                            <Label>Supplier *</Label>
+                                            <select
+                                                value={formData.supplierId}
+                                                onChange={(e) => {
+                                                    setFormData({ ...formData, supplierId: e.target.value });
+                                                    if (e.target.value) setFormErrors(prev => ({ ...prev, supplierId: "" }));
+                                                }}
+                                                className={`${selectClass} ${formErrors.supplierId ? "border-red-500" : ""}`}
+                                            >
+                                                <option value="">-- Select Supplier --</option>
+                                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            </select>
+                                            {formErrors.supplierId && <p className="text-sm text-red-500">{formErrors.supplierId}</p>}
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label>Cost Price (per device) *</Label>
+                                            <Input
+                                                type="number" step="0.01"
+                                                value={formData.costPrice}
+                                                onChange={(e) => {
+                                                    setFormData({ ...formData, costPrice: e.target.value });
+                                                    if (e.target.value) setFormErrors(prev => ({ ...prev, costPrice: "" }));
+                                                }}
+                                                className={formErrors.costPrice ? "border-red-500" : ""}
+                                                placeholder="0.00"
+                                            />
+                                            {formErrors.costPrice && <p className="text-sm text-red-500">{formErrors.costPrice}</p>}
+                                        </div>
                                     </div>
-                                    <div className="grid gap-2">
-                                        <Label>Cost Price *</Label>
-                                        <Input
-                                            type="number" step="0.01"
-                                            value={formData.costPrice}
-                                            onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                                            className={`bg-background ${formErrors.costPrice ? "border-red-500" : ""}`}
-                                            placeholder="0.00"
-                                            required={formData.isImeiTracked}
-                                        />
-                                        {formErrors.costPrice && <p className="text-sm text-red-500">{formErrors.costPrice}</p>}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid gap-2">
+                                            <Label>Landed Cost</Label>
+                                            <Input
+                                                type="number" step="0.01"
+                                                value={formData.landedCost}
+                                                onChange={(e) => setFormData({ ...formData, landedCost: e.target.value })}
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label>Notes</Label>
+                                            <Input
+                                                value={formData.deviceNotes}
+                                                onChange={(e) => setFormData({ ...formData, deviceNotes: e.target.value })}
+                                                placeholder="Optional"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid gap-2">
+                                            <Label>Supplier Warranty Expiry</Label>
+                                            <Input
+                                                type="date"
+                                                value={formData.supplierWarrantyExpiry}
+                                                onChange={(e) => setFormData({ ...formData, supplierWarrantyExpiry: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label>Customer Warranty Expiry</Label>
+                                            <Input
+                                                type="date"
+                                                value={formData.customerWarrantyExpiry}
+                                                onChange={(e) => setFormData({ ...formData, customerWarrantyExpiry: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

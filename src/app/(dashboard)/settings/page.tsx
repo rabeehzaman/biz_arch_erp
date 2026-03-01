@@ -5,7 +5,6 @@ import { CompanySettings } from "@/components/settings/company-settings";
 import { UnitsSettings } from "@/components/settings/units-settings";
 import { AccountingSettings } from "@/components/settings/accounting-settings";
 import { POSSettings } from "@/components/settings/pos-settings";
-import { SaudiInvoiceSettings } from "@/components/settings/saudi-invoice-settings";
 import { PageAnimation } from "@/components/ui/page-animation";
 
 export default function SettingsPage() {
@@ -26,7 +25,6 @@ export default function SettingsPage() {
                 <TabsTrigger value="units">Units of Measure</TabsTrigger>
                 <TabsTrigger value="accounting">Accounting</TabsTrigger>
                 <TabsTrigger value="pos">POS</TabsTrigger>
-                <TabsTrigger value="saudi-einvoice">Saudi E-Invoice</TabsTrigger>
               </TabsList>
             </div>
             <TabsContent value="company" className="mt-6">
@@ -40,9 +38,6 @@ export default function SettingsPage() {
             </TabsContent>
             <TabsContent value="pos" className="mt-6">
               <POSSettings />
-            </TabsContent>
-            <TabsContent value="saudi-einvoice" className="mt-6">
-              <SaudiInvoiceSettings />
             </TabsContent>
           </Tabs>
         </div>

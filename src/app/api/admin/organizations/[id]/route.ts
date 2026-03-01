@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedDefaultCOA } from "@/lib/accounting/seed-coa";
+import { seedDefaultCOA, seedSaudiVATAccounts } from "@/lib/accounting/seed-coa";
+import { validateTRN } from "@/lib/saudi-vat/calculator";
 
 export async function GET(
   request: NextRequest,
@@ -36,7 +37,14 @@ export async function GET(
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    return NextResponse.json(organization);
+    const pdfFormatSetting = await prisma.setting.findFirst({
+      where: { organizationId: id, key: "invoice_pdf_format" },
+    });
+
+    return NextResponse.json({
+      ...organization,
+      invoicePdfFormat: pdfFormatSetting?.value || "A5_LANDSCAPE",
+    });
   } catch (error) {
     console.error("Failed to fetch organization:", error);
     return NextResponse.json(
@@ -62,7 +70,24 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, slug, gstEnabled, eInvoicingEnabled, multiUnitEnabled, multiBranchEnabled, isMobileShopModuleEnabled, gstin, gstStateCode } = body;
+    const {
+      name,
+      slug,
+      gstEnabled,
+      eInvoicingEnabled,
+      multiUnitEnabled,
+      multiBranchEnabled,
+      isMobileShopModuleEnabled,
+      gstin,
+      gstStateCode,
+      saudiEInvoiceEnabled,
+      vatNumber,
+      commercialRegNumber,
+      arabicName,
+      arabicAddress,
+      arabicCity,
+      invoicePdfFormat,
+    } = body;
 
     // Basic field update validation
     if (slug && !/^[a-z0-9-]+$/.test(slug)) {
@@ -103,6 +128,31 @@ export async function PUT(
       );
     }
 
+    // Saudi validation
+    if (saudiEInvoiceEnabled && gstEnabled) {
+      return NextResponse.json(
+        { error: "Cannot enable both GST and Saudi E-Invoice simultaneously" },
+        { status: 400 }
+      );
+    }
+
+    if (saudiEInvoiceEnabled && vatNumber && !validateTRN(vatNumber)) {
+      return NextResponse.json(
+        { error: "Invalid VAT Number (TRN). Must be 15 digits starting with 3." },
+        { status: 400 }
+      );
+    }
+
+    // Check if enabling Saudi for the first time (to seed VAT accounts)
+    let seedVATAccounts = false;
+    if (saudiEInvoiceEnabled === true) {
+      const current = await prisma.organization.findUnique({
+        where: { id },
+        select: { saudiEInvoiceEnabled: true },
+      });
+      seedVATAccounts = !current?.saudiEInvoiceEnabled;
+    }
+
     // Build update data
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
@@ -120,6 +170,13 @@ export async function PUT(
       updateData.gstStateCode = gstin.substring(0, 2);
     }
 
+    if (saudiEInvoiceEnabled !== undefined) updateData.saudiEInvoiceEnabled = saudiEInvoiceEnabled;
+    if (vatNumber !== undefined) updateData.vatNumber = vatNumber || null;
+    if (commercialRegNumber !== undefined) updateData.commercialRegNumber = commercialRegNumber || null;
+    if (arabicName !== undefined) updateData.arabicName = arabicName || null;
+    if (arabicAddress !== undefined) updateData.arabicAddress = arabicAddress || null;
+    if (arabicCity !== undefined) updateData.arabicCity = arabicCity || null;
+
     const organization = await prisma.$transaction(
       async (tx) => {
         const org = await tx.organization.update({
@@ -130,6 +187,20 @@ export async function PUT(
         // Seed GST accounts if enabling GST
         if (gstEnabled) {
           await seedDefaultCOA(tx as never, id);
+        }
+
+        // Seed Saudi VAT accounts if enabling Saudi for first time
+        if (seedVATAccounts) {
+          await seedSaudiVATAccounts(tx as never, id);
+        }
+
+        // Upsert invoice PDF format setting
+        if (invoicePdfFormat !== undefined) {
+          await tx.setting.upsert({
+            where: { organizationId_key: { organizationId: id, key: "invoice_pdf_format" } },
+            update: { value: invoicePdfFormat },
+            create: { organizationId: id, key: "invoice_pdf_format", value: invoicePdfFormat },
+          });
         }
 
         // Seed default branch + warehouse when enabling multi-branch

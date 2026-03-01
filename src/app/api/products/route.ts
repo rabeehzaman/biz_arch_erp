@@ -118,8 +118,7 @@ export async function POST(request: NextRequest) {
 
       if (isImeiTracked && deviceDetails) {
         const {
-          imeisList, color, storageCapacity, ram,
-          networkStatus, conditionGrade, batteryHealthPercentage,
+          devices,
           supplierId, costPrice, landedCost, sellingPrice,
           supplierWarrantyExpiry, customerWarrantyExpiry, notes
         } = deviceDetails;
@@ -128,24 +127,24 @@ export async function POST(request: NextRequest) {
           throw new Error("SUPPLIER_REQUIRED");
         }
 
-        if (imeisList && Array.isArray(imeisList) && imeisList.length > 0) {
-          const quantity = imeisList.length;
+        if (devices && Array.isArray(devices) && devices.length > 0) {
+          const quantity = devices.length;
           const totalCost = (costPrice || 0) * quantity;
 
-          // Create all mobile devices
-          for (const imei of imeisList) {
+          // Create all mobile devices with per-device specs
+          for (const device of devices) {
             await tx.mobileDevice.create({
               data: {
                 organizationId,
-                imei1: imei,
+                imei1: device.imei,
                 brand: deducedBrand,
                 model: deducedModel,
-                color: color || null,
-                storageCapacity: storageCapacity || null,
-                ram: ram || null,
-                networkStatus: networkStatus || "UNLOCKED",
-                conditionGrade: conditionGrade || "NEW",
-                batteryHealthPercentage: batteryHealthPercentage ?? null,
+                color: device.color || null,
+                storageCapacity: device.storageCapacity || null,
+                ram: device.ram || null,
+                networkStatus: (device.networkStatus || "UNLOCKED") as any,
+                conditionGrade: (device.conditionGrade || "NEW") as any,
+                batteryHealthPercentage: device.batteryHealthPercentage ?? null,
                 productId: newProduct.id,
                 supplierId,
                 costPrice: costPrice || 0,
@@ -199,7 +198,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } else {
-          throw new Error("IMEI_REQUIRED");
+          throw new Error("DEVICES_REQUIRED");
         }
       }
 
@@ -211,21 +210,29 @@ export async function POST(request: NextRequest) {
     console.error("Failed to create product:", error);
 
     let errorMessage = "Failed to create product";
+    let statusCode = 500;
+
     if (error.code === 'P2002') {
+      statusCode = 400;
       if (error.meta?.target?.includes('imei1')) {
         errorMessage = "One or more IMEIs already exist in the database.";
       } else {
         errorMessage = "A product with this SKU or Barcode already exists.";
       }
+    } else if (error.code === 'P2003') {
+      statusCode = 400;
+      errorMessage = "Invalid supplier selected.";
     } else if (error.message === "SUPPLIER_REQUIRED") {
+      statusCode = 400;
       errorMessage = "Supplier is required when tracking by IMEI.";
-    } else if (error.message === "IMEI_REQUIRED") {
-      errorMessage = "At least one IMEI is required when tracking by IMEI.";
+    } else if (error.message === "DEVICES_REQUIRED") {
+      statusCode = 400;
+      errorMessage = "At least one device with IMEI is required when tracking by IMEI.";
     }
 
     return NextResponse.json(
       { error: errorMessage },
-      { status: error.code === 'P2002' || error.message.includes("REQUIRED") ? 400 : 500 }
+      { status: statusCode }
     );
   }
 }
