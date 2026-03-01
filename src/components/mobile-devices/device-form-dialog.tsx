@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +50,6 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     imei1: "",
@@ -448,34 +447,31 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     </button>
                   </div>
                 ))}
-                {/* Hidden input — triggered via ref for reliable iOS Safari support */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
-                  className="sr-only"
-                  disabled={photoUploading}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handlePhotoUpload(file);
-                    e.target.value = "";
-                  }}
-                />
-                <button
-                  type="button"
-                  disabled={photoUploading}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`h-20 w-20 shrink-0 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${photoUploading ? "cursor-not-allowed opacity-50" : "hover:bg-accent"}`}
-                >
+                {/* Overlay input directly over the visual button — no sr-only, no
+                    programmatic .click(). iOS Safari requires the <input> to be
+                    physically tappable (not clipped/hidden) to open the file picker. */}
+                <div className={`relative h-20 w-20 shrink-0 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${photoUploading ? "cursor-not-allowed opacity-50" : "hover:bg-accent"}`}>
+                  {!photoUploading && (
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handlePhotoUpload(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  )}
                   {photoUploading ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   ) : (
                     <>
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground text-center leading-tight">Add Photo</span>
+                      <Upload className="h-5 w-5 text-muted-foreground pointer-events-none" />
+                      <span className="text-xs text-muted-foreground text-center leading-tight pointer-events-none">Add Photo</span>
                     </>
                   )}
-                </button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">JPG, PNG or WEBP. Gallery or camera.</p>
             </fieldset>
