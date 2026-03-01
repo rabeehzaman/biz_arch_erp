@@ -19,8 +19,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
 
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -74,19 +74,6 @@ export default function SuppliersPage() {
     amount: "",
     transactionDate: new Date().toISOString().split("T")[0],
   });
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "India",
-    gstin: "",
-    gstStateCode: "",
-    notes: "",
-  });
 
   useEffect(() => {
     fetchSuppliers();
@@ -106,63 +93,8 @@ export default function SuppliersPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const payload = {
-      name: formData.name,
-      email: formData.email || null,
-      phone: formData.phone || null,
-      address: formData.address || null,
-      city: formData.city || null,
-      state: formData.state || null,
-      zipCode: formData.zipCode || null,
-      country: formData.country || "India",
-      gstin: formData.gstin || null,
-      gstStateCode: formData.gstStateCode || null,
-      notes: formData.notes || null,
-    };
-
-    try {
-      const response = editingSupplier
-        ? await fetch(`/api/suppliers/${editingSupplier.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-        : await fetch("/api/suppliers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-      if (!response.ok) throw new Error("Failed to save");
-
-      setIsDialogOpen(false);
-      resetForm();
-      fetchSuppliers();
-      toast.success(editingSupplier ? "Supplier updated" : "Supplier added");
-    } catch (error) {
-      toast.error("Failed to save supplier");
-      console.error("Failed to save supplier:", error);
-    }
-  };
-
   const handleEdit = (supplier: Supplier) => {
     setEditingSupplier(supplier);
-    setFormData({
-      name: supplier.name,
-      email: supplier.email || "",
-      phone: supplier.phone || "",
-      address: supplier.address || "",
-      city: supplier.city || "",
-      state: supplier.state || "",
-      zipCode: supplier.zipCode || "",
-      country: supplier.country || "India",
-      gstin: supplier.gstin || "",
-      gstStateCode: supplier.gstStateCode || "",
-      notes: supplier.notes || "",
-    });
     setIsDialogOpen(true);
   };
 
@@ -184,23 +116,6 @@ export default function SuppliersPage() {
           console.error("Failed to delete supplier:", error);
         }
       },
-    });
-  };
-
-  const resetForm = () => {
-    setEditingSupplier(null);
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      country: "India",
-      gstin: "",
-      gstStateCode: "",
-      notes: "",
     });
   };
 
@@ -271,159 +186,19 @@ export default function SuppliersPage() {
             <h2 className="text-2xl font-bold text-slate-900">Suppliers</h2>
             <p className="text-slate-500">Manage your supplier/vendor database</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
+          <Button className="w-full sm:w-auto" onClick={() => {
+            setEditingSupplier(null);
+            setIsDialogOpen(true);
           }}>
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Supplier
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl overflow-y-auto max-h-[90vh]">
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingSupplier ? "Edit Supplier" : "Add New Supplier"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingSupplier
-                      ? "Update the supplier details below."
-                      : "Fill in the details to add a new supplier."}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="country">Country</Label>
-                      <Input
-                        id="country"
-                        value={formData.country}
-                        onChange={(e) =>
-                          setFormData({ ...formData, country: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) =>
-                        setFormData({ ...formData, address: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={formData.city}
-                        onChange={(e) =>
-                          setFormData({ ...formData, city: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        value={formData.state}
-                        onChange={(e) =>
-                          setFormData({ ...formData, state: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="zipCode">ZIP Code</Label>
-                      <Input
-                        id="zipCode"
-                        value={formData.zipCode}
-                        onChange={(e) =>
-                          setFormData({ ...formData, zipCode: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="gstin">GSTIN</Label>
-                      <Input
-                        id="gstin"
-                        value={formData.gstin}
-                        onChange={(e) =>
-                          setFormData({ ...formData, gstin: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="gstStateCode">GST State Code</Label>
-                      <Input
-                        id="gstStateCode"
-                        value={formData.gstStateCode}
-                        onChange={(e) =>
-                          setFormData({ ...formData, gstStateCode: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
-                      }
-                      placeholder="Any additional notes..."
-                    />
-                  </div>
-                </div>
-                <DialogFooter className="mt-auto pt-4 border-t">
-                  <Button type="submit" className="w-full sm:w-auto">
-                    {editingSupplier ? "Update Supplier" : "Add Supplier"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Supplier
+          </Button>
+          <SupplierFormDialog
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            onSuccess={fetchSuppliers}
+            supplierToEdit={editingSupplier}
+          />
         </StaggerItem>
 
         <StaggerItem>

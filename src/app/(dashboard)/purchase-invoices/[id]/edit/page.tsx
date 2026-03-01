@@ -381,6 +381,7 @@ export default function EditPurchaseInvoicePage({
                       onValueChange={(value) =>
                         setFormData({ ...formData, supplierId: value })
                       }
+                      onSupplierCreated={fetchSuppliers}
                       required
                     />
                   </div>

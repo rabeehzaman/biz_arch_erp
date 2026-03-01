@@ -418,6 +418,7 @@ export default function NewPurchaseInvoicePage() {
                       onValueChange={(value) =>
                         setFormData({ ...formData, supplierId: value })
                       }
+                      onSupplierCreated={fetchSuppliers}
                       required
                       onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
                       autoFocus={true}
