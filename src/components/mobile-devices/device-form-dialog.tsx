@@ -105,21 +105,28 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
   };
 
   const handlePhotoUpload = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Photo too large. Maximum size is 10 MB.");
+      return;
+    }
     setPhotoUploading(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+      // resource_type=auto handles HEIC/HEIF from iPhone cameras
       const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
         { method: "POST", body: fd }
       );
-      if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error?.message || "Upload failed");
+      }
       setFormData((prev) => ({ ...prev, photoUrls: [...prev.photoUrls, data.secure_url] }));
       toast.success("Photo uploaded");
-    } catch {
-      toast.error("Photo upload failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Photo upload failed");
     } finally {
       setPhotoUploading(false);
     }
@@ -421,7 +428,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                 <label className={`h-24 w-24 shrink-0 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${photoUploading ? "cursor-not-allowed opacity-50" : "hover:bg-accent cursor-pointer"}`}>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
                     className="sr-only"
                     disabled={photoUploading}
                     onChange={(e) => {
