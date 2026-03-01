@@ -136,7 +136,6 @@ export function CommandPalette() {
 
   const isEmpty = search.trim().length === 0;
   const isSearching = search.trim().length >= 2;
-  const showStatic = !isSearching || search.trim().length < 2;
 
   return (
     <CommandDialog open={open} onOpenChange={handleOpenChange}>
@@ -220,8 +219,8 @@ export function CommandPalette() {
           </>
         )}
 
-        {/* Quick Actions (shown when empty or search matches) */}
-        {(isEmpty || showStatic) && nav.quickActions.length > 0 && (
+        {/* Quick Actions */}
+        {nav.quickActions.length > 0 && (
           <CommandGroup heading="Quick Actions">
             {nav.quickActions.map((item) => (
               <CommandItem
@@ -236,35 +235,33 @@ export function CommandPalette() {
           </CommandGroup>
         )}
 
-        {/* Navigation — Core */}
-        {(isEmpty || showStatic) && nav.core.length > 0 && (
-          <CommandGroup heading="Navigation">
-            {nav.core.map((item) => (
-              <NavCommandItem key={item.href} item={item} onSelect={navigate} />
-            ))}
-            {nav.sales.map((item) => (
-              <NavCommandItem key={item.href} item={item} onSelect={navigate} />
-            ))}
-            {nav.purchases.map((item) => (
-              <NavCommandItem key={item.href} item={item} onSelect={navigate} />
-            ))}
-            {nav.accounting.map((item) => (
-              <NavCommandItem key={item.href} item={item} onSelect={navigate} />
-            ))}
-            {nav.inventory.map((item) => (
-              <NavCommandItem key={item.href} item={item} onSelect={navigate} />
-            ))}
-            {nav.mobileShop.map((item) => (
-              <NavCommandItem key={item.href} item={item} onSelect={navigate} />
-            ))}
-            {nav.settings.map((item) => (
-              <NavCommandItem key={item.href} item={item} onSelect={navigate} />
-            ))}
-          </CommandGroup>
-        )}
+        {/* Navigation */}
+        <CommandGroup heading="Navigation">
+          {nav.core.map((item) => (
+            <NavCommandItem key={item.href} item={item} onSelect={navigate} />
+          ))}
+          {nav.sales.map((item) => (
+            <NavCommandItem key={item.href} item={item} onSelect={navigate} />
+          ))}
+          {nav.purchases.map((item) => (
+            <NavCommandItem key={item.href} item={item} onSelect={navigate} />
+          ))}
+          {nav.accounting.map((item) => (
+            <NavCommandItem key={item.href} item={item} onSelect={navigate} />
+          ))}
+          {nav.inventory.map((item) => (
+            <NavCommandItem key={item.href} item={item} onSelect={navigate} />
+          ))}
+          {nav.mobileShop.map((item) => (
+            <NavCommandItem key={item.href} item={item} onSelect={navigate} />
+          ))}
+          {nav.settings.map((item) => (
+            <NavCommandItem key={item.href} item={item} onSelect={navigate} />
+          ))}
+        </CommandGroup>
 
         {/* Reports */}
-        {(isEmpty || showStatic) && nav.reports.length > 0 && (
+        {nav.reports.length > 0 && (
           <CommandGroup heading="Reports">
             {nav.reports.map((item) => (
               <NavCommandItem key={item.href} item={item} onSelect={navigate} />
@@ -273,7 +270,7 @@ export function CommandPalette() {
         )}
 
         {/* Superadmin */}
-        {(isEmpty || showStatic) && nav.admin.length > 0 && (
+        {nav.admin.length > 0 && (
           <CommandGroup heading="Admin">
             {nav.admin.map((item) => (
               <NavCommandItem key={item.href} item={item} onSelect={navigate} />
