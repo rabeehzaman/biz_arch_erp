@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     imei1: "",
@@ -111,8 +112,16 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     }
     setPhotoUploading(true);
     try {
+      // Use FileReader → base64 data URL to avoid iOS Safari binary upload issues
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsDataURL(file);
+      });
+
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", dataUrl);
       fd.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
       const res = await fetch(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
@@ -439,18 +448,25 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     </button>
                   </div>
                 ))}
-                <label className={`h-20 w-20 shrink-0 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${photoUploading ? "cursor-not-allowed opacity-50" : "hover:bg-accent cursor-pointer"}`}>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
-                    className="sr-only"
-                    disabled={photoUploading}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handlePhotoUpload(file);
-                      e.target.value = "";
-                    }}
-                  />
+                {/* Hidden input — triggered via ref for reliable iOS Safari support */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
+                  className="sr-only"
+                  disabled={photoUploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handlePhotoUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={photoUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`h-20 w-20 shrink-0 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${photoUploading ? "cursor-not-allowed opacity-50" : "hover:bg-accent"}`}
+                >
                   {photoUploading ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   ) : (
@@ -459,7 +475,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                       <span className="text-xs text-muted-foreground text-center leading-tight">Add Photo</span>
                     </>
                   )}
-                </label>
+                </button>
               </div>
               <p className="text-xs text-muted-foreground">JPG, PNG or WEBP. Gallery or camera.</p>
             </fieldset>
