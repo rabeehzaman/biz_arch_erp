@@ -475,103 +475,362 @@ export default function NewPurchaseInvoicePage() {
                 </CardAction>
               </CardHeader>
               <CardContent className="p-0 border-t border-slate-200">
-                <Table>
-                  <TableHeader className="bg-slate-50">
-                    <TableRow>
-                      <TableHead className="w-[30%] font-semibold">Product *</TableHead>
-                      <TableHead className="w-[10%] font-semibold">Quantity *</TableHead>
-                      {session?.user?.multiUnitEnabled && (
-                        <TableHead className="w-[12%] font-semibold">Unit</TableHead>
-                      )}
-                      <TableHead className="w-[12%] font-semibold">Unit Cost *</TableHead>
-                      <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
-                      {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
-                      {session?.user?.gstEnabled ? (
-                        <>
-                          <TableHead className="text-right font-semibold">Gross Amount</TableHead>
-                          <TableHead className="text-right font-semibold">Net Amount</TableHead>
-                        </>
-                      ) : (
-                        <TableHead className="text-right font-semibold">Line Total</TableHead>
-                      )}
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lineItems.map((item, index) => {
-                      const product = products.find((p) => p.id === item.productId);
-                      const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
-                      return (
-                        <Fragment key={item.id}><TableRow className="group hover:bg-slate-50 border-b">
-                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                            <div ref={(el) => {
-                              if (el) {
-                                const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
-                                if (button) productComboRefs.current.set(item.id, button);
-                              } else {
-                                productComboRefs.current.delete(item.id);
-                              }
-                            }}>
-                              <ProductCombobox
-                                products={products}
-                                value={item.productId}
-                                onValueChange={(value) =>
-                                  updateLineItem(item.id, "productId", value)
-                                }
-                                onProductCreated={fetchProducts}
-                                onSelect={() => focusQuantity(item.id)}
-                                onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0 relative">
-                            <Input
-                              ref={(el) => {
+                {/* Desktop Table Layout */}
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="w-[30%] font-semibold">Product *</TableHead>
+                        <TableHead className="w-[10%] font-semibold">Quantity *</TableHead>
+                        {session?.user?.multiUnitEnabled && (
+                          <TableHead className="w-[12%] font-semibold">Unit</TableHead>
+                        )}
+                        <TableHead className="w-[12%] font-semibold">Unit Cost *</TableHead>
+                        <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
+                        {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
+                        {session?.user?.gstEnabled ? (
+                          <>
+                            <TableHead className="text-right font-semibold">Gross Amount</TableHead>
+                            <TableHead className="text-right font-semibold">Net Amount</TableHead>
+                          </>
+                        ) : (
+                          <TableHead className="text-right font-semibold">Line Total</TableHead>
+                        )}
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lineItems.map((item, index) => {
+                        const product = products.find((p) => p.id === item.productId);
+                        const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
+                        return (
+                          <Fragment key={item.id}><TableRow className="group hover:bg-slate-50 border-b">
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <div ref={(el) => {
                                 if (el) {
-                                  quantityRefs.current.set(item.id, el);
+                                  const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
+                                  if (button) productComboRefs.current.set(item.id, button);
                                 } else {
-                                  quantityRefs.current.delete(item.id);
+                                  productComboRefs.current.delete(item.id);
                                 }
-                              }}
+                              }}>
+                                <ProductCombobox
+                                  products={products}
+                                  value={item.productId}
+                                  onValueChange={(value) =>
+                                    updateLineItem(item.id, "productId", value)
+                                  }
+                                  onProductCreated={fetchProducts}
+                                  onSelect={() => focusQuantity(item.id)}
+                                  onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0 relative">
+                              <Input
+                                ref={(el) => {
+                                  if (el) {
+                                    quantityRefs.current.set(item.id, el);
+                                  } else {
+                                    quantityRefs.current.delete(item.id);
+                                  }
+                                }}
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0.01"
+                                step="0.01"
+                                value={item.quantity || ""}
+                                onChange={(e) =>
+                                  updateLineItem(
+                                    item.id,
+                                    "quantity",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                required
+                              />
+                            </TableCell>
+                            {session?.user?.multiUnitEnabled && (
+                              <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                                <ItemUnitSelect
+                                  value={item.unitId}
+                                  onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                                  options={(() => {
+                                    const product = products.find((p) => p.id === item.productId);
+                                    if (!product) return [];
+                                    const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
+                                    const alternateOptions = unitConversions
+                                      .filter(uc => uc.toUnitId === product.unitId)
+                                      .map(uc => ({
+                                        id: uc.fromUnitId,
+                                        name: uc.fromUnit.name,
+                                        conversionFactor: Number(uc.conversionFactor)
+                                      }));
+                                    return [baseOption, ...alternateOptions];
+                                  })()}
+                                  disabled={!item.productId}
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <Input
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0"
+                                step="0.01"
+                                value={item.unitCost}
+                                onChange={(e) =>
+                                  updateLineItem(
+                                    item.id,
+                                    "unitCost",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                required
+                              />
+                            </TableCell>
+                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                              <Input
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={item.discount || ""}
+                                onChange={(e) =>
+                                  updateLineItem(
+                                    item.id,
+                                    "discount",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const isLastItem = index === lineItems.length - 1;
+                                    if (isLastItem) {
+                                      addLineItem(true);
+                                    } else {
+                                      const nextItemId = lineItems[index + 1].id;
+                                      const nextProductTrigger = productComboRefs.current.get(nextItemId);
+                                      if (nextProductTrigger) {
+                                        nextProductTrigger.focus();
+                                      }
+                                    }
+                                  }
+                                }}
+                                className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                placeholder="0"
+                              />
+                            </TableCell>
+                            {session?.user?.gstEnabled && (
+                              <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                                <Input
+                                  type="number"
+                                  onFocus={(e) => e.target.select()}
+                                  min="0"
+                                  max="100"
+                                  step="0.01"
+                                  value={item.gstRate || ""}
+                                  onChange={(e) =>
+                                    updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
+                                  }
+                                  className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                  placeholder="0"
+                                />
+                              </TableCell>
+                            )}
+                            {session?.user?.gstEnabled ? (
+                              <>
+                                <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                                  ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                  {item.discount > 0 && (
+                                    <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
+                                  ₹{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                                </TableCell>
+                              </>
+                            ) : (
+                              <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
+                                ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                {item.discount > 0 && (
+                                  <div className="text-xs text-green-600">(-{item.discount}%)</div>
+                                )}
+                              </TableCell>
+                            )}
+                            <TableCell className="align-middle p-2 text-center">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
+                                onClick={() => removeLineItem(item.id)}
+                                disabled={lineItems.length === 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                            {isImeiTracked && item.imeiNumbers.length > 0 && (
+                              <TableRow key={`${item.id}-imei`} className="bg-blue-50/50">
+                                <TableCell colSpan={99} className="p-3">
+                                  <div className="space-y-2">
+                                    <p className="text-xs font-medium text-blue-700">IMEI Details ({item.imeiNumbers.length} device{item.imeiNumbers.length > 1 ? "s" : ""})</p>
+                                    {item.imeiNumbers.map((imei, idx) => (
+                                      <div key={idx} className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2 bg-white rounded border">
+                                        <Input
+                                          placeholder={`IMEI 1 *`}
+                                          value={imei.imei1}
+                                          onChange={(e) => updateImeiField(item.id, idx, "imei1", e.target.value)}
+                                          className="font-mono text-xs h-8"
+                                          maxLength={15}
+                                          required
+                                        />
+                                        <Input
+                                          placeholder="IMEI 2"
+                                          value={imei.imei2}
+                                          onChange={(e) => updateImeiField(item.id, idx, "imei2", e.target.value)}
+                                          className="font-mono text-xs h-8"
+                                          maxLength={15}
+                                        />
+                                        <Input
+                                          placeholder="Brand"
+                                          value={imei.brand}
+                                          onChange={(e) => updateImeiField(item.id, idx, "brand", e.target.value)}
+                                          className="text-xs h-8"
+                                        />
+                                        <Input
+                                          placeholder="Model"
+                                          value={imei.model}
+                                          onChange={(e) => updateImeiField(item.id, idx, "model", e.target.value)}
+                                          className="text-xs h-8"
+                                        />
+                                        <Input
+                                          placeholder="Color"
+                                          value={imei.color}
+                                          onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
+                                          className="text-xs h-8"
+                                        />
+                                        <Select
+                                          value={imei.storageCapacity}
+                                          onValueChange={(value) => updateImeiField(item.id, idx, "storageCapacity", value)}
+                                        >
+                                          <SelectTrigger className="text-xs h-8">
+                                            <SelectValue placeholder="Storage" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
+                                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <Select
+                                          value={imei.ram}
+                                          onValueChange={(value) => updateImeiField(item.id, idx, "ram", value)}
+                                        >
+                                          <SelectTrigger className="text-xs h-8">
+                                            <SelectValue placeholder="RAM" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
+                                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <Select
+                                          value={imei.conditionGrade}
+                                          onValueChange={(value) => updateImeiField(item.id, idx, "conditionGrade", value)}
+                                        >
+                                          <SelectTrigger className="text-xs h-8">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="NEW">New</SelectItem>
+                                            <SelectItem value="OPEN_BOX">Open Box</SelectItem>
+                                            <SelectItem value="GRADE_A">Grade A</SelectItem>
+                                            <SelectItem value="GRADE_B">Grade B</SelectItem>
+                                            <SelectItem value="GRADE_C">Grade C</SelectItem>
+                                            <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card Layout */}
+                <div className="sm:hidden divide-y divide-slate-200">
+                  {lineItems.map((item) => {
+                    const product = products.find((p) => p.id === item.productId);
+                    const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
+                    const lineGross = item.quantity * item.unitCost * (1 - item.discount / 100);
+                    const lineNet = lineGross * (1 + (item.gstRate || 0) / 100);
+
+                    return (
+                      <div key={item.id} className="p-3 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1" ref={(el) => {
+                            if (el) {
+                              const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
+                              if (button) productComboRefs.current.set(item.id, button);
+                            } else {
+                              productComboRefs.current.delete(item.id);
+                            }
+                          }}>
+                            <Label className="text-xs text-slate-500 mb-1 block">Product *</Label>
+                            <ProductCombobox
+                              products={products}
+                              value={item.productId}
+                              onValueChange={(value) =>
+                                updateLineItem(item.id, "productId", value)
+                              }
+                              onProductCreated={fetchProducts}
+                              onSelect={() => focusQuantity(item.id)}
+                              onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-400 hover:text-red-500 mt-5"
+                            onClick={() => removeLineItem(item.id)}
+                            disabled={lineItems.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs text-slate-500">Quantity *</Label>
+                            <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
                               min="0.01"
                               step="0.01"
                               value={item.quantity || ""}
                               onChange={(e) =>
-                                updateLineItem(
-                                  item.id,
-                                  "quantity",
-                                  parseFloat(e.target.value) || 0
-                                )
+                                updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
                               }
-                              className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                               required
                             />
-                          </TableCell>
-                          {session?.user?.multiUnitEnabled && (
-                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                              <ItemUnitSelect
-                                value={item.unitId}
-                                onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
-                                options={(() => {
-                                  const product = products.find((p) => p.id === item.productId);
-                                  if (!product) return [];
-                                  const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
-                                  const alternateOptions = unitConversions
-                                    .filter(uc => uc.toUnitId === product.unitId)
-                                    .map(uc => ({
-                                      id: uc.fromUnitId,
-                                      name: uc.fromUnit.name,
-                                      conversionFactor: Number(uc.conversionFactor)
-                                    }));
-                                  return [baseOption, ...alternateOptions];
-                                })()}
-                                disabled={!item.productId}
-                              />
-                            </TableCell>
-                          )}
-                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                          </div>
+                          <div>
+                            <Label className="text-xs text-slate-500">Unit Cost *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -579,17 +838,13 @@ export default function NewPurchaseInvoicePage() {
                               step="0.01"
                               value={item.unitCost}
                               onChange={(e) =>
-                                updateLineItem(
-                                  item.id,
-                                  "unitCost",
-                                  parseFloat(e.target.value) || 0
-                                )
+                                updateLineItem(item.id, "unitCost", parseFloat(e.target.value) || 0)
                               }
-                              className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                               required
                             />
-                          </TableCell>
-                          <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                          </div>
+                          <div>
+                            <Label className="text-xs text-slate-500">Discount %</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -598,34 +853,14 @@ export default function NewPurchaseInvoicePage() {
                               step="0.01"
                               value={item.discount || ""}
                               onChange={(e) =>
-                                updateLineItem(
-                                  item.id,
-                                  "discount",
-                                  parseFloat(e.target.value) || 0
-                                )
+                                updateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)
                               }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-                                  e.preventDefault();
-                                  e.stopPropagation(); // Prevent useEnterToTab from also moving focus
-                                  const isLastItem = index === lineItems.length - 1;
-                                  if (isLastItem) {
-                                    addLineItem(true);
-                                  } else {
-                                    const nextItemId = lineItems[index + 1].id;
-                                    const nextProductTrigger = productComboRefs.current.get(nextItemId);
-                                    if (nextProductTrigger) {
-                                      nextProductTrigger.focus();
-                                    }
-                                  }
-                                }
-                              }}
-                              className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                               placeholder="0"
                             />
-                          </TableCell>
+                          </div>
                           {session?.user?.gstEnabled && (
-                            <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                            <div>
+                              <Label className="text-xs text-slate-500">GST %</Label>
                               <Input
                                 type="number"
                                 onFocus={(e) => e.target.select()}
@@ -636,137 +871,128 @@ export default function NewPurchaseInvoicePage() {
                                 onChange={(e) =>
                                   updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
                                 }
-                                className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                                 placeholder="0"
                               />
-                            </TableCell>
+                            </div>
                           )}
-                          {session?.user?.gstEnabled ? (
-                            <>
-                              <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                                {item.discount > 0 && (
-                                  <div className="text-xs text-green-600">(-{item.discount}%)</div>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                                ₹{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
-                              </TableCell>
-                            </>
-                          ) : (
-                            <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                              ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
-                              {item.discount > 0 && (
-                                <div className="text-xs text-green-600">(-{item.discount}%)</div>
-                              )}
-                            </TableCell>
+                          {session?.user?.multiUnitEnabled && (
+                            <div>
+                              <Label className="text-xs text-slate-500">Unit</Label>
+                              <ItemUnitSelect
+                                value={item.unitId}
+                                onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                                options={(() => {
+                                  const p = products.find((p) => p.id === item.productId);
+                                  if (!p) return [];
+                                  const baseOption = { id: p.unitId!, name: p.unit?.name || p.unit?.code || "Base Unit", conversionFactor: 1 };
+                                  const alternateOptions = unitConversions
+                                    .filter(uc => uc.toUnitId === p.unitId)
+                                    .map(uc => ({ id: uc.fromUnitId, name: uc.fromUnit.name, conversionFactor: Number(uc.conversionFactor) }));
+                                  return [baseOption, ...alternateOptions];
+                                })()}
+                                disabled={!item.productId}
+                              />
+                            </div>
                           )}
-                          <TableCell className="align-middle p-2 text-center">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
-                              onClick={() => removeLineItem(item.id)}
-                              disabled={lineItems.length === 1}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                          {isImeiTracked && item.imeiNumbers.length > 0 && (
-                            <TableRow key={`${item.id}-imei`} className="bg-blue-50/50">
-                              <TableCell colSpan={99} className="p-3">
-                                <div className="space-y-2">
-                                  <p className="text-xs font-medium text-blue-700">IMEI Details ({item.imeiNumbers.length} device{item.imeiNumbers.length > 1 ? "s" : ""})</p>
-                                  {item.imeiNumbers.map((imei, idx) => (
-                                    <div key={idx} className="grid grid-cols-4 gap-2 p-2 bg-white rounded border">
-                                      <Input
-                                        placeholder={`IMEI 1 *`}
-                                        value={imei.imei1}
-                                        onChange={(e) => updateImeiField(item.id, idx, "imei1", e.target.value)}
-                                        className="font-mono text-xs h-8"
-                                        maxLength={15}
-                                        required
-                                      />
-                                      <Input
-                                        placeholder="IMEI 2"
-                                        value={imei.imei2}
-                                        onChange={(e) => updateImeiField(item.id, idx, "imei2", e.target.value)}
-                                        className="font-mono text-xs h-8"
-                                        maxLength={15}
-                                      />
-                                      <Input
-                                        placeholder="Brand"
-                                        value={imei.brand}
-                                        onChange={(e) => updateImeiField(item.id, idx, "brand", e.target.value)}
-                                        className="text-xs h-8"
-                                      />
-                                      <Input
-                                        placeholder="Model"
-                                        value={imei.model}
-                                        onChange={(e) => updateImeiField(item.id, idx, "model", e.target.value)}
-                                        className="text-xs h-8"
-                                      />
-                                      <Input
-                                        placeholder="Color"
-                                        value={imei.color}
-                                        onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
-                                        className="text-xs h-8"
-                                      />
-                                      <Select
-                                        value={imei.storageCapacity}
-                                        onValueChange={(value) => updateImeiField(item.id, idx, "storageCapacity", value)}
-                                      >
-                                        <SelectTrigger className="text-xs h-8">
-                                          <SelectValue placeholder="Storage" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
-                                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      <Select
-                                        value={imei.ram}
-                                        onValueChange={(value) => updateImeiField(item.id, idx, "ram", value)}
-                                      >
-                                        <SelectTrigger className="text-xs h-8">
-                                          <SelectValue placeholder="RAM" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
-                                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      <Select
-                                        value={imei.conditionGrade}
-                                        onValueChange={(value) => updateImeiField(item.id, idx, "conditionGrade", value)}
-                                      >
-                                        <SelectTrigger className="text-xs h-8">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="NEW">New</SelectItem>
-                                          <SelectItem value="OPEN_BOX">Open Box</SelectItem>
-                                          <SelectItem value="GRADE_A">Grade A</SelectItem>
-                                          <SelectItem value="GRADE_B">Grade B</SelectItem>
-                                          <SelectItem value="GRADE_C">Grade C</SelectItem>
-                                          <SelectItem value="REFURBISHED">Refurbished</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  ))}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </Fragment>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                        </div>
+
+                        <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
+                          <span className="text-sm font-semibold">
+                            {session?.user?.gstEnabled
+                              ? `₹${lineNet.toLocaleString("en-IN")}`
+                              : `₹${lineGross.toLocaleString("en-IN")}`}
+                          </span>
+                        </div>
+
+                        {/* Mobile IMEI Section */}
+                        {isImeiTracked && item.imeiNumbers.length > 0 && (
+                          <div className="bg-blue-50/50 rounded-lg p-3 space-y-2">
+                            <p className="text-xs font-medium text-blue-700">IMEI Details ({item.imeiNumbers.length} device{item.imeiNumbers.length > 1 ? "s" : ""})</p>
+                            {item.imeiNumbers.map((imei, idx) => (
+                              <div key={idx} className="grid grid-cols-2 gap-2 p-2 bg-white rounded border">
+                                <Input
+                                  placeholder="IMEI 1 *"
+                                  value={imei.imei1}
+                                  onChange={(e) => updateImeiField(item.id, idx, "imei1", e.target.value)}
+                                  className="font-mono text-xs h-8"
+                                  maxLength={15}
+                                  required
+                                />
+                                <Input
+                                  placeholder="IMEI 2"
+                                  value={imei.imei2}
+                                  onChange={(e) => updateImeiField(item.id, idx, "imei2", e.target.value)}
+                                  className="font-mono text-xs h-8"
+                                  maxLength={15}
+                                />
+                                <Input
+                                  placeholder="Brand"
+                                  value={imei.brand}
+                                  onChange={(e) => updateImeiField(item.id, idx, "brand", e.target.value)}
+                                  className="text-xs h-8"
+                                />
+                                <Input
+                                  placeholder="Model"
+                                  value={imei.model}
+                                  onChange={(e) => updateImeiField(item.id, idx, "model", e.target.value)}
+                                  className="text-xs h-8"
+                                />
+                                <Input
+                                  placeholder="Color"
+                                  value={imei.color}
+                                  onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
+                                  className="text-xs h-8"
+                                />
+                                <Select
+                                  value={imei.storageCapacity}
+                                  onValueChange={(value) => updateImeiField(item.id, idx, "storageCapacity", value)}
+                                >
+                                  <SelectTrigger className="text-xs h-8">
+                                    <SelectValue placeholder="Storage" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
+                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={imei.ram}
+                                  onValueChange={(value) => updateImeiField(item.id, idx, "ram", value)}
+                                >
+                                  <SelectTrigger className="text-xs h-8">
+                                    <SelectValue placeholder="RAM" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
+                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={imei.conditionGrade}
+                                  onValueChange={(value) => updateImeiField(item.id, idx, "conditionGrade", value)}
+                                >
+                                  <SelectTrigger className="text-xs h-8">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="NEW">New</SelectItem>
+                                    <SelectItem value="OPEN_BOX">Open Box</SelectItem>
+                                    <SelectItem value="GRADE_A">Grade A</SelectItem>
+                                    <SelectItem value="GRADE_B">Grade B</SelectItem>
+                                    <SelectItem value="GRADE_C">Grade C</SelectItem>
+                                    <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
 

@@ -366,39 +366,60 @@ export default function InvoiceDetailPage({
               </div>
             </div>
 
-            {/* Line Items */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40%]">Description</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoice.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell className="text-right">{Number(item.quantity)}</TableCell>
-                    <TableCell className="text-right">
-                      ₹{Number(item.unitPrice).toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {Number(item.discount) > 0 ? (
-                        <span className="text-green-600">{Number(item.discount)}%</span>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ₹{Number(item.total).toLocaleString("en-IN")}
-                    </TableCell>
+            {/* Line Items — Desktop */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40%]">Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {invoice.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell className="text-right">{Number(item.quantity)}</TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {Number(item.discount) > 0 ? (
+                          <span className="text-green-600">{Number(item.discount)}%</span>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.total).toLocaleString("en-IN")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Line Items — Mobile */}
+            <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
+              {invoice.items.map((item) => (
+                <div key={item.id} className="p-3 space-y-1">
+                  <div className="font-medium text-sm">{item.description}</div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
+                    <span>Qty: {Number(item.quantity)}</span>
+                    <span>Price: ₹{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                    {Number(item.discount) > 0 && (
+                      <span className="text-green-600">Discount: {Number(item.discount)}%</span>
+                    )}
+                  </div>
+                  <div className="text-right font-semibold text-sm">
+                    ₹{Number(item.total).toLocaleString("en-IN")}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Totals */}
             <div className="flex justify-end mt-6">

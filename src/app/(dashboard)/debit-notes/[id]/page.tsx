@@ -230,41 +230,64 @@ export default function DebitNoteDetailPage() {
             <CardTitle>Items</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Unit Cost</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {debitNote.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{item.description}</div>
-                        {item.product?.sku && (
-                          <div className="text-sm text-slate-500">
-                            SKU: {item.product.sku}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">
-                      ₹{Number(item.unitCost).toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell className="text-right">{item.discount}%</TableCell>
-                    <TableCell className="text-right font-medium">
-                      ₹{Number(item.total).toLocaleString("en-IN")}
-                    </TableCell>
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead className="text-right">Unit Cost</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {debitNote.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{item.description}</div>
+                          {item.product?.sku && (
+                            <div className="text-sm text-slate-500">
+                              SKU: {item.product.sku}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.unitCost).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">{item.discount}%</TableCell>
+                      <TableCell className="text-right font-medium">
+                        ₹{Number(item.total).toLocaleString("en-IN")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
+              {debitNote.items.map((item) => (
+                <div key={item.id} className="p-3 space-y-1">
+                  <div className="font-medium text-sm">{item.description}</div>
+                  {item.product?.sku && (
+                    <div className="text-xs text-slate-500">SKU: {item.product.sku}</div>
+                  )}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
+                    <span>Qty: {item.quantity}</span>
+                    <span>Cost: ₹{Number(item.unitCost).toLocaleString("en-IN")}</span>
+                    {Number(item.discount) > 0 && (
+                      <span className="text-green-600">Discount: {item.discount}%</span>
+                    )}
+                  </div>
+                  <div className="text-right font-semibold text-sm">
+                    ₹{Number(item.total).toLocaleString("en-IN")}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             <div className="mt-4 space-y-2 max-w-xs ml-auto">
               <div className="flex justify-between text-sm">

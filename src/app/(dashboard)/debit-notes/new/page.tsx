@@ -404,90 +404,102 @@ export default function NewDebitNotePage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-2 sm:contents">
-                        <Input
-                          type="number"
-                          onFocus={(e) => e.target.select()}
-                          placeholder="Qty"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
-                          }
-                          min="0"
-                          step="0.01"
-                          required
-                          ref={(el) => {
-                            if (el) quantityRefs.current.set(item.id, el);
-                            else quantityRefs.current.delete(item.id);
-                          }}
-                        />
+                      <div className="grid grid-cols-2 sm:contents gap-2">
+                        <div className="space-y-1">
+                          <Label className="sm:hidden text-xs text-slate-500">Quantity *</Label>
+                          <Input
+                            type="number"
+                            onFocus={(e) => e.target.select()}
+                            placeholder="Qty"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
+                            }
+                            min="0"
+                            step="0.01"
+                            required
+                            ref={(el) => {
+                              if (el) quantityRefs.current.set(item.id, el);
+                              else quantityRefs.current.delete(item.id);
+                            }}
+                          />
+                        </div>
 
                         {session?.user?.multiUnitEnabled && (
-                          <ItemUnitSelect
-                            value={item.unitId}
-                            onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
-                            options={(() => {
-                              const product = products.find((p) => p.id === item.productId);
-                              if (!product) return [];
-                              const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
-                              const alternateOptions = unitConversions
-                                .filter(uc => uc.toUnitId === product.unitId)
-                                .map(uc => ({
-                                  id: uc.fromUnitId,
-                                  name: uc.fromUnit.name,
-                                  conversionFactor: Number(uc.conversionFactor)
-                                }));
-                              return [baseOption, ...alternateOptions];
-                            })()}
-                            disabled={!item.productId}
-                          />
+                          <div className="space-y-1">
+                            <Label className="sm:hidden text-xs text-slate-500">Unit</Label>
+                            <ItemUnitSelect
+                              value={item.unitId}
+                              onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
+                              options={(() => {
+                                const product = products.find((p) => p.id === item.productId);
+                                if (!product) return [];
+                                const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
+                                const alternateOptions = unitConversions
+                                  .filter(uc => uc.toUnitId === product.unitId)
+                                  .map(uc => ({
+                                    id: uc.fromUnitId,
+                                    name: uc.fromUnit.name,
+                                    conversionFactor: Number(uc.conversionFactor)
+                                  }));
+                                return [baseOption, ...alternateOptions];
+                              })()}
+                              disabled={!item.productId}
+                            />
+                          </div>
                         )}
 
-                        <Input
-                          type="number"
-                          onFocus={(e) => e.target.select()}
-                          placeholder="Unit Cost"
-                          value={item.unitCost}
-                          onChange={(e) =>
-                            updateLineItem(item.id, "unitCost", parseFloat(e.target.value) || 0)
-                          }
-                          min="0"
-                          step="0.01"
-                          required
-                        />
+                        <div className="space-y-1">
+                          <Label className="sm:hidden text-xs text-slate-500">Unit Cost *</Label>
+                          <Input
+                            type="number"
+                            onFocus={(e) => e.target.select()}
+                            placeholder="Unit Cost"
+                            value={item.unitCost}
+                            onChange={(e) =>
+                              updateLineItem(item.id, "unitCost", parseFloat(e.target.value) || 0)
+                            }
+                            min="0"
+                            step="0.01"
+                            required
+                          />
+                        </div>
 
-                        <Input
-                          type="number"
-                          onFocus={(e) => e.target.select()}
-                          placeholder="Discount %"
-                          value={item.discount || ""}
-                          onChange={(e) =>
-                            updateLineItem(
-                              item.id,
-                              "discount",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-                              e.preventDefault();
-                              e.stopPropagation(); // Prevent useEnterToTab from also running
-                              const isLastItem = index === items.length - 1;
-                              if (isLastItem) {
-                                addLineItem(true);
-                              } else {
-                                const nextItemId = items[index + 1].id;
-                                const nextProductTrigger = productComboRefs.current.get(nextItemId);
-                                if (nextProductTrigger) {
-                                  nextProductTrigger.focus();
+                        <div className="space-y-1">
+                          <Label className="sm:hidden text-xs text-slate-500">Discount %</Label>
+                          <Input
+                            type="number"
+                            onFocus={(e) => e.target.select()}
+                            placeholder="Discount %"
+                            value={item.discount || ""}
+                            onChange={(e) =>
+                              updateLineItem(
+                                item.id,
+                                "discount",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const isLastItem = index === items.length - 1;
+                                if (isLastItem) {
+                                  addLineItem(true);
+                                } else {
+                                  const nextItemId = items[index + 1].id;
+                                  const nextProductTrigger = productComboRefs.current.get(nextItemId);
+                                  if (nextProductTrigger) {
+                                    nextProductTrigger.focus();
+                                  }
                                 }
                               }
-                            }
-                          }}
-                          min="0"
-                          max="100"
-                          step="0.01"
-                        />
+                            }}
+                            min="0"
+                            max="100"
+                            step="0.01"
+                          />
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-end">

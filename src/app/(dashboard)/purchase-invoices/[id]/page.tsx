@@ -323,50 +323,76 @@ export default function PurchaseInvoiceDetailPage({
               </div>
             </div>
 
-            {/* Line Items */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[35%]">Description</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit Cost</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right print:hidden">Stock</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoice.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell className="text-right">{Number(item.quantity)}</TableCell>
-                    <TableCell className="text-right">
-                      ₹{Number(item.unitCost).toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {Number(item.discount) > 0 ? (
-                        <span className="text-green-600">{Number(item.discount)}%</span>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ₹{Number(item.total).toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell className="text-right print:hidden">
-                      {item.stockLot && (
-                        <div className="flex items-center justify-end gap-1">
-                          <Package className="h-4 w-4 text-green-600" />
-                          <span className="text-green-600">
-                            {Number(item.stockLot.remainingQuantity)} remaining
-                          </span>
-                        </div>
-                      )}
-                    </TableCell>
+            {/* Line Items — Desktop */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[35%]">Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Cost</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right print:hidden">Stock</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {invoice.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell className="text-right">{Number(item.quantity)}</TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.unitCost).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {Number(item.discount) > 0 ? (
+                          <span className="text-green-600">{Number(item.discount)}%</span>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.total).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right print:hidden">
+                        {item.stockLot && (
+                          <div className="flex items-center justify-end gap-1">
+                            <Package className="h-4 w-4 text-green-600" />
+                            <span className="text-green-600">
+                              {Number(item.stockLot.remainingQuantity)} remaining
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Line Items — Mobile */}
+            <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
+              {invoice.items.map((item) => (
+                <div key={item.id} className="p-3 space-y-1">
+                  <div className="font-medium text-sm">{item.description}</div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
+                    <span>Qty: {Number(item.quantity)}</span>
+                    <span>Cost: ₹{Number(item.unitCost).toLocaleString("en-IN")}</span>
+                    {Number(item.discount) > 0 && (
+                      <span className="text-green-600">Discount: {Number(item.discount)}%</span>
+                    )}
+                    {item.stockLot && (
+                      <span className="text-green-600">
+                        Stock: {Number(item.stockLot.remainingQuantity)} left
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right font-semibold text-sm">
+                    ₹{Number(item.total).toLocaleString("en-IN")}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Totals */}
             <div className="flex justify-end mt-6">

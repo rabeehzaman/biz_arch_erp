@@ -389,37 +389,58 @@ export default function QuotationDetailPage({
               </div>
             </div>
 
-            {/* Line Items */}
-            <Table className="print:text-sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {quotation.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell className="text-right">
-                      {Number(item.quantity).toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ₹{Number(item.unitPrice).toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {Number(item.discount)}%
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ₹{Number(item.total).toLocaleString("en-IN")}
-                    </TableCell>
+            {/* Line Items — Desktop */}
+            <div className="hidden sm:block">
+              <Table className="print:text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {quotation.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell className="text-right">
+                        {Number(item.quantity).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {Number(item.discount)}%
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        ₹{Number(item.total).toLocaleString("en-IN")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Line Items — Mobile */}
+            <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
+              {quotation.items.map((item) => (
+                <div key={item.id} className="p-3 space-y-1">
+                  <div className="font-medium text-sm">{item.description}</div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
+                    <span>Qty: {Number(item.quantity).toLocaleString("en-IN")}</span>
+                    <span>Price: ₹{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                    {Number(item.discount) > 0 && (
+                      <span className="text-green-600">Discount: {Number(item.discount)}%</span>
+                    )}
+                  </div>
+                  <div className="text-right font-semibold text-sm">
+                    ₹{Number(item.total).toLocaleString("en-IN")}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Totals */}
             <div className="flex justify-end mt-6 print:mt-4">
