@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
-import { Loader2, AlertTriangle, Search, Smartphone } from "lucide-react";
+import { Loader2, AlertTriangle, Search, Smartphone, Download, Images } from "lucide-react";
 import Link from "next/link";
 import { ImeiCameraScanner } from "@/components/mobile-devices/imei-camera-scanner";
 
@@ -34,6 +34,7 @@ interface DeviceResult {
   supplierWarrantyExpiry: string | null;
   customerWarrantyExpiry: string | null;
   notes: string | null;
+  photoUrls: string[];
   supplier: { id: string; name: string } | null;
   customer: { id: string; name: string } | null;
   product: { id: string; name: string; sku: string | null } | null;
@@ -368,6 +369,45 @@ export default function ImeiLookupPage() {
                 </CardContent>
               </Card>
             </StaggerItem>
+
+            {/* Device Photos - Full Width */}
+            {device.photoUrls && device.photoUrls.length > 0 && (
+              <StaggerItem className="md:col-span-2">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Images className="h-4 w-4" />
+                      Device Photos ({device.photoUrls.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-3">
+                      {device.photoUrls.map((url, index) => (
+                        <div key={url} className="relative group">
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`Photo ${index + 1}`}
+                              className="h-28 w-28 rounded-md border object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            />
+                          </a>
+                          <a
+                            href={url.replace("/upload/", "/upload/fl_attachment/")}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute bottom-1 right-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Download"
+                          >
+                            <Download className="h-3 w-3" />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </StaggerItem>
+            )}
 
             {/* Warranty - Full Width */}
             <StaggerItem className="md:col-span-2">
