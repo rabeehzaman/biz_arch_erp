@@ -199,7 +199,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6 bg-slate-900">
+      <div className="flex h-16 items-center gap-3 px-6 border-b border-white/5 bg-slate-900/40 backdrop-blur-sm">
         <div className="relative h-9 w-9 bg-white rounded-md flex items-center justify-center overflow-hidden p-1 shadow-sm border border-slate-700">
           <Image src="/logo.png" alt="BizArch Logo" fill sizes="36px" className="object-contain" priority />
         </div>
@@ -320,8 +320,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function Sidebar() {
   return (
-    <div className="hidden md:flex h-full w-64 flex-col bg-slate-900 text-white">
-      <SidebarContent />
+    <div
+      className="hidden md:flex h-full w-64 flex-col bg-slate-950 text-white bg-cover bg-no-repeat bg-center border-r border-slate-800"
+      style={{ backgroundImage: "url('/sidebar_bg.png')" }}
+    >
+      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] pointer-events-none z-0"></div>
+      <div className="relative z-10 flex h-full flex-col">
+        <SidebarContent />
+      </div>
     </div>
   );
 }
@@ -351,8 +357,13 @@ export function MobileSidebar() {
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-64 p-0 bg-slate-900 text-white border-slate-700">
-        <div className="flex h-full flex-col">
+      <SheetContent
+        side="left"
+        className="w-64 p-0 bg-slate-950 text-white border-slate-800 bg-cover bg-no-repeat bg-center"
+        style={{ backgroundImage: "url('/sidebar_bg.png')" }}
+      >
+        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] pointer-events-none z-0"></div>
+        <div className="relative z-10 flex h-full flex-col">
           <SidebarContent onNavigate={() => setOpen(false)} />
         </div>
       </SheetContent>
