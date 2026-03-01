@@ -713,18 +713,32 @@ export default function NewPurchaseInvoicePage() {
                                         onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
                                         className="text-xs h-8"
                                       />
-                                      <Input
-                                        placeholder="Storage (e.g. 128GB)"
+                                      <Select
                                         value={imei.storageCapacity}
-                                        onChange={(e) => updateImeiField(item.id, idx, "storageCapacity", e.target.value)}
-                                        className="text-xs h-8"
-                                      />
-                                      <Input
-                                        placeholder="RAM (e.g. 8GB)"
+                                        onValueChange={(value) => updateImeiField(item.id, idx, "storageCapacity", value)}
+                                      >
+                                        <SelectTrigger className="text-xs h-8">
+                                          <SelectValue placeholder="Storage" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
+                                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <Select
                                         value={imei.ram}
-                                        onChange={(e) => updateImeiField(item.id, idx, "ram", e.target.value)}
-                                        className="text-xs h-8"
-                                      />
+                                        onValueChange={(value) => updateImeiField(item.id, idx, "ram", value)}
+                                      >
+                                        <SelectTrigger className="text-xs h-8">
+                                          <SelectValue placeholder="RAM" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
+                                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                       <Select
                                         value={imei.conditionGrade}
                                         onValueChange={(value) => updateImeiField(item.id, idx, "conditionGrade", value)}

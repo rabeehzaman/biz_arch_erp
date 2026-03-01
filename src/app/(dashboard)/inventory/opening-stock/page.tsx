@@ -703,18 +703,32 @@ export default function OpeningStockPage() {
                             onChange={(e) => updateImeiField(idx, "color", e.target.value)}
                             className="text-xs"
                           />
-                          <Input
-                            placeholder="Storage"
+                          <Select
                             value={imei.storageCapacity}
-                            onChange={(e) => updateImeiField(idx, "storageCapacity", e.target.value)}
-                            className="text-xs"
-                          />
-                          <Input
-                            placeholder="RAM"
+                            onValueChange={(value) => updateImeiField(idx, "storageCapacity", value)}
+                          >
+                            <SelectTrigger className="text-xs h-9">
+                              <SelectValue placeholder="Storage" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
                             value={imei.ram}
-                            onChange={(e) => updateImeiField(idx, "ram", e.target.value)}
-                            className="text-xs"
-                          />
+                            onValueChange={(value) => updateImeiField(idx, "ram", value)}
+                          >
+                            <SelectTrigger className="text-xs h-9">
+                              <SelectValue placeholder="RAM" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <Select
                             value={imei.conditionGrade}
                             onValueChange={(value) => updateImeiField(idx, "conditionGrade", value)}

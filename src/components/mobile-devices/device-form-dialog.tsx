@@ -212,19 +212,35 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
               </div>
               <div className="grid gap-2">
                 <Label>Storage</Label>
-                <Input
+                <Select
                   value={formData.storageCapacity}
-                  onChange={(e) => setFormData({ ...formData, storageCapacity: e.target.value })}
-                  placeholder="e.g. 128GB"
-                />
+                  onValueChange={(value) => setFormData({ ...formData, storageCapacity: value })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select storage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label>RAM</Label>
-                <Input
+                <Select
                   value={formData.ram}
-                  onChange={(e) => setFormData({ ...formData, ram: e.target.value })}
-                  placeholder="e.g. 8GB"
-                />
+                  onValueChange={(value) => setFormData({ ...formData, ram: value })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select RAM" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
