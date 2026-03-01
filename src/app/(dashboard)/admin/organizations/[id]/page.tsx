@@ -36,7 +36,7 @@ interface OrganizationDetails {
 }
 
 export default function OrganizationDetailsPage() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
@@ -78,12 +78,13 @@ export default function OrganizationDetailsPage() {
     }, [id]);
 
     useEffect(() => {
+        if (status === "loading") return;
         if (session?.user?.role !== "superadmin") {
             router.push("/");
             return;
         }
         fetchOrganization();
-    }, [session, router, fetchOrganization]);
+    }, [session, status, router, fetchOrganization]);
 
     const handleDeleteOrg = async (e: React.MouseEvent) => {
         e.preventDefault();

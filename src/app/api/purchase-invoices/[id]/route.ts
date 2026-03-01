@@ -264,6 +264,7 @@ export async function PUT(
                 unitCost: baseUnitCost, // Store base unit cost for accurate COGS
                 initialQuantity: baseQuantity,
                 remainingQuantity: baseQuantity,
+                warehouseId: existingInvoice.warehouseId || null,
               },
             });
 

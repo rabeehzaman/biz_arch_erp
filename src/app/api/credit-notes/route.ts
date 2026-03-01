@@ -279,7 +279,7 @@ export async function POST(request: NextRequest) {
       // Update customer balance (decrement - reduces receivable)
       if (appliedToBalance) {
         await tx.customer.update({
-          where: { id: customerId },
+          where: { id: customerId, organizationId },
           data: {
             balance: { decrement: total },
           },

@@ -106,7 +106,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, notes, terms, items } = body;
+    const { customerId, issueDate, dueDate, notes, terms, items, warehouseId: bodyWarehouseId } = body;
 
     const existingInvoice = await prisma.invoice.findUnique({
       where: { id, organizationId },
@@ -125,6 +125,9 @@ export async function PUT(
         { status: 404 }
       );
     }
+
+    // Resolve effective warehouseId (allow updating it, fall back to existing)
+    const effectiveWarehouseId = bodyWarehouseId !== undefined ? bodyWarehouseId : existingInvoice.warehouseId;
 
     // Check if any items have stock consumptions
     const hasConsumptions = existingInvoice.items.some(
@@ -307,7 +310,8 @@ export async function PUT(
                 invoiceItem.id,
                 newInvoiceDate,
                 tx,
-                organizationId
+                organizationId,
+                effectiveWarehouseId
               );
 
               // Update the invoice item with COGS

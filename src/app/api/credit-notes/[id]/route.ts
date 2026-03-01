@@ -305,7 +305,7 @@ export async function PUT(
       // Apply new customer balance change
       if (appliedToBalance) {
         await tx.customer.update({
-          where: { id: customerId },
+          where: { id: customerId, organizationId },
           data: {
             balance: { decrement: total },
           },

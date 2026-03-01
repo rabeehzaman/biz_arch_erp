@@ -91,6 +91,7 @@ export async function POST(
           organizationId,
           invoiceNumber,
           customerId: quotation.customerId,
+          createdById: session.user.id,
           issueDate: invoiceDate,
           dueDate: dueDate,
           subtotal: quotation.subtotal,
@@ -132,9 +133,10 @@ export async function POST(
       // Consume stock via FIFO for each item with a product
       for (const invoiceItem of newInvoice.items) {
         if (invoiceItem.productId) {
+          const baseQuantity = Number(invoiceItem.quantity) * Number(invoiceItem.conversionFactor || 1);
           const fifoResult = await consumeStockFIFO(
             invoiceItem.productId,
-            Number(invoiceItem.quantity),
+            baseQuantity,
             invoiceItem.id,
             invoiceDate,
             tx,
@@ -154,7 +156,7 @@ export async function POST(
 
       // Update customer balance
       await tx.customer.update({
-        where: { id: quotation.customerId },
+        where: { id: quotation.customerId, organizationId },
         data: {
           balance: {
             increment: quotation.total,

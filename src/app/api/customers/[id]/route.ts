@@ -153,8 +153,17 @@ export async function DELETE(
     const { id } = await params;
     const isAdmin = session.user.role === "admin";
 
-    if (!await canAccessCustomer(id, organizationId, session.user.id, isAdmin)) {
+    if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Check for linked records before deleting
+    const invoiceCount = await prisma.invoice.count({ where: { customerId: id, organizationId } });
+    if (invoiceCount > 0) {
+      return NextResponse.json(
+        { error: `Cannot delete customer with ${invoiceCount} invoice(s). Delete or reassign invoices first.` },
+        { status: 400 }
+      );
     }
 
     await prisma.customer.delete({

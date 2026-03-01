@@ -50,7 +50,7 @@ interface Organization {
 }
 
 export default function OrganizationsPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,12 +88,13 @@ export default function OrganizationsPage() {
   }, []);
 
   useEffect(() => {
+    if (status === "loading") return;
     if (session?.user?.role !== "superadmin") {
       router.push("/");
       return;
     }
     fetchOrganizations();
-  }, [session, router, fetchOrganizations]);
+  }, [session, status, router, fetchOrganizations]);
 
   const handleNameChange = (value: string) => {
     setName(value);

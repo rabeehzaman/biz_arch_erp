@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
       // Update supplier balance (decrement - reduces payable)
       if (appliedToBalance) {
         await tx.supplier.update({
-          where: { id: supplierId },
+          where: { id: supplierId, organizationId },
           data: {
             balance: { decrement: total },
           },

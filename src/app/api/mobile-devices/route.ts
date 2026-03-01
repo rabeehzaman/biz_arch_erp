@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
             await createAutoJournalEntry(tx, organizationId, {
               date: new Date(),
               description: `Opening Stock - ${openingStock.product.name}`,
-              sourceType: "OPENING_STOCK",
+              sourceType: "OPENING_BALANCE",
               sourceId: openingStock.id,
               lines: [
                 { accountId: inventoryAccount.id, description: "Inventory", debit: costPrice, credit: 0 },
