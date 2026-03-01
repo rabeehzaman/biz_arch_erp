@@ -23,7 +23,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { toast } from "sonner";
-import { Loader2, Upload, ImageIcon, X } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import { ImeiCameraScanner } from "./imei-camera-scanner";
 
 interface Supplier {
@@ -186,47 +186,56 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { onOpenChange(isOpen); if (!isOpen) resetForm(); }}>
-      <DialogContent className="sm:max-w-2xl overflow-y-auto max-h-[90vh]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
+      {/* flex+min-h-0 on form lets header/footer stay sticky while body scrolls */}
+      <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-2xl max-h-[90dvh]">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+
+          {/* Sticky header */}
+          <DialogHeader className="shrink-0 px-4 pt-5 pb-4 sm:px-6 border-b">
             <DialogTitle>{editDevice ? "Edit Device" : "Add Device"}</DialogTitle>
-            <DialogDescription>{editDevice ? "Update details for this mobile device" : "Manually add a mobile device to inventory"}</DialogDescription>
+            <DialogDescription>
+              {editDevice ? "Update details for this mobile device" : "Manually add a mobile device to inventory"}
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="grid gap-2">
-                <Label>IMEI 1 *</Label>
-                <div className="flex gap-1">
-                  <Input
-                    value={formData.imei1}
-                    onChange={(e) => setFormData({ ...formData, imei1: e.target.value })}
-                    placeholder="15-digit IMEI"
-                    maxLength={15}
-                    className="font-mono"
-                    required
-                  />
-                  <ImeiCameraScanner
-                    onScan={(imei) => setFormData((prev) => ({ ...prev, imei1: imei }))}
-                  />
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
+
+            {/* Identifiers */}
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Identifiers</legend>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label>IMEI 1 *</Label>
+                  <div className="flex gap-1">
+                    <Input
+                      value={formData.imei1}
+                      onChange={(e) => setFormData({ ...formData, imei1: e.target.value })}
+                      placeholder="15-digit IMEI"
+                      maxLength={15}
+                      inputMode="numeric"
+                      className="font-mono"
+                      required
+                    />
+                    <ImeiCameraScanner onScan={(imei) => setFormData((prev) => ({ ...prev, imei1: imei }))} />
+                  </div>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>IMEI 2</Label>
+                  <div className="flex gap-1">
+                    <Input
+                      value={formData.imei2}
+                      onChange={(e) => setFormData({ ...formData, imei2: e.target.value })}
+                      placeholder="Optional"
+                      maxLength={15}
+                      inputMode="numeric"
+                      className="font-mono"
+                    />
+                    <ImeiCameraScanner onScan={(imei) => setFormData((prev) => ({ ...prev, imei2: imei }))} />
+                  </div>
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label>IMEI 2</Label>
-                <div className="flex gap-1">
-                  <Input
-                    value={formData.imei2}
-                    onChange={(e) => setFormData({ ...formData, imei2: e.target.value })}
-                    placeholder="Optional"
-                    maxLength={15}
-                    className="font-mono"
-                  />
-                  <ImeiCameraScanner
-                    onScan={(imei) => setFormData((prev) => ({ ...prev, imei2: imei }))}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
+              <div className="grid gap-1.5">
                 <Label>Serial Number</Label>
                 <Input
                   value={formData.serialNumber}
@@ -234,185 +243,191 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   placeholder="Optional"
                 />
               </div>
-            </div>
+            </fieldset>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="grid gap-2">
-                <Label>Color</Label>
-                <Input
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  placeholder="e.g. Black"
-                />
+            {/* Specifications — 2 cols on mobile, 3 on sm+ */}
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Specifications</legend>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid gap-1.5">
+                  <Label>Color</Label>
+                  <Input
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    placeholder="e.g. Black"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Storage</Label>
+                  <Select value={formData.storageCapacity} onValueChange={(value) => setFormData({ ...formData, storageCapacity: value })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>RAM</Label>
+                  <Select value={formData.ram} onValueChange={(value) => setFormData({ ...formData, ram: value })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Network</Label>
+                  <Select value={formData.networkStatus} onValueChange={(value) => setFormData({ ...formData, networkStatus: value })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UNLOCKED">Unlocked</SelectItem>
+                      <SelectItem value="LOCKED">Locked</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Condition</Label>
+                  <Select value={formData.conditionGrade} onValueChange={(value) => setFormData({ ...formData, conditionGrade: value })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NEW">New</SelectItem>
+                      <SelectItem value="OPEN_BOX">Open Box</SelectItem>
+                      <SelectItem value="GRADE_A">Grade A</SelectItem>
+                      <SelectItem value="GRADE_B">Grade B</SelectItem>
+                      <SelectItem value="GRADE_C">Grade C</SelectItem>
+                      <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Battery %</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    max="100"
+                    value={formData.batteryHealthPercentage}
+                    onChange={(e) => setFormData({ ...formData, batteryHealthPercentage: e.target.value })}
+                    placeholder="e.g. 95"
+                  />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Storage</Label>
-                <Select
-                  value={formData.storageCapacity}
-                  onValueChange={(value) => setFormData({ ...formData, storageCapacity: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select storage" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>RAM</Label>
-                <Select
-                  value={formData.ram}
-                  onValueChange={(value) => setFormData({ ...formData, ram: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select RAM" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            </fieldset>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="grid gap-2">
-                <Label>Network Status</Label>
-                <Select
-                  value={formData.networkStatus}
-                  onValueChange={(value) => setFormData({ ...formData, networkStatus: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UNLOCKED">Unlocked</SelectItem>
-                    <SelectItem value="LOCKED">Locked</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Product & Supplier */}
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Product & Supplier</legend>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label>Product {!editDevice && "*"}</Label>
+                  <Combobox
+                    items={products}
+                    value={formData.productId}
+                    onValueChange={(value) => setFormData({ ...formData, productId: value })}
+                    getId={(p) => p.id}
+                    getLabel={(p) => p.name}
+                    filterFn={(p, query) => p.name.toLowerCase().includes(query)}
+                    placeholder="Search products..."
+                    emptyText={products.length === 0 ? "No IMEI-tracked products found." : "No products found."}
+                  />
+                  {products.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No IMEI-tracked products found. Create one from the Products page first.</p>
+                  )}
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Supplier *</Label>
+                  <SupplierCombobox
+                    suppliers={suppliers as any}
+                    value={formData.supplierId}
+                    onValueChange={(value) => setFormData({ ...formData, supplierId: value })}
+                    required
+                  />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Condition</Label>
-                <Select
-                  value={formData.conditionGrade}
-                  onValueChange={(value) => setFormData({ ...formData, conditionGrade: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NEW">New</SelectItem>
-                    <SelectItem value="OPEN_BOX">Open Box</SelectItem>
-                    <SelectItem value="GRADE_A">Grade A</SelectItem>
-                    <SelectItem value="GRADE_B">Grade B</SelectItem>
-                    <SelectItem value="GRADE_C">Grade C</SelectItem>
-                    <SelectItem value="REFURBISHED">Refurbished</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Battery Health %</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.batteryHealthPercentage}
-                  onChange={(e) => setFormData({ ...formData, batteryHealthPercentage: e.target.value })}
-                  placeholder="e.g. 95"
-                />
-              </div>
-            </div>
+            </fieldset>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Product {!editDevice && "*"}</Label>
-                <Combobox
-                  items={products}
-                  value={formData.productId}
-                  onValueChange={(value) => setFormData({ ...formData, productId: value })}
-                  getId={(p) => p.id}
-                  getLabel={(p) => p.name}
-                  filterFn={(p, query) => p.name.toLowerCase().includes(query)}
-                  placeholder="Search products..."
-                  emptyText={products.length === 0 ? "No IMEI-tracked products found." : "No products found."}
-                />
-                {products.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No IMEI-tracked products found. Create one from the Products page first.</p>
-                )}
+            {/* Pricing — always 3 cols, shortened labels fit on small screens */}
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pricing</legend>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="grid gap-1.5">
+                  <Label>Cost *</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Landed</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    value={formData.landedCost}
+                    onChange={(e) => setFormData({ ...formData, landedCost: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Selling</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    value={formData.sellingPrice}
+                    onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Supplier *</Label>
-                <SupplierCombobox
-                  suppliers={suppliers as any}
-                  value={formData.supplierId}
-                  onValueChange={(value) => setFormData({ ...formData, supplierId: value })}
-                  required
-                />
-              </div>
-            </div>
+            </fieldset>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="grid gap-2">
-                <Label>Cost Price *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.costPrice}
-                  onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                  placeholder="0.00"
-                  required
-                />
+            {/* Warranty */}
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Warranty</legend>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label>Supplier Expiry</Label>
+                  <Input
+                    type="date"
+                    value={formData.supplierWarrantyExpiry}
+                    onChange={(e) => setFormData({ ...formData, supplierWarrantyExpiry: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Customer Expiry</Label>
+                  <Input
+                    type="date"
+                    value={formData.customerWarrantyExpiry}
+                    onChange={(e) => setFormData({ ...formData, customerWarrantyExpiry: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Landed Cost</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.landedCost}
-                  onChange={(e) => setFormData({ ...formData, landedCost: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Selling Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.sellingPrice}
-                  onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
+            </fieldset>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Supplier Warranty Expiry</Label>
-                <Input
-                  type="date"
-                  value={formData.supplierWarrantyExpiry}
-                  onChange={(e) => setFormData({ ...formData, supplierWarrantyExpiry: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Customer Warranty Expiry</Label>
-                <Input
-                  type="date"
-                  value={formData.customerWarrantyExpiry}
-                  onChange={(e) => setFormData({ ...formData, customerWarrantyExpiry: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Device Photos</Label>
+            {/* Photos */}
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Device Photos</legend>
               <div className="flex flex-wrap gap-2">
                 {formData.photoUrls.map((url, index) => (
-                  <div key={url} className="relative h-24 w-24 shrink-0 rounded-md border overflow-hidden bg-muted">
+                  <div key={url} className="relative h-20 w-20 shrink-0 rounded-md border overflow-hidden bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt={`Photo ${index + 1}`} className="h-full w-full object-cover" />
                     <button
@@ -425,7 +440,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     </button>
                   </div>
                 ))}
-                <label className={`h-24 w-24 shrink-0 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${photoUploading ? "cursor-not-allowed opacity-50" : "hover:bg-accent cursor-pointer"}`}>
+                <label className={`h-20 w-20 shrink-0 rounded-md border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${photoUploading ? "cursor-not-allowed opacity-50" : "hover:bg-accent cursor-pointer"}`}>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
@@ -442,33 +457,38 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   ) : (
                     <>
                       <Upload className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Add Photo</span>
+                      <span className="text-xs text-muted-foreground text-center leading-tight">Add Photo</span>
                     </>
                   )}
                 </label>
               </div>
-              <p className="text-xs text-muted-foreground">JPG, PNG or WEBP. Choose from gallery or take a photo.</p>
-            </div>
+              <p className="text-xs text-muted-foreground">JPG, PNG or WEBP. Gallery or camera.</p>
+            </fieldset>
 
-            <div className="grid gap-2">
+            {/* Notes */}
+            <div className="grid gap-1.5">
               <Label>Notes</Label>
               <Textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Any additional notes..."
+                rows={3}
               />
             </div>
+
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          {/* Sticky footer — full-width buttons on mobile */}
+          <DialogFooter className="shrink-0 flex flex-row gap-2 px-4 sm:px-6 py-4 border-t bg-background">
+            <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving} className="flex-1 sm:flex-none">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editDevice ? "Update Device" : "Add Device"}
             </Button>
           </DialogFooter>
+
         </form>
       </DialogContent>
     </Dialog>
