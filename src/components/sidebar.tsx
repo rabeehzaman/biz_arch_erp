@@ -321,7 +321,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function Sidebar() {
   return (
     <div
-      className="hidden md:flex h-full w-64 flex-col bg-slate-950 text-white bg-cover bg-no-repeat bg-center border-r border-slate-800"
+      className="hidden md:flex h-full w-64 flex-col relative bg-slate-950 text-white bg-cover bg-no-repeat bg-center border-r border-slate-800"
       style={{ backgroundImage: "url('/sidebar_bg.png')" }}
     >
       <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] pointer-events-none z-0"></div>
@@ -359,7 +359,7 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="w-64 p-0 bg-slate-950 text-white border-slate-800 bg-cover bg-no-repeat bg-center"
+        className="w-64 p-0 relative bg-slate-950 text-white border-slate-800 bg-cover bg-no-repeat bg-center"
         style={{ backgroundImage: "url('/sidebar_bg.png')" }}
       >
         <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] pointer-events-none z-0"></div>
