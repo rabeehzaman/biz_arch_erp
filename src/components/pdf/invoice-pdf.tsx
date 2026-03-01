@@ -7,7 +7,8 @@ import {
   Image,
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
-import { numberToWords } from "@/lib/number-to-words";
+import { numberToWordsLocalized } from "@/lib/number-to-words";
+import { translate, type Language } from "@/lib/i18n";
 
 const styles = StyleSheet.create({
   page: {
@@ -259,6 +260,7 @@ interface InvoicePDFProps {
     sales: number;
     balance: number;
   };
+  lang?: string;
 }
 
 const formatCurrency = (amount: number): string => {
@@ -268,9 +270,19 @@ const formatCurrency = (amount: number): string => {
   });
 };
 
-export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: InvoicePDFProps) {
+export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo, lang = "en" }: InvoicePDFProps) {
   const isSaudi = !!invoice.saudiInvoiceType;
-  const formatAmt = (n: number) => isSaudi ? `SAR ${n.toFixed(2)}` : formatCurrency(n);
+  const l = lang as Language;
+  const t = (key: string) => translate(key, l);
+  const formatAmt = (n: number) => {
+    if (isSaudi) {
+      const formatted = l === "ar"
+        ? n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : n.toFixed(2);
+      return l === "ar" ? `${formatted} ر.س` : `SAR ${formatted}`;
+    }
+    return formatCurrency(n);
+  };
   const DISPLAY_ROWS = 12;
   const emptyRowsCount = Math.max(0, DISPLAY_ROWS - invoice.items.length);
   const paddedItems = [
@@ -342,17 +354,17 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
         <View style={styles.table}>
           {/* Header Row */}
           <View style={styles.tableHeader}>
-            <Text style={[styles.colSNo, styles.headerText]}>S No</Text>
+            <Text style={[styles.colSNo, styles.headerText]}>{t("pdf.sNo")}</Text>
             <Text style={[styles.colDescription, styles.headerText]}>
-              Description
+              {t("pdf.description")}
             </Text>
-            <Text style={[styles.colQty, styles.headerText]}>Qty</Text>
-            <Text style={[styles.colRate, styles.headerText]}>Rate</Text>
-            <Text style={[styles.colDisPer, styles.headerText]}>Dis %</Text>
+            <Text style={[styles.colQty, styles.headerText]}>{t("pdf.qty")}</Text>
+            <Text style={[styles.colRate, styles.headerText]}>{t("pdf.rate")}</Text>
+            <Text style={[styles.colDisPer, styles.headerText]}>{t("pdf.disPercent")}</Text>
             <Text style={[styles.colDiscount, styles.headerText]}>
-              Discount
+              {t("pdf.discount")}
             </Text>
-            <Text style={[styles.colTotal, styles.headerText]}>Total</Text>
+            <Text style={[styles.colTotal, styles.headerText]}>{t("pdf.total")}</Text>
           </View>
 
           {/* Data Rows */}
@@ -383,8 +395,8 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
               <Text style={styles.colDiscount}>
                 {item
                   ? formatCurrency(
-                      (item.quantity * item.unitPrice * item.discount) / 100
-                    )
+                    (item.quantity * item.unitPrice * item.discount) / 100
+                  )
                   : ""}
               </Text>
               <Text style={styles.colTotal}>
@@ -400,29 +412,29 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
           <View style={styles.footerLeft}>
             <View style={styles.totalRow}>
               <Text style={styles.totalQtyLabel}>
-                Total Qty : {formatCurrency(totalQuantity)}
+                {t("pdf.totalQty")} : {formatCurrency(totalQuantity)}
               </Text>
             </View>
             <Text style={styles.amountInWords}>
-              ( {numberToWords(netAmount)} )
+              ( {numberToWordsLocalized(netAmount, lang)} )
             </Text>
             {balanceInfo && (
               <View style={styles.balanceSection}>
                 <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>Old Balance</Text>
+                  <Text style={styles.balanceLabel}>{t("pdf.oldBalance")}</Text>
                   <Text style={styles.balanceValue}>
                     : {formatCurrency(balanceInfo.oldBalance)}
                   </Text>
                 </View>
                 <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>Sales</Text>
+                  <Text style={styles.balanceLabel}>{t("pdf.sales")}</Text>
                   <Text style={styles.balanceValue}>
                     : {formatCurrency(balanceInfo.sales)}
                   </Text>
                 </View>
                 <View style={styles.balanceRow}>
                   <Text style={[styles.balanceLabel, styles.balanceBold]}>
-                    Balance
+                    {t("pdf.balance")}
                   </Text>
                   <Text style={[styles.balanceValue, styles.balanceBold]}>
                     : {formatCurrency(balanceInfo.balance)}
@@ -436,19 +448,19 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
                 <Text style={{ fontSize: 6, color: "#666", marginTop: 2 }}>ZATCA QR Code</Text>
               </View>
             )}
-            <Text style={styles.eoeText}>E & O.E</Text>
+            <Text style={styles.eoeText}>{t("pdf.eAndOE")}</Text>
           </View>
 
           {/* Right Side */}
           <View style={styles.footerRight}>
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>{t("pdf.total")}</Text>
               <Text style={styles.totalValue}>
                 {formatAmt(invoice.subtotal + totalDiscount)}
               </Text>
             </View>
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Discount</Text>
+              <Text style={styles.totalLabel}>{t("pdf.discount")}</Text>
               <Text style={styles.totalValue}>
                 {formatAmt(totalDiscount)}
               </Text>
@@ -491,7 +503,7 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
               </>
             )}
             <View style={styles.netAmountRow}>
-              <Text style={styles.netAmountLabel}>Net Total</Text>
+              <Text style={styles.netAmountLabel}>{t("pdf.netTotal")}</Text>
               <Text style={styles.netAmountValue}>
                 {formatAmt(invoice.total)}
               </Text>

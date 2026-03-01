@@ -41,6 +41,7 @@ import { useSession } from "next-auth/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface User {
   id: string;
@@ -94,6 +95,12 @@ export default function CustomersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const { t, lang } = useLanguage();
+
+  const formatAmount = (amount: number) => {
+    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
+    return `₹${amount.toLocaleString("en-IN")}`;
+  };
 
   const [openingBalanceData, setOpeningBalanceData] = useState({
     amount: "",
@@ -112,7 +119,7 @@ export default function CustomersPage() {
       const data = await response.json();
       setCustomers(data);
     } catch (error) {
-      toast.error("Failed to load customers");
+      toast.error(t("common.error"));
       console.error("Failed to fetch customers:", error);
     } finally {
       setIsLoading(false);
@@ -170,9 +177,9 @@ export default function CustomersPage() {
       setSelectedCustomerForAssign(null);
       setSelectedUserIds([]);
       fetchCustomers();
-      toast.success("Customer assignments updated");
+      toast.success(t("customers.customerUpdated"));
     } catch (error) {
-      toast.error("Failed to update assignments");
+      toast.error(t("common.error"));
       console.error("Failed to update assignments:", error);
     }
   };
@@ -202,9 +209,9 @@ export default function CustomersPage() {
         transactionDate: new Date().toISOString().split("T")[0],
       });
       fetchCustomers();
-      toast.success("Opening balance set successfully");
+      toast.success(t("customers.customerUpdated"));
     } catch (error) {
-      toast.error("Failed to set opening balance");
+      toast.error(t("common.error"));
       console.error("Failed to set opening balance:", error);
     }
   };
@@ -238,16 +245,16 @@ export default function CustomersPage() {
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
-      title: "Delete Customer",
-      description: "Are you sure you want to delete this customer?",
+      title: t("customers.deleteCustomer"),
+      description: t("customers.deleteConfirm"),
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/customers/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
           fetchCustomers();
-          toast.success("Customer deleted");
+          toast.success(t("customers.customerDeleted"));
         } catch (error) {
-          toast.error("Failed to delete customer");
+          toast.error(t("common.error"));
           console.error("Failed to delete customer:", error);
         }
       },
@@ -268,12 +275,12 @@ export default function CustomersPage() {
       <StaggerContainer className="space-y-6">
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Customers</h2>
-            <p className="text-slate-500">Manage your customer database</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("customers.title")}</h2>
+            <p className="text-slate-500">{t("dashboard.manageCustomers")}</p>
           </div>
           <Button className="w-full sm:w-auto" onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Customer
+            <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
+            {t("customers.addCustomer")}
           </Button>
 
           <CustomerFormDialog
@@ -307,14 +314,14 @@ export default function CustomersPage() {
             <DialogContent>
               <form onSubmit={handleOpeningBalanceSubmit}>
                 <DialogHeader>
-                  <DialogTitle>Set Opening Balance</DialogTitle>
+                  <DialogTitle>{t("common.openingBalance")}</DialogTitle>
                   <DialogDescription>
                     Set the opening balance for {selectedCustomerForBalance?.name}. This represents the initial receivable amount.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="openingAmount">Opening Balance Amount *</Label>
+                    <Label htmlFor="openingAmount">{t("common.openingBalance")} *</Label>
                     <Input
                       id="openingAmount"
                       type="number"
@@ -331,7 +338,7 @@ export default function CustomersPage() {
                     </p>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="balanceDate">As of Date *</Label>
+                    <Label htmlFor="balanceDate">{t("common.date")} *</Label>
                     <Input
                       id="balanceDate"
                       type="date"
@@ -344,7 +351,7 @@ export default function CustomersPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Set Opening Balance</Button>
+                  <Button type="submit">{t("common.save")}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -418,7 +425,7 @@ export default function CustomersPage() {
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
-                    placeholder="Search customers..."
+                    placeholder={t("customers.searchCustomers")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -432,24 +439,24 @@ export default function CustomersPage() {
               ) : filteredCustomers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Users className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No customers found</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t("customers.noCustomers")}</h3>
                   <p className="text-sm text-slate-500">
                     {searchQuery
-                      ? "Try a different search term"
-                      : "Add your first customer to get started"}
+                      ? t("common.noMatchFound")
+                      : t("customers.noCustomersDesc")}
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="hidden sm:table-cell">Contact</TableHead>
-                      <TableHead className="hidden sm:table-cell">Assigned To</TableHead>
-                      <TableHead>Balance</TableHead>
-                      <TableHead>Invoices</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t("common.name")}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t("customers.contactInfo")}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t("common.assigned")}</TableHead>
+                      <TableHead>{t("common.balance")}</TableHead>
+                      <TableHead>{t("customers.totalInvoices")}</TableHead>
+                      <TableHead>{t("common.status")}</TableHead>
+                      <TableHead className="text-right">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -489,7 +496,7 @@ export default function CustomersPage() {
                                   : ""
                             }
                           >
-                            ₹{Math.abs(Number(customer.balance)).toLocaleString("en-IN")}
+                            {formatAmount(Math.abs(Number(customer.balance)))}
                           </span>
                         </TableCell>
                         <TableCell>{customer._count?.invoices || 0}</TableCell>
@@ -497,7 +504,7 @@ export default function CustomersPage() {
                           <Badge
                             variant={customer.isActive ? "default" : "secondary"}
                           >
-                            {customer.isActive ? "Active" : "Inactive"}
+                            {customer.isActive ? t("common.active") : t("common.inactive")}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -510,16 +517,16 @@ export default function CustomersPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => handleEdit(customer)}>
                                 <Pencil className="mr-2 h-4 w-4" />
-                                Edit
+                                {t("common.edit")}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(customer)}>
                                 <Wallet className="mr-2 h-4 w-4" />
-                                Opening Balance
+                                {t("common.openingBalance")}
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>
                                 <Link href={`/customers/${customer.id}/statement`}>
                                   <FileText className="mr-2 h-4 w-4" />
-                                  View Statement
+                                  {t("customers.viewStatement")}
                                 </Link>
                               </DropdownMenuItem>
                               {isAdmin && (
@@ -534,7 +541,7 @@ export default function CustomersPage() {
                                 onClick={() => handleDelete(customer.id)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
+                                {t("common.delete")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

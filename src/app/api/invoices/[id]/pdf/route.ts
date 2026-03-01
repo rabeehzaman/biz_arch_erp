@@ -122,6 +122,7 @@ export async function GET(
         invoice: pdfInvoice,
         type: "SALES",
         balanceInfo,
+        lang: (session.user as { language?: string }).language || "en",
       }) as any
     );
 

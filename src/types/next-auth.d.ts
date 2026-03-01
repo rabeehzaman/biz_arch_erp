@@ -12,6 +12,8 @@ declare module "next-auth" {
       multiBranchEnabled?: boolean;
       isMobileShopModuleEnabled?: boolean;
       gstStateCode?: string | null;
+      saudiEInvoiceEnabled?: boolean;
+      language?: string;
     } & DefaultSession["user"];
   }
 
@@ -24,6 +26,8 @@ declare module "next-auth" {
     multiBranchEnabled?: boolean;
     isMobileShopModuleEnabled?: boolean;
     gstStateCode?: string | null;
+    saudiEInvoiceEnabled?: boolean;
+    language?: string;
   }
 }
 
@@ -38,5 +42,7 @@ declare module "next-auth/jwt" {
     multiBranchEnabled?: boolean;
     isMobileShopModuleEnabled?: boolean;
     gstStateCode?: string | null;
+    saudiEInvoiceEnabled?: boolean;
+    language?: string;
   }
 }

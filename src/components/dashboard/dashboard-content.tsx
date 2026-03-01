@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useDashboardStats } from "@/hooks/use-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "next-auth/react";
+import { useLanguage } from "@/lib/i18n";
 
 function StatCardSkeleton() {
   return (
@@ -28,11 +29,19 @@ export function DashboardContent() {
   const { stats, isLoading, isError } = useDashboardStats();
   const { data: session } = useSession();
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
+  const { t, lang } = useLanguage();
+
+  const formatAmount = (amount: number) => {
+    if (lang === "ar") {
+      return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
+    }
+    return `₹${amount.toLocaleString("en-IN")}`;
+  };
 
   if (isError) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-red-500">Failed to load dashboard data</p>
+        <p className="text-red-500">{t("common.loading")}</p>
       </div>
     );
   }
@@ -41,14 +50,16 @@ export function DashboardContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
-          <p className="text-slate-500">Overview of your business</p>
+          <h2 className="text-2xl font-bold text-slate-900">{t("dashboard.title")}</h2>
+          <p className="text-slate-500">
+            {t("dashboard.overview")}
+          </p>
         </div>
         <div className="flex gap-2">
           <Link href="/invoices/new">
             <Button>
               <FileText className="mr-2 h-4 w-4" />
-              New Invoice
+              {t("sales.newInvoice")}
             </Button>
           </Link>
         </div>
@@ -68,14 +79,14 @@ export function DashboardContent() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Total Invoices
+                  {t("dashboard.totalInvoices")}
                 </CardTitle>
                 <FileText className="h-4 w-4 text-slate-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats?.totalInvoices ?? 0}</div>
                 <p className="text-xs text-slate-500">
-                  {stats?.pendingInvoices ?? 0} pending
+                  {stats?.pendingInvoices ?? 0} {t("dashboard.pending")}
                 </p>
               </CardContent>
             </Card>
@@ -83,42 +94,46 @@ export function DashboardContent() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Total Customers
+                  {t("dashboard.totalCustomers")}
                 </CardTitle>
                 <Users className="h-4 w-4 text-slate-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats?.totalCustomers ?? 0}</div>
-                <p className="text-xs text-slate-500">Active customers</p>
+                <p className="text-xs text-slate-500">
+                  {t("dashboard.activeCustomers")}
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Total Products
+                  {t("dashboard.totalProducts")}
                 </CardTitle>
                 <Package className="h-4 w-4 text-slate-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats?.totalProducts ?? 0}</div>
-                <p className="text-xs text-slate-500">In catalog</p>
+                <p className="text-xs text-slate-500">
+                  {t("dashboard.inCatalog")}
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Total Invoiced
+                  {t("dashboard.totalInvoiced")}
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-slate-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  ₹{(stats?.totalRevenue ?? 0).toLocaleString("en-IN")}
+                  {formatAmount(stats?.totalRevenue ?? 0)}
                 </div>
                 <p className="text-xs text-slate-500">
-                  ₹{(stats?.totalCollected ?? 0).toLocaleString("en-IN")} collected
+                  {formatAmount(stats?.totalCollected ?? 0)} {t("dashboard.collected")}
                 </p>
               </CardContent>
             </Card>
@@ -135,7 +150,9 @@ export function DashboardContent() {
                 <GitBranch className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-500">Active Branches</p>
+                <p className="text-sm text-slate-500">
+                  {t("dashboard.activeBranches")}
+                </p>
                 <p className="text-2xl font-bold">
                   {isLoading ? <Skeleton className="h-8 w-10" /> : (stats as any)?.totalBranches ?? 0}
                 </p>
@@ -148,7 +165,9 @@ export function DashboardContent() {
                 <Warehouse className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-500">Active Warehouses</p>
+                <p className="text-sm text-slate-500">
+                  {t("dashboard.activeWarehouses")}
+                </p>
                 <p className="text-2xl font-bold">
                   {isLoading ? <Skeleton className="h-8 w-10" /> : (stats as any)?.totalWarehouses ?? 0}
                 </p>
@@ -162,8 +181,10 @@ export function DashboardContent() {
                   <Package className="h-6 w-6 text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Stock Summary</h3>
-                  <p className="text-sm text-slate-500">View inventory by warehouse</p>
+                  <h3 className="font-semibold">{t("nav.stockSummary")}</h3>
+                  <p className="text-sm text-slate-500">
+                    {t("dashboard.viewByWarehouse")}
+                  </p>
                 </div>
               </CardContent>
             </Link>
@@ -180,9 +201,9 @@ export function DashboardContent() {
                 <FileText className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold">Create Invoice</h3>
+                <h3 className="font-semibold">{t("sales.newInvoice")}</h3>
                 <p className="text-sm text-slate-500">
-                  Generate a new invoice for a customer
+                  {t("dashboard.createInvoiceDesc")}
                 </p>
               </div>
             </CardContent>
@@ -196,9 +217,11 @@ export function DashboardContent() {
                 <Users className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <h3 className="font-semibold">Manage Customers</h3>
+                <h3 className="font-semibold">
+                  {t("dashboard.manageCustomers")}
+                </h3>
                 <p className="text-sm text-slate-500">
-                  View and edit customer details
+                  {t("dashboard.viewEditCustomers")}
                 </p>
               </div>
             </CardContent>
@@ -212,9 +235,11 @@ export function DashboardContent() {
                 <CreditCard className="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <h3 className="font-semibold">Record Payment</h3>
+                <h3 className="font-semibold">
+                  {t("dashboard.recordPayment")}
+                </h3>
                 <p className="text-sm text-slate-500">
-                  Record a payment from a customer
+                  {t("dashboard.recordPaymentDesc")}
                 </p>
               </div>
             </CardContent>
@@ -227,7 +252,7 @@ export function DashboardContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Recent Invoices
+            {t("dashboard.recentInvoices")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -252,12 +277,14 @@ export function DashboardContent() {
           ) : !stats?.recentInvoices?.length ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <FileText className="h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-semibold">No invoices yet</h3>
+              <h3 className="mt-4 text-lg font-semibold">
+                {t("dashboard.noInvoicesYet")}
+              </h3>
               <p className="text-sm text-slate-500">
-                Start by creating your first invoice
+                {t("dashboard.startByCreating")}
               </p>
               <Link href="/invoices/new" className="mt-4">
-                <Button variant="outline">Create Invoice</Button>
+                <Button variant="outline">{t("sales.newInvoice")}</Button>
               </Link>
             </div>
           ) : (
@@ -278,7 +305,7 @@ export function DashboardContent() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">₹{invoice.total.toLocaleString("en-IN")}</p>
+                    <p className="font-medium">{formatAmount(invoice.total)}</p>
                     <p className="text-sm text-slate-500">
                       {format(new Date(invoice.createdAt), "dd MMM yyyy")}
                     </p>
@@ -287,7 +314,7 @@ export function DashboardContent() {
               ))}
               <Link href="/invoices" className="block">
                 <Button variant="outline" className="w-full">
-                  View All Invoices
+                  {t("common.viewAll")} {t("nav.salesInvoices")}
                 </Button>
               </Link>
             </div>

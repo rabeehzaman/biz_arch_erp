@@ -15,11 +15,13 @@ import {
 import { Building2, CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_SETTINGS, type CompanySettingsFormData } from "@/lib/validations/settings";
+import { useLanguage } from "@/lib/i18n";
 
 export function CompanySettings() {
   const [formData, setFormData] = useState<CompanySettingsFormData>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchSettings();
@@ -32,7 +34,7 @@ export function CompanySettings() {
       const data = await response.json();
       setFormData(data);
     } catch (error) {
-      toast.error("Failed to load settings");
+      toast.error(t("settings.settingsLoadFailed"));
       console.error("Failed to fetch settings:", error);
     } finally {
       setIsLoading(false);
@@ -59,12 +61,12 @@ export function CompanySettings() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to save settings");
+        throw new Error(data.error || t("settings.settingsSaveFailed"));
       }
 
-      toast.success("Settings saved successfully");
+      toast.success(t("settings.settingsSaved"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      toast.error(error instanceof Error ? error.message : t("settings.settingsSaveFailed"));
       console.error("Failed to save settings:", error);
     } finally {
       setIsSaving(false);
@@ -86,98 +88,98 @@ export function CompanySettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Company Information
+              {t("settings.companyInfo")}
             </CardTitle>
             <CardDescription>
-              Your company details for invoices and documents
+              {t("settings.companyInfoDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="companyName">
-                Company Name <span className="text-red-500">*</span>
+                {t("settings.companyName")} <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="companyName"
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleChange}
-                placeholder="Your Company Name"
+                placeholder={t("settings.companyName")}
                 required
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="companyAddress">Address</Label>
+              <Label htmlFor="companyAddress">{t("settings.address")}</Label>
               <Textarea
                 id="companyAddress"
                 name="companyAddress"
                 value={formData.companyAddress}
                 onChange={handleChange}
-                placeholder="Street address"
+                placeholder={t("settings.address")}
                 rows={2}
               />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="companyCity">City</Label>
+                <Label htmlFor="companyCity">{t("settings.city")}</Label>
                 <Input
                   id="companyCity"
                   name="companyCity"
                   value={formData.companyCity}
                   onChange={handleChange}
-                  placeholder="City"
+                  placeholder={t("settings.city")}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="companyState">State</Label>
+                <Label htmlFor="companyState">{t("settings.state")}</Label>
                 <Input
                   id="companyState"
                   name="companyState"
                   value={formData.companyState}
                   onChange={handleChange}
-                  placeholder="State"
+                  placeholder={t("settings.state")}
                 />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="companyZipCode">ZIP Code</Label>
+                <Label htmlFor="companyZipCode">{t("settings.zipCode")}</Label>
                 <Input
                   id="companyZipCode"
                   name="companyZipCode"
                   value={formData.companyZipCode}
                   onChange={handleChange}
-                  placeholder="ZIP Code"
+                  placeholder={t("settings.zipCode")}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="companyCountry">Country</Label>
+                <Label htmlFor="companyCountry">{t("settings.country")}</Label>
                 <Input
                   id="companyCountry"
                   name="companyCountry"
                   value={formData.companyCountry}
                   onChange={handleChange}
-                  placeholder="Country"
+                  placeholder={t("settings.country")}
                 />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="companyPhone">Phone</Label>
+                <Label htmlFor="companyPhone">{t("settings.phone")}</Label>
                 <Input
                   id="companyPhone"
                   name="companyPhone"
                   value={formData.companyPhone}
                   onChange={handleChange}
-                  placeholder="+91 98765 43210"
+                  placeholder="+966 5X XXX XXXX"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="companyEmail">Email</Label>
+                <Label htmlFor="companyEmail">{t("settings.email")}</Label>
                 <Input
                   id="companyEmail"
                   name="companyEmail"
@@ -195,15 +197,15 @@ export function CompanySettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Tax & Banking Details
+              {t("settings.taxBanking")}
             </CardTitle>
             <CardDescription>
-              GST and bank account information for payments
+              {t("settings.taxBankingDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="companyGstNumber">GST Number</Label>
+              <Label htmlFor="companyGstNumber">{t("settings.gstNumber")}</Label>
               <Input
                 id="companyGstNumber"
                 name="companyGstNumber"
@@ -217,29 +219,29 @@ export function CompanySettings() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="bankName">Bank Name</Label>
+              <Label htmlFor="bankName">{t("settings.bankName")}</Label>
               <Input
                 id="bankName"
                 name="bankName"
                 value={formData.bankName}
                 onChange={handleChange}
-                placeholder="Bank name"
+                placeholder={t("settings.bankName")}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="bankAccountNumber">Account Number</Label>
+              <Label htmlFor="bankAccountNumber">{t("settings.accountNumber")}</Label>
               <Input
                 id="bankAccountNumber"
                 name="bankAccountNumber"
                 value={formData.bankAccountNumber}
                 onChange={handleChange}
-                placeholder="Account number"
+                placeholder={t("settings.accountNumber")}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="bankIfscCode">IFSC Code</Label>
+              <Label htmlFor="bankIfscCode">{t("settings.ifscCode")}</Label>
               <Input
                 id="bankIfscCode"
                 name="bankIfscCode"
@@ -253,13 +255,13 @@ export function CompanySettings() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="bankBranch">Branch</Label>
+              <Label htmlFor="bankBranch">{t("settings.branch")}</Label>
               <Input
                 id="bankBranch"
                 name="bankBranch"
                 value={formData.bankBranch}
                 onChange={handleChange}
-                placeholder="Branch name"
+                placeholder={t("settings.branch")}
               />
             </div>
           </CardContent>
@@ -269,7 +271,7 @@ export function CompanySettings() {
       <div className="mt-6 flex justify-end">
         <Button type="submit" disabled={isSaving}>
           {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isSaving ? "Saving..." : "Save Settings"}
+          {isSaving ? t("settings.saving") : t("settings.saveSettings")}
         </Button>
       </div>
     </form>

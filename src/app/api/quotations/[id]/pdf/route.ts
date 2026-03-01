@@ -81,6 +81,7 @@ export async function GET(
         invoice: invoiceData,
         type: "SALES",
         title: "QUOTATION",
+        lang: (session.user as { language?: string }).language || "en",
       }) as any
     );
 

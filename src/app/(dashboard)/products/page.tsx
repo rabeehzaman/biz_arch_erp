@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { UnitSelect } from "@/components/units/unit-select";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 interface Product {
   id: string;
@@ -82,6 +83,12 @@ function ProductsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeTab = searchParams.get("tab") === "inventory" ? "inventory" : "products";
+  const { t, lang } = useLanguage();
+
+  const formatAmount = (amount: number) => {
+    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
+    return `₹${amount.toLocaleString("en-IN")}`;
+  };
 
   // — Products tab state —
   const [products, setProducts] = useState<Product[]>([]);
@@ -122,7 +129,7 @@ function ProductsPageContent() {
       setProducts(data);
       setProductsLoaded(true);
     } catch (error) {
-      toast.error("Failed to load products");
+      toast.error(t("common.error"));
       console.error("Failed to fetch products:", error);
     } finally {
       setIsProductsLoading(false);
@@ -147,7 +154,7 @@ function ProductsPageContent() {
       calculateSummary(data);
       setInventoryLoaded(true);
     } catch (error) {
-      toast.error("Failed to load inventory");
+      toast.error(t("common.error"));
       console.error("Failed to fetch inventory:", error);
     } finally {
       setIsInventoryLoading(false);
@@ -184,16 +191,16 @@ function ProductsPageContent() {
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
-      title: "Delete Product",
-      description: "Are you sure you want to delete this product?",
+      title: t("products.deleteProduct"),
+      description: t("common.deleteConfirm"),
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
           fetchProducts();
-          toast.success("Product deleted");
+          toast.success(t("products.productDeleted"));
         } catch (error) {
-          toast.error("Failed to delete product");
+          toast.error(t("common.error"));
           console.error("Failed to delete product:", error);
         }
       },
@@ -238,8 +245,8 @@ function ProductsPageContent() {
       <div className="space-y-6">
         {/* Page Header */}
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Products</h2>
-          <p className="text-slate-500">Manage your product catalog and stock levels</p>
+          <h2 className="text-2xl font-bold text-slate-900">{t("products.title")}</h2>
+          <p className="text-slate-500">{lang === "ar" ? "إدارة كتالوج المنتجات ومستويات المخزون" : "Manage your product catalog and stock levels"}</p>
         </div>
 
         {/* Tab Bar */}
@@ -254,7 +261,7 @@ function ProductsPageContent() {
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
               )}
             >
-              Products
+              {t("products.title")}
             </button>
             <button
               onClick={() => switchTab("inventory")}
@@ -265,7 +272,7 @@ function ProductsPageContent() {
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
               )}
             >
-              Inventory
+              {t("nav.inventory")}
             </button>
           </nav>
         </div>
@@ -275,8 +282,8 @@ function ProductsPageContent() {
           <div className="space-y-4">
             <div className="flex justify-end">
               <Button className="w-full sm:w-auto" onClick={() => setIsDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
+                <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
+                {t("products.addProduct")}
               </Button>
             </div>
 
@@ -305,7 +312,7 @@ function ProductsPageContent() {
                       <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <Input
-                          placeholder="Search products..."
+                          placeholder={t("products.searchProducts")}
                           value={productSearch}
                           onChange={(e) => setProductSearch(e.target.value)}
                           className="pl-10"
@@ -319,23 +326,23 @@ function ProductsPageContent() {
                     ) : filteredProducts.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Package className="h-12 w-12 text-slate-300" />
-                        <h3 className="mt-4 text-lg font-semibold">No products found</h3>
+                        <h3 className="mt-4 text-lg font-semibold">{t("products.noProducts")}</h3>
                         <p className="text-sm text-slate-500">
                           {productSearch
-                            ? "Try a different search term"
-                            : "Add your first product to get started"}
+                            ? t("common.noMatchFound")
+                            : t("products.noProductsDesc")}
                         </p>
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead className="hidden sm:table-cell">SKU</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead className="hidden sm:table-cell">Unit</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{t("common.name")}</TableHead>
+                            <TableHead className="hidden sm:table-cell">{t("products.sku")}</TableHead>
+                            <TableHead>{t("common.price")}</TableHead>
+                            <TableHead className="hidden sm:table-cell">{t("common.unit")}</TableHead>
+                            <TableHead>{t("common.status")}</TableHead>
+                            <TableHead className="text-right">{t("common.actions")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -354,13 +361,13 @@ function ProductsPageContent() {
                               <TableCell className="hidden sm:table-cell">
                                 {product.sku || "-"}
                               </TableCell>
-                              <TableCell>₹{Number(product.price).toLocaleString("en-IN")}</TableCell>
+                              <TableCell>{formatAmount(Number(product.price))}</TableCell>
                               <TableCell className="hidden sm:table-cell">
                                 {product.unit?.name || "-"}
                               </TableCell>
                               <TableCell>
                                 <Badge variant={product.isActive ? "default" : "secondary"}>
-                                  {product.isActive ? "Active" : "Inactive"}
+                                  {product.isActive ? t("common.active") : t("common.inactive")}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
@@ -399,8 +406,8 @@ function ProductsPageContent() {
                 <div className="flex justify-end">
                   <Link href="/inventory/opening-stock" className="w-full sm:w-auto">
                     <Button variant="outline" className="w-full sm:w-auto min-h-[44px]">
-                      Opening Stock
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      {t("inventory.openingStock")}
+                      <ArrowRight className={`h-4 w-4 ${lang === "ar" ? "mr-2" : "ml-2"}`} />
                     </Button>
                   </Link>
                 </div>
@@ -411,13 +418,13 @@ function ProductsPageContent() {
                 <div className="grid gap-4 md:grid-cols-4">
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardDescription>Total Products</CardDescription>
+                      <CardDescription>{t("dashboard.totalProducts")}</CardDescription>
                       <CardTitle className="text-3xl">{summary.totalProducts}</CardTitle>
                     </CardHeader>
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardDescription>In Stock</CardDescription>
+                      <CardDescription>{lang === "ar" ? "في المخزون" : "In Stock"}</CardDescription>
                       <CardTitle className="text-3xl text-green-600">
                         {summary.productsWithStock}
                       </CardTitle>
@@ -425,7 +432,7 @@ function ProductsPageContent() {
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardDescription>Out of Stock</CardDescription>
+                      <CardDescription>{lang === "ar" ? "نفد المخزون" : "Out of Stock"}</CardDescription>
                       <CardTitle className="text-3xl text-red-600">
                         {summary.productsOutOfStock}
                       </CardTitle>
@@ -433,9 +440,9 @@ function ProductsPageContent() {
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardDescription>Total Stock Value</CardDescription>
+                      <CardDescription>{t("reports.stockValue")}</CardDescription>
                       <CardTitle className="text-3xl">
-                        ₹{summary.totalStockValue.toLocaleString("en-IN")}
+                        {formatAmount(summary.totalStockValue)}
                       </CardTitle>
                     </CardHeader>
                   </Card>
@@ -450,7 +457,7 @@ function ProductsPageContent() {
                       <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <Input
-                          placeholder="Search products..."
+                          placeholder={t("products.searchProducts")}
                           value={inventorySearch}
                           onChange={(e) => setInventorySearch(e.target.value)}
                           className="pl-10"
@@ -464,23 +471,23 @@ function ProductsPageContent() {
                     ) : filteredInventory.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Package className="h-12 w-12 text-slate-300" />
-                        <h3 className="mt-4 text-lg font-semibold">No products found</h3>
+                        <h3 className="mt-4 text-lg font-semibold">{t("products.noProducts")}</h3>
                         <p className="text-sm text-slate-500">
                           {inventorySearch
-                            ? "Try a different search term"
-                            : "Add products and stock to see inventory"}
+                            ? t("common.noMatchFound")
+                            : t("products.noProductsDesc")}
                         </p>
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Product</TableHead>
-                            <TableHead>SKU</TableHead>
-                            <TableHead className="text-right">Current Stock</TableHead>
-                            <TableHead className="text-right">Avg. Cost</TableHead>
-                            <TableHead className="text-right">Stock Value</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>{t("products.productName")}</TableHead>
+                            <TableHead>{t("products.sku")}</TableHead>
+                            <TableHead className="text-right">{t("inventory.currentStock")}</TableHead>
+                            <TableHead className="text-right">{lang === "ar" ? "متوسط التكلفة" : "Avg. Cost"}</TableHead>
+                            <TableHead className="text-right">{t("reports.stockValue")}</TableHead>
+                            <TableHead>{t("common.status")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -509,16 +516,16 @@ function ProductsPageContent() {
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  ₹{avgCost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                                  {formatAmount(avgCost)}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  ₹{stockValue.toLocaleString("en-IN")}
+                                  {formatAmount(stockValue)}
                                 </TableCell>
                                 <TableCell>
                                   {isOutOfStock ? (
                                     <Badge variant="destructive">
                                       <AlertTriangle className="mr-1 h-3 w-3" />
-                                      Out of Stock
+                                      {lang === "ar" ? "نفد المخزون" : "Out of Stock"}
                                     </Badge>
                                   ) : isLowStock ? (
                                     <Badge
@@ -526,14 +533,14 @@ function ProductsPageContent() {
                                       className="bg-orange-100 text-orange-800"
                                     >
                                       <AlertTriangle className="mr-1 h-3 w-3" />
-                                      Low Stock
+                                      {lang === "ar" ? "مخزون منخفض" : "Low Stock"}
                                     </Badge>
                                   ) : (
                                     <Badge
                                       variant="default"
                                       className="bg-green-100 text-green-800"
                                     >
-                                      In Stock
+                                      {lang === "ar" ? "في المخزون" : "In Stock"}
                                     </Badge>
                                   )}
                                 </TableCell>

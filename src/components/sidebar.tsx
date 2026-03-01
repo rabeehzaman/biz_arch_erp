@@ -49,76 +49,125 @@ import {
 } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
 import useSWR from "swr";
+import { useLanguage } from "@/lib/i18n";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+// Navigation items with translation keys
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "POS Terminal", href: "/pos", icon: Monitor },
-  { name: "Products", href: "/products", icon: Package },
+  { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard },
+  { nameKey: "nav.posTerminal", href: "/pos", icon: Monitor },
+  { nameKey: "nav.products", href: "/products", icon: Package },
 ];
 
 const salesNavigation = [
-  { name: "Customers", href: "/customers", icon: Users },
-  { name: "Quotations", href: "/quotations", icon: FileCheck },
-  { name: "Sales Invoices", href: "/invoices", icon: FileText },
-  { name: "Credit Notes", href: "/credit-notes", icon: FileMinus },
-  { name: "Customer Payments", href: "/payments", icon: CreditCard },
+  { nameKey: "nav.customers", href: "/customers", icon: Users },
+  { nameKey: "nav.quotations", href: "/quotations", icon: FileCheck },
+  { nameKey: "nav.salesInvoices", href: "/invoices", icon: FileText },
+  { nameKey: "nav.creditNotes", href: "/credit-notes", icon: FileMinus },
+  { nameKey: "nav.customerPayments", href: "/payments", icon: CreditCard },
 ];
 
 const purchasesNavigation = [
-  { name: "Suppliers", href: "/suppliers", icon: Truck },
-  { name: "Purchase Invoices", href: "/purchase-invoices", icon: Receipt },
-  { name: "Debit Notes", href: "/debit-notes", icon: FileOutput },
-  { name: "Supplier Payments", href: "/supplier-payments", icon: Wallet },
+  { nameKey: "nav.suppliers", href: "/suppliers", icon: Truck },
+  { nameKey: "nav.purchaseInvoices", href: "/purchase-invoices", icon: Receipt },
+  { nameKey: "nav.debitNotes", href: "/debit-notes", icon: FileOutput },
+  { nameKey: "nav.supplierPayments", href: "/supplier-payments", icon: Wallet },
 ];
 
 const accountingNavigation = [
-  { name: "Expenses", href: "/accounting/expenses", icon: CircleDollarSign },
-  { name: "Cash & Bank", href: "/accounting/cash-bank", icon: Landmark },
-  { name: "Journal Entries", href: "/accounting/journal-entries", icon: BookOpen },
-  { name: "Chart of Accounts", href: "/accounting/chart-of-accounts", icon: Scale },
+  { nameKey: "nav.expenses", href: "/accounting/expenses", icon: CircleDollarSign },
+  { nameKey: "nav.cashBank", href: "/accounting/cash-bank", icon: Landmark },
+  { nameKey: "nav.journalEntries", href: "/accounting/journal-entries", icon: BookOpen },
+  { nameKey: "nav.chartOfAccounts", href: "/accounting/chart-of-accounts", icon: Scale },
 ];
 
 const reportsNavigation = [
-  { name: "Profit by Items", href: "/reports/profit-by-items", icon: BarChart3 },
-  { name: "Customer Balances", href: "/reports/customer-balances", icon: Users },
-  { name: "Supplier Balances", href: "/reports/supplier-balances", icon: Truck },
-  { name: "Unified Ledger", href: "/reports/ledger", icon: BookOpen },
-  { name: "Trial Balance", href: "/reports/trial-balance", icon: Scale },
-  { name: "Profit & Loss", href: "/reports/profit-loss", icon: TrendingUp },
-  { name: "Balance Sheet", href: "/reports/balance-sheet", icon: PieChart },
-  { name: "Cash Flow", href: "/reports/cash-flow", icon: ArrowRightLeft },
-  { name: "Expense Report", href: "/reports/expense-report", icon: DollarSign },
-  { name: "Stock Summary", href: "/reports/stock-summary", icon: Package },
-  { name: "Branch P&L", href: "/reports/branch-pl", icon: GitBranch },
+  { nameKey: "nav.profitByItems", href: "/reports/profit-by-items", icon: BarChart3 },
+  { nameKey: "nav.customerBalances", href: "/reports/customer-balances", icon: Users },
+  { nameKey: "nav.supplierBalances", href: "/reports/supplier-balances", icon: Truck },
+  { nameKey: "nav.unifiedLedger", href: "/reports/ledger", icon: BookOpen },
+  { nameKey: "nav.trialBalance", href: "/reports/trial-balance", icon: Scale },
+  { nameKey: "nav.profitLoss", href: "/reports/profit-loss", icon: TrendingUp },
+  { nameKey: "nav.balanceSheet", href: "/reports/balance-sheet", icon: PieChart },
+  { nameKey: "nav.cashFlow", href: "/reports/cash-flow", icon: ArrowRightLeft },
+  { nameKey: "nav.expenseReport", href: "/reports/expense-report", icon: DollarSign },
+  { nameKey: "nav.stockSummary", href: "/reports/stock-summary", icon: Package },
+  { nameKey: "nav.branchPL", href: "/reports/branch-pl", icon: GitBranch },
 ];
 
 const bottomNavigation = [
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Fix Balances", href: "/admin/fix-balances", icon: Wrench },
+  { nameKey: "nav.settings", href: "/settings", icon: Settings },
+  { nameKey: "nav.fixBalances", href: "/admin/fix-balances", icon: Wrench },
 ];
 
 const inventoryNavigation = [
-  { name: "Branches", href: "/inventory/branches", icon: GitBranch },
-  { name: "Stock Transfers", href: "/inventory/stock-transfers", icon: ArrowRightLeft },
-  { name: "Opening Stock", href: "/inventory/opening-stock", icon: Package },
+  { nameKey: "nav.branches", href: "/inventory/branches", icon: GitBranch },
+  { nameKey: "nav.stockTransfers", href: "/inventory/stock-transfers", icon: ArrowRightLeft },
+  { nameKey: "nav.openingStock", href: "/inventory/opening-stock", icon: Package },
 ];
 
 const mobileShopNavigation = [
-  { name: "IMEI Lookup", href: "/mobile-shop/imei-lookup", icon: Search },
-  { name: "Device Inventory", href: "/mobile-shop/device-inventory", icon: Smartphone },
+  { nameKey: "nav.imeiLookup", href: "/mobile-shop/imei-lookup", icon: Search },
+  { nameKey: "nav.deviceInventory", href: "/mobile-shop/device-inventory", icon: Smartphone },
 ];
 
 const superadminNavigation = [
-  { name: "Organizations", href: "/admin/organizations", icon: Building2 },
+  { nameKey: "nav.organizations", href: "/admin/organizations", icon: Building2 },
 ];
 
-function NavItem({ item, pathname, onNavigate }: {
-  item: { name: string; href: string; icon: React.ElementType };
+// Map from English name to nameKey for sidebar filtering (backward compat with API)
+const NAME_TO_KEY: Record<string, string> = {
+  "Dashboard": "nav.dashboard",
+  "POS Terminal": "nav.posTerminal",
+  "Products": "nav.products",
+  "Customers": "nav.customers",
+  "Quotations": "nav.quotations",
+  "Sales Invoices": "nav.salesInvoices",
+  "Credit Notes": "nav.creditNotes",
+  "Customer Payments": "nav.customerPayments",
+  "Suppliers": "nav.suppliers",
+  "Purchase Invoices": "nav.purchaseInvoices",
+  "Debit Notes": "nav.debitNotes",
+  "Supplier Payments": "nav.supplierPayments",
+  "Expenses": "nav.expenses",
+  "Cash & Bank": "nav.cashBank",
+  "Journal Entries": "nav.journalEntries",
+  "Chart of Accounts": "nav.chartOfAccounts",
+  "Branches": "nav.branches",
+  "Stock Transfers": "nav.stockTransfers",
+  "Opening Stock": "nav.openingStock",
+  "IMEI Lookup": "nav.imeiLookup",
+  "Device Inventory": "nav.deviceInventory",
+  "Profit by Items": "nav.profitByItems",
+  "Customer Balances": "nav.customerBalances",
+  "Supplier Balances": "nav.supplierBalances",
+  "Unified Ledger": "nav.unifiedLedger",
+  "Trial Balance": "nav.trialBalance",
+  "Profit & Loss": "nav.profitLoss",
+  "Balance Sheet": "nav.balanceSheet",
+  "Cash Flow": "nav.cashFlow",
+  "Expense Report": "nav.expenseReport",
+  "Stock Summary": "nav.stockSummary",
+  "Branch P&L": "nav.branchPL",
+  "Settings": "nav.settings",
+  "Fix Balances": "nav.fixBalances",
+  "Organizations": "nav.organizations",
+};
+
+// Reverse map: key → English name (for disabledItems filtering)
+const KEY_TO_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(NAME_TO_KEY).map(([k, v]) => [v, k])
+);
+
+type NavItem = { nameKey: string; href: string; icon: React.ElementType };
+
+function NavItemComponent({ item, pathname, onNavigate }: {
+  item: NavItem;
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const { t } = useLanguage();
   const isActive = pathname === item.href ||
     (item.href !== "/" && pathname.startsWith(item.href));
   return (
@@ -133,7 +182,7 @@ function NavItem({ item, pathname, onNavigate }: {
       )}
     >
       <item.icon className="h-5 w-5" />
-      {item.name}
+      {t(item.nameKey)}
     </Link>
   );
 }
@@ -141,11 +190,12 @@ function NavItem({ item, pathname, onNavigate }: {
 function CollapsibleSection({ title, icon: Icon, items, pathname, onNavigate, defaultOpen = false }: {
   title: string;
   icon: React.ElementType;
-  items: { name: string; href: string; icon: React.ElementType }[];
+  items: NavItem[];
   pathname: string;
   onNavigate?: () => void;
   defaultOpen?: boolean;
 }) {
+  const { t, isRTL } = useLanguage();
   const hasActive = items.some(
     (item) => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
   );
@@ -158,13 +208,13 @@ function CollapsibleSection({ title, icon: Icon, items, pathname, onNavigate, de
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
       >
         <Icon className="h-5 w-5" />
-        <span className="flex-1 text-left">{title}</span>
-        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        <span className={`flex-1 ${isRTL ? "text-right" : "text-left"}`}>{t(title)}</span>
+        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className={`h-4 w-4 ${isRTL ? "rotate-180" : ""}`} />}
       </button>
       {isOpen && (
-        <div className="ml-3 space-y-1">
+        <div className={`${isRTL ? "mr-3" : "ml-3"} space-y-1`}>
           {items.map((item) => (
-            <NavItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+            <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} />
           ))}
         </div>
       )}
@@ -175,6 +225,7 @@ function CollapsibleSection({ title, icon: Icon, items, pathname, onNavigate, de
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const isSuperadmin = session?.user?.role === "superadmin";
 
   const { data: disabledItems = [] } = useSWR<string[]>(
@@ -182,8 +233,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     fetcher
   );
 
-  const filterItems = (items: { name: string; href: string; icon: any }[]) =>
-    items.filter((item) => !disabledItems.includes(item.name));
+  // disabledItems come from API as English names; filter by matching English name
+  const filterItems = (items: NavItem[]) =>
+    items.filter((item) => {
+      const englishName = KEY_TO_NAME[item.nameKey];
+      return !disabledItems.includes(englishName || "");
+    });
 
   const visibleNav = filterItems(navigation);
   const visibleSales = filterItems(salesNavigation);
@@ -212,17 +267,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {isSuperadmin ? (
           superadminNavigation.map((item) => (
-            <NavItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+            <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} />
           ))
         ) : (
           <>
             {visibleNav.map((item) => (
-              <NavItem key={item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+              <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} />
             ))}
 
             {visibleSales.length > 0 && (
               <CollapsibleSection
-                title="Sales"
+                title="nav.sales"
                 icon={ShoppingCart}
                 items={visibleSales}
                 pathname={pathname}
@@ -232,7 +287,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
             {visiblePurchases.length > 0 && (
               <CollapsibleSection
-                title="Purchases"
+                title="nav.purchases"
                 icon={Truck}
                 items={visiblePurchases}
                 pathname={pathname}
@@ -242,7 +297,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
             {visibleAccounting.length > 0 && (
               <CollapsibleSection
-                title="Accounting"
+                title="nav.accounting"
                 icon={BookOpen}
                 items={visibleAccounting}
                 pathname={pathname}
@@ -252,7 +307,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
             {multiBranchEnabled && visibleInventory.length > 0 && (
               <CollapsibleSection
-                title="Inventory"
+                title="nav.inventory"
                 icon={Warehouse}
                 items={visibleInventory}
                 pathname={pathname}
@@ -262,7 +317,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
             {isMobileShopEnabled && visibleMobileShop.length > 0 && (
               <CollapsibleSection
-                title="Mobile Shop"
+                title="nav.mobileShop"
                 icon={Smartphone}
                 items={visibleMobileShop}
                 pathname={pathname}
@@ -272,7 +327,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
             {visibleReports.length > 0 && (
               <CollapsibleSection
-                title="Reports"
+                title="nav.reports"
                 icon={BarChart3}
                 items={visibleReports}
                 pathname={pathname}
@@ -290,7 +345,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           const isActive = pathname === item.href;
           return (
             <Link
-              key={item.name}
+              key={item.nameKey}
               href={item.href}
               onClick={onNavigate}
               className={cn(
@@ -301,7 +356,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               )}
             >
               <item.icon className="h-5 w-5" />
-              {item.name}
+              {t(item.nameKey)}
             </Link>
           );
         })}
@@ -311,7 +366,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           <LogOut className="h-5 w-5" />
-          Sign Out
+          {t("nav.signOut")}
         </Button>
       </div>
     </>
@@ -319,9 +374,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function Sidebar() {
+  const { isRTL } = useLanguage();
   return (
     <div
-      className="hidden md:flex h-full w-64 flex-col relative bg-slate-950 text-white bg-cover bg-no-repeat bg-center border-r border-slate-800"
+      className={`hidden md:flex h-full w-64 flex-col relative bg-slate-950 text-white bg-cover bg-no-repeat bg-center border-slate-800 ${isRTL ? "border-l" : "border-r"}`}
       style={{ backgroundImage: "url('/sidebar_bg.png')" }}
     >
       <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] pointer-events-none z-0"></div>
@@ -335,6 +391,7 @@ export function Sidebar() {
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { isRTL } = useLanguage();
 
   useEffect(() => {
     setMounted(true);
@@ -358,7 +415,7 @@ export function MobileSidebar() {
         </Button>
       </SheetTrigger>
       <SheetContent
-        side="left"
+        side={isRTL ? "right" : "left"}
         className="w-64 p-0 bg-slate-950 text-white border-slate-800 flex flex-col overflow-hidden"
       >
         <div

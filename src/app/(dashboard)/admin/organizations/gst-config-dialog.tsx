@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Globe } from "lucide-react";
 import { INDIAN_STATES } from "@/lib/gst/constants";
 
 interface GSTConfigDialogProps {
@@ -49,6 +49,7 @@ export function OrgSettingsDialog({
   const [arabicAddress, setArabicAddress] = useState("");
   const [arabicCity, setArabicCity] = useState("");
   const [invoicePdfFormat, setInvoicePdfFormat] = useState("A5_LANDSCAPE");
+  const [language, setLanguage] = useState("en");
 
   useEffect(() => {
     if (open && orgId) {
@@ -71,6 +72,7 @@ export function OrgSettingsDialog({
           setArabicAddress(data.arabicAddress || "");
           setArabicCity(data.arabicCity || "");
           setInvoicePdfFormat(data.invoicePdfFormat || "A5_LANDSCAPE");
+          setLanguage(data.language || "en");
         })
         .catch(() => setError("Failed to load organization"))
         .finally(() => setLoading(false));
@@ -145,6 +147,7 @@ export function OrgSettingsDialog({
           arabicAddress: saudiEInvoiceEnabled ? arabicAddress || null : null,
           arabicCity: saudiEInvoiceEnabled ? arabicCity || null : null,
           invoicePdfFormat,
+          language,
         }),
       });
 
@@ -183,7 +186,29 @@ export function OrgSettingsDialog({
               <p className="text-sm text-red-500 font-medium">{error}</p>
             )}
 
+            {/* Language Selection */}
             <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Organization Language
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Set the UI language for all users of this organization
+                </p>
+              </div>
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="ar">العربية (Arabic)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
               <div className="space-y-0.5">
                 <Label htmlFor="gstEnabled">Enable GST</Label>
                 <p className="text-xs text-muted-foreground">

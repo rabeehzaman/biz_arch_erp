@@ -15,10 +15,12 @@ import { LogOut, User, Building2, Search } from "lucide-react";
 import { MobileSidebar } from "./sidebar";
 import { useEffect, useState } from "react";
 import { useCommandPalette } from "@/components/command-palette/command-palette-provider";
+import { useLanguage } from "@/lib/i18n";
 
 export function Header() {
   const { data: session } = useSession();
   const { setOpen } = useCommandPalette();
+  const { t } = useLanguage();
   const [orgName, setOrgName] = useState<string>("");
   const [mounted, setMounted] = useState(false);
 
@@ -52,7 +54,7 @@ export function Header() {
         <MobileSidebar />
         <div className="min-w-0">
           <h1 className="text-base md:text-lg font-semibold text-slate-900 truncate">
-            Welcome, {session?.user?.name?.split(" ")[0] || "User"}
+            {t("header.welcome")}, {session?.user?.name?.split(" ")[0] || "User"}
           </h1>
           <p className="text-xs md:text-sm text-slate-500 hidden sm:block">
             {orgName ? (
@@ -61,7 +63,7 @@ export function Header() {
                 {orgName}
               </span>
             ) : (
-              "Manage your business operations"
+              t("header.manageOps")
             )}
           </p>
         </div>
@@ -73,7 +75,7 @@ export function Header() {
         className="hidden md:flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-white transition-colors mx-4 flex-1 max-w-xs"
       >
         <Search className="h-4 w-4 shrink-0" />
-        <span className="flex-1 text-left">Search or jump to...</span>
+        <span className="flex-1 text-left">{t("header.searchPlaceholder")}</span>
         <kbd className="pointer-events-none hidden sm:inline-flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
           <span className="text-[10px]">⌘</span>K
         </kbd>
@@ -100,7 +102,7 @@ export function Header() {
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
-              Profile
+              {t("header.profile")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -108,7 +110,7 @@ export function Header() {
               onClick={() => signOut({ callbackUrl: "/login" })}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
+              {t("header.signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

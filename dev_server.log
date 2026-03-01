@@ -4,467 +4,627 @@
 
 ▲ Next.js 16.1.1 (Turbopack)
 - Local:         http://localhost:3000
-- Network:       http://192.168.1.102:3000
+- Network:       http://172.20.10.3:3000
 - Environments: .env
 
 ✓ Starting...
 ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-✓ Ready in 1804ms
- GET /inventory/branches?tab=branches 200 in 1538ms (compile: 1043ms, proxy.ts: 104ms, render: 391ms)
- GET /api/auth/session 200 in 1587ms (compile: 1554ms, proxy.ts: 14ms, render: 20ms)
- GET /api/auth/session 200 in 81ms (compile: 48ms, proxy.ts: 9ms, render: 24ms)
- GET /api/branches 200 in 2.1s (compile: 629ms, proxy.ts: 33ms, render: 1488ms)
- GET /api/sidebar 200 in 1767ms (compile: 88ms, proxy.ts: 35ms, render: 1645ms)
- GET /api/settings 200 in 1767ms (compile: 147ms, proxy.ts: 34ms, render: 1587ms)
- GET / 200 in 375ms (compile: 134ms, proxy.ts: 55ms, render: 186ms)
- GET /api/auth/session 200 in 47ms (compile: 5ms, proxy.ts: 20ms, render: 22ms)
- GET /api/auth/session 200 in 97ms (compile: 27ms, proxy.ts: 24ms, render: 46ms)
- GET /api/sidebar 200 in 1328ms (compile: 11ms, proxy.ts: 16ms, render: 1301ms)
- GET /api/settings 200 in 1479ms (compile: 16ms, proxy.ts: 17ms, render: 1445ms)
- GET /api/dashboard 200 in 1571ms (compile: 72ms, proxy.ts: 35ms, render: 1464ms)
- GET /api/auth/csrf 200 in 31ms (compile: 8ms, proxy.ts: 16ms, render: 7ms)
- POST /api/auth/signout 200 in 17ms (compile: 7ms, proxy.ts: 6ms, render: 5ms)
- GET /login 200 in 183ms (compile: 109ms, proxy.ts: 10ms, render: 64ms)
- GET /apple-touch-icon-precomposed.png 404 in 151ms (compile: 71ms, render: 81ms)
- GET /apple-touch-icon.png 404 in 146ms (compile: 111ms, render: 35ms)
- GET /api/auth/providers 200 in 28ms (compile: 10ms, proxy.ts: 8ms, render: 10ms)
- GET /api/auth/csrf 200 in 16ms (compile: 6ms, proxy.ts: 6ms, render: 3ms)
- POST /api/auth/callback/credentials? 200 in 2.0s (compile: 5ms, proxy.ts: 4ms, render: 2.0s)
- GET / 200 in 247ms (compile: 15ms, proxy.ts: 22ms, render: 210ms)
- GET /api/auth/session 200 in 34ms (compile: 16ms, proxy.ts: 12ms, render: 6ms)
- GET /api/auth/session 200 in 37ms (compile: 3ms, proxy.ts: 11ms, render: 23ms)
- GET /api/sidebar 200 in 228ms (compile: 15ms, proxy.ts: 24ms, render: 189ms)
- GET /api/settings 200 in 391ms (compile: 15ms, proxy.ts: 29ms, render: 347ms)
- GET /api/dashboard 200 in 1527ms (compile: 14ms, proxy.ts: 27ms, render: 1485ms)
- GET /products 200 in 568ms (compile: 497ms, proxy.ts: 16ms, render: 55ms)
- GET /api/dashboard 200 in 555ms (compile: 25ms, proxy.ts: 47ms, render: 483ms)
- GET /api/products 200 in 629ms (compile: 116ms, proxy.ts: 22ms, render: 491ms)
- GET /api/products 200 in 627ms (compile: 112ms, proxy.ts: 17ms, render: 498ms)
- GET /api/units 200 in 409ms (compile: 119ms, proxy.ts: 9ms, render: 281ms)
- GET /api/units 200 in 401ms (compile: 91ms, proxy.ts: 20ms, render: 290ms)
- GET /api/suppliers 200 in 445ms (compile: 95ms, proxy.ts: 17ms, render: 333ms)
- GET /api/auth/csrf 200 in 55ms (compile: 13ms, proxy.ts: 31ms, render: 11ms)
- POST /api/auth/signout 200 in 14ms (compile: 3ms, proxy.ts: 6ms, render: 5ms)
- GET /login 200 in 51ms (compile: 7ms, proxy.ts: 2ms, render: 42ms)
- GET /api/auth/providers 200 in 36ms (compile: 14ms, proxy.ts: 12ms, render: 10ms)
- GET /api/auth/csrf 200 in 7ms (compile: 2ms, proxy.ts: 2ms, render: 3ms)
- POST /api/auth/callback/credentials? 200 in 1750ms (compile: 4ms, proxy.ts: 6ms, render: 1740ms)
- GET / 200 in 166ms (compile: 6ms, proxy.ts: 15ms, render: 146ms)
- GET /api/auth/session 200 in 64ms (compile: 13ms, proxy.ts: 25ms, render: 26ms)
- GET /api/auth/session 200 in 35ms (compile: 11ms, proxy.ts: 15ms, render: 9ms)
- GET /api/settings 200 in 356ms (compile: 5ms, proxy.ts: 14ms, render: 337ms)
- GET /api/sidebar 200 in 1233ms (compile: 4ms, proxy.ts: 14ms, render: 1216ms)
- GET /api/dashboard 200 in 1530ms (compile: 1821µs, proxy.ts: 28ms, render: 1500ms)
- GET /products 200 in 47ms (compile: 4ms, proxy.ts: 18ms, render: 25ms)
- GET /api/dashboard 200 in 420ms (compile: 18ms, proxy.ts: 28ms, render: 374ms)
- GET /api/products 200 in 394ms (compile: 7ms, proxy.ts: 22ms, render: 365ms)
- GET /api/products 200 in 420ms (compile: 14ms, proxy.ts: 22ms, render: 384ms)
- GET /api/units 200 in 182ms (compile: 1472µs, proxy.ts: 3ms, render: 177ms)
- GET /api/units 200 in 178ms (compile: 1687µs, proxy.ts: 5ms, render: 172ms)
- GET /api/suppliers 200 in 211ms (compile: 2ms, proxy.ts: 10ms, render: 199ms)
-Failed to create product: Error [PrismaClientValidationError]: 
-Invalid `tx.journalEntry.create()` invocation in
-/Users/tmr/Desktop/Final Projects/biz_arch_erp/.next/dev/server/chunks/[root-of-the-server]__38da47b8._.js:1736:48
-
-  1733     return null;
-  1734 }
-  1735 const journalNumber = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$accounting$2f$auto$2d$number$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["generateAutoNumber"])(tx.journalEntry, "journalNumber", "JV", organizationId);
-→ 1736 const journalEntry = await tx.journalEntry.create({
-         data: {
-           journalNumber: "JV-20260301-001",
-           date: new Date("2026-03-01T03:38:11.971Z"),
-           description: "Opening Stock - Iphone 14 Pro",
-           status: "POSTED",
-           sourceType: "OPENING_STOCK",
-                       ~~~~~~~~~~~~~~~
-           sourceId: "cmm779mj70002aswl5raeq7ta",
-           organizationId: "cmm6athis000004l5pirwklql",
-           branchId: null,
-           lines: {
-             create: [
-               {
-                 accountId: "cmm6athpf000804l53frcbzkf",
-                 description: "Inventory",
-                 debit: 10000,
-                 credit: 0,
-                 organizationId: "cmm6athis000004l5pirwklql"
-               },
-               {
-                 accountId: "cmm6athvk000h04l56vorofcc",
-                 description: "Opening Balance Equity",
-                 debit: 0,
-                 credit: 10000,
-                 organizationId: "cmm6athis000004l5pirwklql"
-               }
-             ]
-           }
-         },
-         select: {
-           id: true,
-           journalNumber: true
-         }
-       })
-
-Invalid value for argument `sourceType`. Expected JournalSourceType.
-    at <unknown> (src/lib/accounting/journal.ts:70:46)
-    at async createAutoJournalEntry (src/lib/accounting/journal.ts:70:24)
-    at async (src/app/api/products/route.ts:188:13)
-    at async POST (src/app/api/products/route.ts:94:21)
-  68 |   );
-  69 |
-> 70 |   const journalEntry = await tx.journalEntry.create({
-     |                                              ^
-  71 |     data: {
-  72 |       journalNumber,
-  73 |       date, {
-  clientVersion: '7.2.0'
-}
- POST /api/products 500 in 3.5s (compile: 32ms, proxy.ts: 37ms, render: 3.4s)
- GET /api/sidebar 200 in 1781ms (compile: 57ms, proxy.ts: 74ms, render: 1650ms)
-✓ Compiled in 1020ms
- GET /products 200 in 238ms (compile: 46ms, proxy.ts: 49ms, render: 142ms)
- GET /api/auth/session 200 in 182ms (compile: 88ms, proxy.ts: 34ms, render: 60ms)
- GET /api/auth/session 200 in 325ms (compile: 276ms, proxy.ts: 25ms, render: 24ms)
- GET /api/settings 200 in 1426ms (compile: 25ms, proxy.ts: 15ms, render: 1386ms)
- GET /api/sidebar 200 in 1431ms (compile: 17ms, proxy.ts: 16ms, render: 1397ms)
- GET /api/products 200 in 1467ms (compile: 274ms, proxy.ts: 26ms, render: 1168ms)
- GET /products 200 in 127ms (compile: 11ms, proxy.ts: 18ms, render: 98ms)
- GET /api/auth/session 200 in 128ms (compile: 24ms, proxy.ts: 26ms, render: 78ms)
- GET /api/auth/session 200 in 69ms (compile: 22ms, proxy.ts: 25ms, render: 22ms)
- GET /api/settings 200 in 271ms (compile: 16ms, proxy.ts: 22ms, render: 233ms)
- GET /api/sidebar 200 in 283ms (compile: 6ms, proxy.ts: 30ms, render: 247ms)
- GET /api/products 200 in 2.1s (compile: 8ms, proxy.ts: 64ms, render: 1982ms)
- GET /products 200 in 143ms (compile: 14ms, proxy.ts: 37ms, render: 92ms)
- GET /api/auth/session 200 in 57ms (compile: 16ms, proxy.ts: 17ms, render: 25ms)
- GET /api/auth/session 200 in 44ms (compile: 13ms, proxy.ts: 18ms, render: 14ms)
- GET /api/sidebar 200 in 241ms (compile: 2ms, proxy.ts: 18ms, render: 220ms)
- GET /api/settings 200 in 271ms (compile: 4ms, proxy.ts: 18ms, render: 250ms)
- GET /api/products 200 in 612ms (compile: 7ms, proxy.ts: 25ms, render: 579ms)
- GET /products 200 in 131ms (compile: 25ms, proxy.ts: 23ms, render: 83ms)
- GET /api/auth/session 200 in 101ms (compile: 25ms, proxy.ts: 31ms, render: 45ms)
- GET /api/auth/session 200 in 49ms (compile: 13ms, proxy.ts: 25ms, render: 11ms)
- GET /api/sidebar 200 in 220ms (compile: 4ms, proxy.ts: 25ms, render: 191ms)
- GET /api/settings 200 in 507ms (compile: 9ms, proxy.ts: 26ms, render: 472ms)
- GET /api/products 200 in 588ms (compile: 5ms, proxy.ts: 53ms, render: 530ms)
- GET /api/suppliers 200 in 262ms (compile: 15ms, proxy.ts: 14ms, render: 233ms)
- GET /api/units 200 in 236ms (compile: 11ms, proxy.ts: 34ms, render: 191ms)
- GET /api/units 200 in 236ms (compile: 2ms, proxy.ts: 39ms, render: 195ms)
- POST /api/products 201 in 3.9s (compile: 35ms, proxy.ts: 48ms, render: 3.8s)
- GET /api/products 200 in 1453ms (compile: 1795µs, proxy.ts: 5ms, render: 1446ms)
- GET /api/sidebar 200 in 500ms (compile: 15ms, proxy.ts: 29ms, render: 456ms)
- GET /mobile-shop/device-inventory 200 in 2.2s (compile: 2.1s, proxy.ts: 10ms, render: 32ms)
- GET /api/mobile-devices? 200 in 1809ms (compile: 251ms, proxy.ts: 38ms, render: 1519ms)
- GET /api/mobile-devices? 200 in 2.4s (compile: 1523µs, proxy.ts: 22ms, render: 2.4s)
- GET /api/mobile-devices? 200 in 2.8s (compile: 259ms, proxy.ts: 39ms, render: 2.5s)
- GET /products 200 in 54ms (compile: 7ms, proxy.ts: 23ms, render: 25ms)
- GET /api/products 200 in 425ms (compile: 6ms, proxy.ts: 30ms, render: 389ms)
- GET /api/products 200 in 431ms (compile: 11ms, proxy.ts: 31ms, render: 388ms)
- GET /mobile-shop/device-inventory 200 in 46ms (compile: 8ms, proxy.ts: 11ms, render: 27ms)
- GET /api/mobile-devices? 200 in 374ms (compile: 3ms, proxy.ts: 9ms, render: 362ms)
- GET /api/mobile-devices? 200 in 1412ms (compile: 7ms, proxy.ts: 11ms, render: 1394ms)
- GET /api/mobile-devices? 200 in 1470ms (compile: 1435µs, proxy.ts: 10ms, render: 1459ms)
- GET /api/sidebar 200 in 216ms (compile: 3ms, proxy.ts: 14ms, render: 199ms)
- DELETE /api/mobile-devices/cmm77cd2n0005aswl5r16vd8e 200 in 1245ms (compile: 853ms, proxy.ts: 18ms, render: 374ms)
- GET /api/mobile-devices? 200 in 418ms (compile: 4ms, proxy.ts: 42ms, render: 373ms)
- DELETE /api/mobile-devices/cmm6fz5vw000104jooskanpdb 200 in 452ms (compile: 19ms, proxy.ts: 22ms, render: 411ms)
- GET /api/mobile-devices? 200 in 409ms (compile: 4ms, proxy.ts: 29ms, render: 377ms)
- GET /products 200 in 23ms (compile: 4ms, proxy.ts: 7ms, render: 11ms)
- GET /api/products 200 in 444ms (compile: 25ms, proxy.ts: 33ms, render: 386ms)
- GET /api/products 200 in 449ms (compile: 9ms, proxy.ts: 35ms, render: 405ms)
- GET /products 200 in 128ms (compile: 6ms, proxy.ts: 18ms, render: 104ms)
- GET /api/auth/session 200 in 24ms (compile: 6ms, proxy.ts: 6ms, render: 12ms)
- GET /api/auth/session 200 in 52ms (compile: 16ms, proxy.ts: 19ms, render: 17ms)
- GET /api/sidebar 200 in 211ms (compile: 6ms, proxy.ts: 23ms, render: 182ms)
- GET /api/settings 200 in 219ms (compile: 9ms, proxy.ts: 23ms, render: 187ms)
- GET /api/products 200 in 426ms (compile: 3ms, proxy.ts: 33ms, render: 389ms)
- GET /mobile-shop/device-inventory 200 in 41ms (compile: 8ms, proxy.ts: 14ms, render: 19ms)
- GET /api/mobile-devices? 200 in 395ms (compile: 13ms, proxy.ts: 14ms, render: 368ms)
- GET /api/mobile-devices? 200 in 1797ms (compile: 7ms, proxy.ts: 16ms, render: 1774ms)
- GET /api/mobile-devices? 200 in 1664ms (compile: 3ms, proxy.ts: 13ms, render: 1647ms)
- GET /products 200 in 35ms (compile: 6ms, proxy.ts: 11ms, render: 18ms)
- GET /api/products 200 in 464ms (compile: 4ms, proxy.ts: 32ms, render: 428ms)
- GET /api/products 200 in 501ms (compile: 3ms, proxy.ts: 34ms, render: 464ms)
-Failed to delete product: Error [PrismaClientKnownRequestError]: 
-Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].product.delete()` invocation in
-/Users/tmr/Desktop/Final Projects/biz_arch_erp/.next/dev/server/chunks/[root-of-the-server]__256aec7c._.js:1791:159
-
-  1788 }
-  1789 const organizationId = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$auth$2d$utils$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["getOrgId"])(session);
-  1790 const { id } = await params;
-→ 1791 await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].product.delete(
-Foreign key constraint violated on the constraint: `stock_lots_productId_fkey`
-    at <unknown> (src/app/api/products/[id]/route.ts:107:32)
-    at async DELETE (src/app/api/products/[id]/route.ts:107:5)
-  105 |     const organizationId = getOrgId(session);
-  106 |     const { id } = await params;
-> 107 |     await prisma.product.delete({
-      |                                ^
-  108 |       where: { id, organizationId },
-  109 |     });
-  110 | {
-  code: 'P2003',
-  meta: [Object],
-  clientVersion: '7.2.0'
-}
- DELETE /api/products/cmm77ccoo0004aswlybtasy74 500 in 1126ms (compile: 714ms, proxy.ts: 24ms, render: 387ms)
- GET /api/sidebar 200 in 1353ms (compile: 19ms, proxy.ts: 41ms, render: 1293ms)
- GET /api/auth/session 200 in 86ms (compile: 33ms, proxy.ts: 45ms, render: 9ms)
- GET /api/auth/session 200 in 29ms (compile: 10ms, proxy.ts: 8ms, render: 12ms)
- GET /api/sidebar 200 in 1446ms (compile: 19ms, proxy.ts: 30ms, render: 1396ms)
- GET /mobile-shop/device-inventory 200 in 33ms (compile: 5ms, proxy.ts: 9ms, render: 18ms)
- GET /api/mobile-devices? 200 in 2.0s (compile: 4ms, proxy.ts: 13ms, render: 2.0s)
- GET /api/mobile-devices? 200 in 1917ms (compile: 3ms, proxy.ts: 10ms, render: 1904ms)
- GET /api/mobile-devices? 200 in 3.2s (compile: 6ms, proxy.ts: 11ms, render: 3.2s)
- GET /products 200 in 42ms (compile: 7ms, proxy.ts: 13ms, render: 22ms)
- GET /api/products 200 in 394ms (compile: 3ms, proxy.ts: 21ms, render: 370ms)
- GET /api/products 200 in 395ms (compile: 8ms, proxy.ts: 20ms, render: 367ms)
- DELETE /api/products/cmm77ccoo0004aswlybtasy74 200 in 2.1s (compile: 190ms, proxy.ts: 5ms, render: 1912ms)
- GET /api/products 200 in 408ms (compile: 2ms, proxy.ts: 8ms, render: 397ms)
- GET /products?tab=inventory 200 in 52ms (compile: 9ms, proxy.ts: 21ms, render: 22ms)
- GET /api/products/stock 200 in 612ms (compile: 187ms, proxy.ts: 11ms, render: 414ms)
- GET /products?tab=products 200 in 33ms (compile: 4ms, proxy.ts: 11ms, render: 18ms)
- GET /api/suppliers 200 in 245ms (compile: 4ms, proxy.ts: 10ms, render: 231ms)
- GET /api/units 200 in 218ms (compile: 3ms, proxy.ts: 8ms, render: 207ms)
- GET /api/units 200 in 1350ms (compile: 1796µs, proxy.ts: 8ms, render: 1341ms)
- POST /api/products 201 in 4.1s (compile: 9ms, proxy.ts: 30ms, render: 4.0s)
- GET /api/products 200 in 1640ms (compile: 4ms, proxy.ts: 11ms, render: 1625ms)
- GET /products?tab=inventory 200 in 31ms (compile: 5ms, proxy.ts: 10ms, render: 15ms)
- GET /products?tab=products 200 in 53ms (compile: 11ms, proxy.ts: 29ms, render: 13ms)
- GET /products?tab=products 200 in 152ms (compile: 25ms, proxy.ts: 48ms, render: 78ms)
- GET /api/auth/session 200 in 37ms (compile: 13ms, proxy.ts: 10ms, render: 15ms)
- GET /api/auth/session 200 in 44ms (compile: 10ms, proxy.ts: 19ms, render: 16ms)
- GET /api/settings 200 in 1242ms (compile: 11ms, proxy.ts: 25ms, render: 1205ms)
- GET /api/sidebar 200 in 1308ms (compile: 8ms, proxy.ts: 26ms, render: 1274ms)
- GET /api/products 200 in 2.5s (compile: 8ms, proxy.ts: 15ms, render: 2.4s)
- GET /products?tab=inventory 200 in 38ms (compile: 4ms, proxy.ts: 15ms, render: 18ms)
- GET /api/products/stock 200 in 396ms (compile: 3ms, proxy.ts: 9ms, render: 384ms)
- GET /inventory/opening-stock 200 in 1171ms (compile: 1081ms, proxy.ts: 5ms, render: 85ms)
- GET /inventory/opening-stock 200 in 1926ms (compile: 1848ms, proxy.ts: 26ms, render: 52ms)
- GET /api/branches 200 in 1346ms (compile: 16ms, proxy.ts: 37ms, render: 1293ms)
- GET /api/suppliers 200 in 1339ms (compile: 17ms, proxy.ts: 33ms, render: 1289ms)
- GET /api/products 200 in 1511ms (compile: 11ms, proxy.ts: 38ms, render: 1462ms)
- GET /api/branches 200 in 201ms (compile: 9ms, proxy.ts: 12ms, render: 180ms)
- GET /api/warehouses 200 in 1621ms (compile: 70ms, proxy.ts: 34ms, render: 1518ms)
- GET /api/products 200 in 371ms (compile: 4ms, proxy.ts: 12ms, render: 355ms)
- GET /api/suppliers 200 in 177ms (compile: 1423µs, proxy.ts: 4ms, render: 171ms)
- GET /api/warehouses 200 in 352ms (compile: 1373µs, proxy.ts: 4ms, render: 347ms)
- GET /api/opening-stocks 200 in 2.5s (compile: 72ms, proxy.ts: 9ms, render: 2.4s)
- GET /api/opening-stocks 200 in 2.7s (compile: 176ms, proxy.ts: 39ms, render: 2.5s)
- GET /mobile-shop/device-inventory 200 in 66ms (compile: 13ms, proxy.ts: 28ms, render: 24ms)
- GET /api/mobile-devices? 200 in 1494ms (compile: 3ms, proxy.ts: 12ms, render: 1479ms)
- GET /api/mobile-devices? 200 in 2.5s (compile: 5ms, proxy.ts: 15ms, render: 2.5s)
- GET /api/mobile-devices? 200 in 2.6s (compile: 7ms, proxy.ts: 12ms, render: 2.6s)
- GET /api/suppliers 200 in 302ms (compile: 8ms, proxy.ts: 35ms, render: 259ms)
- GET /api/product-categories 200 in 327ms (compile: 116ms, proxy.ts: 26ms, render: 185ms)
- GET /api/units 200 in 320ms (compile: 51ms, proxy.ts: 19ms, render: 251ms)
- GET /api/products?excludeServices=true 200 in 506ms (compile: 26ms, proxy.ts: 27ms, render: 452ms)
- GET /mobile-shop/imei-lookup 200 in 667ms (compile: 621ms, proxy.ts: 25ms, render: 20ms)
- GET /products 200 in 47ms (compile: 9ms, proxy.ts: 19ms, render: 19ms)
- GET /api/products 200 in 2.5s (compile: 10ms, proxy.ts: 23ms, render: 2.4s)
- GET /api/products 200 in 2.5s (compile: 7ms, proxy.ts: 24ms, render: 2.5s)
- GET /api/suppliers 200 in 261ms (compile: 31ms, proxy.ts: 28ms, render: 202ms)
- GET /api/units 200 in 251ms (compile: 23ms, proxy.ts: 17ms, render: 211ms)
- GET /api/units 200 in 230ms (compile: 1736µs, proxy.ts: 30ms, render: 199ms)
- GET /api/units 200 in 258ms (compile: 10ms, proxy.ts: 59ms, render: 189ms)
- GET /api/units 200 in 277ms (compile: 16ms, proxy.ts: 55ms, render: 206ms)
- GET /api/suppliers 200 in 299ms (compile: 9ms, proxy.ts: 64ms, render: 225ms)
- GET /api/sidebar 200 in 1346ms (compile: 42ms, proxy.ts: 66ms, render: 1239ms)
-✓ Compiled in 1709ms
-✓ Compiled in 639ms
-✓ Compiled in 455ms
-✓ Compiled in 494ms
-✓ Compiled in 92ms
-✓ Compiled in 82ms
-✓ Compiled in 116ms
-✓ Compiled in 100ms
-✓ Compiled in 59ms
-✓ Compiled in 331ms
-✓ Compiled in 593ms
-⚠ Fast Refresh had to perform a full reload due to a runtime error.
-⚠ Fast Refresh had to perform a full reload due to a runtime error.
-⚠ Fast Refresh had to perform a full reload due to a runtime error.
-⚠ Fast Refresh had to perform a full reload due to a runtime error.
-⚠ Fast Refresh had to perform a full reload due to a runtime error.
-⚠ Fast Refresh had to perform a full reload due to a runtime error.
-⚠ Fast Refresh had to perform a full reload due to a runtime error.
-⚠ Fast Refresh had to perform a full reload due to a runtime error.
- GET /products 200 in 1005ms (compile: 423ms, proxy.ts: 76ms, render: 506ms)
- GET /api/auth/session 200 in 41ms (compile: 10ms, proxy.ts: 24ms, render: 7ms)
- GET /api/auth/session 200 in 26ms (compile: 10ms, proxy.ts: 9ms, render: 8ms)
- GET /api/sidebar 200 in 4.2s (compile: 4ms, proxy.ts: 7ms, render: 4.2s)
- GET /api/settings 200 in 4.2s (compile: 16ms, proxy.ts: 7ms, render: 4.2s)
- GET /api/products 200 in 5.2s (compile: 1026ms, proxy.ts: 14ms, render: 4.2s)
- GET /settings 200 in 1013ms (compile: 919ms, proxy.ts: 34ms, render: 60ms)
- GET /api/settings 200 in 304ms (compile: 5ms, proxy.ts: 25ms, render: 274ms)
- GET /api/settings 200 in 307ms (compile: 8ms, proxy.ts: 24ms, render: 274ms)
- GET /products 200 in 85ms (compile: 11ms, proxy.ts: 47ms, render: 27ms)
- GET /api/products 200 in 454ms (compile: 7ms, proxy.ts: 37ms, render: 410ms)
- GET /api/products 200 in 1969ms (compile: 5ms, proxy.ts: 77ms, render: 1887ms)
- GET /mobile-shop/device-inventory 200 in 224ms (compile: 198ms, proxy.ts: 11ms, render: 16ms)
- GET /api/mobile-devices? 200 in 503ms (compile: 4ms, proxy.ts: 15ms, render: 485ms)
- GET /api/mobile-devices? 200 in 1695ms (compile: 24ms, proxy.ts: 11ms, render: 1660ms)
- GET /api/mobile-devices? 200 in 1511ms (compile: 2ms, proxy.ts: 7ms, render: 1502ms)
- GET /api/product-categories 200 in 354ms (compile: 44ms, proxy.ts: 50ms, render: 260ms)
- GET /api/units 200 in 355ms (compile: 24ms, proxy.ts: 49ms, render: 282ms)
- GET /api/suppliers 200 in 373ms (compile: 7ms, proxy.ts: 54ms, render: 313ms)
- GET /api/products?excludeServices=true 200 in 521ms (compile: 20ms, proxy.ts: 53ms, render: 449ms)
-✓ Compiled in 359ms
- GET /mobile-shop/device-inventory 200 in 330ms (compile: 27ms, proxy.ts: 38ms, render: 264ms)
- GET /api/auth/session 200 in 29ms (compile: 8ms, proxy.ts: 11ms, render: 10ms)
- GET /api/auth/session 200 in 51ms (compile: 23ms, proxy.ts: 19ms, render: 9ms)
- GET /api/settings 200 in 1223ms (compile: 16ms, proxy.ts: 16ms, render: 1192ms)
- GET /api/sidebar 200 in 1229ms (compile: 8ms, proxy.ts: 16ms, render: 1206ms)
- GET /api/mobile-devices? 200 in 1417ms (compile: 8ms, proxy.ts: 16ms, render: 1393ms)
- GET /api/mobile-devices? 200 in 1392ms (compile: 3ms, proxy.ts: 5ms, render: 1384ms)
- GET /api/product-categories 200 in 240ms (compile: 11ms, proxy.ts: 34ms, render: 195ms)
- GET /api/units 200 in 240ms (compile: 16ms, proxy.ts: 31ms, render: 194ms)
- GET /api/suppliers 200 in 258ms (compile: 5ms, proxy.ts: 40ms, render: 213ms)
- GET /api/products?excludeServices=true 200 in 415ms (compile: 7ms, proxy.ts: 37ms, render: 371ms)
- GET /mobile-shop/device-inventory 200 in 144ms (compile: 16ms, proxy.ts: 26ms, render: 102ms)
- GET /api/auth/session 200 in 43ms (compile: 14ms, proxy.ts: 16ms, render: 13ms)
- GET /api/auth/session 200 in 39ms (compile: 14ms, proxy.ts: 17ms, render: 8ms)
- GET /api/sidebar 200 in 189ms (compile: 3ms, proxy.ts: 12ms, render: 174ms)
- GET /api/settings 200 in 199ms (compile: 4ms, proxy.ts: 12ms, render: 183ms)
- GET /api/mobile-devices? 200 in 369ms (compile: 1907µs, proxy.ts: 5ms, render: 362ms)
- GET /api/mobile-devices? 200 in 1425ms (compile: 4ms, proxy.ts: 18ms, render: 1403ms)
- GET /api/units 200 in 217ms (compile: 17ms, proxy.ts: 21ms, render: 179ms)
- GET /api/suppliers 200 in 237ms (compile: 11ms, proxy.ts: 24ms, render: 202ms)
- GET /api/product-categories 200 in 237ms (compile: 15ms, proxy.ts: 22ms, render: 200ms)
- GET /api/products?excludeServices=true 200 in 428ms (compile: 13ms, proxy.ts: 24ms, render: 392ms)
- GET /api/sidebar 200 in 1267ms (compile: 12ms, proxy.ts: 49ms, render: 1206ms)
- GET /api/sidebar 200 in 1407ms (compile: 33ms, proxy.ts: 58ms, render: 1316ms)
- GET /api/auth/csrf 200 in 30ms (compile: 12ms, proxy.ts: 8ms, render: 10ms)
- POST /api/auth/signout 200 in 21ms (compile: 3ms, proxy.ts: 12ms, render: 6ms)
- GET /login 200 in 460ms (compile: 304ms, proxy.ts: 9ms, render: 147ms)
-✓ Compiled in 195ms
- GET /api/auth/providers 200 in 264ms (compile: 67ms, proxy.ts: 123ms, render: 73ms)
- GET /api/auth/csrf 200 in 27ms (compile: 18ms, proxy.ts: 5ms, render: 5ms)
- POST /api/auth/callback/credentials? 200 in 1918ms (compile: 5ms, proxy.ts: 9ms, render: 1905ms)
- GET / 200 in 236ms (compile: 22ms, proxy.ts: 12ms, render: 202ms)
- GET /api/auth/session 200 in 26ms (compile: 10ms, proxy.ts: 9ms, render: 7ms)
- GET /api/auth/session 200 in 22ms (compile: 3ms, proxy.ts: 14ms, render: 5ms)
- GET /api/sidebar 200 in 275ms (compile: 13ms, proxy.ts: 34ms, render: 228ms)
- GET /api/settings 200 in 463ms (compile: 19ms, proxy.ts: 34ms, render: 410ms)
- GET /api/dashboard 200 in 1527ms (compile: 17ms, proxy.ts: 34ms, render: 1476ms)
- GET /api/dashboard 200 in 380ms (compile: 10ms, proxy.ts: 27ms, render: 343ms)
- GET /mobile-shop/device-inventory 200 in 311ms (compile: 278ms, proxy.ts: 9ms, render: 23ms)
- GET /api/mobile-devices? 200 in 401ms (compile: 4ms, proxy.ts: 10ms, render: 387ms)
- GET /api/mobile-devices? 200 in 404ms (compile: 7ms, proxy.ts: 10ms, render: 386ms)
- GET /api/mobile-devices? 200 in 377ms (compile: 3ms, proxy.ts: 6ms, render: 368ms)
- GET /api/suppliers 200 in 209ms (compile: 2ms, proxy.ts: 7ms, render: 199ms)
- GET /api/products?excludeServices=true 200 in 378ms (compile: 4ms, proxy.ts: 7ms, render: 367ms)
- GET /api/sidebar 200 in 1325ms (compile: 17ms, proxy.ts: 36ms, render: 1272ms)
- GET /api/suppliers 200 in 1204ms (compile: 4ms, proxy.ts: 15ms, render: 1185ms)
- GET /api/products?excludeServices=true 200 in 1456ms (compile: 7ms, proxy.ts: 13ms, render: 1436ms)
- GET /api/sidebar 200 in 1428ms (compile: 25ms, proxy.ts: 51ms, render: 1352ms)
-✓ Compiled in 153ms
- GET /api/suppliers 200 in 1289ms (compile: 7ms, proxy.ts: 36ms, render: 1246ms)
- GET /api/products?excludeServices=true 200 in 1475ms (compile: 12ms, proxy.ts: 30ms, render: 1432ms)
-✓ Compiled in 47ms
-✓ Compiled in 55ms
-✓ Compiled in 49ms
-✓ Compiled in 79ms
-✓ Compiled in 46ms
-✓ Compiled in 85ms
- GET /api/sidebar 200 in 1399ms (compile: 14ms, proxy.ts: 48ms, render: 1338ms)
- GET /api/sidebar 200 in 1313ms (compile: 15ms, proxy.ts: 58ms, render: 1240ms)
- GET /products 200 in 120ms (compile: 48ms, proxy.ts: 31ms, render: 41ms)
-✓ Compiled in 1150ms
- GET /products 200 in 159ms (compile: 14ms, proxy.ts: 21ms, render: 124ms)
- GET /inventory/branches?tab=branches 200 in 74ms (compile: 12ms, proxy.ts: 9ms, render: 52ms)
- GET /api/products 200 in 2.6s (compile: 9ms, proxy.ts: 19ms, render: 2.6s)
- GET /api/products 200 in 2.7s (compile: 14ms, proxy.ts: 20ms, render: 2.6s)
- GET /mobile-shop/device-inventory 200 in 2.2s (compile: 1993ms, proxy.ts: 90ms, render: 152ms)
- GET /products 200 in 2.5s (compile: 2.3s, proxy.ts: 129ms, render: 30ms)
- GET /products 200 in 2.3s (compile: 2.0s, proxy.ts: 108ms, render: 125ms)
- GET /products 200 in 2.4s (compile: 2.1s, proxy.ts: 219ms, render: 94ms)
- GET /products 200 in 2.4s (compile: 2.1s, proxy.ts: 221ms, render: 61ms)
- GET /products 200 in 2.8s (compile: 1532ms, proxy.ts: 124ms, render: 1167ms)
- GET /inventory/branches?tab=branches 200 in 2.2s (compile: 1530ms, proxy.ts: 87ms, render: 605ms)
- GET /inventory/branches?tab=branches 200 in 5.1s (compile: 1900ms, proxy.ts: 137ms, render: 3.1s)
- GET /products 200 in 2.3s (compile: 463ms, proxy.ts: 1569ms, render: 274ms)
- GET /inventory/branches?tab=branches 200 in 2.3s (compile: 82ms, proxy.ts: 1571ms, render: 658ms)
- GET /api/auth/session 200 in 283ms (compile: 66ms, proxy.ts: 118ms, render: 98ms)
- GET /api/auth/session 200 in 245ms (compile: 98ms, proxy.ts: 71ms, render: 76ms)
- GET /api/auth/session 200 in 192ms (compile: 29ms, proxy.ts: 123ms, render: 40ms)
- GET /api/auth/session 200 in 126ms (compile: 22ms, proxy.ts: 52ms, render: 52ms)
- GET /api/branches 200 in 417ms (compile: 15ms, proxy.ts: 106ms, render: 296ms)
- GET /api/sidebar 200 in 342ms (compile: 15ms, proxy.ts: 117ms, render: 210ms)
- GET /api/settings 200 in 326ms (compile: 18ms, proxy.ts: 100ms, render: 208ms)
- GET /api/settings 200 in 1289ms (compile: 10ms, proxy.ts: 53ms, render: 1226ms)
- GET /api/sidebar 200 in 1357ms (compile: 9ms, proxy.ts: 58ms, render: 1291ms)
- GET /api/products 200 in 1658ms (compile: 7ms, proxy.ts: 138ms, render: 1513ms)
- GET /invoices 200 in 307ms (compile: 269ms, proxy.ts: 13ms, render: 26ms)
- GET /api/invoices 200 in 1043ms (compile: 635ms, proxy.ts: 20ms, render: 389ms)
- GET /api/invoices 200 in 1046ms (compile: 613ms, proxy.ts: 18ms, render: 415ms)
- GET /invoices/new 200 in 72ms (compile: 42ms, proxy.ts: 10ms, render: 21ms)
- GET /api/products 200 in 627ms (compile: 20ms, proxy.ts: 22ms, render: 585ms)
- GET /api/customers 200 in 841ms (compile: 121ms, proxy.ts: 54ms, render: 667ms)
- GET /api/customers 200 in 858ms (compile: 147ms, proxy.ts: 23ms, render: 687ms)
- GET /api/unit-conversions 200 in 1747ms (compile: 106ms, proxy.ts: 22ms, render: 1619ms)
- GET /api/products 200 in 1744ms (compile: 121ms, proxy.ts: 64ms, render: 1560ms)
- GET /api/unit-conversions 200 in 1766ms (compile: 151ms, proxy.ts: 24ms, render: 1591ms)
- GET /api/mobile-devices?productId=cmm77i3w9000baswl7p3av2s9&status=IN_STOCK 200 in 1243ms (compile: 15ms, proxy.ts: 168ms, render: 1061ms)
- GET / 200 in 191ms (compile: 146ms, proxy.ts: 16ms, render: 29ms)
- GET /api/dashboard 200 in 2.2s (compile: 1803µs, proxy.ts: 6ms, render: 2.2s)
-✓ Compiled in 724ms
+✓ Ready in 2.9s
+ GET /purchase-invoices/new 200 in 2.1s (compile: 1069ms, proxy.ts: 110ms, render: 944ms)
+ GET / 200 in 2.1s (compile: 953ms, proxy.ts: 104ms, render: 1068ms)
+ GET / 200 in 330ms (compile: 11ms, proxy.ts: 32ms, render: 287ms)
+ GET /api/auth/session 200 in 3.1s (compile: 2.9s, proxy.ts: 122ms, render: 45ms)
+ GET /api/auth/session 200 in 258ms (compile: 110ms, proxy.ts: 18ms, render: 131ms)
+ GET /api/auth/session 200 in 141ms (compile: 28ms, proxy.ts: 44ms, render: 70ms)
+ GET /api/suppliers 200 in 4.2s (compile: 1203ms, proxy.ts: 400ms, render: 2.6s)
+ GET /api/auth/session 200 in 286ms (compile: 28ms, proxy.ts: 238ms, render: 21ms)
+ GET /api/auth/session 200 in 86ms (compile: 10ms, proxy.ts: 56ms, render: 21ms)
+ GET /api/auth/session 200 in 106ms (compile: 16ms, proxy.ts: 77ms, render: 14ms)
+ GET /api/auth/session 200 in 728ms (compile: 551ms, proxy.ts: 17ms, render: 161ms)
+ GET /api/auth/session 200 in 115ms (compile: 30ms, proxy.ts: 59ms, render: 26ms)
+ GET /api/auth/session 200 in 68ms (compile: 11ms, proxy.ts: 40ms, render: 16ms)
+ GET /api/auth/session 200 in 100ms (compile: 33ms, proxy.ts: 31ms, render: 35ms)
+ GET /api/settings 200 in 2.7s (compile: 575ms, proxy.ts: 102ms, render: 2.0s)
+ GET /api/sidebar 200 in 2.7s (compile: 351ms, proxy.ts: 110ms, render: 2.3s)
+ GET /api/auth/session 200 in 292ms (compile: 208ms, proxy.ts: 13ms, render: 71ms)
+ GET /api/unit-conversions 200 in 6.2s (compile: 1219ms, proxy.ts: 392ms, render: 4.6s)
+ GET /api/products 200 in 6.5s (compile: 1199ms, proxy.ts: 400ms, render: 4.9s)
+ GET /api/auth/session 200 in 526ms (compile: 25ms, proxy.ts: 475ms, render: 25ms)
+ GET /api/dashboard 200 in 3.0s (compile: 173ms, proxy.ts: 76ms, render: 2.7s)
+ GET /api/settings 200 in 993ms (compile: 110ms, proxy.ts: 165ms, render: 719ms)
+ GET /api/sidebar 200 in 961ms (compile: 437ms, proxy.ts: 130ms, render: 394ms)
+ GET /api/settings 200 in 318ms (compile: 16ms, proxy.ts: 78ms, render: 224ms)
+ GET /api/sidebar 200 in 468ms (compile: 23ms, proxy.ts: 61ms, render: 385ms)
+ GET /api/dashboard 200 in 692ms (compile: 10ms, proxy.ts: 141ms, render: 541ms)
+ GET /login 200 in 1603ms (compile: 1451ms, proxy.ts: 8ms, render: 143ms)
+ GET /api/auth/providers 200 in 49ms (compile: 21ms, proxy.ts: 19ms, render: 9ms)
+ GET /api/auth/csrf 200 in 15ms (compile: 3ms, proxy.ts: 3ms, render: 8ms)
+ POST /api/auth/callback/credentials? 200 in 1844ms (compile: 3ms, proxy.ts: 6ms, render: 1835ms)
+ GET /admin/organizations 200 in 653ms (compile: 455ms, proxy.ts: 4ms, render: 194ms)
+ GET /api/auth/session 200 in 83ms (compile: 18ms, proxy.ts: 45ms, render: 20ms)
+ GET /api/auth/session 200 in 40ms (compile: 8ms, proxy.ts: 24ms, render: 8ms)
+ GET /api/admin/organizations 200 in 493ms (compile: 83ms, proxy.ts: 42ms, render: 367ms)
+ GET /api/admin/organizations 200 in 1827ms (compile: 147ms, proxy.ts: 20ms, render: 1661ms)
+ GET /admin/organizations/cmm764q20000504jpi1url376 200 in 534ms (compile: 455ms, proxy.ts: 41ms, render: 37ms)
+ GET /api/admin/organizations/cmm764q20000504jpi1url376 200 in 1436ms (compile: 886ms, proxy.ts: 26ms, render: 524ms)
+ GET /api/admin/organizations/cmm764q20000504jpi1url376 200 in 1540ms (compile: 888ms, proxy.ts: 28ms, render: 624ms)
+ GET /api/admin/organizations/cmm764q20000504jpi1url376 200 in 594ms (compile: 45ms, proxy.ts: 19ms, render: 530ms)
+ GET /api/admin/organizations/cmm764q20000504jpi1url376 200 in 702ms (compile: 29ms, proxy.ts: 17ms, render: 656ms)
+ PUT /api/admin/organizations/cmm764q20000504jpi1url376 200 in 1167ms (compile: 43ms, proxy.ts: 18ms, render: 1105ms)
+ GET /api/admin/organizations/cmm764q20000504jpi1url376 200 in 654ms (compile: 10ms, proxy.ts: 10ms, render: 634ms)
+ GET /api/auth/csrf 200 in 26ms (compile: 10ms, proxy.ts: 12ms, render: 3ms)
+ POST /api/auth/signout 200 in 16ms (compile: 3ms, proxy.ts: 5ms, render: 8ms)
+ GET /login 200 in 73ms (compile: 4ms, proxy.ts: 1866µs, render: 67ms)
+ GET /api/auth/providers 200 in 19ms (compile: 8ms, proxy.ts: 7ms, render: 4ms)
+ GET /api/auth/csrf 200 in 8ms (compile: 3ms, proxy.ts: 3ms, render: 1912µs)
+ POST /api/auth/callback/credentials? 200 in 1850ms (compile: 3ms, proxy.ts: 2ms, render: 1845ms)
+ GET / 200 in 101ms (compile: 9ms, proxy.ts: 11ms, render: 81ms)
+ GET /api/auth/session 200 in 29ms (compile: 4ms, proxy.ts: 14ms, render: 11ms)
+ GET /api/auth/session 200 in 99ms (compile: 32ms, proxy.ts: 51ms, render: 16ms)
+ GET /api/settings 200 in 394ms (compile: 24ms, proxy.ts: 34ms, render: 337ms)
+ GET /api/sidebar 200 in 1310ms (compile: 10ms, proxy.ts: 35ms, render: 1265ms)
+ GET /api/dashboard 200 in 1762ms (compile: 7ms, proxy.ts: 9ms, render: 1747ms)
+ GET /api/dashboard 200 in 426ms (compile: 7ms, proxy.ts: 31ms, render: 388ms)
+ GET /invoices 200 in 146ms (compile: 108ms, proxy.ts: 20ms, render: 18ms)
+ GET /api/invoices 200 in 629ms (compile: 184ms, proxy.ts: 12ms, render: 434ms)
+ GET /api/invoices 200 in 666ms (compile: 188ms, proxy.ts: 21ms, render: 456ms)
+ GET /quotations 200 in 3.0s (compile: 2.9s, proxy.ts: 19ms, render: 83ms)
+ GET /credit-notes 200 in 1028ms (compile: 972ms, proxy.ts: 19ms, render: 37ms)
+ GET /api/credit-notes 200 in 747ms (compile: 232ms, proxy.ts: 52ms, render: 463ms)
+ GET /payments 200 in 162ms (compile: 134ms, proxy.ts: 15ms, render: 13ms)
+ GET /api/credit-notes 200 in 2.0s (compile: 243ms, proxy.ts: 69ms, render: 1695ms)
+ GET /api/customers 200 in 678ms (compile: 75ms, proxy.ts: 20ms, render: 583ms)
+ GET /api/customers 200 in 783ms (compile: 80ms, proxy.ts: 32ms, render: 671ms)
+ GET /api/payments 200 in 1577ms (compile: 111ms, proxy.ts: 33ms, render: 1434ms)
+ GET /api/payments 200 in 1602ms (compile: 114ms, proxy.ts: 21ms, render: 1466ms)
+ GET /api/invoices 200 in 1671ms (compile: 4ms, proxy.ts: 29ms, render: 1638ms)
+ GET /api/invoices 200 in 1646ms (compile: 3ms, proxy.ts: 15ms, render: 1628ms)
+ GET /suppliers 200 in 146ms (compile: 89ms, proxy.ts: 18ms, render: 39ms)
+ GET /api/suppliers 200 in 238ms (compile: 9ms, proxy.ts: 22ms, render: 207ms)
+ GET /api/suppliers 200 in 249ms (compile: 4ms, proxy.ts: 29ms, render: 216ms)
+ GET /purchase-invoices 200 in 131ms (compile: 90ms, proxy.ts: 13ms, render: 28ms)
+ GET /api/purchase-invoices? 200 in 503ms (compile: 57ms, proxy.ts: 21ms, render: 425ms)
+ GET /api/purchase-invoices? 200 in 505ms (compile: 49ms, proxy.ts: 22ms, render: 433ms)
+ GET /debit-notes 200 in 973ms (compile: 930ms, proxy.ts: 14ms, render: 29ms)
+ GET /api/debit-notes 200 in 621ms (compile: 144ms, proxy.ts: 17ms, render: 460ms)
+ GET /api/debit-notes 200 in 686ms (compile: 136ms, proxy.ts: 16ms, render: 533ms)
+ GET /supplier-payments 200 in 1002ms (compile: 958ms, proxy.ts: 15ms, render: 29ms)
+ GET /api/suppliers 200 in 477ms (compile: 8ms, proxy.ts: 133ms, render: 336ms)
+ GET /api/suppliers 200 in 438ms (compile: 30ms, proxy.ts: 92ms, render: 316ms)
+ GET /api/purchase-invoices 200 in 593ms (compile: 15ms, proxy.ts: 131ms, render: 447ms)
+ GET /api/purchase-invoices 200 in 548ms (compile: 12ms, proxy.ts: 118ms, render: 419ms)
+ GET /api/supplier-payments 200 in 1750ms (compile: 88ms, proxy.ts: 130ms, render: 1532ms)
+ GET /api/supplier-payments 200 in 1889ms (compile: 96ms, proxy.ts: 136ms, render: 1656ms)
+ GET / 200 in 41ms (compile: 12ms, proxy.ts: 12ms, render: 17ms)
+ GET /api/dashboard 200 in 1635ms (compile: 8ms, proxy.ts: 5ms, render: 1622ms)
+ GET /pos 200 in 247ms (compile: 194ms, proxy.ts: 18ms, render: 35ms)
+ GET /api/auth/session 200 in 116ms (compile: 24ms, proxy.ts: 14ms, render: 79ms)
+ GET /api/auth/session 200 in 114ms (compile: 41ms, proxy.ts: 11ms, render: 62ms)
+ GET /api/auth/session 200 in 20ms (compile: 3ms, proxy.ts: 7ms, render: 9ms)
+ GET /api/auth/session 200 in 21ms (compile: 6ms, proxy.ts: 7ms, render: 8ms)
+ GET /api/pos/dashboard 200 in 965ms (compile: 79ms, proxy.ts: 18ms, render: 868ms)
+ GET / 200 in 80ms (compile: 8ms, proxy.ts: 20ms, render: 52ms)
+ GET /api/auth/session 200 in 68ms (compile: 12ms, proxy.ts: 39ms, render: 17ms)
+ GET /api/auth/session 200 in 73ms (compile: 18ms, proxy.ts: 43ms, render: 12ms)
+ GET /api/auth/session 200 in 46ms (compile: 23ms, proxy.ts: 12ms, render: 12ms)
+ GET /api/auth/session 200 in 53ms (compile: 24ms, proxy.ts: 12ms, render: 17ms)
+ GET /api/sidebar 200 in 334ms (compile: 9ms, proxy.ts: 26ms, render: 300ms)
+ GET /api/dashboard 200 in 403ms (compile: 11ms, proxy.ts: 11ms, render: 382ms)
+ GET /products 200 in 242ms (compile: 209ms, proxy.ts: 15ms, render: 18ms)
+ GET /api/settings 200 in 1398ms (compile: 9ms, proxy.ts: 13ms, render: 1376ms)
+ GET /api/products 200 in 417ms (compile: 16ms, proxy.ts: 28ms, render: 373ms)
+ GET /api/products 200 in 457ms (compile: 24ms, proxy.ts: 10ms, render: 423ms)
+ GET /payments 200 in 63ms (compile: 14ms, proxy.ts: 26ms, render: 23ms)
+ GET /api/invoices 200 in 483ms (compile: 16ms, proxy.ts: 64ms, render: 403ms)
+ GET /api/payments 200 in 483ms (compile: 20ms, proxy.ts: 64ms, render: 399ms)
+ GET /api/invoices 200 in 521ms (compile: 23ms, proxy.ts: 58ms, render: 439ms)
+ GET /api/payments 200 in 545ms (compile: 12ms, proxy.ts: 66ms, render: 467ms)
+ GET /api/customers 200 in 725ms (compile: 23ms, proxy.ts: 64ms, render: 638ms)
+ GET /api/customers 200 in 732ms (compile: 14ms, proxy.ts: 65ms, render: 654ms)
+ GET / 200 in 97ms (compile: 35ms, proxy.ts: 12ms, render: 50ms)
+ GET /api/sidebar 200 in 2.1s (compile: 90ms, proxy.ts: 277ms, render: 1719ms)
+ GET /api/dashboard 200 in 1793ms (compile: 21ms, proxy.ts: 15ms, render: 1757ms)
+ GET /api/dashboard 200 in 411ms (compile: 11ms, proxy.ts: 5ms, render: 395ms)
+ GET /invoices/new 200 in 1168ms (compile: 1088ms, proxy.ts: 32ms, render: 48ms)
+ GET /api/unit-conversions 200 in 460ms (compile: 5ms, proxy.ts: 34ms, render: 421ms)
+ GET /api/unit-conversions 200 in 563ms (compile: 18ms, proxy.ts: 27ms, render: 518ms)
+ GET /api/products 200 in 582ms (compile: 19ms, proxy.ts: 26ms, render: 537ms)
+ GET /api/products 200 in 564ms (compile: 6ms, proxy.ts: 29ms, render: 530ms)
+ GET /api/customers 200 in 801ms (compile: 10ms, proxy.ts: 33ms, render: 759ms)
+ GET /api/customers 200 in 800ms (compile: 17ms, proxy.ts: 28ms, render: 755ms)
+ GET / 200 in 77ms (compile: 14ms, proxy.ts: 40ms, render: 23ms)
+ GET /api/dashboard 200 in 545ms (compile: 5ms, proxy.ts: 34ms, render: 506ms)
+ GET /pos 200 in 35ms (compile: 11ms, proxy.ts: 10ms, render: 14ms)
+ GET /api/auth/session 200 in 114ms (compile: 54ms, proxy.ts: 40ms, render: 20ms)
+ GET /api/auth/session 200 in 112ms (compile: 52ms, proxy.ts: 45ms, render: 15ms)
+ GET /api/auth/session 200 in 31ms (compile: 9ms, proxy.ts: 11ms, render: 11ms)
+ GET /api/auth/session 200 in 33ms (compile: 13ms, proxy.ts: 11ms, render: 9ms)
+ GET /api/pos/dashboard 200 in 936ms (compile: 40ms, proxy.ts: 48ms, render: 849ms)
+ GET / 200 in 44ms (compile: 9ms, proxy.ts: 9ms, render: 26ms)
+ GET /api/auth/session 200 in 88ms (compile: 15ms, proxy.ts: 52ms, render: 21ms)
+ GET /api/auth/session 200 in 88ms (compile: 22ms, proxy.ts: 52ms, render: 15ms)
+ GET /api/auth/session 200 in 80ms (compile: 14ms, proxy.ts: 44ms, render: 22ms)
+ GET /api/auth/session 200 in 54ms (compile: 19ms, proxy.ts: 16ms, render: 19ms)
+ GET /api/settings 200 in 226ms (compile: 6ms, proxy.ts: 18ms, render: 202ms)
+ GET /api/sidebar 200 in 336ms (compile: 15ms, proxy.ts: 17ms, render: 304ms)
+ GET /api/dashboard 200 in 520ms (compile: 8ms, proxy.ts: 59ms, render: 453ms)
+ GET /settings 200 in 2.9s (compile: 2.9s, proxy.ts: 19ms, render: 42ms)
+ GET /api/dashboard 200 in 608ms (compile: 48ms, proxy.ts: 79ms, render: 480ms)
+ GET /api/settings 200 in 308ms (compile: 19ms, proxy.ts: 51ms, render: 238ms)
+ GET /api/settings 200 in 304ms (compile: 29ms, proxy.ts: 45ms, render: 230ms)
+ GET / 200 in 46ms (compile: 7ms, proxy.ts: 20ms, render: 20ms)
+ GET /api/dashboard 200 in 477ms (compile: 4ms, proxy.ts: 35ms, render: 438ms)
+ GET /api/dashboard 200 in 459ms (compile: 8ms, proxy.ts: 16ms, render: 435ms)
+✓ Compiled in 1822ms
+✓ Compiled in 2ms
+ GET /api/sidebar 200 in 810ms (compile: 147ms, proxy.ts: 245ms, render: 417ms)
+ GET /api/sidebar 200 in 855ms (compile: 100ms, proxy.ts: 283ms, render: 472ms)
+ GET /api/dashboard 200 in 635ms (compile: 22ms, proxy.ts: 22ms, render: 592ms)
+ GET /api/dashboard 200 in 486ms (compile: 8ms, proxy.ts: 30ms, render: 448ms)
+ GET /api/dashboard 200 in 578ms (compile: 31ms, proxy.ts: 84ms, render: 464ms)
+ GET /api/dashboard 200 in 473ms (compile: 13ms, proxy.ts: 22ms, render: 439ms)
+ GET /api/sidebar 200 in 313ms (compile: 16ms, proxy.ts: 29ms, render: 268ms)
+✓ Compiled in 2.9s
+ GET /api/settings 200 in 2.5s (compile: 176ms, proxy.ts: 392ms, render: 1906ms)
+ GET /api/suppliers 200 in 2.3s (compile: 216ms, proxy.ts: 166ms, render: 1902ms)
+ GET /api/sidebar 200 in 2.3s (compile: 215ms, proxy.ts: 137ms, render: 1899ms)
+ GET /api/settings 200 in 299ms (compile: 28ms, proxy.ts: 46ms, render: 224ms)
+ GET /api/suppliers 200 in 342ms (compile: 38ms, proxy.ts: 53ms, render: 251ms)
+ GET /api/settings 200 in 344ms (compile: 16ms, proxy.ts: 24ms, render: 304ms)
+ GET /api/settings 200 in 430ms (compile: 8ms, proxy.ts: 76ms, render: 345ms)
+ GET /api/settings 200 in 311ms (compile: 10ms, proxy.ts: 53ms, render: 248ms)
+ GET /api/unit-conversions 200 in 4.0s (compile: 150ms, proxy.ts: 204ms, render: 3.6s)
+ GET /api/products 200 in 3.9s (compile: 205ms, proxy.ts: 149ms, render: 3.5s)
+ GET /api/settings 200 in 285ms (compile: 28ms, proxy.ts: 18ms, render: 239ms)
+ GET /api/products 200 in 577ms (compile: 8ms, proxy.ts: 59ms, render: 510ms)
+ GET /api/unit-conversions 200 in 632ms (compile: 16ms, proxy.ts: 57ms, render: 559ms)
+✓ Compiled in 1163ms
+✓ Compiled in 4ms
+ GET /api/sidebar 200 in 2.1s (compile: 159ms, proxy.ts: 265ms, render: 1636ms)
+ GET /api/suppliers 200 in 2.8s (compile: 171ms, proxy.ts: 956ms, render: 1710ms)
+ GET /api/settings 200 in 3.3s (compile: 110ms, proxy.ts: 1465ms, render: 1771ms)
+ GET /api/products 200 in 3.0s (compile: 179ms, proxy.ts: 927ms, render: 1844ms)
+ GET /api/unit-conversions 200 in 3.1s (compile: 175ms, proxy.ts: 970ms, render: 1912ms)
+ GET /api/settings 200 in 325ms (compile: 7ms, proxy.ts: 17ms, render: 301ms)
+ GET /api/products 200 in 446ms (compile: 5ms, proxy.ts: 6ms, render: 435ms)
+ GET /api/settings 200 in 405ms (compile: 10ms, proxy.ts: 173ms, render: 222ms)
+ GET /api/unit-conversions 200 in 715ms (compile: 42ms, proxy.ts: 18ms, render: 654ms)
+ GET /api/settings 200 in 192ms (compile: 1344µs, proxy.ts: 5ms, render: 186ms)
+ GET /api/products 200 in 440ms (compile: 6ms, proxy.ts: 17ms, render: 417ms)
+ GET /api/settings 200 in 209ms (compile: 2ms, proxy.ts: 17ms, render: 190ms)
+ GET /api/unit-conversions 200 in 456ms (compile: 7ms, proxy.ts: 6ms, render: 443ms)
+ GET /api/settings 200 in 204ms (compile: 2ms, proxy.ts: 12ms, render: 190ms)
+ GET /api/products 200 in 452ms (compile: 9ms, proxy.ts: 20ms, render: 423ms)
+ GET /api/suppliers 200 in 1629ms (compile: 20ms, proxy.ts: 20ms, render: 1589ms)
+ GET /api/settings 200 in 280ms (compile: 17ms, proxy.ts: 38ms, render: 226ms)
+ GET /api/settings 200 in 210ms (compile: 6ms, proxy.ts: 4ms, render: 199ms)
+ GET /api/unit-conversions 200 in 536ms (compile: 31ms, proxy.ts: 69ms, render: 436ms)
+ GET /api/settings 200 in 263ms (compile: 14ms, proxy.ts: 25ms, render: 224ms)
+ GET /api/suppliers 200 in 782ms (compile: 7ms, proxy.ts: 11ms, render: 764ms)
+ GET /api/settings 200 in 233ms (compile: 5ms, proxy.ts: 11ms, render: 216ms)
+ GET /api/settings 200 in 239ms (compile: 5ms, proxy.ts: 24ms, render: 210ms)
+ GET /api/suppliers 200 in 271ms (compile: 13ms, proxy.ts: 22ms, render: 235ms)
+ GET /api/settings 200 in 209ms (compile: 2ms, proxy.ts: 6ms, render: 201ms)
+✓ Compiled in 3.1s
+✓ Compiled in 2.1s
+✓ Compiled in 2.3s
+✓ Compiled in 630ms
+ GET /api/auth/session 200 in 821ms (compile: 340ms, proxy.ts: 224ms, render: 257ms)
+ GET /api/dashboard 200 in 1683ms (compile: 106ms, proxy.ts: 822ms, render: 755ms)
+ GET /api/sidebar 200 in 1160ms (compile: 216ms, proxy.ts: 277ms, render: 667ms)
+ GET /api/settings 200 in 1101ms (compile: 266ms, proxy.ts: 233ms, render: 602ms)
+ GET /api/settings 200 in 1079ms (compile: 233ms, proxy.ts: 239ms, render: 607ms)
+ GET /api/settings 200 in 991ms (compile: 39ms, proxy.ts: 417ms, render: 536ms)
+ GET /api/settings 200 in 216ms (compile: 12ms, proxy.ts: 21ms, render: 183ms)
+ GET / 200 in 1791ms (compile: 640ms, proxy.ts: 39ms, render: 1112ms)
+ GET /api/auth/session 200 in 153ms (compile: 64ms, proxy.ts: 37ms, render: 53ms)
+ GET /api/auth/session 200 in 221ms (compile: 74ms, proxy.ts: 109ms, render: 37ms)
+ GET /api/settings 200 in 806ms (compile: 11ms, proxy.ts: 126ms, render: 670ms)
+ GET /api/sidebar 200 in 1462ms (compile: 52ms, proxy.ts: 101ms, render: 1309ms)
+ GET /api/dashboard 200 in 1550ms (compile: 43ms, proxy.ts: 59ms, render: 1449ms)
+ GET /api/dashboard 200 in 777ms (compile: 16ms, proxy.ts: 37ms, render: 725ms)
+ GET /api/auth/session 200 in 273ms (compile: 53ms, proxy.ts: 155ms, render: 65ms)
+ GET /api/auth/session 200 in 81ms (compile: 15ms, proxy.ts: 44ms, render: 22ms)
+ GET /api/sidebar 200 in 440ms (compile: 34ms, proxy.ts: 158ms, render: 248ms)
+ GET /api/dashboard 200 in 676ms (compile: 24ms, proxy.ts: 214ms, render: 438ms)
+ GET / 200 in 486ms (compile: 56ms, proxy.ts: 35ms, render: 395ms)
+ GET /api/auth/session 200 in 105ms (compile: 30ms, proxy.ts: 33ms, render: 42ms)
+ GET /api/auth/session 200 in 139ms (compile: 44ms, proxy.ts: 76ms, render: 19ms)
+ GET /api/sidebar 200 in 297ms (compile: 10ms, proxy.ts: 61ms, render: 226ms)
+ GET /api/dashboard 200 in 475ms (compile: 5ms, proxy.ts: 22ms, render: 448ms)
+ GET /api/settings 200 in 432ms (compile: 15ms, proxy.ts: 58ms, render: 359ms)
+ GET /api/dashboard 200 in 445ms (compile: 12ms, proxy.ts: 24ms, render: 409ms)
+ GET /api/dashboard 200 in 412ms (compile: 8ms, proxy.ts: 17ms, render: 386ms)
+ GET /api/dashboard 200 in 443ms (compile: 8ms, proxy.ts: 21ms, render: 414ms)
+ GET /api/dashboard 200 in 498ms (compile: 11ms, proxy.ts: 18ms, render: 469ms)
+ GET /api/dashboard 200 in 399ms (compile: 8ms, proxy.ts: 18ms, render: 373ms)
+ GET /api/dashboard 200 in 442ms (compile: 8ms, proxy.ts: 5ms, render: 429ms)
+ GET /api/dashboard 200 in 450ms (compile: 6ms, proxy.ts: 23ms, render: 421ms)
+ GET /api/dashboard 200 in 882ms (compile: 50ms, proxy.ts: 114ms, render: 718ms)
+ GET /api/dashboard 200 in 675ms (compile: 45ms, proxy.ts: 74ms, render: 555ms)
+ GET /api/dashboard 200 in 444ms (compile: 8ms, proxy.ts: 40ms, render: 395ms)
+ GET /api/dashboard 200 in 486ms (compile: 10ms, proxy.ts: 23ms, render: 453ms)
+ GET /api/dashboard 200 in 433ms (compile: 6ms, proxy.ts: 29ms, render: 399ms)
+ GET /api/sidebar 200 in 384ms (compile: 41ms, proxy.ts: 89ms, render: 255ms)
+✓ Compiled in 955ms
+ GET /api/settings 200 in 2.9s (compile: 246ms, proxy.ts: 385ms, render: 2.3s)
+ GET /api/suppliers 200 in 2.6s (compile: 756ms, proxy.ts: 143ms, render: 1736ms)
+ GET /api/sidebar 200 in 2.6s (compile: 66ms, proxy.ts: 841ms, render: 1707ms)
+ GET /api/products 200 in 2.9s (compile: 161ms, proxy.ts: 755ms, render: 1936ms)
+ GET /api/unit-conversions 200 in 2.9s (compile: 685ms, proxy.ts: 158ms, render: 2.1s)
+ GET /api/settings 200 in 219ms (compile: 12ms, proxy.ts: 23ms, render: 184ms)
+ GET /api/settings 200 in 241ms (compile: 8ms, proxy.ts: 8ms, render: 225ms)
+ GET /api/products 200 in 403ms (compile: 2ms, proxy.ts: 4ms, render: 397ms)
+ GET /api/unit-conversions 200 in 399ms (compile: 3ms, proxy.ts: 13ms, render: 383ms)
+ GET /api/settings 200 in 295ms (compile: 3ms, proxy.ts: 4ms, render: 288ms)
+ GET /api/settings 200 in 258ms (compile: 7ms, proxy.ts: 38ms, render: 212ms)
+ GET /api/settings 200 in 217ms (compile: 6ms, proxy.ts: 16ms, render: 195ms)
+ GET /api/suppliers 200 in 1359ms (compile: 19ms, proxy.ts: 25ms, render: 1314ms)
+✓ Compiled in 306ms
 ✓ Compiled in 0ms
- GET /api/dashboard 200 in 405ms (compile: 10ms, proxy.ts: 17ms, render: 379ms)
- GET /api/sidebar 200 in 883ms (compile: 96ms, proxy.ts: 328ms, render: 459ms)
- GET /api/dashboard 200 in 2.1s (compile: 310ms, proxy.ts: 293ms, render: 1500ms)
- GET /api/dashboard 200 in 409ms (compile: 8ms, proxy.ts: 25ms, render: 376ms)
- GET /api/sidebar 200 in 352ms (compile: 16ms, proxy.ts: 44ms, render: 292ms)
- GET /api/dashboard 200 in 532ms (compile: 22ms, proxy.ts: 26ms, render: 483ms)
- GET /api/auth/csrf 200 in 38ms (compile: 15ms, proxy.ts: 15ms, render: 8ms)
- POST /api/auth/signout 200 in 27ms (compile: 3ms, proxy.ts: 9ms, render: 15ms)
- GET /login 200 in 752ms (compile: 509ms, proxy.ts: 3ms, render: 240ms)
- GET /api/auth/providers 200 in 40ms (compile: 12ms, proxy.ts: 16ms, render: 13ms)
- GET /api/auth/csrf 200 in 20ms (compile: 3ms, proxy.ts: 3ms, render: 15ms)
- POST /api/auth/callback/credentials? 200 in 1816ms (compile: 2ms, proxy.ts: 5ms, render: 1809ms)
- GET / 200 in 262ms (compile: 6ms, proxy.ts: 10ms, render: 246ms)
- GET /api/auth/session 200 in 26ms (compile: 6ms, proxy.ts: 15ms, render: 5ms)
- GET /api/auth/session 200 in 19ms (compile: 4ms, proxy.ts: 8ms, render: 7ms)
- GET /api/sidebar 200 in 257ms (compile: 6ms, proxy.ts: 25ms, render: 226ms)
- GET /api/settings 200 in 432ms (compile: 11ms, proxy.ts: 24ms, render: 397ms)
- GET /api/dashboard 200 in 2.1s (compile: 9ms, proxy.ts: 24ms, render: 2.0s)
- GET /api/dashboard 200 in 423ms (compile: 7ms, proxy.ts: 24ms, render: 392ms)
- GET /api/dashboard 200 in 374ms (compile: 3ms, proxy.ts: 13ms, render: 358ms)
- GET /api/dashboard 200 in 448ms (compile: 10ms, proxy.ts: 34ms, render: 404ms)
- GET /api/dashboard 200 in 374ms (compile: 3ms, proxy.ts: 8ms, render: 363ms)
- GET /api/dashboard 200 in 400ms (compile: 3ms, proxy.ts: 13ms, render: 384ms)
- GET /api/dashboard 200 in 420ms (compile: 21ms, proxy.ts: 15ms, render: 384ms)
- GET /api/dashboard 200 in 395ms (compile: 4ms, proxy.ts: 23ms, render: 368ms)
- GET /api/dashboard 200 in 391ms (compile: 10ms, proxy.ts: 20ms, render: 360ms)
- GET /api/dashboard 200 in 410ms (compile: 6ms, proxy.ts: 23ms, render: 380ms)
- GET /api/dashboard 200 in 703ms (compile: 16ms, proxy.ts: 38ms, render: 649ms)
- GET /api/sidebar 200 in 466ms (compile: 38ms, proxy.ts: 78ms, render: 349ms)
- GET /mobile-shop/device-inventory 200 in 397ms (compile: 237ms, proxy.ts: 13ms, render: 147ms)
- GET /api/mobile-devices? 200 in 788ms (compile: 17ms, proxy.ts: 25ms, render: 746ms)
- GET /api/mobile-devices? 200 in 789ms (compile: 35ms, proxy.ts: 24ms, render: 731ms)
- GET /api/dashboard 200 in 3.4s (compile: 7ms, proxy.ts: 56ms, render: 3.4s)
- GET /api/mobile-devices? 200 in 681ms (compile: 1919µs, proxy.ts: 7ms, render: 672ms)
- GET /api/suppliers 200 in 938ms (compile: 276ms, proxy.ts: 25ms, render: 636ms)
- GET /api/products?excludeServices=true 200 in 1248ms (compile: 73ms, proxy.ts: 26ms, render: 1149ms)
- GET /api/sidebar 200 in 1950ms (compile: 34ms, proxy.ts: 57ms, render: 1859ms)
- GET /api/sidebar 200 in 226ms (compile: 13ms, proxy.ts: 36ms, render: 177ms)
- GET /api/sidebar 200 in 1312ms (compile: 14ms, proxy.ts: 91ms, render: 1208ms)
-✓ Compiled in 1336ms
-✓ Compiled in 301ms
-✓ Compiled in 194ms
-✓ Compiled in 93ms
- GET /api/auth/session 200 in 754ms (compile: 198ms, proxy.ts: 142ms, render: 414ms)
-Failed to fetch mobile devices: Error [PrismaClientValidationError]: 
-Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].mobileDevice.findMany()` invocation in
-/Users/tmr/Desktop/Final Projects/biz_arch_erp/.next/dev/server/chunks/[root-of-the-server]__f0d8304f._.js:2145:174
+ GET /api/suppliers 200 in 2.5s (compile: 54ms, proxy.ts: 247ms, render: 2.2s)
+ GET /api/settings 200 in 2.6s (compile: 44ms, proxy.ts: 322ms, render: 2.3s)
+ GET /api/unit-conversions 200 in 2.7s (compile: 135ms, proxy.ts: 172ms, render: 2.4s)
+ GET /api/settings 200 in 212ms (compile: 9ms, proxy.ts: 15ms, render: 188ms)
+ GET /api/sidebar 200 in 2.7s (compile: 22ms, proxy.ts: 266ms, render: 2.4s)
+ GET /api/settings 200 in 189ms (compile: 3ms, proxy.ts: 4ms, render: 182ms)
+ GET /api/products 200 in 2.9s (compile: 16ms, proxy.ts: 274ms, render: 2.6s)
+ GET /api/unit-conversions 200 in 346ms (compile: 1711µs, proxy.ts: 7ms, render: 338ms)
+ GET /api/settings 200 in 200ms (compile: 1309µs, proxy.ts: 4ms, render: 195ms)
+ GET /api/settings 200 in 190ms (compile: 1380µs, proxy.ts: 3ms, render: 185ms)
+ GET /api/unit-conversions 200 in 364ms (compile: 1898µs, proxy.ts: 4ms, render: 359ms)
+ GET /api/products 200 in 455ms (compile: 1890µs, proxy.ts: 5ms, render: 448ms)
+ GET /api/settings 200 in 208ms (compile: 3ms, proxy.ts: 8ms, render: 198ms)
+ GET /api/settings 200 in 205ms (compile: 4ms, proxy.ts: 6ms, render: 195ms)
+ GET /api/suppliers 200 in 1276ms (compile: 13ms, proxy.ts: 11ms, render: 1252ms)
+ GET /api/unit-conversions 200 in 404ms (compile: 1429µs, proxy.ts: 4ms, render: 399ms)
+ GET /api/products 200 in 438ms (compile: 3ms, proxy.ts: 7ms, render: 428ms)
+ GET /api/settings 200 in 191ms (compile: 2ms, proxy.ts: 5ms, render: 184ms)
+ GET /api/suppliers 200 in 230ms (compile: 1516µs, proxy.ts: 14ms, render: 215ms)
+ GET /api/settings 200 in 197ms (compile: 3ms, proxy.ts: 5ms, render: 189ms)
+ GET /api/suppliers 200 in 242ms (compile: 3ms, proxy.ts: 4ms, render: 235ms)
+ GET /api/settings 200 in 204ms (compile: 1651µs, proxy.ts: 8ms, render: 195ms)
+ GET /api/products 200 in 441ms (compile: 1625µs, proxy.ts: 3ms, render: 437ms)
+ GET /api/settings 200 in 241ms (compile: 5ms, proxy.ts: 16ms, render: 219ms)
+ GET /api/settings 200 in 278ms (compile: 9ms, proxy.ts: 20ms, render: 248ms)
+ GET /api/settings 200 in 1228ms (compile: 396ms, proxy.ts: 172ms, render: 661ms)
+ GET /api/settings 200 in 1156ms (compile: 94ms, proxy.ts: 294ms, render: 768ms)
+ GET /api/sidebar 200 in 1365ms (compile: 483ms, proxy.ts: 278ms, render: 604ms)
+ GET /api/dashboard 200 in 1568ms (compile: 507ms, proxy.ts: 499ms, render: 562ms)
+ GET /api/settings 200 in 1204ms (compile: 329ms, proxy.ts: 164ms, render: 711ms)
+ GET /api/settings 200 in 1254ms (compile: 557ms, proxy.ts: 183ms, render: 514ms)
+ GET / 200 in 1358ms (compile: 515ms, proxy.ts: 33ms, render: 810ms)
+ GET /api/auth/session 200 in 139ms (compile: 27ms, proxy.ts: 87ms, render: 25ms)
+ GET /api/auth/session 200 in 106ms (compile: 21ms, proxy.ts: 78ms, render: 7ms)
+ GET /api/sidebar 200 in 514ms (compile: 8ms, proxy.ts: 45ms, render: 460ms)
+ GET /api/settings 200 in 512ms (compile: 14ms, proxy.ts: 43ms, render: 454ms)
+ GET /api/dashboard 200 in 799ms (compile: 27ms, proxy.ts: 40ms, render: 732ms)
+ GET /api/dashboard 200 in 492ms (compile: 10ms, proxy.ts: 23ms, render: 459ms)
+ GET /api/dashboard 200 in 821ms (compile: 5ms, proxy.ts: 79ms, render: 737ms)
+ GET /api/dashboard 200 in 489ms (compile: 8ms, proxy.ts: 25ms, render: 456ms)
+ GET /api/dashboard 200 in 700ms (compile: 17ms, proxy.ts: 29ms, render: 654ms)
+ GET /api/dashboard 200 in 1303ms (compile: 228ms, proxy.ts: 526ms, render: 550ms)
+ GET /login 200 in 549ms (compile: 275ms, proxy.ts: 4ms, render: 269ms)
+ GET /api/dashboard 200 in 508ms (compile: 32ms, proxy.ts: 53ms, render: 424ms)
+ GET /api/dashboard 200 in 817ms (compile: 31ms, proxy.ts: 97ms, render: 688ms)
+ GET /api/dashboard 200 in 488ms (compile: 7ms, proxy.ts: 54ms, render: 426ms)
+ GET /api/auth/providers 200 in 127ms (compile: 71ms, proxy.ts: 33ms, render: 24ms)
+ GET /api/auth/csrf 200 in 37ms (compile: 26ms, proxy.ts: 4ms, render: 7ms)
+ POST /api/auth/callback/credentials? 200 in 998ms (compile: 4ms, proxy.ts: 12ms, render: 982ms)
+ GET / 200 in 201ms (compile: 16ms, proxy.ts: 37ms, render: 148ms)
+ GET /api/auth/session 200 in 171ms (compile: 47ms, proxy.ts: 78ms, render: 46ms)
+ GET /api/auth/session 200 in 140ms (compile: 58ms, proxy.ts: 53ms, render: 29ms)
+ GET /api/settings 200 in 354ms (compile: 23ms, proxy.ts: 56ms, render: 276ms)
+ GET /api/dashboard 200 in 689ms (compile: 21ms, proxy.ts: 32ms, render: 636ms)
+ GET /api/dashboard 200 in 470ms (compile: 10ms, proxy.ts: 42ms, render: 419ms)
+ GET /api/sidebar 200 in 2.1s (compile: 20ms, proxy.ts: 53ms, render: 2.1s)
+ GET /api/dashboard 200 in 699ms (compile: 34ms, proxy.ts: 169ms, render: 497ms)
+ GET /api/dashboard 200 in 1031ms (compile: 16ms, proxy.ts: 80ms, render: 935ms)
+ GET /api/dashboard 200 in 568ms (compile: 51ms, proxy.ts: 107ms, render: 410ms)
+ GET /api/dashboard 200 in 459ms (compile: 15ms, proxy.ts: 28ms, render: 416ms)
+ GET /api/dashboard 200 in 449ms (compile: 7ms, proxy.ts: 19ms, render: 423ms)
+ GET /api/dashboard 200 in 397ms (compile: 5ms, proxy.ts: 16ms, render: 375ms)
+✓ Compiled in 2.4s
+ GET /api/sidebar 200 in 1168ms (compile: 54ms, proxy.ts: 473ms, render: 640ms)
+  Reload env: .env.local
+ GET /api/dashboard 200 in 1268ms (compile: 25ms, proxy.ts: 86ms, render: 1157ms)
+ GET /api/dashboard 200 in 4.3s (compile: 69ms, proxy.ts: 565ms, render: 3.7s)
+ GET / 200 in 20.3s (compile: 17.7s, proxy.ts: 360ms, render: 2.2s)
+ GET / 200 in 20.3s (compile: 17.1s, proxy.ts: 333ms, render: 2.9s)
+ GET / 200 in 21.0s (compile: 18.7s, proxy.ts: 999ms, render: 1288ms)
+✓ Compiled in 24ms
+ GET /purchase-invoices/new 200 in 21.3s (compile: 18.2s, proxy.ts: 1152ms, render: 1906ms)
+ GET / 200 in 508ms (compile: 112ms, proxy.ts: 281ms, render: 115ms)
+ GET /api/dashboard 200 in 17.4s (compile: 8.4s, proxy.ts: 594ms, render: 8.4s)
+ GET /api/dashboard 200 in 16.8s (compile: 7.7s, proxy.ts: 457ms, render: 8.6s)
+ GET /api/dashboard 200 in 582ms (compile: 33ms, proxy.ts: 79ms, render: 471ms)
+ GET /api/dashboard 200 in 890ms (compile: 58ms, proxy.ts: 93ms, render: 739ms)
+✓ Finished writing to filesystem cache in 18.6s
+ GET /api/dashboard 200 in 771ms (compile: 85ms, proxy.ts: 72ms, render: 614ms)
+ GET /api/dashboard 200 in 722ms (compile: 4ms, proxy.ts: 156ms, render: 563ms)
+ GET /api/dashboard 200 in 517ms (compile: 29ms, proxy.ts: 62ms, render: 426ms)
+ GET /api/dashboard 200 in 541ms (compile: 6ms, proxy.ts: 7ms, render: 529ms)
+ GET /api/dashboard 200 in 902ms (compile: 47ms, proxy.ts: 320ms, render: 534ms)
+ GET /api/dashboard 200 in 931ms (compile: 88ms, proxy.ts: 188ms, render: 655ms)
+✓ Finished filesystem cache database compaction in 14.9s
+ GET /api/dashboard 200 in 562ms (compile: 19ms, proxy.ts: 88ms, render: 455ms)
+ GET /api/dashboard 200 in 597ms (compile: 13ms, proxy.ts: 37ms, render: 547ms)
+ GET /api/dashboard 200 in 559ms (compile: 25ms, proxy.ts: 32ms, render: 502ms)
+ GET /api/dashboard 200 in 785ms (compile: 18ms, proxy.ts: 28ms, render: 740ms)
+ GET /api/dashboard 200 in 906ms (compile: 6ms, proxy.ts: 65ms, render: 834ms)
+ GET /api/dashboard 200 in 816ms (compile: 7ms, proxy.ts: 9ms, render: 800ms)
+ GET /api/dashboard 200 in 872ms (compile: 90ms, proxy.ts: 80ms, render: 702ms)
+ GET /api/dashboard 200 in 880ms (compile: 88ms, proxy.ts: 193ms, render: 599ms)
+ GET /api/dashboard 200 in 4.3s (compile: 3.5s, proxy.ts: 16ms, render: 797ms)
+ GET /api/dashboard 200 in 4.5s (compile: 3.6s, proxy.ts: 34ms, render: 847ms)
+ GET /api/dashboard 200 in 873ms (compile: 73ms, proxy.ts: 233ms, render: 568ms)
+ GET /api/dashboard 200 in 883ms (compile: 115ms, proxy.ts: 115ms, render: 653ms)
+ GET /api/dashboard 200 in 573ms (compile: 30ms, proxy.ts: 57ms, render: 485ms)
+ GET /api/dashboard 200 in 769ms (compile: 43ms, proxy.ts: 50ms, render: 675ms)
+ GET /api/dashboard 200 in 1025ms (compile: 26ms, proxy.ts: 44ms, render: 955ms)
+ GET /api/sidebar 200 in 1202ms (compile: 909ms, proxy.ts: 18ms, render: 275ms)
+ GET /api/dashboard 200 in 450ms (compile: 32ms, proxy.ts: 30ms, render: 388ms)
+ GET / 200 in 1057ms (compile: 69ms, proxy.ts: 34ms, render: 955ms)
+ GET /api/dashboard 200 in 738ms (compile: 11ms, proxy.ts: 14ms, render: 713ms)
+ GET /api/auth/session 200 in 903ms (compile: 672ms, proxy.ts: 72ms, render: 159ms)
+ GET /api/auth/session 200 in 230ms (compile: 100ms, proxy.ts: 111ms, render: 19ms)
+ GET /api/sidebar 200 in 353ms (compile: 65ms, proxy.ts: 87ms, render: 202ms)
+ GET /api/dashboard 200 in 496ms (compile: 35ms, proxy.ts: 18ms, render: 444ms)
+ GET /api/settings 200 in 1955ms (compile: 1416ms, proxy.ts: 86ms, render: 453ms)
+ GET /api/dashboard 200 in 430ms (compile: 7ms, proxy.ts: 25ms, render: 397ms)
+ GET /api/dashboard 200 in 412ms (compile: 12ms, proxy.ts: 14ms, render: 386ms)
+ GET /api/dashboard 200 in 422ms (compile: 17ms, proxy.ts: 27ms, render: 377ms)
+ GET /api/dashboard 200 in 481ms (compile: 16ms, proxy.ts: 42ms, render: 423ms)
+✓ Compiled in 2.3s
+✓ Compiled in 0ms
+ GET /api/dashboard 200 in 461ms (compile: 17ms, proxy.ts: 17ms, render: 428ms)
+ GET /api/dashboard 200 in 519ms (compile: 9ms, proxy.ts: 37ms, render: 473ms)
+ GET /api/dashboard 200 in 579ms (compile: 36ms, proxy.ts: 37ms, render: 505ms)
+ GET /api/dashboard 200 in 471ms (compile: 37ms, proxy.ts: 31ms, render: 403ms)
+ GET /api/dashboard 200 in 430ms (compile: 13ms, proxy.ts: 31ms, render: 386ms)
+ GET /api/dashboard 200 in 478ms (compile: 17ms, proxy.ts: 49ms, render: 412ms)
+ GET /api/dashboard 200 in 436ms (compile: 5ms, proxy.ts: 21ms, render: 410ms)
+ GET /api/dashboard 200 in 455ms (compile: 17ms, proxy.ts: 31ms, render: 406ms)
+ GET /api/dashboard 200 in 455ms (compile: 15ms, proxy.ts: 22ms, render: 418ms)
+ GET /api/dashboard 200 in 527ms (compile: 5ms, proxy.ts: 94ms, render: 428ms)
+✓ Compiled in 936ms
+✓ Compiled in 0ms
+ GET /api/dashboard 200 in 588ms (compile: 43ms, proxy.ts: 72ms, render: 473ms)
+ GET /api/dashboard 200 in 410ms (compile: 23ms, proxy.ts: 15ms, render: 373ms)
+ GET /api/dashboard 200 in 477ms (compile: 37ms, proxy.ts: 36ms, render: 404ms)
+ GET /api/dashboard 200 in 468ms (compile: 9ms, proxy.ts: 83ms, render: 376ms)
+ GET /api/dashboard 200 in 443ms (compile: 7ms, proxy.ts: 25ms, render: 411ms)
+ GET /api/dashboard 200 in 398ms (compile: 7ms, proxy.ts: 7ms, render: 383ms)
+ GET /api/dashboard 200 in 451ms (compile: 42ms, proxy.ts: 26ms, render: 383ms)
+ GET /api/dashboard 200 in 421ms (compile: 11ms, proxy.ts: 12ms, render: 398ms)
+ GET /api/dashboard 200 in 494ms (compile: 34ms, proxy.ts: 22ms, render: 438ms)
+ GET /api/dashboard 200 in 400ms (compile: 4ms, proxy.ts: 11ms, render: 385ms)
+ GET /api/auth/session 200 in 844ms (compile: 389ms, proxy.ts: 174ms, render: 281ms)
+ GET /api/auth/session 200 in 68ms (compile: 35ms, proxy.ts: 13ms, render: 20ms)
+ GET /api/dashboard 200 in 1674ms (compile: 134ms, proxy.ts: 102ms, render: 1438ms)
+ GET /api/auth/session 200 in 244ms (compile: 23ms, proxy.ts: 14ms, render: 208ms)
+ GET /api/dashboard 200 in 515ms (compile: 24ms, proxy.ts: 58ms, render: 433ms)
+ GET /api/auth/session 200 in 378ms (compile: 94ms, proxy.ts: 278ms, render: 6ms)
+ GET /api/auth/session 200 in 22ms (compile: 6ms, proxy.ts: 7ms, render: 9ms)
+ GET /api/auth/session 200 in 20ms (compile: 3ms, proxy.ts: 8ms, render: 9ms)
+ GET /api/auth/session 200 in 27ms (compile: 14ms, proxy.ts: 5ms, render: 8ms)
+ GET /api/auth/session 200 in 20ms (compile: 3ms, proxy.ts: 11ms, render: 6ms)
+ GET /api/dashboard 200 in 1016ms (compile: 55ms, proxy.ts: 275ms, render: 685ms)
+ GET /api/dashboard 200 in 512ms (compile: 5ms, proxy.ts: 6ms, render: 501ms)
+ GET /api/sidebar 200 in 3.0s (compile: 190ms, proxy.ts: 163ms, render: 2.7s)
+ GET /api/sidebar 200 in 221ms (compile: 7ms, proxy.ts: 11ms, render: 203ms)
+ GET /api/sidebar 200 in 216ms (compile: 3ms, proxy.ts: 5ms, render: 208ms)
+ GET /api/dashboard 200 in 410ms (compile: 11ms, proxy.ts: 25ms, render: 374ms)
+ GET /api/dashboard 200 in 375ms (compile: 7ms, proxy.ts: 11ms, render: 357ms)
+ GET /api/dashboard 200 in 416ms (compile: 8ms, proxy.ts: 10ms, render: 398ms)
+ GET /api/dashboard 200 in 579ms (compile: 9ms, proxy.ts: 10ms, render: 559ms)
+ GET /api/dashboard 200 in 451ms (compile: 14ms, proxy.ts: 32ms, render: 404ms)
+ GET /api/dashboard 200 in 383ms (compile: 3ms, proxy.ts: 7ms, render: 372ms)
+ GET /api/dashboard 200 in 380ms (compile: 2ms, proxy.ts: 4ms, render: 373ms)
+ GET /api/dashboard 200 in 371ms (compile: 2ms, proxy.ts: 6ms, render: 363ms)
+ GET /api/dashboard 200 in 485ms (compile: 24ms, proxy.ts: 51ms, render: 410ms)
+ GET /api/dashboard 200 in 413ms (compile: 6ms, proxy.ts: 15ms, render: 393ms)
+ GET /api/dashboard 200 in 458ms (compile: 29ms, proxy.ts: 11ms, render: 418ms)
+ GET /api/dashboard 200 in 430ms (compile: 3ms, proxy.ts: 4ms, render: 423ms)
+ GET / 200 in 1265ms (compile: 521ms, proxy.ts: 7ms, render: 737ms)
+ GET /api/auth/session 200 in 248ms (compile: 28ms, proxy.ts: 161ms, render: 59ms)
+ GET /api/auth/session 200 in 287ms (compile: 44ms, proxy.ts: 17ms, render: 226ms)
+ GET /api/dashboard 200 in 591ms (compile: 9ms, proxy.ts: 34ms, render: 548ms)
+ GET /api/sidebar 200 in 711ms (compile: 30ms, proxy.ts: 129ms, render: 552ms)
+ GET /api/settings 200 in 728ms (compile: 58ms, proxy.ts: 128ms, render: 541ms)
+ GET /api/auth/session 200 in 479ms (compile: 86ms, proxy.ts: 289ms, render: 104ms)
+ GET /api/auth/session 200 in 109ms (compile: 22ms, proxy.ts: 37ms, render: 50ms)
+ GET /api/auth/session 200 in 113ms (compile: 19ms, proxy.ts: 44ms, render: 49ms)
+ GET /api/dashboard 200 in 633ms (compile: 34ms, proxy.ts: 61ms, render: 537ms)
+ GET /api/dashboard 200 in 654ms (compile: 16ms, proxy.ts: 58ms, render: 580ms)
+ GET /api/dashboard 200 in 724ms (compile: 35ms, proxy.ts: 178ms, render: 511ms)
+ GET /api/dashboard 200 in 753ms (compile: 75ms, proxy.ts: 53ms, render: 625ms)
+ GET /api/dashboard 200 in 614ms (compile: 22ms, proxy.ts: 116ms, render: 476ms)
+ GET /api/dashboard 200 in 485ms (compile: 25ms, proxy.ts: 26ms, render: 433ms)
+ GET /api/dashboard 200 in 396ms (compile: 8ms, proxy.ts: 5ms, render: 383ms)
+ GET /api/dashboard 200 in 779ms (compile: 71ms, proxy.ts: 96ms, render: 612ms)
+ GET /api/dashboard 200 in 723ms (compile: 8ms, proxy.ts: 119ms, render: 596ms)
+ GET /api/dashboard 200 in 551ms (compile: 43ms, proxy.ts: 90ms, render: 418ms)
+ GET /api/dashboard 200 in 799ms (compile: 31ms, proxy.ts: 50ms, render: 718ms)
+ GET /api/dashboard 200 in 818ms (compile: 5ms, proxy.ts: 10ms, render: 803ms)
+ GET / 200 in 633ms (compile: 66ms, proxy.ts: 15ms, render: 553ms)
+ GET /api/dashboard 200 in 974ms (compile: 55ms, proxy.ts: 29ms, render: 890ms)
+ GET /api/dashboard 200 in 650ms (compile: 37ms, proxy.ts: 71ms, render: 542ms)
+ GET /api/auth/session 200 in 531ms (compile: 149ms, proxy.ts: 158ms, render: 224ms)
+ GET /api/dashboard 200 in 729ms (compile: 30ms, proxy.ts: 60ms, render: 639ms)
+ GET /api/auth/session 200 in 691ms (compile: 295ms, proxy.ts: 343ms, render: 53ms)
+ GET /api/dashboard 200 in 1253ms (compile: 15ms, proxy.ts: 337ms, render: 901ms)
+ GET /api/settings 200 in 581ms (compile: 235ms, proxy.ts: 52ms, render: 294ms)
+ GET /api/sidebar 200 in 660ms (compile: 109ms, proxy.ts: 115ms, render: 437ms)
+ GET /api/dashboard 200 in 857ms (compile: 68ms, proxy.ts: 33ms, render: 755ms)
+ GET /api/dashboard 200 in 1402ms (compile: 142ms, proxy.ts: 104ms, render: 1157ms)
+ GET /api/dashboard 200 in 1915ms (compile: 88ms, proxy.ts: 95ms, render: 1732ms)
+ GET /api/dashboard 200 in 1633ms (compile: 45ms, proxy.ts: 43ms, render: 1545ms)
+ GET /api/dashboard 200 in 582ms (compile: 40ms, proxy.ts: 55ms, render: 487ms)
+ GET /api/dashboard 200 in 469ms (compile: 35ms, proxy.ts: 28ms, render: 406ms)
+ GET /api/dashboard 200 in 572ms (compile: 32ms, proxy.ts: 83ms, render: 457ms)
+ GET /api/dashboard 200 in 631ms (compile: 22ms, proxy.ts: 13ms, render: 597ms)
+ GET /api/dashboard 200 in 763ms (compile: 30ms, proxy.ts: 8ms, render: 725ms)
+ GET /api/dashboard 200 in 934ms (compile: 7ms, proxy.ts: 9ms, render: 918ms)
+ GET /api/dashboard 200 in 408ms (compile: 12ms, proxy.ts: 13ms, render: 383ms)
+ GET /api/dashboard 200 in 2.7s (compile: 49ms, proxy.ts: 143ms, render: 2.5s)
+ GET /api/dashboard 200 in 1830ms (compile: 141ms, proxy.ts: 994ms, render: 695ms)
+ GET /api/dashboard 200 in 1706ms (compile: 242ms, proxy.ts: 712ms, render: 751ms)
+ GET /api/dashboard 200 in 966ms (compile: 103ms, proxy.ts: 172ms, render: 691ms)
+ GET /api/dashboard 200 in 841ms (compile: 78ms, proxy.ts: 200ms, render: 563ms)
+ GET /settings 200 in 9.8s (compile: 4.7s, proxy.ts: 383ms, render: 4.7s)
+ GET /api/settings 200 in 1399ms (compile: 79ms, proxy.ts: 153ms, render: 1166ms)
+ GET /api/dashboard 200 in 12.8s (compile: 2.2s, proxy.ts: 4.4s, render: 6.2s)
+ GET /api/dashboard 200 in 12.7s (compile: 3.6s, proxy.ts: 4.2s, render: 4.9s)
+ GET /api/dashboard 200 in 13.0s (compile: 3.3s, proxy.ts: 4.6s, render: 5.0s)
+ GET /api/settings 200 in 2.3s (compile: 87ms, proxy.ts: 566ms, render: 1600ms)
+ GET /api/dashboard 200 in 2.3s (compile: 189ms, proxy.ts: 180ms, render: 1944ms)
+ GET /settings 200 in 2.8s (compile: 959ms, proxy.ts: 956ms, render: 836ms)
+ GET /api/dashboard 200 in 1016ms (compile: 28ms, proxy.ts: 163ms, render: 825ms)
+ GET /api/dashboard 200 in 1755ms (compile: 36ms, proxy.ts: 71ms, render: 1647ms)
+ GET /api/dashboard 200 in 2.0s (compile: 60ms, proxy.ts: 91ms, render: 1860ms)
+ GET /api/dashboard 200 in 1629ms (compile: 149ms, proxy.ts: 735ms, render: 745ms)
+ GET /api/dashboard 200 in 619ms (compile: 57ms, proxy.ts: 100ms, render: 462ms)
+ GET /api/dashboard 200 in 1448ms (compile: 94ms, proxy.ts: 67ms, render: 1287ms)
+ GET /api/dashboard 200 in 725ms (compile: 32ms, proxy.ts: 69ms, render: 624ms)
+ GET /api/dashboard 200 in 897ms (compile: 75ms, proxy.ts: 64ms, render: 759ms)
+ GET /api/dashboard 200 in 1199ms (compile: 66ms, proxy.ts: 297ms, render: 836ms)
+ GET /api/dashboard 200 in 1828ms (compile: 30ms, proxy.ts: 261ms, render: 1536ms)
+ GET /api/dashboard 200 in 2.2s (compile: 77ms, proxy.ts: 907ms, render: 1219ms)
+ GET /api/dashboard 200 in 2.1s (compile: 174ms, proxy.ts: 664ms, render: 1287ms)
+ GET /api/dashboard 200 in 926ms (compile: 142ms, proxy.ts: 147ms, render: 637ms)
+ GET /api/dashboard 200 in 822ms (compile: 114ms, proxy.ts: 107ms, render: 602ms)
+ GET /api/dashboard 200 in 805ms (compile: 70ms, proxy.ts: 95ms, render: 640ms)
+ GET /api/dashboard 200 in 2.2s (compile: 139ms, proxy.ts: 49ms, render: 2.0s)
+ GET /api/dashboard 200 in 2.6s (compile: 1403ms, proxy.ts: 106ms, render: 1114ms)
+ GET /api/dashboard 200 in 852ms (compile: 84ms, proxy.ts: 142ms, render: 626ms)
+ GET /api/dashboard 200 in 1268ms (compile: 167ms, proxy.ts: 239ms, render: 862ms)
+ GET /api/dashboard 200 in 1326ms (compile: 61ms, proxy.ts: 142ms, render: 1123ms)
+ GET /api/dashboard 200 in 730ms (compile: 75ms, proxy.ts: 153ms, render: 502ms)
+ GET /api/dashboard 200 in 1033ms (compile: 127ms, proxy.ts: 253ms, render: 653ms)
+ GET /api/dashboard 200 in 789ms (compile: 162ms, proxy.ts: 114ms, render: 513ms)
+ GET /api/dashboard 200 in 851ms (compile: 38ms, proxy.ts: 59ms, render: 754ms)
+ GET /api/dashboard 200 in 639ms (compile: 50ms, proxy.ts: 43ms, render: 546ms)
+ GET /api/dashboard 200 in 608ms (compile: 35ms, proxy.ts: 92ms, render: 481ms)
+ GET /api/dashboard 200 in 1573ms (compile: 204ms, proxy.ts: 227ms, render: 1141ms)
+ GET /api/auth/csrf 200 in 835ms (compile: 583ms, proxy.ts: 88ms, render: 165ms)
+ POST /api/auth/signout 200 in 679ms (compile: 77ms, proxy.ts: 204ms, render: 397ms)
+ GET /api/dashboard 200 in 1300ms (compile: 96ms, proxy.ts: 345ms, render: 859ms)
+ GET /api/dashboard 200 in 955ms (compile: 76ms, proxy.ts: 206ms, render: 674ms)
+ GET /api/auth/session 200 in 725ms (compile: 395ms, proxy.ts: 181ms, render: 149ms)
+ GET /api/auth/session 200 in 488ms (compile: 316ms, proxy.ts: 119ms, render: 53ms)
+ GET /api/auth/session 200 in 71ms (compile: 34ms, proxy.ts: 21ms, render: 16ms)
+ GET /api/dashboard 200 in 641ms (compile: 30ms, proxy.ts: 81ms, render: 529ms)
+✓ Finished writing to filesystem cache in 13.2s
+ GET /api/dashboard 200 in 29.7s (compile: 440ms, proxy.ts: 200ms, render: 29.0s)
+ GET /api/auth/csrf 200 in 2.1s (compile: 1386ms, proxy.ts: 719ms, render: 32ms)
+ GET /login 200 in 35.6s (compile: 17.8s, proxy.ts: 48ms, render: 17.8s)
+ GET /api/sidebar 200 in 2.7s (compile: 322ms, proxy.ts: 757ms, render: 1577ms)
+ POST /api/auth/signout 200 in 438ms (compile: 132ms, proxy.ts: 201ms, render: 104ms)
+ GET /api/dashboard 200 in 2.7s (compile: 399ms, proxy.ts: 1314ms, render: 959ms)
+ GET /api/dashboard 200 in 4.2s (compile: 1019ms, proxy.ts: 697ms, render: 2.4s)
+ GET /login 200 in 3.0s (compile: 348ms, proxy.ts: 81ms, render: 2.6s)
+ GET /api/dashboard 200 in 6.5s (compile: 975ms, proxy.ts: 669ms, render: 4.8s)
+ GET /api/dashboard 200 in 3.9s (compile: 186ms, proxy.ts: 679ms, render: 3.1s)
+ GET /api/dashboard 200 in 1479ms (compile: 107ms, proxy.ts: 821ms, render: 551ms)
+ GET /api/dashboard 200 in 757ms (compile: 43ms, proxy.ts: 107ms, render: 607ms)
+ GET /api/auth/providers 200 in 3.0s (compile: 1648ms, proxy.ts: 901ms, render: 445ms)
+ GET /api/auth/csrf 200 in 751ms (compile: 518ms, proxy.ts: 31ms, render: 202ms)
+ GET /api/dashboard 200 in 10.9s (compile: 305ms, proxy.ts: 5.6s, render: 5.0s)
+ GET /api/dashboard 200 in 7.3s (compile: 1589ms, proxy.ts: 2.3s, render: 3.5s)
+ GET /api/dashboard 200 in 19.0s (compile: 1356ms, proxy.ts: 2.2s, render: 15.5s)
+ POST /api/auth/callback/credentials? 200 in 22.6s (compile: 704ms, proxy.ts: 149ms, render: 21.7s)
+ GET /api/dashboard 200 in 1808ms (compile: 247ms, proxy.ts: 1090ms, render: 472ms)
+ GET / 200 in 9.2s (compile: 916ms, proxy.ts: 2.7s, render: 5.6s)
+ GET /api/auth/session 200 in 127ms (compile: 58ms, proxy.ts: 39ms, render: 30ms)
+ GET /api/auth/session 200 in 250ms (compile: 39ms, proxy.ts: 84ms, render: 127ms)
+ GET /api/dashboard 200 in 26.7s (compile: 3.7s, proxy.ts: 18.8s, render: 4.2s)
+ GET /api/sidebar 200 in 750ms (compile: 29ms, proxy.ts: 91ms, render: 630ms)
+ GET /api/settings 200 in 818ms (compile: 41ms, proxy.ts: 92ms, render: 686ms)
+ GET /api/dashboard 200 in 1083ms (compile: 20ms, proxy.ts: 24ms, render: 1039ms)
+ GET /api/dashboard 200 in 422ms (compile: 6ms, proxy.ts: 44ms, render: 372ms)
+ GET /api/dashboard 200 in 389ms (compile: 2ms, proxy.ts: 19ms, render: 369ms)
+ GET /api/dashboard 200 in 585ms (compile: 24ms, proxy.ts: 40ms, render: 520ms)
+ GET /api/dashboard 200 in 1852ms (compile: 7ms, proxy.ts: 7ms, render: 1839ms)
+ GET / 200 in 305ms (compile: 42ms, proxy.ts: 57ms, render: 206ms)
+ GET /api/auth/session 200 in 501ms (compile: 65ms, proxy.ts: 57ms, render: 379ms)
+ GET /api/dashboard 200 in 4.0s (compile: 462ms, proxy.ts: 388ms, render: 3.2s)
+ GET /api/auth/session 200 in 4.2s (compile: 2.1s, proxy.ts: 1433ms, render: 675ms)
+ GET /api/sidebar 200 in 4.2s (compile: 1705ms, proxy.ts: 1419ms, render: 1068ms)
+ GET /api/settings 200 in 4.4s (compile: 1767ms, proxy.ts: 1434ms, render: 1162ms)
+ GET /api/dashboard 200 in 4.4s (compile: 938ms, proxy.ts: 1408ms, render: 2.0s)
+ GET /api/dashboard 200 in 1972ms (compile: 115ms, proxy.ts: 697ms, render: 1160ms)
+ GET /api/dashboard 200 in 692ms (compile: 51ms, proxy.ts: 89ms, render: 551ms)
+ GET /api/dashboard 200 in 493ms (compile: 16ms, proxy.ts: 47ms, render: 431ms)
+ GET /api/dashboard 200 in 638ms (compile: 53ms, proxy.ts: 77ms, render: 508ms)
+ GET /api/dashboard 200 in 570ms (compile: 38ms, proxy.ts: 87ms, render: 445ms)
+ GET /api/dashboard 200 in 605ms (compile: 7ms, proxy.ts: 28ms, render: 569ms)
+ GET /api/dashboard 200 in 460ms (compile: 12ms, proxy.ts: 25ms, render: 423ms)
+ GET /api/sidebar 200 in 383ms (compile: 45ms, proxy.ts: 20ms, render: 317ms)
+ GET /api/dashboard 200 in 573ms (compile: 31ms, proxy.ts: 29ms, render: 513ms)
+ GET /api/dashboard 200 in 418ms (compile: 3ms, proxy.ts: 8ms, render: 407ms)
+ GET /api/dashboard 200 in 393ms (compile: 6ms, proxy.ts: 16ms, render: 371ms)
+ GET /api/dashboard 200 in 426ms (compile: 3ms, proxy.ts: 58ms, render: 366ms)
+○ Compiling /mobile-shop/device-inventory ...
+ GET /mobile-shop/device-inventory 200 in 3.8s (compile: 3.7s, proxy.ts: 40ms, render: 105ms)
+ GET /api/mobile-devices? 200 in 873ms (compile: 302ms, proxy.ts: 30ms, render: 541ms)
+ GET /api/mobile-devices? 200 in 476ms (compile: 3ms, proxy.ts: 34ms, render: 439ms)
+ GET /api/mobile-devices? 200 in 913ms (compile: 330ms, proxy.ts: 42ms, render: 542ms)
+ GET /api/suppliers 200 in 942ms (compile: 472ms, proxy.ts: 46ms, render: 424ms)
+ GET /api/products?excludeServices=true 200 in 1126ms (compile: 639ms, proxy.ts: 38ms, render: 449ms)
+ GET /api/dashboard 200 in 462ms (compile: 21ms, proxy.ts: 27ms, render: 413ms)
+ GET /api/dashboard 200 in 479ms (compile: 10ms, proxy.ts: 28ms, render: 441ms)
+ GET /api/dashboard 200 in 447ms (compile: 16ms, proxy.ts: 27ms, render: 404ms)
+ GET /api/sidebar 200 in 301ms (compile: 19ms, proxy.ts: 33ms, render: 250ms)
+ GET /api/dashboard 200 in 402ms (compile: 11ms, proxy.ts: 9ms, render: 382ms)
+Failed to update mobile device: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].mobileDevice.update()` invocation in
+/Users/tmr/Desktop/Final Projects/biz_arch_erp/.next/dev/server/chunks/[root-of-the-server]__30aabd30._.js:1878:173
 
-  2142         }
-  2143     ];
-  2144 }
-→ 2145 const devices = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].mobileDevice.findMany({
+  1875     });
+  1876     updateData.productId = newProduct.id;
+  1877 }
+→ 1878 const device = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].mobileDevice.update({
          where: {
-           organizationId: "cmm6athis000004l5pirwklql",
-           currentStatus: "ALL"
-                          ~~~~~
+           id: "cmm8axumw000004ji0rh71574"
+         },
+         data: {
+           imei1: "657847567467847",
+           imei2: "",
+           serialNumber: "",
+           brand: "Iphone",
+           model: "14 Pro Max",
+           color: "Black",
+           storageCapacity: "8GB",
+           ram: "10GB",
+           networkStatus: "UNLOCKED",
+           conditionGrade: "NEW",
+           batteryHealthPercentage: 95,
+           productId: "cmm7m51pn000004k1gd56eop3",
+           ~~~~~~~~~
+           supplierId: "cmm6axl0d000104lhcqtgw5bm",
+           costPrice: 10000,
+           landedCost: 0,
+           sellingPrice: 10000,
+           notes: "",
+           photoUrl: "https://res.cloudinary.com/dqrejmhlv/image/upload/v1772404815/mr4c1mmaekiwpqgud5rm.jpg",
+           supplierWarrantyExpiry: null,
+           customerWarrantyExpiry: null,
+       ?   id?: String | StringFieldUpdateOperationsInput,
+       ?   currentStatus?: DeviceStatus | EnumDeviceStatusFieldUpdateOperationsInput,
+       ?   includedAccessories?: NullableJsonNullValueInput | Json,
+       ?   inwardDate?: DateTime | DateTimeFieldUpdateOperationsInput,
+       ?   outwardDate?: DateTime | NullableDateTimeFieldUpdateOperationsInput | Null,
+       ?   soldPrice?: Decimal | NullableDecimalFieldUpdateOperationsInput | Null,
+       ?   createdAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+       ?   updatedAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+       ?   organization?: OrganizationUpdateOneRequiredWithoutMobileDevicesNestedInput,
+       ?   product?: ProductUpdateOneWithoutMobileDevicesNestedInput,
+       ?   supplier?: SupplierUpdateOneRequiredWithoutMobileDevicesNestedInput,
+       ?   purchaseInvoice?: PurchaseInvoiceUpdateOneWithoutMobileDevicesNestedInput,
+       ?   customer?: CustomerUpdateOneWithoutMobileDevicesNestedInput,
+       ?   salesInvoice?: InvoiceUpdateOneWithoutMobileDevicesNestedInput,
+       ?   salesperson?: UserUpdateOneWithoutSoldDevicesNestedInput
          },
          include: {
            supplier: {
@@ -482,41 +642,74 @@ Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e
            product: {
              select: {
                id: true,
-               name: true,
-               sku: true
+               name: true
              }
            }
-         },
-         orderBy: {
-           createdAt: "desc"
          }
        })
 
-Invalid value for argument `currentStatus`. Expected DeviceStatus.
-    at <unknown> (src/app/api/mobile-devices/route.ts:39:47)
-    at async GET (src/app/api/mobile-devices/route.ts:39:21)
-  37 |     }
-  38 |
-> 39 |     const devices = await prisma.mobileDevice.findMany({
-     |                                               ^
-  40 |       where,
-  41 |       include: {
-  42 |         supplier: { select: { id: true, name: true } }, {
+Unknown argument `productId`. Did you mean `product`? Available options are marked with ?.
+    at <unknown> (src/app/api/mobile-devices/[id]/route.ts:136:46)
+    at async PUT (src/app/api/mobile-devices/[id]/route.ts:136:20)
+  134 |     }
+  135 |
+> 136 |     const device = await prisma.mobileDevice.update({
+      |                                              ^
+  137 |       where: { id },
+  138 |       data: updateData,
+  139 |       include: { {
   clientVersion: '7.2.0'
 }
- GET /api/mobile-devices?status=ALL 500 in 1325ms (compile: 198ms, proxy.ts: 126ms, render: 1001ms)
-Failed to fetch mobile devices: Error [PrismaClientValidationError]: 
-Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].mobileDevice.findMany()` invocation in
-/Users/tmr/Desktop/Final Projects/biz_arch_erp/.next/dev/server/chunks/[root-of-the-server]__f0d8304f._.js:2145:174
+ PUT /api/mobile-devices/cmm8axumw000004ji0rh71574 500 in 1832ms (compile: 1097ms, proxy.ts: 43ms, render: 692ms)
+ GET /api/dashboard 200 in 428ms (compile: 10ms, proxy.ts: 14ms, render: 404ms)
+Failed to update mobile device: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].mobileDevice.update()` invocation in
+/Users/tmr/Desktop/Final Projects/biz_arch_erp/.next/dev/server/chunks/[root-of-the-server]__30aabd30._.js:1878:173
 
-  2142         }
-  2143     ];
-  2144 }
-→ 2145 const devices = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].mobileDevice.findMany({
+  1875     });
+  1876     updateData.productId = newProduct.id;
+  1877 }
+→ 1878 const device = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"].mobileDevice.update({
          where: {
-           organizationId: "cmm6athis000004l5pirwklql",
-           currentStatus: "ALL"
-                          ~~~~~
+           id: "cmm8axumw000004ji0rh71574"
+         },
+         data: {
+           imei1: "657847567467847",
+           imei2: "",
+           serialNumber: "",
+           brand: "Iphone",
+           model: "14 Pro Max",
+           color: "Black",
+           storageCapacity: "8GB",
+           ram: "10GB",
+           networkStatus: "UNLOCKED",
+           conditionGrade: "NEW",
+           batteryHealthPercentage: 95,
+           productId: "cmm7m51pn000004k1gd56eop3",
+           ~~~~~~~~~
+           supplierId: "cmm6axl0d000104lhcqtgw5bm",
+           costPrice: 10000,
+           landedCost: 0,
+           sellingPrice: 10000,
+           notes: "",
+           photoUrl: "https://res.cloudinary.com/dqrejmhlv/image/upload/v1772404815/mr4c1mmaekiwpqgud5rm.jpg",
+           supplierWarrantyExpiry: null,
+           customerWarrantyExpiry: null,
+       ?   id?: String | StringFieldUpdateOperationsInput,
+       ?   currentStatus?: DeviceStatus | EnumDeviceStatusFieldUpdateOperationsInput,
+       ?   includedAccessories?: NullableJsonNullValueInput | Json,
+       ?   inwardDate?: DateTime | DateTimeFieldUpdateOperationsInput,
+       ?   outwardDate?: DateTime | NullableDateTimeFieldUpdateOperationsInput | Null,
+       ?   soldPrice?: Decimal | NullableDecimalFieldUpdateOperationsInput | Null,
+       ?   createdAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+       ?   updatedAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+       ?   organization?: OrganizationUpdateOneRequiredWithoutMobileDevicesNestedInput,
+       ?   product?: ProductUpdateOneWithoutMobileDevicesNestedInput,
+       ?   supplier?: SupplierUpdateOneRequiredWithoutMobileDevicesNestedInput,
+       ?   purchaseInvoice?: PurchaseInvoiceUpdateOneWithoutMobileDevicesNestedInput,
+       ?   customer?: CustomerUpdateOneWithoutMobileDevicesNestedInput,
+       ?   salesInvoice?: InvoiceUpdateOneWithoutMobileDevicesNestedInput,
+       ?   salesperson?: UserUpdateOneWithoutSoldDevicesNestedInput
          },
          include: {
            supplier: {
@@ -534,346 +727,44 @@ Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e
            product: {
              select: {
                id: true,
-               name: true,
-               sku: true
+               name: true
              }
            }
-         },
-         orderBy: {
-           createdAt: "desc"
          }
        })
 
-Invalid value for argument `currentStatus`. Expected DeviceStatus.
-    at <unknown> (src/app/api/mobile-devices/route.ts:39:47)
-    at async GET (src/app/api/mobile-devices/route.ts:39:21)
-  37 |     }
-  38 |
-> 39 |     const devices = await prisma.mobileDevice.findMany({
-     |                                               ^
-  40 |       where,
-  41 |       include: {
-  42 |         supplier: { select: { id: true, name: true } }, {
+Unknown argument `productId`. Did you mean `product`? Available options are marked with ?.
+    at <unknown> (src/app/api/mobile-devices/[id]/route.ts:136:46)
+    at async PUT (src/app/api/mobile-devices/[id]/route.ts:136:20)
+  134 |     }
+  135 |
+> 136 |     const device = await prisma.mobileDevice.update({
+      |                                              ^
+  137 |       where: { id },
+  138 |       data: updateData,
+  139 |       include: { {
   clientVersion: '7.2.0'
 }
- GET /api/mobile-devices?status=ALL 500 in 1603ms (compile: 265ms, proxy.ts: 296ms, render: 1042ms)
- GET /api/auth/session 200 in 35ms (compile: 16ms, proxy.ts: 13ms, render: 5ms)
- GET /api/sidebar 200 in 3.5s (compile: 77ms, proxy.ts: 411ms, render: 3.0s)
- GET /api/suppliers 200 in 1383ms (compile: 11ms, proxy.ts: 13ms, render: 1360ms)
- GET /api/products?excludeServices=true 200 in 1527ms (compile: 16ms, proxy.ts: 10ms, render: 1502ms)
- GET /invoices 200 in 236ms (compile: 181ms, proxy.ts: 19ms, render: 37ms)
- GET /api/invoices 200 in 2.6s (compile: 13ms, proxy.ts: 15ms, render: 2.5s)
- GET /api/invoices 200 in 2.6s (compile: 22ms, proxy.ts: 14ms, render: 2.5s)
- GET /products 200 in 864ms (compile: 804ms, proxy.ts: 15ms, render: 44ms)
- GET /api/products 200 in 493ms (compile: 4ms, proxy.ts: 49ms, render: 439ms)
- GET /api/products 200 in 498ms (compile: 10ms, proxy.ts: 51ms, render: 437ms)
- GET /api/units 200 in 234ms (compile: 4ms, proxy.ts: 23ms, render: 207ms)
- GET /api/units 200 in 222ms (compile: 9ms, proxy.ts: 9ms, render: 204ms)
- GET /mobile-shop/device-inventory 200 in 205ms (compile: 140ms, proxy.ts: 38ms, render: 27ms)
- GET /api/mobile-devices? 200 in 1439ms (compile: 3ms, proxy.ts: 11ms, render: 1425ms)
- GET /api/mobile-devices? 200 in 2.5s (compile: 12ms, proxy.ts: 17ms, render: 2.5s)
- GET /api/mobile-devices? 200 in 2.5s (compile: 4ms, proxy.ts: 19ms, render: 2.5s)
- GET /mobile-shop/imei-lookup 200 in 207ms (compile: 153ms, proxy.ts: 16ms, render: 39ms)
- GET /api/mobile-devices/lookup?imei=563789456378654 200 in 1285ms (compile: 866ms, proxy.ts: 13ms, render: 405ms)
-✓ Finished filesystem cache database compaction in 16.3s
- GET /api/auth/session 200 in 520ms (compile: 198ms, proxy.ts: 188ms, render: 134ms)
- GET /api/auth/session 200 in 23ms (compile: 7ms, proxy.ts: 7ms, render: 9ms)
- GET /api/sidebar 200 in 2.2s (compile: 267ms, proxy.ts: 233ms, render: 1744ms)
-✓ Compiled in 1285ms
- GET /api/sidebar 200 in 6.2s (compile: 22ms, proxy.ts: 43ms, render: 6.1s)
- GET /api/sidebar 200 in 236ms (compile: 16ms, proxy.ts: 25ms, render: 195ms)
- GET /inventory/branches?tab=branches 200 in 939ms (compile: 411ms, proxy.ts: 25ms, render: 502ms)
- GET /api/auth/session 200 in 23ms (compile: 11ms, proxy.ts: 5ms, render: 8ms)
- GET /api/auth/session 200 in 15ms (compile: 3ms, proxy.ts: 4ms, render: 8ms)
- GET /api/branches 200 in 3.8s (compile: 12ms, proxy.ts: 5ms, render: 3.8s)
- GET /api/sidebar 200 in 4.0s (compile: 6ms, proxy.ts: 7ms, render: 4.0s)
- GET /api/settings 200 in 4.0s (compile: 9ms, proxy.ts: 9ms, render: 4.0s)
- GET / 200 in 382ms (compile: 141ms, proxy.ts: 24ms, render: 217ms)
- GET /api/auth/session 200 in 22ms (compile: 9ms, proxy.ts: 7ms, render: 7ms)
- GET /api/auth/session 200 in 150ms (compile: 38ms, proxy.ts: 94ms, render: 18ms)
- GET /api/sidebar 200 in 378ms (compile: 31ms, proxy.ts: 80ms, render: 267ms)
- GET /api/dashboard 200 in 1677ms (compile: 4ms, proxy.ts: 6ms, render: 1668ms)
- GET /api/settings 200 in 1610ms (compile: 29ms, proxy.ts: 88ms, render: 1493ms)
- GET /api/dashboard 200 in 1382ms (compile: 10ms, proxy.ts: 27ms, render: 1345ms)
- GET /api/sidebar 200 in 493ms (compile: 9ms, proxy.ts: 85ms, render: 399ms)
- GET /api/dashboard 200 in 427ms (compile: 7ms, proxy.ts: 33ms, render: 387ms)
- GET /api/dashboard 200 in 2.2s (compile: 23ms, proxy.ts: 26ms, render: 2.2s)
- GET /api/dashboard 200 in 420ms (compile: 7ms, proxy.ts: 12ms, render: 401ms)
- GET /api/dashboard 200 in 456ms (compile: 5ms, proxy.ts: 10ms, render: 442ms)
- GET /api/dashboard 200 in 389ms (compile: 5ms, proxy.ts: 17ms, render: 367ms)
- GET /api/dashboard 200 in 378ms (compile: 5ms, proxy.ts: 19ms, render: 353ms)
- GET /api/dashboard 200 in 398ms (compile: 4ms, proxy.ts: 18ms, render: 376ms)
- GET /api/dashboard 200 in 442ms (compile: 4ms, proxy.ts: 13ms, render: 424ms)
- GET /api/dashboard 200 in 421ms (compile: 6ms, proxy.ts: 43ms, render: 372ms)
- GET /api/dashboard 200 in 413ms (compile: 8ms, proxy.ts: 34ms, render: 370ms)
- GET /api/dashboard 200 in 440ms (compile: 8ms, proxy.ts: 32ms, render: 401ms)
- GET /api/dashboard 200 in 403ms (compile: 5ms, proxy.ts: 14ms, render: 383ms)
- GET /api/dashboard 200 in 998ms (compile: 11ms, proxy.ts: 38ms, render: 948ms)
- GET /api/dashboard 200 in 475ms (compile: 4ms, proxy.ts: 21ms, render: 450ms)
- GET /api/dashboard 200 in 1405ms (compile: 6ms, proxy.ts: 24ms, render: 1375ms)
- GET /api/dashboard 200 in 782ms (compile: 6ms, proxy.ts: 42ms, render: 734ms)
- GET /api/dashboard 200 in 632ms (compile: 12ms, proxy.ts: 48ms, render: 571ms)
-✓ Compiled in 245ms
- GET /api/dashboard 200 in 651ms (compile: 3ms, proxy.ts: 26ms, render: 622ms)
- GET /api/dashboard 200 in 6.5s (compile: 7ms, proxy.ts: 46ms, render: 6.5s)
- GET /api/dashboard 200 in 3.9s (compile: 5ms, proxy.ts: 31ms, render: 3.9s)
- GET /api/sidebar 200 in 15.9s (compile: 15ms, proxy.ts: 39ms, render: 15.9s)
- GET /api/dashboard 200 in 783ms (compile: 4ms, proxy.ts: 16ms, render: 763ms)
- GET /api/dashboard 200 in 6.6s (compile: 10ms, proxy.ts: 31ms, render: 6.5s)
- GET /api/dashboard 200 in 3.3s (compile: 6ms, proxy.ts: 22ms, render: 3.3s)
- GET /api/dashboard 200 in 631ms (compile: 6ms, proxy.ts: 15ms, render: 610ms)
- GET /api/dashboard 200 in 1438ms (compile: 10ms, proxy.ts: 30ms, render: 1398ms)
- GET /api/dashboard 200 in 1689ms (compile: 15ms, proxy.ts: 36ms, render: 1639ms)
- GET /api/dashboard 200 in 464ms (compile: 7ms, proxy.ts: 32ms, render: 425ms)
- GET /api/dashboard 200 in 502ms (compile: 12ms, proxy.ts: 51ms, render: 440ms)
- GET /api/dashboard 200 in 511ms (compile: 12ms, proxy.ts: 44ms, render: 455ms)
- GET /api/dashboard 200 in 625ms (compile: 6ms, proxy.ts: 29ms, render: 590ms)
- GET /api/dashboard 200 in 618ms (compile: 8ms, proxy.ts: 22ms, render: 587ms)
- GET /api/dashboard 200 in 390ms (compile: 6ms, proxy.ts: 14ms, render: 371ms)
- GET /api/dashboard 200 in 2.2s (compile: 9ms, proxy.ts: 31ms, render: 2.1s)
- GET /api/dashboard 200 in 1369ms (compile: 11ms, proxy.ts: 12ms, render: 1346ms)
- GET /api/dashboard 200 in 535ms (compile: 4ms, proxy.ts: 16ms, render: 514ms)
- GET /api/dashboard 200 in 422ms (compile: 2ms, proxy.ts: 6ms, render: 413ms)
- GET /api/dashboard 200 in 662ms (compile: 5ms, proxy.ts: 13ms, render: 644ms)
- GET /api/dashboard 200 in 693ms (compile: 6ms, proxy.ts: 19ms, render: 669ms)
- GET /api/dashboard 200 in 460ms (compile: 9ms, proxy.ts: 32ms, render: 419ms)
- GET /api/dashboard 200 in 425ms (compile: 4ms, proxy.ts: 10ms, render: 410ms)
- GET /api/dashboard 200 in 677ms (compile: 4ms, proxy.ts: 11ms, render: 663ms)
- GET /api/dashboard 200 in 364ms (compile: 5ms, proxy.ts: 11ms, render: 348ms)
- GET /api/dashboard 200 in 758ms (compile: 9ms, proxy.ts: 51ms, render: 699ms)
- GET /api/dashboard 200 in 413ms (compile: 6ms, proxy.ts: 14ms, render: 392ms)
- GET /api/dashboard 200 in 510ms (compile: 5ms, proxy.ts: 20ms, render: 486ms)
- GET /api/dashboard 200 in 492ms (compile: 4ms, proxy.ts: 34ms, render: 453ms)
- GET /api/dashboard 200 in 677ms (compile: 4ms, proxy.ts: 12ms, render: 662ms)
- GET /api/dashboard 200 in 471ms (compile: 7ms, proxy.ts: 17ms, render: 447ms)
- GET /api/dashboard 200 in 411ms (compile: 9ms, proxy.ts: 16ms, render: 386ms)
- GET /api/dashboard 200 in 480ms (compile: 7ms, proxy.ts: 23ms, render: 450ms)
- GET /api/dashboard 200 in 492ms (compile: 6ms, proxy.ts: 13ms, render: 474ms)
- GET /api/dashboard 200 in 407ms (compile: 3ms, proxy.ts: 12ms, render: 391ms)
- GET /api/dashboard 200 in 385ms (compile: 3ms, proxy.ts: 10ms, render: 373ms)
- GET /api/dashboard 200 in 470ms (compile: 5ms, proxy.ts: 38ms, render: 427ms)
- GET /api/dashboard 200 in 385ms (compile: 5ms, proxy.ts: 32ms, render: 348ms)
- GET /api/dashboard 200 in 457ms (compile: 6ms, proxy.ts: 16ms, render: 435ms)
- GET /api/dashboard 200 in 489ms (compile: 5ms, proxy.ts: 14ms, render: 470ms)
- GET /api/dashboard 200 in 461ms (compile: 11ms, proxy.ts: 46ms, render: 404ms)
- GET /api/dashboard 200 in 503ms (compile: 5ms, proxy.ts: 14ms, render: 484ms)
- GET /api/dashboard 200 in 419ms (compile: 5ms, proxy.ts: 14ms, render: 400ms)
- GET /api/dashboard 200 in 424ms (compile: 7ms, proxy.ts: 21ms, render: 395ms)
- GET /api/dashboard 200 in 430ms (compile: 2ms, proxy.ts: 9ms, render: 419ms)
- GET /api/dashboard 200 in 1001ms (compile: 7ms, proxy.ts: 56ms, render: 938ms)
- GET /api/dashboard 200 in 706ms (compile: 7ms, proxy.ts: 42ms, render: 657ms)
- GET /api/dashboard 200 in 1024ms (compile: 5ms, proxy.ts: 10ms, render: 1009ms)
- GET /api/dashboard 200 in 956ms (compile: 6ms, proxy.ts: 15ms, render: 935ms)
- GET /api/dashboard 200 in 702ms (compile: 4ms, proxy.ts: 19ms, render: 679ms)
- GET /api/dashboard 200 in 366ms (compile: 5ms, proxy.ts: 14ms, render: 347ms)
- GET /api/dashboard 200 in 602ms (compile: 12ms, proxy.ts: 52ms, render: 537ms)
- GET /api/dashboard 200 in 456ms (compile: 5ms, proxy.ts: 16ms, render: 436ms)
- GET /api/dashboard 200 in 385ms (compile: 8ms, proxy.ts: 26ms, render: 351ms)
- GET /api/dashboard 200 in 722ms (compile: 4ms, proxy.ts: 10ms, render: 708ms)
-✓ Compiled in 285ms
- GET /api/dashboard 200 in 996ms (compile: 12ms, proxy.ts: 104ms, render: 880ms)
- GET /api/sidebar 200 in 284ms (compile: 16ms, proxy.ts: 58ms, render: 210ms)
- GET /pos 200 in 889ms (compile: 839ms, proxy.ts: 19ms, render: 31ms)
- GET /api/auth/session 200 in 51ms (compile: 13ms, proxy.ts: 16ms, render: 22ms)
- GET /api/auth/session 200 in 17ms (compile: 2ms, proxy.ts: 4ms, render: 11ms)
- GET /api/auth/session 200 in 15ms (compile: 4ms, proxy.ts: 4ms, render: 7ms)
- GET /api/auth/session 200 in 11ms (compile: 2ms, proxy.ts: 3ms, render: 5ms)
- GET /api/dashboard 200 in 935ms (compile: 110ms, proxy.ts: 10ms, render: 816ms)
- GET /api/pos/dashboard 200 in 2.3s (compile: 216ms, proxy.ts: 30ms, render: 2.0s)
- GET / 200 in 428ms (compile: 315ms, proxy.ts: 44ms, render: 69ms)
- GET /api/auth/session 200 in 90ms (compile: 21ms, proxy.ts: 18ms, render: 50ms)
- GET /api/auth/session 200 in 154ms (compile: 13ms, proxy.ts: 112ms, render: 30ms)
- GET /api/auth/session 200 in 17ms (compile: 4ms, proxy.ts: 7ms, render: 5ms)
- GET /api/auth/session 200 in 23ms (compile: 3ms, proxy.ts: 8ms, render: 12ms)
- GET /api/sidebar 200 in 415ms (compile: 23ms, proxy.ts: 17ms, render: 375ms)
- GET /api/dashboard 200 in 599ms (compile: 51ms, proxy.ts: 18ms, render: 530ms)
- GET /api/settings 200 in 1858ms (compile: 13ms, proxy.ts: 21ms, render: 1824ms)
- GET /invoices 200 in 144ms (compile: 120ms, proxy.ts: 7ms, render: 17ms)
- GET /api/invoices 200 in 573ms (compile: 32ms, proxy.ts: 6ms, render: 534ms)
- GET /api/invoices 200 in 570ms (compile: 3ms, proxy.ts: 8ms, render: 558ms)
- GET /api/sidebar 200 in 1370ms (compile: 24ms, proxy.ts: 56ms, render: 1290ms)
-✓ Compiled in 465ms
- GET /api/sidebar 200 in 2.1s (compile: 21ms, proxy.ts: 96ms, render: 1953ms)
- GET /invoices 200 in 528ms (compile: 129ms, proxy.ts: 18ms, render: 382ms)
- GET /api/auth/session 200 in 19ms (compile: 6ms, proxy.ts: 8ms, render: 5ms)
- GET /api/auth/session 200 in 41ms (compile: 12ms, proxy.ts: 7ms, render: 22ms)
- GET /api/settings 200 in 1215ms (compile: 16ms, proxy.ts: 11ms, render: 1188ms)
- GET /api/sidebar 200 in 1340ms (compile: 11ms, proxy.ts: 10ms, render: 1318ms)
- GET /api/invoices 200 in 1923ms (compile: 3ms, proxy.ts: 7ms, render: 1913ms)
- GET / 200 in 119ms (compile: 76ms, proxy.ts: 21ms, render: 21ms)
- GET /api/dashboard 200 in 1691ms (compile: 8ms, proxy.ts: 44ms, render: 1640ms)
- GET /api/dashboard 200 in 433ms (compile: 5ms, proxy.ts: 27ms, render: 401ms)
- GET /api/dashboard 200 in 398ms (compile: 5ms, proxy.ts: 28ms, render: 365ms)
- GET /api/dashboard 200 in 393ms (compile: 3ms, proxy.ts: 14ms, render: 376ms)
- GET /api/dashboard 200 in 387ms (compile: 4ms, proxy.ts: 13ms, render: 371ms)
- GET /api/dashboard 200 in 397ms (compile: 4ms, proxy.ts: 21ms, render: 372ms)
- GET /api/dashboard 200 in 368ms (compile: 4ms, proxy.ts: 13ms, render: 351ms)
-✓ Compiled in 632ms
- GET /api/dashboard 200 in 457ms (compile: -691µs, proxy.ts: 56ms, render: 402ms)
- GET /api/dashboard 200 in 439ms (compile: 21ms, proxy.ts: 57ms, render: 361ms)
- GET /api/sidebar 200 in 1519ms (compile: 24ms, proxy.ts: 86ms, render: 1409ms)
- GET /api/dashboard 200 in 544ms (compile: 7ms, proxy.ts: 28ms, render: 509ms)
-✓ Compiled in 110ms
- GET / 200 in 402ms (compile: 194ms, proxy.ts: 20ms, render: 188ms)
- GET / 200 in 184ms (compile: 3ms, proxy.ts: 8ms, render: 173ms)
- GET / 200 in 178ms (compile: 12ms, proxy.ts: 25ms, render: 142ms)
- GET / 200 in 131ms (compile: 5ms, proxy.ts: 14ms, render: 111ms)
- GET / 200 in 107ms (compile: 6ms, proxy.ts: 16ms, render: 86ms)
- GET / 200 in 106ms (compile: 3ms, proxy.ts: 7ms, render: 96ms)
- GET / 200 in 94ms (compile: 1967µs, proxy.ts: 6ms, render: 86ms)
- GET / 200 in 67ms (compile: 4ms, proxy.ts: 16ms, render: 46ms)
- GET / 200 in 31ms (compile: 1821µs, proxy.ts: 6ms, render: 23ms)
- GET /api/dashboard 200 in 835ms (compile: 3ms, proxy.ts: 8ms, render: 824ms)
- GET /api/sidebar 200 in 218ms (compile: -274µs, proxy.ts: 33ms, render: 184ms)
- GET / 200 in 336ms (compile: 7ms, proxy.ts: 14ms, render: 315ms)
- GET /api/auth/session 200 in 29ms (compile: 6ms, proxy.ts: 10ms, render: 13ms)
- GET /api/auth/session 200 in 24ms (compile: 15ms, proxy.ts: 5ms, render: 4ms)
- GET /api/settings 200 in 268ms (compile: 6ms, proxy.ts: 27ms, render: 235ms)
- GET /api/dashboard 200 in 359ms (compile: 2ms, proxy.ts: 4ms, render: 353ms)
- GET /api/sidebar 200 in 1284ms (compile: 3ms, proxy.ts: 29ms, render: 1252ms)
- GET /api/dashboard 200 in 561ms (compile: 7ms, proxy.ts: 18ms, render: 536ms)
- GET /api/sidebar 200 in 384ms (compile: 24ms, proxy.ts: 20ms, render: 340ms)
- GET /api/dashboard 200 in 592ms (compile: 16ms, proxy.ts: 55ms, render: 520ms)
- GET / 200 in 132ms (compile: 6ms, proxy.ts: 9ms, render: 117ms)
- GET /api/auth/session 200 in 26ms (compile: 9ms, proxy.ts: 8ms, render: 9ms)
- GET /api/auth/session 200 in 22ms (compile: 5ms, proxy.ts: 11ms, render: 7ms)
- GET /api/auth/session 200 in 59ms (compile: 15ms, proxy.ts: 32ms, render: 12ms)
- GET /api/sidebar 200 in 221ms (compile: 4ms, proxy.ts: 31ms, render: 186ms)
- GET /api/settings 200 in 369ms (compile: 6ms, proxy.ts: 24ms, render: 338ms)
- GET /api/dashboard 200 in 380ms (compile: 5ms, proxy.ts: 29ms, render: 345ms)
- GET /api/auth/session 200 in 33ms (compile: 9ms, proxy.ts: 12ms, render: 12ms)
- GET /api/auth/session 200 in 12ms (compile: 2ms, proxy.ts: 4ms, render: 6ms)
- GET /api/auth/session 200 in 13ms (compile: 1860µs, proxy.ts: 7ms, render: 5ms)
- GET /api/dashboard 200 in 413ms (compile: 8ms, proxy.ts: 22ms, render: 384ms)
- GET /api/dashboard 200 in 388ms (compile: 3ms, proxy.ts: 12ms, render: 374ms)
- GET /api/dashboard 200 in 394ms (compile: 4ms, proxy.ts: 13ms, render: 377ms)
- GET / 200 in 131ms (compile: 8ms, proxy.ts: 11ms, render: 113ms)
- GET /api/auth/session 200 in 17ms (compile: 4ms, proxy.ts: 5ms, render: 8ms)
- GET /api/auth/session 200 in 24ms (compile: 6ms, proxy.ts: 9ms, render: 9ms)
- GET /api/settings 200 in 301ms (compile: 5ms, proxy.ts: 35ms, render: 261ms)
- GET /api/dashboard 200 in 348ms (compile: 3ms, proxy.ts: 5ms, render: 341ms)
- GET /api/sidebar 200 in 1297ms (compile: 3ms, proxy.ts: 35ms, render: 1259ms)
- GET /api/dashboard 200 in 440ms (compile: 6ms, proxy.ts: 22ms, render: 412ms)
- GET /api/dashboard 200 in 437ms (compile: 3ms, proxy.ts: 34ms, render: 401ms)
- GET /api/dashboard 200 in 405ms (compile: 11ms, proxy.ts: 27ms, render: 367ms)
- GET /api/dashboard 200 in 359ms (compile: 3ms, proxy.ts: 12ms, render: 344ms)
- GET /api/dashboard 200 in 399ms (compile: 3ms, proxy.ts: 38ms, render: 358ms)
- GET /api/dashboard 200 in 374ms (compile: 4ms, proxy.ts: 14ms, render: 356ms)
- GET /api/dashboard 200 in 497ms (compile: 3ms, proxy.ts: 28ms, render: 467ms)
-✓ Compiled in 133ms
- GET /api/sidebar 200 in 1355ms (compile: 6ms, proxy.ts: 15ms, render: 1334ms)
- GET / 200 in 473ms (compile: 121ms, proxy.ts: 10ms, render: 341ms)
- GET /api/auth/session 200 in 19ms (compile: 6ms, proxy.ts: 7ms, render: 6ms)
- GET /api/auth/session 200 in 20ms (compile: 4ms, proxy.ts: 8ms, render: 9ms)
- GET /api/sidebar 200 in 233ms (compile: 6ms, proxy.ts: 8ms, render: 219ms)
- GET /api/dashboard 200 in 453ms (compile: 7ms, proxy.ts: 8ms, render: 437ms)
- GET /api/settings 200 in 462ms (compile: 9ms, proxy.ts: 8ms, render: 444ms)
- GET / 200 in 145ms (compile: 7ms, proxy.ts: 9ms, render: 129ms)
- GET /api/auth/session 200 in 19ms (compile: 7ms, proxy.ts: 5ms, render: 7ms)
- GET /api/auth/session 200 in 54ms (compile: 12ms, proxy.ts: 23ms, render: 20ms)
- GET /api/sidebar 200 in 231ms (compile: 3ms, proxy.ts: 30ms, render: 198ms)
- GET /api/settings 200 in 306ms (compile: 7ms, proxy.ts: 29ms, render: 270ms)
- GET /api/dashboard 200 in 401ms (compile: 7ms, proxy.ts: 13ms, render: 381ms)
- GET /api/dashboard 200 in 429ms (compile: 6ms, proxy.ts: 18ms, render: 405ms)
- GET /api/sidebar 200 in 264ms (compile: 17ms, proxy.ts: 43ms, render: 204ms)
- GET / 200 in 150ms (compile: 15ms, proxy.ts: 17ms, render: 119ms)
- GET /api/auth/session 200 in 27ms (compile: 6ms, proxy.ts: 4ms, render: 18ms)
- GET /api/auth/session 200 in 51ms (compile: 23ms, proxy.ts: 19ms, render: 8ms)
- GET /api/sidebar 200 in 215ms (compile: 17ms, proxy.ts: 18ms, render: 181ms)
- GET /api/settings 200 in 305ms (compile: 18ms, proxy.ts: 18ms, render: 268ms)
- GET /api/dashboard 200 in 341ms (compile: 1842µs, proxy.ts: 5ms, render: 334ms)
- GET /api/dashboard 200 in 426ms (compile: 3ms, proxy.ts: 53ms, render: 370ms)
- GET /api/sidebar 200 in 281ms (compile: 6ms, proxy.ts: 51ms, render: 225ms)
- GET /api/dashboard 200 in 464ms (compile: 5ms, proxy.ts: 57ms, render: 402ms)
- GET / 200 in 83ms (compile: 5ms, proxy.ts: 7ms, render: 71ms)
- GET /api/auth/session 200 in 21ms (compile: 6ms, proxy.ts: 6ms, render: 10ms)
- GET /api/auth/session 200 in 22ms (compile: 7ms, proxy.ts: 11ms, render: 5ms)
- GET /api/sidebar 200 in 212ms (compile: 2ms, proxy.ts: 28ms, render: 182ms)
- GET /api/settings 200 in 293ms (compile: 5ms, proxy.ts: 28ms, render: 260ms)
- GET /api/dashboard 200 in 392ms (compile: 5ms, proxy.ts: 5ms, render: 382ms)
- GET / 200 in 103ms (compile: 6ms, proxy.ts: 17ms, render: 79ms)
- GET /api/auth/session 200 in 22ms (compile: 4ms, proxy.ts: 5ms, render: 13ms)
- GET /api/auth/session 200 in 13ms (compile: 3ms, proxy.ts: 4ms, render: 5ms)
- GET /api/auth/session 200 in 26ms (compile: 4ms, proxy.ts: 5ms, render: 17ms)
- GET /api/sidebar 200 in 228ms (compile: 3ms, proxy.ts: 22ms, render: 204ms)
- GET /api/settings 200 in 380ms (compile: 7ms, proxy.ts: 18ms, render: 355ms)
- GET /api/dashboard 200 in 389ms (compile: 4ms, proxy.ts: 20ms, render: 364ms)
- GET / 200 in 115ms (compile: 4ms, proxy.ts: 9ms, render: 102ms)
- GET /api/auth/session 200 in 20ms (compile: 4ms, proxy.ts: 5ms, render: 11ms)
- GET /api/auth/session 200 in 50ms (compile: 6ms, proxy.ts: 34ms, render: 10ms)
- GET /api/auth/session 200 in 20ms (compile: 10ms, proxy.ts: 6ms, render: 4ms)
- GET /api/sidebar 200 in 208ms (compile: 3ms, proxy.ts: 33ms, render: 173ms)
- GET /api/settings 200 in 288ms (compile: 4ms, proxy.ts: 33ms, render: 251ms)
- GET /api/dashboard 200 in 349ms (compile: 1124µs, proxy.ts: 8ms, render: 340ms)
- GET /api/dashboard 200 in 412ms (compile: 15ms, proxy.ts: 19ms, render: 378ms)
- GET /api/dashboard 200 in 397ms (compile: 3ms, proxy.ts: 22ms, render: 372ms)
- GET /invoices 200 in 128ms (compile: 102ms, proxy.ts: 10ms, render: 15ms)
- GET /api/invoices 200 in 390ms (compile: 9ms, proxy.ts: 16ms, render: 365ms)
- GET /api/invoices 200 in 368ms (compile: 3ms, proxy.ts: 9ms, render: 357ms)
- GET / 200 in 34ms (compile: 6ms, proxy.ts: 6ms, render: 22ms)
- GET /api/dashboard 200 in 364ms (compile: 1882µs, proxy.ts: 6ms, render: 356ms)
- GET /api/dashboard 200 in 413ms (compile: 7ms, proxy.ts: 52ms, render: 354ms)
- GET /api/dashboard 200 in 471ms (compile: 3ms, proxy.ts: 17ms, render: 451ms)
- GET /api/dashboard 200 in 382ms (compile: 5ms, proxy.ts: 25ms, render: 352ms)
-✓ Compiled in 161ms
- GET /api/dashboard 200 in 699ms (compile: 175ms, proxy.ts: 105ms, render: 419ms)
- GET /api/sidebar 200 in 1518ms (compile: 188ms, proxy.ts: 35ms, render: 1296ms)
- GET /api/dashboard 200 in 470ms (compile: 8ms, proxy.ts: 57ms, render: 405ms)
- GET /api/suppliers 200 in 255ms (compile: 31ms, proxy.ts: 28ms, render: 197ms)
- GET /api/products 200 in 425ms (compile: 26ms, proxy.ts: 28ms, render: 371ms)
- GET /api/invoices 200 in 439ms (compile: 12ms, proxy.ts: 29ms, render: 398ms)
- GET /api/purchase-invoices 200 in 562ms (compile: 179ms, proxy.ts: 32ms, render: 350ms)
- GET /api/customers 200 in 614ms (compile: 26ms, proxy.ts: 40ms, render: 549ms)
- GET /api/dashboard 200 in 392ms (compile: 4ms, proxy.ts: 13ms, render: 375ms)
- GET /api/suppliers 200 in 249ms (compile: 10ms, proxy.ts: 36ms, render: 203ms)
- GET /api/products 200 in 433ms (compile: 7ms, proxy.ts: 38ms, render: 388ms)
- GET /api/invoices 200 in 433ms (compile: 12ms, proxy.ts: 36ms, render: 385ms)
- GET /api/purchase-invoices 200 in 426ms (compile: 13ms, proxy.ts: 28ms, render: 385ms)
- GET /api/customers 200 in 563ms (compile: 8ms, proxy.ts: 37ms, render: 518ms)
- GET /api/suppliers 200 in 251ms (compile: 10ms, proxy.ts: 35ms, render: 207ms)
- GET /api/products 200 in 415ms (compile: 6ms, proxy.ts: 36ms, render: 372ms)
- GET /api/purchase-invoices 200 in 414ms (compile: 14ms, proxy.ts: 33ms, render: 367ms)
- GET /api/invoices 200 in 418ms (compile: 13ms, proxy.ts: 34ms, render: 372ms)
- GET /api/customers 200 in 646ms (compile: 8ms, proxy.ts: 35ms, render: 603ms)
- GET /api/suppliers 200 in 277ms (compile: 10ms, proxy.ts: 23ms, render: 244ms)
- GET /api/invoices 200 in 438ms (compile: 13ms, proxy.ts: 23ms, render: 402ms)
- GET /api/purchase-invoices 200 in 441ms (compile: 14ms, proxy.ts: 22ms, render: 405ms)
- GET /api/products 200 in 449ms (compile: 6ms, proxy.ts: 25ms, render: 419ms)
- GET /api/customers 200 in 635ms (compile: 8ms, proxy.ts: 24ms, render: 604ms)
- GET /api/dashboard 200 in 377ms (compile: 3ms, proxy.ts: 9ms, render: 365ms)
- GET /api/dashboard 200 in 379ms (compile: 4ms, proxy.ts: 10ms, render: 366ms)
- GET /invoices 200 in 178ms (compile: 147ms, proxy.ts: 11ms, render: 20ms)
- GET /api/invoices 200 in 367ms (compile: 2ms, proxy.ts: 7ms, render: 358ms)
- GET /api/invoices 200 in 389ms (compile: 2ms, proxy.ts: 7ms, render: 380ms)
- GET / 200 in 87ms (compile: 67ms, proxy.ts: 7ms, render: 13ms)
- GET /api/dashboard 200 in 361ms (compile: 1758µs, proxy.ts: 6ms, render: 354ms)
- GET /inventory/opening-stock 200 in 270ms (compile: 227ms, proxy.ts: 30ms, render: 14ms)
- GET /api/branches 200 in 307ms (compile: 30ms, proxy.ts: 50ms, render: 227ms)
- GET /api/suppliers 200 in 283ms (compile: 21ms, proxy.ts: 52ms, render: 210ms)
- GET /api/products 200 in 487ms (compile: 15ms, proxy.ts: 54ms, render: 419ms)
- GET /api/branches 200 in 178ms (compile: 1770µs, proxy.ts: 4ms, render: 172ms)
- GET /api/suppliers 200 in 190ms (compile: 1795µs, proxy.ts: 13ms, render: 175ms)
- GET /api/warehouses 200 in 539ms (compile: 37ms, proxy.ts: 46ms, render: 455ms)
- GET /api/opening-stocks 200 in 681ms (compile: 21ms, proxy.ts: 58ms, render: 602ms)
- GET /api/products 200 in 367ms (compile: 3ms, proxy.ts: 11ms, render: 353ms)
- GET /api/warehouses 200 in 385ms (compile: 2ms, proxy.ts: 7ms, render: 376ms)
- GET /api/opening-stocks 200 in 520ms (compile: 2ms, proxy.ts: 8ms, render: 510ms)
- GET /inventory/stock-transfers 200 in 2.1s (compile: 1991ms, proxy.ts: 6ms, render: 74ms)
- GET /inventory/stock-transfers 200 in 36ms (compile: 5ms, proxy.ts: 18ms, render: 13ms)
- GET /api/stock-transfers 200 in 596ms (compile: 185ms, proxy.ts: 45ms, render: 366ms)
- GET /api/stock-transfers 200 in 384ms (compile: 2ms, proxy.ts: 8ms, render: 374ms)
- GET /inventory/branches 200 in 136ms (compile: 110ms, proxy.ts: 11ms, render: 15ms)
- GET /api/branches 200 in 196ms (compile: 2ms, proxy.ts: 10ms, render: 184ms)
- GET /api/branches 200 in 197ms (compile: 1939µs, proxy.ts: 6ms, render: 190ms)
- GET /api/sidebar 200 in 1711ms (compile: 54ms, proxy.ts: 88ms, render: 1569ms)
- GET / 200 in 916ms (compile: 297ms, proxy.ts: 222ms, render: 397ms)
- GET /api/dashboard 200 in 1509ms (compile: 6ms, proxy.ts: 8ms, render: 1496ms)
- GET /api/dashboard 200 in 583ms (compile: 7ms, proxy.ts: 28ms, render: 548ms)
- GET /api/dashboard 200 in 425ms (compile: 20ms, proxy.ts: 27ms, render: 378ms)
- GET /api/dashboard 200 in 432ms (compile: 17ms, proxy.ts: 60ms, render: 354ms)
- GET /api/dashboard 200 in 420ms (compile: 9ms, proxy.ts: 42ms, render: 369ms)
- GET /api/dashboard 200 in 394ms (compile: 5ms, proxy.ts: 9ms, render: 380ms)
- GET /api/dashboard 200 in 430ms (compile: 8ms, proxy.ts: 52ms, render: 371ms)
-✓ Compiled in 211ms
- GET /api/dashboard 200 in 406ms (compile: 7ms, proxy.ts: 34ms, render: 366ms)
- GET /api/dashboard 200 in 405ms (compile: 7ms, proxy.ts: 41ms, render: 357ms)
+ PUT /api/mobile-devices/cmm8axumw000004ji0rh71574 500 in 380ms (compile: 40ms, proxy.ts: 23ms, render: 317ms)
+ GET /api/dashboard 200 in 415ms (compile: 16ms, proxy.ts: 23ms, render: 376ms)
+ GET /api/dashboard 200 in 439ms (compile: 21ms, proxy.ts: 35ms, render: 383ms)
+ GET /api/dashboard 200 in 442ms (compile: 10ms, proxy.ts: 27ms, render: 405ms)
+ GET /api/dashboard 200 in 477ms (compile: 36ms, proxy.ts: 37ms, render: 405ms)
+ GET /api/sidebar 200 in 272ms (compile: 13ms, proxy.ts: 27ms, render: 233ms)
+ GET /api/dashboard 200 in 409ms (compile: 11ms, proxy.ts: 19ms, render: 379ms)
+ GET /api/dashboard 200 in 439ms (compile: 8ms, proxy.ts: 28ms, render: 403ms)
+ GET /api/dashboard 200 in 446ms (compile: 19ms, proxy.ts: 13ms, render: 414ms)
+ GET /api/dashboard 200 in 464ms (compile: 9ms, proxy.ts: 39ms, render: 416ms)
+ GET /api/dashboard 200 in 463ms (compile: 7ms, proxy.ts: 48ms, render: 408ms)
+ GET /api/dashboard 200 in 425ms (compile: 15ms, proxy.ts: 40ms, render: 370ms)
+ GET /api/sidebar 200 in 294ms (compile: 22ms, proxy.ts: 42ms, render: 230ms)
+ GET /api/dashboard 200 in 412ms (compile: 9ms, proxy.ts: 32ms, render: 371ms)
+ GET /api/sidebar 200 in 254ms (compile: 7ms, proxy.ts: 17ms, render: 231ms)
+ GET /api/sidebar 200 in 4.1s (compile: 74ms, proxy.ts: 147ms, render: 3.9s)
+✓ Compiled in 959ms
+ GET /api/suppliers 200 in 2.8s (compile: 1168ms, proxy.ts: 85ms, render: 1529ms)
+ GET /api/products?excludeServices=true 200 in 3.0s (compile: 1005ms, proxy.ts: 60ms, render: 1934ms)
+✓ Compiled in 350ms
+✓ Finished filesystem cache database compaction in 15.9s
+✓ Finished writing to filesystem cache in 12.6s
+✓ Compiled in 665ms

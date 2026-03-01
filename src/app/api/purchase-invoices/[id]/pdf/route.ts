@@ -101,6 +101,7 @@ export async function GET(
         invoice: pdfInvoice,
         type: "PURCHASE",
         balanceInfo,
+        lang: (session.user as { language?: string }).language || "en",
       }) as any
     );
 

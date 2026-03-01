@@ -87,12 +87,21 @@ export async function PUT(
       arabicAddress,
       arabicCity,
       invoicePdfFormat,
+      language,
     } = body;
 
     // Basic field update validation
     if (slug && !/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json(
         { error: "Slug must contain only lowercase letters, numbers, and hyphens" },
+        { status: 400 }
+      );
+    }
+
+    // Validate language
+    if (language !== undefined && !["en", "ar"].includes(language)) {
+      return NextResponse.json(
+        { error: "Language must be 'en' or 'ar'" },
         { status: 400 }
       );
     }
@@ -176,6 +185,7 @@ export async function PUT(
     if (arabicName !== undefined) updateData.arabicName = arabicName || null;
     if (arabicAddress !== undefined) updateData.arabicAddress = arabicAddress || null;
     if (arabicCity !== undefined) updateData.arabicCity = arabicCity || null;
+    if (language !== undefined) updateData.language = language;
 
     const organization = await prisma.$transaction(
       async (tx) => {

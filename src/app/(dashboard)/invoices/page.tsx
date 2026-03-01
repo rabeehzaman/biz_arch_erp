@@ -21,6 +21,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface Invoice {
   id: string;
@@ -39,10 +40,10 @@ interface Invoice {
   };
 }
 
-function getInvoiceStatus(balanceDue: number, dueDate: string) {
-  if (balanceDue <= 0) return { label: "PAID", className: "bg-green-100 text-green-700" };
-  if (new Date(dueDate) < new Date()) return { label: "OVERDUE", className: "bg-red-100 text-red-700" };
-  return { label: "UNPAID", className: "bg-yellow-100 text-yellow-700" };
+function getInvoiceStatus(balanceDue: number, dueDate: string, t: (key: string) => string) {
+  if (balanceDue <= 0) return { label: t("common.paid"), className: "bg-green-100 text-green-700" };
+  if (new Date(dueDate) < new Date()) return { label: t("common.overdue"), className: "bg-red-100 text-red-700" };
+  return { label: t("common.unpaid"), className: "bg-yellow-100 text-yellow-700" };
 }
 
 export default function InvoicesPage() {
@@ -51,6 +52,12 @@ export default function InvoicesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const { t, lang } = useLanguage();
+
+  const formatAmount = (amount: number) => {
+    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
+    return `₹${amount.toLocaleString("en-IN")}`;
+  };
 
   useEffect(() => {
     fetchInvoices();
@@ -63,7 +70,7 @@ export default function InvoicesPage() {
       const data = await response.json();
       setInvoices(data);
     } catch (error) {
-      toast.error("Failed to load invoices");
+      toast.error(t("common.error"));
       console.error("Failed to fetch invoices:", error);
     } finally {
       setIsLoading(false);
@@ -72,16 +79,16 @@ export default function InvoicesPage() {
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
-      title: "Delete Invoice",
-      description: "Are you sure you want to delete this invoice?",
+      title: t("sales.deleteInvoice"),
+      description: t("common.deleteConfirm"),
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
           fetchInvoices();
-          toast.success("Invoice deleted");
+          toast.success(t("sales.invoiceDeleted"));
         } catch (error) {
-          toast.error("Failed to delete invoice");
+          toast.error(t("common.error"));
           console.error("Failed to delete invoice:", error);
         }
       },
@@ -99,13 +106,13 @@ export default function InvoicesPage() {
       <StaggerContainer className="space-y-6">
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Invoices</h2>
-            <p className="text-slate-500">Create and manage invoices</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("sales.invoices")}</h2>
+            <p className="text-slate-500">{t("dashboard.createInvoiceDesc")}</p>
           </div>
           <Link href="/invoices/new" className="w-full sm:w-auto">
             <Button className="w-full">
-              <Plus className="mr-2 h-4 w-4" />
-              New Invoice
+              <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
+              {t("sales.newInvoice")}
             </Button>
           </Link>
         </StaggerItem>
@@ -116,7 +123,7 @@ export default function InvoicesPage() {
               <div className="relative max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Search invoices..."
+                  placeholder={t("sales.searchInvoices")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -129,15 +136,15 @@ export default function InvoicesPage() {
               ) : filteredInvoices.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <FileText className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No invoices found</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t("sales.noInvoices")}</h3>
                   <p className="text-sm text-slate-500">
                     {searchQuery
-                      ? "Try a different search term"
-                      : "Create your first invoice to get started"}
+                      ? t("common.noMatchFound")
+                      : t("sales.noInvoicesDesc")}
                   </p>
                   {!searchQuery && (
                     <Link href="/invoices/new" className="mt-4">
-                      <Button variant="outline">Create Invoice</Button>
+                      <Button variant="outline">{t("sales.createInvoice")}</Button>
                     </Link>
                   )}
                 </div>
@@ -145,14 +152,14 @@ export default function InvoicesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="hidden sm:table-cell">Issue Date</TableHead>
-                      <TableHead className="hidden sm:table-cell">Due Date</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t("sales.invoiceNumber")}</TableHead>
+                      <TableHead>{t("sales.customer")}</TableHead>
+                      <TableHead>{t("common.status")}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t("sales.issueDate")}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t("sales.dueDate")}</TableHead>
+                      <TableHead className="text-right">{t("common.total")}</TableHead>
+                      <TableHead className="text-right">{t("common.balance")}</TableHead>
+                      <TableHead className="text-right">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -177,7 +184,7 @@ export default function InvoicesPage() {
                         </TableCell>
                         <TableCell>
                           {(() => {
-                            const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate);
+                            const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
                             return (
                               <Badge variant="outline" className={status.className}>
                                 {status.label}
@@ -192,7 +199,7 @@ export default function InvoicesPage() {
                           {format(new Date(invoice.dueDate), "dd MMM yyyy")}
                         </TableCell>
                         <TableCell className="text-right">
-                          ₹{Number(invoice.total).toLocaleString("en-IN")}
+                          {formatAmount(Number(invoice.total))}
                         </TableCell>
                         <TableCell className="text-right">
                           <span
@@ -202,7 +209,7 @@ export default function InvoicesPage() {
                                 : "text-green-600"
                             }
                           >
-                            ₹{Number(invoice.balanceDue).toLocaleString("en-IN")}
+                            {formatAmount(Number(invoice.balanceDue))}
                           </span>
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>

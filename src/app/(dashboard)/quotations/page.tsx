@@ -21,6 +21,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface Quotation {
   id: string;
@@ -45,6 +46,12 @@ export default function QuotationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const { t, lang } = useLanguage();
+
+  const formatAmount = (amount: number) => {
+    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
+    return `₹${amount.toLocaleString("en-IN")}`;
+  };
 
   useEffect(() => {
     fetchQuotations();
@@ -57,7 +64,7 @@ export default function QuotationsPage() {
       const data = await response.json();
       setQuotations(data);
     } catch (error) {
-      toast.error("Failed to load quotations");
+      toast.error(t("common.error"));
       console.error("Failed to fetch quotations:", error);
     } finally {
       setIsLoading(false);
@@ -66,8 +73,8 @@ export default function QuotationsPage() {
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
-      title: "Delete Quotation",
-      description: "Are you sure you want to delete this quotation?",
+      title: t("quotations.quotationDeleted"),
+      description: t("common.deleteConfirm"),
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
@@ -76,9 +83,9 @@ export default function QuotationsPage() {
             throw new Error(error.error || "Failed to delete");
           }
           fetchQuotations();
-          toast.success("Quotation deleted");
+          toast.success(t("quotations.quotationDeleted"));
         } catch (error: any) {
-          toast.error(error.message || "Failed to delete quotation");
+          toast.error(error.message || t("common.error"));
           console.error("Failed to delete quotation:", error);
         }
       },
@@ -106,9 +113,13 @@ export default function QuotationsPage() {
       EXPIRED: "bg-red-500",
     };
 
+    const statusLabels: Record<string, string> = lang === "ar"
+      ? { SENT: "مُرسل", CONVERTED: "مُحوّل", CANCELLED: "ملغي", EXPIRED: "منتهي الصلاحية" }
+      : { SENT: "SENT", CONVERTED: "CONVERTED", CANCELLED: "CANCELLED", EXPIRED: "EXPIRED" };
+
     return (
       <Badge variant={variants[status] || "default"} className={colors[status]}>
-        {status}
+        {statusLabels[status] || status}
       </Badge>
     );
   };
@@ -118,13 +129,13 @@ export default function QuotationsPage() {
       <StaggerContainer className="space-y-6">
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Quotations</h2>
-            <p className="text-slate-500">Create and manage quotations</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("quotations.title")}</h2>
+            <p className="text-slate-500">{lang === "ar" ? "إنشاء وإدارة عروض الأسعار" : "Create and manage quotations"}</p>
           </div>
           <Link href="/quotations/new" className="w-full sm:w-auto">
             <Button className="w-full">
-              <Plus className="mr-2 h-4 w-4" />
-              New Quotation
+              <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
+              {t("quotations.newQuotation")}
             </Button>
           </Link>
         </StaggerItem>
@@ -135,7 +146,7 @@ export default function QuotationsPage() {
               <div className="relative max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Search quotations..."
+                  placeholder={t("quotations.searchQuotations")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -148,15 +159,15 @@ export default function QuotationsPage() {
               ) : filteredQuotations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <FileText className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No quotations found</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t("quotations.noQuotations")}</h3>
                   <p className="text-sm text-slate-500">
                     {searchQuery
-                      ? "Try a different search term"
-                      : "Create your first quotation to get started"}
+                      ? t("common.noMatchFound")
+                      : t("quotations.noQuotationsDesc")}
                   </p>
                   {!searchQuery && (
                     <Link href="/quotations/new" className="mt-4">
-                      <Button variant="outline">Create Quotation</Button>
+                      <Button variant="outline">{t("quotations.createQuotation")}</Button>
                     </Link>
                   )}
                 </div>
@@ -164,13 +175,13 @@ export default function QuotationsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Quotation #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Issue Date</TableHead>
-                      <TableHead>Valid Until</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t("quotations.quotationNumber")}</TableHead>
+                      <TableHead>{t("sales.customer")}</TableHead>
+                      <TableHead>{t("sales.issueDate")}</TableHead>
+                      <TableHead>{t("quotations.validUntil")}</TableHead>
+                      <TableHead>{t("common.status")}</TableHead>
+                      <TableHead className="text-right">{t("common.total")}</TableHead>
+                      <TableHead className="text-right">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -201,7 +212,7 @@ export default function QuotationsPage() {
                         </TableCell>
                         <TableCell>{getStatusBadge(quotation.status)}</TableCell>
                         <TableCell className="text-right">
-                          ₹{Number(quotation.total).toLocaleString("en-IN")}
+                          {formatAmount(Number(quotation.total))}
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <Link href={`/quotations/${quotation.id}`}>

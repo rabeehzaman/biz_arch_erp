@@ -57,6 +57,7 @@ export const authConfig: NextAuthConfig = {
         token.isMobileShopModuleEnabled = (user as { isMobileShopModuleEnabled?: boolean }).isMobileShopModuleEnabled ?? false;
         token.gstStateCode = (user as { gstStateCode?: string | null }).gstStateCode ?? null;
         token.saudiEInvoiceEnabled = (user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled ?? false;
+        token.language = (user as { language?: string }).language ?? "en";
       }
       return token;
     },
@@ -72,6 +73,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as { isMobileShopModuleEnabled?: boolean }).isMobileShopModuleEnabled = token.isMobileShopModuleEnabled as boolean;
         (session.user as { gstStateCode?: string | null }).gstStateCode = token.gstStateCode as string | null;
         (session.user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled = token.saudiEInvoiceEnabled as boolean;
+        (session.user as { language?: string }).language = token.language as string ?? "en";
       }
       return session;
     },
