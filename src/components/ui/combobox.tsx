@@ -49,6 +49,7 @@ export function Combobox<T>({
   const listRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const justClosedRef = React.useRef(false);
+  const isPointerDownRef = React.useRef(false);
 
   // Ensure items is always an array
   const safeItems = Array.isArray(items) ? items : [];
@@ -156,9 +157,16 @@ export function Combobox<T>({
           aria-required={required}
           disabled={disabled}
           autoFocus={autoFocus}
+          onPointerDown={() => {
+            isPointerDownRef.current = true;
+          }}
           // Using onFocus allows standard tab cycling. 
           // However, autoFocus will trigger this on mount, which is generally desired for the first field.
           onFocus={() => {
+            if (isPointerDownRef.current) {
+              isPointerDownRef.current = false;
+              return;
+            }
             if (justClosedRef.current) {
               justClosedRef.current = false;
               return;
