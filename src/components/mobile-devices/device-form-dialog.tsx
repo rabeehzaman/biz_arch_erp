@@ -193,20 +193,20 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { onOpenChange(isOpen); if (!isOpen) resetForm(); }}>
-      {/* flex+min-h-0 on form lets header/footer stay sticky while body scrolls */}
-      <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-2xl max-h-[90dvh]">
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+      {/* "contents" on form removes it from flex layout so DialogHeader/Footer
+          become direct children of the inner scrollable wrapper in DialogContent,
+          enabling the built-in sticky top-0 / sticky bottom-0 on those components. */}
+      <DialogContent className="sm:max-w-2xl">
+        <form className="contents" onSubmit={handleSubmit}>
 
-          {/* Sticky header */}
-          <DialogHeader className="shrink-0 px-4 pt-5 pb-4 sm:px-6 border-b">
+          <DialogHeader>
             <DialogTitle>{editDevice ? "Edit Device" : "Add Device"}</DialogTitle>
             <DialogDescription>
               {editDevice ? "Update details for this mobile device" : "Manually add a mobile device to inventory"}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
+          <div className="space-y-5">
 
             {/* Identifiers */}
             <fieldset className="space-y-3">
@@ -489,8 +489,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
           </div>
 
-          {/* Sticky footer — full-width buttons on mobile */}
-          <DialogFooter className="shrink-0 flex flex-row gap-2 px-4 sm:px-6 py-4 border-t bg-background">
+          <DialogFooter>
             <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
