@@ -359,10 +359,14 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="w-64 p-0 relative bg-slate-950 text-white border-slate-800 bg-cover bg-no-repeat bg-center"
-        style={{ backgroundImage: "url('/sidebar_bg.png')" }}
+        className="w-64 p-0 bg-slate-950 text-white border-slate-800 flex flex-col overflow-hidden"
       >
-        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] pointer-events-none z-0"></div>
+        <div
+          className="absolute inset-0 bg-cover bg-no-repeat bg-center z-0"
+          style={{ backgroundImage: "url('/sidebar_bg.png')" }}
+        >
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]"></div>
+        </div>
         <div className="relative z-10 flex h-full flex-col">
           <SidebarContent onNavigate={() => setOpen(false)} />
         </div>
