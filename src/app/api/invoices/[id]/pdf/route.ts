@@ -6,6 +6,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/pdf/invoice-pdf";
 import { createElement } from "react";
 import { format } from "date-fns";
+import { generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
 
 export async function GET(
   request: NextRequest,
@@ -82,6 +83,16 @@ export async function GET(
       unit: item.unit,
     }));
 
+    // Generate QR code image for Saudi invoices
+    let qrCodeDataURL: string | undefined;
+    if (invoice.qrCodeData) {
+      try {
+        qrCodeDataURL = await generateQRCodeDataURL(invoice.qrCodeData);
+      } catch {
+        // QR code generation failure is non-fatal
+      }
+    }
+
     // Prepare invoice data for PDF
     const pdfInvoice = {
       invoiceNumber: invoice.invoiceNumber,
@@ -98,6 +109,10 @@ export async function GET(
       totalSgst: Number(invoice.totalSgst),
       totalIgst: Number(invoice.totalIgst),
       total: Number(invoice.total),
+      // Saudi fields
+      saudiInvoiceType: invoice.saudiInvoiceType ?? undefined,
+      totalVat: invoice.totalVat ? Number(invoice.totalVat) : undefined,
+      qrCodeDataURL,
     };
 
     // Generate PDF

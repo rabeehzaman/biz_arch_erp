@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft, Building2, Download, Pencil, Printer, CreditCard, Send } from "lucide-react";
+import QRCode from "react-qr-code";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -59,6 +60,8 @@ interface Invoice {
     city: string | null;
     state: string | null;
     zipCode: string | null;
+    vatNumber?: string | null;
+    arabicName?: string | null;
   };
   issueDate: string;
   dueDate: string;
@@ -77,6 +80,12 @@ interface Invoice {
   items: InvoiceItem[];
   branch?: { id: string; name: string; code: string } | null;
   warehouse?: { id: string; name: string; code: string } | null;
+  // Saudi e-Invoice fields
+  saudiInvoiceType?: string | null;
+  totalVat?: number | null;
+  qrCodeData?: string | null;
+  invoiceUuid?: string | null;
+  invoiceCounterValue?: number | null;
 }
 
 export default function InvoiceDetailPage({
@@ -394,37 +403,62 @@ export default function InvoiceDetailPage({
             {/* Totals */}
             <div className="flex justify-end mt-6">
               <div className="w-full sm:w-64 space-y-2">
+                {invoice.saudiInvoiceType && invoice.qrCodeData && (
+                  <div className="flex flex-col items-end gap-1 mb-4">
+                    <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
+                      {invoice.saudiInvoiceType === "SIMPLIFIED" ? "Simplified Tax Invoice" : "Tax Invoice"} — ZATCA Phase 1
+                    </span>
+                    {invoice.invoiceCounterValue && (
+                      <span className="text-xs text-slate-400">ICV: {invoice.invoiceCounterValue}</span>
+                    )}
+                    <div className="border p-1 bg-white" title="Scan to verify invoice (ZATCA Phase 1)">
+                      <QRCode value={invoice.qrCodeData} size={96} level="M" />
+                    </div>
+                    <span className="text-[10px] text-slate-400">ZATCA Compliant QR</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>₹{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
+                  <span>{invoice.saudiInvoiceType ? "SAR" : "₹"}{Number(invoice.subtotal).toLocaleString(invoice.saudiInvoiceType ? "en-SA" : "en-IN")}</span>
                 </div>
-                {Number(invoice.totalCgst) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>CGST</span>
-                    <span>₹{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(invoice.totalSgst) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>SGST</span>
-                    <span>₹{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(invoice.totalIgst) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>IGST</span>
-                    <span>₹{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>Tax</span>
-                    <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
-                  </div>
+                {invoice.saudiInvoiceType ? (
+                  Number(invoice.totalVat) > 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>VAT (15%) — ضريبة القيمة المضافة</span>
+                      <span>SAR {Number(invoice.totalVat).toFixed(2)}</span>
+                    </div>
+                  )
+                ) : (
+                  <>
+                    {Number(invoice.totalCgst) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>CGST</span>
+                        <span>₹{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    {Number(invoice.totalSgst) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>SGST</span>
+                        <span>₹{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    {Number(invoice.totalIgst) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>IGST</span>
+                        <span>₹{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>Tax</span>
+                        <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                  </>
                 )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Total</span>
-                  <span>₹{Number(invoice.total).toLocaleString("en-IN")}</span>
+                  <span>{invoice.saudiInvoiceType ? `SAR ${Number(invoice.total).toFixed(2)}` : `₹${Number(invoice.total).toLocaleString("en-IN")}`}</span>
                 </div>
                 {Number(invoice.amountPaid) > 0 && (
                   <div className="flex justify-between text-sm text-green-600">

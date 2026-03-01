@@ -56,6 +56,7 @@ export const authConfig: NextAuthConfig = {
         token.multiBranchEnabled = (user as { multiBranchEnabled?: boolean }).multiBranchEnabled ?? false;
         token.isMobileShopModuleEnabled = (user as { isMobileShopModuleEnabled?: boolean }).isMobileShopModuleEnabled ?? false;
         token.gstStateCode = (user as { gstStateCode?: string | null }).gstStateCode ?? null;
+        token.saudiEInvoiceEnabled = (user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled ?? false;
       }
       return token;
     },
@@ -70,6 +71,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as { multiBranchEnabled?: boolean }).multiBranchEnabled = token.multiBranchEnabled as boolean;
         (session.user as { isMobileShopModuleEnabled?: boolean }).isMobileShopModuleEnabled = token.isMobileShopModuleEnabled as boolean;
         (session.user as { gstStateCode?: string | null }).gstStateCode = token.gstStateCode as string | null;
+        (session.user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled = token.saudiEInvoiceEnabled as boolean;
       }
       return session;
     },

@@ -59,6 +59,7 @@ interface LineItem {
   discount: number;
   gstRate: number;
   hsnCode: string;
+  vatRate: number; // Saudi VAT rate (15 or 0)
   selectedImeis: string[];
 }
 
@@ -85,7 +86,7 @@ export default function NewInvoicePage() {
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: "1", productId: "", quantity: 1, unitId: "", conversionFactor: 1, unitPrice: 0, discount: 0, gstRate: 0, hsnCode: "", selectedImeis: [] },
+    { id: "1", productId: "", quantity: 1, unitId: "", conversionFactor: 1, unitPrice: 0, discount: 0, gstRate: 0, hsnCode: "", vatRate: 15, selectedImeis: [] },
   ]);
   const [availableDevices, setAvailableDevices] = useState<Record<string, MobileDeviceOption[]>>({});
 
@@ -160,6 +161,7 @@ export default function NewInvoicePage() {
         discount: 0,
         gstRate: 0,
         hsnCode: "",
+        vatRate: 15,
         selectedImeis: [],
       },
     ]);
@@ -257,6 +259,7 @@ export default function NewInvoicePage() {
             discount: 0,
             gstRate: 0,
             hsnCode: "",
+            vatRate: 15,
             selectedImeis: [],
           },
         ]);
@@ -295,7 +298,15 @@ export default function NewInvoicePage() {
     );
   };
 
+  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
+
   const calculateTax = () => {
+    if (saudiEnabled) {
+      return lineItems.reduce((sum, item) => {
+        const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
+        return sum + (lineTotal * (item.vatRate || 0)) / 100;
+      }, 0);
+    }
     return lineItems.reduce((sum, item) => {
       const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
       return sum + (lineTotal * (item.gstRate || 0)) / 100;
@@ -349,6 +360,7 @@ export default function NewInvoicePage() {
               discount: item.discount,
               gstRate: item.gstRate,
               hsnCode: item.hsnCode,
+              ...(saudiEnabled && { vatRate: item.vatRate ?? 15 }),
               ...(product?.isImeiTracked && item.selectedImeis.length > 0 && { selectedImeis: item.selectedImeis }),
             };
           }),
@@ -475,7 +487,8 @@ export default function NewInvoicePage() {
                       <TableHead className="w-[12%] font-semibold">Unit Price *</TableHead>
                       <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
                       {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
-                      {session?.user?.gstEnabled ? (
+                      {saudiEnabled && <TableHead className="w-[8%] font-semibold">VAT %</TableHead>}
+                      {(session?.user?.gstEnabled || saudiEnabled) ? (
                         <>
                           <TableHead className="text-right font-semibold">Gross Amount</TableHead>
                           <TableHead className="text-right font-semibold">Net Amount</TableHead>
@@ -645,16 +658,36 @@ export default function NewInvoicePage() {
                                 />
                               </TableCell>
                             )}
-                            {session?.user?.gstEnabled ? (
+                            {saudiEnabled && (
+                              <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                                <Input
+                                  type="number"
+                                  onFocus={(e) => e.target.select()}
+                                  min="0"
+                                  max="100"
+                                  step="0.01"
+                                  value={item.vatRate ?? 15}
+                                  onChange={(e) =>
+                                    updateLineItem(item.id, "vatRate", parseFloat(e.target.value) || 0)
+                                  }
+                                  className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                  placeholder="15"
+                                />
+                              </TableCell>
+                            )}
+                            {(session?.user?.gstEnabled || saudiEnabled) ? (
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                  ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                  {saudiEnabled ? "SAR" : "₹"}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toFixed(2)}
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                                  ₹{((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                                  {saudiEnabled
+                                    ? `SAR ${((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.vatRate || 0) / 100)).toFixed(2)}`
+                                    : `₹${((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}`
+                                  }
                                 </TableCell>
                               </>
                             ) : (
@@ -760,19 +793,22 @@ export default function NewInvoicePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-w-xs ml-auto">
+                  {saudiEnabled && (
+                    <div className="text-xs text-slate-500 text-right mb-2 font-medium">VAT Invoice (ZATCA Phase 1)</div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
+                    <span>{saudiEnabled ? `SAR ${calculateSubtotal().toFixed(2)}` : `₹${calculateSubtotal().toLocaleString("en-IN")}`}</span>
                   </div>
                   {calculateTax() > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>GST</span>
-                      <span>₹{calculateTax().toLocaleString("en-IN")}</span>
+                      <span>{saudiEnabled ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
+                      <span>{saudiEnabled ? `SAR ${calculateTax().toFixed(2)}` : `₹${calculateTax().toLocaleString("en-IN")}`}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
+                    <span>{saudiEnabled ? `SAR ${calculateTotal().toFixed(2)}` : `₹${calculateTotal().toLocaleString("en-IN")}`}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex justify-end">

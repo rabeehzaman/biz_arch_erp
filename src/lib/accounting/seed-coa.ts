@@ -112,6 +112,57 @@ export async function seedDefaultCOA(
     accountMap.set(acct.code, created.id);
   }
 
+  await _createCashBankAccounts(tx, organizationId, accountMap);
+
+  return accountMap;
+}
+
+// ─── Saudi VAT Accounts ────────────────────────────────────────────────────
+// Call this when saudiEInvoiceEnabled is toggled ON for an org
+
+const SAUDI_VAT_ACCOUNTS: AccountDef[] = [
+  { code: "1380", name: "VAT Input (ضريبة القيمة المضافة - مدخلات)", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "2240", name: "VAT Output (ضريبة القيمة المضافة - مخرجات)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+];
+
+export async function seedSaudiVATAccounts(
+  tx: PrismaTransactionClient,
+  organizationId: string
+) {
+  const sorted = [...SAUDI_VAT_ACCOUNTS].sort((a, b) => a.code.localeCompare(b.code));
+
+  for (const acct of sorted) {
+    // Find parent account id
+    let parentId: string | null = null;
+    if (acct.parentCode) {
+      const parent = await tx.account.findFirst({ where: { organizationId, code: acct.parentCode } });
+      parentId = parent?.id ?? null;
+    }
+
+    await tx.account.upsert({
+      where: { organizationId_code: { organizationId, code: acct.code } },
+      update: {},
+      create: {
+        code: acct.code,
+        name: acct.name,
+        accountType: acct.accountType,
+        accountSubType: acct.accountSubType,
+        parentId,
+        isSystem: acct.isSystem,
+        organizationId,
+      },
+    });
+  }
+}
+
+// ─── Original seedDefaultCOA continues below ───────────────────────────────
+// (split to reuse the seedSaudiVATAccounts separately)
+
+async function _createCashBankAccounts(
+  tx: PrismaTransactionClient,
+  organizationId: string,
+  accountMap: Map<string, string>
+) {
   // Create default Cash account (linked to COA 1100)
   const cashAccountId = accountMap.get("1100");
   if (cashAccountId) {

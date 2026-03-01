@@ -4,6 +4,7 @@ import {
   Text,
   View,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { numberToWords } from "@/lib/number-to-words";
@@ -246,6 +247,10 @@ interface InvoicePDFProps {
     totalSgst: number;
     totalIgst: number;
     total: number;
+    // Saudi fields
+    saudiInvoiceType?: string;
+    totalVat?: number;
+    qrCodeDataURL?: string; // PNG data URL for QR code
   };
   type: "SALES" | "PURCHASE";
   title?: string;
@@ -264,6 +269,8 @@ const formatCurrency = (amount: number): string => {
 };
 
 export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: InvoicePDFProps) {
+  const isSaudi = !!invoice.saudiInvoiceType;
+  const formatAmt = (n: number) => isSaudi ? `SAR ${n.toFixed(2)}` : formatCurrency(n);
   const DISPLAY_ROWS = 12;
   const emptyRowsCount = Math.max(0, DISPLAY_ROWS - invoice.items.length);
   const paddedItems = [
@@ -311,7 +318,16 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
             </Text>
           </View>
           <View style={styles.headerCenter}>
-            <Text style={styles.estimateTitle}>{title}</Text>
+            <Text style={styles.estimateTitle}>
+              {isSaudi
+                ? (invoice.saudiInvoiceType === "SIMPLIFIED" ? "Simplified Tax Invoice" : "Tax Invoice")
+                : title}
+            </Text>
+            {isSaudi && (
+              <Text style={{ fontSize: 8, textAlign: "center", color: "#666", marginTop: 2 }}>
+                فاتورة ضريبية {invoice.saudiInvoiceType === "SIMPLIFIED" ? "مبسطة" : ""}
+              </Text>
+            )}
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.toLabel}>To</Text>
@@ -414,6 +430,12 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
                 </View>
               </View>
             )}
+            {isSaudi && invoice.qrCodeDataURL && (
+              <View style={{ marginTop: 8 }}>
+                <Image src={invoice.qrCodeDataURL} style={{ width: 56, height: 56 }} />
+                <Text style={{ fontSize: 6, color: "#666", marginTop: 2 }}>ZATCA QR Code</Text>
+              </View>
+            )}
             <Text style={styles.eoeText}>E & O.E</Text>
           </View>
 
@@ -422,43 +444,56 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo }: I
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>
-                {formatCurrency(invoice.subtotal + totalDiscount)}
+                {formatAmt(invoice.subtotal + totalDiscount)}
               </Text>
             </View>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Discount</Text>
               <Text style={styles.totalValue}>
-                {formatCurrency(totalDiscount)}
+                {formatAmt(totalDiscount)}
               </Text>
             </View>
-            {invoice.totalCgst > 0 && (
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>CGST</Text>
-                <Text style={styles.totalValue}>
-                  {formatCurrency(invoice.totalCgst)}
-                </Text>
-              </View>
-            )}
-            {invoice.totalSgst > 0 && (
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>SGST</Text>
-                <Text style={styles.totalValue}>
-                  {formatCurrency(invoice.totalSgst)}
-                </Text>
-              </View>
-            )}
-            {invoice.totalIgst > 0 && (
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>IGST</Text>
-                <Text style={styles.totalValue}>
-                  {formatCurrency(invoice.totalIgst)}
-                </Text>
-              </View>
+            {isSaudi ? (
+              (invoice.totalVat ?? 0) > 0 && (
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>VAT 15%</Text>
+                  <Text style={styles.totalValue}>
+                    {formatAmt(invoice.totalVat ?? 0)}
+                  </Text>
+                </View>
+              )
+            ) : (
+              <>
+                {invoice.totalCgst > 0 && (
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>CGST</Text>
+                    <Text style={styles.totalValue}>
+                      {formatCurrency(invoice.totalCgst)}
+                    </Text>
+                  </View>
+                )}
+                {invoice.totalSgst > 0 && (
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>SGST</Text>
+                    <Text style={styles.totalValue}>
+                      {formatCurrency(invoice.totalSgst)}
+                    </Text>
+                  </View>
+                )}
+                {invoice.totalIgst > 0 && (
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>IGST</Text>
+                    <Text style={styles.totalValue}>
+                      {formatCurrency(invoice.totalIgst)}
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
             <View style={styles.netAmountRow}>
               <Text style={styles.netAmountLabel}>Net Total</Text>
               <Text style={styles.netAmountValue}>
-                {formatCurrency(invoice.total)}
+                {formatAmt(invoice.total)}
               </Text>
             </View>
           </View>

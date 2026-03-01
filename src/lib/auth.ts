@@ -35,6 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 multiBranchEnabled: true,
                 isMobileShopModuleEnabled: true,
                 gstStateCode: true,
+                saudiEInvoiceEnabled: true,
               },
             },
           },
@@ -65,6 +66,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           multiBranchEnabled: user.organization?.multiBranchEnabled ?? false,
           isMobileShopModuleEnabled: user.organization?.isMobileShopModuleEnabled ?? false,
           gstStateCode: user.organization?.gstStateCode ?? null,
+          saudiEInvoiceEnabled: user.organization?.saudiEInvoiceEnabled ?? false,
         };
       },
     }),

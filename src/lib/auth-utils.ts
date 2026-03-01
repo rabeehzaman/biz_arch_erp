@@ -21,3 +21,7 @@ export function isEInvoicingEnabled(session: Session): boolean {
 export function isMobileShopModuleEnabled(session: Session): boolean {
   return (session.user as { isMobileShopModuleEnabled?: boolean }).isMobileShopModuleEnabled === true;
 }
+
+export function isSaudiEInvoiceEnabled(session: Session): boolean {
+  return (session.user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled === true;
+}
