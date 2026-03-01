@@ -358,21 +358,16 @@ export default function EditCreditNotePage({
                             <div className="grid gap-4 sm:grid-cols-2 mt-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="customer">Customer *</Label>
-                                    <select
-                                        id="customer"
+                                    <CustomerCombobox
+                                        customers={customers}
                                         value={customerId}
-                                        onChange={(e) => setCustomerId(e.target.value)}
-                                        className="w-full rounded-md border border-input bg-background px-3 py-2"
+                                        onValueChange={setCustomerId}
+                                        onCustomerCreated={(c) => {
+                                            setCustomers((prev) => [...prev, c]);
+                                        }}
                                         required
                                         autoFocus
-                                    >
-                                        <option value="">Select customer</option>
-                                        {customers.map((customer) => (
-                                            <option key={customer.id} value={customer.id}>
-                                                {customer.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
 
                                 <div className="space-y-2">

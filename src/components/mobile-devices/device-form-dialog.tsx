@@ -13,6 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
+import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -24,18 +33,9 @@ interface Supplier {
 interface Product {
   id: string;
   name: string;
+  isImeiTracked: boolean;
 }
 
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface Unit {
-  id: string;
-  code: string;
-  name: string;
-}
 
 interface DeviceFormDialogProps {
   open: boolean;
@@ -48,15 +48,11 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
   const [saving, setSaving] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
 
   const [formData, setFormData] = useState({
     imei1: "",
     imei2: "",
     serialNumber: "",
-    brand: "",
-    model: "",
     color: "",
     storageCapacity: "",
     ram: "",
@@ -71,72 +67,47 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     supplierWarrantyExpiry: "",
     customerWarrantyExpiry: "",
     notes: "",
-    createProduct: false,
-    productName: "",
-    categoryId: "",
-    unitId: "",
-    hsnCode: "",
-    gstRate: "18",
   });
-
-  useEffect(() => {
-    if (formData.createProduct && formData.brand && formData.model) {
-      const parts = [
-        editDevice ? formData.brand : formData.model.split(" ")[0] || "Unknown",
-        editDevice ? formData.model : formData.model.split(" ").slice(1).join(" ") || formData.model,
-        formData.color,
-        formData.storageCapacity
-      ].filter(Boolean);
-      const newName = parts.join(" ");
-      if (formData.productName !== newName) {
-        setFormData((prev) => ({ ...prev, productName: newName }));
-      }
-    }
-  }, [formData.createProduct, formData.brand, formData.model, formData.color, formData.storageCapacity, editDevice]);
 
   useEffect(() => {
     if (open) {
       if (editDevice) {
         setFormData({
           imei1: editDevice.imei1 || "", imei2: editDevice.imei2 || "", serialNumber: editDevice.serialNumber || "",
-          brand: editDevice.brand || "", model: editDevice.brand && editDevice.model ? `${editDevice.brand} ${editDevice.model}`.trim() : (editDevice.model || editDevice.brand || ""), color: editDevice.color || "",
+          color: editDevice.color || "",
           storageCapacity: editDevice.storageCapacity || "", ram: editDevice.ram || "", networkStatus: editDevice.networkStatus || "UNLOCKED",
           conditionGrade: editDevice.conditionGrade || "NEW", batteryHealthPercentage: editDevice.batteryHealthPercentage ? String(editDevice.batteryHealthPercentage) : "",
           productId: editDevice.productId || "", supplierId: editDevice.supplierId || "", costPrice: editDevice.costPrice !== undefined ? String(editDevice.costPrice) : "",
           landedCost: editDevice.landedCost !== undefined ? String(editDevice.landedCost) : "", sellingPrice: editDevice.sellingPrice !== undefined ? String(editDevice.sellingPrice) : "",
           supplierWarrantyExpiry: editDevice.supplierWarrantyExpiry ? new Date(editDevice.supplierWarrantyExpiry).toISOString().split('T')[0] : "",
           customerWarrantyExpiry: editDevice.customerWarrantyExpiry ? new Date(editDevice.customerWarrantyExpiry).toISOString().split('T')[0] : "", notes: editDevice.notes || "",
-          createProduct: false, productName: "", categoryId: "", unitId: "", hsnCode: "", gstRate: "18",
         });
       } else {
         resetForm();
       }
       fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers).catch(() => { });
-      fetch("/api/products?excludeServices=true").then((r) => r.json()).then(setProducts).catch(() => { });
-      fetch("/api/product-categories").then((r) => r.json()).then(setCategories).catch(() => { });
-      fetch("/api/units").then((r) => r.json()).then(setUnits).catch(() => { });
+      fetch("/api/products?excludeServices=true").then((r) => r.json()).then((data) => setProducts(data.filter((p: Product) => p.isImeiTracked))).catch(() => { });
     }
   }, [open, editDevice]);
 
   const resetForm = () => {
     setFormData({
-      imei1: "", imei2: "", serialNumber: "", brand: "", model: "",
+      imei1: "", imei2: "", serialNumber: "",
       color: "", storageCapacity: "", ram: "", networkStatus: "UNLOCKED",
       conditionGrade: "NEW", batteryHealthPercentage: "", productId: "",
       supplierId: "", costPrice: "", landedCost: "", sellingPrice: "",
       supplierWarrantyExpiry: "", customerWarrantyExpiry: "", notes: "",
-      createProduct: false, productName: "", categoryId: "", unitId: "", hsnCode: "", gstRate: "18",
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.imei1 || !formData.model || !formData.supplierId || !formData.costPrice) {
-      toast.error("IMEI 1, Model, Supplier, and Cost Price are required");
+    if (!formData.imei1 || !formData.supplierId || !formData.costPrice) {
+      toast.error("IMEI 1, Supplier, and Cost Price are required");
       return;
     }
-    if (formData.createProduct && !formData.productName) {
-      toast.error("Product name is required when creating a new product");
+    if (!editDevice && !formData.productId) {
+      toast.error("Product is required");
       return;
     }
 
@@ -149,21 +120,15 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          brand: formData.model.split(" ")[0] || "Unknown",
-          model: formData.model.split(" ").slice(1).join(" ") || formData.model,
+          brand: (() => { const n = (products.find(p => p.id === formData.productId)?.name || editDevice?.brand || "").trim(); return n.split(" ")[0] || "Unknown"; })(),
+          model: (() => { const n = (products.find(p => p.id === formData.productId)?.name || `${editDevice?.brand || ""} ${editDevice?.model || ""}`).trim(); const parts = n.split(" "); return parts.slice(1).join(" ") || n; })(),
           costPrice: parseFloat(formData.costPrice),
           landedCost: parseFloat(formData.landedCost) || 0,
           sellingPrice: parseFloat(formData.sellingPrice) || 0,
           batteryHealthPercentage: formData.batteryHealthPercentage ? parseInt(formData.batteryHealthPercentage) : null,
-          productId: formData.productId === "CREATE_NEW" ? null : (formData.productId || null),
+          productId: formData.productId || null,
           supplierWarrantyExpiry: formData.supplierWarrantyExpiry || null,
           customerWarrantyExpiry: formData.customerWarrantyExpiry || null,
-          createProduct: formData.createProduct,
-          productName: formData.productName,
-          categoryId: formData.categoryId || null,
-          unitId: formData.unitId || null,
-          hsnCode: formData.hsnCode || null,
-          gstRate: parseFloat(formData.gstRate) || 0,
         }),
       });
 
@@ -193,7 +158,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="grid gap-2">
                 <Label>IMEI 1 *</Label>
                 <Input
@@ -213,18 +178,6 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   placeholder="Optional"
                   maxLength={15}
                   className="font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="grid gap-2 col-span-2">
-                <Label>Brand & Model *</Label>
-                <Input
-                  value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  placeholder="e.g. Samsung Galaxy S24"
-                  required
                 />
               </div>
               <div className="grid gap-2">
@@ -267,29 +220,37 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
             <div className="grid grid-cols-3 gap-3">
               <div className="grid gap-2">
                 <Label>Network Status</Label>
-                <select
+                <Select
                   value={formData.networkStatus}
-                  onChange={(e) => setFormData({ ...formData, networkStatus: e.target.value })}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  onValueChange={(value) => setFormData({ ...formData, networkStatus: value })}
                 >
-                  <option value="UNLOCKED">Unlocked</option>
-                  <option value="LOCKED">Locked</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UNLOCKED">Unlocked</SelectItem>
+                    <SelectItem value="LOCKED">Locked</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label>Condition</Label>
-                <select
+                <Select
                   value={formData.conditionGrade}
-                  onChange={(e) => setFormData({ ...formData, conditionGrade: e.target.value })}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  onValueChange={(value) => setFormData({ ...formData, conditionGrade: value })}
                 >
-                  <option value="NEW">New</option>
-                  <option value="OPEN_BOX">Open Box</option>
-                  <option value="GRADE_A">Grade A</option>
-                  <option value="GRADE_B">Grade B</option>
-                  <option value="GRADE_C">Grade C</option>
-                  <option value="REFURBISHED">Refurbished</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NEW">New</SelectItem>
+                    <SelectItem value="OPEN_BOX">Open Box</SelectItem>
+                    <SelectItem value="GRADE_A">Grade A</SelectItem>
+                    <SelectItem value="GRADE_B">Grade B</SelectItem>
+                    <SelectItem value="GRADE_C">Grade C</SelectItem>
+                    <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label>Battery Health %</Label>
@@ -306,109 +267,31 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
-                <Label>Product</Label>
-                <select
+                <Label>Product {!editDevice && "*"}</Label>
+                <Combobox
+                  items={products}
                   value={formData.productId}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "CREATE_NEW") {
-                      setFormData({ ...formData, productId: value, createProduct: true });
-                    } else {
-                      setFormData({ ...formData, productId: value, createProduct: false });
-                    }
-                  }}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                >
-                  <option value="">-- Select Product --</option>
-                  <option value="CREATE_NEW">-- Create New Product --</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  onValueChange={(value) => setFormData({ ...formData, productId: value })}
+                  getId={(p) => p.id}
+                  getLabel={(p) => p.name}
+                  filterFn={(p, query) => p.name.toLowerCase().includes(query)}
+                  placeholder="Search products..."
+                  emptyText={products.length === 0 ? "No IMEI-tracked products found." : "No products found."}
+                />
+                {products.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No IMEI-tracked products found. Create one from the Products page first.</p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label>Supplier *</Label>
-                <select
+                <SupplierCombobox
+                  suppliers={suppliers as any}
                   value={formData.supplierId}
-                  onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  onValueChange={(value) => setFormData({ ...formData, supplierId: value })}
                   required
-                >
-                  <option value="">-- Select Supplier --</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
-
-            {formData.createProduct && (
-              <div className="rounded-md border p-4 space-y-4 bg-muted/20">
-                <h4 className="text-sm font-medium border-b pb-2">New Product Details</h4>
-                <div className="grid gap-2">
-                  <Label>Product Name *</Label>
-                  <Input
-                    value={formData.productName}
-                    onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-                    placeholder="e.g. Samsung Galaxy S24 Black 128GB"
-                    required={formData.createProduct}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label>Category</Label>
-                    <select
-                      value={formData.categoryId}
-                      onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm bg-background"
-                    >
-                      <option value="">-- None --</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Unit</Label>
-                    <select
-                      value={formData.unitId}
-                      onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm bg-background"
-                    >
-                      <option value="">-- Select Unit --</option>
-                      {units.map((u) => (
-                        <option key={u.id} value={u.id}>{u.code}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label>HSN Code</Label>
-                    <Input
-                      value={formData.hsnCode}
-                      onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
-                      placeholder="e.g. 8517"
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>GST Rate (%)</Label>
-                    <select
-                      value={formData.gstRate}
-                      onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm bg-background"
-                    >
-                      <option value="0">0</option>
-                      <option value="5">5</option>
-                      <option value="12">12</option>
-                      <option value="18">18</option>
-                      <option value="28">28</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="grid grid-cols-3 gap-3">
               <div className="grid gap-2">

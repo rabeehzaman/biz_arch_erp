@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, description, price, unitId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, deviceDetails } = body;
+    const { name, description, price, unitId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -111,97 +111,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Deduce brand and model from product name
-      const nameParts = name.trim().split(/\s+/);
-      const deducedBrand = nameParts.length > 0 ? nameParts[0] : "Unknown";
-      const deducedModel = nameParts.length > 1 ? nameParts.slice(1).join(" ") : name;
-
-      if (isImeiTracked && deviceDetails) {
-        const {
-          devices,
-          supplierId, costPrice, landedCost, sellingPrice,
-          supplierWarrantyExpiry, customerWarrantyExpiry, notes
-        } = deviceDetails;
-
-        if (!supplierId) {
-          throw new Error("SUPPLIER_REQUIRED");
-        }
-
-        if (devices && Array.isArray(devices) && devices.length > 0) {
-          const quantity = devices.length;
-          const totalCost = (costPrice || 0) * quantity;
-
-          // Create all mobile devices with per-device specs
-          for (const device of devices) {
-            await tx.mobileDevice.create({
-              data: {
-                organizationId,
-                imei1: device.imei,
-                brand: deducedBrand,
-                model: deducedModel,
-                color: device.color || null,
-                storageCapacity: device.storageCapacity || null,
-                ram: device.ram || null,
-                networkStatus: (device.networkStatus || "UNLOCKED") as any,
-                conditionGrade: (device.conditionGrade || "NEW") as any,
-                batteryHealthPercentage: device.batteryHealthPercentage ?? null,
-                productId: newProduct.id,
-                supplierId,
-                costPrice: costPrice || 0,
-                landedCost: landedCost || 0,
-                sellingPrice: sellingPrice || price || 0,
-                supplierWarrantyExpiry: supplierWarrantyExpiry ? new Date(supplierWarrantyExpiry) : null,
-                customerWarrantyExpiry: customerWarrantyExpiry ? new Date(customerWarrantyExpiry) : null,
-                notes: notes || null,
-              },
-            });
-          }
-
-          const openingStock = await tx.openingStock.create({
-            data: {
-              productId: newProduct.id,
-              quantity: quantity,
-              unitCost: costPrice || 0,
-              stockDate: new Date(),
-              notes: `Created from Product Form (${quantity} devices)`,
-              organizationId,
-            },
-          });
-
-          await tx.stockLot.create({
-            data: {
-              organizationId,
-              productId: newProduct.id,
-              sourceType: "OPENING_STOCK",
-              openingStockId: openingStock.id,
-              lotDate: new Date(),
-              unitCost: costPrice || 0,
-              initialQuantity: quantity,
-              remainingQuantity: quantity,
-            },
-          });
-
-          if ((costPrice || 0) > 0) {
-            const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
-            const ownerCapitalAccount = await getSystemAccount(tx, organizationId, "3100");
-            if (inventoryAccount && ownerCapitalAccount) {
-              await createAutoJournalEntry(tx, organizationId, {
-                date: new Date(),
-                description: `Opening Stock - ${newProduct.name}`,
-                sourceType: "OPENING_STOCK",
-                sourceId: openingStock.id,
-                lines: [
-                  { accountId: inventoryAccount.id, description: "Inventory", debit: totalCost, credit: 0 },
-                  { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: totalCost },
-                ],
-              });
-            }
-          }
-        } else {
-          throw new Error("DEVICES_REQUIRED");
-        }
-      }
-
       return newProduct;
     });
 
@@ -214,20 +123,7 @@ export async function POST(request: NextRequest) {
 
     if (error.code === 'P2002') {
       statusCode = 400;
-      if (error.meta?.target?.includes('imei1')) {
-        errorMessage = "One or more IMEIs already exist in the database.";
-      } else {
-        errorMessage = "A product with this SKU or Barcode already exists.";
-      }
-    } else if (error.code === 'P2003') {
-      statusCode = 400;
-      errorMessage = "Invalid supplier selected.";
-    } else if (error.message === "SUPPLIER_REQUIRED") {
-      statusCode = 400;
-      errorMessage = "Supplier is required when tracking by IMEI.";
-    } else if (error.message === "DEVICES_REQUIRED") {
-      statusCode = 400;
-      errorMessage = "At least one device with IMEI is required when tracking by IMEI.";
+      errorMessage = "A product with this SKU or Barcode already exists.";
     }
 
     return NextResponse.json(

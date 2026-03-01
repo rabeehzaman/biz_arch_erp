@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { Plus, Smartphone, Loader2, Trash2, Pencil } from "lucide-react";
 import { DeviceFormDialog } from "@/components/mobile-devices/device-form-dialog";
@@ -49,7 +50,7 @@ export default function DeviceInventoryPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<Device | null>(null);
 
@@ -58,7 +59,7 @@ export default function DeviceInventoryPage() {
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
-      if (statusFilter) params.set("status", statusFilter);
+      if (statusFilter && statusFilter !== "ALL") params.set("status", statusFilter);
       const res = await fetch(`/api/mobile-devices?${params}`);
       if (res.ok) {
         const data = await res.json();
@@ -120,18 +121,23 @@ export default function DeviceInventoryPage() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-64"
                 />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="IN_STOCK">In Stock</option>
-                  <option value="RESERVED">Reserved</option>
-                  <option value="SOLD">Sold</option>
-                  <option value="IN_REPAIR">In Repair</option>
-                  <option value="RMA">RMA</option>
-                </select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Statuses</SelectItem>
+                    <SelectItem value="IN_STOCK">In Stock</SelectItem>
+                    <SelectItem value="RESERVED">Reserved</SelectItem>
+                    <SelectItem value="SOLD">Sold</SelectItem>
+                    <SelectItem value="IN_REPAIR">In Repair</SelectItem>
+                    <SelectItem value="RMA">RMA</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={() => { setEditDevice(null); setDialogOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Device
+                </Button>
               </div>
             </CardAction>
           </CardHeader>

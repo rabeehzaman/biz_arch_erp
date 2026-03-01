@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
   Building2,
@@ -198,9 +199,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <Building2 className="h-5 w-5 text-primary-foreground" />
+      <div className="flex h-16 items-center gap-3 px-6 bg-slate-900">
+        <div className="relative h-9 w-9 bg-white rounded-md flex items-center justify-center overflow-hidden p-1 shadow-sm border border-slate-700">
+          <Image src="/logo.png" alt="BizArch Logo" fill sizes="36px" className="object-contain" priority />
         </div>
         <span className="text-lg font-bold">BizArch ERP</span>
       </div>

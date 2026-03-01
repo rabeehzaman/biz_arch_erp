@@ -321,21 +321,13 @@ export default function NewDebitNotePage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="supplier">Supplier *</Label>
-                  <select
-                    id="supplier"
+                  <SupplierCombobox
+                    suppliers={suppliers}
                     value={supplierId}
-                    onChange={(e) => setSupplierId(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    onValueChange={setSupplierId}
                     required
                     autoFocus
-                  >
-                    <option value="">Select supplier</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div className="space-y-2">

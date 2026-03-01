@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -724,18 +725,22 @@ export default function NewPurchaseInvoicePage() {
                                         onChange={(e) => updateImeiField(item.id, idx, "ram", e.target.value)}
                                         className="text-xs h-8"
                                       />
-                                      <select
+                                      <Select
                                         value={imei.conditionGrade}
-                                        onChange={(e) => updateImeiField(item.id, idx, "conditionGrade", e.target.value)}
-                                        className="text-xs h-8 rounded border px-2"
+                                        onValueChange={(value) => updateImeiField(item.id, idx, "conditionGrade", value)}
                                       >
-                                        <option value="NEW">New</option>
-                                        <option value="OPEN_BOX">Open Box</option>
-                                        <option value="GRADE_A">Grade A</option>
-                                        <option value="GRADE_B">Grade B</option>
-                                        <option value="GRADE_C">Grade C</option>
-                                        <option value="REFURBISHED">Refurbished</option>
-                                      </select>
+                                        <SelectTrigger className="text-xs h-8">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="NEW">New</SelectItem>
+                                          <SelectItem value="OPEN_BOX">Open Box</SelectItem>
+                                          <SelectItem value="GRADE_A">Grade A</SelectItem>
+                                          <SelectItem value="GRADE_B">Grade B</SelectItem>
+                                          <SelectItem value="GRADE_C">Grade C</SelectItem>
+                                          <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                                        </SelectContent>
+                                      </Select>
                                     </div>
                                   ))}
                                 </div>

@@ -715,18 +715,22 @@ export default function OpeningStockPage() {
                             onChange={(e) => updateImeiField(idx, "ram", e.target.value)}
                             className="text-xs"
                           />
-                          <select
+                          <Select
                             value={imei.conditionGrade}
-                            onChange={(e) => updateImeiField(idx, "conditionGrade", e.target.value)}
-                            className="text-xs h-9 rounded-md border border-input bg-transparent px-3 py-1 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            onValueChange={(value) => updateImeiField(idx, "conditionGrade", value)}
                           >
-                            <option value="NEW">New</option>
-                            <option value="OPEN_BOX">Open Box</option>
-                            <option value="GRADE_A">Grade A</option>
-                            <option value="GRADE_B">Grade B</option>
-                            <option value="GRADE_C">Grade C</option>
-                            <option value="REFURBISHED">Refurbished</option>
-                          </select>
+                            <SelectTrigger className="text-xs h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="NEW">New</SelectItem>
+                              <SelectItem value="OPEN_BOX">Open Box</SelectItem>
+                              <SelectItem value="GRADE_A">Grade A</SelectItem>
+                              <SelectItem value="GRADE_B">Grade B</SelectItem>
+                              <SelectItem value="GRADE_C">Grade C</SelectItem>
+                              <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       ))}
                     </div>

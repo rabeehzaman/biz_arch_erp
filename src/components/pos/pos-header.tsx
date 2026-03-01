@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 interface POSHeaderProps {
   session: {
@@ -56,8 +57,8 @@ export function POSHeader({
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-          <Building2 className="h-5 w-5 text-primary-foreground" />
+        <div className="relative h-8 w-8 shrink-0 bg-white rounded-md flex items-center justify-center overflow-hidden p-0.5 shadow-sm border border-slate-700 hidden sm:flex">
+          <Image src="/logo.png" alt="BizArch Logo" fill sizes="32px" className="object-contain" priority />
         </div>
         <span className="text-base font-bold whitespace-nowrap">BizArch POS</span>
         {session && (

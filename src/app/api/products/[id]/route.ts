@@ -104,8 +104,36 @@ export async function DELETE(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
-    await prisma.product.delete({
-      where: { id, organizationId },
+
+    await prisma.$transaction(async (tx) => {
+      // Delete mobile devices linked to this product
+      await tx.mobileDevice.deleteMany({ where: { productId: id, organizationId } });
+
+      // Find opening stocks to clean up their journal entries
+      const openingStocks = await tx.openingStock.findMany({
+        where: { productId: id, organizationId },
+        select: { id: true },
+      });
+      const openingStockIds = openingStocks.map((o) => o.id);
+
+      // Delete journal entries that were created from these opening stocks
+      if (openingStockIds.length > 0) {
+        const journalEntries = await tx.journalEntry.findMany({
+          where: { sourceType: "OPENING_BALANCE", sourceId: { in: openingStockIds }, organizationId },
+          select: { id: true },
+        });
+        const journalIds = journalEntries.map((j) => j.id);
+        if (journalIds.length > 0) {
+          await tx.journalEntryLine.deleteMany({ where: { journalEntryId: { in: journalIds } } });
+          await tx.journalEntry.deleteMany({ where: { id: { in: journalIds } } });
+        }
+      }
+
+      // Delete stock lots and opening stocks
+      await tx.stockLot.deleteMany({ where: { productId: id, organizationId } });
+      await tx.openingStock.deleteMany({ where: { productId: id, organizationId } });
+
+      await tx.product.delete({ where: { id, organizationId } });
     });
 
     return NextResponse.json({ success: true });
