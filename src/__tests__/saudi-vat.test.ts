@@ -54,10 +54,10 @@ section("TRN Validation");
 assert(validateTRN("300000000000003"), "Valid TRN starting with 3, 15 digits");
 assert(validateTRN("312345678901234"), "Valid TRN - another example");
 assert(!validateTRN("200000000000003"), "Reject TRN not starting with 3");
-assert(!validateTRN("30000000000000"),  "Reject TRN with 14 digits");
+assert(!validateTRN("30000000000000"), "Reject TRN with 14 digits");
 assert(!validateTRN("3000000000000031"), "Reject TRN with 16 digits");
 assert(!validateTRN("3000000000000X5"), "Reject TRN with non-digit char");
-assert(!validateTRN(""),                "Reject empty TRN");
+assert(!validateTRN(""), "Reject empty TRN");
 
 // ─── Line VAT Calculation ──────────────────────────────────────────────────
 
@@ -271,7 +271,7 @@ section("Integration: Multi-line invoice VAT");
   const tlv = generateTLVQRCode({
     sellerName: "شركة الاختبار",
     vatNumber: "300000000000003",
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString().replace(/\.\d{3}/, ''),
     totalWithVat: doc.totalInclVat.toFixed(2),
     totalVat: doc.totalVat.toFixed(2),
   });
@@ -280,7 +280,7 @@ section("Integration: Multi-line invoice VAT");
   // Generate hash chain
   const hash = computeInvoiceHash({
     invoiceNumber: "INV-20240101-001",
-    issueDate: new Date().toISOString(),
+    issueDate: new Date().toISOString().replace(/\.\d{3}/, ''),
     sellerVatNumber: "300000000000003",
     totalInclVat: doc.totalInclVat.toFixed(2),
     totalVat: doc.totalVat.toFixed(2),

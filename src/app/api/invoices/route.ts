@@ -181,9 +181,7 @@ export async function POST(request: NextRequest) {
         previousInvoiceHash = await getLastInvoiceHash(tx as unknown as Parameters<typeof getLastInvoiceHash>[0], organizationId);
 
         const sellerName = org?.arabicName || org?.name || "";
-        const sellerVat = org?.vatNumber || "";
-        const timestamp = invoiceDate.toISOString();
-        const totalInclVat = (subtotal + totalVat).toFixed(2);
+        const timestamp = invoiceDate.toISOString().replace(/\.\d{3}/, '');
         const vatStr = totalVat.toFixed(2);
 
         invoiceHash = computeInvoiceHash({
