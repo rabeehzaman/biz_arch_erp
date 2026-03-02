@@ -72,7 +72,7 @@ function DialogContent({
       >
         {/* Drag handle — mobile only */}
         <div className="mx-auto mt-3 mb-1 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/20 sm:hidden" />
-        <div className="flex flex-col overflow-y-auto flex-1 p-6 pt-3 sm:pt-6 gap-4">
+        <div className="flex flex-col overflow-y-auto overflow-x-hidden flex-1 p-6 pt-3 sm:pt-6 gap-4">
           {children}
         </div>
         {showCloseButton && (
