@@ -25,3 +25,7 @@ export function isMobileShopModuleEnabled(session: Session): boolean {
 export function isSaudiEInvoiceEnabled(session: Session): boolean {
   return (session.user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled === true;
 }
+
+export function isWeighMachineEnabled(session: Session): boolean {
+  return (session.user as { isWeighMachineEnabled?: boolean }).isWeighMachineEnabled === true;
+}

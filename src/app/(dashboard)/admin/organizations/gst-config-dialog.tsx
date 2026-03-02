@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Globe } from "lucide-react";
+import { Loader2, Globe, Scale } from "lucide-react";
 import { INDIAN_STATES } from "@/lib/gst/constants";
 
 interface GSTConfigDialogProps {
@@ -39,6 +39,11 @@ export function OrgSettingsDialog({
   const [multiUnitEnabled, setMultiUnitEnabled] = useState(false);
   const [multiBranchEnabled, setMultiBranchEnabled] = useState(false);
   const [isMobileShopModuleEnabled, setIsMobileShopModuleEnabled] = useState(false);
+  const [isWeighMachineEnabled, setIsWeighMachineEnabled] = useState(false);
+  const [weighMachineBarcodePrefix, setWeighMachineBarcodePrefix] = useState("77");
+  const [weighMachineProductCodeLen, setWeighMachineProductCodeLen] = useState(5);
+  const [weighMachineWeightDigits, setWeighMachineWeightDigits] = useState(5);
+  const [weighMachineDecimalPlaces, setWeighMachineDecimalPlaces] = useState(3);
   const [gstin, setGstin] = useState("");
   const [gstStateCode, setGstStateCode] = useState("");
 
@@ -63,6 +68,11 @@ export function OrgSettingsDialog({
           setMultiUnitEnabled(data.multiUnitEnabled || false);
           setMultiBranchEnabled(data.multiBranchEnabled || false);
           setIsMobileShopModuleEnabled(data.isMobileShopModuleEnabled || false);
+          setIsWeighMachineEnabled(data.isWeighMachineEnabled || false);
+          setWeighMachineBarcodePrefix(data.weighMachineBarcodePrefix || "77");
+          setWeighMachineProductCodeLen(data.weighMachineProductCodeLen || 5);
+          setWeighMachineWeightDigits(data.weighMachineWeightDigits || 5);
+          setWeighMachineDecimalPlaces(data.weighMachineDecimalPlaces || 3);
           setGstin(data.gstin || "");
           setGstStateCode(data.gstStateCode || "");
           setSaudiEInvoiceEnabled(data.saudiEInvoiceEnabled || false);
@@ -138,6 +148,11 @@ export function OrgSettingsDialog({
           multiUnitEnabled,
           multiBranchEnabled,
           isMobileShopModuleEnabled,
+          isWeighMachineEnabled,
+          weighMachineBarcodePrefix,
+          weighMachineProductCodeLen,
+          weighMachineWeightDigits,
+          weighMachineDecimalPlaces,
           gstin: gstEnabled ? gstin : null,
           gstStateCode: gstEnabled ? gstStateCode : null,
           saudiEInvoiceEnabled,
@@ -309,6 +324,86 @@ export function OrgSettingsDialog({
                 onCheckedChange={setIsMobileShopModuleEnabled}
               />
             </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="space-y-0.5">
+                <Label htmlFor="isWeighMachineEnabled" className="flex items-center gap-2">
+                  <Scale className="h-4 w-4" />
+                  Enable Weigh Machine
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Decode EAN-13 weight barcodes from weigh machines at POS/invoice screen
+                </p>
+              </div>
+              <Switch
+                id="isWeighMachineEnabled"
+                checked={isWeighMachineEnabled}
+                onCheckedChange={setIsWeighMachineEnabled}
+              />
+            </div>
+
+            {isWeighMachineEnabled && (
+              <div className="space-y-4 pl-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="weighMachineBarcodePrefix">Barcode Prefix</Label>
+                    <Input
+                      id="weighMachineBarcodePrefix"
+                      value={weighMachineBarcodePrefix}
+                      onChange={(e) => setWeighMachineBarcodePrefix(e.target.value)}
+                      placeholder="77"
+                      maxLength={4}
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="weighMachineProductCodeLen">Product Code Length</Label>
+                    <Input
+                      id="weighMachineProductCodeLen"
+                      type="number"
+                      min={1}
+                      max={8}
+                      value={weighMachineProductCodeLen}
+                      onChange={(e) => setWeighMachineProductCodeLen(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="weighMachineWeightDigits">Weight Digits</Label>
+                    <Input
+                      id="weighMachineWeightDigits"
+                      type="number"
+                      min={1}
+                      max={8}
+                      value={weighMachineWeightDigits}
+                      onChange={(e) => setWeighMachineWeightDigits(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="weighMachineDecimalPlaces">Decimal Places</Label>
+                    <Input
+                      id="weighMachineDecimalPlaces"
+                      type="number"
+                      min={0}
+                      max={4}
+                      value={weighMachineDecimalPlaces}
+                      onChange={(e) => setWeighMachineDecimalPlaces(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div className="rounded-md bg-muted p-3">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Barcode preview</p>
+                  <p className="font-mono text-sm">
+                    <span className="text-blue-600">{weighMachineBarcodePrefix}</span>
+                    <span className="text-green-600">{"P".repeat(weighMachineProductCodeLen)}</span>
+                    <span className="text-orange-600">{"N".repeat(weighMachineWeightDigits - weighMachineDecimalPlaces)}{"D".repeat(weighMachineDecimalPlaces)}</span>
+                    <span className="text-slate-400">C</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    e.g. <span className="font-mono">{weighMachineBarcodePrefix}12345012501</span> → product <span className="font-mono">12345</span>, weight <span className="font-mono">1.250</span>
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between pt-4 border-t">
               <div className="space-y-0.5">

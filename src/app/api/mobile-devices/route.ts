@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       imei1, imei2, serialNumber, brand, model, color,
       storageCapacity, ram, networkStatus, conditionGrade,
       batteryHealthPercentage, includedAccessories,
-      productId, supplierId, costPrice, landedCost, sellingPrice,
+      productId, supplierId, costPrice, mrp, landedCost, sellingPrice,
       supplierWarrantyExpiry, customerWarrantyExpiry, notes, photoUrls,
       createProduct, productName, categoryId, unitId, hsnCode, gstRate,
     } = body;
@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
           productId: finalProductId,
           supplierId,
           costPrice,
+          mrp: mrp || 0,
           landedCost: landedCost || 0,
           sellingPrice: sellingPrice || 0,
           supplierWarrantyExpiry: supplierWarrantyExpiry ? new Date(supplierWarrantyExpiry) : null,

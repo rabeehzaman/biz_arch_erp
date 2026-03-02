@@ -78,6 +78,11 @@ export async function PUT(
       multiUnitEnabled,
       multiBranchEnabled,
       isMobileShopModuleEnabled,
+      isWeighMachineEnabled,
+      weighMachineBarcodePrefix,
+      weighMachineProductCodeLen,
+      weighMachineWeightDigits,
+      weighMachineDecimalPlaces,
       gstin,
       gstStateCode,
       saudiEInvoiceEnabled,
@@ -171,6 +176,11 @@ export async function PUT(
     if (multiUnitEnabled !== undefined) updateData.multiUnitEnabled = multiUnitEnabled;
     if (multiBranchEnabled !== undefined) updateData.multiBranchEnabled = multiBranchEnabled;
     if (isMobileShopModuleEnabled !== undefined) updateData.isMobileShopModuleEnabled = isMobileShopModuleEnabled;
+    if (isWeighMachineEnabled !== undefined) updateData.isWeighMachineEnabled = isWeighMachineEnabled;
+    if (weighMachineBarcodePrefix !== undefined) updateData.weighMachineBarcodePrefix = weighMachineBarcodePrefix || "77";
+    if (weighMachineProductCodeLen !== undefined) updateData.weighMachineProductCodeLen = Number(weighMachineProductCodeLen) || 5;
+    if (weighMachineWeightDigits !== undefined) updateData.weighMachineWeightDigits = Number(weighMachineWeightDigits) || 5;
+    if (weighMachineDecimalPlaces !== undefined) updateData.weighMachineDecimalPlaces = Number(weighMachineDecimalPlaces) || 3;
     if (gstin !== undefined) updateData.gstin = gstin || null;
     if (gstStateCode !== undefined) updateData.gstStateCode = gstStateCode || null;
 

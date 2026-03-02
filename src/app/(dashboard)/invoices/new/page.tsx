@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Scale } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
@@ -19,6 +19,8 @@ import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
+import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
+import { parseWeightBarcode, WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
 
 interface Customer {
   id: string;
@@ -37,6 +39,7 @@ interface Product {
   availableStock?: number;
   gstRate?: number;
   hsnCode?: string;
+  weighMachineCode?: string | null;
 }
 
 interface MobileDeviceOption {
@@ -95,6 +98,56 @@ export default function NewInvoicePage() {
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  const weighMachineEnabled = !!(session?.user as { isWeighMachineEnabled?: boolean })?.isWeighMachineEnabled;
+  const weighMachineConfig: WeighMachineConfig = {
+    prefix: (session?.user as { weighMachineBarcodePrefix?: string | null })?.weighMachineBarcodePrefix ?? "77",
+    productCodeLen: (session?.user as { weighMachineProductCodeLen?: number | null })?.weighMachineProductCodeLen ?? 5,
+    weightDigits: (session?.user as { weighMachineWeightDigits?: number | null })?.weighMachineWeightDigits ?? 5,
+    decimalPlaces: (session?.user as { weighMachineDecimalPlaces?: number | null })?.weighMachineDecimalPlaces ?? 3,
+  };
+
+  const handleWeightScan = useCallback((barcode: string) => {
+    const parsed = parseWeightBarcode(barcode, weighMachineConfig);
+    if (!parsed) return;
+
+    const product = products.find((p) => p.weighMachineCode === parsed.productCode);
+    if (!product) {
+      toast.error(`Product not found for weigh machine code: ${parsed.productCode}`);
+      return;
+    }
+
+    setLineItems((prev) => {
+      // Check if there's an existing line for this product with quantity 0
+      const existingIdx = prev.findIndex((i) => i.productId === product.id && i.quantity === 0);
+      if (existingIdx !== -1) {
+        return prev.map((item, idx) =>
+          idx === existingIdx ? { ...item, quantity: parsed.weightKg } : item
+        );
+      }
+      // Otherwise add a new line
+      return [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          productId: product.id,
+          quantity: parsed.weightKg,
+          unitId: product.unitId || "",
+          conversionFactor: 1,
+          unitPrice: Number(product.price),
+          discount: 0,
+          gstRate: Number(product.gstRate) || 0,
+          hsnCode: product.hsnCode || "",
+          vatRate: 15,
+          selectedImeis: [],
+        },
+      ];
+    });
+
+    toast.success(`${product.name} — ${parsed.weightKg} kg`);
+  }, [products, weighMachineConfig]);
+
+  useBarcodeScanner(handleWeightScan, weighMachineEnabled);
 
   // Focus quantity input for a specific line item
   const focusQuantity = useCallback((itemId: string) => {
@@ -475,6 +528,12 @@ export default function NewInvoicePage() {
                   </Button>
                 </CardAction>
               </CardHeader>
+              {weighMachineEnabled && (
+                <div className="mx-6 mb-3 flex items-center gap-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
+                  <Scale className="h-4 w-4 shrink-0" />
+                  Weigh Machine Active — scan barcode to add item
+                </div>
+              )}
               <CardContent className="p-0 border-t border-slate-200">
                 {/* Desktop Table Layout */}
                 <div className="hidden sm:block">

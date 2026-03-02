@@ -42,6 +42,7 @@ interface Product {
     gstRate: number | null;
     isService: boolean;
     isImeiTracked: boolean;
+    weighMachineCode: string | null;
     isActive: boolean;
     createdAt: string;
 }
@@ -75,6 +76,7 @@ export function ProductFormDialog({
         gstRate: "0",
         isService: false,
         isImeiTracked: false,
+        weighMachineCode: "",
     });
 
     useEffect(() => {
@@ -90,6 +92,7 @@ export function ProductFormDialog({
                 gstRate: productToEdit.gstRate?.toString() || "0",
                 isService: productToEdit.isService || false,
                 isImeiTracked: productToEdit.isImeiTracked || false,
+                weighMachineCode: productToEdit.weighMachineCode || "",
             });
             setFormErrors({});
         } else if (!open) {
@@ -124,6 +127,7 @@ export function ProductFormDialog({
             gstRate: parseFloat(formData.gstRate) || 0,
             isService: formData.isService,
             isImeiTracked: formData.isImeiTracked,
+            weighMachineCode: formData.weighMachineCode || null,
         };
 
         try {
@@ -176,6 +180,7 @@ export function ProductFormDialog({
             gstRate: "0",
             isService: false,
             isImeiTracked: false,
+            weighMachineCode: "",
         });
     };
 
@@ -331,6 +336,25 @@ export function ProductFormDialog({
                                     className="h-4 w-4 rounded border-gray-300"
                                 />
                                 <Label htmlFor="prod-isImeiTracked">Track by IMEI (individual device tracking)</Label>
+                            </div>
+                        )}
+
+                        {(session?.user as { isWeighMachineEnabled?: boolean })?.isWeighMachineEnabled && !formData.isService && (
+                            <div className="grid gap-2">
+                                <Label htmlFor="prod-weighMachineCode">Weigh Machine Code</Label>
+                                <Input
+                                    id="prod-weighMachineCode"
+                                    value={formData.weighMachineCode}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, weighMachineCode: e.target.value.replace(/\D/g, "") })
+                                    }
+                                    placeholder="e.g. 12345"
+                                    maxLength={(session?.user as { weighMachineProductCodeLen?: number })?.weighMachineProductCodeLen ?? 5}
+                                    className="font-mono"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Numeric code embedded in the weigh machine barcode label
+                                </p>
                             </div>
                         )}
 

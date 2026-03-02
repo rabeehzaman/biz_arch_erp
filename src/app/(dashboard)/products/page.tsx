@@ -53,6 +53,7 @@ interface Product {
   hsnCode: string | null;
   isService: boolean;
   isImeiTracked: boolean;
+  weighMachineCode: string | null;
   isActive: boolean;
   createdAt: string;
 }

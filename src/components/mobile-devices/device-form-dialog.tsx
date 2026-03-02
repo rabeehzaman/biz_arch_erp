@@ -64,6 +64,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     productId: "",
     supplierId: "",
     costPrice: "",
+    mrp: "",
     landedCost: "",
     sellingPrice: "",
     supplierWarrantyExpiry: "",
@@ -81,6 +82,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           storageCapacity: editDevice.storageCapacity || "", ram: editDevice.ram || "", networkStatus: editDevice.networkStatus || "UNLOCKED",
           conditionGrade: editDevice.conditionGrade || "NEW", batteryHealthPercentage: editDevice.batteryHealthPercentage ? String(editDevice.batteryHealthPercentage) : "",
           productId: editDevice.productId || "", supplierId: editDevice.supplierId || "", costPrice: editDevice.costPrice !== undefined ? String(editDevice.costPrice) : "",
+          mrp: editDevice.mrp !== undefined ? String(editDevice.mrp) : "",
           landedCost: editDevice.landedCost !== undefined ? String(editDevice.landedCost) : "", sellingPrice: editDevice.sellingPrice !== undefined ? String(editDevice.sellingPrice) : "",
           supplierWarrantyExpiry: editDevice.supplierWarrantyExpiry ? new Date(editDevice.supplierWarrantyExpiry).toISOString().split('T')[0] : "",
           customerWarrantyExpiry: editDevice.customerWarrantyExpiry ? new Date(editDevice.customerWarrantyExpiry).toISOString().split('T')[0] : "", notes: editDevice.notes || "",
@@ -99,7 +101,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
       imei1: "", imei2: "", serialNumber: "",
       color: "", storageCapacity: "", ram: "", networkStatus: "UNLOCKED",
       conditionGrade: "NEW", batteryHealthPercentage: "", productId: "",
-      supplierId: "", costPrice: "", landedCost: "", sellingPrice: "",
+      supplierId: "", costPrice: "", mrp: "", landedCost: "", sellingPrice: "",
       supplierWarrantyExpiry: "", customerWarrantyExpiry: "", notes: "", photoUrls: [],
     });
   };
@@ -158,6 +160,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           brand: (() => { const n = (products.find(p => p.id === formData.productId)?.name || editDevice?.brand || "").trim(); return n.split(" ")[0] || "Unknown"; })(),
           model: (() => { const n = (products.find(p => p.id === formData.productId)?.name || `${editDevice?.brand || ""} ${editDevice?.model || ""}`).trim(); const parts = n.split(" "); return parts.slice(1).join(" ") || n; })(),
           costPrice: parseFloat(formData.costPrice),
+          mrp: parseFloat(formData.mrp) || 0,
           landedCost: parseFloat(formData.landedCost) || 0,
           sellingPrice: parseFloat(formData.sellingPrice) || 0,
           batteryHealthPercentage: formData.batteryHealthPercentage ? parseInt(formData.batteryHealthPercentage) : null,
@@ -360,7 +363,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
             {/* Pricing — always 3 cols, shortened labels fit on small screens */}
             <fieldset className="space-y-3">
               <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pricing</legend>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="grid gap-1.5">
                   <Label>Cost *</Label>
                   <Input
@@ -371,6 +374,17 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
                     placeholder="0.00"
                     required
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>MRP</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    value={formData.mrp}
+                    onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+                    placeholder="0.00"
                   />
                 </div>
                 <div className="grid gap-1.5">
