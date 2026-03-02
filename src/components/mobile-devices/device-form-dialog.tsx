@@ -454,8 +454,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   {!photoUploading && (
                     <input
                       type="file"
-                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      accept="image/*"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handlePhotoUpload(file);
