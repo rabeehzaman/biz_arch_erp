@@ -111,16 +111,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     }
     setPhotoUploading(true);
     try {
-      // Use FileReader → base64 data URL to avoid iOS Safari binary upload issues
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsDataURL(file);
-      });
-
       const fd = new FormData();
-      fd.append("file", dataUrl);
+      fd.append("file", file);
       fd.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
       const res = await fetch(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
