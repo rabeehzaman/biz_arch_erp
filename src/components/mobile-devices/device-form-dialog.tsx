@@ -196,7 +196,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
       {/* "contents" on form removes it from flex layout so DialogHeader/Footer
           become direct children of the inner scrollable wrapper in DialogContent,
           enabling the built-in sticky top-0 / sticky bottom-0 on those components. */}
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-lg md:max-w-2xl">
         <form className="contents" onSubmit={handleSubmit}>
 
           <DialogHeader>
