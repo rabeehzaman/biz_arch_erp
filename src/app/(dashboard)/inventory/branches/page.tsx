@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Plus, Pencil, Trash2, Search, GitBranch, Warehouse, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, GitBranch, Warehouse, Loader2, Star } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,7 @@ interface WarehouseItem {
     code: string;
     address: string | null;
     isActive: boolean;
+    isDefault: boolean;
     branchId: string;
     branch: { id: string; name: string; code: string };
     _count: { stockLots: number; posSessions?: number };
@@ -178,6 +179,23 @@ function BranchesPageContent() {
             }
         } catch { toast.error("Failed to save warehouse"); }
         finally { setWarehouseSaving(false); }
+    };
+
+    const setDefaultWarehouse = async (id: string) => {
+        try {
+            const res = await fetch(`/api/warehouses/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isDefault: true }),
+            });
+            if (res.ok) {
+                toast.success("Default warehouse updated");
+                fetchWarehouses();
+            } else {
+                const d = await res.json();
+                toast.error(d.error || "Failed to update default warehouse");
+            }
+        } catch { toast.error("Failed to update default warehouse"); }
     };
 
     const deleteWarehouse = (id: string) => {
@@ -330,7 +348,7 @@ function BranchesPageContent() {
                                                         <TableHead>Name</TableHead>
                                                         <TableHead>Code</TableHead>
                                                         <TableHead>Branch</TableHead>
-                                                        <TableHead>Stock Lots</TableHead>
+                                                        <TableHead className="hidden sm:table-cell">Stock Lots</TableHead>
                                                         <TableHead>Status</TableHead>
                                                         <TableHead className="text-right">Actions</TableHead>
                                                     </TableRow>
@@ -338,16 +356,31 @@ function BranchesPageContent() {
                                                 <TableBody>
                                                     {filteredWarehouses.map((wh) => (
                                                         <TableRow key={wh.id}>
-                                                            <TableCell className="font-medium">{wh.name}</TableCell>
+                                                            <TableCell className="font-medium">
+                                                                <div className="flex items-center gap-2">
+                                                                    {wh.name}
+                                                                    {wh.isDefault && (
+                                                                        <Badge variant="secondary" className="text-xs">
+                                                                            <Star className="mr-1 h-3 w-3 fill-current" />
+                                                                            Default
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
                                                             <TableCell><Badge variant="outline">{wh.code}</Badge></TableCell>
                                                             <TableCell>{wh.branch.name}</TableCell>
-                                                            <TableCell>{wh._count.stockLots}</TableCell>
+                                                            <TableCell className="hidden sm:table-cell">{wh._count.stockLots}</TableCell>
                                                             <TableCell>
                                                                 <Badge variant={wh.isActive ? "default" : "secondary"}>
                                                                     {wh.isActive ? "Active" : "Inactive"}
                                                                 </Badge>
                                                             </TableCell>
                                                             <TableCell className="text-right">
+                                                                {!wh.isDefault && (
+                                                                    <Button variant="ghost" size="icon" title="Set as Default" onClick={() => setDefaultWarehouse(wh.id)}>
+                                                                        <Star className="h-4 w-4 text-slate-400" />
+                                                                    </Button>
+                                                                )}
                                                                 <Button variant="ghost" size="icon" onClick={() => openWarehouseDialog(wh)}>
                                                                     <Pencil className="h-4 w-4" />
                                                                 </Button>

@@ -236,6 +236,7 @@ export async function PUT(
                 name: "Main Warehouse",
                 code: "MW",
                 isActive: true,
+                isDefault: true,
               },
             });
 
@@ -257,6 +258,43 @@ export async function PUT(
                 skipDuplicates: true,
               });
             }
+          }
+
+          // Migrate existing NULL-warehouse/branch records to the first (oldest) warehouse
+          const targetWarehouse = await tx.warehouse.findFirst({
+            where: { organizationId: id, isActive: true },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, branchId: true },
+          });
+
+          if (targetWarehouse) {
+            await tx.stockLot.updateMany({
+              where: { organizationId: id, warehouseId: null },
+              data: { warehouseId: targetWarehouse.id },
+            });
+
+            await tx.openingStock.updateMany({
+              where: { organizationId: id, warehouseId: null },
+              data: { warehouseId: targetWarehouse.id },
+            });
+
+            await tx.invoice.updateMany({
+              where: { organizationId: id, branchId: null },
+              data: { branchId: targetWarehouse.branchId },
+            });
+            await tx.invoice.updateMany({
+              where: { organizationId: id, warehouseId: null },
+              data: { warehouseId: targetWarehouse.id },
+            });
+
+            await tx.purchaseInvoice.updateMany({
+              where: { organizationId: id, branchId: null },
+              data: { branchId: targetWarehouse.branchId },
+            });
+            await tx.purchaseInvoice.updateMany({
+              where: { organizationId: id, warehouseId: null },
+              data: { warehouseId: targetWarehouse.id },
+            });
           }
         }
 

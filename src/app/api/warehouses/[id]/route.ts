@@ -48,7 +48,7 @@ export async function PUT(
 
         const { id } = await params;
         const body = await request.json();
-        const { name, code, branchId, address, isActive } = body;
+        const { name, code, branchId, address, isActive, isDefault } = body;
 
         const organizationId = session.user.organizationId;
 
@@ -85,14 +85,25 @@ export async function PUT(
         if (branchId !== undefined) updateData.branchId = branchId;
         if (address !== undefined) updateData.address = address || null;
         if (isActive !== undefined) updateData.isActive = isActive;
+        if (isDefault === true) updateData.isDefault = true;
 
-        const warehouse = await prisma.warehouse.update({
-            where: { id },
-            data: updateData,
-            include: {
-                branch: { select: { id: true, name: true, code: true } },
-                _count: { select: { stockLots: true } },
-            },
+        const warehouse = await prisma.$transaction(async (tx) => {
+            // If setting as default, clear other defaults for this org first
+            if (isDefault === true) {
+                await tx.warehouse.updateMany({
+                    where: { organizationId, isDefault: true, id: { not: id } },
+                    data: { isDefault: false },
+                });
+            }
+
+            return tx.warehouse.update({
+                where: { id },
+                data: updateData,
+                include: {
+                    branch: { select: { id: true, name: true, code: true } },
+                    _count: { select: { stockLots: true } },
+                },
+            });
         });
 
         return NextResponse.json(warehouse);

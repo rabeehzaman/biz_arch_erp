@@ -56,6 +56,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { multiBranchEnabled: true },
+    });
+
+    if (org?.multiBranchEnabled && !warehouseId) {
+      return NextResponse.json(
+        { error: "Warehouse is required when multi-branch is enabled" },
+        { status: 400 }
+      );
+    }
+
     const parsedStockDate = new Date(stockDate);
     const parsedQuantity = parseFloat(quantity);
     const parsedUnitCost = parseFloat(unitCost) || 0;
