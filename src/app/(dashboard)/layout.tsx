@@ -1,42 +1,64 @@
-"use client";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import ClientDashboardLayout from "./client-layout";
+import { getOrgId } from "@/lib/auth-utils";
 
-import { SessionProvider, useSession } from "next-auth/react";
-import { Sidebar } from "@/components/sidebar";
-import { Header } from "@/components/header";
-import { SWRProvider } from "@/lib/swr-config";
-import { CommandPaletteProvider } from "@/components/command-palette/command-palette-provider";
-import { CommandPalette } from "@/components/command-palette/command-palette";
-import { LanguageProvider, useLanguage } from "@/lib/i18n";
-
-function DashboardInner({ children }: { children: React.ReactNode }) {
-  const { dir, isRTL } = useLanguage();
-
-  return (
-    <div className="flex h-screen overflow-hidden bg-slate-100" dir={dir}>
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-      </div>
-    </div>
-  );
-}
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  // Pre-fetch disabled sidebar items to prevent flicker
+  let disabledSidebarItems: string[] = [];
+  try {
+    if (session.user && session.user.role !== "superadmin") {
+      let organizationId;
+      try {
+        organizationId = getOrgId(session);
+      } catch (e) {
+        // ignore
+      }
+
+      if (organizationId) {
+        const setting = await prisma.setting.findFirst({
+          where: {
+            organizationId,
+            key: "disabledSidebarItems",
+          },
+        });
+
+        if (setting && setting.value) {
+          try {
+            disabledSidebarItems = JSON.parse(setting.value);
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Failed to pre-fetch disabled sidebar items:", error);
+  }
+
+  // Extract language from session to prevent en→ar flash
+  const initialLang = (session.user as { language?: string })?.language || "en";
+
   return (
-    <SessionProvider>
-      <SWRProvider>
-        <LanguageProvider>
-          <CommandPaletteProvider>
-            <DashboardInner>{children}</DashboardInner>
-            <CommandPalette />
-          </CommandPaletteProvider>
-        </LanguageProvider>
-      </SWRProvider>
-    </SessionProvider>
+    <ClientDashboardLayout
+      session={session}
+      swrFallback={{
+        "/api/sidebar": disabledSidebarItems,
+      }}
+      initialLang={initialLang}
+    >
+      {children}
+    </ClientDashboardLayout>
   );
 }

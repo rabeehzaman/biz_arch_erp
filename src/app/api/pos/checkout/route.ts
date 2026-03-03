@@ -124,11 +124,11 @@ export async function POST(request: NextRequest) {
       // ── 1. Validate POS session ──────────────────────────────────────
       const posSession = sessionId
         ? await tx.pOSSession.findFirst({
-            where: { id: sessionId, organizationId, status: "OPEN" },
-          })
+          where: { id: sessionId, organizationId, status: "OPEN" },
+        })
         : await tx.pOSSession.findFirst({
-            where: { organizationId, userId, status: "OPEN" },
-          });
+          where: { organizationId, userId, status: "OPEN" },
+        });
 
       if (!posSession) {
         throw new Error("NO_OPEN_SESSION");
@@ -470,7 +470,8 @@ export async function POST(request: NextRequest) {
           const cashBankInfo = await getDefaultCashBankAccount(
             tx,
             organizationId,
-            payment.method
+            payment.method,
+            posSession.branchId
           );
 
           if (arAccount && cashBankInfo) {

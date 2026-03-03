@@ -12,11 +12,12 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
-export function SWRProvider({ children }: { children: ReactNode }) {
+export function SWRProvider({ children, fallback }: { children: ReactNode, fallback?: Record<string, any> }) {
   return (
     <SWRConfig
       value={{
         fetcher,
+        fallback,
         revalidateOnFocus: true,
         revalidateOnReconnect: true,
         dedupingInterval: 2000,

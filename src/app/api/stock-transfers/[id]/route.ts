@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { Decimal } from "@prisma/client/runtime/client";
+import { consumeStockFIFO, restoreStockFromConsumptions } from "@/lib/inventory/fifo";
 
 export async function GET(
     request: NextRequest,
@@ -90,27 +91,30 @@ export async function PATCH(
                     });
 
                 case "ship":
-                    // Deduct stock from source warehouse
+                    // Deduct stock from source warehouse using fully compliant FIFO logic
                     for (const item of transfer.items) {
-                        const lots = await tx.stockLot.findMany({
-                            where: {
-                                productId: item.productId,
-                                warehouseId: transfer.sourceWarehouseId,
-                                remainingQuantity: { gt: 0 },
-                            },
-                            orderBy: { lotDate: "asc" },
+                        const fifoResult = await consumeStockFIFO(
+                            item.productId,
+                            item.quantity,
+                            item.id,
+                            transfer.transferDate,
+                            tx,
+                            organizationId,
+                            transfer.sourceWarehouseId,
+                            "STOCK_TRANSFER"
+                        );
+
+                        const newUnitCost = new Decimal(item.quantity).gt(0)
+                            ? fifoResult.totalCOGS.div(new Decimal(item.quantity))
+                            : new Decimal(0);
+
+                        await tx.stockTransferItem.update({
+                            where: { id: item.id },
+                            data: { unitCost: newUnitCost }
                         });
 
-                        let remaining = new Decimal(item.quantity);
-                        for (const lot of lots) {
-                            if (remaining.lte(0)) break;
-                            const deduct = Decimal.min(lot.remainingQuantity, remaining);
-                            await tx.stockLot.update({
-                                where: { id: lot.id },
-                                data: { remainingQuantity: { decrement: deduct } },
-                            });
-                            remaining = remaining.sub(deduct);
-                        }
+                        // Local override in runtime object in case 'complete' runs in same execution context
+                        item.unitCost = newUnitCost as any;
                     }
 
                     return tx.stockTransfer.update({
@@ -142,22 +146,10 @@ export async function PATCH(
                     });
 
                 case "cancel":
-                    // If IN_TRANSIT, restore source warehouse stock
+                    // If IN_TRANSIT, restore source warehouse stock from exact previously consumed stock lots
                     if (transfer.status === "IN_TRANSIT") {
                         for (const item of transfer.items) {
-                            await tx.stockLot.create({
-                                data: {
-                                    productId: item.productId,
-                                    organizationId,
-                                    sourceType: "STOCK_TRANSFER",
-                                    stockTransferId: id,
-                                    warehouseId: transfer.sourceWarehouseId,
-                                    lotDate: new Date(),
-                                    unitCost: item.unitCost,
-                                    initialQuantity: item.quantity,
-                                    remainingQuantity: item.quantity,
-                                },
-                            });
+                            await restoreStockFromConsumptions(item.id, tx, "STOCK_TRANSFER");
                         }
                     }
 
@@ -174,6 +166,7 @@ export async function PATCH(
                                 stockTransferId: id,
                                 warehouseId: transfer.destinationWarehouseId,
                                 productId: item.productId,
+                                sourceType: "STOCK_TRANSFER",
                             },
                         });
                         const totalRemaining = destLots.reduce(
@@ -191,24 +184,12 @@ export async function PATCH(
                     for (const item of transfer.items) {
                         // Zero out destination lots
                         await tx.stockLot.updateMany({
-                            where: { stockTransferId: id, warehouseId: transfer.destinationWarehouseId, productId: item.productId },
+                            where: { stockTransferId: id, warehouseId: transfer.destinationWarehouseId, productId: item.productId, sourceType: "STOCK_TRANSFER" },
                             data: { remainingQuantity: 0 },
                         });
 
-                        // Restore source lots
-                        await tx.stockLot.create({
-                            data: {
-                                productId: item.productId,
-                                organizationId,
-                                sourceType: "STOCK_TRANSFER",
-                                stockTransferId: id,
-                                warehouseId: transfer.sourceWarehouseId,
-                                lotDate: new Date(),
-                                unitCost: item.unitCost,
-                                initialQuantity: item.quantity,
-                                remainingQuantity: item.quantity,
-                            },
-                        });
+                        // Restore exact consumptions back to source original stock lots
+                        await restoreStockFromConsumptions(item.id, tx, "STOCK_TRANSFER");
                     }
 
                     return tx.stockTransfer.update({

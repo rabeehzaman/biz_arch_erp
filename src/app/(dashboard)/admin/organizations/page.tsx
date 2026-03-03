@@ -31,7 +31,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, ChevronRight } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { PageAnimation } from "@/components/ui/page-animation";
 
@@ -50,7 +49,6 @@ interface Organization {
 }
 
 export default function OrganizationsPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,13 +86,8 @@ export default function OrganizationsPage() {
   }, []);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (session?.user?.role !== "superadmin") {
-      router.push("/");
-      return;
-    }
     fetchOrganizations();
-  }, [session, status, router, fetchOrganizations]);
+  }, [fetchOrganizations]);
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -174,10 +167,6 @@ export default function OrganizationsPage() {
       setCreatingUser(false);
     }
   };
-
-  if (session?.user?.role !== "superadmin") {
-    return null;
-  }
 
   return (
     <PageAnimation>

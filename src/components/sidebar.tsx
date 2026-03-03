@@ -47,7 +47,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import { useLanguage } from "@/lib/i18n";
 
@@ -390,21 +390,7 @@ export function Sidebar() {
 
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { isRTL } = useLanguage();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <Button variant="ghost" size="icon" className="md:hidden">
-        <Menu className="h-5 w-5" />
-        <span className="sr-only">Toggle menu</span>
-      </Button>
-    );
-  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

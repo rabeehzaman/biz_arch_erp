@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +14,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw } from "lucide-react";
 import { OrgSettingsDialog } from "../gst-config-dialog";
 import { SidebarConfigDialog } from "../sidebar-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -36,7 +35,6 @@ interface OrganizationDetails {
 }
 
 export default function OrganizationDetailsPage() {
-    const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
@@ -61,6 +59,12 @@ export default function OrganizationDetailsPage() {
     const [resetError, setResetError] = useState("");
     const [resetSuccess, setResetSuccess] = useState("");
 
+    // Recalculate state
+    const [recalcOpen, setRecalcOpen] = useState(false);
+    const [isRecalculating, setIsRecalculating] = useState(false);
+    const [recalcError, setRecalcError] = useState("");
+    const [recalcSuccess, setRecalcSuccess] = useState("");
+
     const fetchOrganization = useCallback(async () => {
         try {
             const res = await fetch(`/api/admin/organizations/${id}`);
@@ -78,13 +82,8 @@ export default function OrganizationDetailsPage() {
     }, [id]);
 
     useEffect(() => {
-        if (status === "loading") return;
-        if (session?.user?.role !== "superadmin") {
-            router.push("/");
-            return;
-        }
         fetchOrganization();
-    }, [session, status, router, fetchOrganization]);
+    }, [fetchOrganization]);
 
     const handleDeleteOrg = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -133,9 +132,28 @@ export default function OrganizationDetailsPage() {
         }
     };
 
-    if (session?.user?.role !== "superadmin") {
-        return null;
-    }
+    const handleRecalculateFIFO = async () => {
+        setRecalcError("");
+        setRecalcSuccess("");
+        setIsRecalculating(true);
+        try {
+            const res = await fetch(`/api/admin/organizations/${id}/recalculate-fifo`, {
+                method: "POST",
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setRecalcSuccess(`Successfully recalculated FIFO for ${data.productsProcessed} products.`);
+                setRecalcOpen(false);
+            } else {
+                const data = await res.json();
+                setRecalcError(data.error || "Failed to recalculate FIFO");
+            }
+        } catch {
+            setRecalcError("Failed to recalculate FIFO");
+        } finally {
+            setIsRecalculating(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -246,6 +264,39 @@ export default function OrganizationDetailsPage() {
                                     </div>
                                 </div>
                                 <Button variant="outline" onClick={() => setSidebarConfigOpen(true)}>Configure</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="md:col-span-2">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Wrench className="h-5 w-5" />
+                                Maintenance Utilities
+                            </CardTitle>
+                            <CardDescription>Tools to ensure data integrity for this organization</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {recalcSuccess && (
+                                <div className="text-sm font-medium text-green-700 bg-green-50 p-3 rounded-md border border-green-200">
+                                    {recalcSuccess}
+                                </div>
+                            )}
+                            {recalcError && (
+                                <div className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                                    {recalcError}
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between flex-wrap gap-4 pt-2">
+                                <div className="max-w-[70%]">
+                                    <h4 className="font-semibold text-sm text-foreground">Recalculate FIFO Inventory</h4>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Rebuilds the entire Cost of Goods Sold (COGS) logic for all products chronologically. This fixes accounting irregularities caused by deep backdated changes, but may take some time depending on data volume.
+                                    </p>
+                                </div>
+                                <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50" onClick={() => setRecalcOpen(true)}>
+                                    Recalculate FIFO
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -395,6 +446,30 @@ export default function OrganizationDetailsPage() {
                             <Button variant="destructive" onClick={() => handleReset("complete_reset")} disabled={isResetting}>
                                 {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
                                 Confirm Full Reset
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog open={recalcOpen} onOpenChange={(open) => !open && !isRecalculating && setRecalcOpen(false)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Recalculate FIFO Inventory?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will reprocess all inventory stock consumptions to fix COGS calculation discrepancies.
+                                This operation is system intensive and might take up to a minute depending on the organization scale.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        {recalcError && (
+                            <div className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                                {recalcError}
+                            </div>
+                        )}
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isRecalculating}>Cancel</AlertDialogCancel>
+                            <Button onClick={handleRecalculateFIFO} disabled={isRecalculating}>
+                                {isRecalculating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                Start Recalculation
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>

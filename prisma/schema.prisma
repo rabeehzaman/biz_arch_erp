@@ -1032,8 +1032,11 @@ model StockLotConsumption {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  invoiceItemId String
-  invoiceItem   InvoiceItem @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
+  invoiceItemId String?
+  invoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
+
+  stockTransferItemId String?
+  stockTransferItem   StockTransferItem? @relation(fields: [stockTransferItemId], references: [id], onDelete: Cascade)
 
   quantityConsumed Decimal @db.Decimal(10, 2)
   unitCost         Decimal @db.Decimal(10, 2)
@@ -1043,6 +1046,7 @@ model StockLotConsumption {
 
   @@index([stockLotId])
   @@index([invoiceItemId])
+  @@index([stockTransferItemId])
   @@index([organizationId])
   @@map("stock_lot_consumptions")
 }
@@ -1669,6 +1673,8 @@ model StockTransferItem {
   notes    String?
 
   createdAt DateTime @default(now())
+
+  lotConsumptions StockLotConsumption[]
 
   @@index([stockTransferId])
   @@index([organizationId])

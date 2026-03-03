@@ -177,11 +177,12 @@ export async function calculateFIFOConsumption(
 export async function consumeStockFIFO(
   productId: string,
   quantityNeeded: Decimal | number,
-  invoiceItemId: string,
+  referenceId: string,
   asOfDate: Date,
   tx: PrismaTransaction,
   organizationId?: string,
-  warehouseId?: string | null
+  warehouseId?: string | null,
+  referenceType: "INVOICE" | "STOCK_TRANSFER" = "INVOICE"
 ): Promise<FIFOConsumptionResult> {
   const qty =
     quantityNeeded instanceof Decimal
@@ -227,11 +228,15 @@ export async function consumeStockFIFO(
     // Create consumption record
     const consumptionData: any = {
       stockLotId: consumption.lotId,
-      invoiceItemId,
       quantityConsumed: consumption.quantity,
       unitCost: consumption.unitCost,
       totalCost: consumption.totalCost,
     };
+    if (referenceType === "INVOICE") {
+      consumptionData.invoiceItemId = referenceId;
+    } else {
+      consumptionData.stockTransferItemId = referenceId;
+    }
     if (organizationId) consumptionData.organizationId = organizationId;
 
     await tx.stockLotConsumption.create({
@@ -289,12 +294,17 @@ export async function consumeStockFIFO(
  * Restore stock from consumptions (used when deleting/editing invoices)
  */
 export async function restoreStockFromConsumptions(
-  invoiceItemId: string,
-  tx: PrismaTransaction
+  referenceId: string,
+  tx: PrismaTransaction,
+  referenceType: "INVOICE" | "STOCK_TRANSFER" = "INVOICE"
 ): Promise<void> {
-  // Get all consumptions for this invoice item
+  // Get all consumptions for this item
+  const whereClause = referenceType === "INVOICE"
+    ? { invoiceItemId: referenceId }
+    : { stockTransferItemId: referenceId };
+
   const consumptions = await tx.stockLotConsumption.findMany({
-    where: { invoiceItemId },
+    where: whereClause,
   });
 
   // Restore quantity to each lot
@@ -311,7 +321,7 @@ export async function restoreStockFromConsumptions(
 
   // Delete the consumption records
   await tx.stockLotConsumption.deleteMany({
-    where: { invoiceItemId },
+    where: whereClause,
   });
 }
 
@@ -412,7 +422,7 @@ export async function recalculateFromDate(
   triggeredBy?: string,
   organizationId?: string
 ): Promise<void> {
-  // OPTIMIZATION: Early exit if no sales to recalculate
+  // OPTIMIZATION: Early exit if no sales or transfers to recalculate
   const salesCount = await tx.invoiceItem.count({
     where: {
       productId,
@@ -420,8 +430,29 @@ export async function recalculateFromDate(
     },
   });
 
-  if (salesCount === 0) {
-    // No sales from this date onwards, nothing to recalculate
+  const transfersCount = await tx.stockTransferItem.count({
+    where: {
+      productId,
+      stockTransfer: { transferDate: { gte: fromDate }, status: { in: ["APPROVED", "IN_TRANSIT", "COMPLETED", "REVERSED", "CANCELLED"] } },
+    }
+  });
+
+  const debitNotesCount = await tx.debitNoteItem.count({
+    where: {
+      productId,
+      debitNote: { issueDate: { gte: fromDate } },
+    }
+  });
+
+  const creditNotesCount = await tx.creditNoteItem.count({
+    where: {
+      productId,
+      creditNote: { issueDate: { gte: fromDate } },
+    }
+  });
+
+  if (salesCount === 0 && transfersCount === 0 && debitNotesCount === 0 && creditNotesCount === 0) {
+    // No sales, transfers, debit notes, or credit notes from this date onwards, nothing to recalculate
     return;
   }
 
@@ -435,6 +466,20 @@ export async function recalculateFromDate(
           invoiceItem: {
             include: {
               invoice: true,
+            },
+          },
+          stockTransferItem: {
+            include: {
+              stockTransfer: true,
+            },
+          },
+        },
+      },
+      debitNoteConsumptions: {
+        include: {
+          debitNoteItem: {
+            include: {
+              debitNote: true,
             },
           },
         },
@@ -455,17 +500,81 @@ export async function recalculateFromDate(
     orderBy: { invoice: { issueDate: "asc" } },
   });
 
+  // 2b. Get all stock transfer items for this product from fromDate onwards
+  const transferItems = await tx.stockTransferItem.findMany({
+    where: {
+      productId,
+      stockTransfer: { transferDate: { gte: fromDate }, status: { in: ["APPROVED", "IN_TRANSIT", "COMPLETED"] } }
+    },
+    include: {
+      stockTransfer: true,
+      lotConsumptions: true
+    },
+    orderBy: { stockTransfer: { transferDate: "asc" } },
+  });
+
+  // 2c. Get all debit note items for this product from fromDate onwards
+  const debitNoteItems = await tx.debitNoteItem.findMany({
+    where: {
+      productId,
+      debitNote: { issueDate: { gte: fromDate } }
+    },
+    include: {
+      debitNote: true,
+      lotConsumptions: true
+    },
+    orderBy: { debitNote: { issueDate: "asc" } }
+  });
+
+  // 2d. Get all credit note items for this product from fromDate onwards
+  const creditNoteItems = await tx.creditNoteItem.findMany({
+    where: {
+      productId,
+      creditNote: { issueDate: { gte: fromDate } }
+    },
+    include: {
+      creditNote: true,
+      stockLot: true
+    },
+    orderBy: { creditNote: { issueDate: "asc" } }
+  });
+
+  // Merge into a single timeline sorted by date
+  type TimelineEvent =
+    | { type: "INVOICE", item: typeof salesItems[0], date: Date }
+    | { type: "STOCK_TRANSFER", item: typeof transferItems[0], date: Date }
+    | { type: "DEBIT_NOTE", item: typeof debitNoteItems[0], date: Date }
+    | { type: "CREDIT_NOTE", item: typeof creditNoteItems[0], date: Date };
+
+  const events: TimelineEvent[] = [
+    ...salesItems.map(item => ({ type: "INVOICE" as const, item, date: item.invoice.issueDate })),
+    ...transferItems.map(item => ({ type: "STOCK_TRANSFER" as const, item, date: item.stockTransfer.transferDate })),
+    ...debitNoteItems.map(item => ({ type: "DEBIT_NOTE" as const, item, date: item.debitNote.issueDate })),
+    ...creditNoteItems.map(item => ({ type: "CREDIT_NOTE" as const, item, date: item.creditNote.issueDate }))
+  ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
   // 3. Reset all lot quantities
   for (const lot of allLots) {
     if (lot.lotDate < fromDate) {
       // Calculate how much was consumed before fromDate
       const preConsumption = lot.consumptions
-        .filter((c) => c.invoiceItem.invoice.issueDate < fromDate)
+        .filter((c) => {
+          if (c.invoiceItem?.invoice?.issueDate) return c.invoiceItem.invoice.issueDate < fromDate;
+          if (c.stockTransferItem?.stockTransfer?.transferDate) return c.stockTransferItem.stockTransfer.transferDate < fromDate;
+          return false;
+        })
         .reduce((sum, c) => sum.add(c.quantityConsumed), new Decimal(0));
+
+      const preDebitNoteConsumption = lot.debitNoteConsumptions
+        .filter((c) => {
+          if (c.debitNoteItem?.debitNote?.issueDate) return c.debitNoteItem.debitNote.issueDate < fromDate;
+          return false;
+        })
+        .reduce((sum, c) => sum.add(c.quantityReturned), new Decimal(0));
 
       await tx.stockLot.update({
         where: { id: lot.id },
-        data: { remainingQuantity: lot.initialQuantity.sub(preConsumption) },
+        data: { remainingQuantity: lot.initialQuantity.sub(preConsumption).sub(preDebitNoteConsumption) },
       });
     } else {
       // Reset to full initial quantity
@@ -478,59 +587,172 @@ export async function recalculateFromDate(
 
   // 4. Delete all consumptions from fromDate onwards
   const itemIds = salesItems.map((item) => item.id);
+  const transferItemIds = transferItems.map((t) => t.id);
+  const debitNoteItemIds = debitNoteItems.map((dn) => dn.id);
+
   if (itemIds.length > 0) {
     await tx.stockLotConsumption.deleteMany({
       where: { invoiceItemId: { in: itemIds } },
     });
   }
+  if (transferItemIds.length > 0) {
+    await tx.stockLotConsumption.deleteMany({
+      where: { stockTransferItemId: { in: transferItemIds } },
+    });
+  }
+  if (debitNoteItemIds.length > 0) {
+    await tx.debitNoteLotConsumption.deleteMany({
+      where: { debitNoteItemId: { in: debitNoteItemIds } },
+    });
+  }
 
-  // 5. Re-process each sale in date order and log cost changes
+  // 5. Re-process each event in date order and log cost changes
   const affectedInvoiceIds = new Set<string>();
 
-  for (const item of salesItems) {
+  for (const event of events) {
+    const item = event.item;
     if (!item.productId) continue;
 
-    const oldCOGS = item.costOfGoodsSold;
+    if (event.type === "INVOICE") {
+      const saleItem = item as typeof salesItems[0];
+      const oldCOGS = saleItem.costOfGoodsSold;
+      const baseQty = new Decimal(saleItem.quantity).mul(new Decimal(saleItem.conversionFactor || 1));
 
-    // Apply conversionFactor to get base quantity (e.g. 2 BOX * 10 = 20 PCS)
-    const baseQty = new Decimal(item.quantity).mul(new Decimal(item.conversionFactor || 1));
+      const fifoResult = await consumeStockFIFO(
+        saleItem.productId!,
+        baseQty,
+        saleItem.id,
+        event.date,
+        tx,
+        organizationId,
+        saleItem.invoice.warehouseId || null,
+        "INVOICE"
+      );
 
-    const fifoResult = await consumeStockFIFO(
-      item.productId,
-      baseQty,
-      item.id,
-      item.invoice.issueDate,
-      tx,
-      organizationId,
-      item.invoice.warehouseId || null
-    );
+      const newCOGS = fifoResult.totalCOGS;
 
-    const newCOGS = fifoResult.totalCOGS;
-
-    // Update invoice item COGS
-    await tx.invoiceItem.update({
-      where: { id: item.id },
-      data: { costOfGoodsSold: newCOGS },
-    });
-
-    // Log cost change if COGS changed
-    if (!oldCOGS.equals(newCOGS)) {
-      affectedInvoiceIds.add(item.invoice.id);
-
-      const auditData: any = {
-        productId: item.productId,
-        invoiceItemId: item.id,
-        oldCOGS,
-        newCOGS,
-        changeAmount: newCOGS.sub(oldCOGS),
-        changeReason,
-        triggeredBy: triggeredBy || null,
-      };
-      if (organizationId) auditData.organizationId = organizationId;
-
-      await tx.costAuditLog.create({
-        data: auditData,
+      await tx.invoiceItem.update({
+        where: { id: saleItem.id },
+        data: { costOfGoodsSold: newCOGS },
       });
+
+      if (!oldCOGS.equals(newCOGS)) {
+        affectedInvoiceIds.add(saleItem.invoice.id);
+        const auditData: any = {
+          productId: saleItem.productId,
+          invoiceItemId: saleItem.id,
+          oldCOGS,
+          newCOGS,
+          changeAmount: newCOGS.sub(oldCOGS),
+          changeReason,
+          triggeredBy: triggeredBy || null,
+        };
+        if (organizationId) auditData.organizationId = organizationId;
+
+        await tx.costAuditLog.create({ data: auditData });
+      }
+    } else if (event.type === "STOCK_TRANSFER") {
+      const stItem = item as typeof transferItems[0];
+      const baseQty = new Decimal(stItem.quantity); // Transfers don't have conversion factor in schema right now
+
+      const fifoResult = await consumeStockFIFO(
+        stItem.productId,
+        baseQty,
+        stItem.id,
+        event.date,
+        tx,
+        organizationId,
+        stItem.stockTransfer.sourceWarehouseId,
+        "STOCK_TRANSFER"
+      );
+
+      const newTotalCost = fifoResult.totalCOGS;
+      const newUnitCost = baseQty.gt(0) ? newTotalCost.div(baseQty) : new Decimal(0);
+
+      await tx.stockTransferItem.update({
+        where: { id: stItem.id },
+        data: { unitCost: newUnitCost },
+      });
+
+      // Update the destination stock lot's unit cost! This is the multi-tier cost propagation!
+      if (stItem.stockTransfer.status === "COMPLETED") {
+        await tx.stockLot.updateMany({
+          where: {
+            stockTransferId: stItem.stockTransferId,
+            warehouseId: stItem.stockTransfer.destinationWarehouseId,
+            productId: stItem.productId,
+            sourceType: "STOCK_TRANSFER"
+          },
+          data: { unitCost: newUnitCost }
+        });
+      }
+    } else if (event.type === "DEBIT_NOTE") {
+      const dnItem = item as typeof debitNoteItems[0];
+      const baseQty = new Decimal(dnItem.quantity).mul(new Decimal(dnItem.conversionFactor || 1));
+
+      const result = await calculateFIFOConsumption(
+        dnItem.productId,
+        baseQty,
+        event.date,
+        tx,
+        dnItem.debitNote.warehouseId || null
+      );
+
+      for (const consumption of result.consumptions) {
+        const consumptionData: any = {
+          debitNoteItemId: dnItem.id,
+          stockLotId: consumption.lotId,
+          quantityReturned: consumption.quantity,
+          unitCost: consumption.unitCost,
+          totalCost: consumption.totalCost,
+        };
+        if (organizationId) consumptionData.organizationId = organizationId;
+
+        await tx.debitNoteLotConsumption.create({
+          data: consumptionData
+        });
+
+        await tx.stockLot.update({
+          where: { id: consumption.lotId },
+          data: { remainingQuantity: { decrement: consumption.quantity } }
+        });
+      }
+    } else if (event.type === "CREDIT_NOTE") {
+      const cnItem = item as typeof creditNoteItems[0];
+      if (cnItem.stockLot) {
+        let newUnitCost = new Decimal(0);
+
+        // Try to get updated unit cost from the original invoice item, whose COGS was just correctly recalculated earlier in this timeline!
+        if (cnItem.invoiceItemId) {
+          const invoiceItem = await tx.invoiceItem.findUnique({
+            where: { id: cnItem.invoiceItemId },
+            select: { costOfGoodsSold: true, quantity: true }
+          });
+          if (invoiceItem && invoiceItem.quantity.gt(0)) {
+            newUnitCost = invoiceItem.costOfGoodsSold.div(invoiceItem.quantity);
+          }
+        }
+
+        // Fallback to originalCOGS if present
+        if (newUnitCost.lte(0) && cnItem.originalCOGS && new Decimal(cnItem.originalCOGS).gt(0)) {
+          newUnitCost = new Decimal(cnItem.originalCOGS);
+        }
+
+        // Fallback to product cost
+        if (newUnitCost.lte(0) && cnItem.productId) {
+          const product = await tx.product.findUnique({
+            where: { id: cnItem.productId },
+            select: { cost: true }
+          });
+          if (product) newUnitCost = product.cost;
+        }
+
+        // Update the stock lot that this Credit Note generated
+        await tx.stockLot.update({
+          where: { id: cnItem.stockLot.id },
+          data: { unitCost: newUnitCost }
+        });
+      }
     }
   }
 
@@ -664,19 +886,48 @@ export async function updateStockLotCost(
       },
     });
 
-    // Get all consumptions for this invoice item to recalculate total COGS
-    const allConsumptions = await tx.stockLotConsumption.findMany({
-      where: { invoiceItemId: consumption.invoiceItemId },
-    });
+    if (consumption.invoiceItemId) {
+      // Get all consumptions for this invoice item to recalculate total COGS
+      const allConsumptions = await tx.stockLotConsumption.findMany({
+        where: { invoiceItemId: consumption.invoiceItemId },
+      });
 
-    const totalCOGS = allConsumptions.reduce(
-      (sum, c) => sum.add(c.totalCost),
-      new Decimal(0)
-    );
+      const totalCOGS = allConsumptions.reduce(
+        (sum, c) => sum.add(c.totalCost),
+        new Decimal(0)
+      );
 
-    await tx.invoiceItem.update({
-      where: { id: consumption.invoiceItemId },
-      data: { costOfGoodsSold: totalCOGS },
-    });
+      await tx.invoiceItem.update({
+        where: { id: consumption.invoiceItemId },
+        data: { costOfGoodsSold: totalCOGS },
+      });
+    } else if (consumption.stockTransferItemId) {
+      const allConsumptions = await tx.stockLotConsumption.findMany({
+        where: { stockTransferItemId: consumption.stockTransferItemId },
+      });
+
+      const totalCost = allConsumptions.reduce(
+        (sum, c) => sum.add(c.totalCost),
+        new Decimal(0)
+      );
+
+      const stItem = await tx.stockTransferItem.findUnique({ where: { id: consumption.stockTransferItemId } });
+      if (stItem) {
+        const newUnitCost = stItem.quantity.gt(0) ? totalCost.div(stItem.quantity) : new Decimal(0);
+        await tx.stockTransferItem.update({
+          where: { id: consumption.stockTransferItemId },
+          data: { unitCost: newUnitCost }
+        });
+
+        await tx.stockLot.updateMany({
+          where: {
+            stockTransferId: stItem.stockTransferId,
+            productId: stItem.productId,
+            sourceType: "STOCK_TRANSFER"
+          },
+          data: { unitCost: newUnitCost }
+        });
+      }
+    }
   }
 }

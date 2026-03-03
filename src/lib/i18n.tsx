@@ -100,9 +100,9 @@ const LanguageContext = createContext<LanguageContextValue>({
     isRTL: false,
 });
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
+export function LanguageProvider({ children, initialLang }: { children: React.ReactNode; initialLang?: string }) {
     const { data: session } = useSession();
-    const lang = ((session?.user as { language?: string })?.language || "en") as Language;
+    const lang = ((session?.user as { language?: string })?.language || initialLang || "en") as Language;
 
     const value = useMemo<LanguageContextValue>(() => ({
         lang,
