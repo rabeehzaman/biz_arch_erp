@@ -2,6 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PosReceipt, type ReceiptData } from "@/components/pos/receipt";
 
+export { smartPrintReceipt } from "@/lib/electron-print";
+
 export function generateReceiptHtml(data: ReceiptData): string {
   const markup = renderToStaticMarkup(createElement(PosReceipt, { data }));
 

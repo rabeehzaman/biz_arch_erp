@@ -36,7 +36,7 @@ import { CustomerSelect } from "@/components/pos/customer-select";
 import { PaymentPanel } from "@/components/pos/payment-panel";
 import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
-import { generateReceiptHtml, printReceipt } from "@/lib/print-receipt";
+import { smartPrintReceipt } from "@/lib/electron-print";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -397,8 +397,7 @@ function POSTerminalContent() {
       // Auto-print receipt (fire-and-forget)
       if (receiptPrintingEnabled) {
         try {
-          const html = generateReceiptHtml(receiptData);
-          printReceipt(html);
+          smartPrintReceipt(receiptData);
         } catch (e) {
           console.error("Receipt printing failed:", e);
         }
@@ -510,8 +509,7 @@ function POSTerminalContent() {
         onBackToSessions={() => router.push("/pos")}
         onReprintReceipt={lastReceiptData ? () => {
           try {
-            const html = generateReceiptHtml(lastReceiptData);
-            printReceipt(html);
+            smartPrintReceipt(lastReceiptData);
           } catch (e) {
             console.error("Receipt reprint failed:", e);
           }
