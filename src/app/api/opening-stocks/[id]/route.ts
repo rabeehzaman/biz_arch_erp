@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
+import { recalculateFromDate, getRecalculationStartDate, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 export async function GET(
@@ -112,8 +112,11 @@ export async function PUT(
         data: { cost: newUnitCost },
       });
 
-      // Recalculate if date changed or quantity/cost changed
-      const recalcDate = getRecalculationStartDate(oldDate, newDate);
+      // Recalculate if date changed or quantity/cost changed, or if zero COGS items exist
+      const zeroCOGSDate = await hasZeroCOGSItems(existingOpeningStock.productId, tx);
+      let recalcDate = getRecalculationStartDate(oldDate, newDate);
+      if (zeroCOGSDate && zeroCOGSDate < recalcDate) recalcDate = zeroCOGSDate;
+
       await recalculateFromDate(existingOpeningStock.productId, recalcDate, tx, "recalculation", undefined, organizationId);
 
       // Sync Journal Entry

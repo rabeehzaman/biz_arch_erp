@@ -25,6 +25,8 @@ import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { toast } from "sonner";
 import { Loader2, Upload, X } from "lucide-react";
 import { ImeiCameraScanner } from "./imei-camera-scanner";
+import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
+import { useSession } from "next-auth/react";
 
 interface Supplier {
   id: string;
@@ -46,6 +48,9 @@ interface DeviceFormDialogProps {
 }
 
 export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: DeviceFormDialogProps) {
+  const { data: session } = useSession();
+  const multiBranchEnabled = session?.user?.multiBranchEnabled;
+
   const [saving, setSaving] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -71,6 +76,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     customerWarrantyExpiry: "",
     notes: "",
     photoUrls: [] as string[],
+    branchId: "",
+    warehouseId: "",
   });
 
   useEffect(() => {
@@ -87,6 +94,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           supplierWarrantyExpiry: editDevice.supplierWarrantyExpiry ? new Date(editDevice.supplierWarrantyExpiry).toISOString().split('T')[0] : "",
           customerWarrantyExpiry: editDevice.customerWarrantyExpiry ? new Date(editDevice.customerWarrantyExpiry).toISOString().split('T')[0] : "", notes: editDevice.notes || "",
           photoUrls: Array.isArray(editDevice.photoUrls) ? editDevice.photoUrls : [],
+          branchId: editDevice.branchId || "",
+          warehouseId: editDevice.warehouseId || "", // We assume editDevice can have warehouseId if passed
         });
       } else {
         resetForm();
@@ -103,6 +112,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
       conditionGrade: "NEW", batteryHealthPercentage: "", productId: "",
       supplierId: "", costPrice: "", mrp: "", landedCost: "", sellingPrice: "",
       supplierWarrantyExpiry: "", customerWarrantyExpiry: "", notes: "", photoUrls: [],
+      branchId: "", warehouseId: "",
     });
   };
 
@@ -147,6 +157,10 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
       toast.error("Product is required");
       return;
     }
+    if (multiBranchEnabled && !formData.warehouseId && !editDevice) {
+      toast.error("Warehouse is required");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -167,6 +181,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
           productId: formData.productId || null,
           supplierWarrantyExpiry: formData.supplierWarrantyExpiry || null,
           customerWarrantyExpiry: formData.customerWarrantyExpiry || null,
+          warehouseId: formData.warehouseId || null,
         }),
       });
 
@@ -201,7 +216,19 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5">
+          <div className="space-y-5 py-2">
+
+            {multiBranchEnabled && !editDevice && (
+              <fieldset className="space-y-3">
+                <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Location</legend>
+                <BranchWarehouseSelector
+                  branchId={formData.branchId}
+                  warehouseId={formData.warehouseId}
+                  onBranchChange={(branchId) => setFormData({ ...formData, branchId, warehouseId: "" })}
+                  onWarehouseChange={(warehouseId) => setFormData({ ...formData, warehouseId })}
+                />
+              </fieldset>
+            )}
 
             {/* Identifiers */}
             <fieldset className="space-y-3">

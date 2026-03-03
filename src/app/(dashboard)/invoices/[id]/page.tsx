@@ -30,6 +30,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { JournalEntryTab } from "@/components/journal-entry-tab";
 import { ArrowLeft, Building2, Download, Pencil, Printer, CreditCard, Send } from "lucide-react";
 import QRCode from "react-qr-code";
 import { format } from "date-fns";
@@ -293,6 +295,13 @@ export default function InvoiceDetailPage({
           </div>
         </div>
 
+        <Tabs defaultValue="invoice" className="w-full">
+          <TabsList className="print:hidden">
+            <TabsTrigger value="invoice">Invoice</TabsTrigger>
+            <TabsTrigger value="journal">Journal</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="invoice">
         {/* Invoice Document */}
         <Card className="print:shadow-none print:border-none">
           <CardContent className="p-4 sm:p-8">
@@ -519,6 +528,13 @@ export default function InvoiceDetailPage({
             )}
           </CardContent>
         </Card>
+
+          </TabsContent>
+
+          <TabsContent value="journal">
+            <JournalEntryTab sourceType="INVOICE" sourceId={id} />
+          </TabsContent>
+        </Tabs>
 
         {/* Record Payment Dialog */}
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>

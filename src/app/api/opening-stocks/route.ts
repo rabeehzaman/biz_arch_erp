@@ -162,12 +162,14 @@ export async function POST(request: NextRequest) {
       const backdated = await isBackdated(productId, parsedStockDate, tx);
       const zeroCOGSDate = await hasZeroCOGSItems(productId, tx);
 
-      if (backdated) {
-        // Recalculate from opening stock date if backdated
-        await recalculateFromDate(productId, parsedStockDate, tx, "backdated_opening_stock", undefined, organizationId);
-      } else if (zeroCOGSDate) {
-        // Recalculate from earliest zero-COGS date to fix those items
-        await recalculateFromDate(productId, zeroCOGSDate, tx, "zero_cogs_fix", undefined, organizationId);
+      let recalcDate = null;
+      if (backdated) recalcDate = parsedStockDate;
+      if (zeroCOGSDate) {
+        recalcDate = recalcDate ? (recalcDate < zeroCOGSDate ? recalcDate : zeroCOGSDate) : zeroCOGSDate;
+      }
+
+      if (recalcDate) {
+        await recalculateFromDate(productId, recalcDate, tx, "opening_stock_added", undefined, organizationId);
       }
 
       return openingStock;

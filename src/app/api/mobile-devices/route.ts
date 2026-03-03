@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isMobileShopModuleEnabled } from "@/lib/auth-utils";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { isBackdated, hasZeroCOGSItems, recalculateFromDate } from "@/lib/inventory/fifo";
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,8 +76,20 @@ export async function POST(request: NextRequest) {
       batteryHealthPercentage, includedAccessories,
       productId, supplierId, costPrice, mrp, landedCost, sellingPrice,
       supplierWarrantyExpiry, customerWarrantyExpiry, notes, photoUrls,
-      createProduct, productName, categoryId, unitId, hsnCode, gstRate,
+      createProduct, productName, categoryId, unitId, hsnCode, gstRate, warehouseId,
     } = body;
+
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { multiBranchEnabled: true },
+    });
+
+    if (org?.multiBranchEnabled && !warehouseId) {
+      return NextResponse.json(
+        { error: "Warehouse is required when multi-branch is enabled" },
+        { status: 400 }
+      );
+    }
 
     if (!imei1 || !brand || !model || !supplierId || costPrice === undefined) {
       return NextResponse.json(
@@ -131,6 +144,66 @@ export async function POST(request: NextRequest) {
         finalProductId = newProduct.id;
       }
 
+      let openingStockIdStr = null;
+
+      // If product is linked, create Opening Stock lot FIRST
+      if (finalProductId) {
+        const openingStock = await tx.openingStock.create({
+          data: {
+            productId: finalProductId,
+            quantity: 1,
+            unitCost: costPrice,
+            stockDate: new Date(),
+            notes: `Created from Mobile Shop - IMEI: ${imei1}`,
+            organizationId,
+            warehouseId: warehouseId || null,
+          },
+          include: { product: true }
+        });
+        openingStockIdStr = openingStock.id;
+
+        await tx.stockLot.create({
+          data: {
+            organizationId,
+            productId: finalProductId,
+            sourceType: "OPENING_STOCK",
+            openingStockId: openingStock.id,
+            lotDate: new Date(),
+            unitCost: costPrice,
+            initialQuantity: 1,
+            remainingQuantity: 1,
+            warehouseId: warehouseId || null,
+          },
+        });
+
+        if (costPrice > 0) {
+          const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+          const ownerCapitalAccount = await getSystemAccount(tx, organizationId, "3100");
+          if (inventoryAccount && ownerCapitalAccount) {
+            await createAutoJournalEntry(tx, organizationId, {
+              date: new Date(),
+              description: `Opening Stock - ${openingStock.product.name} (IMEI: ${imei1})`,
+              sourceType: "OPENING_BALANCE",
+              sourceId: openingStock.id,
+              lines: [
+                { accountId: inventoryAccount.id, description: "Inventory", debit: costPrice, credit: 0 },
+                { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: costPrice },
+              ],
+            });
+          }
+        }
+
+        const now = new Date();
+        const backdated = await isBackdated(finalProductId, now, tx);
+        const zeroCOGSDate = await hasZeroCOGSItems(finalProductId, tx);
+
+        if (backdated) {
+          await recalculateFromDate(finalProductId, now, tx, "backdated_mobile_device_stock", undefined, organizationId);
+        } else if (zeroCOGSDate) {
+          await recalculateFromDate(finalProductId, zeroCOGSDate, tx, "zero_cogs_fix_mobile_device", undefined, organizationId);
+        }
+      }
+
       const newDevice = await tx.mobileDevice.create({
         data: {
           organizationId,
@@ -156,57 +229,13 @@ export async function POST(request: NextRequest) {
           customerWarrantyExpiry: customerWarrantyExpiry ? new Date(customerWarrantyExpiry) : null,
           notes: notes || null,
           photoUrls: Array.isArray(photoUrls) ? photoUrls : [],
+          openingStockId: openingStockIdStr,
         },
         include: {
           supplier: { select: { id: true, name: true } },
           product: { select: { id: true, name: true } },
         },
       });
-
-      // If product is linked, create Opening Stock lot
-      if (finalProductId) {
-        const openingStock = await tx.openingStock.create({
-          data: {
-            productId: finalProductId,
-            quantity: 1,
-            unitCost: costPrice,
-            stockDate: new Date(),
-            notes: "Created from Mobile Shop",
-            organizationId,
-          },
-          include: { product: true }
-        });
-
-        await tx.stockLot.create({
-          data: {
-            organizationId,
-            productId: finalProductId,
-            sourceType: "OPENING_STOCK",
-            openingStockId: openingStock.id,
-            lotDate: new Date(),
-            unitCost: costPrice,
-            initialQuantity: 1,
-            remainingQuantity: 1,
-          },
-        });
-
-        if (costPrice > 0) {
-          const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
-          const ownerCapitalAccount = await getSystemAccount(tx, organizationId, "3100");
-          if (inventoryAccount && ownerCapitalAccount) {
-            await createAutoJournalEntry(tx, organizationId, {
-              date: new Date(),
-              description: `Opening Stock - ${openingStock.product.name}`,
-              sourceType: "OPENING_BALANCE",
-              sourceId: openingStock.id,
-              lines: [
-                { accountId: inventoryAccount.id, description: "Inventory", debit: costPrice, credit: 0 },
-                { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: costPrice },
-              ],
-            });
-          }
-        }
-      }
 
       return newDevice;
     });

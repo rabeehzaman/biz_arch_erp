@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isMobileShopModuleEnabled } from "@/lib/auth-utils";
+import { isBackdated, hasZeroCOGSItems, recalculateFromDate } from "@/lib/inventory/fifo";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 export async function GET(
   request: NextRequest,
@@ -116,31 +118,90 @@ export async function PUT(
       updateData.outwardDate = new Date();
     }
 
-    if (body.createProduct && body.productName) {
-      const newProduct = await prisma.product.create({
-        data: {
-          organizationId,
-          name: body.productName,
-          price: body.sellingPrice || 0,
-          cost: body.costPrice || 0,
-          unitId: body.unitId || null,
-          categoryId: body.categoryId || null,
-          hsnCode: body.hsnCode || null,
-          gstRate: parseFloat(body.gstRate) || 0,
-          isImeiTracked: true,
-        }
-      });
-      updateData.productId = newProduct.id;
-    }
+    const device = await prisma.$transaction(async (tx) => {
+      let finalProductId = existing.productId;
 
-    const device = await prisma.mobileDevice.update({
-      where: { id },
-      data: updateData,
-      include: {
-        supplier: { select: { id: true, name: true } },
-        customer: { select: { id: true, name: true } },
-        product: { select: { id: true, name: true } },
-      },
+      if (body.createProduct && body.productName) {
+        const newProduct = await tx.product.create({
+          data: {
+            organizationId,
+            name: body.productName,
+            price: body.sellingPrice || 0,
+            cost: body.costPrice || 0,
+            unitId: body.unitId || null,
+            categoryId: body.categoryId || null,
+            hsnCode: body.hsnCode || null,
+            gstRate: parseFloat(body.gstRate) || 0,
+            isImeiTracked: true,
+          }
+        });
+        updateData.productId = newProduct.id;
+        finalProductId = newProduct.id;
+      }
+
+      const updatedDevice = await tx.mobileDevice.update({
+        where: { id },
+        data: updateData,
+        include: {
+          supplier: { select: { id: true, name: true } },
+          customer: { select: { id: true, name: true } },
+          product: { select: { id: true, name: true } },
+        },
+      });
+
+      if (existing.openingStockId) {
+        const openingStock = await tx.openingStock.findUnique({
+          where: { id: existing.openingStockId },
+          include: { stockLot: true },
+        });
+
+        if (openingStock) {
+          const newCostPrice = body.costPrice !== undefined ? body.costPrice : Number(openingStock.unitCost);
+
+          await tx.openingStock.update({
+            where: { id: openingStock.id },
+            data: { unitCost: newCostPrice }
+          });
+
+          if (openingStock.stockLot) {
+            await tx.stockLot.update({
+              where: { id: openingStock.stockLot.id },
+              data: { unitCost: newCostPrice }
+            });
+          }
+
+          await tx.journalEntry.deleteMany({
+            where: { sourceType: "OPENING_BALANCE", sourceId: openingStock.id, organizationId }
+          });
+
+          if (newCostPrice > 0) {
+            const inventoryAccount = await getSystemAccount(tx, organizationId, "1400");
+            const ownerCapitalAccount = await getSystemAccount(tx, organizationId, "3100");
+            if (inventoryAccount && ownerCapitalAccount) {
+              await createAutoJournalEntry(tx, organizationId, {
+                date: openingStock.stockDate,
+                description: `Opening Stock - Updated (IMEI: ${existing.imei1})`,
+                sourceType: "OPENING_BALANCE",
+                sourceId: openingStock.id,
+                lines: [
+                  { accountId: inventoryAccount.id, description: "Inventory", debit: newCostPrice, credit: 0 },
+                  { accountId: ownerCapitalAccount.id, description: "Opening Balance Equity", debit: 0, credit: newCostPrice },
+                ]
+              });
+            }
+          }
+
+          if (newCostPrice !== Number(openingStock.unitCost)) {
+            await tx.product.update({
+              where: { id: openingStock.productId },
+              data: { cost: newCostPrice }
+            });
+
+            await recalculateFromDate(openingStock.productId, openingStock.stockDate, tx, "mobile_device_cost_update", undefined, organizationId);
+          }
+        }
+      }
+      return updatedDevice;
     });
 
     return NextResponse.json(device);
@@ -184,7 +245,31 @@ export async function DELETE(
       );
     }
 
-    await prisma.mobileDevice.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.mobileDevice.delete({ where: { id } });
+
+      if (device.openingStockId) {
+        const openingStock = await tx.openingStock.findUnique({
+          where: { id: device.openingStockId },
+          include: { stockLot: { include: { consumptions: true } } },
+        });
+
+        if (openingStock) {
+          if (openingStock.stockLot) {
+            await tx.stockLot.delete({ where: { id: openingStock.stockLot.id } });
+          }
+          await tx.openingStock.delete({ where: { id: device.openingStockId } });
+
+          const hasConsumptions = (openingStock.stockLot?.consumptions?.length ?? 0) > 0;
+          if (hasConsumptions) {
+            await recalculateFromDate(openingStock.productId, openingStock.stockDate, tx, "mobile_device_delete", undefined, organizationId);
+          }
+          await tx.journalEntry.deleteMany({
+            where: { sourceType: "OPENING_BALANCE", sourceId: device.openingStockId, organizationId },
+          });
+        }
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -21,6 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { JournalEntryTab } from "@/components/journal-entry-tab";
 import { ArrowLeft, Building2, Download, Package, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -242,6 +244,13 @@ export default function PurchaseInvoiceDetailPage({
           </div>
         </div>
 
+        <Tabs defaultValue="invoice" className="w-full">
+          <TabsList className="print:hidden">
+            <TabsTrigger value="invoice">Invoice</TabsTrigger>
+            <TabsTrigger value="journal">Journal</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="invoice">
         {/* Invoice Document */}
         <Card className="print:shadow-none print:border-none">
           <CardContent className="p-4 sm:p-8">
@@ -455,6 +464,12 @@ export default function PurchaseInvoiceDetailPage({
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="journal">
+            <JournalEntryTab sourceType="PURCHASE_INVOICE" sourceId={id} />
+          </TabsContent>
+        </Tabs>
       </div>
     </PageAnimation>
   );

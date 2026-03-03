@@ -5,7 +5,7 @@ import { getOrgId } from "@/lib/auth-utils";
 import { generateAutoNumber } from "@/lib/accounting/auto-number";
 import { validateJournalBalance } from "@/lib/accounting/journal";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -13,9 +13,16 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const { searchParams } = new URL(request.url);
+    const sourceType = searchParams.get("sourceType");
+    const sourceId = searchParams.get("sourceId");
+
+    const where: Record<string, unknown> = { organizationId };
+    if (sourceType) where.sourceType = sourceType;
+    if (sourceId) where.sourceId = sourceId;
 
     const entries = await prisma.journalEntry.findMany({
-      where: { organizationId },
+      where,
       orderBy: { createdAt: "desc" },
       include: {
         lines: {
