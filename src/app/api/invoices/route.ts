@@ -183,7 +183,9 @@ export async function POST(request: NextRequest) {
         const sellerName = org?.arabicName || org?.name || "";
         const sellerVat = org?.vatNumber || "";
         const totalInclVat = subtotal + (totalVat ?? 0);
-        const timestamp = invoiceDate.toISOString().replace(/\.\d{3}/, '');
+        const totalInclVatStr = totalInclVat.toFixed(2);
+        // ZATCA spec: timestamp = actual creation time (not just date), ISO 8601 with Z, no milliseconds
+        const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
         const vatStr = totalVat.toFixed(2);
 
         invoiceHash = computeInvoiceHash({
@@ -200,7 +202,7 @@ export async function POST(request: NextRequest) {
             sellerName,
             vatNumber: sellerVat,
             timestamp,
-            totalWithVat: totalInclVat,
+            totalWithVat: totalInclVatStr,
             totalVat: vatStr,
           });
           qrCodeData = tlv;
