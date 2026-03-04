@@ -28,6 +28,7 @@ interface DeviceResult {
   costPrice: number;
   landedCost: number;
   sellingPrice: number;
+  mrp: number | null;
   soldPrice: number | null;
   inwardDate: string;
   outwardDate: string | null;
@@ -313,6 +314,12 @@ export default function ImeiLookupPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Selling Price</span>
                       <span>&#8377;{Number(device.sellingPrice).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  {device.mrp !== null && Number(device.mrp) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">MRP</span>
+                      <span>&#8377;{Number(device.mrp).toLocaleString("en-IN")}</span>
                     </div>
                   )}
                 </CardContent>
