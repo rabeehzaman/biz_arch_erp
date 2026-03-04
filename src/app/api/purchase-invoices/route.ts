@@ -268,6 +268,9 @@ export async function POST(request: NextRequest) {
                 purchaseInvoiceId: invoice.id,
                 inwardDate: purchaseDate,
                 costPrice: Number(item.unitCost),
+                mrp: imeiEntry.mrp ? Number(imeiEntry.mrp) : 0,
+                landedCost: 0,
+                sellingPrice: 0,
                 currentStatus: "IN_STOCK",
               },
             });
