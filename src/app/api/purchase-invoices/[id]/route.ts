@@ -5,6 +5,7 @@ import { getOrgId } from "@/lib/auth-utils";
 import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 export async function GET(
   request: NextRequest,
@@ -95,7 +96,7 @@ export async function PUT(
 
     // If date or items are being updated, we need to recalculate
     const oldDate = existingInvoice.invoiceDate;
-    const newDate = invoiceDate ? new Date(invoiceDate) : oldDate;
+    const newDate = invoiceDate ? toMidnightUTC(invoiceDate) : oldDate;
 
     await prisma.$transaction(async (tx) => {
       // If items are being updated
@@ -160,7 +161,7 @@ export async function PUT(
           data: {
             supplierId: newSupplierId,
             invoiceDate: newDate,
-            dueDate: dueDate ? new Date(dueDate) : existingInvoice.dueDate,
+            dueDate: dueDate ? toMidnightUTC(dueDate) : existingInvoice.dueDate,
             supplierInvoiceRef: supplierInvoiceRef !== undefined ? supplierInvoiceRef : existingInvoice.supplierInvoiceRef,
             notes: notes !== undefined ? notes : existingInvoice.notes,
             subtotal,

@@ -6,6 +6,7 @@ import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCO
 import { Decimal } from "@prisma/client/runtime/client";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
 async function generatePurchaseInvoiceNumber(organizationId: string) {
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     const purchaseInvoiceNumber = await generatePurchaseInvoiceNumber(organizationId);
-    const purchaseDate = invoiceDate ? new Date(invoiceDate) : new Date();
+    const purchaseDate = toMidnightUTC(invoiceDate);
 
     // Calculate subtotal with item-level discounts
     const subtotal = items.reduce(
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
           warehouseId: warehouseId || null,
           supplierId,
           invoiceDate: purchaseDate,
-          dueDate: new Date(dueDate),
+          dueDate: toMidnightUTC(dueDate),
           supplierInvoiceRef: supplierInvoiceRef || null,
           status: "RECEIVED",
           subtotal,

@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 export async function GET(
   request: NextRequest,
@@ -108,11 +109,11 @@ export async function PUT(
     }
 
     if (body.issueDate !== undefined) {
-      updateData.issueDate = new Date(body.issueDate);
+      updateData.issueDate = toMidnightUTC(body.issueDate);
     }
 
     if (body.validUntil !== undefined) {
-      updateData.validUntil = new Date(body.validUntil);
+      updateData.validUntil = toMidnightUTC(body.validUntil);
     }
 
     if (body.notes !== undefined) {

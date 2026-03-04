@@ -10,6 +10,7 @@ import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate debit note number: DN-YYYYMMDD-XXX
 async function generateDebitNoteNumber(organizationId: string) {
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
       );
     }
     const debitNoteNumber = await generateDebitNoteNumber(organizationId);
-    const debitNoteDate = issueDate ? new Date(issueDate) : new Date();
+    const debitNoteDate = toMidnightUTC(issueDate);
 
     // Calculate subtotal with item-level discounts
     const subtotal = items.reduce(

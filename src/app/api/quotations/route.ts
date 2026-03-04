@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate quotation number: QUO-YYYYMMDD-XXX
 async function generateQuotationNumber(organizationId: string) {
@@ -85,8 +86,8 @@ export async function POST(request: NextRequest) {
     }
 
     const quotationNumber = await generateQuotationNumber(organizationId);
-    const quotationIssueDate = issueDate ? new Date(issueDate) : new Date();
-    const quotationValidUntil = validUntil ? new Date(validUntil) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const quotationIssueDate = toMidnightUTC(issueDate);
+    const quotationValidUntil = validUntil ? toMidnightUTC(validUntil) : toMidnightUTC(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
 
     // Calculate subtotal with item-level discounts
     const subtotal = items.reduce(

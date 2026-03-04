@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId, isMobileShopModuleEnabled } from "@/lib/auth-utils";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 import { isBackdated, hasZeroCOGSItems, recalculateFromDate } from "@/lib/inventory/fifo";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -148,11 +149,7 @@ export async function POST(request: NextRequest) {
 
       // If product is linked, create Opening Stock lot FIRST
       if (finalProductId) {
-        // Use start-of-day so the lot is available for same-day invoices
-        // (invoice dates are midnight UTC, so a lot created at e.g. 10:30 UTC
-        // would be "after" a same-day invoice date and excluded by FIFO)
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0);
+        const today = toMidnightUTC();
 
         const openingStock = await tx.openingStock.create({
           data: {

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createStockLotFromOpeningStock, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 export async function GET() {
   try {
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const parsedStockDate = new Date(stockDate);
+    const parsedStockDate = toMidnightUTC(stockDate);
     const parsedQuantity = parseFloat(quantity);
     const parsedUnitCost = parseFloat(unitCost) || 0;
 

@@ -5,6 +5,7 @@ import { getOrgId } from "@/lib/auth-utils";
 import { restoreStockFromConsumptions, recalculateFromDate, consumeStockFIFO, isBackdated, getRecalculationStartDate } from "@/lib/inventory/fifo";
 import { syncInvoiceRevenueJournal, syncInvoiceCOGSJournal } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 // Helper to check if user can access an invoice (based on customer assignment)
 async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean, organizationId: string) {
@@ -195,8 +196,8 @@ export async function PUT(
         where: { id, organizationId },
         data: {
           customerId,
-          issueDate: new Date(issueDate),
-          dueDate: new Date(dueDate),
+          issueDate: toMidnightUTC(issueDate),
+          dueDate: toMidnightUTC(dueDate),
           notes,
           terms,
           subtotal,

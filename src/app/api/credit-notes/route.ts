@@ -10,6 +10,7 @@ import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate credit note number: CN-YYYYMMDD-XXX
 async function generateCreditNoteNumber(organizationId: string) {
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     const creditNoteNumber = await generateCreditNoteNumber(organizationId);
-    const creditNoteDate = issueDate ? new Date(issueDate) : new Date();
+    const creditNoteDate = toMidnightUTC(issueDate);
 
     // Calculate subtotal with item-level discounts
     const subtotal = items.reduce(

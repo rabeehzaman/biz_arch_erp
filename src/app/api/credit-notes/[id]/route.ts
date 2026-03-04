@@ -11,6 +11,7 @@ import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 import { Decimal } from "@prisma/client/runtime/client";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 export async function GET(
   request: NextRequest,
@@ -105,7 +106,7 @@ export async function PUT(
       );
     }
 
-    const creditNoteDate = issueDate ? new Date(issueDate) : new Date();
+    const creditNoteDate = toMidnightUTC(issueDate);
 
     // Calculate new totals
     const totalReturnedCOGS = items.reduce(

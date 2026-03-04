@@ -9,6 +9,7 @@ import { calculateLineVAT, calculateDocumentVAT, determineSaudiInvoiceType, Line
 import { generateTLVQRCode } from "@/lib/saudi-vat/qr-code";
 import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash } from "@/lib/saudi-vat/invoice-hash";
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber(organizationId: string) {
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     }
 
     const invoiceNumber = await generateInvoiceNumber(organizationId);
-    const invoiceDate = issueDate ? new Date(issueDate) : new Date();
+    const invoiceDate = toMidnightUTC(issueDate);
 
     // Calculate subtotal with item-level discounts
     const subtotal = items.reduce(
@@ -236,7 +237,7 @@ export async function POST(request: NextRequest) {
           customerId,
           createdById: userId,
           issueDate: invoiceDate,
-          dueDate: new Date(dueDate),
+          dueDate: toMidnightUTC(dueDate),
           subtotal,
           total,
           balanceDue,

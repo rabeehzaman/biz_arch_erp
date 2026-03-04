@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
 import { syncInvoiceRevenueJournal, syncInvoiceCOGSJournal } from "@/lib/accounting/journal";
+import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber(organizationId: string) {
@@ -82,8 +83,8 @@ export async function POST(
     const invoice = await prisma.$transaction(async (tx) => {
       // Generate invoice number
       const invoiceNumber = await generateInvoiceNumber(organizationId);
-      const invoiceDate = new Date(); // Use current date for invoice
-      const dueDate = new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+      const invoiceDate = toMidnightUTC(); // Use current date for invoice
+      const dueDate = toMidnightUTC(new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000)); // 30 days from now
 
       // Create invoice from quotation (carry GST fields)
       const newInvoice = await tx.invoice.create({
