@@ -271,6 +271,7 @@ export async function POST(request: NextRequest) {
                 mrp: imeiEntry.mrp ? Number(imeiEntry.mrp) : 0,
                 landedCost: 0,
                 sellingPrice: 0,
+                photoUrls: [],
                 currentStatus: "IN_STOCK",
               },
             });
