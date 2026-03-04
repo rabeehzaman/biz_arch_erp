@@ -93,6 +93,8 @@ export async function PUT(
       arabicCity,
       invoicePdfFormat,
       language,
+      pdfHeaderImageUrl,
+      pdfFooterImageUrl,
     } = body;
 
     // Basic field update validation
@@ -196,6 +198,8 @@ export async function PUT(
     if (arabicAddress !== undefined) updateData.arabicAddress = arabicAddress || null;
     if (arabicCity !== undefined) updateData.arabicCity = arabicCity || null;
     if (language !== undefined) updateData.language = language;
+    if (pdfHeaderImageUrl !== undefined) updateData.pdfHeaderImageUrl = pdfHeaderImageUrl || null;
+    if (pdfFooterImageUrl !== undefined) updateData.pdfFooterImageUrl = pdfFooterImageUrl || null;
 
     const organization = await prisma.$transaction(
       async (tx) => {
@@ -311,7 +315,8 @@ export async function PUT(
         return org;
       },
       {
-        timeout: 30000, // Increase timeout to 30s to allow multiple upserts on poor network/Neon
+        maxWait: 15000, // Wait up to 15s to acquire a connection (Neon cold start)
+        timeout: 30000, // Allow 30s for all queries inside the transaction
       }
     );
 

@@ -3,6 +3,7 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
@@ -252,12 +253,16 @@ interface InvoiceA4PDFProps {
   type: "SALES" | "PURCHASE";
   title?: string;
   balanceInfo?: { oldBalance: number; sales: number; balance: number };
+  headerImageUrl?: string;
+  footerImageUrl?: string;
 }
 
 export function InvoiceA4PDF({
   invoice,
   title = "Tax Invoice",
   balanceInfo,
+  headerImageUrl,
+  footerImageUrl,
 }: InvoiceA4PDFProps) {
   // Compute taxable value per item
   const itemsComputed = invoice.items.map((item) => {
@@ -318,10 +323,34 @@ export function InvoiceA4PDF({
     .filter(Boolean)
     .join(", ");
 
+  const hasHeader = !!headerImageUrl;
+  const hasFooter = !!footerImageUrl;
+  const hasImages = hasHeader || hasFooter;
+
+  // When images are present, page has no padding; content View gets its own padding
+  const pageStyle = hasImages
+    ? { ...styles.page, paddingTop: 0, paddingBottom: 0, paddingLeft: 0, paddingRight: 0 }
+    : styles.page;
+
+  const contentStyle = hasImages
+    ? { paddingHorizontal: "10mm" as const, flexGrow: 1 as const }
+    : {};
+
   return (
     <Document>
-      <Page size="A4" orientation="portrait" style={styles.page}>
+      <Page size="A4" orientation="portrait" style={pageStyle}>
+        {/* Header Image — fixed, repeats on every page */}
+        {hasHeader && (
+          <View style={{ width: "100%" }} fixed>
+            <Image src={headerImageUrl} style={{ width: "100%" }} />
+          </View>
+        )}
+
+        {/* Content area */}
+        <View style={contentStyle}>
+
         {/* A. Title */}
+        {hasHeader && <View style={{ height: 10 }} />}
         <Text style={styles.title}>{title}</Text>
 
         {/* B. Info Boxes Row */}
@@ -595,6 +624,16 @@ export function InvoiceA4PDF({
 
         {/* I. E&OE */}
         <Text style={styles.eoe}>E. & O.E.</Text>
+
+        </View>
+        {/* End content area */}
+
+        {/* Footer Image — fixed, repeats on every page */}
+        {hasFooter && (
+          <View style={{ width: "100%", marginTop: "auto" }} fixed>
+            <Image src={footerImageUrl} style={{ width: "100%" }} />
+          </View>
+        )}
       </Page>
     </Document>
   );

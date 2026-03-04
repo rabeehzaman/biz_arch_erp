@@ -5,6 +5,7 @@ import { getOrgId } from "@/lib/auth-utils";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/components/pdf/invoice-pdf";
 import { InvoiceA4PDF } from "@/components/pdf/invoice-pdf-a4";
+import { InvoiceA4GST2PDF } from "@/components/pdf/invoice-pdf-a4-gst2";
 import { createElement } from "react";
 import { format } from "date-fns";
 import { generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
@@ -22,11 +23,18 @@ export async function GET(
     const organizationId = getOrgId(session);
     const { id } = await params;
 
-    // Fetch organization for GST template decision
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { name: true, gstEnabled: true, gstin: true, gstStateCode: true },
-    });
+    // Fetch organization and PDF format setting
+    const [org, pdfFormatSetting] = await Promise.all([
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { name: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true },
+      }),
+      prisma.setting.findFirst({
+        where: { organizationId, key: "invoice_pdf_format" },
+        select: { value: true },
+      }),
+    ]);
+    const invoicePdfFormat = pdfFormatSetting?.value || "A5_LANDSCAPE";
 
     // Fetch invoice with customer and items
     const invoice = await prisma.invoice.findUnique({
@@ -127,10 +135,10 @@ export async function GET(
       qrCodeDataURL,
     };
 
-    // Generate PDF — use A4 GST template when GST is enabled
+    // Generate PDF — use A4 portrait template when configured
     let pdfBuffer: Buffer;
 
-    if (org?.gstEnabled) {
+    if (invoicePdfFormat === "A4_PORTRAIT" || invoicePdfFormat === "A4_GST2") {
       const a4Items = invoice.items.map((item) => ({
         description: item.description,
         quantity: Number(item.quantity),
@@ -159,7 +167,7 @@ export async function GET(
           state: invoice.customer.state,
           gstin: invoice.customer.gstin,
         },
-        organization: { name: org.name, gstin: org.gstin },
+        organization: { name: org?.name ?? "", gstin: org?.gstin ?? null },
         items: a4Items,
         subtotal: Number(invoice.subtotal),
         totalCgst: Number(invoice.totalCgst),
@@ -175,12 +183,15 @@ export async function GET(
         createdByName: invoice.createdBy?.name ?? null,
       };
 
+      const A4Component = invoicePdfFormat === "A4_GST2" ? InvoiceA4GST2PDF : InvoiceA4PDF;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       pdfBuffer = await renderToBuffer(
-        createElement(InvoiceA4PDF, {
+        createElement(A4Component, {
           invoice: a4Invoice,
           type: "SALES",
           balanceInfo,
+          headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
+          footerImageUrl: org?.pdfFooterImageUrl ?? undefined,
         }) as any
       );
     } else {

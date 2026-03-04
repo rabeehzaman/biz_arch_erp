@@ -37,6 +37,10 @@ model Organization {
   arabicAddress         String?   // Arabic address
   arabicCity            String?   // Arabic city
 
+  // PDF Customization
+  pdfHeaderImageUrl     String?  // Edge-to-edge header image URL for A4 invoices
+  pdfFooterImageUrl     String?  // Edge-to-edge footer image URL for A4 invoices
+
   // Localization
   language              String   @default("en")  // "en" or "ar" — org-wide UI language
 

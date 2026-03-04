@@ -148,12 +148,18 @@ export async function POST(request: NextRequest) {
 
       // If product is linked, create Opening Stock lot FIRST
       if (finalProductId) {
+        // Use start-of-day so the lot is available for same-day invoices
+        // (invoice dates are midnight UTC, so a lot created at e.g. 10:30 UTC
+        // would be "after" a same-day invoice date and excluded by FIFO)
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
         const openingStock = await tx.openingStock.create({
           data: {
             productId: finalProductId,
             quantity: 1,
             unitCost: costPrice,
-            stockDate: new Date(),
+            stockDate: today,
             notes: `Created from Mobile Shop - IMEI: ${imei1}`,
             organizationId,
             warehouseId: warehouseId || null,
@@ -168,7 +174,7 @@ export async function POST(request: NextRequest) {
             productId: finalProductId,
             sourceType: "OPENING_STOCK",
             openingStockId: openingStock.id,
-            lotDate: new Date(),
+            lotDate: today,
             unitCost: costPrice,
             initialQuantity: 1,
             remainingQuantity: 1,
@@ -181,7 +187,7 @@ export async function POST(request: NextRequest) {
           const ownerCapitalAccount = await getSystemAccount(tx, organizationId, "3100");
           if (inventoryAccount && ownerCapitalAccount) {
             await createAutoJournalEntry(tx, organizationId, {
-              date: new Date(),
+              date: today,
               description: `Opening Stock - ${openingStock.product.name} (IMEI: ${imei1})`,
               sourceType: "OPENING_BALANCE",
               sourceId: openingStock.id,
@@ -193,12 +199,11 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const now = new Date();
-        const backdated = await isBackdated(finalProductId, now, tx);
+        const backdated = await isBackdated(finalProductId, today, tx);
         const zeroCOGSDate = await hasZeroCOGSItems(finalProductId, tx);
 
         if (backdated) {
-          await recalculateFromDate(finalProductId, now, tx, "backdated_mobile_device_stock", undefined, organizationId);
+          await recalculateFromDate(finalProductId, today, tx, "backdated_mobile_device_stock", undefined, organizationId);
         } else if (zeroCOGSDate) {
           await recalculateFromDate(finalProductId, zeroCOGSDate, tx, "zero_cogs_fix_mobile_device", undefined, organizationId);
         }

@@ -6,7 +6,7 @@ import { Camera, X, Loader2, ScanLine } from "lucide-react";
 
 interface ImeiCameraScannerProps {
   onScan: (imei: string) => void;
-  /** If false, hides the button entirely (e.g. desktop where camera isn't useful) */
+  /** If false, hides the button entirely */
   show?: boolean;
 }
 
@@ -21,6 +21,11 @@ function isBarcodeDetectorSupported() {
   return typeof window !== "undefined" && "BarcodeDetector" in window;
 }
 
+/** Check if camera is available (mobile or desktop with camera) */
+function isCameraAvailable() {
+  return typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+}
+
 export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,10 +36,18 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const detectorRef = useRef<BarcodeDetector | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const zxingReaderRef = useRef<any>(null);
+  const zxingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mountedRef = useRef(true);
 
   const stopCamera = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
+    if (zxingIntervalRef.current) {
+      clearInterval(zxingIntervalRef.current);
+      zxingIntervalRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -49,22 +62,140 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
     setScanning(false);
   }, [stopCamera]);
 
+  // Native BarcodeDetector scan loop (Chrome/Android)
+  const scanLoopNative = useCallback(() => {
+    const video = videoRef.current;
+    const detector = detectorRef.current;
+    if (!video || !detector || video.readyState < 2) {
+      rafRef.current = requestAnimationFrame(scanLoopNative);
+      return;
+    }
+
+    detector
+      .detect(video)
+      .then((barcodes) => {
+        if (!mountedRef.current) return;
+        for (const barcode of barcodes) {
+          const digits = barcode.rawValue.replace(/\D/g, "");
+          if (digits.length === 15) {
+            setDetected(digits);
+            stopCamera();
+            setScanning(false);
+            setTimeout(() => {
+              onScan(digits);
+              closeScanner();
+            }, 800);
+            return;
+          }
+        }
+        rafRef.current = requestAnimationFrame(scanLoopNative);
+      })
+      .catch(() => {
+        rafRef.current = requestAnimationFrame(scanLoopNative);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onScan, stopCamera, closeScanner]);
+
+  // ZXing-based scan loop (Safari/iOS fallback)
+  const startZxingScanLoop = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (reader: any) => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      zxingIntervalRef.current = setInterval(() => {
+        if (!video || video.readyState < 2 || !ctx || !mountedRef.current) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { BrowserMultiFormatReader } = require("@zxing/browser");
+          const luminance = BrowserMultiFormatReader.createCanvasFromMediaElement
+            ? undefined
+            : undefined;
+          void luminance;
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const result = reader.decode(imageData, canvas.width, canvas.height);
+
+          if (result) {
+            const text = result.getText ? result.getText() : String(result);
+            const digits = text.replace(/\D/g, "");
+            if (digits.length === 15) {
+              setDetected(digits);
+              stopCamera();
+              setScanning(false);
+              setTimeout(() => {
+                onScan(digits);
+                closeScanner();
+              }, 800);
+            }
+          }
+        } catch {
+          // No barcode found in this frame — continue scanning
+        }
+      }, 250); // Scan every 250ms for performance
+    },
+    [onScan, stopCamera, closeScanner]
+  );
+
   const startCamera = useCallback(async () => {
     setError(null);
     setDetected(null);
     setScanning(false);
 
-    if (!isBarcodeDetectorSupported()) {
-      setError("Barcode scanning is not supported on this browser. Use Chrome on Android.");
-      return;
-    }
+    const useNative = isBarcodeDetectorSupported();
 
     try {
-      // Init detector with barcode formats IMEI labels use
-      if (!detectorRef.current) {
-        detectorRef.current = new BarcodeDetector({
-          formats: ["code_128", "code_39", "ean_13", "ean_8", "qr_code"],
-        });
+      // Initialize the appropriate decoder
+      if (useNative) {
+        if (!detectorRef.current) {
+          detectorRef.current = new BarcodeDetector({
+            formats: ["code_128", "code_39", "ean_13", "ean_8", "qr_code"],
+          });
+        }
+      } else {
+        // Load ZXing for Safari/iOS
+        if (!zxingReaderRef.current) {
+          const { MultiFormatReader, BarcodeFormat, DecodeHintType, RGBLuminanceSource, BinaryBitmap, HybridBinarizer } =
+            await import("@zxing/library");
+
+          const hints = new Map();
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+            BarcodeFormat.CODE_128,
+            BarcodeFormat.CODE_39,
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.QR_CODE,
+          ]);
+          hints.set(DecodeHintType.TRY_HARDER, true);
+
+          const reader = new MultiFormatReader();
+          reader.setHints(hints);
+
+          // Wrap with a decode helper
+          zxingReaderRef.current = {
+            decode: (imageData: ImageData, width: number, height: number) => {
+              const { data } = imageData;
+              // Convert RGBA to RGB
+              const rgbData = new Uint8ClampedArray((width * height * 3));
+              for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
+                rgbData[j] = data[i];
+                rgbData[j + 1] = data[i + 1];
+                rgbData[j + 2] = data[i + 2];
+              }
+              const luminanceSource = new RGBLuminanceSource(rgbData, width, height);
+              const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+              return reader.decode(binaryBitmap);
+            },
+          };
+        }
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -78,7 +209,12 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         setScanning(true);
-        scanLoop();
+
+        if (useNative) {
+          scanLoopNative();
+        } else {
+          startZxingScanLoop(zxingReaderRef.current);
+        }
       }
     } catch (err) {
       const e = err as Error;
@@ -91,41 +227,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const scanLoop = useCallback(() => {
-    const video = videoRef.current;
-    const detector = detectorRef.current;
-    if (!video || !detector || video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(scanLoop);
-      return;
-    }
-
-    detector
-      .detect(video)
-      .then((barcodes) => {
-        for (const barcode of barcodes) {
-          // Extract only digits — IMEI is 15 digits
-          const digits = barcode.rawValue.replace(/\D/g, "");
-          if (digits.length === 15) {
-            setDetected(digits);
-            stopCamera();
-            setScanning(false);
-            // Brief pause so user sees the result, then fire callback
-            setTimeout(() => {
-              onScan(digits);
-              closeScanner();
-            }, 800);
-            return;
-          }
-        }
-        rafRef.current = requestAnimationFrame(scanLoop);
-      })
-      .catch(() => {
-        rafRef.current = requestAnimationFrame(scanLoop);
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onScan, stopCamera, closeScanner]);
+  }, [scanLoopNative, startZxingScanLoop]);
 
   // Start camera when overlay opens
   useEffect(() => {
@@ -134,9 +236,15 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
   }, [open, startCamera, stopCamera]);
 
   // Cleanup on unmount
-  useEffect(() => () => stopCamera(), [stopCamera]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      stopCamera();
+    };
+  }, [stopCamera]);
 
-  if (!show || !isBarcodeDetectorSupported()) return null;
+  if (!show || !isCameraAvailable()) return null;
 
   return (
     <>
