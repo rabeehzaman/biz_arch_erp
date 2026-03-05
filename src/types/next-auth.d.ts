@@ -14,6 +14,7 @@ declare module "next-auth" {
       gstStateCode?: string | null;
       saudiEInvoiceEnabled?: boolean;
       language?: string;
+      currency?: string;
     } & DefaultSession["user"];
   }
 
@@ -28,6 +29,7 @@ declare module "next-auth" {
     gstStateCode?: string | null;
     saudiEInvoiceEnabled?: boolean;
     language?: string;
+    currency?: string;
   }
 }
 
@@ -44,5 +46,6 @@ declare module "next-auth/jwt" {
     gstStateCode?: string | null;
     saudiEInvoiceEnabled?: boolean;
     language?: string;
+    currency?: string;
   }
 }

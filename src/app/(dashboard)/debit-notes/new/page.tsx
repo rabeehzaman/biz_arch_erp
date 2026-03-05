@@ -17,6 +17,7 @@ import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Supplier {
   id: string;
@@ -73,6 +74,7 @@ export default function NewDebitNotePage() {
   ]);
   const { data: session } = useSession();
   const { unitConversions } = useUnitConversions();
+  const { symbol } = useCurrency();
 
   useEffect(() => {
     fetchSuppliers();
@@ -504,7 +506,7 @@ export default function NewDebitNotePage() {
 
                       <div className="flex items-center justify-end">
                         <span className="text-sm font-medium">
-                          ₹
+                          {symbol}
                           {(
                             item.quantity *
                             item.unitCost *
@@ -557,17 +559,17 @@ export default function NewDebitNotePage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span>₹{calculateSubtotal().toFixed(2)}</span>
+                  <span>{symbol}{calculateSubtotal().toFixed(2)}</span>
                 </div>
                 {calculateTax() > 0 && (
                   <div className="flex justify-between text-sm text-slate-500">
                     <span>GST:</span>
-                    <span>₹{calculateTax().toFixed(2)}</span>
+                    <span>{symbol}{calculateTax().toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span>₹{calculateTotal().toFixed(2)}</span>
+                  <span>{symbol}{calculateTotal().toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>

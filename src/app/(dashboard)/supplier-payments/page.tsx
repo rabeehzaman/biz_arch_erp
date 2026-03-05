@@ -47,6 +47,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface SupplierPayment {
   id: string;
@@ -90,6 +91,7 @@ const methodLabels: Record<string, string> = {
 };
 
 export default function SupplierPaymentsPage() {
+  const { symbol, fmt } = useCurrency();
   const [payments, setPayments] = useState<SupplierPayment[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
@@ -261,7 +263,7 @@ export default function SupplierPaymentsPage() {
                         <div className="flex justify-between w-full">
                           <span>{supplier.name}</span>
                           <span className="text-slate-500 text-xs">
-                            Payable: ₹{Number(supplier.balance).toLocaleString("en-IN")}
+                            Payable: {symbol}{Number(supplier.balance).toLocaleString("en-IN")}
                           </span>
                         </div>
                       )}
@@ -284,7 +286,7 @@ export default function SupplierPaymentsPage() {
                         <SelectContent>
                           {supplierInvoices.map((invoice) => (
                             <SelectItem key={invoice.id} value={invoice.id}>
-                              {invoice.purchaseInvoiceNumber} (Due: ₹{Number(invoice.balanceDue).toLocaleString("en-IN")})
+                              {invoice.purchaseInvoiceNumber} (Due: {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -446,11 +448,11 @@ export default function SupplierPaymentsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium text-orange-600">
-                        ₹{Number(payment.amount).toLocaleString("en-IN")}
+                        {symbol}{Number(payment.amount).toLocaleString("en-IN")}
                       </TableCell>
                       <TableCell className="text-right text-slate-500">
                         {Number(payment.discountGiven) > 0
-                          ? `₹${Number(payment.discountGiven).toLocaleString("en-IN")}`
+                          ? `${symbol}${Number(payment.discountGiven).toLocaleString("en-IN")}`
                           : "-"}
                       </TableCell>
                       <TableCell>

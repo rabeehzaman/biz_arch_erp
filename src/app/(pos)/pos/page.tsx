@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -72,6 +73,7 @@ function isStale(openedAt: string): boolean {
 }
 
 export default function POSDashboardPage() {
+  const { fmt } = useCurrency();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [openingState, setOpeningState] = useState<OpeningState | null>(null);
@@ -248,21 +250,13 @@ export default function POSDashboardPage() {
                           <div className="flex items-center gap-1.5 text-muted-foreground">
                             <DollarSign className="h-3.5 w-3.5" />
                             <span>
-                              {Number(session.openingCash).toLocaleString("en-IN", {
-                                style: "currency",
-                                currency: "INR",
-                                maximumFractionDigits: 0,
-                              })}
+                              {fmt(Number(session.openingCash))}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="font-medium">
-                              {Number(session.totalSales).toLocaleString("en-IN", {
-                                style: "currency",
-                                currency: "INR",
-                                maximumFractionDigits: 0,
-                              })}
+                              {fmt(Number(session.totalSales))}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 text-muted-foreground">

@@ -5,14 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * Formats a number as Indian currency (₹)
- * @param amount - The amount to format
- * @returns Formatted currency string (e.g., "₹1,234.56")
- */
-export function formatCurrency(amount: number): string {
-  return `₹${amount.toLocaleString("en-IN", {
+const CURRENCY_CONFIG: Record<string, { symbol: string; locale: string }> = {
+  INR: { symbol: "₹", locale: "en-IN" },
+  SAR: { symbol: "SAR ", locale: "en-US" },
+};
+
+export function formatCurrency(amount: number, currency: string = "INR"): string {
+  const config = CURRENCY_CONFIG[currency] || CURRENCY_CONFIG.INR;
+  return `${config.symbol}${amount.toLocaleString(config.locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`
+  })}`;
 }

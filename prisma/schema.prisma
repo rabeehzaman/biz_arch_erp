@@ -43,6 +43,7 @@ model Organization {
 
   // Localization
   language              String   @default("en")  // "en" or "ar" — org-wide UI language
+  currency              String   @default("INR") // "INR" or "SAR" — org-wide currency
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

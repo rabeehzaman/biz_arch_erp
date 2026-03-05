@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Package } from "lucide-react";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface ProductTileProps {
   product: {
@@ -17,6 +18,7 @@ interface ProductTileProps {
 }
 
 export function ProductTile({ product, onAdd }: ProductTileProps) {
+  const { fmt } = useCurrency();
   const outOfStock = !product.isService && product.stockQuantity <= 0;
   const lowStock = !product.isService && product.stockQuantity > 0 && product.stockQuantity <= 5;
 
@@ -46,10 +48,7 @@ export function ProductTile({ product, onAdd }: ProductTileProps) {
         <span className="text-xs text-muted-foreground mt-0.5">{product.sku}</span>
       )}
       <span className="mt-1 text-sm font-bold">
-        {Number(product.price).toLocaleString("en-IN", {
-          style: "currency",
-          currency: "INR",
-        })}
+        {fmt(Number(product.price))}
       </span>
       {outOfStock && (
         <span className="text-xs text-red-500 font-medium mt-1">Out of Stock</span>

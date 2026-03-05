@@ -51,6 +51,7 @@ interface OrganizationDetails {
     pdfHeaderImageUrl: string | null;
     pdfFooterImageUrl: string | null;
     language: string;
+    currency: string;
     createdAt: string;
     users: Array<{
         id: string;
@@ -101,6 +102,7 @@ export default function OrganizationDetailsPage() {
     const [pdfHeaderImageUrl, setPdfHeaderImageUrl] = useState("");
     const [pdfFooterImageUrl, setPdfFooterImageUrl] = useState("");
     const [language, setLanguage] = useState("en");
+    const [currency, setCurrency] = useState("INR");
     const [saving, setSaving] = useState(false);
     const [settingsError, setSettingsError] = useState("");
     const [settingsSuccess, setSettingsSuccess] = useState("");
@@ -156,6 +158,7 @@ export default function OrganizationDetailsPage() {
         setPdfHeaderImageUrl(data.pdfHeaderImageUrl || "");
         setPdfFooterImageUrl(data.pdfFooterImageUrl || "");
         setLanguage(data.language || "en");
+        setCurrency(data.currency || "INR");
     };
 
     const fetchOrganization = useCallback(async () => {
@@ -256,6 +259,7 @@ export default function OrganizationDetailsPage() {
                     pdfHeaderImageUrl,
                     pdfFooterImageUrl,
                     language,
+                    currency,
                 }),
             });
 
@@ -530,6 +534,28 @@ export default function OrganizationDetailsPage() {
                                     <SelectContent>
                                         <SelectItem value="en">English</SelectItem>
                                         <SelectItem value="ar">العربية (Arabic)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Currency */}
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label className="flex items-center gap-2">
+                                        <Globe className="h-4 w-4" />
+                                        Currency
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Set the currency used for all transactions
+                                    </p>
+                                </div>
+                                <Select value={currency} onValueChange={setCurrency}>
+                                    <SelectTrigger className="w-44">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="INR">₹ INR (Rupee)</SelectItem>
+                                        <SelectItem value="SAR">SAR (Riyal)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

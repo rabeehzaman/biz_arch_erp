@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +92,7 @@ export default function ExpenseDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { fmt } = useCurrency();
   const [expense, setExpense] = useState<Expense | null>(null);
   const [cashBankAccounts, setCashBankAccounts] = useState<CashBankAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -247,10 +249,7 @@ export default function ExpenseDetailPage({
                 <div>
                   <span className="text-slate-500">Total</span>
                   <p className="font-medium text-lg">
-                    {Number(expense.total).toLocaleString("en-IN", {
-                      style: "currency",
-                      currency: "INR",
-                    })}
+                    {fmt(Number(expense.total))}
                   </p>
                 </div>
               </div>
@@ -368,7 +367,7 @@ export default function ExpenseDetailPage({
                         .filter((a) => a.isActive !== false)
                         .map((a) => (
                           <SelectItem key={a.id} value={a.id}>
-                            {a.name} ({Number(a.balance).toLocaleString("en-IN", { style: "currency", currency: "INR" })})
+                            {a.name} ({fmt(Number(a.balance))})
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -376,7 +375,7 @@ export default function ExpenseDetailPage({
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={!selectedAccountId}>
-                    Pay {Number(expense.total).toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                    Pay {fmt(Number(expense.total))}
                   </Button>
                 </DialogFooter>
               </form>

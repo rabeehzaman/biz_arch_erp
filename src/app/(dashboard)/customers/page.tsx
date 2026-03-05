@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import {
   Table,
@@ -96,11 +97,9 @@ export default function CustomersPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
+  const { fmt } = useCurrency();
 
-  const formatAmount = (amount: number) => {
-    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
-    return `₹${amount.toLocaleString("en-IN")}`;
-  };
+  const formatAmount = (amount: number) => fmt(amount);
 
   const [openingBalanceData, setOpeningBalanceData] = useState({
     amount: "",

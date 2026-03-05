@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, ChevronRight, ChevronDown, BookOpen, Search } from "lucide-react";
+import { useCurrency } from "@/hooks/use-currency";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,6 +133,7 @@ function AccountTreeItem({
   onDelete: (node: TreeNode) => void;
   searchQuery: string;
 }) {
+  const { symbol } = useCurrency();
   const isExpanded = expanded.has(node.id);
   const hasChildren = node.children.length > 0;
   const matchesSearch =
@@ -213,7 +215,7 @@ function AccountTreeItem({
         <div className="flex flex-col items-end shrink-0 gap-1.5 sm:gap-0 sm:flex-row sm:items-center">
           <span className={`text-xs sm:text-sm font-mono sm:w-28 text-right ${node.balance < 0 ? "text-red-600" : node.balance > 0 ? "text-slate-800" : "text-slate-400"}`}>
             {node.balance !== 0
-              ? `₹${Math.abs(node.balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${node.balance < 0 ? " Cr" : " Dr"}`
+              ? `${symbol}${Math.abs(node.balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${node.balance < 0 ? " Cr" : " Dr"}`
               : "—"}
           </span>
 

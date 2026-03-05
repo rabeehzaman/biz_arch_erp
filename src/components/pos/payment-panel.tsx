@@ -7,6 +7,7 @@ import { PaymentMethodButton } from "./payment-method-button";
 import { CashTenderedInput } from "./cash-tendered-input";
 import { SplitPaymentForm, type PaymentEntry } from "./split-payment-form";
 import { Input } from "@/components/ui/input";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface PaymentPanelProps {
   total: number;
@@ -18,10 +19,6 @@ interface PaymentPanelProps {
 
 const METHODS = ["CASH", "CREDIT_CARD", "UPI", "BANK_TRANSFER"];
 
-function formatCurrency(amount: number) {
-  return amount.toLocaleString("en-IN", { style: "currency", currency: "INR" });
-}
-
 export function PaymentPanel({
   total,
   onBack,
@@ -29,6 +26,7 @@ export function PaymentPanel({
   isProcessing,
   hasCustomer,
 }: PaymentPanelProps) {
+  const { fmt: formatCurrency } = useCurrency();
   const [mode, setMode] = useState<"single" | "split">("single");
   const [selectedMethod, setSelectedMethod] = useState("CASH");
   const [isCreditSale, setIsCreditSale] = useState(false);

@@ -20,6 +20,7 @@ import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/pa
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface WarehouseRow {
     warehouseId: string | null;
@@ -62,7 +63,6 @@ interface Totals {
     grossProfit: number;
 }
 
-const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const pct = (n: number) => `${n.toFixed(1)}%`;
 
 function marginColor(m: number) {
@@ -72,6 +72,8 @@ function marginColor(m: number) {
 export default function BranchPLPage() {
     const { data: session } = useSession();
     const multiBranchEnabled = (session?.user as any)?.multiBranchEnabled;
+    const { symbol } = useCurrency();
+    const fmt = (n: number) => `${symbol}${n.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
     const today = new Date();
     const firstOfYear = new Date(today.getFullYear(), 0, 1);

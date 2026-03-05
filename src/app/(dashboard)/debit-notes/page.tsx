@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface DebitNote {
   id: string;
@@ -49,11 +50,7 @@ export default function DebitNotesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
-
-  const formatAmount = (amount: number) => {
-    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
-    return `₹${amount.toLocaleString("en-IN")}`;
-  };
+  const { fmt } = useCurrency();
 
   useEffect(() => {
     fetchDebitNotes();
@@ -204,7 +201,7 @@ export default function DebitNotesPage() {
                         {format(new Date(debitNote.issueDate), "dd MMM yyyy")}
                       </TableCell>
                       <TableCell className="text-right text-orange-600 font-medium">
-                        {formatAmount(Number(debitNote.total))}
+                        {fmt(Number(debitNote.total))}
                       </TableCell>
                       <TableCell
                         className="text-right"

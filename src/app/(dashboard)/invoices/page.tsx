@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Invoice {
   id: string;
@@ -53,11 +54,7 @@ export default function InvoicesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
-
-  const formatAmount = (amount: number) => {
-    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
-    return `₹${amount.toLocaleString("en-IN")}`;
-  };
+  const { fmt } = useCurrency();
 
   useEffect(() => {
     fetchInvoices();
@@ -199,7 +196,7 @@ export default function InvoicesPage() {
                           {format(new Date(invoice.dueDate), "dd MMM yyyy")}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell text-right">
-                          {formatAmount(Number(invoice.total))}
+                          {fmt(Number(invoice.total))}
                         </TableCell>
                         <TableCell className="text-right">
                           <span
@@ -209,7 +206,7 @@ export default function InvoicesPage() {
                                 : "text-green-600"
                             }
                           >
-                            {formatAmount(Number(invoice.balanceDue))}
+                            {fmt(Number(invoice.balanceDue))}
                           </span>
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>

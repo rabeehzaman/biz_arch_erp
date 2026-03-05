@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useCurrency } from "@/hooks/use-currency";
 import {
   Table,
   TableBody,
@@ -62,6 +63,7 @@ interface Supplier {
 
 export default function SuppliersPage() {
   const { data: session } = useSession();
+  const { symbol } = useCurrency();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -332,7 +334,7 @@ export default function SuppliersPage() {
                                     : ""
                               }
                             >
-                              ₹{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
+                              {symbol}{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
                             </span>
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">{supplier._count?.purchaseInvoices || 0}</TableCell>

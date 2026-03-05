@@ -42,6 +42,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 gstStateCode: true,
                 saudiEInvoiceEnabled: true,
                 language: true,
+                currency: true,
               },
             },
           },
@@ -79,6 +80,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           gstStateCode: user.organization?.gstStateCode ?? null,
           saudiEInvoiceEnabled: user.organization?.saudiEInvoiceEnabled ?? false,
           language: user.organization?.language ?? "en",
+          currency: user.organization?.currency ?? "INR",
         };
       },
     }),

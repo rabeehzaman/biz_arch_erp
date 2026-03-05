@@ -17,6 +17,7 @@ import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
+import { useCurrency } from "@/hooks/use-currency";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
@@ -90,6 +91,7 @@ export default function NewPurchaseInvoicePage() {
   ]);
 
   const { data: session } = useSession();
+  const { symbol } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -646,18 +648,18 @@ export default function NewPurchaseInvoicePage() {
                             {session?.user?.gstEnabled ? (
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                  ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                  {symbol}{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                                  ₹{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                                  {symbol}{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
                                 </TableCell>
                               </>
                             ) : (
                               <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                ₹{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                {symbol}{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
                                 {item.discount > 0 && (
                                   <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                 )}
@@ -899,8 +901,8 @@ export default function NewPurchaseInvoicePage() {
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span className="text-sm font-semibold">
                             {session?.user?.gstEnabled
-                              ? `₹${lineNet.toLocaleString("en-IN")}`
-                              : `₹${lineGross.toLocaleString("en-IN")}`}
+                              ? `${symbol}${lineNet.toLocaleString("en-IN")}`
+                              : `${symbol}${lineGross.toLocaleString("en-IN")}`}
                           </span>
                         </div>
 
@@ -1031,17 +1033,17 @@ export default function NewPurchaseInvoicePage() {
                 <div className="space-y-2 max-w-xs ml-auto">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>₹{calculateSubtotal().toLocaleString("en-IN")}</span>
+                    <span>{symbol}{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
                   {calculateTax() > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>GST</span>
-                      <span>₹{calculateTax().toLocaleString("en-IN")}</span>
+                      <span>{symbol}{calculateTax().toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span>₹{calculateTotal().toLocaleString("en-IN")}</span>
+                    <span>{symbol}{calculateTotal().toLocaleString("en-IN")}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex justify-end">

@@ -16,6 +16,7 @@ import { Truck, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Supplier {
   id: string;
@@ -51,6 +52,7 @@ export default function SupplierBalancesPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const { fmt: formatCurrency } = useCurrency();
 
   useEffect(() => {
     fetchReport();
@@ -68,13 +70,6 @@ export default function SupplierBalancesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
   };
 
   const filteredSuppliers = reportData?.suppliers.filter(

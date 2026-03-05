@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import {
   Table,
@@ -40,6 +41,7 @@ interface JournalEntryTabProps {
 }
 
 export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) {
+  const { symbol } = useCurrency();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -131,12 +133,12 @@ export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) 
                         </TableCell>
                         <TableCell className="text-right">
                           {Number(line.debit) > 0
-                            ? `₹${Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                            ? `${symbol}${Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
                             : ""}
                         </TableCell>
                         <TableCell className="text-right">
                           {Number(line.credit) > 0
-                            ? `₹${Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                            ? `${symbol}${Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
                             : ""}
                         </TableCell>
                       </TableRow>
@@ -144,10 +146,10 @@ export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) 
                     <TableRow className="font-bold border-t-2">
                       <TableCell>Total</TableCell>
                       <TableCell className="text-right">
-                        ₹{entryDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {symbol}{entryDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right">
-                        ₹{entryCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {symbol}{entryCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -165,20 +167,20 @@ export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) 
                     <div className="flex justify-between text-sm">
                       {Number(line.debit) > 0 && (
                         <span className="text-emerald-600">
-                          Dr ₹{Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          Dr {symbol}{Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </span>
                       )}
                       {Number(line.credit) > 0 && (
                         <span className="text-blue-600 ml-auto">
-                          Cr ₹{Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          Cr {symbol}{Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </span>
                       )}
                     </div>
                   </div>
                 ))}
                 <div className="p-3 font-bold flex justify-between text-sm bg-slate-50">
-                  <span>Dr ₹{entryDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                  <span>Cr ₹{entryCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                  <span>Dr {symbol}{entryDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                  <span>Cr {symbol}{entryCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </CardContent>
@@ -189,8 +191,8 @@ export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) 
       {entries.length > 1 && (
         <div className="flex justify-end px-4">
           <div className="text-sm font-semibold text-slate-600 space-x-4">
-            <span>Grand Total — Debit: ₹{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-            <span>Credit: ₹{totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+            <span>Grand Total — Debit: {symbol}{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+            <span>Credit: {symbol}{totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
       )}

@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Customer {
   id: string;
@@ -54,6 +55,7 @@ export default function CustomerBalancesPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const { fmt: formatCurrency } = useCurrency();
 
   useEffect(() => {
     fetchReport();
@@ -71,13 +73,6 @@ export default function CustomerBalancesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
   };
 
   const filteredCustomers = reportData?.customers.filter(

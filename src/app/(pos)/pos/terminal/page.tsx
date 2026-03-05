@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useCallback, useEffect } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -89,6 +90,7 @@ interface Customer {
 }
 
 function POSTerminalContent() {
+  const { fmt } = useCurrency();
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId");
@@ -384,7 +386,7 @@ function POSTerminalContent() {
 
       if (change > 0) {
         toast.success(
-          `Sale complete! Change: ${change.toLocaleString("en-IN", { style: "currency", currency: "INR" })}`
+          `Sale complete! Change: ${fmt(change)}`
         );
       } else {
         toast.success(`Sale complete! Invoice: ${result.invoice?.invoiceNumber}`);
@@ -558,7 +560,7 @@ function POSTerminalContent() {
             </h2>
             {cart.length > 0 && (
               <div className="ml-auto text-sm font-bold text-primary">
-                {total.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                {fmt(total)}
               </div>
             )}
           </div>
@@ -628,10 +630,7 @@ function POSTerminalContent() {
                     }}
                   >
                     Pay{" "}
-                    {total.toLocaleString("en-IN", {
-                      style: "currency",
-                      currency: "INR",
-                    })}
+                    {fmt(total)}
                   </Button>
                 </div>
               )}
@@ -688,10 +687,7 @@ function POSTerminalContent() {
               <div>
                 <span className="text-muted-foreground">Opening Cash</span>
                 <p className="font-medium">
-                  {Number(posSession.openingCash).toLocaleString("en-IN", {
-                    style: "currency",
-                    currency: "INR",
-                  })}
+                  {fmt(Number(posSession.openingCash))}
                 </p>
               </div>
               <div>
@@ -704,10 +700,7 @@ function POSTerminalContent() {
                   {isLoadingSummary ? (
                     <Loader2 className="h-3 w-3 animate-spin inline" />
                   ) : (
-                    expectedCash.toLocaleString("en-IN", {
-                      style: "currency",
-                      currency: "INR",
-                    })
+                    fmt(expectedCash)
                   )}
                 </p>
               </div>
@@ -720,7 +713,7 @@ function POSTerminalContent() {
                     "text-sm font-medium",
                     cashDifference > 0 ? "text-green-600" : (cashDifference < 0 ? "text-red-600" : "text-slate-600")
                   )}>
-                    Diff: {cashDifference > 0 ? "+" : ""}{cashDifference.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                    Diff: {cashDifference > 0 ? "+" : ""}{fmt(cashDifference)}
                   </span>
                 )}
               </div>
@@ -778,10 +771,7 @@ function POSTerminalContent() {
                         </p>
                       </div>
                       <p className="text-sm font-bold">
-                        {Number(order.subtotal).toLocaleString("en-IN", {
-                          style: "currency",
-                          currency: "INR",
-                        })}
+                        {fmt(Number(order.subtotal))}
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground">

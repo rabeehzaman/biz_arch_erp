@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Product {
   id: string;
@@ -86,6 +87,7 @@ export default function ProfitByItemsPage() {
     new Set()
   );
   const [displayCount, setDisplayCount] = useState(20);
+  const { fmt: formatCurrency } = useCurrency();
 
   const toggleInvoice = (invoiceId: string) => {
     setExpandedInvoices((prev) => {
@@ -150,13 +152,6 @@ export default function ProfitByItemsPage() {
     setTimeout(() => {
       fetchReport();
     }, 0);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
   };
 
   const hasFilters = selectedProductId || fromDate || toDate;

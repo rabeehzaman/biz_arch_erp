@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useCurrency } from "@/hooks/use-currency";
 import { Plus, Smartphone, Loader2, Trash2, Pencil } from "lucide-react";
 import { DeviceFormDialog } from "@/components/mobile-devices/device-form-dialog";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ const conditionLabels: Record<string, string> = {
 };
 
 export default function DeviceInventoryPage() {
+  const { symbol } = useCurrency();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -197,7 +199,7 @@ export default function DeviceInventoryPage() {
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-right text-sm">
                         {Number(device.sellingPrice) > 0
-                          ? `₹${Number(device.sellingPrice).toLocaleString("en-IN")}`
+                          ? `${symbol}${Number(device.sellingPrice).toLocaleString("en-IN")}`
                           : "-"}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-sm">

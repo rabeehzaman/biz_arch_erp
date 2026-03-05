@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ export default function CashBankDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { fmt } = useCurrency();
   const [account, setAccount] = useState<CashBankAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogType, setDialogType] = useState<"deposit" | "withdrawal" | null>(null);
@@ -163,10 +165,7 @@ export default function CashBankDetailPage({
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">
-                {Number(account.balance).toLocaleString("en-IN", {
-                  style: "currency",
-                  currency: "INR",
-                })}
+                {fmt(Number(account.balance))}
               </p>
               <div className="flex gap-2 mt-2">
                 <Badge variant="outline">

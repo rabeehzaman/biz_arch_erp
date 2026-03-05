@@ -27,6 +27,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface StockRow {
     productId: string;
@@ -65,6 +66,7 @@ interface BranchOption {
 export default function StockSummaryPage() {
     const { data: session } = useSession();
     const multiBranchEnabled = session?.user?.multiBranchEnabled;
+    const { symbol } = useCurrency();
 
     const [rows, setRows] = useState<StockRow[]>([]);
     const [summary, setSummary] = useState<Summary | null>(null);
@@ -192,7 +194,7 @@ export default function StockSummaryPage() {
                                         <div>
                                             <p className="text-sm text-slate-500">Total Stock Value</p>
                                             <p className="text-2xl font-bold">
-                                                ₹{summary.totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                                                {symbol}{summary.totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                                             </p>
                                         </div>
                                     </CardContent>
@@ -346,10 +348,10 @@ export default function StockSummaryPage() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right tabular-nums text-sm">
-                                                    ₹{row.avgCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    {symbol}{row.avgCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium tabular-nums">
-                                                    ₹{row.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    {symbol}{row.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge variant="outline" className="text-xs">

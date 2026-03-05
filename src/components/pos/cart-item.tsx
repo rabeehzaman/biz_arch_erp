@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Minus, Plus, Trash2, Percent } from "lucide-react";
@@ -29,6 +30,7 @@ export function CartItem({
   onUpdateDiscount,
   onRemove,
 }: CartItemProps) {
+  const { fmt } = useCurrency();
   const [showDiscountInput, setShowDiscountInput] = useState(false);
   const [discountValue, setDiscountValue] = useState(item.discount.toString());
   const lineTotal = item.quantity * item.price * (1 - item.discount / 100);
@@ -46,10 +48,7 @@ export function CartItem({
           <p className="text-sm font-medium truncate">{item.name}</p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span>
-              {Number(item.price).toLocaleString("en-IN", {
-                style: "currency",
-                currency: "INR",
-              })}
+              {fmt(Number(item.price))}
             </span>
             <button
               onClick={() => {
@@ -87,10 +86,7 @@ export function CartItem({
           </Button>
         </div>
         <span className="w-16 sm:w-20 text-right text-sm font-semibold">
-          {lineTotal.toLocaleString("en-IN", {
-            style: "currency",
-            currency: "INR",
-          })}
+          {fmt(lineTotal)}
         </span>
         <Button
           variant="ghost"

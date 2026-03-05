@@ -63,6 +63,7 @@ export const authConfig: NextAuthConfig = {
         token.gstStateCode = (user as { gstStateCode?: string | null }).gstStateCode ?? null;
         token.saudiEInvoiceEnabled = (user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled ?? false;
         token.language = (user as { language?: string }).language ?? "en";
+        token.currency = (user as { currency?: string }).currency ?? "INR";
       }
       return token;
     },
@@ -84,6 +85,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as { gstStateCode?: string | null }).gstStateCode = token.gstStateCode as string | null;
         (session.user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled = token.saudiEInvoiceEnabled as boolean;
         (session.user as { language?: string }).language = token.language as string ?? "en";
+        (session.user as { currency?: string }).currency = token.currency as string ?? "INR";
       }
       return session;
     },

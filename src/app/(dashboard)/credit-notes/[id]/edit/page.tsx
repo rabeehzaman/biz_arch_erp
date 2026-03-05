@@ -18,6 +18,7 @@ import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Customer {
     id: string;
@@ -78,6 +79,7 @@ export default function EditCreditNotePage({
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     const { data: session } = useSession();
     const { unitConversions } = useUnitConversions();
+    const { symbol } = useCurrency();
 
     useEffect(() => {
         Promise.all([fetchCustomers()]).then(() => {
@@ -539,7 +541,7 @@ export default function EditCreditNotePage({
 
                                             <div className="flex items-center justify-end">
                                                 <span className="text-sm font-medium">
-                                                    ₹
+                                                    {symbol}
                                                     {(
                                                         item.quantity *
                                                         item.unitPrice *
@@ -604,7 +606,7 @@ export default function EditCreditNotePage({
                             <div className="space-y-2">
                                 <div className="flex justify-between text-lg font-bold">
                                     <span>Total Return:</span>
-                                    <span className="text-green-600">₹{calculateTotal().toFixed(2)}</span>
+                                    <span className="text-green-600">{symbol}{calculateTotal().toFixed(2)}</span>
                                 </div>
                             </div>
                         </CardContent>

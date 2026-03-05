@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,6 +75,7 @@ export default function QuotationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { symbol } = useCurrency();
   const router = useRouter();
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -409,13 +411,13 @@ export default function QuotationDetailPage({
                         {Number(item.quantity).toLocaleString("en-IN")}
                       </TableCell>
                       <TableCell className="text-right">
-                        ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                        {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}
                       </TableCell>
                       <TableCell className="text-right">
                         {Number(item.discount)}%
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        ₹{Number(item.total).toLocaleString("en-IN")}
+                        {symbol}{Number(item.total).toLocaleString("en-IN")}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -430,13 +432,13 @@ export default function QuotationDetailPage({
                   <div className="font-medium text-sm">{item.description}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>Qty: {Number(item.quantity).toLocaleString("en-IN")}</span>
-                    <span>Price: ₹{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                    <span>Price: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
                     {Number(item.discount) > 0 && (
                       <span className="text-green-600">Discount: {Number(item.discount)}%</span>
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
-                    ₹{Number(item.total).toLocaleString("en-IN")}
+                    {symbol}{Number(item.total).toLocaleString("en-IN")}
                   </div>
                 </div>
               ))}
@@ -448,36 +450,36 @@ export default function QuotationDetailPage({
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Subtotal</span>
                   <span className="font-medium">
-                    ₹{Number(quotation.subtotal).toLocaleString("en-IN")}
+                    {symbol}{Number(quotation.subtotal).toLocaleString("en-IN")}
                   </span>
                 </div>
                 {Number(quotation.totalCgst) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">CGST</span>
-                    <span className="font-medium">₹{Number(quotation.totalCgst).toLocaleString("en-IN")}</span>
+                    <span className="font-medium">{symbol}{Number(quotation.totalCgst).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 {Number(quotation.totalSgst) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">SGST</span>
-                    <span className="font-medium">₹{Number(quotation.totalSgst).toLocaleString("en-IN")}</span>
+                    <span className="font-medium">{symbol}{Number(quotation.totalSgst).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 {Number(quotation.totalIgst) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">IGST</span>
-                    <span className="font-medium">₹{Number(quotation.totalIgst).toLocaleString("en-IN")}</span>
+                    <span className="font-medium">{symbol}{Number(quotation.totalIgst).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 {Number(quotation.totalCgst) === 0 && Number(quotation.totalSgst) === 0 && Number(quotation.totalIgst) === 0 && Number(quotation.taxAmount) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Tax</span>
-                    <span className="font-medium">₹{Number(quotation.taxAmount).toLocaleString("en-IN")}</span>
+                    <span className="font-medium">{symbol}{Number(quotation.taxAmount).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total</span>
-                  <span>₹{Number(quotation.total).toLocaleString("en-IN")}</span>
+                  <span>{symbol}{Number(quotation.total).toLocaleString("en-IN")}</span>
                 </div>
               </div>
             </div>

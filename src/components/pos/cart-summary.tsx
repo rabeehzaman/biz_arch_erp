@@ -2,19 +2,14 @@
 
 import { Separator } from "@/components/ui/separator";
 import type { CartItemData } from "./cart-item";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface CartSummaryProps {
   items: CartItemData[];
 }
 
-function formatCurrency(amount: number) {
-  return amount.toLocaleString("en-IN", {
-    style: "currency",
-    currency: "INR",
-  });
-}
-
 export function CartSummary({ items }: CartSummaryProps) {
+  const { fmt: formatCurrency } = useCurrency();
   const { subtotal, taxAmount, total } = calculateCartTotal(items);
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -182,9 +183,7 @@ export default function FixBalancesPage() {
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const { fmt: formatCurrency } = useCurrency();
 
   return (
         <PageAnimation>

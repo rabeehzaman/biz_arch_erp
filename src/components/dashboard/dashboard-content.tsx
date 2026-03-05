@@ -9,6 +9,7 @@ import { useDashboardStats } from "@/hooks/use-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 
 function StatCardSkeleton() {
   return (
@@ -30,12 +31,10 @@ export function DashboardContent() {
   const { data: session } = useSession();
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
   const { t, lang } = useLanguage();
+  const { fmt } = useCurrency();
 
   const formatAmount = (amount: number) => {
-    if (lang === "ar") {
-      return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
-    }
-    return `₹${amount.toLocaleString("en-IN")}`;
+    return fmt(amount);
   };
 
   if (isError) {

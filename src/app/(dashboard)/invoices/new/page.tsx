@@ -21,6 +21,7 @@ import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { parseWeightBarcode, WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Customer {
   id: string;
@@ -94,6 +95,7 @@ export default function NewInvoicePage() {
   const [availableDevices, setAvailableDevices] = useState<Record<string, MobileDeviceOption[]>>({});
 
   const { data: session } = useSession();
+  const { symbol } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -739,21 +741,21 @@ export default function NewInvoicePage() {
                               {(session?.user?.gstEnabled || saudiEnabled) ? (
                                 <>
                                   <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                    {saudiEnabled ? "SAR" : "₹"}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toFixed(2)}
+                                    {symbol}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toFixed(2)}
                                     {item.discount > 0 && (
                                       <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                     )}
                                   </TableCell>
                                   <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
                                     {saudiEnabled
-                                      ? `SAR ${((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.vatRate || 0) / 100)).toFixed(2)}`
-                                      : `₹${((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}`
+                                      ? `${symbol}${((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.vatRate || 0) / 100)).toFixed(2)}`
+                                      : `${symbol}${((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}`
                                     }
                                   </TableCell>
                                 </>
                               ) : (
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                  ₹{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                  {symbol}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                   )}
@@ -970,8 +972,8 @@ export default function NewInvoicePage() {
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span className="text-sm font-semibold">
                             {(session?.user?.gstEnabled || saudiEnabled)
-                              ? `${saudiEnabled ? "SAR" : "₹"} ${lineNet.toFixed(2)}`
-                              : `₹${lineGross.toLocaleString("en-IN")}`}
+                              ? `${symbol}${lineNet.toFixed(2)}`
+                              : `${symbol}${lineGross.toLocaleString("en-IN")}`}
                           </span>
                         </div>
 
@@ -1046,17 +1048,17 @@ export default function NewInvoicePage() {
                   )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>{saudiEnabled ? `SAR ${calculateSubtotal().toFixed(2)}` : `₹${calculateSubtotal().toLocaleString("en-IN")}`}</span>
+                    <span>{symbol}{calculateSubtotal().toLocaleString("en-IN")}</span>
                   </div>
                   {calculateTax() > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>{saudiEnabled ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
-                      <span>{saudiEnabled ? `SAR ${calculateTax().toFixed(2)}` : `₹${calculateTax().toLocaleString("en-IN")}`}</span>
+                      <span>{symbol}{calculateTax().toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span>{saudiEnabled ? `SAR ${calculateTotal().toFixed(2)}` : `₹${calculateTotal().toLocaleString("en-IN")}`}</span>
+                    <span>{symbol}{calculateTotal().toLocaleString("en-IN")}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex justify-end">

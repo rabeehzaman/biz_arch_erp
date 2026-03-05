@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface DebitNote {
   id: string;
@@ -65,6 +66,7 @@ export default function DebitNoteDetailPage() {
   const [debitNote, setDebitNote] = useState<DebitNote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const { symbol } = useCurrency();
 
   useEffect(() => {
     fetchDebitNote();
@@ -256,11 +258,11 @@ export default function DebitNoteDetailPage() {
                       </TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
                       <TableCell className="text-right">
-                        ₹{Number(item.unitCost).toLocaleString("en-IN")}
+                        {symbol}{Number(item.unitCost).toLocaleString("en-IN")}
                       </TableCell>
                       <TableCell className="text-right">{item.discount}%</TableCell>
                       <TableCell className="text-right font-medium">
-                        ₹{Number(item.total).toLocaleString("en-IN")}
+                        {symbol}{Number(item.total).toLocaleString("en-IN")}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -277,13 +279,13 @@ export default function DebitNoteDetailPage() {
                   )}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>Qty: {item.quantity}</span>
-                    <span>Cost: ₹{Number(item.unitCost).toLocaleString("en-IN")}</span>
+                    <span>Cost: {symbol}{Number(item.unitCost).toLocaleString("en-IN")}</span>
                     {Number(item.discount) > 0 && (
                       <span className="text-green-600">Discount: {item.discount}%</span>
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
-                    ₹{Number(item.total).toLocaleString("en-IN")}
+                    {symbol}{Number(item.total).toLocaleString("en-IN")}
                   </div>
                 </div>
               ))}
@@ -292,36 +294,36 @@ export default function DebitNoteDetailPage() {
             <div className="mt-4 space-y-2 max-w-xs ml-auto">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>₹{Number(debitNote.subtotal).toLocaleString("en-IN")}</span>
+                <span>{symbol}{Number(debitNote.subtotal).toLocaleString("en-IN")}</span>
               </div>
               {Number(debitNote.totalCgst) > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
                   <span>CGST:</span>
-                  <span>₹{Number(debitNote.totalCgst).toLocaleString("en-IN")}</span>
+                  <span>{symbol}{Number(debitNote.totalCgst).toLocaleString("en-IN")}</span>
                 </div>
               )}
               {Number(debitNote.totalSgst) > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
                   <span>SGST:</span>
-                  <span>₹{Number(debitNote.totalSgst).toLocaleString("en-IN")}</span>
+                  <span>{symbol}{Number(debitNote.totalSgst).toLocaleString("en-IN")}</span>
                 </div>
               )}
               {Number(debitNote.totalIgst) > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
                   <span>IGST:</span>
-                  <span>₹{Number(debitNote.totalIgst).toLocaleString("en-IN")}</span>
+                  <span>{symbol}{Number(debitNote.totalIgst).toLocaleString("en-IN")}</span>
                 </div>
               )}
               {Number(debitNote.totalCgst) === 0 && Number(debitNote.totalSgst) === 0 && Number(debitNote.totalIgst) === 0 && Number(debitNote.taxAmount) > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
                   <span>Tax:</span>
-                  <span>₹{Number(debitNote.taxAmount).toLocaleString("en-IN")}</span>
+                  <span>{symbol}{Number(debitNote.taxAmount).toLocaleString("en-IN")}</span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total:</span>
                 <span className="text-orange-600">
-                  ₹{Number(debitNote.total).toLocaleString("en-IN")}
+                  {symbol}{Number(debitNote.total).toLocaleString("en-IN")}
                 </span>
               </div>
             </div>

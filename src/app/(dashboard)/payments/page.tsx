@@ -48,6 +48,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Payment {
   id: string;
@@ -100,11 +101,7 @@ export default function PaymentsPage() {
   const [deletePayment, setDeletePayment] = useState<Payment | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { t, lang } = useLanguage();
-
-  const formatAmount = (amount: number) => {
-    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
-    return `₹${amount.toLocaleString("en-IN")}`;
-  };
+  const { symbol, fmt } = useCurrency();
   const [formData, setFormData] = useState({
     customerId: "",
     invoiceId: "",
@@ -281,7 +278,7 @@ export default function PaymentsPage() {
                         <div className="flex justify-between w-full">
                           <span>{customer.name}</span>
                           <span className="text-slate-500 text-xs">
-                            Balance: ₹{Number(customer.balance).toLocaleString("en-IN")}
+                            Balance: {symbol}{Number(customer.balance).toLocaleString("en-IN")}
                           </span>
                         </div>
                       )}
@@ -310,7 +307,7 @@ export default function PaymentsPage() {
                         <SelectContent>
                           {customerInvoices.map((invoice) => (
                             <SelectItem key={invoice.id} value={invoice.id}>
-                              {invoice.invoiceNumber} (Due: ₹{Number(invoice.balanceDue).toLocaleString("en-IN")})
+                              {invoice.invoiceNumber} (Due: {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -475,11 +472,11 @@ export default function PaymentsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium text-green-600">
-                          {formatAmount(Number(payment.amount))}
+                          {fmt(Number(payment.amount))}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell text-right text-slate-500">
                           {Number(payment.discountReceived) > 0
-                            ? formatAmount(Number(payment.discountReceived))
+                            ? fmt(Number(payment.discountReceived))
                             : "-"}
                         </TableCell>
                         <TableCell>

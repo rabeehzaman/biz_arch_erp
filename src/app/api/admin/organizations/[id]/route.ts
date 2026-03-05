@@ -93,6 +93,7 @@ export async function PUT(
       arabicCity,
       invoicePdfFormat,
       language,
+      currency,
       pdfHeaderImageUrl,
       pdfFooterImageUrl,
     } = body;
@@ -109,6 +110,14 @@ export async function PUT(
     if (language !== undefined && !["en", "ar"].includes(language)) {
       return NextResponse.json(
         { error: "Language must be 'en' or 'ar'" },
+        { status: 400 }
+      );
+    }
+
+    // Validate currency
+    if (currency !== undefined && !["INR", "SAR"].includes(currency)) {
+      return NextResponse.json(
+        { error: "Currency must be 'INR' or 'SAR'" },
         { status: 400 }
       );
     }
@@ -198,6 +207,7 @@ export async function PUT(
     if (arabicAddress !== undefined) updateData.arabicAddress = arabicAddress || null;
     if (arabicCity !== undefined) updateData.arabicCity = arabicCity || null;
     if (language !== undefined) updateData.language = language;
+    if (currency !== undefined) updateData.currency = currency;
     if (pdfHeaderImageUrl !== undefined) updateData.pdfHeaderImageUrl = pdfHeaderImageUrl || null;
     if (pdfFooterImageUrl !== undefined) updateData.pdfFooterImageUrl = pdfFooterImageUrl || null;
 

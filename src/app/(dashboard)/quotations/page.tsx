@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Quotation {
   id: string;
@@ -47,11 +48,7 @@ export default function QuotationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
-
-  const formatAmount = (amount: number) => {
-    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
-    return `₹${amount.toLocaleString("en-IN")}`;
-  };
+  const { fmt } = useCurrency();
 
   useEffect(() => {
     fetchQuotations();
@@ -212,7 +209,7 @@ export default function QuotationsPage() {
                         </TableCell>
                         <TableCell>{getStatusBadge(quotation.status)}</TableCell>
                         <TableCell className="text-right">
-                          {formatAmount(Number(quotation.total))}
+                          {fmt(Number(quotation.total))}
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <Link href={`/quotations/${quotation.id}`}>

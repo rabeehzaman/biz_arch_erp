@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,12 +132,8 @@ export default function SupplierStatementPage({
     fetchStatement();
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₹${Math.abs(amount).toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
+  const { fmt } = useCurrency();
+  const formatCurrency = (amount: number) => fmt(Math.abs(amount));
 
   if (isLoading) {
     return (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useCurrency } from "@/hooks/use-currency";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -99,6 +100,7 @@ const emptyForm = {
 
 export default function OpeningStockPage() {
   const { data: session } = useSession();
+  const { symbol } = useCurrency();
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
   const [openingStocks, setOpeningStocks] = useState<OpeningStock[]>([]);
@@ -338,7 +340,7 @@ export default function OpeningStockPage() {
                     <div>
                       <p className="text-sm text-slate-500">Total Value</p>
                       <p className="text-2xl font-bold">
-                        ₹{totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                        {symbol}{totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </div>
@@ -462,10 +464,10 @@ export default function OpeningStockPage() {
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-right tabular-nums">
-                          ₹{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          {symbol}{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell text-right font-medium tabular-nums">
-                          ₹{(Number(stock.quantity) * Number(stock.unitCost)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          {symbol}{(Number(stock.quantity) * Number(stock.unitCost)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </TableCell>
                         {multiBranchEnabled && (
                           <TableCell className="hidden sm:table-cell">
@@ -606,7 +608,7 @@ export default function OpeningStockPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Unit Cost (₹)</Label>
+                <Label>Unit Cost ({symbol})</Label>
                 <Input
                   type="number"
                   min="0"
@@ -623,7 +625,7 @@ export default function OpeningStockPage() {
             {formData.quantity && formData.unitCost && parseFloat(formData.quantity) > 0 && (
               <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
                 <span className="font-medium">Total Value: </span>
-                ₹{(parseFloat(formData.quantity || "0") * parseFloat(formData.unitCost || "0")).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                {symbol}{(parseFloat(formData.quantity || "0") * parseFloat(formData.unitCost || "0")).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </div>
             )}
 

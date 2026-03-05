@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -85,11 +86,9 @@ function ProductsPageContent() {
   const router = useRouter();
   const activeTab = searchParams.get("tab") === "inventory" ? "inventory" : "products";
   const { t, lang } = useLanguage();
+  const { fmt } = useCurrency();
 
-  const formatAmount = (amount: number) => {
-    if (lang === "ar") return `${amount.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ر.س`;
-    return `₹${amount.toLocaleString("en-IN")}`;
-  };
+  const formatAmount = (amount: number) => fmt(amount);
 
   // — Products tab state —
   const [products, setProducts] = useState<Product[]>([]);

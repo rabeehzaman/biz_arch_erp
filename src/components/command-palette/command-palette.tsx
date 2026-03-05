@@ -26,6 +26,7 @@ import {
   CommandItem,
   CommandSeparator,
 } from "@/components/ui/command";
+import { useCurrency } from "@/hooks/use-currency";
 import { useCommandPalette } from "./command-palette-provider";
 import { useRecentCommands } from "./use-recent-commands";
 import { useCommandSearch } from "./use-command-search";
@@ -95,6 +96,7 @@ export function CommandPalette() {
   const { data: session } = useSession();
   const { recents, addRecent, clearRecents } = useRecentCommands();
 
+  const { symbol } = useCurrency();
   const isMobileShopEnabled = !!session?.user?.isMobileShopModuleEnabled;
   const nav = useVisibleNav(session);
 
@@ -303,7 +305,7 @@ export function CommandPalette() {
                 </div>
                 {p.sellingPrice != null && (
                   <span className="ml-auto text-xs text-slate-400 shrink-0">
-                    ₹{p.sellingPrice.toLocaleString("en-IN")}
+                    {symbol}{p.sellingPrice.toLocaleString("en-IN")}
                   </span>
                 )}
               </CommandItem>
@@ -367,7 +369,7 @@ export function CommandPalette() {
                 </div>
                 {inv.total != null && (
                   <span className="ml-auto text-xs text-slate-400 shrink-0">
-                    ₹{inv.total.toLocaleString("en-IN")}
+                    {symbol}{inv.total.toLocaleString("en-IN")}
                   </span>
                 )}
               </CommandItem>

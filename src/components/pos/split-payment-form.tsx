@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
 import { PaymentMethodButton } from "./payment-method-button";
+import { useCurrency } from "@/hooks/use-currency";
 
 export interface PaymentEntry {
   method: string;
@@ -19,15 +20,12 @@ interface SplitPaymentFormProps {
 
 const METHODS = ["CASH", "CREDIT_CARD", "UPI", "BANK_TRANSFER"];
 
-function formatCurrency(amount: number) {
-  return amount.toLocaleString("en-IN", { style: "currency", currency: "INR" });
-}
-
 export function SplitPaymentForm({
   payments,
   total,
   onUpdate,
 }: SplitPaymentFormProps) {
+  const { fmt: formatCurrency } = useCurrency();
   const totalPaid = payments.reduce(
     (sum, p) => sum + (parseFloat(p.amount) || 0),
     0

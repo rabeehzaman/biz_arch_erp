@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Numpad } from "./numpad";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface CashTenderedInputProps {
   total: number;
@@ -10,15 +11,12 @@ interface CashTenderedInputProps {
   onChange: (value: string) => void;
 }
 
-function formatCurrency(amount: number) {
-  return amount.toLocaleString("en-IN", { style: "currency", currency: "INR" });
-}
-
 export function CashTenderedInput({
   total,
   value,
   onChange,
 }: CashTenderedInputProps) {
+  const { fmt: formatCurrency } = useCurrency();
   const numericValue = parseFloat(value) || 0;
   const change = numericValue - total;
 

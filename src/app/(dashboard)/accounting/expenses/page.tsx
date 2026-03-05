@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import {
   Table,
@@ -40,6 +41,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function ExpensesPage() {
+  const { fmt } = useCurrency();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -146,10 +148,7 @@ export default function ExpensesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {Number(expense.total).toLocaleString("en-IN", {
-                            style: "currency",
-                            currency: "INR",
-                          })}
+                          {fmt(Number(expense.total))}
                         </TableCell>
                       </TableRow>
                     ))}

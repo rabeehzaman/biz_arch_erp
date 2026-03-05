@@ -37,6 +37,7 @@ import QRCode from "react-qr-code";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface InvoiceItem {
   id: string;
@@ -97,6 +98,7 @@ export default function InvoiceDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { symbol } = useCurrency();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -393,7 +395,7 @@ export default function InvoiceDetailPage({
                       <TableCell>{item.description}</TableCell>
                       <TableCell className="text-right">{Number(item.quantity)}</TableCell>
                       <TableCell className="text-right">
-                        ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                        {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}
                       </TableCell>
                       <TableCell className="text-right">
                         {Number(item.discount) > 0 ? (
@@ -403,7 +405,7 @@ export default function InvoiceDetailPage({
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        ₹{Number(item.total).toLocaleString("en-IN")}
+                        {symbol}{Number(item.total).toLocaleString("en-IN")}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -418,13 +420,13 @@ export default function InvoiceDetailPage({
                   <div className="font-medium text-sm">{item.description}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>Qty: {Number(item.quantity)}</span>
-                    <span>Price: ₹{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                    <span>Price: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
                     {Number(item.discount) > 0 && (
                       <span className="text-green-600">Discount: {Number(item.discount)}%</span>
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
-                    ₹{Number(item.total).toLocaleString("en-IN")}
+                    {symbol}{Number(item.total).toLocaleString("en-IN")}
                   </div>
                 </div>
               ))}
@@ -449,13 +451,13 @@ export default function InvoiceDetailPage({
                 )}
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>{invoice.saudiInvoiceType ? "SAR" : "₹"}{Number(invoice.subtotal).toLocaleString(invoice.saudiInvoiceType ? "en-SA" : "en-IN")}</span>
+                  <span>{symbol}{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
                 </div>
                 {invoice.saudiInvoiceType ? (
                   Number(invoice.totalVat) > 0 && (
                     <div className="flex justify-between text-sm text-slate-500">
                       <span>VAT (15%) — ضريبة القيمة المضافة</span>
-                      <span>SAR {Number(invoice.totalVat).toFixed(2)}</span>
+                      <span>{symbol}{Number(invoice.totalVat).toFixed(2)}</span>
                     </div>
                   )
                 ) : (
@@ -463,43 +465,43 @@ export default function InvoiceDetailPage({
                     {Number(invoice.totalCgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>CGST</span>
-                        <span>₹{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
+                        <span>{symbol}{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
                       </div>
                     )}
                     {Number(invoice.totalSgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>SGST</span>
-                        <span>₹{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
+                        <span>{symbol}{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
                       </div>
                     )}
                     {Number(invoice.totalIgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>IGST</span>
-                        <span>₹{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
+                        <span>{symbol}{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
                       </div>
                     )}
                     {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>Tax</span>
-                        <span>₹{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
+                        <span>{symbol}{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
                       </div>
                     )}
                   </>
                 )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Total</span>
-                  <span>{invoice.saudiInvoiceType ? `SAR ${Number(invoice.total).toFixed(2)}` : `₹${Number(invoice.total).toLocaleString("en-IN")}`}</span>
+                  <span>{symbol}{Number(invoice.total).toLocaleString("en-IN")}</span>
                 </div>
                 {Number(invoice.amountPaid) > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Amount Paid</span>
-                    <span>₹{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
+                    <span>{symbol}{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Balance Due</span>
                   <span className={Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"}>
-                    ₹{Number(invoice.balanceDue).toLocaleString("en-IN")}
+                    {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")}
                   </span>
                 </div>
               </div>

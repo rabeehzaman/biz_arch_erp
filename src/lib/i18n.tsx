@@ -23,21 +23,17 @@ export function getLocale(lang: Language): string {
     return lang === "ar" ? "ar-SA" : "en";
 }
 
-export function formatCurrencyLocalized(amount: number, lang: Language): string {
-    if (lang === "ar") {
-        return amount.toLocaleString("ar-SA", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
-    }
-    return amount.toLocaleString("en-IN", {
+export function formatCurrencyLocalized(amount: number, lang: Language, currency: string = "INR"): string {
+    const locale = lang === "ar" ? "ar-SA" : (currency === "SAR" ? "en-US" : "en-IN");
+    return amount.toLocaleString(locale, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
 }
 
-export function getCurrencySymbol(lang: Language): string {
-    return lang === "ar" ? "ر.س" : "SAR";
+export function getCurrencySymbol(lang: Language, currency: string = "INR"): string {
+    if (currency === "SAR") return lang === "ar" ? "ر.س" : "SAR";
+    return "₹";
 }
 
 // ---------- translation function ----------

@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface CreditNote {
   id: string;
@@ -64,6 +65,7 @@ export default function CreditNoteDetailPage() {
   const [creditNote, setCreditNote] = useState<CreditNote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const { symbol } = useCurrency();
 
   useEffect(() => {
     fetchCreditNote();
@@ -259,11 +261,11 @@ export default function CreditNoteDetailPage() {
                       </TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
                       <TableCell className="text-right">
-                        ₹{Number(item.unitPrice).toLocaleString("en-IN")}
+                        {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}
                       </TableCell>
                       <TableCell className="text-right">{item.discount}%</TableCell>
                       <TableCell className="text-right font-medium">
-                        ₹{Number(item.total).toLocaleString("en-IN")}
+                        {symbol}{Number(item.total).toLocaleString("en-IN")}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -280,13 +282,13 @@ export default function CreditNoteDetailPage() {
                   )}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>Qty: {item.quantity}</span>
-                    <span>Price: ₹{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                    <span>Price: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
                     {Number(item.discount) > 0 && (
                       <span className="text-green-600">Discount: {item.discount}%</span>
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
-                    ₹{Number(item.total).toLocaleString("en-IN")}
+                    {symbol}{Number(item.total).toLocaleString("en-IN")}
                   </div>
                 </div>
               ))}
@@ -296,7 +298,7 @@ export default function CreditNoteDetailPage() {
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
                 <span className="text-green-600">
-                  ₹{Number(creditNote.total).toLocaleString("en-IN")}
+                  {symbol}{Number(creditNote.total).toLocaleString("en-IN")}
                 </span>
               </div>
             </div>

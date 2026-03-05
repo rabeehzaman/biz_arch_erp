@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ interface Account {
 }
 
 export default function CashBankPage() {
+  const { fmt } = useCurrency();
   const [accounts, setAccounts] = useState<CashBankAccount[]>([]);
   const [coaAccounts, setCoaAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -281,7 +283,7 @@ export default function CashBankPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">
-                {totalBalance.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                {fmt(totalBalance)}
               </p>
             </CardContent>
           </Card>
@@ -315,10 +317,7 @@ export default function CashBankPage() {
                         <p className="text-sm text-slate-500">{account.bankName}</p>
                       )}
                       <p className="text-2xl font-bold mt-3">
-                        {Number(account.balance).toLocaleString("en-IN", {
-                          style: "currency",
-                          currency: "INR",
-                        })}
+                        {fmt(Number(account.balance))}
                       </p>
                       <p className="text-xs text-slate-400 mt-1">
                         {account._count.transactions} transactions
