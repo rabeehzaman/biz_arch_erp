@@ -246,7 +246,7 @@ function ProductsPageContent() {
         {/* Page Header */}
         <div>
           <h2 className="text-2xl font-bold text-slate-900">{t("products.title")}</h2>
-          <p className="text-slate-500">{lang === "ar" ? "إدارة كتالوج المنتجات ومستويات المخزون" : "Manage your product catalog and stock levels"}</p>
+          <p className="text-slate-500">{t("products.manageProducts")}</p>
         </div>
 
         {/* Tab Bar */}
@@ -424,7 +424,7 @@ function ProductsPageContent() {
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardDescription>{lang === "ar" ? "في المخزون" : "In Stock"}</CardDescription>
+                      <CardDescription>{t("products.inStock")}</CardDescription>
                       <CardTitle className="text-3xl text-green-600">
                         {summary.productsWithStock}
                       </CardTitle>
@@ -432,7 +432,7 @@ function ProductsPageContent() {
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardDescription>{lang === "ar" ? "نفد المخزون" : "Out of Stock"}</CardDescription>
+                      <CardDescription>{t("products.outOfStock")}</CardDescription>
                       <CardTitle className="text-3xl text-red-600">
                         {summary.productsOutOfStock}
                       </CardTitle>
@@ -485,7 +485,7 @@ function ProductsPageContent() {
                             <TableHead>{t("products.productName")}</TableHead>
                             <TableHead>{t("products.sku")}</TableHead>
                             <TableHead className="text-right">{t("inventory.currentStock")}</TableHead>
-                            <TableHead className="text-right">{lang === "ar" ? "متوسط التكلفة" : "Avg. Cost"}</TableHead>
+                            <TableHead className="text-right">{t("products.avgCost")}</TableHead>
                             <TableHead className="text-right">{t("reports.stockValue")}</TableHead>
                             <TableHead>{t("common.status")}</TableHead>
                           </TableRow>
@@ -525,7 +525,7 @@ function ProductsPageContent() {
                                   {isOutOfStock ? (
                                     <Badge variant="destructive">
                                       <AlertTriangle className="mr-1 h-3 w-3" />
-                                      {lang === "ar" ? "نفد المخزون" : "Out of Stock"}
+                                      {t("products.outOfStock")}
                                     </Badge>
                                   ) : isLowStock ? (
                                     <Badge
@@ -533,14 +533,14 @@ function ProductsPageContent() {
                                       className="bg-orange-100 text-orange-800"
                                     >
                                       <AlertTriangle className="mr-1 h-3 w-3" />
-                                      {lang === "ar" ? "مخزون منخفض" : "Low Stock"}
+                                      {t("products.lowStock")}
                                     </Badge>
                                   ) : (
                                     <Badge
                                       variant="default"
                                       className="bg-green-100 text-green-800"
                                     >
-                                      {lang === "ar" ? "في المخزون" : "In Stock"}
+                                      {t("products.inStock")}
                                     </Badge>
                                   )}
                                 </TableCell>

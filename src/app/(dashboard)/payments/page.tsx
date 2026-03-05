@@ -82,14 +82,14 @@ interface Invoice {
   balanceDue: number;
 }
 
-const methodLabels: Record<string, string> = {
-  CASH: "Cash",
-  BANK_TRANSFER: "Bank Transfer",
-  CHECK: "Check",
-  CREDIT_CARD: "Credit Card",
-  UPI: "UPI",
-  OTHER: "Other",
-};
+const methodLabels = (t: (key: string) => string): Record<string, string> => ({
+  CASH: t("common.cash"),
+  BANK_TRANSFER: t("common.bankTransfer"),
+  CHECK: t("common.check"),
+  CREDIT_CARD: t("common.creditCard"),
+  UPI: t("common.upi"),
+  OTHER: t("common.other"),
+});
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -154,9 +154,9 @@ export default function PaymentsPage() {
     e.preventDefault();
 
     const errors: Record<string, string> = {};
-    if (!formData.customerId) errors.customerId = "Customer is required";
-    if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = "A valid amount is required";
-    if (!formData.paymentDate) errors.paymentDate = "Payment date is required";
+    if (!formData.customerId) errors.customerId = t("validation.customerRequired");
+    if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = t("validation.amountRequired");
+    if (!formData.paymentDate) errors.paymentDate = t("validation.paymentDateRequired");
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -243,7 +243,7 @@ export default function PaymentsPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("payments.customerPayments")}</h2>
-            <p className="text-slate-500">{lang === "ar" ? "تسجيل وإدارة المدفوعات" : "Record and manage payments"}</p>
+            <p className="text-slate-500">{t("payments.managePayments")}</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -293,7 +293,7 @@ export default function PaymentsPage() {
                   </div>
                   {formData.customerId && customerInvoices.length > 0 && (
                     <div className="grid gap-2">
-                      <Label htmlFor="invoice">Link to Invoice (Optional)</Label>
+                      <Label htmlFor="invoice">{t("common.linkToInvoice")}</Label>
                       <Select
                         value={formData.invoiceId}
                         onValueChange={(value) => {
@@ -306,7 +306,7 @@ export default function PaymentsPage() {
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select invoice" />
+                          <SelectValue placeholder={t("common.selectInvoice")} />
                         </SelectTrigger>
                         <SelectContent>
                           {customerInvoices.map((invoice) => (
@@ -375,12 +375,12 @@ export default function PaymentsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="CASH">Cash</SelectItem>
-                          <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                          <SelectItem value="CHECK">Check</SelectItem>
-                          <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                          <SelectItem value="UPI">UPI</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
+                          <SelectItem value="CASH">{t("common.cash")}</SelectItem>
+                          <SelectItem value="BANK_TRANSFER">
+                          <SelectItem value="CHECK">{t("common.check")}</SelectItem>
+                          <SelectItem value="CREDIT_CARD">{t("common.creditCard")}</SelectItem>
+                          <SelectItem value="UPI">{t("common.upi")}</SelectItem>
+                          <SelectItem value="OTHER">{t("common.other")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -392,7 +392,7 @@ export default function PaymentsPage() {
                         onChange={(e) =>
                           setFormData({ ...formData, reference: e.target.value })
                         }
-                        placeholder="Check #, Transaction ID..."
+                        placeholder={t("common.checkTransactionId")}
                       />
                     </div>
                   </div>
@@ -410,7 +410,7 @@ export default function PaymentsPage() {
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isSubmitting ? "Recording..." : t("payments.recordPayment")}
+                    {isSubmitting ? t("common.recording") : t("payments.recordPayment")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -450,7 +450,7 @@ export default function PaymentsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{lang === "ar" ? "رقم الدفعة" : "Payment #"}</TableHead>
+                      <TableHead>{t("payments.paymentNo")}</TableHead>
                       <TableHead>{t("sales.customer")}</TableHead>
                       <TableHead className="hidden sm:table-cell">{t("sales.invoiceNumber")}</TableHead>
                       <TableHead>{t("common.date")}</TableHead>
@@ -475,7 +475,7 @@ export default function PaymentsPage() {
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
                           <Badge variant="outline">
-                            {methodLabels[payment.paymentMethod]}
+                            {methodLabels(t)[payment.paymentMethod]}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium text-green-600">
@@ -508,11 +508,9 @@ export default function PaymentsPage() {
         <AlertDialog open={!!deletePayment} onOpenChange={() => setDeletePayment(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Payment</AlertDialogTitle>
+              <AlertDialogTitle>{t("payments.deletePayment")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete payment {deletePayment?.paymentNumber}?
-                This will reverse the customer balance and any invoice allocations.
-                This action cannot be undone.
+                {t("payments.deletePaymentDesc").replace("{paymentNumber}", deletePayment?.paymentNumber || "")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

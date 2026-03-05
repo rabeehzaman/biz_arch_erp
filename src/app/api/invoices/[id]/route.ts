@@ -107,7 +107,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, notes, terms, items, warehouseId: bodyWarehouseId } = body;
+    const { customerId, issueDate, dueDate, notes, terms, items, warehouseId: bodyWarehouseId, paymentType } = body;
 
     const existingInvoice = await prisma.invoice.findUnique({
       where: { id, organizationId },
@@ -208,6 +208,7 @@ export async function PUT(
           totalIgst: gstResult.totalIgst,
           placeOfSupply: gstResult.placeOfSupply,
           isInterState: gstResult.isInterState,
+          paymentType,
           items: {
             create: items.map((item: {
               productId: string;

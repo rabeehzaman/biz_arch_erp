@@ -230,6 +230,7 @@ export interface InvoiceA4VATProps {
     createdByName?: string | null;
     qrCodeDataURL?: string;
     saudiInvoiceType?: string;
+    paymentType?: string;
   };
   type: "SALES" | "PURCHASE";
   title?: string;
@@ -287,300 +288,309 @@ export function InvoiceA4VATPDF({
 
         <View style={contentStyle}>
 
-        {/* Bilingual Title */}
-        {hasHeader && <View style={{ height: 10 }} />}
-        <View style={styles.titleRow}>
-          <Text style={styles.titleEn}>{enTitle}</Text>
-          <Text style={styles.titleAr}>{arTitle}</Text>
-        </View>
-        <View style={{ borderBottomWidth: 1.5, borderBottomColor: THEME.primary, marginBottom: 6 }} />
+          {/* Bilingual Title */}
+          {hasHeader && <View style={{ height: 10 }} />}
+          <View style={styles.titleRow}>
+            <Text style={styles.titleEn}>{enTitle}</Text>
+            <Text style={styles.titleAr}>{arTitle}</Text>
+          </View>
+          <View style={{ borderBottomWidth: 1.5, borderBottomColor: THEME.primary, marginBottom: 6 }} />
 
-        {/* Seller + Buyer Info */}
-        <View style={styles.infoRow}>
-          {/* Seller */}
-          <View style={[styles.infoBox, { width: "48%" }]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
-              <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 7 }]}>Seller</Text>
-              <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0628\u0627\u0626\u0639"}</Ar>
-            </View>
-            <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
-              {invoice.organization.name}
-            </Text>
-            {invoice.organization.arabicName && (
-              <Text style={styles.infoBoxTextAr}>
-                {invoice.organization.arabicName}
-              </Text>
-            )}
-            {invoice.organization.arabicAddress && (
-              <Text style={styles.infoBoxTextAr}>
-                {invoice.organization.arabicAddress}
-              </Text>
-            )}
-            {invoice.organization.vatNumber && (
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
-                <Text style={styles.infoBoxText}>TRN: {invoice.organization.vatNumber}</Text>
-                <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A"}</Ar>
+          {/* Seller + Buyer Info */}
+          <View style={styles.infoRow}>
+            {/* Seller */}
+            <View style={[styles.infoBox, { width: "48%" }]}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
+                <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 7 }]}>Seller</Text>
+                <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0628\u0627\u0626\u0639"}</Ar>
               </View>
-            )}
-          </View>
-
-          {/* Buyer */}
-          <View style={[styles.infoBox, { width: "48%" }]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
-              <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 7 }]}>Buyer</Text>
-              <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0645\u0634\u062A\u0631\u064A"}</Ar>
-            </View>
-            <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
-              {invoice.customer.name}
-            </Text>
-            {invoice.customer.arabicName && (
-              <Text style={styles.infoBoxTextAr}>
-                {invoice.customer.arabicName}
+              <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
+                {invoice.organization.name}
               </Text>
-            )}
-            {invoice.customer.address && (
-              <Text style={styles.infoBoxText}>{invoice.customer.address}</Text>
-            )}
-            {customerLocation && (
-              <Text style={styles.infoBoxText}>{customerLocation}</Text>
-            )}
-            {invoice.customer.vatNumber && (
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
-                <Text style={styles.infoBoxText}>TRN: {invoice.customer.vatNumber}</Text>
-                <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A"}</Ar>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Invoice details row */}
-        <View style={{ flexDirection: "row", marginBottom: 8, gap: 16 }}>
-          <View>
-            <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Invoice No:</Text>
-            <Ar style={{ fontSize: 6, color: "#666" }}>{"\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"}</Ar>
-          </View>
-          <Text style={styles.infoBoxText}>{invoice.invoiceNumber}</Text>
-          <View>
-            <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Date:</Text>
-            <Ar style={{ fontSize: 6, color: "#666" }}>{"\u0627\u0644\u062A\u0627\u0631\u064A\u062E"}</Ar>
-          </View>
-          <Text style={styles.infoBoxText}>{format(new Date(invoice.issueDate), "dd-MM-yyyy")}</Text>
-          {invoice.createdByName && (
-            <>
-              <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Salesperson:</Text>
-              <Text style={styles.infoBoxText}>{invoice.createdByName}</Text>
-            </>
-          )}
-        </View>
-
-        {/* Items Table */}
-        <View style={styles.table}>
-          {/* Header — each cell is a View with two Text lines (EN + AR) */}
-          <View style={styles.headerRow}>
-            <View style={[styles.headerCellWrap, { width: COL.sl }]}>
-              <Text style={styles.headerTextEn}>Sl</Text>
-              <Ar style={styles.headerTextAr}>{"\u0645"}</Ar>
-            </View>
-            <View style={[styles.headerCellWrap, { width: COL.item }]}>
-              <Text style={styles.headerTextEn}>Description</Text>
-              <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0648\u0635\u0641"}</Ar>
-            </View>
-            <View style={[styles.headerCellWrap, { width: COL.qty }]}>
-              <Text style={styles.headerTextEn}>Qty</Text>
-              <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0643\u0645\u064A\u0629"}</Ar>
-            </View>
-            <View style={[styles.headerCellWrap, { width: COL.rate }]}>
-              <Text style={styles.headerTextEn}>Unit Price</Text>
-              <Ar style={styles.headerTextAr}>{"\u0633\u0639\u0631 \u0627\u0644\u0648\u062D\u062F\u0629"}</Ar>
-            </View>
-            <View style={[styles.headerCellWrap, { width: COL.disc }]}>
-              <Text style={styles.headerTextEn}>Discount</Text>
-              <Ar style={styles.headerTextAr}>{"\u062E\u0635\u0645"}</Ar>
-            </View>
-            <View style={[styles.taxableHeaderWrap, { width: COL.taxable }]}>
-              <Text style={styles.headerTextEn}>Taxable Value</Text>
-              <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u062E\u0627\u0636\u0639\u0629"}</Ar>
-            </View>
-            <View style={[styles.headerCellWrap, { width: COL.vatPct }]}>
-              <Text style={styles.headerTextEn}>VAT %</Text>
-              <Ar style={styles.headerTextAr}>{"\u0636.\u0642.\u0645 %"}</Ar>
-            </View>
-            <View style={[styles.headerCellWrap, { width: COL.vatAmt }]}>
-              <Text style={styles.headerTextEn}>VAT Amount</Text>
-              <Ar style={styles.headerTextAr}>{"\u0645\u0628\u0644\u063A \u0627\u0644\u0636\u0631\u064A\u0628\u0629"}</Ar>
-            </View>
-            <View style={[styles.headerCellWrapLast, { width: COL.total }]}>
-              <Text style={styles.headerTextEn}>Total</Text>
-              <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"}</Ar>
-            </View>
-          </View>
-
-          {/* Data Rows */}
-          {itemsComputed.map((item, index) => {
-            const unitCode = item.unit?.code || item.product?.unit?.code;
-            const qtyStr = `${formatCurrency(item.quantity)}${unitCode ? ` ${unitCode.toUpperCase()}` : ""}`;
-            return (
-              <View key={index} style={[styles.tableRow, index % 2 === 1 ? { backgroundColor: "#f5f8f5" } : {}]}>
-                <Text style={[styles.cell, { width: COL.sl, textAlign: "center" }]}>
-                  {index + 1}
+              {invoice.organization.arabicName && (
+                <Text style={styles.infoBoxTextAr}>
+                  {invoice.organization.arabicName}
                 </Text>
-                <View style={[styles.cell, { width: COL.item }]}>
-                  <Text style={{ fontSize: 6.5 }}>{item.description}</Text>
-                  {item.arabicName && (
-                    <Text style={{ fontSize: 7, fontFamily: ARABIC_FONT_FAMILY, textAlign: "right" }}>
-                      {item.arabicName}
-                    </Text>
-                  )}
+              )}
+              {invoice.organization.arabicAddress && (
+                <Text style={styles.infoBoxTextAr}>
+                  {invoice.organization.arabicAddress}
+                </Text>
+              )}
+              {invoice.organization.vatNumber && (
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
+                  <Text style={styles.infoBoxText}>TRN: {invoice.organization.vatNumber}</Text>
+                  <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A"}</Ar>
                 </View>
-                <Text style={[styles.cell, { width: COL.qty, textAlign: "right" }]}>
-                  {qtyStr}
-                </Text>
-                <Text style={[styles.cell, { width: COL.rate, textAlign: "right" }]}>
-                  {formatCurrency(item.unitPrice)}
-                </Text>
-                <Text style={[styles.cell, { width: COL.disc, textAlign: "right" }]}>
-                  {item.discountAmt > 0 ? formatCurrency(item.discountAmt) : ""}
-                </Text>
-                <Text style={[styles.taxableCell, { width: COL.taxable, textAlign: "right" }]}>
-                  {formatCurrency(item.taxableValue)}
-                </Text>
-                <Text style={[styles.cell, { width: COL.vatPct, textAlign: "center" }]}>
-                  {item.vatRate > 0 ? `${item.vatRate}%` : "0%"}
-                </Text>
-                <Text style={[styles.cell, { width: COL.vatAmt, textAlign: "right" }]}>
-                  {item.vatAmount > 0 ? formatCurrency(item.vatAmount) : "0.00"}
-                </Text>
-                <Text style={[styles.cellLast, { width: COL.total, textAlign: "right" }]}>
-                  {formatCurrency(item.total)}
-                </Text>
-              </View>
-            );
-          })}
-
-          {/* Totals row */}
-          <View style={styles.totalRow}>
-            <Text style={[styles.cell, { width: COL.sl }]} />
-            <View style={[styles.cell, { width: COL.item, flexDirection: "row", justifyContent: "space-between" }]}>
-              <Text style={{ fontWeight: "bold", fontSize: 6.5 }}>Total</Text>
-              <Ar style={{ fontWeight: "bold", fontSize: 7 }}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"}</Ar>
+              )}
             </View>
-            <Text style={[styles.cell, { width: COL.qty }]} />
-            <Text style={[styles.cell, { width: COL.rate }]} />
-            <Text style={[styles.cell, { width: COL.disc, textAlign: "right", fontWeight: "bold" }]}>
-              {totalDiscount > 0 ? formatCurrency(totalDiscount) : ""}
-            </Text>
-            <Text style={[styles.taxableCell, { width: COL.taxable, textAlign: "right", fontWeight: "bold" }]}>
-              {formatCurrency(taxableTotal)}
-            </Text>
-            <Text style={[styles.cell, { width: COL.vatPct }]} />
-            <Text style={[styles.cell, { width: COL.vatAmt, textAlign: "right", fontWeight: "bold" }]}>
-              {formatCurrency(totalVatComputed)}
-            </Text>
-            <Text style={[styles.cellLast, { width: COL.total, textAlign: "right", fontWeight: "bold" }]}>
-              {formatCurrency(invoice.total)}
-            </Text>
-          </View>
-        </View>
 
-        {/* Summary section */}
-        <View style={{ borderWidth: 1, borderColor: THEME.border, borderTopWidth: 0, marginBottom: 2 }}>
-          <View style={{ flexDirection: "row", justifyContent: "flex-end", padding: 3, gap: 20 }}>
+            {/* Buyer */}
+            <View style={[styles.infoBox, { width: "48%" }]}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
+                <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 7 }]}>Buyer</Text>
+                <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0645\u0634\u062A\u0631\u064A"}</Ar>
+              </View>
+              <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
+                {invoice.customer.name}
+              </Text>
+              {invoice.customer.arabicName && (
+                <Text style={styles.infoBoxTextAr}>
+                  {invoice.customer.arabicName}
+                </Text>
+              )}
+              {invoice.customer.address && (
+                <Text style={styles.infoBoxText}>{invoice.customer.address}</Text>
+              )}
+              {customerLocation && (
+                <Text style={styles.infoBoxText}>{customerLocation}</Text>
+              )}
+              {invoice.customer.vatNumber && (
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
+                  <Text style={styles.infoBoxText}>TRN: {invoice.customer.vatNumber}</Text>
+                  <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A"}</Ar>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Invoice details row */}
+          <View style={{ flexDirection: "row", marginBottom: 8, gap: 16 }}>
             <View>
-              <View style={{ flexDirection: "row", gap: 4 }}>
-                <Text style={{ fontSize: 7 }}>Subtotal</Text>
-                <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0645\u062C\u0645\u0648\u0639 \u0627\u0644\u0641\u0631\u0639\u064A"}</Ar>
-              </View>
-              <View style={{ flexDirection: "row", gap: 4 }}>
-                <Text style={{ fontSize: 7 }}>VAT (15%)</Text>
-                <Ar style={{ fontSize: 7 }}>{"\u0636.\u0642.\u0645"}</Ar>
-              </View>
-              <View style={{ flexDirection: "row", gap: 4 }}>
-                <Text style={{ fontSize: 8, fontWeight: "bold" }}>Grand Total</Text>
-                <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0643\u0644\u064A"}</Ar>
-              </View>
+              <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Invoice No:</Text>
+              <Ar style={{ fontSize: 6, color: "#666" }}>{"\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"}</Ar>
             </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.subtotal)}</Text>
-              <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.totalVat)}</Text>
-              <Text style={{ fontSize: 8, fontWeight: "bold" }}>{formatCurrency(invoice.total)}</Text>
-            </View>
-          </View>
-
-          {/* Amount in words */}
-          <View style={{ paddingHorizontal: 3, paddingBottom: 3 }}>
-            <Text style={{ fontSize: 6.5 }}>
-              {numberToWordsLocalized(invoice.total, "en")}
-            </Text>
-            <Text style={{ fontSize: 7.5, fontFamily: ARABIC_FONT_FAMILY, textAlign: "right" }}>
-              {numberToWordsLocalized(invoice.total, "ar")}
-            </Text>
-          </View>
-
-          {/* Amount Paid / Balance Due */}
-          {invoice.amountPaid > 0 && (
-            <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2, gap: 4 }}>
-              <Text style={{ fontSize: 7 }}>Amount Paid:</Text>
-              <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639"}</Ar>
-              <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.amountPaid)}</Text>
-            </View>
-          )}
-          {invoice.balanceDue > 0 && (
-            <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2, gap: 4 }}>
-              <Text style={{ fontSize: 7, fontWeight: "bold" }}>Balance Due:</Text>
-              <Ar style={{ fontSize: 7, fontWeight: "bold" }}>{"\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062A\u0628\u0642\u064A"}</Ar>
-              <Text style={{ fontSize: 7, fontWeight: "bold" }}>{formatCurrency(invoice.balanceDue)}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Balance Info */}
-        {balanceInfo && (
-          <View style={{ marginBottom: 4, borderWidth: 1, borderColor: THEME.border, padding: 3 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 7 }}>Old Balance: {formatCurrency(balanceInfo.oldBalance)}</Text>
-              <Text style={{ fontSize: 7 }}>This Invoice: {formatCurrency(balanceInfo.sales)}</Text>
-              <Text style={{ fontSize: 7, fontWeight: "bold" }}>Current Balance: {formatCurrency(balanceInfo.balance)}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* QR Code + E&OE */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 2 }}>
-          {invoice.qrCodeDataURL ? (
+            <Text style={styles.infoBoxText}>{invoice.invoiceNumber}</Text>
             <View>
-              <Image src={invoice.qrCodeDataURL} style={{ width: 70, height: 70 }} />
-              <Text style={{ fontSize: 5, color: "#666", marginTop: 1 }}>ZATCA QR Code</Text>
+              <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Date:</Text>
+              <Ar style={{ fontSize: 6, color: "#666" }}>{"\u0627\u0644\u062A\u0627\u0631\u064A\u062E"}</Ar>
             </View>
-          ) : (
-            <View />
+            <Text style={styles.infoBoxText}>{format(new Date(invoice.issueDate), "dd-MM-yyyy")}</Text>
+            {invoice.paymentType && (
+              <>
+                <View>
+                  <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Payment Type:</Text>
+                  <Ar style={{ fontSize: 6, color: "#666" }}>طريقة الدفع</Ar>
+                </View>
+                <Text style={styles.infoBoxText}>{invoice.paymentType === "CREDIT" ? "Credit / آجل" : "Cash / نقدي"}</Text>
+              </>
+            )}
+            {invoice.createdByName && (
+              <>
+                <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Salesperson:</Text>
+                <Text style={styles.infoBoxText}>{invoice.createdByName}</Text>
+              </>
+            )}
+          </View>
+
+          {/* Items Table */}
+          <View style={styles.table}>
+            {/* Header — each cell is a View with two Text lines (EN + AR) */}
+            <View style={styles.headerRow}>
+              <View style={[styles.headerCellWrap, { width: COL.sl }]}>
+                <Text style={styles.headerTextEn}>Sl</Text>
+                <Ar style={styles.headerTextAr}>{"\u0645"}</Ar>
+              </View>
+              <View style={[styles.headerCellWrap, { width: COL.item }]}>
+                <Text style={styles.headerTextEn}>Description</Text>
+                <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0648\u0635\u0641"}</Ar>
+              </View>
+              <View style={[styles.headerCellWrap, { width: COL.qty }]}>
+                <Text style={styles.headerTextEn}>Qty</Text>
+                <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0643\u0645\u064A\u0629"}</Ar>
+              </View>
+              <View style={[styles.headerCellWrap, { width: COL.rate }]}>
+                <Text style={styles.headerTextEn}>Unit Price</Text>
+                <Ar style={styles.headerTextAr}>{"\u0633\u0639\u0631 \u0627\u0644\u0648\u062D\u062F\u0629"}</Ar>
+              </View>
+              <View style={[styles.headerCellWrap, { width: COL.disc }]}>
+                <Text style={styles.headerTextEn}>Discount</Text>
+                <Ar style={styles.headerTextAr}>{"\u062E\u0635\u0645"}</Ar>
+              </View>
+              <View style={[styles.taxableHeaderWrap, { width: COL.taxable }]}>
+                <Text style={styles.headerTextEn}>Taxable Value</Text>
+                <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u062E\u0627\u0636\u0639\u0629"}</Ar>
+              </View>
+              <View style={[styles.headerCellWrap, { width: COL.vatPct }]}>
+                <Text style={styles.headerTextEn}>VAT %</Text>
+                <Ar style={styles.headerTextAr}>{"\u0636.\u0642.\u0645 %"}</Ar>
+              </View>
+              <View style={[styles.headerCellWrap, { width: COL.vatAmt }]}>
+                <Text style={styles.headerTextEn}>VAT Amount</Text>
+                <Ar style={styles.headerTextAr}>{"\u0645\u0628\u0644\u063A \u0627\u0644\u0636\u0631\u064A\u0628\u0629"}</Ar>
+              </View>
+              <View style={[styles.headerCellWrapLast, { width: COL.total }]}>
+                <Text style={styles.headerTextEn}>Total</Text>
+                <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"}</Ar>
+              </View>
+            </View>
+
+            {/* Data Rows */}
+            {itemsComputed.map((item, index) => {
+              const unitCode = item.unit?.code || item.product?.unit?.code;
+              const qtyStr = `${formatCurrency(item.quantity)}${unitCode ? ` ${unitCode.toUpperCase()}` : ""}`;
+              return (
+                <View key={index} style={[styles.tableRow, index % 2 === 1 ? { backgroundColor: "#f5f8f5" } : {}]}>
+                  <Text style={[styles.cell, { width: COL.sl, textAlign: "center" }]}>
+                    {index + 1}
+                  </Text>
+                  <View style={[styles.cell, { width: COL.item }]}>
+                    <Text style={{ fontSize: 6.5 }}>{item.description}</Text>
+                    {item.arabicName && (
+                      <Text style={{ fontSize: 7, fontFamily: ARABIC_FONT_FAMILY, textAlign: "right" }}>
+                        {item.arabicName}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[styles.cell, { width: COL.qty, textAlign: "right" }]}>
+                    {qtyStr}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.rate, textAlign: "right" }]}>
+                    {formatCurrency(item.unitPrice)}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.disc, textAlign: "right" }]}>
+                    {item.discountAmt > 0 ? formatCurrency(item.discountAmt) : ""}
+                  </Text>
+                  <Text style={[styles.taxableCell, { width: COL.taxable, textAlign: "right" }]}>
+                    {formatCurrency(item.taxableValue)}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.vatPct, textAlign: "center" }]}>
+                    {item.vatRate > 0 ? `${item.vatRate}%` : "0%"}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.vatAmt, textAlign: "right" }]}>
+                    {item.vatAmount > 0 ? formatCurrency(item.vatAmount) : "0.00"}
+                  </Text>
+                  <Text style={[styles.cellLast, { width: COL.total, textAlign: "right" }]}>
+                    {formatCurrency(item.total)}
+                  </Text>
+                </View>
+              );
+            })}
+
+            {/* Totals row */}
+            <View style={styles.totalRow}>
+              <Text style={[styles.cell, { width: COL.sl }]} />
+              <View style={[styles.cell, { width: COL.item, flexDirection: "row", justifyContent: "space-between" }]}>
+                <Text style={{ fontWeight: "bold", fontSize: 6.5 }}>Total</Text>
+                <Ar style={{ fontWeight: "bold", fontSize: 7 }}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"}</Ar>
+              </View>
+              <Text style={[styles.cell, { width: COL.qty }]} />
+              <Text style={[styles.cell, { width: COL.rate }]} />
+              <Text style={[styles.cell, { width: COL.disc, textAlign: "right", fontWeight: "bold" }]}>
+                {totalDiscount > 0 ? formatCurrency(totalDiscount) : ""}
+              </Text>
+              <Text style={[styles.taxableCell, { width: COL.taxable, textAlign: "right", fontWeight: "bold" }]}>
+                {formatCurrency(taxableTotal)}
+              </Text>
+              <Text style={[styles.cell, { width: COL.vatPct }]} />
+              <Text style={[styles.cell, { width: COL.vatAmt, textAlign: "right", fontWeight: "bold" }]}>
+                {formatCurrency(totalVatComputed)}
+              </Text>
+              <Text style={[styles.cellLast, { width: COL.total, textAlign: "right", fontWeight: "bold" }]}>
+                {formatCurrency(invoice.total)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Summary section */}
+          <View style={{ borderWidth: 1, borderColor: THEME.border, borderTopWidth: 0, marginBottom: 2 }}>
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", padding: 3, gap: 20 }}>
+              <View>
+                <View style={{ flexDirection: "row", gap: 4 }}>
+                  <Text style={{ fontSize: 7 }}>Subtotal</Text>
+                  <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0645\u062C\u0645\u0648\u0639 \u0627\u0644\u0641\u0631\u0639\u064A"}</Ar>
+                </View>
+                <View style={{ flexDirection: "row", gap: 4 }}>
+                  <Text style={{ fontSize: 7 }}>VAT (15%)</Text>
+                  <Ar style={{ fontSize: 7 }}>{"\u0636.\u0642.\u0645"}</Ar>
+                </View>
+                <View style={{ flexDirection: "row", gap: 4 }}>
+                  <Text style={{ fontSize: 8, fontWeight: "bold" }}>Grand Total</Text>
+                  <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0643\u0644\u064A"}</Ar>
+                </View>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.subtotal)}</Text>
+                <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.totalVat)}</Text>
+                <Text style={{ fontSize: 8, fontWeight: "bold" }}>{formatCurrency(invoice.total)}</Text>
+              </View>
+            </View>
+
+            {/* Amount in words */}
+            <View style={{ paddingHorizontal: 3, paddingBottom: 3 }}>
+              <Text style={{ fontSize: 6.5 }}>
+                {numberToWordsLocalized(invoice.total, "en")}
+              </Text>
+              <Text style={{ fontSize: 7.5, fontFamily: ARABIC_FONT_FAMILY, textAlign: "right" }}>
+                {numberToWordsLocalized(invoice.total, "ar")}
+              </Text>
+            </View>
+
+            {/* Amount Paid / Balance Due */}
+            {invoice.amountPaid > 0 && (
+              <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2, gap: 4 }}>
+                <Text style={{ fontSize: 7 }}>Amount Paid:</Text>
+                <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639"}</Ar>
+                <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.amountPaid)}</Text>
+              </View>
+            )}
+            {invoice.balanceDue > 0 && (
+              <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2, gap: 4 }}>
+                <Text style={{ fontSize: 7, fontWeight: "bold" }}>Balance Due:</Text>
+                <Ar style={{ fontSize: 7, fontWeight: "bold" }}>{"\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062A\u0628\u0642\u064A"}</Ar>
+                <Text style={{ fontSize: 7, fontWeight: "bold" }}>{formatCurrency(invoice.balanceDue)}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Balance Info */}
+          {balanceInfo && (
+            <View style={{ marginBottom: 4, borderWidth: 1, borderColor: THEME.border, padding: 3 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 7 }}>Old Balance: {formatCurrency(balanceInfo.oldBalance)}</Text>
+                <Text style={{ fontSize: 7 }}>This Invoice: {formatCurrency(balanceInfo.sales)}</Text>
+                <Text style={{ fontSize: 7, fontWeight: "bold" }}>Current Balance: {formatCurrency(balanceInfo.balance)}</Text>
+              </View>
+            </View>
           )}
-          <Text style={styles.eoe}>E. & O.E</Text>
-        </View>
 
-        {/* Declaration + Signatory */}
-        <View style={{ borderBottomWidth: 1.5, borderBottomColor: THEME.primary, marginBottom: 4, marginTop: 4 }} />
-        <View style={styles.bottomRow}>
-          <View style={{ width: "55%" }}>
-            <View style={{ flexDirection: "row", gap: 4 }}>
-              <Text style={styles.declarationBold}>Declaration</Text>
-              <Ar style={{ fontSize: 7, fontWeight: "bold" }}>{"\u0625\u0642\u0631\u0627\u0631"}</Ar>
+          {/* QR Code + E&OE */}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 2 }}>
+            {invoice.qrCodeDataURL ? (
+              <View>
+                <Image src={invoice.qrCodeDataURL} style={{ width: 70, height: 70 }} />
+                <Text style={{ fontSize: 5, color: "#666", marginTop: 1 }}>ZATCA QR Code</Text>
+              </View>
+            ) : (
+              <View />
+            )}
+            <Text style={styles.eoe}>E. & O.E</Text>
+          </View>
+
+          {/* Declaration + Signatory */}
+          <View style={{ borderBottomWidth: 1.5, borderBottomColor: THEME.primary, marginBottom: 4, marginTop: 4 }} />
+          <View style={styles.bottomRow}>
+            <View style={{ width: "55%" }}>
+              <View style={{ flexDirection: "row", gap: 4 }}>
+                <Text style={styles.declarationBold}>Declaration</Text>
+                <Ar style={{ fontSize: 7, fontWeight: "bold" }}>{"\u0625\u0642\u0631\u0627\u0631"}</Ar>
+              </View>
+              <Text style={styles.declaration}>
+                Certified that all the particulars shown in the above tax invoice are true and correct.
+              </Text>
+              <Text style={[styles.declaration, { fontFamily: ARABIC_FONT_FAMILY, textAlign: "right", fontSize: 7 }]}>
+                {"\u0646\u0642\u0631 \u0628\u0623\u0646 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0627\u0631\u062F\u0629 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0636\u0631\u064A\u0628\u064A\u0629 \u0635\u062D\u064A\u062D\u0629 \u0648\u062F\u0642\u064A\u0642\u0629"}
+              </Text>
             </View>
-            <Text style={styles.declaration}>
-              Certified that all the particulars shown in the above tax invoice are true and correct.
-            </Text>
-            <Text style={[styles.declaration, { fontFamily: ARABIC_FONT_FAMILY, textAlign: "right", fontSize: 7 }]}>
-              {"\u0646\u0642\u0631 \u0628\u0623\u0646 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0627\u0631\u062F\u0629 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0636\u0631\u064A\u0628\u064A\u0629 \u0635\u062D\u064A\u062D\u0629 \u0648\u062F\u0642\u064A\u0642\u0629"}
-            </Text>
-          </View>
 
-          <View style={{ width: "45%", alignItems: "center" }}>
-            <Text style={{ fontSize: 8, marginBottom: 30 }}>
-              For {invoice.organization.name}
-            </Text>
-            <Text style={styles.signatory}>Authorised Signatory</Text>
-            <Text style={{ fontSize: 6 }}>( With Status & Seal )</Text>
+            <View style={{ width: "45%", alignItems: "center" }}>
+              <Text style={{ fontSize: 8, marginBottom: 30 }}>
+                For {invoice.organization.name}
+              </Text>
+              <Text style={styles.signatory}>Authorised Signatory</Text>
+              <Text style={{ fontSize: 6 }}>( With Status & Seal )</Text>
+            </View>
           </View>
-        </View>
 
         </View>
 

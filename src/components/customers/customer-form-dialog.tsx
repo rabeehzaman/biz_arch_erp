@@ -78,7 +78,7 @@ export function CustomerFormDialog({
                 city: customerToEdit.city || "",
                 state: customerToEdit.state || "",
                 zipCode: customerToEdit.zipCode || "",
-                country: customerToEdit.country || "India",
+                country: customerToEdit.country || (session?.user?.zatcaEnabled ? "Saudi Arabia" : "India"),
                 gstin: customerToEdit.gstin || "",
                 gstStateCode: customerToEdit.gstStateCode || "",
                 notes: customerToEdit.notes || "",
@@ -87,10 +87,15 @@ export function CustomerFormDialog({
                 addNo: customerToEdit.addNo || "",
                 district: customerToEdit.district || "",
             });
+        } else if (open && !customerToEdit) {
+            setFormData(prev => ({
+                ...prev,
+                country: session?.user?.zatcaEnabled ? "Saudi Arabia" : "India"
+            }));
         } else if (!open) {
             resetForm();
         }
-    }, [customerToEdit, open]);
+    }, [customerToEdit, open, session]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -104,7 +109,7 @@ export function CustomerFormDialog({
             city: formData.city || null,
             state: formData.state || null,
             zipCode: formData.zipCode || null,
-            country: formData.country || "India",
+            country: formData.country || (session?.user?.zatcaEnabled ? "Saudi Arabia" : "India"),
             gstin: formData.gstin || null,
             gstStateCode: formData.gstStateCode || null,
             notes: formData.notes || null,
@@ -156,7 +161,7 @@ export function CustomerFormDialog({
             city: "",
             state: "",
             zipCode: "",
-            country: "India",
+            country: session?.user?.zatcaEnabled ? "Saudi Arabia" : "India",
             gstin: "",
             gstStateCode: "",
             notes: "",
@@ -276,42 +281,46 @@ export function CustomerFormDialog({
                                 }
                             />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
-                            <div className="grid gap-2">
-                                <Label htmlFor="cust-district">District / الحي</Label>
-                                <Input
-                                    id="cust-district"
-                                    value={formData.district}
-                                    onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="cust-buildingNo">Building No / رقم المبنى</Label>
-                                <Input
-                                    id="cust-buildingNo"
-                                    value={formData.buildingNo}
-                                    onChange={(e) => setFormData({ ...formData, buildingNo: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
-                            <div className="grid gap-2">
-                                <Label htmlFor="cust-addNo">Add. No / الرقم الفرعي</Label>
-                                <Input
-                                    id="cust-addNo"
-                                    value={formData.addNo}
-                                    onChange={(e) => setFormData({ ...formData, addNo: e.target.value })}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="cust-ccNo">C.C No / معرف آخر</Label>
-                                <Input
-                                    id="cust-ccNo"
-                                    value={formData.ccNo}
-                                    onChange={(e) => setFormData({ ...formData, ccNo: e.target.value })}
-                                />
-                            </div>
-                        </div>
+                        {session?.user?.zatcaEnabled && (
+                            <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="cust-district">District / الحي</Label>
+                                        <Input
+                                            id="cust-district"
+                                            value={formData.district}
+                                            onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="cust-buildingNo">Building No / رقم المبنى</Label>
+                                        <Input
+                                            id="cust-buildingNo"
+                                            value={formData.buildingNo}
+                                            onChange={(e) => setFormData({ ...formData, buildingNo: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="cust-addNo">Add. No / الرقم الفرعي</Label>
+                                        <Input
+                                            id="cust-addNo"
+                                            value={formData.addNo}
+                                            onChange={(e) => setFormData({ ...formData, addNo: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="cust-ccNo">C.R No / معرف آخر</Label>
+                                        <Input
+                                            id="cust-ccNo"
+                                            value={formData.ccNo}
+                                            onChange={(e) => setFormData({ ...formData, ccNo: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="cust-city">City</Label>

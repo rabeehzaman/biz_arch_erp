@@ -252,6 +252,7 @@ interface InvoicePDFProps {
     saudiInvoiceType?: string;
     totalVat?: number;
     qrCodeDataURL?: string; // PNG data URL for QR code
+    paymentType?: string;
   };
   type: "SALES" | "PURCHASE";
   title?: string;
@@ -328,6 +329,11 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo, lan
             <Text style={styles.invoiceDate}>
               Date : {format(new Date(invoice.issueDate), "dd-MM-yy")}
             </Text>
+            {invoice.paymentType && (
+              <Text style={styles.invoiceDate}>
+                Pay Type : {invoice.paymentType === "CREDIT" ? "Credit" : "Cash"}
+              </Text>
+            )}
           </View>
           <View style={styles.headerCenter}>
             <Text style={styles.estimateTitle}>

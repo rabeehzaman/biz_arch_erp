@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId } = body;
+    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId, paymentType } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -234,6 +234,7 @@ export async function POST(request: NextRequest) {
           invoiceNumber,
           branchId: branchId || null,
           warehouseId: warehouseId || null,
+          paymentType: paymentType || "CASH",
           customerId,
           createdById: userId,
           issueDate: invoiceDate,

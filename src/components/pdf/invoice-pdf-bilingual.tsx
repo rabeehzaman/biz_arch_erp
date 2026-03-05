@@ -332,6 +332,7 @@ export interface InvoiceBilingualProps {
         balanceDue: number;
         qrCodeDataURL?: string;
         saudiInvoiceType?: string;
+        paymentType?: string;
     };
     type: "SALES" | "PURCHASE";
     title?: string;
@@ -402,7 +403,7 @@ export function InvoiceBilingualPDF({
                                     <Text style={styles.labelText}>InvoiceType | نوع الفاتورة</Text>
                                 </View>
                                 <View style={styles.topGridCellRowLast}>
-                                    <Ar style={styles.valueText}>{isSimplified ? "مبسطة / Simplified" : "آجل / Credit"}</Ar>
+                                    <Ar style={styles.valueText}>{isSimplified ? "مبسطة / Simplified" : "ضريبية / Standard"}</Ar>
                                 </View>
                             </View>
                             {/* Col 3: G.DATE */}
@@ -414,14 +415,13 @@ export function InvoiceBilingualPDF({
                                     <Text style={styles.valueText}>{format(new Date(invoice.issueDate), "dd-MM-yyyy")}</Text>
                                 </View>
                             </View>
-                            {/* Col 4: H.DATE (Fallback to Gregorian right now as we don't have Hijri lib imported) */}
+                            {/* Col 4: Payment Type */}
                             <View style={styles.topGridCellLast}>
                                 <View style={styles.topGridCellRow}>
-                                    <Text style={styles.labelText}>H.DATE | الموافق</Text>
+                                    <Text style={styles.labelText}>Pay Type | طريقة الدفع</Text>
                                 </View>
                                 <View style={styles.topGridCellRowLast}>
-                                    {/* Provide an empty or placeholder for Hijri if unsupported, or same date. */}
-                                    <Text style={styles.valueText}>{format(new Date(invoice.issueDate), "dd-MM-yyyy")}</Text>
+                                    <Ar style={styles.valueText}>{invoice.paymentType === "CREDIT" ? "آجل / Credit" : "نقدي / Cash"}</Ar>
                                 </View>
                             </View>
                         </View>

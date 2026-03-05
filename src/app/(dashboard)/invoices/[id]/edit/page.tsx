@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, ArrowLeft, Scale } from "lucide-react";
@@ -76,6 +77,7 @@ export default function EditInvoicePage({
     terms: "",
     branchId: "",
     warehouseId: "",
+    paymentType: "CASH",
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -190,6 +192,7 @@ export default function EditInvoicePage({
           terms: data.terms || "",
           branchId: data.branchId || "",
           warehouseId: data.warehouseId || "",
+          paymentType: data.paymentType || "CASH",
         });
         setLineItems(
           data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitPrice: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
@@ -355,6 +358,7 @@ export default function EditInvoicePage({
           terms: formData.terms || null,
           branchId: formData.branchId || undefined,
           warehouseId: formData.warehouseId || undefined,
+          paymentType: formData.paymentType || "CASH",
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -432,7 +436,7 @@ export default function EditInvoicePage({
                   onBranchChange={(id) => setFormData(prev => ({ ...prev, branchId: id }))}
                   onWarehouseChange={(id) => setFormData(prev => ({ ...prev, warehouseId: id }))}
                 />
-                <div className="grid gap-4 sm:grid-cols-3 mt-4">
+                <div className="grid gap-4 sm:grid-cols-4 mt-4">
                   <div className="grid gap-2">
                     <Label htmlFor="customer">Customer *</Label>
                     <CustomerCombobox
@@ -467,6 +471,27 @@ export default function EditInvoicePage({
                       }
                       required
                     />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="paymentType">Payment Type *</Label>
+                    <Select
+                      value={formData.paymentType}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, paymentType: value })
+                      }
+                    >
+                      <SelectTrigger id="paymentType">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CASH">
+                          Cash {session?.user?.saudiEInvoiceEnabled ? "/ نقدي" : ""}
+                        </SelectItem>
+                        <SelectItem value="CREDIT">
+                          Credit {session?.user?.saudiEInvoiceEnabled ? "/ آجل" : ""}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>

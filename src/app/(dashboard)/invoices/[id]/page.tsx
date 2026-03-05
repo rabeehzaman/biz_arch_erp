@@ -80,6 +80,7 @@ interface Invoice {
   sentAt: string | null;
   notes: string | null;
   terms: string | null;
+  paymentType: string;
   items: InvoiceItem[];
   branch?: { id: string; name: string; code: string } | null;
   warehouse?: { id: string; name: string; code: string } | null;
@@ -320,232 +321,238 @@ export default function InvoiceDetailPage({
           </TabsList>
 
           <TabsContent value="invoice">
-        {/* Invoice Document */}
-        <Card className="print:shadow-none print:border-none">
-          <CardContent className="p-4 sm:p-8">
-            {/* Company & Invoice Info */}
-            <div className="flex justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-                  <Building2 className="h-7 w-7 text-primary-foreground" />
+            {/* Invoice Document */}
+            <Card className="print:shadow-none print:border-none">
+              <CardContent className="p-4 sm:p-8">
+                {/* Company & Invoice Info */}
+                <div className="flex justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
+                      <Building2 className="h-7 w-7 text-primary-foreground" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold">BizArch ERP</h1>
+                      <p className="text-sm text-slate-500">Invoice</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-xl font-bold">{invoice.invoiceNumber}</h2>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold">BizArch ERP</h1>
-                  <p className="text-sm text-slate-500">Invoice</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <h2 className="text-xl font-bold">{invoice.invoiceNumber}</h2>
-              </div>
-            </div>
 
-            {/* Bill To & Dates */}
-            <div className="grid sm:grid-cols-2 gap-8 mb-8">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                  Bill To
-                </h3>
-                <div>
-                  <p className="font-semibold">{invoice.customer.name}</p>
-                  {invoice.customer.email && (
-                    <p className="text-sm text-slate-600">{invoice.customer.email}</p>
-                  )}
-                  {invoice.customer.phone && (
-                    <p className="text-sm text-slate-600">{invoice.customer.phone}</p>
-                  )}
-                  {invoice.customer.address && (
-                    <p className="text-sm text-slate-600">
-                      {invoice.customer.address}
-                      {invoice.customer.city && `, ${invoice.customer.city}`}
-                      {invoice.customer.state && `, ${invoice.customer.state}`}
-                      {invoice.customer.zipCode && ` - ${invoice.customer.zipCode}`}
-                    </p>
-                  )}
+                {/* Bill To & Dates */}
+                <div className="grid sm:grid-cols-2 gap-8 mb-8">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                      Bill To
+                    </h3>
+                    <div>
+                      <p className="font-semibold">{invoice.customer.name}</p>
+                      {invoice.customer.email && (
+                        <p className="text-sm text-slate-600">{invoice.customer.email}</p>
+                      )}
+                      {invoice.customer.phone && (
+                        <p className="text-sm text-slate-600">{invoice.customer.phone}</p>
+                      )}
+                      {invoice.customer.address && (
+                        <p className="text-sm text-slate-600">
+                          {invoice.customer.address}
+                          {invoice.customer.city && `, ${invoice.customer.city}`}
+                          {invoice.customer.state && `, ${invoice.customer.state}`}
+                          {invoice.customer.zipCode && ` - ${invoice.customer.zipCode}`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="sm:text-right">
+                    <div className="space-y-1">
+                      <p className="text-sm">
+                        <span className="text-slate-500">Issue Date:</span>{" "}
+                        <span className="font-medium">
+                          {format(new Date(invoice.issueDate), "dd MMM yyyy")}
+                        </span>
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-slate-500">Due Date:</span>{" "}
+                        <span className="font-medium">
+                          {format(new Date(invoice.dueDate), "dd MMM yyyy")}
+                        </span>
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-slate-500">Payment Type:</span>{" "}
+                        <span className="font-medium">
+                          {invoice.paymentType === "CREDIT" ? "Credit" : "Cash"}
+                        </span>
+                      </p>
+                      {invoice.branch && (
+                        <p className="text-sm">
+                          <span className="text-slate-500">Branch:</span>{" "}
+                          <span className="font-medium">{invoice.branch.name}</span>
+                        </p>
+                      )}
+                      {invoice.warehouse && (
+                        <p className="text-sm">
+                          <span className="text-slate-500">Warehouse:</span>{" "}
+                          <span className="font-medium">{invoice.warehouse.name}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="sm:text-right">
-                <div className="space-y-1">
-                  <p className="text-sm">
-                    <span className="text-slate-500">Issue Date:</span>{" "}
-                    <span className="font-medium">
-                      {format(new Date(invoice.issueDate), "dd MMM yyyy")}
-                    </span>
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-slate-500">Due Date:</span>{" "}
-                    <span className="font-medium">
-                      {format(new Date(invoice.dueDate), "dd MMM yyyy")}
-                    </span>
-                  </p>
-                  {invoice.branch && (
-                    <p className="text-sm">
-                      <span className="text-slate-500">Branch:</span>{" "}
-                      <span className="font-medium">{invoice.branch.name}</span>
-                    </p>
-                  )}
-                  {invoice.warehouse && (
-                    <p className="text-sm">
-                      <span className="text-slate-500">Warehouse:</span>{" "}
-                      <span className="font-medium">{invoice.warehouse.name}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
 
-            {/* Line Items — Desktop */}
-            <div className="hidden sm:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40%]">Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                {/* Line Items — Desktop */}
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[40%]">Description</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Unit Price</TableHead>
+                        <TableHead className="text-right">Discount</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoice.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.description}</TableCell>
+                          <TableCell className="text-right">{Number(item.quantity)}</TableCell>
+                          <TableCell className="text-right">
+                            {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {Number(item.discount) > 0 ? (
+                              <span className="text-green-600">{Number(item.discount)}%</span>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {symbol}{Number(item.total).toLocaleString("en-IN")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Line Items — Mobile */}
+                <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
                   {invoice.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell className="text-right">{Number(item.quantity)}</TableCell>
-                      <TableCell className="text-right">
-                        {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {Number(item.discount) > 0 ? (
-                          <span className="text-green-600">{Number(item.discount)}%</span>
-                        ) : (
-                          "-"
+                    <div key={item.id} className="p-3 space-y-1">
+                      <div className="font-medium text-sm">{item.description}</div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
+                        <span>Qty: {Number(item.quantity)}</span>
+                        <span>Price: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                        {Number(item.discount) > 0 && (
+                          <span className="text-green-600">Discount: {Number(item.discount)}%</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right">
+                      </div>
+                      <div className="text-right font-semibold text-sm">
                         {symbol}{Number(item.total).toLocaleString("en-IN")}
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Line Items — Mobile */}
-            <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
-              {invoice.items.map((item) => (
-                <div key={item.id} className="p-3 space-y-1">
-                  <div className="font-medium text-sm">{item.description}</div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
-                    <span>Qty: {Number(item.quantity)}</span>
-                    <span>Price: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
-                    {Number(item.discount) > 0 && (
-                      <span className="text-green-600">Discount: {Number(item.discount)}%</span>
-                    )}
-                  </div>
-                  <div className="text-right font-semibold text-sm">
-                    {symbol}{Number(item.total).toLocaleString("en-IN")}
-                  </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Totals */}
-            <div className="flex justify-end mt-6">
-              <div className="w-full sm:w-64 space-y-2">
-                {invoice.saudiInvoiceType && invoice.qrCodeData && (
-                  <div className="flex flex-col items-end gap-1 mb-4">
-                    <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
-                      {invoice.saudiInvoiceType === "SIMPLIFIED" ? "Simplified Tax Invoice" : "Tax Invoice"} — ZATCA Phase 1
-                    </span>
-                    {invoice.invoiceCounterValue && (
-                      <span className="text-xs text-slate-400">ICV: {invoice.invoiceCounterValue}</span>
+                {/* Totals */}
+                <div className="flex justify-end mt-6">
+                  <div className="w-full sm:w-64 space-y-2">
+                    {invoice.saudiInvoiceType && invoice.qrCodeData && (
+                      <div className="flex flex-col items-end gap-1 mb-4">
+                        <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
+                          {invoice.saudiInvoiceType === "SIMPLIFIED" ? "Simplified Tax Invoice" : "Tax Invoice"} — ZATCA Phase 1
+                        </span>
+                        {invoice.invoiceCounterValue && (
+                          <span className="text-xs text-slate-400">ICV: {invoice.invoiceCounterValue}</span>
+                        )}
+                        <div className="border p-1 bg-white" title="Scan to verify invoice (ZATCA Phase 1)">
+                          <QRCode value={invoice.qrCodeData} size={96} level="M" />
+                        </div>
+                        <span className="text-[10px] text-slate-400">ZATCA Compliant QR</span>
+                      </div>
                     )}
-                    <div className="border p-1 bg-white" title="Scan to verify invoice (ZATCA Phase 1)">
-                      <QRCode value={invoice.qrCodeData} size={96} level="M" />
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal</span>
+                      <span>{symbol}{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
                     </div>
-                    <span className="text-[10px] text-slate-400">ZATCA Compliant QR</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span>Subtotal</span>
-                  <span>{symbol}{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
-                </div>
-                {invoice.saudiInvoiceType ? (
-                  Number(invoice.totalVat) > 0 && (
-                    <div className="flex justify-between text-sm text-slate-500">
-                      <span>VAT (15%) — ضريبة القيمة المضافة</span>
-                      <span>{symbol}{Number(invoice.totalVat).toFixed(2)}</span>
+                    {invoice.saudiInvoiceType ? (
+                      Number(invoice.totalVat) > 0 && (
+                        <div className="flex justify-between text-sm text-slate-500">
+                          <span>VAT (15%) — ضريبة القيمة المضافة</span>
+                          <span>{symbol}{Number(invoice.totalVat).toFixed(2)}</span>
+                        </div>
+                      )
+                    ) : (
+                      <>
+                        {Number(invoice.totalCgst) > 0 && (
+                          <div className="flex justify-between text-sm text-slate-500">
+                            <span>CGST</span>
+                            <span>{symbol}{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                        {Number(invoice.totalSgst) > 0 && (
+                          <div className="flex justify-between text-sm text-slate-500">
+                            <span>SGST</span>
+                            <span>{symbol}{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                        {Number(invoice.totalIgst) > 0 && (
+                          <div className="flex justify-between text-sm text-slate-500">
+                            <span>IGST</span>
+                            <span>{symbol}{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                        {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
+                          <div className="flex justify-between text-sm text-slate-500">
+                            <span>Tax</span>
+                            <span>{symbol}{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div className="flex justify-between font-bold text-lg border-t pt-2">
+                      <span>Total</span>
+                      <span>{symbol}{Number(invoice.total).toLocaleString("en-IN")}</span>
                     </div>
-                  )
-                ) : (
-                  <>
-                    {Number(invoice.totalCgst) > 0 && (
-                      <div className="flex justify-between text-sm text-slate-500">
-                        <span>CGST</span>
-                        <span>{symbol}{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
+                    {Number(invoice.amountPaid) > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Amount Paid</span>
+                        <span>{symbol}{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
                       </div>
                     )}
-                    {Number(invoice.totalSgst) > 0 && (
-                      <div className="flex justify-between text-sm text-slate-500">
-                        <span>SGST</span>
-                        <span>{symbol}{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
-                      </div>
-                    )}
-                    {Number(invoice.totalIgst) > 0 && (
-                      <div className="flex justify-between text-sm text-slate-500">
-                        <span>IGST</span>
-                        <span>{symbol}{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
-                      </div>
-                    )}
-                    {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
-                      <div className="flex justify-between text-sm text-slate-500">
-                        <span>Tax</span>
-                        <span>{symbol}{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>Total</span>
-                  <span>{symbol}{Number(invoice.total).toLocaleString("en-IN")}</span>
-                </div>
-                {Number(invoice.amountPaid) > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Amount Paid</span>
-                    <span>{symbol}{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
+                    <div className="flex justify-between font-bold text-lg border-t pt-2">
+                      <span>Balance Due</span>
+                      <span className={Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"}>
+                        {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")}
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>Balance Due</span>
-                  <span className={Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"}>
-                    {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")}
-                  </span>
                 </div>
-              </div>
-            </div>
 
-            {/* Notes */}
-            {(invoice.notes || invoice.terms) && (
-              <div className="mt-8 pt-8 border-t grid sm:grid-cols-2 gap-8">
-                {invoice.notes && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                      Notes
-                    </h3>
-                    <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
+                {/* Notes */}
+                {(invoice.notes || invoice.terms) && (
+                  <div className="mt-8 pt-8 border-t grid sm:grid-cols-2 gap-8">
+                    {invoice.notes && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                          Notes
+                        </h3>
+                        <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
+                      </div>
+                    )}
+                    {invoice.terms && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                          Terms & Conditions
+                        </h3>
+                        <p className="text-sm whitespace-pre-wrap">{invoice.terms}</p>
+                      </div>
+                    )}
                   </div>
                 )}
-                {invoice.terms && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                      Terms & Conditions
-                    </h3>
-                    <p className="text-sm whitespace-pre-wrap">{invoice.terms}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
           </TabsContent>
 

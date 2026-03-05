@@ -107,7 +107,7 @@ export default function CreditNotesPage() {
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("accounting.creditNotes")}</h2>
             <p className="text-slate-500">
-              {lang === "ar" ? "إدارة مرتجعات المبيعات وائتمانات العملاء" : "Manage sales returns and customer credits"}
+              {t("creditNotes.manageCreditNotes")}
             </p>
           </div>
           <Link href="/credit-notes/new" className="w-full sm:w-auto">
@@ -123,7 +123,7 @@ export default function CreditNotesPage() {
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
-                placeholder={lang === "ar" ? "بحث في إشعارات الائتمان..." : "Search credit notes..."}
+                placeholder={t("creditNotes.searchCreditNotes")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -137,12 +137,12 @@ export default function CreditNotesPage() {
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <FileText className="h-12 w-12 text-slate-300" />
                 <h3 className="mt-4 text-lg font-semibold">
-                  {lang === "ar" ? "لا توجد إشعارات ائتمان" : "No credit notes found"}
+                  {t("creditNotes.noCreditNotesFound")}
                 </h3>
                 <p className="text-sm text-slate-500">
                   {searchQuery
                     ? t("common.noMatchFound")
-                    : lang === "ar" ? "أنشئ أول إشعار ائتمان" : "Create your first credit note to get started"}
+                    : t("creditNotes.noCreditNotesDesc")}
                 </p>
                 {!searchQuery && (
                   <Link href="/credit-notes/new" className="mt-4">
@@ -154,7 +154,7 @@ export default function CreditNotesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{lang === "ar" ? "رقم إشعار الائتمان" : "CN #"}</TableHead>
+                    <TableHead>{t("creditNotes.cnNo")}</TableHead>
                     <TableHead>{t("sales.customer")}</TableHead>
                     <TableHead>{t("sales.invoiceNumber")}</TableHead>
                     <TableHead>{t("sales.issueDate")}</TableHead>

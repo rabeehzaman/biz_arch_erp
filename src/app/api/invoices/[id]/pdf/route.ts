@@ -144,6 +144,7 @@ export async function GET(
       saudiInvoiceType: invoice.saudiInvoiceType ?? undefined,
       totalVat: invoice.totalVat ? Number(invoice.totalVat) : undefined,
       qrCodeDataURL,
+      paymentType: invoice.paymentType,
     };
 
     // Generate PDF — use A4 portrait template when configured
@@ -191,6 +192,7 @@ export async function GET(
         createdByName: invoice.createdBy?.name ?? null,
         qrCodeDataURL,
         saudiInvoiceType: invoice.saudiInvoiceType ?? undefined,
+        paymentType: invoice.paymentType,
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -249,6 +251,7 @@ export async function GET(
         balanceDue: Number(invoice.balanceDue),
         qrCodeDataURL,
         saudiInvoiceType: invoice.saudiInvoiceType ?? undefined,
+        paymentType: invoice.paymentType,
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -304,6 +307,7 @@ export async function GET(
         notes: invoice.notes,
         terms: invoice.terms,
         createdByName: invoice.createdBy?.name ?? null,
+        paymentType: invoice.paymentType,
       };
 
       const A4Component = invoicePdfFormat === "A4_GST2" ? InvoiceA4GST2PDF : InvoiceA4PDF;

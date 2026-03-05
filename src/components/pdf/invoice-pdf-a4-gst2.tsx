@@ -211,6 +211,7 @@ interface InvoiceA4GST2Props {
     placeOfSupply?: string | null;
     notes?: string | null;
     terms?: string | null;
+    paymentType?: string;
     createdByName?: string | null;
   };
   type: "SALES" | "PURCHASE";
@@ -268,229 +269,235 @@ export function InvoiceA4GST2PDF({
 
         <View style={contentStyle}>
 
-        {/* Title */}
-        {hasHeader && <View style={{ height: 10 }} />}
-        <Text style={styles.title}>{title}</Text>
-        <View style={{ borderBottomWidth: 1.5, borderBottomColor: "#1a4731", marginBottom: 6 }} />
+          {/* Title */}
+          {hasHeader && <View style={{ height: 10 }} />}
+          <Text style={styles.title}>{title}</Text>
+          <View style={{ borderBottomWidth: 1.5, borderBottomColor: "#1a4731", marginBottom: 6 }} />
 
-        {/* Info boxes — two rounded boxes side by side */}
-        <View style={styles.infoRow}>
-          {/* Bill To (left) */}
-          <View style={[styles.infoBox, { width: "55%" }]}>
-            <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
-              {invoice.customer.name}
-            </Text>
-            {invoice.customer.address && (
-              <Text style={styles.infoBoxText}>{invoice.customer.address}</Text>
-            )}
-            {customerLocation && (
-              <Text style={styles.infoBoxText}>{customerLocation}</Text>
-            )}
-            {invoice.customer.gstin && (
-              <Text style={styles.infoBoxText}>GSTIN: {invoice.customer.gstin}</Text>
-            )}
-          </View>
-
-          {/* Invoice details (right) */}
-          <View style={[styles.infoBox, { width: "43%" }]}>
-            <Text style={styles.infoBoxText}>
-              <Text style={{ fontWeight: "bold" }}>Invoice No: </Text>
-              {invoice.invoiceNumber}
-            </Text>
-            <Text style={styles.infoBoxText}>
-              <Text style={{ fontWeight: "bold" }}>Date: </Text>
-              {format(new Date(invoice.issueDate), "dd-MM-yyyy")}
-            </Text>
-            {invoice.createdByName && (
-              <Text style={styles.infoBoxText}>
-                <Text style={{ fontWeight: "bold" }}>Salesperson: </Text>
-                {invoice.createdByName}
+          {/* Info boxes — two rounded boxes side by side */}
+          <View style={styles.infoRow}>
+            {/* Bill To (left) */}
+            <View style={[styles.infoBox, { width: "55%" }]}>
+              <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
+                {invoice.customer.name}
               </Text>
-            )}
-            {invoice.isInterState && invoice.placeOfSupply && (
+              {invoice.customer.address && (
+                <Text style={styles.infoBoxText}>{invoice.customer.address}</Text>
+              )}
+              {customerLocation && (
+                <Text style={styles.infoBoxText}>{customerLocation}</Text>
+              )}
+              {invoice.customer.gstin && (
+                <Text style={styles.infoBoxText}>GSTIN: {invoice.customer.gstin}</Text>
+              )}
+            </View>
+
+            {/* Invoice details (right) */}
+            <View style={[styles.infoBox, { width: "43%" }]}>
               <Text style={styles.infoBoxText}>
-                <Text style={{ fontWeight: "bold" }}>Place of Supply: </Text>
-                {invoice.placeOfSupply}
+                <Text style={{ fontWeight: "bold" }}>Invoice No: </Text>
+                {invoice.invoiceNumber}
               </Text>
-            )}
-          </View>
-        </View>
-
-        {/* Items Table */}
-        <View style={styles.table}>
-          {/* Header Row 1 — merged CGST / SGST headers */}
-          <View style={styles.headerRow1}>
-            <Text style={[styles.headerCell, { width: COL.sl }]}>Sl</Text>
-            <Text style={[styles.headerCell, { width: COL.hsn }]}>HSN</Text>
-            <Text style={[styles.headerCell, { width: COL.item }]}>Commodity / Item</Text>
-            <Text style={[styles.headerCell, { width: COL.qty }]}>Qty.Unit</Text>
-            <Text style={[styles.headerCell, { width: COL.rate }]}>Rate</Text>
-            <Text style={[styles.headerCell, { width: COL.amount }]}>Amount</Text>
-            <Text style={[styles.headerCell, { width: COL.disc }]}>Less:{"\n"}Disc</Text>
-            <Text style={[styles.taxableHeaderCell, { width: COL.taxable }]}>Taxable{"\n"}Value</Text>
-            {/* CGST group header */}
-            <View style={{ width: "11.5%", borderRightWidth: 1, borderRightColor: "#333" }}>
-              <Text style={[styles.headerCell, { borderRightWidth: 0 }]}>CGST</Text>
+              <Text style={styles.infoBoxText}>
+                <Text style={{ fontWeight: "bold" }}>Date: </Text>
+                {format(new Date(invoice.issueDate), "dd-MM-yyyy")}
+              </Text>
+              {invoice.paymentType && (
+                <Text style={styles.infoBoxText}>
+                  <Text style={{ fontWeight: "bold" }}>Payment Type: </Text>
+                  {invoice.paymentType === "CREDIT" ? "Credit" : "Cash"}
+                </Text>
+              )}
+              {invoice.createdByName && (
+                <Text style={styles.infoBoxText}>
+                  <Text style={{ fontWeight: "bold" }}>Salesperson: </Text>
+                  {invoice.createdByName}
+                </Text>
+              )}
+              {invoice.isInterState && invoice.placeOfSupply && (
+                <Text style={styles.infoBoxText}>
+                  <Text style={{ fontWeight: "bold" }}>Place of Supply: </Text>
+                  {invoice.placeOfSupply}
+                </Text>
+              )}
             </View>
-            {/* SGST group header */}
-            <View style={{ width: "11.5%", borderRightWidth: 1, borderRightColor: "#333" }}>
-              <Text style={[styles.headerCell, { borderRightWidth: 0 }]}>SGST</Text>
-            </View>
-            <Text style={[styles.headerCellLast, { width: COL.total }]}>Total</Text>
           </View>
 
-          {/* Header Row 2 — sub-headers for CGST/SGST */}
-          <View style={styles.headerRow2}>
-            <Text style={[styles.headerCell, { width: COL.sl }]} />
-            <Text style={[styles.headerCell, { width: COL.hsn }]} />
-            <Text style={[styles.headerCell, { width: COL.item }]} />
-            <Text style={[styles.headerCell, { width: COL.qty }]} />
-            <Text style={[styles.headerCell, { width: COL.rate }]} />
-            <Text style={[styles.headerCell, { width: COL.amount }]} />
-            <Text style={[styles.headerCell, { width: COL.disc }]} />
-            <Text style={[styles.taxableHeaderCell, { width: COL.taxable }]} />
-            <Text style={[styles.headerCell, { width: COL.cgstPct }]}>%</Text>
-            <Text style={[styles.headerCell, { width: COL.cgstAmt }]}>Amount</Text>
-            <Text style={[styles.headerCell, { width: COL.sgstPct }]}>%</Text>
-            <Text style={[styles.headerCell, { width: COL.sgstAmt }]}>Amount</Text>
-            <Text style={[styles.headerCellLast, { width: COL.total }]} />
-          </View>
-
-          {/* Data Rows */}
-          {itemsComputed.map((item, index) => {
-            const unitCode = item.unit?.code || item.product?.unit?.code;
-            const qtyStr = `${formatCurrency(item.quantity)}${unitCode ? ` ${unitCode.toUpperCase()}` : ""}`;
-            return (
-              <View key={index} style={[styles.tableRow, index % 2 === 1 ? { backgroundColor: "#f5f8f5" } : {}]}>
-                <Text style={[styles.cell, { width: COL.sl, textAlign: "center" }]}>
-                  {index + 1}
-                </Text>
-                <Text style={[styles.cell, { width: COL.hsn, textAlign: "center" }]}>
-                  {item.hsnCode || ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.item }]}>
-                  {item.description}
-                </Text>
-                <Text style={[styles.cell, { width: COL.qty, textAlign: "right" }]}>
-                  {qtyStr}
-                </Text>
-                <Text style={[styles.cell, { width: COL.rate, textAlign: "right" }]}>
-                  {formatCurrency(item.unitPrice)}
-                </Text>
-                <Text style={[styles.cell, { width: COL.amount, textAlign: "right" }]}>
-                  {formatCurrency(item.gross)}
-                </Text>
-                <Text style={[styles.cell, { width: COL.disc, textAlign: "right" }]}>
-                  {item.discountAmt > 0 ? formatCurrency(item.discountAmt) : ""}
-                </Text>
-                <Text style={[styles.taxableCell, { width: COL.taxable, textAlign: "right" }]}>
-                  {formatCurrency(item.taxableValue)}
-                </Text>
-                <Text style={[styles.cell, { width: COL.cgstPct, textAlign: "center" }]}>
-                  {item.cgstRate > 0 ? `${item.cgstRate}` : ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.cgstAmt, textAlign: "right" }]}>
-                  {item.cgstAmount > 0 ? formatCurrency(item.cgstAmount) : ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.sgstPct, textAlign: "center" }]}>
-                  {item.sgstRate > 0 ? `${item.sgstRate}` : ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.sgstAmt, textAlign: "right" }]}>
-                  {item.sgstAmount > 0 ? formatCurrency(item.sgstAmount) : ""}
-                </Text>
-                <Text style={[styles.cellLast, { width: COL.total, textAlign: "right" }]}>
-                  {formatCurrency(item.total)}
-                </Text>
+          {/* Items Table */}
+          <View style={styles.table}>
+            {/* Header Row 1 — merged CGST / SGST headers */}
+            <View style={styles.headerRow1}>
+              <Text style={[styles.headerCell, { width: COL.sl }]}>Sl</Text>
+              <Text style={[styles.headerCell, { width: COL.hsn }]}>HSN</Text>
+              <Text style={[styles.headerCell, { width: COL.item }]}>Commodity / Item</Text>
+              <Text style={[styles.headerCell, { width: COL.qty }]}>Qty.Unit</Text>
+              <Text style={[styles.headerCell, { width: COL.rate }]}>Rate</Text>
+              <Text style={[styles.headerCell, { width: COL.amount }]}>Amount</Text>
+              <Text style={[styles.headerCell, { width: COL.disc }]}>Less:{"\n"}Disc</Text>
+              <Text style={[styles.taxableHeaderCell, { width: COL.taxable }]}>Taxable{"\n"}Value</Text>
+              {/* CGST group header */}
+              <View style={{ width: "11.5%", borderRightWidth: 1, borderRightColor: "#333" }}>
+                <Text style={[styles.headerCell, { borderRightWidth: 0 }]}>CGST</Text>
               </View>
-            );
-          })}
+              {/* SGST group header */}
+              <View style={{ width: "11.5%", borderRightWidth: 1, borderRightColor: "#333" }}>
+                <Text style={[styles.headerCell, { borderRightWidth: 0 }]}>SGST</Text>
+              </View>
+              <Text style={[styles.headerCellLast, { width: COL.total }]}>Total</Text>
+            </View>
 
-          {/* Totals row inside table */}
-          <View style={styles.totalRow}>
-            <Text style={[styles.cell, { width: COL.sl }]} />
-            <Text style={[styles.cell, { width: COL.hsn }]} />
-            <Text style={[styles.cell, { width: COL.item, fontWeight: "bold" }]}>Total</Text>
-            <Text style={[styles.cell, { width: COL.qty }]} />
-            <Text style={[styles.cell, { width: COL.rate }]} />
-            <Text style={[styles.cell, { width: COL.amount, textAlign: "right", fontWeight: "bold" }]}>
-              {formatCurrency(totalGross)}
-            </Text>
-            <Text style={[styles.cell, { width: COL.disc, textAlign: "right", fontWeight: "bold" }]}>
-              {totalDiscount > 0 ? formatCurrency(totalDiscount) : ""}
-            </Text>
-            <Text style={[styles.taxableCell, { width: COL.taxable, textAlign: "right", fontWeight: "bold" }]}>
-              {formatCurrency(taxableTotal)}
-            </Text>
-            <Text style={[styles.cell, { width: COL.cgstPct }]} />
-            <Text style={[styles.cell, { width: COL.cgstAmt, textAlign: "right", fontWeight: "bold" }]}>
-              {invoice.totalCgst > 0 ? formatCurrency(invoice.totalCgst) : ""}
-            </Text>
-            <Text style={[styles.cell, { width: COL.sgstPct }]} />
-            <Text style={[styles.cell, { width: COL.sgstAmt, textAlign: "right", fontWeight: "bold" }]}>
-              {invoice.totalSgst > 0 ? formatCurrency(invoice.totalSgst) : ""}
-            </Text>
-            <Text style={[styles.cellLast, { width: COL.total, textAlign: "right", fontWeight: "bold" }]}>
-              {formatCurrency(invoice.total)}
-            </Text>
-          </View>
-        </View>
+            {/* Header Row 2 — sub-headers for CGST/SGST */}
+            <View style={styles.headerRow2}>
+              <Text style={[styles.headerCell, { width: COL.sl }]} />
+              <Text style={[styles.headerCell, { width: COL.hsn }]} />
+              <Text style={[styles.headerCell, { width: COL.item }]} />
+              <Text style={[styles.headerCell, { width: COL.qty }]} />
+              <Text style={[styles.headerCell, { width: COL.rate }]} />
+              <Text style={[styles.headerCell, { width: COL.amount }]} />
+              <Text style={[styles.headerCell, { width: COL.disc }]} />
+              <Text style={[styles.taxableHeaderCell, { width: COL.taxable }]} />
+              <Text style={[styles.headerCell, { width: COL.cgstPct }]}>%</Text>
+              <Text style={[styles.headerCell, { width: COL.cgstAmt }]}>Amount</Text>
+              <Text style={[styles.headerCell, { width: COL.sgstPct }]}>%</Text>
+              <Text style={[styles.headerCell, { width: COL.sgstAmt }]}>Amount</Text>
+              <Text style={[styles.headerCellLast, { width: COL.total }]} />
+            </View>
 
-        {/* Grand Total / Balance rows below table */}
-        <View style={{ borderWidth: 1, borderColor: "#333", borderTopWidth: 0, marginBottom: 2 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", padding: 3 }}>
-            <Text style={{ fontSize: 7 }}>
-              {numberToWordsLocalized(invoice.total, "en")}
-            </Text>
-            <Text style={{ fontSize: 8, fontWeight: "bold" }}>
-              Grand Total: {formatCurrency(invoice.total)}
-            </Text>
+            {/* Data Rows */}
+            {itemsComputed.map((item, index) => {
+              const unitCode = item.unit?.code || item.product?.unit?.code;
+              const qtyStr = `${formatCurrency(item.quantity)}${unitCode ? ` ${unitCode.toUpperCase()}` : ""}`;
+              return (
+                <View key={index} style={[styles.tableRow, index % 2 === 1 ? { backgroundColor: "#f5f8f5" } : {}]}>
+                  <Text style={[styles.cell, { width: COL.sl, textAlign: "center" }]}>
+                    {index + 1}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.hsn, textAlign: "center" }]}>
+                    {item.hsnCode || ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.item }]}>
+                    {item.description}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.qty, textAlign: "right" }]}>
+                    {qtyStr}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.rate, textAlign: "right" }]}>
+                    {formatCurrency(item.unitPrice)}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.amount, textAlign: "right" }]}>
+                    {formatCurrency(item.gross)}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.disc, textAlign: "right" }]}>
+                    {item.discountAmt > 0 ? formatCurrency(item.discountAmt) : ""}
+                  </Text>
+                  <Text style={[styles.taxableCell, { width: COL.taxable, textAlign: "right" }]}>
+                    {formatCurrency(item.taxableValue)}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.cgstPct, textAlign: "center" }]}>
+                    {item.cgstRate > 0 ? `${item.cgstRate}` : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.cgstAmt, textAlign: "right" }]}>
+                    {item.cgstAmount > 0 ? formatCurrency(item.cgstAmount) : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.sgstPct, textAlign: "center" }]}>
+                    {item.sgstRate > 0 ? `${item.sgstRate}` : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.sgstAmt, textAlign: "right" }]}>
+                    {item.sgstAmount > 0 ? formatCurrency(item.sgstAmount) : ""}
+                  </Text>
+                  <Text style={[styles.cellLast, { width: COL.total, textAlign: "right" }]}>
+                    {formatCurrency(item.total)}
+                  </Text>
+                </View>
+              );
+            })}
+
+            {/* Totals row inside table */}
+            <View style={styles.totalRow}>
+              <Text style={[styles.cell, { width: COL.sl }]} />
+              <Text style={[styles.cell, { width: COL.hsn }]} />
+              <Text style={[styles.cell, { width: COL.item, fontWeight: "bold" }]}>Total</Text>
+              <Text style={[styles.cell, { width: COL.qty }]} />
+              <Text style={[styles.cell, { width: COL.rate }]} />
+              <Text style={[styles.cell, { width: COL.amount, textAlign: "right", fontWeight: "bold" }]}>
+                {formatCurrency(totalGross)}
+              </Text>
+              <Text style={[styles.cell, { width: COL.disc, textAlign: "right", fontWeight: "bold" }]}>
+                {totalDiscount > 0 ? formatCurrency(totalDiscount) : ""}
+              </Text>
+              <Text style={[styles.taxableCell, { width: COL.taxable, textAlign: "right", fontWeight: "bold" }]}>
+                {formatCurrency(taxableTotal)}
+              </Text>
+              <Text style={[styles.cell, { width: COL.cgstPct }]} />
+              <Text style={[styles.cell, { width: COL.cgstAmt, textAlign: "right", fontWeight: "bold" }]}>
+                {invoice.totalCgst > 0 ? formatCurrency(invoice.totalCgst) : ""}
+              </Text>
+              <Text style={[styles.cell, { width: COL.sgstPct }]} />
+              <Text style={[styles.cell, { width: COL.sgstAmt, textAlign: "right", fontWeight: "bold" }]}>
+                {invoice.totalSgst > 0 ? formatCurrency(invoice.totalSgst) : ""}
+              </Text>
+              <Text style={[styles.cellLast, { width: COL.total, textAlign: "right", fontWeight: "bold" }]}>
+                {formatCurrency(invoice.total)}
+              </Text>
+            </View>
           </View>
-          {invoice.amountPaid > 0 && (
-            <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2 }}>
-              <Text style={{ fontSize: 7 }}>Amount Paid: {formatCurrency(invoice.amountPaid)}</Text>
+
+          {/* Grand Total / Balance rows below table */}
+          <View style={{ borderWidth: 1, borderColor: "#333", borderTopWidth: 0, marginBottom: 2 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", padding: 3 }}>
+              <Text style={{ fontSize: 7 }}>
+                {numberToWordsLocalized(invoice.total, "en")}
+              </Text>
+              <Text style={{ fontSize: 8, fontWeight: "bold" }}>
+                Grand Total: {formatCurrency(invoice.total)}
+              </Text>
+            </View>
+            {invoice.amountPaid > 0 && (
+              <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2 }}>
+                <Text style={{ fontSize: 7 }}>Amount Paid: {formatCurrency(invoice.amountPaid)}</Text>
+              </View>
+            )}
+            {invoice.balanceDue > 0 && (
+              <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2 }}>
+                <Text style={{ fontSize: 7, fontWeight: "bold" }}>Balance Due: {formatCurrency(invoice.balanceDue)}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Balance Info */}
+          {balanceInfo && (
+            <View style={{ marginBottom: 4, borderWidth: 1, borderColor: "#333", padding: 3 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 7 }}>Old Balance: {formatCurrency(balanceInfo.oldBalance)}</Text>
+                <Text style={{ fontSize: 7 }}>This Invoice: {formatCurrency(balanceInfo.sales)}</Text>
+                <Text style={{ fontSize: 7, fontWeight: "bold" }}>Current Balance: {formatCurrency(balanceInfo.balance)}</Text>
+              </View>
             </View>
           )}
-          {invoice.balanceDue > 0 && (
-            <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2 }}>
-              <Text style={{ fontSize: 7, fontWeight: "bold" }}>Balance Due: {formatCurrency(invoice.balanceDue)}</Text>
+
+          {/* E&OE */}
+          <Text style={styles.eoe}>E. & O.E</Text>
+
+          {/* Declaration + Signatory */}
+          <View style={{ borderBottomWidth: 1.5, borderBottomColor: "#1a4731", marginBottom: 4 }} />
+          <View style={styles.bottomRow}>
+            {/* Left — Declaration */}
+            <View style={{ width: "55%" }}>
+              <Text style={styles.declarationBold}>Declaration:</Text>
+              <Text style={styles.declaration}>
+                Certified that all the particulars shown to the above tax Invoice are true and correct
+              </Text>
             </View>
-          )}
-        </View>
 
-        {/* Balance Info */}
-        {balanceInfo && (
-          <View style={{ marginBottom: 4, borderWidth: 1, borderColor: "#333", padding: 3 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 7 }}>Old Balance: {formatCurrency(balanceInfo.oldBalance)}</Text>
-              <Text style={{ fontSize: 7 }}>This Invoice: {formatCurrency(balanceInfo.sales)}</Text>
-              <Text style={{ fontSize: 7, fontWeight: "bold" }}>Current Balance: {formatCurrency(balanceInfo.balance)}</Text>
+            {/* Right — Signatory */}
+            <View style={{ width: "45%", alignItems: "center" }}>
+              <Text style={{ fontSize: 8, marginBottom: 30 }}>
+                For {invoice.organization.name}
+              </Text>
+              <Text style={styles.signatory}>Authorised Signatory</Text>
+              <Text style={{ fontSize: 6 }}>( With Status & seal)</Text>
             </View>
           </View>
-        )}
-
-        {/* E&OE */}
-        <Text style={styles.eoe}>E. & O.E</Text>
-
-        {/* Declaration + Signatory */}
-        <View style={{ borderBottomWidth: 1.5, borderBottomColor: "#1a4731", marginBottom: 4 }} />
-        <View style={styles.bottomRow}>
-          {/* Left — Declaration */}
-          <View style={{ width: "55%" }}>
-            <Text style={styles.declarationBold}>Declaration:</Text>
-            <Text style={styles.declaration}>
-              Certified that all the particulars shown to the above tax Invoice are true and correct
-            </Text>
-          </View>
-
-          {/* Right — Signatory */}
-          <View style={{ width: "45%", alignItems: "center" }}>
-            <Text style={{ fontSize: 8, marginBottom: 30 }}>
-              For {invoice.organization.name}
-            </Text>
-            <Text style={styles.signatory}>Authorised Signatory</Text>
-            <Text style={{ fontSize: 6 }}>( With Status & seal)</Text>
-          </View>
-        </View>
 
         </View>
         {/* End content area */}

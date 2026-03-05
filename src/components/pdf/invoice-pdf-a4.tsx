@@ -249,6 +249,7 @@ interface InvoiceA4PDFProps {
     notes?: string | null;
     terms?: string | null;
     createdByName?: string | null;
+    paymentType?: string;
   };
   type: "SALES" | "PURCHASE";
   title?: string;
@@ -349,281 +350,293 @@ export function InvoiceA4PDF({
         {/* Content area */}
         <View style={contentStyle}>
 
-        {/* A. Title */}
-        {hasHeader && <View style={{ height: 10 }} />}
-        <Text style={styles.title}>{title}</Text>
+          {/* A. Title */}
+          {hasHeader && <View style={{ height: 10 }} />}
+          <Text style={styles.title}>{title}</Text>
 
-        {/* B. Info Boxes Row */}
-        <View style={styles.infoRow}>
-          {/* Bill To */}
-          <View style={[styles.infoBox, { width: "40%" }]}>
-            <View style={styles.infoBoxHeader}>
-              <Text style={styles.infoBoxHeaderText}>Bill To</Text>
+          {/* B. Info Boxes Row */}
+          <View style={styles.infoRow}>
+            {/* Bill To */}
+            <View style={[styles.infoBox, { width: "36%" }]}>
+              <View style={styles.infoBoxHeader}>
+                <Text style={styles.infoBoxHeaderText}>Bill To</Text>
+              </View>
+              <View style={styles.infoBoxBody}>
+                <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
+                  {invoice.customer.name}
+                </Text>
+                {invoice.customer.address && (
+                  <Text style={styles.infoBoxText}>{invoice.customer.address}</Text>
+                )}
+                {customerLocation && (
+                  <Text style={styles.infoBoxText}>{customerLocation}</Text>
+                )}
+                {invoice.customer.gstin && (
+                  <Text style={styles.infoBoxText}>GSTIN: {invoice.customer.gstin}</Text>
+                )}
+              </View>
             </View>
-            <View style={styles.infoBoxBody}>
-              <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
-                {invoice.customer.name}
-              </Text>
-              {invoice.customer.address && (
-                <Text style={styles.infoBoxText}>{invoice.customer.address}</Text>
-              )}
-              {customerLocation && (
-                <Text style={styles.infoBoxText}>{customerLocation}</Text>
-              )}
-              {invoice.customer.gstin && (
-                <Text style={styles.infoBoxText}>GSTIN: {invoice.customer.gstin}</Text>
-              )}
-            </View>
-          </View>
 
-          {/* Invoice No */}
-          <View style={[styles.infoBox, { width: "20%", borderLeftWidth: 0 }]}>
-            <View style={styles.infoBoxHeader}>
-              <Text style={styles.infoBoxHeaderText}>Invoice No</Text>
-            </View>
-            <View style={styles.infoBoxBody}>
-              <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>
-                {invoice.invoiceNumber}
-              </Text>
-            </View>
-          </View>
-
-          {/* Invoice Date */}
-          <View style={[styles.infoBox, { width: "20%", borderLeftWidth: 0 }]}>
-            <View style={styles.infoBoxHeader}>
-              <Text style={styles.infoBoxHeaderText}>Invoice Date</Text>
-            </View>
-            <View style={styles.infoBoxBody}>
-              <Text style={styles.infoBoxText}>
-                {format(new Date(invoice.issueDate), "dd-MM-yyyy")}
-              </Text>
-            </View>
-          </View>
-
-          {/* Salesperson */}
-          <View style={[styles.infoBox, { width: "20%", borderLeftWidth: 0 }]}>
-            <View style={styles.infoBoxHeader}>
-              <Text style={styles.infoBoxHeaderText}>Salesperson</Text>
-            </View>
-            <View style={styles.infoBoxBody}>
-              <Text style={styles.infoBoxText}>
-                {invoice.createdByName || "-"}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Place of Supply */}
-        {invoice.isInterState && invoice.placeOfSupply && (
-          <Text style={styles.placeOfSupply}>
-            Place of Supply: {invoice.placeOfSupply}
-          </Text>
-        )}
-
-        {/* C. Items Table */}
-        <View style={styles.table}>
-          {/* Header */}
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerCell, { width: COL.sno, textAlign: "center" }]}>#</Text>
-            <Text style={[styles.headerCell, { width: COL.desc }]}>Description</Text>
-            <Text style={[styles.headerCell, { width: COL.hsn, textAlign: "center" }]}>HSN/SAC</Text>
-            <Text style={[styles.headerCell, { width: COL.qty, textAlign: "right" }]}>Qty</Text>
-            <Text style={[styles.headerCell, { width: COL.rate, textAlign: "right" }]}>Rate</Text>
-            <Text style={[styles.headerCell, { width: COL.disc, textAlign: "right" }]}>Disc%</Text>
-            <Text style={[styles.headerCell, { width: COL.taxable, textAlign: "right" }]}>Taxable</Text>
-            <Text style={[styles.headerCell, { width: COL.gstPct, textAlign: "center" }]}>GST%</Text>
-            <Text style={[styles.headerCell, { width: COL.cgst, textAlign: "right" }]}>CGST</Text>
-            <Text style={[styles.headerCell, { width: COL.sgst, textAlign: "right" }]}>SGST</Text>
-            <Text style={[styles.headerCell, { width: COL.igst, textAlign: "right" }]}>IGST</Text>
-            <Text style={[styles.headerCellLast, { width: COL.total, textAlign: "right" }]}>Total</Text>
-          </View>
-
-          {/* Data Rows */}
-          {itemsComputed.map((item, index) => {
-            const unitCode = item.unit?.code || item.product?.unit?.code;
-            const rowStyle = index % 2 === 1 ? styles.tableRowAlt : styles.tableRow;
-            return (
-              <View key={index} style={rowStyle}>
-                <Text style={[styles.cell, { width: COL.sno, textAlign: "center" }]}>
-                  {index + 1}
-                </Text>
-                <Text style={[styles.cell, { width: COL.desc }]}>
-                  {item.description}
-                </Text>
-                <Text style={[styles.cell, { width: COL.hsn, textAlign: "center" }]}>
-                  {item.hsnCode || ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.qty, textAlign: "right" }]}>
-                  {formatCurrency(item.quantity)}{unitCode ? ` ${unitCode.toUpperCase()}` : ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.rate, textAlign: "right" }]}>
-                  {formatCurrency(item.unitPrice)}
-                </Text>
-                <Text style={[styles.cell, { width: COL.disc, textAlign: "right" }]}>
-                  {item.discount > 0 ? formatCurrency(item.discount) : ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.taxable, textAlign: "right" }]}>
-                  {formatCurrency(item.taxableValue)}
-                </Text>
-                <Text style={[styles.cell, { width: COL.gstPct, textAlign: "center" }]}>
-                  {item.gstRate > 0 ? `${item.gstRate}%` : ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.cgst, textAlign: "right" }]}>
-                  {item.cgstAmount > 0 ? formatCurrency(item.cgstAmount) : ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.sgst, textAlign: "right" }]}>
-                  {item.sgstAmount > 0 ? formatCurrency(item.sgstAmount) : ""}
-                </Text>
-                <Text style={[styles.cell, { width: COL.igst, textAlign: "right" }]}>
-                  {item.igstAmount > 0 ? formatCurrency(item.igstAmount) : ""}
-                </Text>
-                <Text style={[styles.cellLast, { width: COL.total, textAlign: "right" }]}>
-                  {formatCurrency(item.total)}
+            {/* Invoice No */}
+            <View style={[styles.infoBox, { width: "16%", borderLeftWidth: 0 }]}>
+              <View style={styles.infoBoxHeader}>
+                <Text style={styles.infoBoxHeaderText}>Invoice No</Text>
+              </View>
+              <View style={styles.infoBoxBody}>
+                <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>
+                  {invoice.invoiceNumber}
                 </Text>
               </View>
-            );
-          })}
-        </View>
+            </View>
 
-        {/* D. HSN-Wise Tax Summary */}
-        {hsnSummary.length > 0 && (
-          <View style={styles.hsnTable}>
-            <Text style={styles.hsnTitle}>HSN/SAC Summary</Text>
-            {/* HSN Header */}
+            {/* Invoice Date */}
+            <View style={[styles.infoBox, { width: "16%", borderLeftWidth: 0 }]}>
+              <View style={styles.infoBoxHeader}>
+                <Text style={styles.infoBoxHeaderText}>Invoice Date</Text>
+              </View>
+              <View style={styles.infoBoxBody}>
+                <Text style={styles.infoBoxText}>
+                  {format(new Date(invoice.issueDate), "dd-MM-yyyy")}
+                </Text>
+              </View>
+            </View>
+
+            {/* Salesperson */}
+            <View style={[styles.infoBox, { width: "16%", borderLeftWidth: 0 }]}>
+              <View style={styles.infoBoxHeader}>
+                <Text style={styles.infoBoxHeaderText}>Salesperson</Text>
+              </View>
+              <View style={styles.infoBoxBody}>
+                <Text style={styles.infoBoxText}>
+                  {invoice.createdByName || "-"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Payment Type */}
+            <View style={[styles.infoBox, { width: "16%", borderLeftWidth: 0 }]}>
+              <View style={styles.infoBoxHeader}>
+                <Text style={styles.infoBoxHeaderText}>Payment</Text>
+              </View>
+              <View style={styles.infoBoxBody}>
+                <Text style={styles.infoBoxText}>
+                  {invoice.paymentType === "CREDIT" ? "Credit" : "Cash"}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Place of Supply */}
+          {invoice.isInterState && invoice.placeOfSupply && (
+            <Text style={styles.placeOfSupply}>
+              Place of Supply: {invoice.placeOfSupply}
+            </Text>
+          )}
+
+          {/* C. Items Table */}
+          <View style={styles.table}>
+            {/* Header */}
             <View style={styles.tableHeader}>
-              <Text style={[styles.headerCell, { width: "14%" }]}>HSN/SAC</Text>
-              <Text style={[styles.headerCell, { width: "14%", textAlign: "right" }]}>Taxable Value</Text>
-              <Text style={[styles.headerCell, { width: "9%", textAlign: "center" }]}>CGST %</Text>
-              <Text style={[styles.headerCell, { width: "13%", textAlign: "right" }]}>CGST Amt</Text>
-              <Text style={[styles.headerCell, { width: "9%", textAlign: "center" }]}>SGST %</Text>
-              <Text style={[styles.headerCell, { width: "13%", textAlign: "right" }]}>SGST Amt</Text>
-              <Text style={[styles.headerCell, { width: "9%", textAlign: "center" }]}>IGST %</Text>
-              <Text style={[styles.headerCell, { width: "13%", textAlign: "right" }]}>IGST Amt</Text>
-              <Text style={[styles.headerCellLast, { width: "6%", textAlign: "right" }]}>Tax</Text>
+              <Text style={[styles.headerCell, { width: COL.sno, textAlign: "center" }]}>#</Text>
+              <Text style={[styles.headerCell, { width: COL.desc }]}>Description</Text>
+              <Text style={[styles.headerCell, { width: COL.hsn, textAlign: "center" }]}>HSN/SAC</Text>
+              <Text style={[styles.headerCell, { width: COL.qty, textAlign: "right" }]}>Qty</Text>
+              <Text style={[styles.headerCell, { width: COL.rate, textAlign: "right" }]}>Rate</Text>
+              <Text style={[styles.headerCell, { width: COL.disc, textAlign: "right" }]}>Disc%</Text>
+              <Text style={[styles.headerCell, { width: COL.taxable, textAlign: "right" }]}>Taxable</Text>
+              <Text style={[styles.headerCell, { width: COL.gstPct, textAlign: "center" }]}>GST%</Text>
+              <Text style={[styles.headerCell, { width: COL.cgst, textAlign: "right" }]}>CGST</Text>
+              <Text style={[styles.headerCell, { width: COL.sgst, textAlign: "right" }]}>SGST</Text>
+              <Text style={[styles.headerCell, { width: COL.igst, textAlign: "right" }]}>IGST</Text>
+              <Text style={[styles.headerCellLast, { width: COL.total, textAlign: "right" }]}>Total</Text>
             </View>
-            {hsnSummary.map((row, i) => (
-              <View key={i} style={i % 2 === 1 ? styles.tableRowAlt : styles.tableRow}>
-                <Text style={[styles.cell, { width: "14%" }]}>{row.hsnCode}</Text>
-                <Text style={[styles.cell, { width: "14%", textAlign: "right" }]}>
-                  {formatCurrency(row.taxableValue)}
-                </Text>
-                <Text style={[styles.cell, { width: "9%", textAlign: "center" }]}>
-                  {row.cgstRate > 0 ? `${row.cgstRate}%` : ""}
-                </Text>
-                <Text style={[styles.cell, { width: "13%", textAlign: "right" }]}>
-                  {row.cgstAmount > 0 ? formatCurrency(row.cgstAmount) : ""}
-                </Text>
-                <Text style={[styles.cell, { width: "9%", textAlign: "center" }]}>
-                  {row.sgstRate > 0 ? `${row.sgstRate}%` : ""}
-                </Text>
-                <Text style={[styles.cell, { width: "13%", textAlign: "right" }]}>
-                  {row.sgstAmount > 0 ? formatCurrency(row.sgstAmount) : ""}
-                </Text>
-                <Text style={[styles.cell, { width: "9%", textAlign: "center" }]}>
-                  {row.igstRate > 0 ? `${row.igstRate}%` : ""}
-                </Text>
-                <Text style={[styles.cell, { width: "13%", textAlign: "right" }]}>
-                  {row.igstAmount > 0 ? formatCurrency(row.igstAmount) : ""}
-                </Text>
-                <Text style={[styles.cellLast, { width: "6%", textAlign: "right" }]}>
-                  {formatCurrency(row.totalTax)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
 
-        {/* E. Totals Section */}
-        <View style={styles.totalsContainer}>
-          <View style={styles.totalsBox}>
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>Subtotal (Taxable)</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(taxableTotal)}</Text>
+            {/* Data Rows */}
+            {itemsComputed.map((item, index) => {
+              const unitCode = item.unit?.code || item.product?.unit?.code;
+              const rowStyle = index % 2 === 1 ? styles.tableRowAlt : styles.tableRow;
+              return (
+                <View key={index} style={rowStyle}>
+                  <Text style={[styles.cell, { width: COL.sno, textAlign: "center" }]}>
+                    {index + 1}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.desc }]}>
+                    {item.description}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.hsn, textAlign: "center" }]}>
+                    {item.hsnCode || ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.qty, textAlign: "right" }]}>
+                    {formatCurrency(item.quantity)}{unitCode ? ` ${unitCode.toUpperCase()}` : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.rate, textAlign: "right" }]}>
+                    {formatCurrency(item.unitPrice)}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.disc, textAlign: "right" }]}>
+                    {item.discount > 0 ? formatCurrency(item.discount) : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.taxable, textAlign: "right" }]}>
+                    {formatCurrency(item.taxableValue)}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.gstPct, textAlign: "center" }]}>
+                    {item.gstRate > 0 ? `${item.gstRate}%` : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.cgst, textAlign: "right" }]}>
+                    {item.cgstAmount > 0 ? formatCurrency(item.cgstAmount) : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.sgst, textAlign: "right" }]}>
+                    {item.sgstAmount > 0 ? formatCurrency(item.sgstAmount) : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: COL.igst, textAlign: "right" }]}>
+                    {item.igstAmount > 0 ? formatCurrency(item.igstAmount) : ""}
+                  </Text>
+                  <Text style={[styles.cellLast, { width: COL.total, textAlign: "right" }]}>
+                    {formatCurrency(item.total)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* D. HSN-Wise Tax Summary */}
+          {hsnSummary.length > 0 && (
+            <View style={styles.hsnTable}>
+              <Text style={styles.hsnTitle}>HSN/SAC Summary</Text>
+              {/* HSN Header */}
+              <View style={styles.tableHeader}>
+                <Text style={[styles.headerCell, { width: "14%" }]}>HSN/SAC</Text>
+                <Text style={[styles.headerCell, { width: "14%", textAlign: "right" }]}>Taxable Value</Text>
+                <Text style={[styles.headerCell, { width: "9%", textAlign: "center" }]}>CGST %</Text>
+                <Text style={[styles.headerCell, { width: "13%", textAlign: "right" }]}>CGST Amt</Text>
+                <Text style={[styles.headerCell, { width: "9%", textAlign: "center" }]}>SGST %</Text>
+                <Text style={[styles.headerCell, { width: "13%", textAlign: "right" }]}>SGST Amt</Text>
+                <Text style={[styles.headerCell, { width: "9%", textAlign: "center" }]}>IGST %</Text>
+                <Text style={[styles.headerCell, { width: "13%", textAlign: "right" }]}>IGST Amt</Text>
+                <Text style={[styles.headerCellLast, { width: "6%", textAlign: "right" }]}>Tax</Text>
+              </View>
+              {hsnSummary.map((row, i) => (
+                <View key={i} style={i % 2 === 1 ? styles.tableRowAlt : styles.tableRow}>
+                  <Text style={[styles.cell, { width: "14%" }]}>{row.hsnCode}</Text>
+                  <Text style={[styles.cell, { width: "14%", textAlign: "right" }]}>
+                    {formatCurrency(row.taxableValue)}
+                  </Text>
+                  <Text style={[styles.cell, { width: "9%", textAlign: "center" }]}>
+                    {row.cgstRate > 0 ? `${row.cgstRate}%` : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: "13%", textAlign: "right" }]}>
+                    {row.cgstAmount > 0 ? formatCurrency(row.cgstAmount) : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: "9%", textAlign: "center" }]}>
+                    {row.sgstRate > 0 ? `${row.sgstRate}%` : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: "13%", textAlign: "right" }]}>
+                    {row.sgstAmount > 0 ? formatCurrency(row.sgstAmount) : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: "9%", textAlign: "center" }]}>
+                    {row.igstRate > 0 ? `${row.igstRate}%` : ""}
+                  </Text>
+                  <Text style={[styles.cell, { width: "13%", textAlign: "right" }]}>
+                    {row.igstAmount > 0 ? formatCurrency(row.igstAmount) : ""}
+                  </Text>
+                  <Text style={[styles.cellLast, { width: "6%", textAlign: "right" }]}>
+                    {formatCurrency(row.totalTax)}
+                  </Text>
+                </View>
+              ))}
             </View>
-            {invoice.totalCgst > 0 && (
+          )}
+
+          {/* E. Totals Section */}
+          <View style={styles.totalsContainer}>
+            <View style={styles.totalsBox}>
               <View style={styles.totalsRow}>
-                <Text style={styles.totalsLabel}>CGST</Text>
-                <Text style={styles.totalsValue}>{formatCurrency(invoice.totalCgst)}</Text>
+                <Text style={styles.totalsLabel}>Subtotal (Taxable)</Text>
+                <Text style={styles.totalsValue}>{formatCurrency(taxableTotal)}</Text>
               </View>
-            )}
-            {invoice.totalSgst > 0 && (
-              <View style={styles.totalsRow}>
-                <Text style={styles.totalsLabel}>SGST</Text>
-                <Text style={styles.totalsValue}>{formatCurrency(invoice.totalSgst)}</Text>
-              </View>
-            )}
-            {invoice.totalIgst > 0 && (
-              <View style={styles.totalsRow}>
-                <Text style={styles.totalsLabel}>IGST</Text>
-                <Text style={styles.totalsValue}>{formatCurrency(invoice.totalIgst)}</Text>
-              </View>
-            )}
-            <View style={styles.grandTotalRow}>
-              <Text style={[styles.totalsLabel, styles.totalsBold, { fontSize: 9 }]}>
-                Grand Total
-              </Text>
-              <Text style={[styles.totalsValue, styles.totalsBold, { fontSize: 9 }]}>
-                {formatCurrency(invoice.total)}
-              </Text>
-            </View>
-            {invoice.amountPaid > 0 && (
-              <View style={styles.totalsRow}>
-                <Text style={styles.totalsLabel}>Amount Paid</Text>
-                <Text style={styles.totalsValue}>{formatCurrency(invoice.amountPaid)}</Text>
-              </View>
-            )}
-            {invoice.balanceDue > 0 && (
-              <View style={styles.totalsRow}>
-                <Text style={[styles.totalsLabel, styles.totalsBold]}>Balance Due</Text>
-                <Text style={[styles.totalsValue, styles.totalsBold]}>
-                  {formatCurrency(invoice.balanceDue)}
+              {invoice.totalCgst > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>CGST</Text>
+                  <Text style={styles.totalsValue}>{formatCurrency(invoice.totalCgst)}</Text>
+                </View>
+              )}
+              {invoice.totalSgst > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>SGST</Text>
+                  <Text style={styles.totalsValue}>{formatCurrency(invoice.totalSgst)}</Text>
+                </View>
+              )}
+              {invoice.totalIgst > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>IGST</Text>
+                  <Text style={styles.totalsValue}>{formatCurrency(invoice.totalIgst)}</Text>
+                </View>
+              )}
+              <View style={styles.grandTotalRow}>
+                <Text style={[styles.totalsLabel, styles.totalsBold, { fontSize: 9 }]}>
+                  Grand Total
+                </Text>
+                <Text style={[styles.totalsValue, styles.totalsBold, { fontSize: 9 }]}>
+                  {formatCurrency(invoice.total)}
                 </Text>
               </View>
-            )}
-          </View>
-        </View>
-
-        {/* F. Amount in Words */}
-        <Text style={styles.amountInWords}>
-          {numberToWordsLocalized(invoice.total, "en")}
-        </Text>
-
-        {/* G. Balance Info */}
-        {balanceInfo && (
-          <View style={styles.balanceSection}>
-            <View style={styles.balanceRow}>
-              <Text style={styles.balanceLabel}>Old Balance</Text>
-              <Text style={styles.balanceValue}>: {formatCurrency(balanceInfo.oldBalance)}</Text>
-            </View>
-            <View style={styles.balanceRow}>
-              <Text style={styles.balanceLabel}>This Invoice</Text>
-              <Text style={styles.balanceValue}>: {formatCurrency(balanceInfo.sales)}</Text>
-            </View>
-            <View style={styles.balanceRow}>
-              <Text style={[styles.balanceLabel, { fontWeight: "bold" }]}>Current Balance</Text>
-              <Text style={[styles.balanceValue, { fontWeight: "bold" }]}>
-                : {formatCurrency(balanceInfo.balance)}
-              </Text>
+              {invoice.amountPaid > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>Amount Paid</Text>
+                  <Text style={styles.totalsValue}>{formatCurrency(invoice.amountPaid)}</Text>
+                </View>
+              )}
+              {invoice.balanceDue > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text style={[styles.totalsLabel, styles.totalsBold]}>Balance Due</Text>
+                  <Text style={[styles.totalsValue, styles.totalsBold]}>
+                    {formatCurrency(invoice.balanceDue)}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
-        )}
 
-        {/* H. Notes / Terms */}
-        {invoice.notes && (
-          <View style={styles.notesSection}>
-            <Text style={styles.notesLabel}>Notes</Text>
-            <Text style={styles.notesText}>{invoice.notes}</Text>
-          </View>
-        )}
-        {invoice.terms && (
-          <View style={styles.notesSection}>
-            <Text style={styles.notesLabel}>Terms & Conditions</Text>
-            <Text style={styles.notesText}>{invoice.terms}</Text>
-          </View>
-        )}
+          {/* F. Amount in Words */}
+          <Text style={styles.amountInWords}>
+            {numberToWordsLocalized(invoice.total, "en")}
+          </Text>
 
-        {/* I. E&OE */}
-        <Text style={styles.eoe}>E. & O.E.</Text>
+          {/* G. Balance Info */}
+          {balanceInfo && (
+            <View style={styles.balanceSection}>
+              <View style={styles.balanceRow}>
+                <Text style={styles.balanceLabel}>Old Balance</Text>
+                <Text style={styles.balanceValue}>: {formatCurrency(balanceInfo.oldBalance)}</Text>
+              </View>
+              <View style={styles.balanceRow}>
+                <Text style={styles.balanceLabel}>This Invoice</Text>
+                <Text style={styles.balanceValue}>: {formatCurrency(balanceInfo.sales)}</Text>
+              </View>
+              <View style={styles.balanceRow}>
+                <Text style={[styles.balanceLabel, { fontWeight: "bold" }]}>Current Balance</Text>
+                <Text style={[styles.balanceValue, { fontWeight: "bold" }]}>
+                  : {formatCurrency(balanceInfo.balance)}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* H. Notes / Terms */}
+          {invoice.notes && (
+            <View style={styles.notesSection}>
+              <Text style={styles.notesLabel}>Notes</Text>
+              <Text style={styles.notesText}>{invoice.notes}</Text>
+            </View>
+          )}
+          {invoice.terms && (
+            <View style={styles.notesSection}>
+              <Text style={styles.notesLabel}>Terms & Conditions</Text>
+              <Text style={styles.notesText}>{invoice.terms}</Text>
+            </View>
+          )}
+
+          {/* I. E&OE */}
+          <Text style={styles.eoe}>E. & O.E.</Text>
 
         </View>
         {/* End content area */}

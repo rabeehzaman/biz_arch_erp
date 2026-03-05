@@ -107,7 +107,7 @@ export default function DebitNotesPage() {
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("accounting.debitNotes")}</h2>
             <p className="text-slate-500">
-              {lang === "ar" ? "إدارة مرتجعات المشتريات ومديونيات الموردين" : "Manage purchase returns and supplier debits"}
+              {t("debitNotes.manageDebitNotes")}
             </p>
           </div>
           <Link href="/debit-notes/new" className="w-full sm:w-auto">
@@ -123,7 +123,7 @@ export default function DebitNotesPage() {
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
-                placeholder={lang === "ar" ? "بحث في إشعارات المدين..." : "Search debit notes..."}
+                placeholder={t("debitNotes.searchDebitNotes")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -137,12 +137,12 @@ export default function DebitNotesPage() {
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <FileText className="h-12 w-12 text-slate-300" />
                 <h3 className="mt-4 text-lg font-semibold">
-                  {lang === "ar" ? "لا توجد إشعارات مدين" : "No debit notes found"}
+                  {t("debitNotes.noDebitNotesFound")}
                 </h3>
                 <p className="text-sm text-slate-500">
                   {searchQuery
                     ? t("common.noMatchFound")
-                    : lang === "ar" ? "أنشئ أول إشعار مدين" : "Create your first debit note to get started"}
+                    : t("debitNotes.noDebitNotesDesc")}
                 </p>
                 {!searchQuery && (
                   <Link href="/debit-notes/new" className="mt-4">
@@ -154,7 +154,7 @@ export default function DebitNotesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{lang === "ar" ? "رقم إشعار المدين" : "DN #"}</TableHead>
+                    <TableHead>{t("debitNotes.dnNo")}</TableHead>
                     <TableHead>{t("suppliers.supplier")}</TableHead>
                     <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>
                     <TableHead>{t("sales.issueDate")}</TableHead>
