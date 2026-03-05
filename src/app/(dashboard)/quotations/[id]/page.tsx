@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Download, FileCheck, Ban, Info, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, Building2, Download, FileCheck, Ban, Info, Loader2, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -80,6 +80,8 @@ export default function QuotationDetailPage({
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConverting, setIsConverting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void; variant?: "default" | "destructive"; confirmLabel?: string } | null>(null);
 
   useEffect(() => {
@@ -104,6 +106,7 @@ export default function QuotationDetailPage({
   };
 
   const handleDownloadPDF = async () => {
+    setIsDownloading(true);
     try {
       const response = await fetch(`/api/quotations/${id}/pdf`);
       if (!response.ok) throw new Error("Failed to generate PDF");
@@ -124,10 +127,13 @@ export default function QuotationDetailPage({
     } catch (error) {
       toast.error("Failed to download PDF");
       console.error(error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handlePrint = async () => {
+    setIsPrinting(true);
     try {
       const response = await fetch(`/api/quotations/${id}/pdf`);
       if (!response.ok) throw new Error("Failed to generate PDF");
@@ -143,6 +149,8 @@ export default function QuotationDetailPage({
     } catch (error) {
       toast.error("Failed to print quotation");
       console.error(error);
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -262,13 +270,17 @@ export default function QuotationDetailPage({
                 </Button>
               </Link>
             )}
-            <Button variant="outline" onClick={handleDownloadPDF}>
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
+            <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading}>
+              {isDownloading
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <Download className="mr-2 h-4 w-4" />}
+              {isDownloading ? "Downloading..." : "Download PDF"}
             </Button>
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="mr-2 h-4 w-4" />
-              Print
+            <Button variant="outline" onClick={handlePrint} disabled={isPrinting}>
+              {isPrinting
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <Printer className="mr-2 h-4 w-4" />}
+              {isPrinting ? "Printing..." : "Print"}
             </Button>
             {quotation.status === "SENT" && !isExpired && (
               <>

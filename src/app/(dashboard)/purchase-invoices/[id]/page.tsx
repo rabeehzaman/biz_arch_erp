@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, Download, Package, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, Building2, Download, Loader2, Package, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -103,6 +103,8 @@ export default function PurchaseInvoiceDetailPage({
   const { symbol } = useCurrency();
   const [invoice, setInvoice] = useState<PurchaseInvoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     fetchInvoice();
@@ -142,6 +144,7 @@ export default function PurchaseInvoiceDetailPage({
   };
 
   const handleDownloadPDF = async () => {
+    setIsDownloading(true);
     try {
       const response = await fetch(`/api/purchase-invoices/${id}/pdf`);
       if (!response.ok) throw new Error("Failed to generate PDF");
@@ -162,10 +165,13 @@ export default function PurchaseInvoiceDetailPage({
     } catch (error) {
       toast.error("Failed to download PDF");
       console.error(error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handlePrint = async () => {
+    setIsPrinting(true);
     try {
       const response = await fetch(`/api/purchase-invoices/${id}/pdf`);
       if (!response.ok) throw new Error("Failed to generate PDF");
@@ -181,6 +187,8 @@ export default function PurchaseInvoiceDetailPage({
     } catch (error) {
       toast.error("Failed to print invoice");
       console.error(error);
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -235,13 +243,17 @@ export default function PurchaseInvoiceDetailPage({
                 Edit
               </Button>
             </Link>
-            <Button variant="outline" onClick={handleDownloadPDF}>
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
+            <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading}>
+              {isDownloading
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <Download className="mr-2 h-4 w-4" />}
+              {isDownloading ? "Downloading..." : "Download PDF"}
             </Button>
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="mr-2 h-4 w-4" />
-              Print
+            <Button variant="outline" onClick={handlePrint} disabled={isPrinting}>
+              {isPrinting
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <Printer className="mr-2 h-4 w-4" />}
+              {isPrinting ? "Printing..." : "Print"}
             </Button>
           </div>
         </div>

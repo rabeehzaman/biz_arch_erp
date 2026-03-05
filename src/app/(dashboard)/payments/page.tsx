@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, CreditCard, Trash2 } from "lucide-react";
+import { Plus, Search, CreditCard, Loader2, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,6 +96,7 @@ export default function PaymentsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletePayment, setDeletePayment] = useState<Payment | null>(null);
@@ -162,6 +163,7 @@ export default function PaymentsPage() {
     }
     setFormErrors({});
 
+    setIsSubmitting(true);
     try {
       const response = await fetch("/api/payments", {
         method: "POST",
@@ -189,6 +191,8 @@ export default function PaymentsPage() {
     } catch (error) {
       toast.error(t("common.error"));
       console.error("Failed to save payment:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -404,7 +408,10 @@ export default function PaymentsPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">{t("payments.recordPayment")}</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmitting ? "Recording..." : t("payments.recordPayment")}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>

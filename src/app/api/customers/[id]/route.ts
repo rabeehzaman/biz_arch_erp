@@ -93,7 +93,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, email, phone, address, city, state, zipCode, country, notes, isActive, gstin, gstStateCode } = body;
+    const { name, email, phone, address, city, state, zipCode, country, notes, isActive, gstin, gstStateCode, ccNo, buildingNo, addNo, district } = body;
 
     if (gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
       return NextResponse.json(
@@ -117,6 +117,10 @@ export async function PUT(
         isActive,
         gstin: gstin !== undefined ? gstin : undefined,
         gstStateCode: gstStateCode !== undefined ? gstStateCode : undefined,
+        ccNo: ccNo !== undefined ? ccNo : undefined,
+        buildingNo: buildingNo !== undefined ? buildingNo : undefined,
+        addNo: addNo !== undefined ? addNo : undefined,
+        district: district !== undefined ? district : undefined,
       },
       include: {
         assignments: {

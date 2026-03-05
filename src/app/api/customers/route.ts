@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, email, phone, address, city, state, zipCode, country, notes, gstin, gstStateCode } = body;
+    const { name, email, phone, address, city, state, zipCode, country, notes, gstin, gstStateCode, ccNo, buildingNo, addNo, district } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -107,6 +107,10 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         gstin: gstin || null,
         gstStateCode: gstStateCode || null,
+        ccNo: ccNo || null,
+        buildingNo: buildingNo || null,
+        addNo: addNo || null,
+        district: district || null,
         assignments: {
           create: {
             userId: session.user.id,

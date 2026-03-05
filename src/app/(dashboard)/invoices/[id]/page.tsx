@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, Download, Pencil, Printer, CreditCard, Send } from "lucide-react";
+import { ArrowLeft, Building2, Download, Loader2, Pencil, Printer, CreditCard, Send } from "lucide-react";
 import QRCode from "react-qr-code";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -109,6 +109,9 @@ export default function InvoiceDetailPage({
     reference: "",
   });
   const [isMarkingSent, setIsMarkingSent] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
 
   useEffect(() => {
     fetchInvoice();
@@ -138,6 +141,7 @@ export default function InvoiceDetailPage({
   };
 
   const handleDownloadPDF = async () => {
+    setIsDownloading(true);
     try {
       const response = await fetch(`/api/invoices/${id}/pdf`);
       if (!response.ok) throw new Error("Failed to generate PDF");
@@ -158,6 +162,8 @@ export default function InvoiceDetailPage({
     } catch (error) {
       toast.error("Failed to download PDF");
       console.error(error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -165,6 +171,7 @@ export default function InvoiceDetailPage({
     e.preventDefault();
     if (!invoice) return;
 
+    setIsRecordingPayment(true);
     try {
       const response = await fetch("/api/payments", {
         method: "POST",
@@ -189,6 +196,8 @@ export default function InvoiceDetailPage({
       fetchInvoice();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to record payment");
+    } finally {
+      setIsRecordingPayment(false);
     }
   };
 
@@ -212,6 +221,7 @@ export default function InvoiceDetailPage({
   };
 
   const handlePrint = async () => {
+    setIsPrinting(true);
     try {
       const response = await fetch(`/api/invoices/${id}/pdf`);
       if (!response.ok) throw new Error("Failed to generate PDF");
@@ -227,6 +237,8 @@ export default function InvoiceDetailPage({
     } catch (error) {
       toast.error("Failed to print invoice");
       console.error(error);
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -286,13 +298,17 @@ export default function InvoiceDetailPage({
                 Sent {format(new Date(invoice.sentAt), "dd MMM yyyy")}
               </span>
             )}
-            <Button variant="outline" onClick={handleDownloadPDF}>
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
+            <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading}>
+              {isDownloading
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <Download className="mr-2 h-4 w-4" />}
+              {isDownloading ? "Downloading..." : "Download PDF"}
             </Button>
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="mr-2 h-4 w-4" />
-              Print
+            <Button variant="outline" onClick={handlePrint} disabled={isPrinting}>
+              {isPrinting
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <Printer className="mr-2 h-4 w-4" />}
+              {isPrinting ? "Printing..." : "Print"}
             </Button>
           </div>
         </div>
@@ -606,7 +622,10 @@ export default function InvoiceDetailPage({
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Record Payment</Button>
+                <Button type="submit" disabled={isRecordingPayment}>
+                  {isRecordingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isRecordingPayment ? "Recording..." : "Record Payment"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

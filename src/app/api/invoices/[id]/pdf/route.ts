@@ -7,6 +7,7 @@ import { InvoicePDF } from "@/components/pdf/invoice-pdf";
 import { InvoiceA4PDF } from "@/components/pdf/invoice-pdf-a4";
 import { InvoiceA4GST2PDF } from "@/components/pdf/invoice-pdf-a4-gst2";
 import { InvoiceA4VATPDF } from "@/components/pdf/invoice-pdf-a4-vat";
+import { InvoiceBilingualPDF } from "@/components/pdf/invoice-pdf-bilingual";
 import { createElement } from "react";
 import { format } from "date-fns";
 import { generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
@@ -28,7 +29,7 @@ export async function GET(
     const [org, pdfFormatSetting] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: organizationId },
-        select: { name: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true },
+        select: { name: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true },
       }),
       prisma.setting.findFirst({
         where: { organizationId, key: "invoice_pdf_format" },
@@ -53,6 +54,12 @@ export async function GET(
             gstStateCode: true,
             arabicName: true,
             vatNumber: true,
+            zipCode: true,
+            country: true,
+            ccNo: true,
+            buildingNo: true,
+            addNo: true,
+            district: true,
           },
         },
         createdBy: {
@@ -192,6 +199,64 @@ export async function GET(
           invoice: vatInvoice,
           type: "SALES",
           balanceInfo,
+          headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
+          footerImageUrl: org?.pdfFooterImageUrl ?? undefined,
+        }) as any
+      );
+    } else if (invoicePdfFormat === "A4_BILINGUAL") {
+      const bilingualItems = invoice.items.map((item) => ({
+        description: item.description,
+        arabicName: item.product?.arabicName ?? null,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        discount: Number(item.discount),
+        total: Number(item.total),
+        vatRate: Number(item.vatRate ?? 15),
+        vatAmount: Number(item.vatAmount ?? 0),
+        product: item.product,
+        unit: item.unit,
+      }));
+
+      const bilingualInvoice = {
+        invoiceNumber: invoice.invoiceNumber,
+        issueDate: invoice.issueDate,
+        customer: {
+          name: invoice.customer.name,
+          arabicName: invoice.customer.arabicName,
+          address: invoice.customer.address,
+          city: invoice.customer.city,
+          state: invoice.customer.state,
+          vatNumber: invoice.customer.vatNumber,
+          zipCode: invoice.customer.zipCode,
+          country: invoice.customer.country,
+          ccNo: invoice.customer.ccNo,
+          buildingNo: invoice.customer.buildingNo,
+          addNo: invoice.customer.addNo,
+          district: invoice.customer.district,
+        },
+        organization: {
+          name: org?.name ?? "",
+          arabicName: org?.arabicName ?? null,
+          arabicAddress: org?.arabicAddress ?? null,
+          vatNumber: org?.vatNumber ?? null,
+          commercialRegNumber: org?.commercialRegNumber ?? null,
+        },
+        items: bilingualItems,
+        subtotal: Number(invoice.subtotal),
+        totalVat: Number(invoice.totalVat ?? 0),
+        total: Number(invoice.total),
+        amountPaid: Number(invoice.amountPaid),
+        balanceDue: Number(invoice.balanceDue),
+        qrCodeDataURL,
+        saudiInvoiceType: invoice.saudiInvoiceType ?? undefined,
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pdfBuffer = await renderToBuffer(
+        createElement(InvoiceBilingualPDF, {
+          invoice: bilingualInvoice,
+          type: "SALES",
+          title: "Tax Invoice",
           headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
           footerImageUrl: org?.pdfFooterImageUrl ?? undefined,
         }) as any

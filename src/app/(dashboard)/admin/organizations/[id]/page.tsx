@@ -176,7 +176,7 @@ export default function OrganizationDetailsPage() {
         } finally {
             setLoading(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     useEffect(() => {
@@ -839,12 +839,13 @@ export default function OrganizationDetailsPage() {
                                         <SelectItem value="A4_PORTRAIT">A4 Portrait (GST)</SelectItem>
                                         <SelectItem value="A4_GST2">A4 Portrait (GST 2)</SelectItem>
                                         <SelectItem value="A4_VAT">A4 Portrait (VAT - Arabic)</SelectItem>
+                                        <SelectItem value="A4_BILINGUAL">A4 Bilingual (Arabic-English)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             {/* PDF Header/Footer Images */}
-                            {(invoicePdfFormat === "A4_PORTRAIT" || invoicePdfFormat === "A4_GST2" || invoicePdfFormat === "A4_VAT") && (
+                            {(invoicePdfFormat === "A4_PORTRAIT" || invoicePdfFormat === "A4_GST2" || invoicePdfFormat === "A4_VAT" || invoicePdfFormat === "A4_BILINGUAL") && (
                                 <div className="space-y-4 pt-4 border-t">
                                     <div className="space-y-0.5 mb-2">
                                         <Label>PDF Header / Footer Images</Label>

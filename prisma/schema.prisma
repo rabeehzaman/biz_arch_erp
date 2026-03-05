@@ -235,6 +235,10 @@ model Customer {
   // Saudi fields
   arabicName     String?
   vatNumber      String?      // Customer's VAT TRN (for standard invoices)
+  ccNo           String?
+  buildingNo     String?
+  addNo          String?
+  district       String?
   balance        Decimal      @default(0) @db.Decimal(12, 2)
   notes          String?
   isActive       Boolean      @default(true)

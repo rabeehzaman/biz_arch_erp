@@ -29,6 +29,10 @@ interface Customer {
     gstin: string | null;
     gstStateCode: string | null;
     notes: string | null;
+    ccNo?: string | null;
+    buildingNo?: string | null;
+    addNo?: string | null;
+    district?: string | null;
 }
 
 interface CustomerFormDialogProps {
@@ -58,6 +62,10 @@ export function CustomerFormDialog({
         gstin: "",
         gstStateCode: "",
         notes: "",
+        ccNo: "",
+        buildingNo: "",
+        addNo: "",
+        district: "",
     });
 
     useEffect(() => {
@@ -74,6 +82,10 @@ export function CustomerFormDialog({
                 gstin: customerToEdit.gstin || "",
                 gstStateCode: customerToEdit.gstStateCode || "",
                 notes: customerToEdit.notes || "",
+                ccNo: customerToEdit.ccNo || "",
+                buildingNo: customerToEdit.buildingNo || "",
+                addNo: customerToEdit.addNo || "",
+                district: customerToEdit.district || "",
             });
         } else if (!open) {
             resetForm();
@@ -96,6 +108,10 @@ export function CustomerFormDialog({
             gstin: formData.gstin || null,
             gstStateCode: formData.gstStateCode || null,
             notes: formData.notes || null,
+            ccNo: formData.ccNo || null,
+            buildingNo: formData.buildingNo || null,
+            addNo: formData.addNo || null,
+            district: formData.district || null,
         };
 
         try {
@@ -144,6 +160,10 @@ export function CustomerFormDialog({
             gstin: "",
             gstStateCode: "",
             notes: "",
+            ccNo: "",
+            buildingNo: "",
+            addNo: "",
+            district: "",
         });
     };
 
@@ -255,6 +275,42 @@ export function CustomerFormDialog({
                                     setFormData({ ...formData, address: e.target.value })
                                 }
                             />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                            <div className="grid gap-2">
+                                <Label htmlFor="cust-district">District / الحي</Label>
+                                <Input
+                                    id="cust-district"
+                                    value={formData.district}
+                                    onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="cust-buildingNo">Building No / رقم المبنى</Label>
+                                <Input
+                                    id="cust-buildingNo"
+                                    value={formData.buildingNo}
+                                    onChange={(e) => setFormData({ ...formData, buildingNo: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                            <div className="grid gap-2">
+                                <Label htmlFor="cust-addNo">Add. No / الرقم الفرعي</Label>
+                                <Input
+                                    id="cust-addNo"
+                                    value={formData.addNo}
+                                    onChange={(e) => setFormData({ ...formData, addNo: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="cust-ccNo">C.C No / معرف آخر</Label>
+                                <Input
+                                    id="cust-ccNo"
+                                    value={formData.ccNo}
+                                    onChange={(e) => setFormData({ ...formData, ccNo: e.target.value })}
+                                />
+                            </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="grid gap-2">
