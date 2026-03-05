@@ -1,15 +1,14 @@
 import { Font } from "@react-pdf/renderer";
 
-// Register Amiri font for Arabic text rendering in PDFs
-// Amiri is a high-quality Naskh Arabic font from Google Fonts
-const AMIRI_BASE = "https://cdn.jsdelivr.net/npm/@fontsource/amiri@5/files";
+// Register Noto Naskh Arabic — same font used in the web UI
+const NOTO_BASE = "https://cdn.jsdelivr.net/npm/@fontsource/noto-naskh-arabic@5/files";
 
 Font.register({
-  family: "Amiri",
+  family: "Noto Naskh Arabic",
   fonts: [
-    { src: `${AMIRI_BASE}/amiri-arabic-400-normal.woff`, fontWeight: 400 },
-    { src: `${AMIRI_BASE}/amiri-arabic-700-normal.woff`, fontWeight: 700 },
+    { src: `${NOTO_BASE}/noto-naskh-arabic-arabic-400-normal.woff`, fontWeight: 400 },
+    { src: `${NOTO_BASE}/noto-naskh-arabic-arabic-700-normal.woff`, fontWeight: 700 },
   ],
 });
 
-export const ARABIC_FONT_FAMILY = "Amiri";
+export const ARABIC_FONT_FAMILY = "Noto Naskh Arabic";
