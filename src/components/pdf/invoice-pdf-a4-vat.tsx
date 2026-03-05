@@ -25,6 +25,11 @@ const THEME = {
   border: "#333",
 };
 
+// Helper: renders Arabic text with the correct font
+const Ar = ({ children, style }: { children: React.ReactNode; style?: any }) => (
+  <Text style={[{ fontFamily: ARABIC_FONT_FAMILY }, style]}>{children}</Text>
+);
+
 const styles = StyleSheet.create({
   page: {
     paddingTop: "20mm",
@@ -34,7 +39,6 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontFamily: "Helvetica",
   },
-  // Bilingual title row
   titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -51,7 +55,6 @@ const styles = StyleSheet.create({
     fontFamily: ARABIC_FONT_FAMILY,
     textAlign: "right",
   },
-  // Info boxes
   infoRow: {
     flexDirection: "row",
     marginBottom: 8,
@@ -74,7 +77,6 @@ const styles = StyleSheet.create({
     fontFamily: ARABIC_FONT_FAMILY,
     textAlign: "right",
   },
-  // Table
   table: {
     marginBottom: 0,
   },
@@ -102,21 +104,31 @@ const styles = StyleSheet.create({
     padding: 2,
     fontSize: 6.5,
   },
-  headerCell: {
+  // Header cells use View containers now (for bilingual two-line labels)
+  headerCellWrap: {
     padding: 2,
-    fontSize: 6.5,
-    fontWeight: "bold",
     borderRightWidth: 1,
     borderRightColor: THEME.border,
-    textAlign: "center",
-    color: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerCellLast: {
+  headerCellWrapLast: {
     padding: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTextEn: {
     fontSize: 6.5,
     fontWeight: "bold",
-    textAlign: "center",
     color: "#fff",
+    textAlign: "center",
+  },
+  headerTextAr: {
+    fontSize: 7,
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+    fontFamily: ARABIC_FONT_FAMILY,
   },
   taxableCell: {
     padding: 2,
@@ -125,15 +137,13 @@ const styles = StyleSheet.create({
     borderRightColor: THEME.border,
     backgroundColor: THEME.gray,
   },
-  taxableHeaderCell: {
+  taxableHeaderWrap: {
     padding: 2,
-    fontSize: 6.5,
-    fontWeight: "bold",
     borderRightWidth: 1,
     borderRightColor: THEME.border,
     backgroundColor: THEME.primaryLight,
-    textAlign: "center",
-    color: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
   totalRow: {
     flexDirection: "row",
@@ -143,7 +153,6 @@ const styles = StyleSheet.create({
     borderColor: THEME.border,
     minHeight: 14,
   },
-  // Bottom
   bottomRow: {
     flexDirection: "row",
     marginTop: 4,
@@ -166,8 +175,7 @@ const styles = StyleSheet.create({
   },
 });
 
-// Column widths:
-// Sl | Description | Qty | Unit Price | Discount | Taxable Value | VAT% | VAT Amt | Total
+// Column widths
 const COL = {
   sl: "4%",
   item: "28%",
@@ -239,9 +247,8 @@ export function InvoiceA4VATPDF({
 }: InvoiceA4VATProps) {
   const isSimplified = invoice.saudiInvoiceType === "SIMPLIFIED";
   const enTitle = title || (isSimplified ? "Simplified Tax Invoice" : "Tax Invoice");
-  const arTitle = isSimplified ? "فاتورة ضريبية مبسطة" : "فاتورة ضريبية";
+  const arTitle = isSimplified ? "\u0641\u0627\u062A\u0648\u0631\u0629 \u0636\u0631\u064A\u0628\u064A\u0629 \u0645\u0628\u0633\u0637\u0629" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0636\u0631\u064A\u0628\u064A\u0629";
 
-  // Compute taxable value per item
   const itemsComputed = invoice.items.map((item) => {
     const gross = item.quantity * item.unitPrice;
     const discountAmt = (gross * item.discount) / 100;
@@ -250,7 +257,6 @@ export function InvoiceA4VATPDF({
   });
 
   const taxableTotal = itemsComputed.reduce((sum, i) => sum + i.taxableValue, 0);
-  const totalGross = itemsComputed.reduce((sum, i) => sum + i.gross, 0);
   const totalDiscount = itemsComputed.reduce((sum, i) => sum + i.discountAmt, 0);
   const totalVatComputed = itemsComputed.reduce((sum, i) => sum + i.vatAmount, 0);
 
@@ -273,7 +279,6 @@ export function InvoiceA4VATPDF({
   return (
     <Document>
       <Page size="A4" orientation="portrait" style={pageStyle}>
-        {/* Header Image */}
         {hasHeader && (
           <View style={{ width: "100%" }} fixed>
             <Image src={headerImageUrl} style={{ width: "100%" }} />
@@ -292,11 +297,12 @@ export function InvoiceA4VATPDF({
 
         {/* Seller + Buyer Info */}
         <View style={styles.infoRow}>
-          {/* Seller (left) */}
+          {/* Seller */}
           <View style={[styles.infoBox, { width: "48%" }]}>
-            <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 7, marginBottom: 2 }]}>
-              Seller / البائع
-            </Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
+              <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 7 }]}>Seller</Text>
+              <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0628\u0627\u0626\u0639"}</Ar>
+            </View>
             <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
               {invoice.organization.name}
             </Text>
@@ -311,17 +317,19 @@ export function InvoiceA4VATPDF({
               </Text>
             )}
             {invoice.organization.vatNumber && (
-              <Text style={[styles.infoBoxText, { marginTop: 2 }]}>
-                TRN / الرقم الضريبي: {invoice.organization.vatNumber}
-              </Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
+                <Text style={styles.infoBoxText}>TRN: {invoice.organization.vatNumber}</Text>
+                <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A"}</Ar>
+              </View>
             )}
           </View>
 
-          {/* Buyer (right) */}
+          {/* Buyer */}
           <View style={[styles.infoBox, { width: "48%" }]}>
-            <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 7, marginBottom: 2 }]}>
-              Buyer / المشتري
-            </Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
+              <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 7 }]}>Buyer</Text>
+              <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0645\u0634\u062A\u0631\u064A"}</Ar>
+            </View>
             <Text style={[styles.infoBoxText, { fontWeight: "bold", fontSize: 8 }]}>
               {invoice.customer.name}
             </Text>
@@ -337,46 +345,74 @@ export function InvoiceA4VATPDF({
               <Text style={styles.infoBoxText}>{customerLocation}</Text>
             )}
             {invoice.customer.vatNumber && (
-              <Text style={[styles.infoBoxText, { marginTop: 2 }]}>
-                TRN / الرقم الضريبي: {invoice.customer.vatNumber}
-              </Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
+                <Text style={styles.infoBoxText}>TRN: {invoice.customer.vatNumber}</Text>
+                <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A"}</Ar>
+              </View>
             )}
           </View>
         </View>
 
         {/* Invoice details row */}
-        <View style={{ flexDirection: "row", marginBottom: 8, gap: 10 }}>
-          <View style={{ flexDirection: "row", gap: 16 }}>
-            <Text style={styles.infoBoxText}>
-              <Text style={{ fontWeight: "bold" }}>Invoice No / رقم الفاتورة: </Text>
-              {invoice.invoiceNumber}
-            </Text>
-            <Text style={styles.infoBoxText}>
-              <Text style={{ fontWeight: "bold" }}>Date / التاريخ: </Text>
-              {format(new Date(invoice.issueDate), "dd-MM-yyyy")}
-            </Text>
-            {invoice.createdByName && (
-              <Text style={styles.infoBoxText}>
-                <Text style={{ fontWeight: "bold" }}>Salesperson: </Text>
-                {invoice.createdByName}
-              </Text>
-            )}
+        <View style={{ flexDirection: "row", marginBottom: 8, gap: 16 }}>
+          <View>
+            <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Invoice No:</Text>
+            <Ar style={{ fontSize: 6, color: "#666" }}>{"\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"}</Ar>
           </View>
+          <Text style={styles.infoBoxText}>{invoice.invoiceNumber}</Text>
+          <View>
+            <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Date:</Text>
+            <Ar style={{ fontSize: 6, color: "#666" }}>{"\u0627\u0644\u062A\u0627\u0631\u064A\u062E"}</Ar>
+          </View>
+          <Text style={styles.infoBoxText}>{format(new Date(invoice.issueDate), "dd-MM-yyyy")}</Text>
+          {invoice.createdByName && (
+            <>
+              <Text style={[styles.infoBoxText, { fontWeight: "bold" }]}>Salesperson:</Text>
+              <Text style={styles.infoBoxText}>{invoice.createdByName}</Text>
+            </>
+          )}
         </View>
 
         {/* Items Table */}
         <View style={styles.table}>
-          {/* Header */}
+          {/* Header — each cell is a View with two Text lines (EN + AR) */}
           <View style={styles.headerRow}>
-            <Text style={[styles.headerCell, { width: COL.sl }]}>Sl{"\n"}م</Text>
-            <Text style={[styles.headerCell, { width: COL.item }]}>Description{"\n"}الوصف</Text>
-            <Text style={[styles.headerCell, { width: COL.qty }]}>Qty{"\n"}الكمية</Text>
-            <Text style={[styles.headerCell, { width: COL.rate }]}>Unit Price{"\n"}سعر الوحدة</Text>
-            <Text style={[styles.headerCell, { width: COL.disc }]}>Discount{"\n"}خصم</Text>
-            <Text style={[styles.taxableHeaderCell, { width: COL.taxable }]}>Taxable Value{"\n"}القيمة الخاضعة</Text>
-            <Text style={[styles.headerCell, { width: COL.vatPct }]}>VAT %{"\n"}ض.ق.م %</Text>
-            <Text style={[styles.headerCell, { width: COL.vatAmt }]}>VAT Amount{"\n"}مبلغ الضريبة</Text>
-            <Text style={[styles.headerCellLast, { width: COL.total }]}>Total{"\n"}الإجمالي</Text>
+            <View style={[styles.headerCellWrap, { width: COL.sl }]}>
+              <Text style={styles.headerTextEn}>Sl</Text>
+              <Ar style={styles.headerTextAr}>{"\u0645"}</Ar>
+            </View>
+            <View style={[styles.headerCellWrap, { width: COL.item }]}>
+              <Text style={styles.headerTextEn}>Description</Text>
+              <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0648\u0635\u0641"}</Ar>
+            </View>
+            <View style={[styles.headerCellWrap, { width: COL.qty }]}>
+              <Text style={styles.headerTextEn}>Qty</Text>
+              <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0643\u0645\u064A\u0629"}</Ar>
+            </View>
+            <View style={[styles.headerCellWrap, { width: COL.rate }]}>
+              <Text style={styles.headerTextEn}>Unit Price</Text>
+              <Ar style={styles.headerTextAr}>{"\u0633\u0639\u0631 \u0627\u0644\u0648\u062D\u062F\u0629"}</Ar>
+            </View>
+            <View style={[styles.headerCellWrap, { width: COL.disc }]}>
+              <Text style={styles.headerTextEn}>Discount</Text>
+              <Ar style={styles.headerTextAr}>{"\u062E\u0635\u0645"}</Ar>
+            </View>
+            <View style={[styles.taxableHeaderWrap, { width: COL.taxable }]}>
+              <Text style={styles.headerTextEn}>Taxable Value</Text>
+              <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u062E\u0627\u0636\u0639\u0629"}</Ar>
+            </View>
+            <View style={[styles.headerCellWrap, { width: COL.vatPct }]}>
+              <Text style={styles.headerTextEn}>VAT %</Text>
+              <Ar style={styles.headerTextAr}>{"\u0636.\u0642.\u0645 %"}</Ar>
+            </View>
+            <View style={[styles.headerCellWrap, { width: COL.vatAmt }]}>
+              <Text style={styles.headerTextEn}>VAT Amount</Text>
+              <Ar style={styles.headerTextAr}>{"\u0645\u0628\u0644\u063A \u0627\u0644\u0636\u0631\u064A\u0628\u0629"}</Ar>
+            </View>
+            <View style={[styles.headerCellWrapLast, { width: COL.total }]}>
+              <Text style={styles.headerTextEn}>Total</Text>
+              <Ar style={styles.headerTextAr}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"}</Ar>
+            </View>
           </View>
 
           {/* Data Rows */}
@@ -421,12 +457,13 @@ export function InvoiceA4VATPDF({
             );
           })}
 
-          {/* Totals row inside table */}
+          {/* Totals row */}
           <View style={styles.totalRow}>
             <Text style={[styles.cell, { width: COL.sl }]} />
-            <Text style={[styles.cell, { width: COL.item, fontWeight: "bold" }]}>
-              Total / الإجمالي
-            </Text>
+            <View style={[styles.cell, { width: COL.item, flexDirection: "row", justifyContent: "space-between" }]}>
+              <Text style={{ fontWeight: "bold", fontSize: 6.5 }}>Total</Text>
+              <Ar style={{ fontWeight: "bold", fontSize: 7 }}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"}</Ar>
+            </View>
             <Text style={[styles.cell, { width: COL.qty }]} />
             <Text style={[styles.cell, { width: COL.rate }]} />
             <Text style={[styles.cell, { width: COL.disc, textAlign: "right", fontWeight: "bold" }]}>
@@ -445,14 +482,22 @@ export function InvoiceA4VATPDF({
           </View>
         </View>
 
-        {/* Summary section below table */}
+        {/* Summary section */}
         <View style={{ borderWidth: 1, borderColor: THEME.border, borderTopWidth: 0, marginBottom: 2 }}>
-          {/* Subtotal + VAT + Grand Total */}
           <View style={{ flexDirection: "row", justifyContent: "flex-end", padding: 3, gap: 20 }}>
             <View>
-              <Text style={{ fontSize: 7 }}>Subtotal / المجموع الفرعي:</Text>
-              <Text style={{ fontSize: 7 }}>VAT (15%) / ض.ق.م:</Text>
-              <Text style={{ fontSize: 8, fontWeight: "bold" }}>Grand Total / الإجمالي الكلي:</Text>
+              <View style={{ flexDirection: "row", gap: 4 }}>
+                <Text style={{ fontSize: 7 }}>Subtotal</Text>
+                <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0645\u062C\u0645\u0648\u0639 \u0627\u0644\u0641\u0631\u0639\u064A"}</Ar>
+              </View>
+              <View style={{ flexDirection: "row", gap: 4 }}>
+                <Text style={{ fontSize: 7 }}>VAT (15%)</Text>
+                <Ar style={{ fontSize: 7 }}>{"\u0636.\u0642.\u0645"}</Ar>
+              </View>
+              <View style={{ flexDirection: "row", gap: 4 }}>
+                <Text style={{ fontSize: 8, fontWeight: "bold" }}>Grand Total</Text>
+                <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0643\u0644\u064A"}</Ar>
+              </View>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.subtotal)}</Text>
@@ -461,7 +506,7 @@ export function InvoiceA4VATPDF({
             </View>
           </View>
 
-          {/* Amount in words (EN + AR) */}
+          {/* Amount in words */}
           <View style={{ paddingHorizontal: 3, paddingBottom: 3 }}>
             <Text style={{ fontSize: 6.5 }}>
               {numberToWordsLocalized(invoice.total, "en")}
@@ -473,13 +518,17 @@ export function InvoiceA4VATPDF({
 
           {/* Amount Paid / Balance Due */}
           {invoice.amountPaid > 0 && (
-            <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2 }}>
-              <Text style={{ fontSize: 7 }}>Amount Paid / المبلغ المدفوع: {formatCurrency(invoice.amountPaid)}</Text>
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2, gap: 4 }}>
+              <Text style={{ fontSize: 7 }}>Amount Paid:</Text>
+              <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639"}</Ar>
+              <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.amountPaid)}</Text>
             </View>
           )}
           {invoice.balanceDue > 0 && (
-            <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2 }}>
-              <Text style={{ fontSize: 7, fontWeight: "bold" }}>Balance Due / المبلغ المتبقي: {formatCurrency(invoice.balanceDue)}</Text>
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2, gap: 4 }}>
+              <Text style={{ fontSize: 7, fontWeight: "bold" }}>Balance Due:</Text>
+              <Ar style={{ fontSize: 7, fontWeight: "bold" }}>{"\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062A\u0628\u0642\u064A"}</Ar>
+              <Text style={{ fontSize: 7, fontWeight: "bold" }}>{formatCurrency(invoice.balanceDue)}</Text>
             </View>
           )}
         </View>
@@ -511,18 +560,19 @@ export function InvoiceA4VATPDF({
         {/* Declaration + Signatory */}
         <View style={{ borderBottomWidth: 1.5, borderBottomColor: THEME.primary, marginBottom: 4, marginTop: 4 }} />
         <View style={styles.bottomRow}>
-          {/* Left — Declaration */}
           <View style={{ width: "55%" }}>
-            <Text style={styles.declarationBold}>Declaration / إقرار:</Text>
+            <View style={{ flexDirection: "row", gap: 4 }}>
+              <Text style={styles.declarationBold}>Declaration</Text>
+              <Ar style={{ fontSize: 7, fontWeight: "bold" }}>{"\u0625\u0642\u0631\u0627\u0631"}</Ar>
+            </View>
             <Text style={styles.declaration}>
               Certified that all the particulars shown in the above tax invoice are true and correct.
             </Text>
             <Text style={[styles.declaration, { fontFamily: ARABIC_FONT_FAMILY, textAlign: "right", fontSize: 7 }]}>
-              نقر بأن جميع البيانات الواردة في هذه الفاتورة الضريبية صحيحة ودقيقة
+              {"\u0646\u0642\u0631 \u0628\u0623\u0646 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0627\u0631\u062F\u0629 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0636\u0631\u064A\u0628\u064A\u0629 \u0635\u062D\u064A\u062D\u0629 \u0648\u062F\u0642\u064A\u0642\u0629"}
             </Text>
           </View>
 
-          {/* Right — Signatory */}
           <View style={{ width: "45%", alignItems: "center" }}>
             <Text style={{ fontSize: 8, marginBottom: 30 }}>
               For {invoice.organization.name}
@@ -533,9 +583,7 @@ export function InvoiceA4VATPDF({
         </View>
 
         </View>
-        {/* End content area */}
 
-        {/* Footer Image */}
         {hasFooter && (
           <View style={{ width: "100%", marginTop: "auto" }} fixed>
             <Image src={footerImageUrl} style={{ width: "100%" }} />
