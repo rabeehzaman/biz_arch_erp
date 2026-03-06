@@ -327,6 +327,7 @@ export default function NewDebitNotePage() {
                     suppliers={suppliers}
                     value={supplierId}
                     onValueChange={setSupplierId}
+                    onSupplierCreated={fetchSuppliers}
                     required
                     autoFocus
                   />

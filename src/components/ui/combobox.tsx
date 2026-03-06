@@ -62,9 +62,25 @@ export function Combobox<T>({
 
   // Filter items based on search query
   const filteredItems = React.useMemo(() => {
-    if (!searchQuery) return safeItems;
-    return safeItems.filter((item) => filterFn(item, searchQuery.toLowerCase()));
-  }, [safeItems, searchQuery, filterFn]);
+    let result = safeItems;
+    if (searchQuery) {
+      result = safeItems.filter((item) => filterFn(item, searchQuery.toLowerCase()));
+    }
+
+    // Cap to 100 items for performance to prevent rendering delays with large datasets
+    const capped = result.slice(0, 100);
+
+    // Ensure the selected item is always visible in the list if it matches the search
+    if (value && !capped.some(item => getId(item) === value)) {
+      const selectedMatch = result.find(item => getId(item) === value);
+      if (selectedMatch) {
+        capped.unshift(selectedMatch);
+        if (capped.length > 100) capped.pop();
+      }
+    }
+
+    return capped;
+  }, [safeItems, searchQuery, filterFn, value, getId]);
 
   // Reset highlighted index when filtered items change
   React.useEffect(() => {

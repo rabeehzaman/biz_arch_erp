@@ -38,15 +38,14 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
   const detectorRef = useRef<BarcodeDetector | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const zxingReaderRef = useRef<any>(null);
-  const zxingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
 
   const stopCamera = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
-    if (zxingIntervalRef.current) {
-      clearInterval(zxingIntervalRef.current);
-      zxingIntervalRef.current = null;
+    if (zxingReaderRef.current?.reset) {
+      try { zxingReaderRef.current.reset(); } catch { /* ignore */ }
+      zxingReaderRef.current = null;
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
@@ -96,54 +95,6 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onScan, stopCamera, closeScanner]);
 
-  // ZXing-based scan loop (Safari/iOS fallback)
-  const startZxingScanLoop = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (reader: any) => {
-      const video = videoRef.current;
-      if (!video) return;
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      zxingIntervalRef.current = setInterval(() => {
-        if (!video || video.readyState < 2 || !ctx || !mountedRef.current) return;
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { BrowserMultiFormatReader } = require("@zxing/browser");
-          const luminance = BrowserMultiFormatReader.createCanvasFromMediaElement
-            ? undefined
-            : undefined;
-          void luminance;
-
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const result = reader.decode(imageData, canvas.width, canvas.height);
-
-          if (result) {
-            const text = result.getText ? result.getText() : String(result);
-            const digits = text.replace(/\D/g, "");
-            if (digits.length === 15) {
-              setDetected(digits);
-              stopCamera();
-              setScanning(false);
-              setTimeout(() => {
-                onScan(digits);
-                closeScanner();
-              }, 800);
-            }
-          }
-        } catch {
-          // No barcode found in this frame — continue scanning
-        }
-      }, 250); // Scan every 250ms for performance
-    },
-    [onScan, stopCamera, closeScanner]
-  );
 
   const startCamera = useCallback(async () => {
     setError(null);
@@ -157,44 +108,8 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
       if (useNative) {
         if (!detectorRef.current) {
           detectorRef.current = new BarcodeDetector({
-            formats: ["code_128", "code_39", "ean_13", "ean_8", "qr_code"],
+            formats: ["code_128", "code_39", "ean_13", "ean_8", "qr_code", "itf"],
           });
-        }
-      } else {
-        // Load ZXing for Safari/iOS
-        if (!zxingReaderRef.current) {
-          const { MultiFormatReader, BarcodeFormat, DecodeHintType, RGBLuminanceSource, BinaryBitmap, HybridBinarizer } =
-            await import("@zxing/library");
-
-          const hints = new Map();
-          hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-            BarcodeFormat.CODE_128,
-            BarcodeFormat.CODE_39,
-            BarcodeFormat.EAN_13,
-            BarcodeFormat.EAN_8,
-            BarcodeFormat.QR_CODE,
-          ]);
-          hints.set(DecodeHintType.TRY_HARDER, true);
-
-          const reader = new MultiFormatReader();
-          reader.setHints(hints);
-
-          // Wrap with a decode helper
-          zxingReaderRef.current = {
-            decode: (imageData: ImageData, width: number, height: number) => {
-              const { data } = imageData;
-              // Convert RGBA to RGB
-              const rgbData = new Uint8ClampedArray((width * height * 3));
-              for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
-                rgbData[j] = data[i];
-                rgbData[j + 1] = data[i + 1];
-                rgbData[j + 2] = data[i + 2];
-              }
-              const luminanceSource = new RGBLuminanceSource(rgbData, width, height);
-              const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
-              return reader.decode(binaryBitmap);
-            },
-          };
         }
       }
 
@@ -213,7 +128,41 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
         if (useNative) {
           scanLoopNative();
         } else {
-          startZxingScanLoop(zxingReaderRef.current);
+          // Use @zxing/browser high-level API (works on Safari/iOS)
+          const { BrowserMultiFormatReader } = await import("@zxing/browser");
+          const { BarcodeFormat, DecodeHintType } = await import("@zxing/library");
+
+          const hints = new Map();
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+            BarcodeFormat.CODE_128,
+            BarcodeFormat.CODE_39,
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.QR_CODE,
+            BarcodeFormat.ITF,
+          ]);
+          hints.set(DecodeHintType.TRY_HARDER, true);
+
+          const codeReader = new BrowserMultiFormatReader(hints);
+          zxingReaderRef.current = codeReader;
+
+          codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+            if (!mountedRef.current) return;
+            if (result) {
+              const digits = result.getText().replace(/\D/g, "");
+              if (digits.length === 15) {
+                setDetected(digits);
+                stopCamera();
+                setScanning(false);
+                setTimeout(() => {
+                  onScan(digits);
+                  closeScanner();
+                }, 800);
+              }
+            } else if (err && err.name !== "NotFoundException") {
+              console.error("[ImeiCameraScanner] ZXing decode error:", err);
+            }
+          });
         }
       }
     } catch (err) {
@@ -227,7 +176,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanLoopNative, startZxingScanLoop]);
+  }, [scanLoopNative]);
 
   // Start camera when overlay opens
   useEffect(() => {

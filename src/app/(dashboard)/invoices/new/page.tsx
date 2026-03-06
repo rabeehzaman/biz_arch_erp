@@ -100,6 +100,7 @@ export default function NewInvoicePage() {
   const { symbol } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
+  const saveAndNew = useRef(false);
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
@@ -181,6 +182,9 @@ export default function NewInvoicePage() {
       // Ctrl+Enter: Submit form
       if (e.ctrlKey && e.key === "Enter") {
         e.preventDefault();
+        if (e.shiftKey) {
+          saveAndNew.current = true;
+        }
         formRef.current?.requestSubmit();
       }
     };
@@ -437,8 +441,16 @@ export default function NewInvoicePage() {
           });
         }
 
-        toast.success("Invoice created");
-        router.push(`/invoices/${invoice.id}`);
+        if (saveAndNew.current) {
+          saveAndNew.current = false;
+          toast.success("Invoice created — starting new");
+          router.push("/invoices/new");
+        } else {
+          toast.success("Invoice created", {
+            action: { label: "New Invoice", onClick: () => router.push("/invoices/new") },
+          });
+          router.push(`/invoices/${invoice.id}`);
+        }
       } else {
         toast.error("Failed to create invoice");
       }
@@ -1085,7 +1097,18 @@ export default function NewInvoicePage() {
                     <span>{symbol}{calculateTotal().toLocaleString("en-IN")}</span>
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
+                    onClick={() => {
+                      saveAndNew.current = true;
+                      formRef.current?.requestSubmit();
+                    }}
+                  >
+                    {isSubmitting ? "Saving..." : "Save & New"}
+                  </Button>
                   <Button
                     type="submit"
                     disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}

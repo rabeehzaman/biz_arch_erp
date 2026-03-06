@@ -381,6 +381,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     suppliers={suppliers as any}
                     value={formData.supplierId}
                     onValueChange={(value) => setFormData({ ...formData, supplierId: value })}
+                    onSupplierCreated={(supplier) => setSuppliers((prev) => [...prev, supplier as any])}
                     required
                   />
                 </div>

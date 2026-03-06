@@ -81,6 +81,12 @@ interface PurchaseInvoice {
   balanceDue: number;
 }
 
+interface Account {
+  id: string;
+  name: string;
+  code: string;
+}
+
 const methodLabels: Record<string, string> = {
   CASH: "Cash",
   BANK_TRANSFER: "Bank Transfer",
@@ -88,6 +94,7 @@ const methodLabels: Record<string, string> = {
   CREDIT_CARD: "Credit Card",
   UPI: "UPI",
   OTHER: "Other",
+  ADJUSTMENT: "Adjustment",
 };
 
 export default function SupplierPaymentsPage() {
@@ -95,10 +102,12 @@ export default function SupplierPaymentsPage() {
   const [payments, setPayments] = useState<SupplierPayment[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletePayment, setDeletePayment] = useState<SupplierPayment | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     supplierId: "",
     purchaseInvoiceId: "",
@@ -108,12 +117,14 @@ export default function SupplierPaymentsPage() {
     paymentMethod: "CASH",
     reference: "",
     notes: "",
+    adjustmentAccountId: "",
   });
 
   useEffect(() => {
     fetchPayments();
     fetchSuppliers();
     fetchInvoices();
+    fetchAccounts();
   }, []);
 
   const fetchPayments = async () => {
@@ -142,12 +153,37 @@ export default function SupplierPaymentsPage() {
     setInvoices(data.filter((inv: PurchaseInvoice) => Number(inv.balanceDue) > 0));
   };
 
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch("/api/accounts");
+      if (response.ok) {
+        const data = await response.json();
+        setAccounts(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch accounts:", error);
+    }
+  };
+
   const supplierInvoices = invoices.filter(
     (inv) => inv.supplierId === formData.supplierId
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errors: Record<string, string> = {};
+    if (!formData.supplierId) errors.supplierId = "Supplier is required";
+    if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = "Valid amount is required";
+    if (!formData.paymentDate) errors.paymentDate = "Payment date is required";
+    if (formData.paymentMethod === "ADJUSTMENT" && !formData.adjustmentAccountId) {
+      errors.adjustmentAccountId = "Account is required for adjustments";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
 
     try {
       const response = await fetch("/api/supplier-payments", {
@@ -162,6 +198,7 @@ export default function SupplierPaymentsPage() {
           paymentMethod: formData.paymentMethod,
           reference: formData.reference || null,
           notes: formData.notes || null,
+          adjustmentAccountId: formData.paymentMethod === "ADJUSTMENT" ? formData.adjustmentAccountId : undefined,
         }),
       });
 
@@ -189,7 +226,9 @@ export default function SupplierPaymentsPage() {
       paymentMethod: "CASH",
       reference: "",
       notes: "",
+      adjustmentAccountId: "",
     });
+    setFormErrors({});
   };
 
   const handleDelete = async () => {
@@ -270,6 +309,7 @@ export default function SupplierPaymentsPage() {
                       placeholder="Search supplier..."
                       emptyText="No suppliers found."
                     />
+                    {formErrors.supplierId && <p className="text-sm text-red-500">{formErrors.supplierId}</p>}
                   </div>
                   {formData.supplierId && supplierInvoices.length > 0 && (
                     <div className="grid gap-2">
@@ -301,11 +341,13 @@ export default function SupplierPaymentsPage() {
                         type="number"
                         step="0.01"
                         value={formData.amount}
-                        onChange={(e) =>
-                          setFormData({ ...formData, amount: e.target.value })
-                        }
-                        required
+                        onChange={(e) => {
+                          setFormData({ ...formData, amount: e.target.value });
+                          if (e.target.value) setFormErrors((prev) => ({ ...prev, amount: "" }));
+                        }}
+                        className={formErrors.amount ? "border-red-500" : ""}
                       />
+                      {formErrors.amount && <p className="text-sm text-red-500">{formErrors.amount}</p>}
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="discountGiven">Discount Given</Label>
@@ -354,21 +396,53 @@ export default function SupplierPaymentsPage() {
                           <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
                           <SelectItem value="UPI">UPI</SelectItem>
                           <SelectItem value="OTHER">Other</SelectItem>
+                          <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="reference">Reference</Label>
-                      <Input
-                        id="reference"
-                        value={formData.reference}
-                        onChange={(e) =>
-                          setFormData({ ...formData, reference: e.target.value })
-                        }
-                        placeholder="Check #, Transaction ID..."
-                      />
-                    </div>
+                    {formData.paymentMethod !== "ADJUSTMENT" && (
+                      <div className="grid gap-2">
+                        <Label htmlFor="reference">Reference</Label>
+                        <Input
+                          id="reference"
+                          value={formData.reference}
+                          onChange={(e) =>
+                            setFormData({ ...formData, reference: e.target.value })
+                          }
+                          placeholder="Check #, Transaction ID..."
+                        />
+                      </div>
+                    )}
                   </div>
+
+                  {formData.paymentMethod === "ADJUSTMENT" && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="adjustmentAccount">Adjustment Account *</Label>
+                      <Combobox
+                        items={accounts}
+                        value={formData.adjustmentAccountId}
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, adjustmentAccountId: value });
+                          if (value) setFormErrors((prev) => ({ ...prev, adjustmentAccountId: "" }));
+                        }}
+                        getId={(account) => account.id}
+                        getLabel={(account) => `${account.name} (${account.code})`}
+                        filterFn={(account, query) =>
+                          `${account.name} ${account.code}`.toLowerCase().includes(query.toLowerCase())
+                        }
+                        renderItem={(account) => (
+                          <div className="flex justify-between w-full">
+                            <span>{account.name}</span>
+                            <span className="text-slate-500 text-xs">{account.code}</span>
+                          </div>
+                        )}
+                        placeholder="Search account..."
+                        emptyText="No results"
+                      />
+                      {formErrors.adjustmentAccountId && <p className="text-sm text-red-500">{formErrors.adjustmentAccountId}</p>}
+                    </div>
+                  )}
+
                   <div className="grid gap-2">
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea

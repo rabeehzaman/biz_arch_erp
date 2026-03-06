@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount } = body;
+    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount, adjustmentAccountId } = body;
     const discountReceived = rawDiscount || 0;
     // Normalize paymentMethod to uppercase enum value
     const paymentMethod = (rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH") as PaymentMethod;
@@ -74,6 +74,13 @@ export async function POST(request: NextRequest) {
     if (!customerId || !amount) {
       return NextResponse.json(
         { error: "Customer and amount are required" },
+        { status: 400 }
+      );
+    }
+
+    if (paymentMethod === "ADJUSTMENT" && !adjustmentAccountId) {
+      return NextResponse.json(
+        { error: "Adjustment account is required" },
         { status: 400 }
       );
     }
@@ -95,6 +102,7 @@ export async function POST(request: NextRequest) {
           paymentMethod: paymentMethod,
           reference: reference || null,
           notes: notes || null,
+          adjustmentAccountId: paymentMethod === "ADJUSTMENT" ? adjustmentAccountId : null,
           organizationId,
         },
       });
@@ -186,17 +194,29 @@ export async function POST(request: NextRequest) {
       }
 
       // Create auto journal entry: DR Cash/Bank [amount], DR Sales Discounts [discount], CR Accounts Receivable [totalSettlement]
+      // Or in the case of ADJUSTMENT: DR Selected Adjustment Account [amount]...
       const arAccount = await getSystemAccount(tx, organizationId, "1300");
-      const cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod);
+      let debitAccountId: string | null = null;
+      let cashBankInfo = null;
+
+      if (paymentMethod === "ADJUSTMENT") {
+        debitAccountId = adjustmentAccountId;
+      } else {
+        cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod);
+        if (cashBankInfo) {
+          debitAccountId = cashBankInfo.accountId;
+        } else {
+          console.error(`[payments] No active cash/bank account found for method "${paymentMethod}" in org ${organizationId} — journal entry and cash balance update skipped for payment ${paymentNumber}.`);
+        }
+      }
+
       if (!arAccount) {
         console.error(`[payments] No AR account (1300) found for org ${organizationId} — journal entry skipped for payment ${paymentNumber}. Ensure COA is seeded.`);
       }
-      if (!cashBankInfo) {
-        console.error(`[payments] No active cash/bank account found for method "${paymentMethod || "CASH"}" in org ${organizationId} — journal entry and cash balance update skipped for payment ${paymentNumber}.`);
-      }
-      if (arAccount && cashBankInfo) {
+
+      if (arAccount && debitAccountId) {
         const paymentLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
-          { accountId: cashBankInfo.accountId, description: "Cash/Bank", debit: Number(amount), credit: 0 },
+          { accountId: debitAccountId, description: paymentMethod === "ADJUSTMENT" ? "Customer Balance Adjustment" : "Cash/Bank", debit: Number(amount), credit: 0 },
           { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: totalSettlement },
         ];
 
@@ -213,42 +233,44 @@ export async function POST(request: NextRequest) {
 
         await createAutoJournalEntry(tx, organizationId, {
           date: parsedPaymentDate,
-          description: `Customer Payment ${paymentNumber}`,
+          description: paymentMethod === "ADJUSTMENT" ? `Customer Adjustment ${paymentNumber}` : `Customer Payment ${paymentNumber}`,
           sourceType: "PAYMENT",
           sourceId: newPayment.id,
           lines: paymentLines,
         });
 
-        // Update cash/bank account balance — only actual cash received
-        await tx.cashBankAccount.update({
-          where: { id: cashBankInfo.cashBankAccountId, organizationId },
-          data: { balance: { increment: Number(amount) } },
-        });
+        // Update cash/bank account balance — only actual cash received, and ONLY IF not an adjustment
+        if (paymentMethod !== "ADJUSTMENT" && cashBankInfo) {
+          await tx.cashBankAccount.update({
+            where: { id: cashBankInfo.cashBankAccountId, organizationId },
+            data: { balance: { increment: Number(amount) } },
+          });
 
-        // Create cash/bank transaction for actual cash received
-        const updatedCB = await tx.cashBankAccount.findUnique({
-          where: { id: cashBankInfo.cashBankAccountId },
-        });
-        await tx.cashBankTransaction.create({
-          data: {
-            cashBankAccountId: cashBankInfo.cashBankAccountId,
-            transactionType: "DEPOSIT",
-            amount: Number(amount),
-            runningBalance: Number(updatedCB?.balance || 0),
-            description: `Customer Payment ${paymentNumber}`,
-            referenceType: "PAYMENT",
-            referenceId: newPayment.id,
-            transactionDate: parsedPaymentDate,
-            organizationId,
-          },
-        });
+          // Create cash/bank transaction for actual cash received
+          const updatedCB = await tx.cashBankAccount.findUnique({
+            where: { id: cashBankInfo.cashBankAccountId },
+          });
+          await tx.cashBankTransaction.create({
+            data: {
+              cashBankAccountId: cashBankInfo.cashBankAccountId,
+              transactionType: "DEPOSIT",
+              amount: Number(amount),
+              runningBalance: Number(updatedCB?.balance || 0),
+              description: `Customer Payment ${paymentNumber}`,
+              referenceType: "PAYMENT",
+              referenceId: newPayment.id,
+              transactionDate: parsedPaymentDate,
+              organizationId,
+            },
+          });
+        }
       }
 
       // Create CustomerTransaction record for audit trail
       await tx.customerTransaction.create({
         data: {
           customerId,
-          transactionType: "PAYMENT",
+          transactionType: paymentMethod === "ADJUSTMENT" ? "ADJUSTMENT" : "PAYMENT",
           transactionDate: parsedPaymentDate,
           amount: -totalSettlement, // Negative for credit (payment + discount reduces balance)
           description: invoiceId

@@ -82,6 +82,12 @@ interface Invoice {
   balanceDue: number;
 }
 
+interface Account {
+  id: string;
+  name: string;
+  code: string;
+}
+
 const methodLabels = (t: (key: string) => string): Record<string, string> => ({
   CASH: t("common.cash"),
   BANK_TRANSFER: t("common.bankTransfer"),
@@ -89,12 +95,14 @@ const methodLabels = (t: (key: string) => string): Record<string, string> => ({
   CREDIT_CARD: t("common.creditCard"),
   UPI: t("common.upi"),
   OTHER: t("common.other"),
+  ADJUSTMENT: t("common.adjustment") || "Adjustment",
 });
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -112,12 +120,14 @@ export default function PaymentsPage() {
     paymentMethod: "CASH",
     reference: "",
     notes: "",
+    adjustmentAccountId: "",
   });
 
   useEffect(() => {
     fetchPayments();
     fetchCustomers();
     fetchInvoices();
+    fetchAccounts();
   }, []);
 
   const fetchPayments = async () => {
@@ -146,6 +156,18 @@ export default function PaymentsPage() {
     setInvoices(data.filter((inv: Invoice) => Number(inv.balanceDue) > 0));
   };
 
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch("/api/accounts");
+      if (response.ok) {
+        const data = await response.json();
+        setAccounts(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch accounts:", error);
+    }
+  };
+
   const customerInvoices = invoices.filter(
     (inv) => inv.customerId === formData.customerId
   );
@@ -157,6 +179,10 @@ export default function PaymentsPage() {
     if (!formData.customerId) errors.customerId = t("validation.customerRequired");
     if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = t("validation.amountRequired");
     if (!formData.paymentDate) errors.paymentDate = t("validation.paymentDateRequired");
+    if (formData.paymentMethod === "ADJUSTMENT" && !formData.adjustmentAccountId) {
+      errors.adjustmentAccountId = t("validation.accountRequired") || "Account is required for adjustments";
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -177,6 +203,7 @@ export default function PaymentsPage() {
           paymentMethod: formData.paymentMethod,
           reference: formData.reference || null,
           notes: formData.notes || null,
+          adjustmentAccountId: formData.paymentMethod === "ADJUSTMENT" ? formData.adjustmentAccountId : undefined,
         }),
       });
 
@@ -206,6 +233,7 @@ export default function PaymentsPage() {
       paymentMethod: "CASH",
       reference: "",
       notes: "",
+      adjustmentAccountId: "",
     });
     setFormErrors({});
   };
@@ -381,21 +409,53 @@ export default function PaymentsPage() {
                           <SelectItem value="CREDIT_CARD">{t("common.creditCard")}</SelectItem>
                           <SelectItem value="UPI">{t("common.upi")}</SelectItem>
                           <SelectItem value="OTHER">{t("common.other")}</SelectItem>
+                          <SelectItem value="ADJUSTMENT">{t("common.adjustment") || "Adjustment"}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="reference">{t("common.reference")}</Label>
-                      <Input
-                        id="reference"
-                        value={formData.reference}
-                        onChange={(e) =>
-                          setFormData({ ...formData, reference: e.target.value })
-                        }
-                        placeholder={t("common.checkTransactionId")}
-                      />
-                    </div>
+                    {formData.paymentMethod !== "ADJUSTMENT" && (
+                      <div className="grid gap-2">
+                        <Label htmlFor="reference">{t("common.reference")}</Label>
+                        <Input
+                          id="reference"
+                          value={formData.reference}
+                          onChange={(e) =>
+                            setFormData({ ...formData, reference: e.target.value })
+                          }
+                          placeholder={t("common.checkTransactionId")}
+                        />
+                      </div>
+                    )}
                   </div>
+
+                  {formData.paymentMethod === "ADJUSTMENT" && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="adjustmentAccount">{t("common.adjustmentAccount") || "Adjustment Account"} *</Label>
+                      <Combobox
+                        items={accounts}
+                        value={formData.adjustmentAccountId}
+                        onValueChange={(value) => {
+                          setFormData({ ...formData, adjustmentAccountId: value });
+                          if (value) setFormErrors((prev) => ({ ...prev, adjustmentAccountId: "" }));
+                        }}
+                        getId={(account) => account.id}
+                        getLabel={(account) => `${account.name} (${account.code})`}
+                        filterFn={(account, query) =>
+                          `${account.name} ${account.code}`.toLowerCase().includes(query.toLowerCase())
+                        }
+                        renderItem={(account) => (
+                          <div className="flex justify-between w-full">
+                            <span>{account.name}</span>
+                            <span className="text-slate-500 text-xs">{account.code}</span>
+                          </div>
+                        )}
+                        placeholder={t("common.searchAccount") || "Search account..."}
+                        emptyText={t("common.noResults")}
+                      />
+                      {formErrors.adjustmentAccountId && <p className="text-sm text-red-500">{formErrors.adjustmentAccountId}</p>}
+                    </div>
+                  )}
+
                   <div className="grid gap-2">
                     <Label htmlFor="notes">{t("common.notes")}</Label>
                     <Textarea

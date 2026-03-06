@@ -882,6 +882,9 @@ model Payment {
   reference        String?
   notes            String?
 
+  adjustmentAccountId String?
+  adjustmentAccount   Account? @relation("PaymentAdjustmentAccount", fields: [adjustmentAccountId], references: [id])
+
   branchId String?
   branch   Branch? @relation(fields: [branchId], references: [id])
 
@@ -935,6 +938,9 @@ model SupplierPayment {
   reference     String?
   notes         String?
 
+  adjustmentAccountId String?
+  adjustmentAccount   Account? @relation("SupplierPaymentAdjustmentAccount", fields: [adjustmentAccountId], references: [id])
+
   branchId String?
   branch   Branch? @relation(fields: [branchId], references: [id])
 
@@ -974,6 +980,7 @@ enum PaymentMethod {
   CREDIT_CARD
   UPI
   OTHER
+  ADJUSTMENT
 }
 
 enum InvoiceSourceType {
@@ -1375,6 +1382,8 @@ model Account {
   journalEntryLines JournalEntryLine[]
   expenseItems      ExpenseItem[]
   cashBankAccount   CashBankAccount?
+  paymentAdjustments Payment[] @relation("PaymentAdjustmentAccount")
+  supplierPaymentAdjustments SupplierPayment[] @relation("SupplierPaymentAdjustmentAccount")
 
   @@unique([organizationId, code])
   @@index([organizationId])

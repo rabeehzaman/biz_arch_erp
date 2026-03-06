@@ -662,6 +662,7 @@ export default function OpeningStockPage() {
                     suppliers={suppliers}
                     value={formData.supplierId}
                     onValueChange={(v) => setFormData((f) => ({ ...f, supplierId: v }))}
+                    onSupplierCreated={fetchData}
                   />
                 </div>
                 {formData.imeiNumbers.length > 0 && (
