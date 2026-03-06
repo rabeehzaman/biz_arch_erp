@@ -325,8 +325,8 @@ export async function PUT(
         return org;
       },
       {
-        maxWait: 15000, // Wait up to 15s to acquire a connection (Neon cold start)
-        timeout: 30000, // Allow 30s for all queries inside the transaction
+        maxWait: 20000, // Wait up to 20s to acquire a connection (Neon cold start)
+        timeout: 60000, // Allow 60s for all queries inside the transaction
       }
     );
 

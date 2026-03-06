@@ -376,7 +376,7 @@ export default function PaymentsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="CASH">{t("common.cash")}</SelectItem>
-                          <SelectItem value="BANK_TRANSFER">
+                          <SelectItem value="BANK_TRANSFER">{t("common.bankTransfer")}</SelectItem>
                           <SelectItem value="CHECK">{t("common.check")}</SelectItem>
                           <SelectItem value="CREDIT_CARD">{t("common.creditCard")}</SelectItem>
                           <SelectItem value="UPI">{t("common.upi")}</SelectItem>

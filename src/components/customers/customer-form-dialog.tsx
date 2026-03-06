@@ -78,7 +78,7 @@ export function CustomerFormDialog({
                 city: customerToEdit.city || "",
                 state: customerToEdit.state || "",
                 zipCode: customerToEdit.zipCode || "",
-                country: customerToEdit.country || (session?.user?.zatcaEnabled ? "Saudi Arabia" : "India"),
+                country: customerToEdit.country || ((session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India"),
                 gstin: customerToEdit.gstin || "",
                 gstStateCode: customerToEdit.gstStateCode || "",
                 notes: customerToEdit.notes || "",
@@ -90,7 +90,7 @@ export function CustomerFormDialog({
         } else if (open && !customerToEdit) {
             setFormData(prev => ({
                 ...prev,
-                country: session?.user?.zatcaEnabled ? "Saudi Arabia" : "India"
+                country: (session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India"
             }));
         } else if (!open) {
             resetForm();
@@ -109,7 +109,7 @@ export function CustomerFormDialog({
             city: formData.city || null,
             state: formData.state || null,
             zipCode: formData.zipCode || null,
-            country: formData.country || (session?.user?.zatcaEnabled ? "Saudi Arabia" : "India"),
+            country: formData.country || ((session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India"),
             gstin: formData.gstin || null,
             gstStateCode: formData.gstStateCode || null,
             notes: formData.notes || null,
@@ -161,7 +161,7 @@ export function CustomerFormDialog({
             city: "",
             state: "",
             zipCode: "",
-            country: session?.user?.zatcaEnabled ? "Saudi Arabia" : "India",
+            country: (session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India",
             gstin: "",
             gstStateCode: "",
             notes: "",
@@ -281,7 +281,7 @@ export function CustomerFormDialog({
                                 }
                             />
                         </div>
-                        {session?.user?.zatcaEnabled && (
+                        {(session?.user as any)?.saudiEInvoiceEnabled && (
                             <>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                                     <div className="grid gap-2">

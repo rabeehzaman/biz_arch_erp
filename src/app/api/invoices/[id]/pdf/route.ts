@@ -8,6 +8,7 @@ import { InvoiceA4PDF } from "@/components/pdf/invoice-pdf-a4";
 import { InvoiceA4GST2PDF } from "@/components/pdf/invoice-pdf-a4-gst2";
 import { InvoiceA4VATPDF } from "@/components/pdf/invoice-pdf-a4-vat";
 import { InvoiceBilingualPDF } from "@/components/pdf/invoice-pdf-bilingual";
+import { InvoiceModernGSTPDF } from "@/components/pdf/invoice-pdf-modern-gst";
 import { createElement } from "react";
 import { format } from "date-fns";
 import { generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
@@ -319,6 +320,59 @@ export async function GET(
           balanceInfo,
           headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
           footerImageUrl: org?.pdfFooterImageUrl ?? undefined,
+        }) as any
+      );
+    } else if (invoicePdfFormat === "A4_MODERN_GST") {
+      const modernGstItems = invoice.items.map((item) => ({
+        description: item.description,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        discount: Number(item.discount),
+        total: Number(item.total),
+        hsnCode: item.hsnCode,
+        gstRate: Number(item.gstRate),
+        cgstRate: Number(item.cgstRate),
+        sgstRate: Number(item.sgstRate),
+        igstRate: Number(item.igstRate),
+        cgstAmount: Number(item.cgstAmount),
+        sgstAmount: Number(item.sgstAmount),
+        igstAmount: Number(item.igstAmount),
+        product: item.product,
+        unit: item.unit,
+      }));
+
+      const modernGstInvoice = {
+        invoiceNumber: invoice.invoiceNumber,
+        issueDate: invoice.issueDate,
+        customer: {
+          name: invoice.customer.name,
+          address: invoice.customer.address,
+          city: invoice.customer.city,
+          state: invoice.customer.state,
+          gstin: invoice.customer.gstin,
+        },
+        organization: { name: org?.name ?? "", gstin: org?.gstin ?? null },
+        items: modernGstItems,
+        subtotal: Number(invoice.subtotal),
+        totalCgst: Number(invoice.totalCgst),
+        totalSgst: Number(invoice.totalSgst),
+        totalIgst: Number(invoice.totalIgst),
+        total: Number(invoice.total),
+        amountPaid: Number(invoice.amountPaid),
+        balanceDue: Number(invoice.balanceDue),
+        isInterState: invoice.isInterState,
+        placeOfSupply: invoice.placeOfSupply,
+        notes: invoice.notes,
+        terms: invoice.terms,
+        paymentType: invoice.paymentType,
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pdfBuffer = await renderToBuffer(
+        createElement(InvoiceModernGSTPDF, {
+          invoice: modernGstInvoice,
+          type: "SALES",
+          headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
         }) as any
       );
     } else {

@@ -838,6 +838,7 @@ export default function OrganizationDetailsPage() {
                                         <SelectItem value="A5_LANDSCAPE">A5 Landscape (Default)</SelectItem>
                                         <SelectItem value="A4_PORTRAIT">A4 Portrait (GST)</SelectItem>
                                         <SelectItem value="A4_GST2">A4 Portrait (GST 2)</SelectItem>
+                                        <SelectItem value="A4_MODERN_GST">A4 Modern Portfolio (GST)</SelectItem>
                                         <SelectItem value="A4_VAT">A4 Portrait (VAT - Arabic)</SelectItem>
                                         <SelectItem value="A4_BILINGUAL">A4 Bilingual (Arabic-English)</SelectItem>
                                     </SelectContent>
@@ -869,6 +870,26 @@ export default function OrganizationDetailsPage() {
                                             value={pdfFooterImageUrl}
                                             onChange={(e) => setPdfFooterImageUrl(e.target.value)}
                                             placeholder="https://example.com/footer.png"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {invoicePdfFormat === "A4_MODERN_GST" && (
+                                <div className="space-y-4 pt-4 border-t">
+                                    <div className="space-y-0.5 mb-2">
+                                        <Label>Company Logo Image URL</Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Optional logo image rendered at the top left of the invoice. For best results, use a square image.
+                                        </p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="pdfHeaderImageUrl" className="text-xs">Logo Image URL</Label>
+                                        <Input
+                                            id="pdfHeaderImageUrl"
+                                            value={pdfHeaderImageUrl}
+                                            onChange={(e) => setPdfHeaderImageUrl(e.target.value)}
+                                            placeholder="https://example.com/logo.png"
                                         />
                                     </div>
                                 </div>
