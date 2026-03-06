@@ -17,7 +17,7 @@ const formatCurrency = (amount: number): string => {
     });
 };
 
-const BRAND_COLOR = "#bd4410"; // Dark orange / terracotta from the image
+const BRAND_COLOR = "#2a3b38"; // Dark green from the modern logo's background
 
 const styles = StyleSheet.create({
     page: {
@@ -30,8 +30,8 @@ const styles = StyleSheet.create({
         color: "#4a4a4a",
     },
     logo: {
-        width: 65,
-        height: 65,
+        width: 100,
+        height: 100,
         marginBottom: 10,
         objectFit: "contain",
     },
@@ -308,9 +308,8 @@ export function InvoiceModernGSTPDF({
         const discountAmt = (gross * item.discount) / 100;
         const taxableValue = gross - discountAmt;
         const isIgst = invoice.isInterState;
-        const taxLabel = isIgst
-            ? `IGST ${item.igstRate}%`
-            : `CGST ${item.cgstRate}% + SGST ${item.sgstRate}%`;
+        const totalTaxRate = isIgst ? item.igstRate : item.cgstRate + item.sgstRate;
+        const taxLabel = `${totalTaxRate}%`;
         const taxAmount = isIgst
             ? item.igstAmount
             : item.cgstAmount + item.sgstAmount;
