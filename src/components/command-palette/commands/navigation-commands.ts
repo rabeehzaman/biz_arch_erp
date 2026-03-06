@@ -24,7 +24,6 @@ import {
   Smartphone,
   Search,
   Settings,
-  Wrench,
   Building2,
   ShoppingCart,
   Warehouse,
@@ -103,7 +102,6 @@ export const reportsNav: NavDef[] = [
 // Settings & admin (non-superadmin)
 export const settingsNav: NavDef[] = [
   { name: "Settings", href: "/settings", icon: Settings, keywords: ["preferences", "configuration", "setup"] },
-  { name: "Fix Balances", href: "/admin/fix-balances", icon: Wrench, keywords: ["recalculate", "repair", "fix"] },
 ];
 
 // Superadmin only

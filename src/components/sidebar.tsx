@@ -14,7 +14,6 @@ import {
   Settings,
   LogOut,
   Menu,
-  Wrench,
   Truck,
   Receipt,
   Wallet,
@@ -98,7 +97,6 @@ const reportsNavigation = [
 
 const bottomNavigation = [
   { nameKey: "nav.settings", href: "/settings", icon: Settings },
-  { nameKey: "nav.fixBalances", href: "/admin/fix-balances", icon: Wrench },
 ];
 
 const inventoryNavigation = [
@@ -151,7 +149,6 @@ const NAME_TO_KEY: Record<string, string> = {
   "Stock Summary": "nav.stockSummary",
   "Branch P&L": "nav.branchPL",
   "Settings": "nav.settings",
-  "Fix Balances": "nav.fixBalances",
   "Organizations": "nav.organizations",
 };
 
