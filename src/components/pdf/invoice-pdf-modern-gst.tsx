@@ -474,6 +474,13 @@ export function InvoiceModernGSTPDF({
                             <Text style={styles.summaryValueTotal}>₹{formatCurrency(invoice.total)}</Text>
                         </View>
 
+                        {invoice.amountPaid > 0 && (
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>Amount Paid</Text>
+                                <Text style={styles.summaryValue}>₹{formatCurrency(invoice.amountPaid)}</Text>
+                            </View>
+                        )}
+
                         <View style={styles.balanceDueBanner}>
                             <Text style={styles.balanceDueBannerLabel}>Balance Due</Text>
                             <Text style={styles.balanceDueBannerValue}>₹{formatCurrency(invoice.balanceDue)}</Text>
