@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     AlertDialog,
     AlertDialogCancel,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
 import { SidebarConfigDialog } from "../sidebar-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { INDIAN_STATES } from "@/lib/gst/constants";
@@ -104,8 +106,6 @@ export default function OrganizationDetailsPage() {
     const [language, setLanguage] = useState("en");
     const [currency, setCurrency] = useState("INR");
     const [saving, setSaving] = useState(false);
-    const [settingsError, setSettingsError] = useState("");
-    const [settingsSuccess, setSettingsSuccess] = useState("");
 
     // Delete state
     const [deleteOpen, setDeleteOpen] = useState(false);
@@ -176,7 +176,6 @@ export default function OrganizationDetailsPage() {
         } finally {
             setLoading(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     useEffect(() => {
@@ -196,11 +195,9 @@ export default function OrganizationDetailsPage() {
 
     const handleSaveSettings = async () => {
         setSaving(true);
-        setSettingsError("");
-        setSettingsSuccess("");
 
         if (gstEnabled && !gstin) {
-            setSettingsError("GSTIN is required when GST is enabled");
+            toast.error("GSTIN is required when GST is enabled");
             setSaving(false);
             return;
         }
@@ -208,26 +205,26 @@ export default function OrganizationDetailsPage() {
         if (gstEnabled && gstin) {
             const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
             if (!gstinRegex.test(gstin)) {
-                setSettingsError("Invalid GSTIN format");
+                toast.error("Invalid GSTIN format");
                 setSaving(false);
                 return;
             }
         }
 
         if (eInvoicingEnabled && !gstEnabled) {
-            setSettingsError("GST must be enabled before enabling e-invoicing");
+            toast.error("GST must be enabled before enabling e-invoicing");
             setSaving(false);
             return;
         }
 
         if (saudiEInvoiceEnabled && gstEnabled) {
-            setSettingsError("Cannot enable both GST and Saudi E-Invoice simultaneously");
+            toast.error("Cannot enable both GST and Saudi E-Invoice simultaneously");
             setSaving(false);
             return;
         }
 
         if (saudiEInvoiceEnabled && vatNumber && !/^3\d{14}$/.test(vatNumber)) {
-            setSettingsError("Invalid VAT Number (TRN). Must be 15 digits starting with 3.");
+            toast.error("Invalid VAT Number (TRN). Must be 15 digits starting with 3.");
             setSaving(false);
             return;
         }
@@ -264,14 +261,14 @@ export default function OrganizationDetailsPage() {
             });
 
             if (res.ok) {
-                setSettingsSuccess("Settings saved successfully.");
+                toast.success("Settings saved successfully.");
                 fetchOrganization();
             } else {
                 const data = await res.json();
-                setSettingsError(data.error || "Failed to save organization settings");
+                toast.error(data.error || "Failed to save organization settings");
             }
         } catch {
-            setSettingsError("Failed to save organization settings");
+            toast.error("Failed to save organization settings");
         } finally {
             setSaving(false);
         }
@@ -417,22 +414,31 @@ export default function OrganizationDetailsPage() {
     return (
         <PageAnimation>
             <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild className="shrink-0">
-                        <Link href="/admin/organizations">
-                            <ArrowLeft className="h-5 w-5" />
-                            <span className="sr-only">Back</span>
-                        </Link>
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-2xl font-bold tracking-tight">{organization.name}</h1>
-                            <Badge variant="secondary">{organization.slug}</Badge>
-                            {organization.gstEnabled && <Badge variant="default">GST Enabled</Badge>}
-                            {organization.saudiEInvoiceEnabled && <Badge variant="default">ZATCA</Badge>}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" asChild className="shrink-0">
+                            <Link href="/admin/organizations">
+                                <ArrowLeft className="h-5 w-5" />
+                                <span className="sr-only">Back</span>
+                            </Link>
+                        </Button>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-2xl font-bold tracking-tight">{organization.name}</h1>
+                                <Badge variant="secondary">{organization.slug}</Badge>
+                                {organization.gstEnabled && <Badge variant="default">GST Enabled</Badge>}
+                                {organization.saudiEInvoiceEnabled && <Badge variant="default">ZATCA</Badge>}
+                            </div>
+                            <p className="text-muted-foreground">Manage settings and configuration for this organization</p>
                         </div>
-                        <p className="text-muted-foreground">Manage settings and configuration for this organization</p>
                     </div>
+                    <Button onClick={handleSaveSettings} disabled={saving} className="w-full sm:w-auto">
+                        {saving
+                            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            : <Save className="mr-2 h-4 w-4" />
+                        }
+                        Save Settings
+                    </Button>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -495,7 +501,7 @@ export default function OrganizationDetailsPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Organization Settings — inline */}
+                    {/* Organization Settings */}
                     <Card className="md:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -504,407 +510,429 @@ export default function OrganizationDetailsPage() {
                             </CardTitle>
                             <CardDescription>Configure features and tax settings for this organization</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            {settingsError && (
-                                <div className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
-                                    {settingsError}
+                        <CardContent>
+                            <Tabs defaultValue="general" className="w-full">
+                                <div className="border-b mb-6">
+                                    <TabsList className="w-full justify-start rounded-none border-b-0 bg-transparent p-0">
+                                        <TabsTrigger
+                                            value="general"
+                                            className="relative h-10 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            General
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="taxation"
+                                            className="relative h-10 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            Taxation
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="modules"
+                                            className="relative h-10 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            Modules
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="invoice"
+                                            className="relative h-10 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            Invoice & PDF
+                                        </TabsTrigger>
+                                    </TabsList>
                                 </div>
-                            )}
-                            {settingsSuccess && (
-                                <div className="text-sm font-medium text-green-700 bg-green-50 p-3 rounded-md border border-green-200">
-                                    {settingsSuccess}
-                                </div>
-                            )}
 
-                            {/* Language */}
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-0.5">
-                                    <Label className="flex items-center gap-2">
-                                        <Globe className="h-4 w-4" />
-                                        Organization Language
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Set the UI language for all users of this organization
-                                    </p>
-                                </div>
-                                <Select value={language} onValueChange={setLanguage}>
-                                    <SelectTrigger className="w-44">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="en">English</SelectItem>
-                                        <SelectItem value="ar">العربية (Arabic)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Currency */}
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-0.5">
-                                    <Label className="flex items-center gap-2">
-                                        <Globe className="h-4 w-4" />
-                                        Currency
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Set the currency used for all transactions
-                                    </p>
-                                </div>
-                                <Select value={currency} onValueChange={setCurrency}>
-                                    <SelectTrigger className="w-44">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="INR">₹ INR (Rupee)</SelectItem>
-                                        <SelectItem value="SAR">SAR (Riyal)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* GST */}
-                            <div className="flex items-center justify-between pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <Label htmlFor="gstEnabled">Enable GST</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Enable Indian GST tax system for this organization
-                                    </p>
-                                </div>
-                                <Switch
-                                    id="gstEnabled"
-                                    checked={gstEnabled}
-                                    onCheckedChange={(checked) => {
-                                        setGstEnabled(checked);
-                                        if (!checked) setEInvoicingEnabled(false);
-                                        if (checked) setSaudiEInvoiceEnabled(false);
-                                    }}
-                                />
-                            </div>
-
-                            {gstEnabled && (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="gstin">GSTIN</Label>
-                                        <Input
-                                            id="gstin"
-                                            value={gstin}
-                                            onChange={(e) => handleGstinChange(e.target.value)}
-                                            placeholder="27AAAAA0000A1Z5"
-                                            maxLength={15}
-                                            className="font-mono max-w-xs"
-                                        />
-                                        <p className="text-xs text-muted-foreground">15-digit GST Identification Number</p>
-                                    </div>
-
-                                    {gstStateCode && stateName && (
-                                        <div className="space-y-1">
-                                            <Label>State (auto-derived)</Label>
-                                            <p className="text-sm font-medium">{gstStateCode} - {stateName}</p>
-                                        </div>
-                                    )}
-
+                                {/* GENERAL TAB */}
+                                <TabsContent value="general" className="space-y-6 mt-0">
+                                    {/* Language */}
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-0.5">
-                                            <Label htmlFor="eInvoicingEnabled">Enable E-Invoicing</Label>
+                                            <Label className="flex items-center gap-2">
+                                                <Globe className="h-4 w-4" />
+                                                Organization Language
+                                            </Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Enable NIC e-invoicing for B2B transactions
+                                                Set the UI language for all users of this organization
+                                            </p>
+                                        </div>
+                                        <Select value={language} onValueChange={setLanguage}>
+                                            <SelectTrigger className="w-44">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="en">English</SelectItem>
+                                                <SelectItem value="ar">العربية (Arabic)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Currency */}
+                                    <div className="flex items-center justify-between border-t border-border pt-6">
+                                        <div className="space-y-0.5">
+                                            <Label className="flex items-center gap-2">
+                                                <Globe className="h-4 w-4" />
+                                                Currency
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Set the currency used for all transactions
+                                            </p>
+                                        </div>
+                                        <Select value={currency} onValueChange={setCurrency}>
+                                            <SelectTrigger className="w-44">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="INR">₹ INR (Rupee)</SelectItem>
+                                                <SelectItem value="SAR">SAR (Riyal)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </TabsContent>
+
+                                {/* TAXATION TAB */}
+                                <TabsContent value="taxation" className="space-y-6 mt-0">
+                                    {/* GST */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="gstEnabled">Enable GST</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Enable Indian GST tax system for this organization
                                             </p>
                                         </div>
                                         <Switch
-                                            id="eInvoicingEnabled"
-                                            checked={eInvoicingEnabled}
-                                            onCheckedChange={setEInvoicingEnabled}
+                                            id="gstEnabled"
+                                            checked={gstEnabled}
+                                            onCheckedChange={(checked) => {
+                                                setGstEnabled(checked);
+                                                if (!checked) setEInvoicingEnabled(false);
+                                                if (checked) setSaudiEInvoiceEnabled(false);
+                                            }}
                                         />
                                     </div>
-                                </>
-                            )}
 
-                            {/* Alternate Units */}
-                            <div className="flex items-center justify-between pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <Label htmlFor="multiUnitEnabled">Enable Alternate Units</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Allow defining products with multiple units of measurement (e.g. Cartons vs Pieces)
-                                    </p>
-                                </div>
-                                <Switch
-                                    id="multiUnitEnabled"
-                                    checked={multiUnitEnabled}
-                                    onCheckedChange={setMultiUnitEnabled}
-                                />
-                            </div>
+                                    {gstEnabled && (
+                                        <div className="space-y-6 pl-4 border-l-2 border-muted mt-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="gstin">GSTIN</Label>
+                                                <Input
+                                                    id="gstin"
+                                                    value={gstin}
+                                                    onChange={(e) => handleGstinChange(e.target.value)}
+                                                    placeholder="27AAAAA0000A1Z5"
+                                                    maxLength={15}
+                                                    className="font-mono max-w-xs"
+                                                />
+                                                <p className="text-xs text-muted-foreground">15-digit GST Identification Number</p>
+                                            </div>
 
-                            {/* Multi-Branch */}
-                            <div className="flex items-center justify-between pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <Label htmlFor="multiBranchEnabled">Enable Multi-Branch</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Manage multiple branches, warehouses, and stock transfers across locations
-                                    </p>
-                                </div>
-                                <Switch
-                                    id="multiBranchEnabled"
-                                    checked={multiBranchEnabled}
-                                    onCheckedChange={setMultiBranchEnabled}
-                                />
-                            </div>
+                                            {gstStateCode && stateName && (
+                                                <div className="space-y-1">
+                                                    <Label>State (auto-derived)</Label>
+                                                    <p className="text-sm font-medium">{gstStateCode} - {stateName}</p>
+                                                </div>
+                                            )}
 
-                            {/* Mobile Shop */}
-                            <div className="flex items-center justify-between pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <Label htmlFor="isMobileShopModuleEnabled">Enable Mobile Shop</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Track individual mobile devices by IMEI from purchase to sale
-                                    </p>
-                                </div>
-                                <Switch
-                                    id="isMobileShopModuleEnabled"
-                                    checked={isMobileShopModuleEnabled}
-                                    onCheckedChange={setIsMobileShopModuleEnabled}
-                                />
-                            </div>
-
-                            {/* Weigh Machine */}
-                            <div className="flex items-center justify-between pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <Label htmlFor="isWeighMachineEnabled" className="flex items-center gap-2">
-                                        <Scale className="h-4 w-4" />
-                                        Enable Weigh Machine
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Decode EAN-13 weight barcodes from weigh machines at POS/invoice screen
-                                    </p>
-                                </div>
-                                <Switch
-                                    id="isWeighMachineEnabled"
-                                    checked={isWeighMachineEnabled}
-                                    onCheckedChange={setIsWeighMachineEnabled}
-                                />
-                            </div>
-
-                            {isWeighMachineEnabled && (
-                                <div className="space-y-4 pl-2">
-                                    <div className="grid grid-cols-2 gap-3 max-w-sm">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="weighMachineBarcodePrefix">Barcode Prefix</Label>
-                                            <Input
-                                                id="weighMachineBarcodePrefix"
-                                                value={weighMachineBarcodePrefix}
-                                                onChange={(e) => setWeighMachineBarcodePrefix(e.target.value)}
-                                                placeholder="77"
-                                                maxLength={4}
-                                                className="font-mono"
-                                            />
+                                            <div className="flex items-center justify-between pt-4 border-t border-border">
+                                                <div className="space-y-0.5">
+                                                    <Label htmlFor="eInvoicingEnabled">Enable E-Invoicing</Label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Enable NIC e-invoicing for B2B transactions
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    id="eInvoicingEnabled"
+                                                    checked={eInvoicingEnabled}
+                                                    onCheckedChange={setEInvoicingEnabled}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="weighMachineProductCodeLen">Product Code Length</Label>
-                                            <Input
-                                                id="weighMachineProductCodeLen"
-                                                type="number"
-                                                min={1}
-                                                max={8}
-                                                value={weighMachineProductCodeLen}
-                                                onChange={(e) => setWeighMachineProductCodeLen(Number(e.target.value))}
-                                            />
+                                    )}
+
+                                    {/* Saudi E-Invoice */}
+                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="saudiEInvoiceEnabled">Enable Saudi E-Invoice (ZATCA)</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                ZATCA Phase 1 e-invoicing with VAT at 15% and QR codes. Disables GST.
+                                            </p>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="weighMachineWeightDigits">Weight Digits</Label>
-                                            <Input
-                                                id="weighMachineWeightDigits"
-                                                type="number"
-                                                min={1}
-                                                max={8}
-                                                value={weighMachineWeightDigits}
-                                                onChange={(e) => setWeighMachineWeightDigits(Number(e.target.value))}
-                                            />
+                                        <Switch
+                                            id="saudiEInvoiceEnabled"
+                                            checked={saudiEInvoiceEnabled}
+                                            onCheckedChange={(checked) => {
+                                                setSaudiEInvoiceEnabled(checked);
+                                                if (checked) {
+                                                    setGstEnabled(false);
+                                                    setEInvoicingEnabled(false);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+
+                                    {saudiEInvoiceEnabled && (
+                                        <div className="space-y-4 pl-4 border-l-2 border-muted mt-4 max-w-md">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="vatNumber">
+                                                    VAT Number (TRN) <span className="text-xs text-muted-foreground">رقم التسجيل الضريبي</span>
+                                                </Label>
+                                                <Input
+                                                    id="vatNumber"
+                                                    value={vatNumber}
+                                                    onChange={(e) => setVatNumber(e.target.value)}
+                                                    placeholder="3XXXXXXXXXXXXXX (15 digits)"
+                                                    maxLength={15}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="commercialRegNumber">
+                                                    Commercial Registration No. <span className="text-xs text-muted-foreground">رقم السجل التجاري</span>
+                                                </Label>
+                                                <Input
+                                                    id="commercialRegNumber"
+                                                    value={commercialRegNumber}
+                                                    onChange={(e) => setCommercialRegNumber(e.target.value)}
+                                                    placeholder="1010XXXXXX"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="arabicName">Arabic Company Name <span className="text-xs text-muted-foreground">(اسم الشركة)</span></Label>
+                                                <Input
+                                                    id="arabicName"
+                                                    value={arabicName}
+                                                    onChange={(e) => setArabicName(e.target.value)}
+                                                    placeholder="اسم الشركة بالعربية"
+                                                    dir="rtl"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="arabicAddress">Arabic Address <span className="text-xs text-muted-foreground">(العنوان)</span></Label>
+                                                <Input
+                                                    id="arabicAddress"
+                                                    value={arabicAddress}
+                                                    onChange={(e) => setArabicAddress(e.target.value)}
+                                                    placeholder="العنوان بالكامل"
+                                                    dir="rtl"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="arabicCity">Arabic City <span className="text-xs text-muted-foreground">(المدينة)</span></Label>
+                                                <Input
+                                                    id="arabicCity"
+                                                    value={arabicCity}
+                                                    onChange={(e) => setArabicCity(e.target.value)}
+                                                    placeholder="المدينة"
+                                                    dir="rtl"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="weighMachineDecimalPlaces">Decimal Places</Label>
-                                            <Input
-                                                id="weighMachineDecimalPlaces"
-                                                type="number"
-                                                min={0}
-                                                max={4}
-                                                value={weighMachineDecimalPlaces}
-                                                onChange={(e) => setWeighMachineDecimalPlaces(Number(e.target.value))}
-                                            />
+                                    )}
+                                </TabsContent>
+
+                                {/* MODULES TAB */}
+                                <TabsContent value="modules" className="space-y-6 mt-0">
+                                    {/* Alternate Units */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="multiUnitEnabled">Enable Alternate Units</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Allow defining products with multiple units of measurement (e.g. Cartons vs Pieces)
+                                            </p>
                                         </div>
+                                        <Switch
+                                            id="multiUnitEnabled"
+                                            checked={multiUnitEnabled}
+                                            onCheckedChange={setMultiUnitEnabled}
+                                        />
                                     </div>
-                                    <div className="rounded-md bg-muted p-3 max-w-sm">
-                                        <p className="text-xs font-medium text-muted-foreground mb-1">Barcode preview</p>
-                                        <p className="font-mono text-sm">
-                                            <span className="text-blue-600">{weighMachineBarcodePrefix}</span>
-                                            <span className="text-green-600">{"P".repeat(weighMachineProductCodeLen)}</span>
-                                            <span className="text-orange-600">{"N".repeat(weighMachineWeightDigits - weighMachineDecimalPlaces)}{"D".repeat(weighMachineDecimalPlaces)}</span>
-                                            <span className="text-slate-400">C</span>
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            e.g. <span className="font-mono">{weighMachineBarcodePrefix}12345012501</span> → product <span className="font-mono">12345</span>, weight <span className="font-mono">1.250</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* Saudi E-Invoice */}
-                            <div className="flex items-center justify-between pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <Label htmlFor="saudiEInvoiceEnabled">Enable Saudi E-Invoice (ZATCA)</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        ZATCA Phase 1 e-invoicing with VAT at 15% and QR codes. Disables GST.
-                                    </p>
-                                </div>
-                                <Switch
-                                    id="saudiEInvoiceEnabled"
-                                    checked={saudiEInvoiceEnabled}
-                                    onCheckedChange={(checked) => {
-                                        setSaudiEInvoiceEnabled(checked);
-                                        if (checked) {
-                                            setGstEnabled(false);
-                                            setEInvoicingEnabled(false);
-                                        }
-                                    }}
-                                />
-                            </div>
+                                    {/* Multi-Branch */}
+                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="multiBranchEnabled">Enable Multi-Branch</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Manage multiple branches, warehouses, and stock transfers across locations
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="multiBranchEnabled"
+                                            checked={multiBranchEnabled}
+                                            onCheckedChange={setMultiBranchEnabled}
+                                        />
+                                    </div>
 
-                            {saudiEInvoiceEnabled && (
-                                <div className="space-y-4 pl-2 max-w-sm">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="vatNumber">
-                                            VAT Number (TRN) <span className="text-xs text-muted-foreground">رقم التسجيل الضريبي</span>
-                                        </Label>
-                                        <Input
-                                            id="vatNumber"
-                                            value={vatNumber}
-                                            onChange={(e) => setVatNumber(e.target.value)}
-                                            placeholder="3XXXXXXXXXXXXXX (15 digits)"
-                                            maxLength={15}
+                                    {/* Mobile Shop */}
+                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="isMobileShopModuleEnabled">Enable Mobile Shop</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Track individual mobile devices by IMEI from purchase to sale
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isMobileShopModuleEnabled"
+                                            checked={isMobileShopModuleEnabled}
+                                            onCheckedChange={setIsMobileShopModuleEnabled}
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="commercialRegNumber">
-                                            Commercial Registration No. <span className="text-xs text-muted-foreground">رقم السجل التجاري</span>
-                                        </Label>
-                                        <Input
-                                            id="commercialRegNumber"
-                                            value={commercialRegNumber}
-                                            onChange={(e) => setCommercialRegNumber(e.target.value)}
-                                            placeholder="1010XXXXXX"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="arabicName">Arabic Company Name <span className="text-xs text-muted-foreground">(اسم الشركة)</span></Label>
-                                        <Input
-                                            id="arabicName"
-                                            value={arabicName}
-                                            onChange={(e) => setArabicName(e.target.value)}
-                                            placeholder="اسم الشركة بالعربية"
-                                            dir="rtl"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="arabicAddress">Arabic Address <span className="text-xs text-muted-foreground">(العنوان)</span></Label>
-                                        <Input
-                                            id="arabicAddress"
-                                            value={arabicAddress}
-                                            onChange={(e) => setArabicAddress(e.target.value)}
-                                            placeholder="العنوان بالكامل"
-                                            dir="rtl"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="arabicCity">Arabic City <span className="text-xs text-muted-foreground">(المدينة)</span></Label>
-                                        <Input
-                                            id="arabicCity"
-                                            value={arabicCity}
-                                            onChange={(e) => setArabicCity(e.target.value)}
-                                            placeholder="المدينة"
-                                            dir="rtl"
-                                        />
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* Invoice PDF Format */}
-                            <div className="flex items-center justify-between pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <Label>Invoice PDF Format</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Paper size and orientation for generated invoice PDFs
-                                    </p>
-                                </div>
-                                <Select value={invoicePdfFormat} onValueChange={setInvoicePdfFormat}>
-                                    <SelectTrigger className="w-52">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="A5_LANDSCAPE">A5 Landscape (Default)</SelectItem>
-                                        <SelectItem value="A4_PORTRAIT">A4 Portrait (GST)</SelectItem>
-                                        <SelectItem value="A4_GST2">A4 Portrait (GST 2)</SelectItem>
-                                        <SelectItem value="A4_MODERN_GST">A4 Modern Portfolio (GST)</SelectItem>
-                                        <SelectItem value="A4_VAT">A4 Portrait (VAT - Arabic)</SelectItem>
-                                        <SelectItem value="A4_BILINGUAL">A4 Bilingual (Arabic-English)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* PDF Header/Footer Images */}
-                            {(invoicePdfFormat === "A4_PORTRAIT" || invoicePdfFormat === "A4_GST2" || invoicePdfFormat === "A4_VAT" || invoicePdfFormat === "A4_BILINGUAL") && (
-                                <div className="space-y-4 pt-4 border-t">
-                                    <div className="space-y-0.5 mb-2">
-                                        <Label>PDF Header / Footer Images</Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Optional images rendered edge-to-edge at the top/bottom of each A4 invoice page (e.g., company letterhead)
-                                        </p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="pdfHeaderImageUrl" className="text-xs">Header Image URL</Label>
-                                        <Input
-                                            id="pdfHeaderImageUrl"
-                                            value={pdfHeaderImageUrl}
-                                            onChange={(e) => setPdfHeaderImageUrl(e.target.value)}
-                                            placeholder="https://example.com/header.png"
+                                    {/* Weigh Machine */}
+                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="isWeighMachineEnabled" className="flex items-center gap-2">
+                                                <Scale className="h-4 w-4" />
+                                                Enable Weigh Machine
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Decode EAN-13 weight barcodes from weigh machines at POS/invoice screen
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isWeighMachineEnabled"
+                                            checked={isWeighMachineEnabled}
+                                            onCheckedChange={setIsWeighMachineEnabled}
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="pdfFooterImageUrl" className="text-xs">Footer Image URL</Label>
-                                        <Input
-                                            id="pdfFooterImageUrl"
-                                            value={pdfFooterImageUrl}
-                                            onChange={(e) => setPdfFooterImageUrl(e.target.value)}
-                                            placeholder="https://example.com/footer.png"
-                                        />
-                                    </div>
-                                </div>
-                            )}
 
-                            {invoicePdfFormat === "A4_MODERN_GST" && (
-                                <div className="space-y-4 pt-4 border-t">
-                                    <div className="space-y-0.5 mb-2">
-                                        <Label>Company Logo Image URL</Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Optional logo image rendered at the top left of the invoice. For best results, use a square image.
-                                        </p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="pdfHeaderImageUrl" className="text-xs">Logo Image URL</Label>
-                                        <Input
-                                            id="pdfHeaderImageUrl"
-                                            value={pdfHeaderImageUrl}
-                                            onChange={(e) => setPdfHeaderImageUrl(e.target.value)}
-                                            placeholder="https://example.com/logo.png"
-                                        />
-                                    </div>
-                                </div>
-                            )}
+                                    {isWeighMachineEnabled && (
+                                        <div className="space-y-4 pl-4 border-l-2 border-muted mt-4">
+                                            <div className="grid grid-cols-2 gap-3 max-w-sm">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="weighMachineBarcodePrefix">Barcode Prefix</Label>
+                                                    <Input
+                                                        id="weighMachineBarcodePrefix"
+                                                        value={weighMachineBarcodePrefix}
+                                                        onChange={(e) => setWeighMachineBarcodePrefix(e.target.value)}
+                                                        placeholder="77"
+                                                        maxLength={4}
+                                                        className="font-mono"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="weighMachineProductCodeLen">Product Code Length</Label>
+                                                    <Input
+                                                        id="weighMachineProductCodeLen"
+                                                        type="number"
+                                                        min={1}
+                                                        max={8}
+                                                        value={weighMachineProductCodeLen}
+                                                        onChange={(e) => setWeighMachineProductCodeLen(Number(e.target.value))}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="weighMachineWeightDigits">Weight Digits</Label>
+                                                    <Input
+                                                        id="weighMachineWeightDigits"
+                                                        type="number"
+                                                        min={1}
+                                                        max={8}
+                                                        value={weighMachineWeightDigits}
+                                                        onChange={(e) => setWeighMachineWeightDigits(Number(e.target.value))}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="weighMachineDecimalPlaces">Decimal Places</Label>
+                                                    <Input
+                                                        id="weighMachineDecimalPlaces"
+                                                        type="number"
+                                                        min={0}
+                                                        max={4}
+                                                        value={weighMachineDecimalPlaces}
+                                                        onChange={(e) => setWeighMachineDecimalPlaces(Number(e.target.value))}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="rounded-md bg-muted p-3 max-w-sm">
+                                                <p className="text-xs font-medium text-muted-foreground mb-1">Barcode preview</p>
+                                                <p className="font-mono text-sm">
+                                                    <span className="text-blue-600">{weighMachineBarcodePrefix}</span>
+                                                    <span className="text-green-600">{"P".repeat(weighMachineProductCodeLen)}</span>
+                                                    <span className="text-orange-600">{"N".repeat(weighMachineWeightDigits - weighMachineDecimalPlaces)}{"D".repeat(weighMachineDecimalPlaces)}</span>
+                                                    <span className="text-slate-400">C</span>
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    e.g. <span className="font-mono">{weighMachineBarcodePrefix}12345012501</span> → product <span className="font-mono">12345</span>, weight <span className="font-mono">1.250</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </TabsContent>
 
-                            {/* Save */}
-                            <div className="pt-4 border-t flex items-center gap-4">
-                                <Button onClick={handleSaveSettings} disabled={saving}>
-                                    {saving
-                                        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        : <Save className="mr-2 h-4 w-4" />
-                                    }
-                                    Save Settings
-                                </Button>
-                            </div>
+                                {/* INVOICE & PDF TAB */}
+                                <TabsContent value="invoice" className="space-y-6 mt-0">
+                                    {/* Invoice PDF Format */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label>Invoice PDF Format</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Paper size and orientation for generated invoice PDFs
+                                            </p>
+                                        </div>
+                                        <Select value={invoicePdfFormat} onValueChange={setInvoicePdfFormat}>
+                                            <SelectTrigger className="w-52">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="A5_LANDSCAPE">A5 Landscape (Default)</SelectItem>
+                                                <SelectItem value="A4_PORTRAIT">A4 Portrait (GST)</SelectItem>
+                                                <SelectItem value="A4_GST2">A4 Portrait (GST 2)</SelectItem>
+                                                <SelectItem value="A4_MODERN_GST">A4 Modern Portfolio (GST)</SelectItem>
+                                                <SelectItem value="A4_VAT">A4 Portrait (VAT - Arabic)</SelectItem>
+                                                <SelectItem value="A4_BILINGUAL">A4 Bilingual (Arabic-English)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* PDF Header/Footer Images */}
+                                    {(invoicePdfFormat === "A4_PORTRAIT" || invoicePdfFormat === "A4_GST2" || invoicePdfFormat === "A4_VAT" || invoicePdfFormat === "A4_BILINGUAL") && (
+                                        <div className="space-y-4 pt-6 border-t border-border mt-4">
+                                            <div className="space-y-0.5 mb-2">
+                                                <Label>PDF Header / Footer Images</Label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Optional images rendered edge-to-edge at the top/bottom of each A4 invoice page (e.g., company letterhead)
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2 max-w-md">
+                                                <Label htmlFor="pdfHeaderImageUrl" className="text-xs">Header Image URL</Label>
+                                                <Input
+                                                    id="pdfHeaderImageUrl"
+                                                    value={pdfHeaderImageUrl}
+                                                    onChange={(e) => setPdfHeaderImageUrl(e.target.value)}
+                                                    placeholder="https://example.com/header.png"
+                                                />
+                                            </div>
+                                            <div className="space-y-2 max-w-md">
+                                                <Label htmlFor="pdfFooterImageUrl" className="text-xs">Footer Image URL</Label>
+                                                <Input
+                                                    id="pdfFooterImageUrl"
+                                                    value={pdfFooterImageUrl}
+                                                    onChange={(e) => setPdfFooterImageUrl(e.target.value)}
+                                                    placeholder="https://example.com/footer.png"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {invoicePdfFormat === "A4_MODERN_GST" && (
+                                        <div className="space-y-4 pt-6 border-t border-border mt-4">
+                                            <div className="space-y-0.5 mb-2">
+                                                <Label>Company Logo Image URL</Label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Optional logo image rendered at the top left of the invoice. For best results, use a square image.
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2 max-w-md">
+                                                <Label htmlFor="pdfHeaderImageUrl" className="text-xs">Logo Image URL</Label>
+                                                <Input
+                                                    id="pdfHeaderImageUrl"
+                                                    value={pdfHeaderImageUrl}
+                                                    onChange={(e) => setPdfHeaderImageUrl(e.target.value)}
+                                                    placeholder="https://example.com/logo.png"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </TabsContent>
+
+                            </Tabs>
                         </CardContent>
                     </Card>
 
