@@ -30,7 +30,7 @@ export async function GET(
     const [org, pdfFormatSetting] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: organizationId },
-        select: { name: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true },
+        select: { name: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true, brandColor: true },
       }),
       prisma.setting.findFirst({
         where: { organizationId, key: "invoice_pdf_format" },
@@ -323,7 +323,10 @@ export async function GET(
         }) as any
       );
     } else if (invoicePdfFormat === "A4_MODERN_GST") {
-      const modernGstItems = invoice.items.map((item) => ({
+      const taxMode = org?.saudiEInvoiceEnabled ? "VAT" : org?.gstEnabled ? "GST" : "NONE";
+      const currencySymbol = org?.currency === "SAR" ? "SAR " : "\u20B9";
+
+      const modernItems = invoice.items.map((item) => ({
         description: item.description,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
@@ -337,11 +340,13 @@ export async function GET(
         cgstAmount: Number(item.cgstAmount),
         sgstAmount: Number(item.sgstAmount),
         igstAmount: Number(item.igstAmount),
+        vatRate: Number(item.vatRate ?? 0),
+        vatAmount: Number(item.vatAmount ?? 0),
         product: item.product,
         unit: item.unit,
       }));
 
-      const modernGstInvoice = {
+      const modernInvoice = {
         invoiceNumber: invoice.invoiceNumber,
         issueDate: invoice.issueDate,
         customer: {
@@ -350,13 +355,19 @@ export async function GET(
           city: invoice.customer.city,
           state: invoice.customer.state,
           gstin: invoice.customer.gstin,
+          vatNumber: invoice.customer.vatNumber,
         },
-        organization: { name: org?.name ?? "", gstin: org?.gstin ?? null },
-        items: modernGstItems,
+        organization: {
+          name: org?.name ?? "",
+          gstin: org?.gstin ?? null,
+          vatNumber: org?.vatNumber ?? null,
+        },
+        items: modernItems,
         subtotal: Number(invoice.subtotal),
         totalCgst: Number(invoice.totalCgst),
         totalSgst: Number(invoice.totalSgst),
         totalIgst: Number(invoice.totalIgst),
+        totalVat: invoice.totalVat ? Number(invoice.totalVat) : undefined,
         total: Number(invoice.total),
         amountPaid: Number(invoice.amountPaid),
         balanceDue: Number(invoice.balanceDue),
@@ -370,8 +381,11 @@ export async function GET(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       pdfBuffer = await renderToBuffer(
         createElement(InvoiceModernGSTPDF, {
-          invoice: modernGstInvoice,
+          invoice: modernInvoice,
           type: "SALES",
+          taxMode,
+          currencySymbol,
+          brandColor: org?.brandColor ?? undefined,
           headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
         }) as any
       );

@@ -5,19 +5,20 @@ import {
     View,
     Image,
     StyleSheet,
-    Font,
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { numberToWordsLocalized } from "@/lib/number-to-words";
 
-const formatCurrency = (amount: number): string => {
-    return amount.toLocaleString("en-IN", {
+type TaxMode = "GST" | "VAT" | "NONE";
+
+const DEFAULT_BRAND_COLOR = "#2a3b38";
+
+const formatCurrencyValue = (amount: number, locale: string): string => {
+    return amount.toLocaleString(locale, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
 };
-
-const BRAND_COLOR = "#2a3b38"; // Dark green from the modern logo's background
 
 const styles = StyleSheet.create({
     page: {
@@ -46,7 +47,6 @@ const styles = StyleSheet.create({
     orgName: {
         fontSize: 14,
         fontWeight: "bold",
-        color: BRAND_COLOR,
         marginBottom: 4,
     },
     orgText: {
@@ -60,7 +60,6 @@ const styles = StyleSheet.create({
     },
     invoiceTitle: {
         fontSize: 26,
-        color: BRAND_COLOR,
         fontWeight: "bold",
         letterSpacing: 0.5,
     },
@@ -84,7 +83,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "#111",
     },
-    // Entities row
     entitiesRow: {
         flexDirection: "row",
         marginBottom: 30,
@@ -98,7 +96,6 @@ const styles = StyleSheet.create({
     billToName: {
         fontSize: 12,
         fontWeight: "bold",
-        color: BRAND_COLOR,
         marginBottom: 5,
     },
     billToText: {
@@ -127,14 +124,12 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: "#111",
     },
-    // Table
     table: {
         width: "100%",
         marginBottom: 20,
     },
     tableHeaderRow: {
         flexDirection: "row",
-        backgroundColor: BRAND_COLOR,
         paddingVertical: 8,
         paddingHorizontal: 10,
     },
@@ -163,15 +158,28 @@ const styles = StyleSheet.create({
         color: "#6b7280",
         marginTop: 3,
     },
-    // Column Widths
-    colNo: { width: "5%" },
-    colItem: { width: "35%" },
-    colHsn: { width: "10%", textAlign: "center" },
-    colQty: { width: "8%", textAlign: "center" },
-    colRate: { width: "12%", textAlign: "right" },
-    colTax: { width: "15%", textAlign: "right" },
-    colAmount: { width: "15%", textAlign: "right" },
-
+    // GST column widths
+    colNoGst: { width: "5%" },
+    colItemGst: { width: "35%" },
+    colHsn: { width: "10%", textAlign: "center" as const },
+    colQtyGst: { width: "8%", textAlign: "center" as const },
+    colRateGst: { width: "12%", textAlign: "right" as const },
+    colTaxGst: { width: "15%", textAlign: "right" as const },
+    colAmountGst: { width: "15%", textAlign: "right" as const },
+    // VAT column widths
+    colNoVat: { width: "5%" },
+    colItemVat: { width: "35%" },
+    colQtyVat: { width: "10%", textAlign: "center" as const },
+    colRateVat: { width: "15%", textAlign: "right" as const },
+    colVatPct: { width: "10%", textAlign: "right" as const },
+    colVatAmt: { width: "10%", textAlign: "right" as const },
+    colAmountVat: { width: "15%", textAlign: "right" as const },
+    // NONE column widths
+    colNoNone: { width: "5%" },
+    colItemNone: { width: "45%" },
+    colQtyNone: { width: "12%", textAlign: "center" as const },
+    colRateNone: { width: "18%", textAlign: "right" as const },
+    colAmountNone: { width: "20%", textAlign: "right" as const },
     // Summary
     summarySection: {
         flexDirection: "row",
@@ -218,7 +226,6 @@ const styles = StyleSheet.create({
     balanceDueBanner: {
         flexDirection: "row",
         justifyContent: "space-between",
-        backgroundColor: BRAND_COLOR,
         paddingVertical: 10,
         paddingHorizontal: 10,
         marginTop: 8,
@@ -234,7 +241,6 @@ const styles = StyleSheet.create({
         color: "#fff",
         textAlign: "right",
     },
-    // Notes
     notesSection: {
         marginTop: 40,
     },
@@ -250,22 +256,26 @@ const styles = StyleSheet.create({
     },
 });
 
-interface InvoiceModernGSTItem {
+interface InvoiceModernItem {
     description: string;
     quantity: number;
     unitPrice: number;
     discount: number;
     total: number;
-    hsnCode: string | null;
-    gstRate: number;
-    cgstRate: number;
-    sgstRate: number;
-    igstRate: number;
-    cgstAmount: number;
-    sgstAmount: number;
-    igstAmount: number;
     unit?: { code: string } | null;
-    product?: { unit?: { code: string } | null, name: string } | null;
+    product?: { unit?: { code: string } | null; name: string } | null;
+    // GST fields (optional)
+    hsnCode?: string | null;
+    gstRate?: number;
+    cgstRate?: number;
+    sgstRate?: number;
+    igstRate?: number;
+    cgstAmount?: number;
+    sgstAmount?: number;
+    igstAmount?: number;
+    // VAT fields (optional)
+    vatRate?: number;
+    vatAmount?: number;
 }
 
 interface InvoiceModernGSTProps {
@@ -278,54 +288,81 @@ interface InvoiceModernGSTProps {
             city?: string | null;
             state?: string | null;
             gstin?: string | null;
+            vatNumber?: string | null;
         };
-        organization: { name: string; gstin?: string | null };
-        items: InvoiceModernGSTItem[];
+        organization: {
+            name: string;
+            gstin?: string | null;
+            vatNumber?: string | null;
+        };
+        items: InvoiceModernItem[];
         subtotal: number;
-        totalCgst: number;
-        totalSgst: number;
-        totalIgst: number;
+        totalCgst?: number;
+        totalSgst?: number;
+        totalIgst?: number;
+        totalVat?: number;
         total: number;
         amountPaid: number;
         balanceDue: number;
-        isInterState: boolean;
+        isInterState?: boolean;
         placeOfSupply?: string | null;
         notes?: string | null;
         terms?: string | null;
         paymentType?: string;
     };
+    taxMode: TaxMode;
+    currencySymbol: string;
+    brandColor?: string;
     type: "SALES" | "PURCHASE";
     headerImageUrl?: string;
 }
 
 export function InvoiceModernGSTPDF({
     invoice,
+    taxMode,
+    currencySymbol,
+    brandColor: brandColorProp,
     headerImageUrl,
 }: InvoiceModernGSTProps) {
-    // Pre-calculate line items
-    const itemsComputed = invoice.items.map((item) => {
-        const gross = item.quantity * item.unitPrice;
-        const discountAmt = (gross * item.discount) / 100;
-        const taxableValue = gross - discountAmt;
-        const isIgst = invoice.isInterState;
-        const totalTaxRate = isIgst ? item.igstRate : item.cgstRate + item.sgstRate;
-        const taxLabel = `${totalTaxRate}%`;
-        const taxAmount = isIgst
-            ? item.igstAmount
-            : item.cgstAmount + item.sgstAmount;
-
-        return { ...item, gross, discountAmt, taxableValue, taxLabel, taxAmount };
-    });
-
-    const hasNotes = invoice.notes && invoice.notes.trim().length > 0;
-    const hasTerms = invoice.terms && invoice.terms.trim().length > 0;
+    const color = brandColorProp || DEFAULT_BRAND_COLOR;
+    const locale = taxMode === "VAT" ? "en-US" : "en-IN";
+    const fmt = (amount: number) => formatCurrencyValue(amount, locale);
 
     const getAddressLines = (addressStr?: string | null) => {
         if (!addressStr) return [];
         return addressStr.split("\n").filter(Boolean);
     };
 
-    const orgAddress = []; // Replace with actual org address if we decide to fetch it, for now using dummy or just hiding
+    const hasNotes = invoice.notes && invoice.notes.trim().length > 0;
+    const hasTerms = invoice.terms && invoice.terms.trim().length > 0;
+
+    // Tax ID label / value
+    const taxIdLabel = taxMode === "GST" ? "GSTIN" : taxMode === "VAT" ? "TRN" : null;
+    const orgTaxId = taxMode === "GST" ? invoice.organization.gstin : taxMode === "VAT" ? invoice.organization.vatNumber : null;
+    const custTaxId = taxMode === "GST" ? invoice.customer.gstin : taxMode === "VAT" ? invoice.customer.vatNumber : null;
+
+    // Pre-calculate items for GST mode
+    const itemsComputed = invoice.items.map((item) => {
+        const gross = item.quantity * item.unitPrice;
+        const discountAmt = (gross * item.discount) / 100;
+        const taxableValue = gross - discountAmt;
+
+        let taxLabel = "";
+        let taxAmount = 0;
+        if (taxMode === "GST") {
+            const isIgst = invoice.isInterState;
+            const totalTaxRate = isIgst ? (item.igstRate ?? 0) : (item.cgstRate ?? 0) + (item.sgstRate ?? 0);
+            taxLabel = `${totalTaxRate}%`;
+            taxAmount = isIgst
+                ? (item.igstAmount ?? 0)
+                : (item.cgstAmount ?? 0) + (item.sgstAmount ?? 0);
+        } else if (taxMode === "VAT") {
+            taxLabel = `${item.vatRate ?? 0}%`;
+            taxAmount = item.vatAmount ?? 0;
+        }
+
+        return { ...item, gross, discountAmt, taxableValue, taxLabel, taxAmount };
+    });
 
     return (
         <Document>
@@ -337,26 +374,25 @@ export function InvoiceModernGSTPDF({
                         {headerImageUrl ? (
                             <Image src={headerImageUrl} style={styles.logo} />
                         ) : (
-                            <View style={{ height: 65, width: 65, borderRadius: 32.5, backgroundColor: BRAND_COLOR, marginBottom: 10, justifyContent: 'center', alignItems: 'center' }}>
+                            <View style={{ height: 65, width: 65, borderRadius: 32.5, backgroundColor: color, marginBottom: 10, justifyContent: 'center', alignItems: 'center' }}>
                                 <Text style={{ color: '#fff', fontSize: 30, fontWeight: 'bold' }}>
                                     {invoice.organization.name.charAt(0).toUpperCase()}
                                 </Text>
                             </View>
                         )}
-                        <Text style={styles.orgName}>{invoice.organization.name}</Text>
-                        {/* If org address fields are passed, render them here. Assuming not present in `organization` obj currently except gstin */}
-                        {invoice.organization.gstin && (
-                            <Text style={styles.orgText}>GSTIN: {invoice.organization.gstin}</Text>
+                        <Text style={[styles.orgName, { color }]}>{invoice.organization.name}</Text>
+                        {taxIdLabel && orgTaxId && (
+                            <Text style={styles.orgText}>{taxIdLabel}: {orgTaxId}</Text>
                         )}
                     </View>
 
                     <View style={styles.headerRight}>
-                        <Text style={styles.invoiceTitle}>INVOICE</Text>
+                        <Text style={[styles.invoiceTitle, { color }]}>INVOICE</Text>
                         <View style={styles.invoiceNumberBox}>
                             <Text style={styles.invoiceNumber}># {invoice.invoiceNumber}</Text>
                         </View>
                         <Text style={styles.balanceDueLabelRight}>Balance Due</Text>
-                        <Text style={styles.balanceDueAmountRight}>{formatCurrency(invoice.balanceDue)}</Text>
+                        <Text style={styles.balanceDueAmountRight}>{currencySymbol}{fmt(invoice.balanceDue)}</Text>
                     </View>
                 </View>
 
@@ -364,7 +400,7 @@ export function InvoiceModernGSTPDF({
                 <View style={styles.entitiesRow}>
                     <View style={{ width: "50%" }}>
                         <Text style={styles.billToLabel}>Bill To</Text>
-                        <Text style={styles.billToName}>{invoice.customer.name}</Text>
+                        <Text style={[styles.billToName, { color }]}>{invoice.customer.name}</Text>
                         {getAddressLines(invoice.customer.address).map((line, i) => (
                             <Text key={i} style={styles.billToText}>{line}</Text>
                         ))}
@@ -373,10 +409,10 @@ export function InvoiceModernGSTPDF({
                                 {invoice.customer.city}, {invoice.customer.state}
                             </Text>
                         )}
-                        {invoice.customer.gstin && (
-                            <Text style={styles.billToText}>GSTIN: {invoice.customer.gstin}</Text>
+                        {taxIdLabel && custTaxId && (
+                            <Text style={styles.billToText}>{taxIdLabel}: {custTaxId}</Text>
                         )}
-                        {invoice.placeOfSupply && invoice.isInterState && (
+                        {taxMode === "GST" && invoice.placeOfSupply && invoice.isInterState && (
                             <Text style={styles.billToText}>Place of Supply: {invoice.placeOfSupply}</Text>
                         )}
                     </View>
@@ -405,33 +441,89 @@ export function InvoiceModernGSTPDF({
 
                 {/* Table */}
                 <View style={styles.table}>
-                    <View style={styles.tableHeaderRow}>
-                        <Text style={[styles.tableHeaderCell, styles.colNo]}>#</Text>
-                        <Text style={[styles.tableHeaderCell, styles.colItem]}>Item & Description</Text>
-                        <Text style={[styles.tableHeaderCell, styles.colHsn]}>HSN</Text>
-                        <Text style={[styles.tableHeaderCell, styles.colQty]}>Qty</Text>
-                        <Text style={[styles.tableHeaderCell, styles.colRate]}>Rate</Text>
-                        <Text style={[styles.tableHeaderCell, styles.colTax]}>Tax Info</Text>
-                        <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
+                    {/* Table Header */}
+                    <View style={[styles.tableHeaderRow, { backgroundColor: color }]}>
+                        {taxMode === "GST" && (
+                            <>
+                                <Text style={[styles.tableHeaderCell, styles.colNoGst]}>#</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colItemGst]}>Item & Description</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colHsn]}>HSN</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colQtyGst]}>Qty</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colRateGst]}>Rate</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colTaxGst]}>Tax Info</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colAmountGst]}>Amount</Text>
+                            </>
+                        )}
+                        {taxMode === "VAT" && (
+                            <>
+                                <Text style={[styles.tableHeaderCell, styles.colNoVat]}>#</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colItemVat]}>Item & Description</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colQtyVat]}>Qty</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colRateVat]}>Rate</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colVatPct]}>VAT %</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colVatAmt]}>VAT Amount</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colAmountVat]}>Amount</Text>
+                            </>
+                        )}
+                        {taxMode === "NONE" && (
+                            <>
+                                <Text style={[styles.tableHeaderCell, styles.colNoNone]}>#</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colItemNone]}>Item & Description</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colQtyNone]}>Qty</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colRateNone]}>Rate</Text>
+                                <Text style={[styles.tableHeaderCell, styles.colAmountNone]}>Amount</Text>
+                            </>
+                        )}
                     </View>
 
+                    {/* Table Rows */}
                     {itemsComputed.map((item, index) => {
                         const unitCode = item.unit?.code || item.product?.unit?.code || "";
                         return (
                             <View key={index} style={styles.tableRow}>
-                                <Text style={[styles.tableCell, styles.colNo]}>{index + 1}</Text>
-                                <View style={styles.colItem}>
-                                    <Text style={styles.tableCellItem}>{item.product?.name || item.description.split('\n')[0]}</Text>
-                                    <Text style={styles.tableCellDesc}>{item.description}</Text>
-                                </View>
-                                <Text style={[styles.tableCell, styles.colHsn]}>{item.hsnCode || "-"}</Text>
-                                <Text style={[styles.tableCell, styles.colQty]}>{item.quantity} {unitCode}</Text>
-                                <Text style={[styles.tableCell, styles.colRate]}>{formatCurrency(item.unitPrice)}</Text>
-                                <View style={[styles.colTax, { alignItems: 'flex-end' }]}>
-                                    <Text style={[styles.tableCell, { textAlign: 'right' }]}>{item.taxLabel}</Text>
-                                    <Text style={styles.tableCellDesc}>{formatCurrency(item.taxAmount)}</Text>
-                                </View>
-                                <Text style={[styles.tableCell, styles.colAmount]}>{formatCurrency(item.total)}</Text>
+                                {taxMode === "GST" && (
+                                    <>
+                                        <Text style={[styles.tableCell, styles.colNoGst]}>{index + 1}</Text>
+                                        <View style={styles.colItemGst}>
+                                            <Text style={styles.tableCellItem}>{item.product?.name || item.description.split('\n')[0]}</Text>
+                                            <Text style={styles.tableCellDesc}>{item.description}</Text>
+                                        </View>
+                                        <Text style={[styles.tableCell, styles.colHsn]}>{item.hsnCode || "-"}</Text>
+                                        <Text style={[styles.tableCell, styles.colQtyGst]}>{item.quantity} {unitCode}</Text>
+                                        <Text style={[styles.tableCell, styles.colRateGst]}>{fmt(item.unitPrice)}</Text>
+                                        <View style={[styles.colTaxGst, { alignItems: 'flex-end' }]}>
+                                            <Text style={[styles.tableCell, { textAlign: 'right' }]}>{item.taxLabel}</Text>
+                                            <Text style={styles.tableCellDesc}>{fmt(item.taxAmount)}</Text>
+                                        </View>
+                                        <Text style={[styles.tableCell, styles.colAmountGst]}>{fmt(item.total)}</Text>
+                                    </>
+                                )}
+                                {taxMode === "VAT" && (
+                                    <>
+                                        <Text style={[styles.tableCell, styles.colNoVat]}>{index + 1}</Text>
+                                        <View style={styles.colItemVat}>
+                                            <Text style={styles.tableCellItem}>{item.product?.name || item.description.split('\n')[0]}</Text>
+                                            <Text style={styles.tableCellDesc}>{item.description}</Text>
+                                        </View>
+                                        <Text style={[styles.tableCell, styles.colQtyVat]}>{item.quantity} {unitCode}</Text>
+                                        <Text style={[styles.tableCell, styles.colRateVat]}>{fmt(item.unitPrice)}</Text>
+                                        <Text style={[styles.tableCell, styles.colVatPct]}>{item.vatRate ?? 0}%</Text>
+                                        <Text style={[styles.tableCell, styles.colVatAmt]}>{fmt(item.vatAmount ?? 0)}</Text>
+                                        <Text style={[styles.tableCell, styles.colAmountVat]}>{fmt(item.total)}</Text>
+                                    </>
+                                )}
+                                {taxMode === "NONE" && (
+                                    <>
+                                        <Text style={[styles.tableCell, styles.colNoNone]}>{index + 1}</Text>
+                                        <View style={styles.colItemNone}>
+                                            <Text style={styles.tableCellItem}>{item.product?.name || item.description.split('\n')[0]}</Text>
+                                            <Text style={styles.tableCellDesc}>{item.description}</Text>
+                                        </View>
+                                        <Text style={[styles.tableCell, styles.colQtyNone]}>{item.quantity} {unitCode}</Text>
+                                        <Text style={[styles.tableCell, styles.colRateNone]}>{fmt(item.unitPrice)}</Text>
+                                        <Text style={[styles.tableCell, styles.colAmountNone]}>{fmt(item.total)}</Text>
+                                    </>
+                                )}
                             </View>
                         );
                     })}
@@ -442,48 +534,57 @@ export function InvoiceModernGSTPDF({
                     <View style={styles.summaryBlock}>
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>Sub Total</Text>
-                            <Text style={styles.summaryValue}>{formatCurrency(invoice.subtotal)}</Text>
+                            <Text style={styles.summaryValue}>{fmt(invoice.subtotal)}</Text>
                         </View>
 
-                        {invoice.isInterState ? (
-                            invoice.totalIgst > 0 && (
-                                <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>IGST</Text>
-                                    <Text style={styles.summaryValue}>{formatCurrency(invoice.totalIgst)}</Text>
-                                </View>
+                        {taxMode === "GST" && (
+                            invoice.isInterState ? (
+                                (invoice.totalIgst ?? 0) > 0 && (
+                                    <View style={styles.summaryRow}>
+                                        <Text style={styles.summaryLabel}>IGST</Text>
+                                        <Text style={styles.summaryValue}>{fmt(invoice.totalIgst ?? 0)}</Text>
+                                    </View>
+                                )
+                            ) : (
+                                <>
+                                    {(invoice.totalCgst ?? 0) > 0 && (
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>CGST</Text>
+                                            <Text style={styles.summaryValue}>{fmt(invoice.totalCgst ?? 0)}</Text>
+                                        </View>
+                                    )}
+                                    {(invoice.totalSgst ?? 0) > 0 && (
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>SGST</Text>
+                                            <Text style={styles.summaryValue}>{fmt(invoice.totalSgst ?? 0)}</Text>
+                                        </View>
+                                    )}
+                                </>
                             )
-                        ) : (
-                            <>
-                                {invoice.totalCgst > 0 && (
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>CGST</Text>
-                                        <Text style={styles.summaryValue}>{formatCurrency(invoice.totalCgst)}</Text>
-                                    </View>
-                                )}
-                                {invoice.totalSgst > 0 && (
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>SGST</Text>
-                                        <Text style={styles.summaryValue}>{formatCurrency(invoice.totalSgst)}</Text>
-                                    </View>
-                                )}
-                            </>
+                        )}
+
+                        {taxMode === "VAT" && (invoice.totalVat ?? 0) > 0 && (
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>VAT</Text>
+                                <Text style={styles.summaryValue}>{fmt(invoice.totalVat ?? 0)}</Text>
+                            </View>
                         )}
 
                         <View style={styles.summaryRowTotal}>
                             <Text style={styles.summaryLabelTotal}>Total</Text>
-                            <Text style={styles.summaryValueTotal}>₹{formatCurrency(invoice.total)}</Text>
+                            <Text style={styles.summaryValueTotal}>{currencySymbol}{fmt(invoice.total)}</Text>
                         </View>
 
                         {invoice.amountPaid > 0 && (
                             <View style={styles.summaryRow}>
                                 <Text style={styles.summaryLabel}>Amount Paid</Text>
-                                <Text style={styles.summaryValue}>₹{formatCurrency(invoice.amountPaid)}</Text>
+                                <Text style={styles.summaryValue}>{currencySymbol}{fmt(invoice.amountPaid)}</Text>
                             </View>
                         )}
 
-                        <View style={styles.balanceDueBanner}>
+                        <View style={[styles.balanceDueBanner, { backgroundColor: color }]}>
                             <Text style={styles.balanceDueBannerLabel}>Balance Due</Text>
-                            <Text style={styles.balanceDueBannerValue}>₹{formatCurrency(invoice.balanceDue)}</Text>
+                            <Text style={styles.balanceDueBannerValue}>{currencySymbol}{fmt(invoice.balanceDue)}</Text>
                         </View>
                     </View>
                 </View>

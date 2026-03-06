@@ -52,6 +52,7 @@ interface OrganizationDetails {
     invoicePdfFormat: string;
     pdfHeaderImageUrl: string | null;
     pdfFooterImageUrl: string | null;
+    brandColor: string | null;
     language: string;
     currency: string;
     createdAt: string;
@@ -103,6 +104,7 @@ export default function OrganizationDetailsPage() {
     const [invoicePdfFormat, setInvoicePdfFormat] = useState("A5_LANDSCAPE");
     const [pdfHeaderImageUrl, setPdfHeaderImageUrl] = useState("");
     const [pdfFooterImageUrl, setPdfFooterImageUrl] = useState("");
+    const [brandColor, setBrandColor] = useState("");
     const [language, setLanguage] = useState("en");
     const [currency, setCurrency] = useState("INR");
     const [saving, setSaving] = useState(false);
@@ -157,6 +159,7 @@ export default function OrganizationDetailsPage() {
         setInvoicePdfFormat(data.invoicePdfFormat || "A5_LANDSCAPE");
         setPdfHeaderImageUrl(data.pdfHeaderImageUrl || "");
         setPdfFooterImageUrl(data.pdfFooterImageUrl || "");
+        setBrandColor(data.brandColor || "");
         setLanguage(data.language || "en");
         setCurrency(data.currency || "INR");
     };
@@ -255,6 +258,7 @@ export default function OrganizationDetailsPage() {
                     invoicePdfFormat,
                     pdfHeaderImageUrl,
                     pdfFooterImageUrl,
+                    brandColor: brandColor || null,
                     language,
                     currency,
                 }),
@@ -874,7 +878,7 @@ export default function OrganizationDetailsPage() {
                                                 <SelectItem value="A5_LANDSCAPE">A5 Landscape (Default)</SelectItem>
                                                 <SelectItem value="A4_PORTRAIT">A4 Portrait (GST)</SelectItem>
                                                 <SelectItem value="A4_GST2">A4 Portrait (GST 2)</SelectItem>
-                                                <SelectItem value="A4_MODERN_GST">A4 Modern Portfolio (GST)</SelectItem>
+                                                <SelectItem value="A4_MODERN_GST">A4 Modern Portfolio</SelectItem>
                                                 <SelectItem value="A4_VAT">A4 Portrait (VAT - Arabic)</SelectItem>
                                                 <SelectItem value="A4_BILINGUAL">A4 Bilingual (Arabic-English)</SelectItem>
                                             </SelectContent>
@@ -926,6 +930,32 @@ export default function OrganizationDetailsPage() {
                                                     value={pdfHeaderImageUrl}
                                                     onChange={(e) => setPdfHeaderImageUrl(e.target.value)}
                                                     placeholder="https://example.com/logo.png"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-0.5 mb-2 mt-6">
+                                                <Label>Brand Color</Label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Customize the accent color used in the Modern PDF template (header, table header, balance banner). Defaults to dark green (#2a3b38).
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-3 max-w-md">
+                                                <Input
+                                                    id="brandColor"
+                                                    value={brandColor}
+                                                    onChange={(e) => setBrandColor(e.target.value)}
+                                                    placeholder="#2a3b38"
+                                                    className="flex-1"
+                                                />
+                                                <input
+                                                    type="color"
+                                                    value={brandColor || "#2a3b38"}
+                                                    onChange={(e) => setBrandColor(e.target.value)}
+                                                    className="h-9 w-12 cursor-pointer rounded border border-input p-0.5"
+                                                />
+                                                <div
+                                                    className="h-9 w-9 rounded border border-input flex-shrink-0"
+                                                    style={{ backgroundColor: brandColor || "#2a3b38" }}
                                                 />
                                             </div>
                                         </div>

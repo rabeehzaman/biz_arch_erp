@@ -96,6 +96,7 @@ export async function PUT(
       currency,
       pdfHeaderImageUrl,
       pdfFooterImageUrl,
+      brandColor,
     } = body;
 
     // Basic field update validation
@@ -118,6 +119,14 @@ export async function PUT(
     if (currency !== undefined && !["INR", "SAR"].includes(currency)) {
       return NextResponse.json(
         { error: "Currency must be 'INR' or 'SAR'" },
+        { status: 400 }
+      );
+    }
+
+    // Validate brand color
+    if (brandColor && !/^#[0-9a-fA-F]{6}$/.test(brandColor)) {
+      return NextResponse.json(
+        { error: "Brand color must be a valid hex color (e.g. #2a3b38)" },
         { status: 400 }
       );
     }
@@ -210,6 +219,7 @@ export async function PUT(
     if (currency !== undefined) updateData.currency = currency;
     if (pdfHeaderImageUrl !== undefined) updateData.pdfHeaderImageUrl = pdfHeaderImageUrl || null;
     if (pdfFooterImageUrl !== undefined) updateData.pdfFooterImageUrl = pdfFooterImageUrl || null;
+    if (brandColor !== undefined) updateData.brandColor = brandColor || null;
 
     const organization = await prisma.$transaction(
       async (tx) => {

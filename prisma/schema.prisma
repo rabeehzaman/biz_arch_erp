@@ -40,6 +40,7 @@ model Organization {
   // PDF Customization
   pdfHeaderImageUrl     String?  // Edge-to-edge header image URL for A4 invoices
   pdfFooterImageUrl     String?  // Edge-to-edge footer image URL for A4 invoices
+  brandColor            String?  // Hex color for PDF branding, e.g. "#2a3b38"
 
   // Localization
   language              String   @default("en")  // "en" or "ar" — org-wide UI language
