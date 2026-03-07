@@ -14,11 +14,12 @@ export async function GET() {
 
         const org = await prisma.organization.findUnique({
             where: { id: organizationId },
-            select: { posAccountingMode: true },
+            select: { posAccountingMode: true, saudiEInvoiceEnabled: true },
         });
 
         return NextResponse.json({
             posAccountingMode: org?.posAccountingMode || "DIRECT",
+            saudiEInvoiceEnabled: org?.saudiEInvoiceEnabled || false,
         });
     } catch (error) {
         console.error("Failed to fetch POS org settings:", error);

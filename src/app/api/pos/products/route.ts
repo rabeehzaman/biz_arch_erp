@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 
 export async function GET() {
   try {
@@ -11,6 +12,13 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+
+    // Check if org uses Saudi VAT
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { saudiEInvoiceEnabled: true },
+    });
+    const isSaudi = org?.saudiEInvoiceEnabled || false;
 
     const products = await prisma.product.findMany({
       where: { organizationId, isActive: true },
@@ -31,7 +39,7 @@ export async function GET() {
       sku: p.sku,
       barcode: p.barcode,
       price: p.price,
-      gstRate: p.gstRate || 0,
+      gstRate: isSaudi ? SAUDI_VAT_RATE : (Number(p.gstRate) || 0),
       hsnCode: p.hsnCode || null,
       categoryId: p.categoryId,
       category: p.category,

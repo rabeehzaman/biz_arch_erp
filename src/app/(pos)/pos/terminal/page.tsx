@@ -46,6 +46,7 @@ import { PaymentPanel } from "@/components/pos/payment-panel";
 import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
 import { smartPrintReceipt } from "@/lib/electron-print";
+import { useLanguage } from "@/lib/i18n";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -99,6 +100,7 @@ interface Customer {
 
 function POSTerminalContent() {
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId");
@@ -402,10 +404,12 @@ function POSTerminalContent() {
             lineTotal,
           };
         }),
-        subtotal: calculateCartTotal(cart).subtotal,
-        taxRate: 0,
-        taxAmount: calculateCartTotal(cart).taxAmount,
-        total: calculateCartTotal(cart).total,
+        subtotal: Number(result.invoice?.subtotal) || calculateCartTotal(cart).subtotal,
+        taxRate: receiptMeta?.taxLabel === "VAT" ? 15 : 0,
+        taxAmount: receiptMeta?.taxLabel === "VAT"
+          ? Number(result.invoice?.totalVat || 0)
+          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || calculateCartTotal(cart).taxAmount,
+        total: Number(result.invoice?.total) || calculateCartTotal(cart).total,
         payments: payments.map((p) => ({
           method: p.method,
           amount: parseFloat(p.amount),
@@ -599,7 +603,7 @@ function POSTerminalContent() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h2 className="text-lg font-bold">
-              {mobileView === "payment" ? "Payment" : "Cart"}
+              {mobileView === "payment" ? t("pos.checkout") : "Cart"}
             </h2>
             {cart.length > 0 && (
               <div className="ml-auto text-sm font-bold text-primary">
@@ -623,8 +627,8 @@ function POSTerminalContent() {
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <ShoppingCart className="h-12 w-12 mb-3 opacity-30" />
-                    <p className="text-sm">Cart is empty</p>
-                    <p className="text-xs">Add products to get started</p>
+                    <p className="text-sm">Empty</p>
+                    <p className="text-xs">Add products</p>
                   </div>
                 ) : (
                   cart.map((item) => (
@@ -654,7 +658,7 @@ function POSTerminalContent() {
                       onClick={holdOrder}
                     >
                       <PauseCircle className="h-4 w-4 mr-1" />
-                      Hold
+                      {t("pos.holdOrder").split(" ")[0]}
                     </Button>
                     <Button
                       variant="outline"
@@ -662,7 +666,7 @@ function POSTerminalContent() {
                       onClick={clearCart}
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
-                      Clear
+                      {t("pos.clearCart").split(" ")[0]}
                     </Button>
                   </div>
                   <Button
@@ -672,7 +676,7 @@ function POSTerminalContent() {
                       setMobileView("payment");
                     }}
                   >
-                    Pay{" "}
+                    {t("pos.payNow")}{" "}
                     {fmt(total)}
                   </Button>
                 </div>
@@ -728,7 +732,7 @@ function POSTerminalContent() {
                 </p>
               </div>
               <div>
-                <span className="text-muted-foreground">Opening Cash</span>
+                <span className="text-muted-foreground">{t("pos.openingCash")}</span>
                 <p className="font-medium">
                   {fmt(Number(posSession.openingCash))}
                 </p>
@@ -828,13 +832,13 @@ function POSTerminalContent() {
       <Sheet open={showHeldSheet} onOpenChange={setShowHeldSheet}>
         <SheetContent side="right" className="w-full sm:w-[400px] sm:max-w-[450px] p-0">
           <SheetHeader className="p-4 border-b">
-            <SheetTitle>Held Orders ({heldOrders.length})</SheetTitle>
+            <SheetTitle>{t("pos.heldOrders")} ({heldOrders.length})</SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto h-[calc(100%-65px)]">
             {heldOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
                 <PauseCircle className="h-12 w-12 mb-3 opacity-30" />
-                <p className="text-sm">No held orders</p>
+                <p className="text-sm">Empty</p>
               </div>
             ) : (
               <div className="p-4 space-y-3">
@@ -846,7 +850,7 @@ function POSTerminalContent() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">
-                          {order.customer?.name || order.customerName || "Walk-in Customer"}
+                          {order.customer?.name || order.customerName || t("pos.walkInCustomer")}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(order.heldAt), {
@@ -868,7 +872,7 @@ function POSTerminalContent() {
                         className="flex-1"
                         onClick={() => restoreHeldOrder(order)}
                       >
-                        Restore
+                        {t("pos.recallOrder")}
                       </Button>
                       <Button
                         size="sm"

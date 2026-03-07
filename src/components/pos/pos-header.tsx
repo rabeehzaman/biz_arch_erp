@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useLanguage } from "@/lib/i18n";
 
 interface POSHeaderProps {
   session: {
@@ -33,6 +34,7 @@ export function POSHeader({
   onReprintReceipt,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
+  const { t } = useLanguage();
   const router = useRouter();
   const [time, setTime] = useState(new Date());
 
@@ -52,7 +54,7 @@ export function POSHeader({
             size="icon"
             className="h-8 w-8 shrink-0 text-slate-300 hover:text-white hover:bg-slate-800"
             onClick={onBackToSessions}
-            title="Back to Sessions"
+            title={t("pos.backToSessions")}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -60,7 +62,7 @@ export function POSHeader({
         <div className="relative h-8 w-8 shrink-0 bg-white rounded-md flex items-center justify-center overflow-hidden p-0.5 shadow-sm border border-slate-700 hidden sm:flex">
           <Image src="/logo.png" alt="BizArch Logo" fill sizes="32px" className="object-contain" priority />
         </div>
-        <span className="text-base font-bold whitespace-nowrap">BizArch POS</span>
+        <span className="text-base font-bold whitespace-nowrap">{t("pos.title")}</span>
         {session && (
           <Badge variant="secondary" className="hidden xs:inline-flex shrink-0 text-xs">
             {session.sessionNumber}
@@ -86,7 +88,7 @@ export function POSHeader({
             size="sm"
             className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
             onClick={onReprintReceipt}
-            title="Reprint last receipt"
+            title={t("pos.reprintReceipt")}
           >
             <Printer className="h-4 w-4" />
           </Button>
@@ -99,7 +101,7 @@ export function POSHeader({
           onClick={onHeldOrdersClick}
         >
           <PauseCircle className="h-4 w-4" />
-          <span className="hidden sm:inline ml-1">Held</span>
+          <span className="hidden sm:inline ml-1">{t("pos.heldOrders").split(" ")[0]}</span>
           {heldOrdersCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold">
               {heldOrdersCount}
@@ -118,7 +120,7 @@ export function POSHeader({
           onClick={onCloseSession}
         >
           <LogOut className="h-4 w-4 sm:hidden" />
-          <span className="hidden sm:inline">End Session</span>
+          <span className="hidden sm:inline">{t("pos.endSession")}</span>
         </Button>
 
         <Button
@@ -126,7 +128,7 @@ export function POSHeader({
           size="icon"
           className="hidden sm:inline-flex text-slate-300 hover:text-white hover:bg-slate-800"
           onClick={() => router.push("/")}
-          title="Exit POS"
+          title={t("pos.exitPos")}
         >
           <LogOut className="h-4 w-4" />
         </Button>

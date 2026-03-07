@@ -3,6 +3,7 @@
 import { Separator } from "@/components/ui/separator";
 import type { CartItemData } from "./cart-item";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface CartSummaryProps {
   items: CartItemData[];
@@ -10,23 +11,24 @@ interface CartSummaryProps {
 
 export function CartSummary({ items }: CartSummaryProps) {
   const { fmt: formatCurrency } = useCurrency();
+  const { t } = useLanguage();
   const { subtotal, taxAmount, total } = calculateCartTotal(items);
 
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">Subtotal</span>
+        <span className="text-muted-foreground">{t("common.subtotal") || "Subtotal"}</span>
         <span>{formatCurrency(subtotal)}</span>
       </div>
       {taxAmount > 0 && (
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">GST</span>
+          <span className="text-muted-foreground">{t("common.tax") || "Tax"}</span>
           <span>{formatCurrency(taxAmount)}</span>
         </div>
       )}
       <Separator />
       <div className="flex justify-between text-lg font-bold">
-        <span>Total</span>
+        <span>{t("common.total") || "Total"}</span>
         <span>{formatCurrency(total)}</span>
       </div>
     </div>

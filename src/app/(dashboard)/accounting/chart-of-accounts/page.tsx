@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface TreeNode {
   id: string;
@@ -61,36 +62,36 @@ interface FlatAccount {
   parentId: string | null;
 }
 
-const accountTypeLabels: Record<string, string> = {
-  ASSET: "Asset",
-  LIABILITY: "Liability",
-  EQUITY: "Equity",
-  REVENUE: "Revenue",
-  EXPENSE: "Expense",
-};
+const accountTypeLabels = (t: (key: string) => string): Record<string, string> => ({
+  ASSET: t("accounting.assets"),
+  LIABILITY: t("accounting.liabilities"),
+  EQUITY: t("accounting.equity"),
+  REVENUE: t("accounting.revenue"),
+  EXPENSE: t("accounting.expenses"),
+});
 
-const accountSubTypeLabels: Record<string, string> = {
-  CURRENT_ASSET: "Current Asset",
-  FIXED_ASSET: "Fixed Asset",
-  BANK: "Bank",
-  CASH: "Cash",
-  ACCOUNTS_RECEIVABLE: "Accounts Receivable",
-  INVENTORY: "Inventory",
-  OTHER_ASSET: "Other Asset",
-  CURRENT_LIABILITY: "Current Liability",
-  LONG_TERM_LIABILITY: "Long-Term Liability",
-  ACCOUNTS_PAYABLE: "Accounts Payable",
-  OTHER_LIABILITY: "Other Liability",
-  OWNERS_EQUITY: "Owner's Equity",
-  RETAINED_EARNINGS: "Retained Earnings",
-  OTHER_EQUITY: "Other Equity",
-  SALES_REVENUE: "Sales Revenue",
-  OTHER_REVENUE: "Other Revenue",
-  COST_OF_GOODS_SOLD: "Cost of Goods Sold",
-  OPERATING_EXPENSE: "Operating Expense",
-  PAYROLL_EXPENSE: "Payroll Expense",
-  OTHER_EXPENSE: "Other Expense",
-};
+const accountSubTypeLabels = (t: (key: string) => string): Record<string, string> => ({
+  CURRENT_ASSET: t("accounting.currentAsset"),
+  FIXED_ASSET: t("accounting.fixedAsset"),
+  BANK: t("accounting.bank"),
+  CASH: t("accounting.cash"),
+  ACCOUNTS_RECEIVABLE: t("accounting.accountsReceivable"),
+  INVENTORY: t("accounting.inventoryAccount"),
+  OTHER_ASSET: t("accounting.otherAsset"),
+  CURRENT_LIABILITY: t("accounting.currentLiability"),
+  LONG_TERM_LIABILITY: t("accounting.longTermLiability"),
+  ACCOUNTS_PAYABLE: t("accounting.accountsPayable"),
+  OTHER_LIABILITY: t("accounting.otherLiability"),
+  OWNERS_EQUITY: t("accounting.ownersEquity"),
+  RETAINED_EARNINGS: t("accounting.retainedEarnings"),
+  OTHER_EQUITY: t("accounting.otherEquity"),
+  SALES_REVENUE: t("accounting.salesRevenue"),
+  OTHER_REVENUE: t("accounting.otherRevenue"),
+  COST_OF_GOODS_SOLD: t("accounting.costOfGoodsSold"),
+  OPERATING_EXPENSE: t("accounting.operatingExpense"),
+  PAYROLL_EXPENSE: t("accounting.payrollExpense"),
+  OTHER_EXPENSE: t("accounting.otherExpense"),
+});
 
 const subTypesByType: Record<string, string[]> = {
   ASSET: ["CURRENT_ASSET", "FIXED_ASSET", "BANK", "CASH", "ACCOUNTS_RECEIVABLE", "INVENTORY", "OTHER_ASSET"],
@@ -134,6 +135,8 @@ function AccountTreeItem({
   searchQuery: string;
 }) {
   const { symbol } = useCurrency();
+  const { t } = useLanguage();
+  const typeLabels = accountTypeLabels(t);
   const isExpanded = expanded.has(node.id);
   const hasChildren = node.children.length > 0;
   const matchesSearch =
@@ -199,14 +202,14 @@ function AccountTreeItem({
 
           <div className="flex items-center gap-1.5 flex-wrap shrink-0">
             <Badge variant="outline" className={`text-[10px] sm:text-xs py-0 h-5 ${typeBadgeColors[node.accountType]}`}>
-              <span className="hidden sm:inline">{accountTypeLabels[node.accountType]}</span>
-              <span className="sm:hidden">{accountTypeLabels[node.accountType]?.substring(0, 3)}</span>
+              <span className="hidden sm:inline">{typeLabels[node.accountType]}</span>
+              <span className="sm:hidden">{typeLabels[node.accountType]?.substring(0, 3)}</span>
             </Badge>
 
             {node.isSystem && (
               <Badge variant="secondary" className="text-[10px] sm:text-xs py-0 h-5">
-                <span className="hidden sm:inline">System</span>
-                <span className="sm:hidden">Sys</span>
+                <span className="hidden sm:inline">{t("accounting.sys")}</span>
+                <span className="sm:hidden">{t("accounting.sys").substring(0, 3)}</span>
               </Badge>
             )}
           </div>
@@ -221,7 +224,7 @@ function AccountTreeItem({
 
           <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => onEdit(node)}>
-              Edit
+              {t("common.edit")}
             </Button>
             {!node.isSystem && node.children.length === 0 && node.transactionCount === 0 && (
               <Button
@@ -230,7 +233,7 @@ function AccountTreeItem({
                 className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={() => onDelete(node)}
               >
-                Delete
+                {t("common.delete")}
               </Button>
             )}
           </div>
@@ -272,6 +275,9 @@ export default function ChartOfAccountsPage() {
     parentId: "",
     isActive: true,
   });
+  const { t } = useLanguage();
+  const typeLabels = accountTypeLabels(t);
+  const subTypeLabels = accountSubTypeLabels(t);
 
   useEffect(() => {
     fetchData();
@@ -438,8 +444,8 @@ export default function ChartOfAccountsPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Chart of Accounts</h2>
-            <p className="text-slate-500">Manage your accounting structure</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("accounting.chartOfAccounts")}</h2>
+            <p className="text-slate-500">{t("accounting.manageStructure")}</p>
           </div>
           <Dialog
             open={isDialogOpen}
@@ -454,25 +460,25 @@ export default function ChartOfAccountsPage() {
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Account
+                {t("accounting.addAccount")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>
-                    {editingAccount ? "Edit Account" : "Add Account"}
+                    {editingAccount ? t("accounting.editAccount") : t("accounting.addAccount")}
                   </DialogTitle>
                   <DialogDescription>
                     {editingAccount
-                      ? "Update account details."
-                      : "Create a new account in the chart of accounts."}
+                      ? t("accounting.updateAccountDetails")
+                      : t("accounting.createNewAccount")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label>Code *</Label>
+                      <Label>{t("accounting.accountCode")} *</Label>
                       <Input
                         value={formData.code}
                         onChange={(e) =>
@@ -484,7 +490,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label>Name *</Label>
+                      <Label>{t("accounting.accountName")} *</Label>
                       <Input
                         value={formData.name}
                         onChange={(e) =>
@@ -499,7 +505,7 @@ export default function ChartOfAccountsPage() {
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="grid gap-2">
-                          <Label>Account Type *</Label>
+                          <Label>{t("accounting.accountType")} *</Label>
                           <Select
                             value={formData.accountType}
                             onValueChange={(value) =>
@@ -512,10 +518,10 @@ export default function ChartOfAccountsPage() {
                             }
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
+                              <SelectValue placeholder={t("accounting.selectType")} />
                             </SelectTrigger>
                             <SelectContent>
-                              {Object.entries(accountTypeLabels).map(([key, label]) => (
+                              {Object.entries(typeLabels).map(([key, label]) => (
                                 <SelectItem key={key} value={key}>
                                   {label}
                                 </SelectItem>
@@ -524,7 +530,7 @@ export default function ChartOfAccountsPage() {
                           </Select>
                         </div>
                         <div className="grid gap-2">
-                          <Label>Sub Type *</Label>
+                          <Label>{t("accounting.accountType")} ({t("accounting.systemAccount")}) *</Label>
                           <Select
                             value={formData.accountSubType}
                             onValueChange={(value) =>
@@ -533,12 +539,12 @@ export default function ChartOfAccountsPage() {
                             disabled={!formData.accountType}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select sub type" />
+                              <SelectValue placeholder={t("accounting.selectSubType")} />
                             </SelectTrigger>
                             <SelectContent>
                               {availableSubTypes.map((key) => (
                                 <SelectItem key={key} value={key}>
-                                  {accountSubTypeLabels[key]}
+                                  {subTypeLabels[key]}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -547,7 +553,7 @@ export default function ChartOfAccountsPage() {
                       </div>
                       {parentOptions.length > 0 && (
                         <div className="grid gap-2">
-                          <Label>Parent Account</Label>
+                          <Label>{t("accounting.parentAccount")}</Label>
                           <Select
                             value={formData.parentId}
                             onValueChange={(value) =>
@@ -555,7 +561,7 @@ export default function ChartOfAccountsPage() {
                             }
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="None (top-level)" />
+                              <SelectValue placeholder={t("accounting.noneTopLevel")} />
                             </SelectTrigger>
                             <SelectContent>
                               {parentOptions.map((a) => (
@@ -570,13 +576,13 @@ export default function ChartOfAccountsPage() {
                     </>
                   )}
                   <div className="grid gap-2">
-                    <Label>Description</Label>
+                    <Label>{t("accounting.narration")}</Label>
                     <Input
                       value={formData.description}
                       onChange={(e) =>
                         setFormData({ ...formData, description: e.target.value })
                       }
-                      placeholder="Optional description"
+                      placeholder={t("accounting.optionalDescription")}
                     />
                   </div>
                   {editingAccount && !editingAccount.isSystem && (
@@ -590,13 +596,13 @@ export default function ChartOfAccountsPage() {
                         }
                         className="h-4 w-4 rounded border-gray-300"
                       />
-                      <Label htmlFor="isActive">Active</Label>
+                      <Label htmlFor="isActive">{t("common.active")}</Label>
                     </div>
                   )}
                 </div>
                 <DialogFooter>
                   <Button type="submit">
-                    {editingAccount ? "Update" : "Create"} Account
+                    {editingAccount ? t("accounting.updateAccount") : t("accounting.createAccount")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -610,7 +616,7 @@ export default function ChartOfAccountsPage() {
               <div className="relative flex-1 sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Search accounts..."
+                  placeholder={t("accounting.searchAccounts")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -618,10 +624,10 @@ export default function ChartOfAccountsPage() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={expandAll} className="flex-1 sm:flex-none">
-                  Expand All
+                  {t("accounting.expandAll")}
                 </Button>
                 <Button variant="outline" size="sm" onClick={collapseAll} className="flex-1 sm:flex-none">
-                  Collapse All
+                  {t("accounting.collapseAll")}
                 </Button>
               </div>
             </div>
@@ -634,9 +640,9 @@ export default function ChartOfAccountsPage() {
             ) : tree.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <BookOpen className="h-12 w-12 text-slate-300" />
-                <h3 className="mt-4 text-lg font-semibold">No accounts found</h3>
+                <h3 className="mt-4 text-lg font-semibold">{t("accounting.noAccountsFound")}</h3>
                 <p className="text-sm text-slate-500">
-                  Add your first account to get started
+                  {t("accounting.addFirstAccount")}
                 </p>
               </div>
             ) : (
@@ -661,19 +667,18 @@ export default function ChartOfAccountsPage() {
         <AlertDialog open={!!deleteAccount} onOpenChange={() => setDeleteAccount(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Account</AlertDialogTitle>
+              <AlertDialogTitle>{t("accounting.deleteAccount")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete account {deleteAccount?.code} - {deleteAccount?.name}?
-                This action cannot be undone.
+                {t("common.deleteConfirm")} {deleteAccount?.code} - {deleteAccount?.name}?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 className="bg-red-600 hover:bg-red-700"
               >
-                Delete
+                {t("common.delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

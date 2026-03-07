@@ -8,6 +8,7 @@ import { CashTenderedInput } from "./cash-tendered-input";
 import { SplitPaymentForm, type PaymentEntry } from "./split-payment-form";
 import { Input } from "@/components/ui/input";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface PaymentPanelProps {
   total: number;
@@ -27,6 +28,7 @@ export function PaymentPanel({
   hasCustomer,
 }: PaymentPanelProps) {
   const { fmt: formatCurrency } = useCurrency();
+  const { t } = useLanguage();
   const [mode, setMode] = useState<"single" | "split">("single");
   const [selectedMethod, setSelectedMethod] = useState("CASH");
   const [isCreditSale, setIsCreditSale] = useState(false);
@@ -92,7 +94,7 @@ export function PaymentPanel({
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-lg font-bold">Payment</h2>
+        <h2 className="text-lg font-bold">{t("pos.checkout")}</h2>
         <div className="ml-auto text-xl font-bold text-primary">
           {formatCurrency(total)}
         </div>
@@ -214,11 +216,11 @@ export function PaymentPanel({
           disabled={!canComplete || isProcessing}
         >
           {isProcessing ? (
-            "Processing..."
+            t("pos.processing") || "Processing..."
           ) : (
             <>
               <CheckCircle2 className="h-5 w-5 mr-2" />
-              Complete Sale
+              {t("pos.completeSale") || "Complete Sale"}
             </>
           )}
         </Button>

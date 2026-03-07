@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Monitor, Wifi, Usb, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Monitor, Printer, Usb, Wifi, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { isElectronEnvironment } from "@/lib/electron-print";
+import { useLanguage } from "@/lib/i18n";
 
 export function POSSettings() {
+  const { t } = useLanguage();
   const [receiptPrinting, setReceiptPrinting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -30,7 +32,7 @@ export function POSSettings() {
     fetch("/api/settings/pos-receipt-printing")
       .then((r) => r.json())
       .then((data) => setReceiptPrinting(data.value === "true"))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -186,20 +188,20 @@ export function POSSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Printer className="h-5 w-5" />
-            POS Receipts
+            {t("pos.posReceipts")}
           </CardTitle>
           <CardDescription>
-            Configure receipt printing for the Point of Sale
+            {t("pos.posReceiptsDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="receipt-printing">Auto-print receipt after sale</Label>
+              <Label htmlFor="receipt-printing">{t("pos.autoPrintReceipt")}</Label>
               <p className="text-sm text-muted-foreground">
                 {isElectron
-                  ? "Automatically print receipt to thermal printer after each POS checkout (silent, no dialog)"
-                  : "Automatically open the print dialog with a thermal receipt after each POS checkout"}
+                  ? t("pos.autoPrintReceiptElectron")
+                  : t("pos.autoPrintReceiptWeb")}
               </p>
             </div>
             <Switch
@@ -217,16 +219,16 @@ export function POSSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Monitor className="h-5 w-5" />
-              Thermal Printer Configuration
+              {t("pos.thermalPrinterConfig")}
             </CardTitle>
             <CardDescription>
-              Configure the thermal printer connected to this POS terminal
+              {t("pos.thermalPrinterConfigDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Connection Type */}
             <div className="space-y-3">
-              <Label>Connection Type</Label>
+              <Label>{t("pos.connectionType")}</Label>
               <div className="flex gap-3">
                 <Button
                   variant={connectionType === "network" ? "default" : "outline"}
@@ -234,7 +236,7 @@ export function POSSettings() {
                   onClick={() => setConnectionType("network")}
                 >
                   <Wifi className="h-4 w-4 mr-2" />
-                  Network (TCP/IP)
+                  {t("pos.networkTcpIp")}
                 </Button>
                 <Button
                   variant={connectionType === "usb" ? "default" : "outline"}
@@ -242,7 +244,7 @@ export function POSSettings() {
                   onClick={() => setConnectionType("usb")}
                 >
                   <Usb className="h-4 w-4 mr-2" />
-                  USB Printer
+                  {t("pos.usbPrinter")}
                 </Button>
               </div>
             </div>
@@ -252,7 +254,7 @@ export function POSSettings() {
               <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2 space-y-1">
-                    <Label htmlFor="printer-ip">Printer IP Address</Label>
+                    <Label htmlFor="printer-ip">{t("pos.printerIpAddress")}</Label>
                     <Input
                       id="printer-ip"
                       placeholder="192.168.1.100"
@@ -261,7 +263,7 @@ export function POSSettings() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="printer-port">Port</Label>
+                    <Label htmlFor="printer-port">{t("pos.port")}</Label>
                     <Input
                       id="printer-port"
                       type="number"
@@ -279,7 +281,7 @@ export function POSSettings() {
               <div className="space-y-3">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <Label>Installed Printers</Label>
+                    <Label>{t("pos.installedPrinters")}</Label>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -289,13 +291,13 @@ export function POSSettings() {
                       {loadingPrinters ? (
                         <Loader2 className="h-3 w-3 animate-spin mr-1" />
                       ) : null}
-                      Refresh
+                      {t("pos.refresh")}
                     </Button>
                   </div>
                   {installedPrinters.length > 0 ? (
                     <Select value={usbPrinterName} onValueChange={setUsbPrinterName}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a printer" />
+                        <SelectValue placeholder={t("pos.selectPrinter")} />
                       </SelectTrigger>
                       <SelectContent>
                         {installedPrinters.map((p) => (
@@ -308,7 +310,7 @@ export function POSSettings() {
                     </Select>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      {loadingPrinters ? "Loading printers..." : "No printers found. Make sure your printer is installed in Windows."}
+                      {loadingPrinters ? t("pos.loadingPrinters") : t("pos.noPrintersFound")}
                     </p>
                   )}
                 </div>
@@ -323,14 +325,14 @@ export function POSSettings() {
                 ) : (
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                 )}
-                Test Connection
+                {t("pos.testConnection")}
               </Button>
               <Button onClick={openCashDrawer} variant="outline">
-                Open Cash Drawer
+                {t("pos.openCashDrawer")}
               </Button>
               <Button onClick={printTestReceipt} variant="outline">
                 <Printer className="h-4 w-4 mr-2" />
-                Print Test Receipt
+                {t("pos.printTestReceipt")}
               </Button>
             </div>
 
@@ -339,7 +341,7 @@ export function POSSettings() {
               {isSavingConfig ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
-              Save Printer Configuration
+              {t("pos.savePrinterConfig")}
             </Button>
           </CardContent>
         </Card>
@@ -348,18 +350,17 @@ export function POSSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Monitor className="h-5 w-5" />
-              Silent Thermal Printing
+              {t("pos.silentThermalPrinting")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-start gap-3">
               <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
               <div className="space-y-1">
-                <p className="text-sm">
-                  Install the <strong>BizArch Desktop App</strong> for silent thermal printing without print dialogs.
+                <p className="text-sm" dangerouslySetInnerHTML={{ __html: t("pos.installDesktopApp").replace("BizArch Desktop App", "<strong>BizArch Desktop App</strong>") }}>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  The desktop app supports network printers (TCP/IP port 9100) and USB printers via Windows print spooler.
+                  {t("pos.desktopAppSupports")}
                 </p>
               </div>
             </div>

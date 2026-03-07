@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 export function AccountingSettings() {
+  const { t } = useLanguage();
   const [hasAccounts, setHasAccounts] = useState<boolean | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
 
@@ -50,37 +52,33 @@ export function AccountingSettings() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Chart of Accounts</CardTitle>
+          <CardTitle>{t("accounting.chartOfAccounts")}</CardTitle>
           <CardDescription>
-            The chart of accounts is the foundation of your accounting system.
-            It must be set up before you can use journal entries, expense tracking,
-            and financial reports.
+            {t("accounting.foundation")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {hasAccounts === null ? (
             <div className="flex items-center gap-2 text-slate-500">
               <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-              Checking...
+              {t("accounting.checking")}
             </div>
           ) : hasAccounts ? (
             <div className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <span className="font-medium text-green-700">
-                Chart of accounts is set up
+                {t("accounting.isSetup")}
               </span>
-              <Badge variant="secondary">Active</Badge>
+              <Badge variant="secondary">{t("common.active")}</Badge>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">
-                Your organization does not have a chart of accounts yet.
-                Click the button below to create the default chart of accounts
-                with standard account categories.
+                {t("accounting.noAccountsYet")}
               </p>
               <Button onClick={handleSeedCOA} disabled={isSeeding}>
                 <BookOpen className="mr-2 h-4 w-4" />
-                {isSeeding ? "Setting up..." : "Set Up Chart of Accounts"}
+                {isSeeding ? t("accounting.settingUp") : t("accounting.setUpCoA")}
               </Button>
             </div>
           )}

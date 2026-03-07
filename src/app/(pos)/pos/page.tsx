@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -74,6 +75,7 @@ function isStale(openedAt: string): boolean {
 
 export default function POSDashboardPage() {
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [openingState, setOpeningState] = useState<OpeningState | null>(null);
@@ -89,14 +91,14 @@ export default function POSDashboardPage() {
   // Filter locations by search
   const filtered = searchQuery
     ? locations.filter((loc) => {
-        const q = searchQuery.toLowerCase();
-        return (
-          loc.branchName.toLowerCase().includes(q) ||
-          loc.branchCode.toLowerCase().includes(q) ||
-          (loc.warehouseName?.toLowerCase().includes(q) ?? false) ||
-          (loc.warehouseCode?.toLowerCase().includes(q) ?? false)
-        );
-      })
+      const q = searchQuery.toLowerCase();
+      return (
+        loc.branchName.toLowerCase().includes(q) ||
+        loc.branchCode.toLowerCase().includes(q) ||
+        (loc.warehouseName?.toLowerCase().includes(q) ?? false) ||
+        (loc.warehouseCode?.toLowerCase().includes(q) ?? false)
+      );
+    })
     : locations;
 
   // Map sessions to locations
@@ -158,17 +160,17 @@ export default function POSDashboardPage() {
             size="icon"
             className="h-9 w-9"
             onClick={() => router.push("/")}
-            title="Back to Dashboard"
+            title={t("common.back")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-bold">Point of Sale</h1>
+          <h1 className="text-lg font-bold">{t("pos.title")}</h1>
         </div>
 
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search registers..."
+            placeholder={t("pos.searchRegisters")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9"
@@ -181,9 +183,9 @@ export default function POSDashboardPage() {
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Store className="h-12 w-12 mb-3 opacity-30" />
-            <p className="text-sm">No registers found</p>
+            <p className="text-sm">{t("pos.noRegistersFound")}</p>
             {searchQuery && (
-              <p className="text-xs mt-1">Try a different search term</p>
+              <p className="text-xs mt-1">{t("pos.tryDifferentSearch")}</p>
             )}
           </div>
         ) : (
@@ -218,18 +220,18 @@ export default function POSDashboardPage() {
                     <div className="shrink-0 ml-2">
                       {!session && (
                         <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                          Opening Control
+                          {t("pos.openingControl")}
                         </Badge>
                       )}
                       {session && stale && (
                         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
                           <AlertTriangle className="h-3 w-3 mr-1" />
-                          To Close
+                          {t("pos.toClose")}
                         </Badge>
                       )}
                       {session && !stale && (
                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          Active
+                          {t("common.active")}
                         </Badge>
                       )}
                     </div>
@@ -260,7 +262,7 @@ export default function POSDashboardPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <span>{session.totalTransactions} orders</span>
+                            <span>{session.totalTransactions} {t("pos.orderCount")}</span>
                           </div>
                         </div>
 
@@ -269,7 +271,7 @@ export default function POSDashboardPage() {
                           className="w-full"
                           onClick={() => router.push(`/pos/terminal?sessionId=${session.id}`)}
                         >
-                          Continue Selling
+                          {t("pos.continueSelling")}
                         </Button>
 
                         {/* User indicator */}
@@ -287,7 +289,7 @@ export default function POSDashboardPage() {
                           <div className="space-y-3 mt-1">
                             <div>
                               <label className="text-sm font-medium text-muted-foreground">
-                                Opening Cash
+                                {t("pos.openingCash")}
                               </label>
                               <Input
                                 type="number"
@@ -318,7 +320,7 @@ export default function POSDashboardPage() {
                                 className="flex-1"
                                 onClick={() => setOpeningState(null)}
                               >
-                                Cancel
+                                {t("common.cancel")}
                               </Button>
                               <Button
                                 className="flex-1"
@@ -328,7 +330,7 @@ export default function POSDashboardPage() {
                                 {openingState?.isOpening && (
                                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 )}
-                                Open
+                                {t("pos.openRegister").split(" ")[0]}
                               </Button>
                             </div>
                           </div>
@@ -344,7 +346,7 @@ export default function POSDashboardPage() {
                               })
                             }
                           >
-                            Open Register
+                            {t("pos.openRegister")}
                           </Button>
                         )}
                       </>
