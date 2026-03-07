@@ -10,20 +10,25 @@ interface ImeiCameraScannerProps {
   show?: boolean;
 }
 
-// BarcodeDetector type — not in TS lib by default
-declare class BarcodeDetector {
-  constructor(options?: { formats: string[] });
-  detect(image: ImageBitmapSource): Promise<Array<{ rawValue: string; format: string }>>;
-  static getSupportedFormats(): Promise<string[]>;
-}
-
-function isBarcodeDetectorSupported() {
-  return typeof window !== "undefined" && "BarcodeDetector" in window;
-}
-
 /** Check if camera is available (mobile or desktop with camera) */
 function isCameraAvailable() {
   return typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+}
+
+/**
+ * Get a BarcodeDetector instance — native on Chrome/Android,
+ * WASM-backed polyfill on iOS Safari / other browsers.
+ */
+async function getBarcodeDetector(
+  formats: string[]
+): Promise<{ detect(image: ImageBitmapSource): Promise<Array<{ rawValue: string; format: string }>> }> {
+  if (typeof window !== "undefined" && "BarcodeDetector" in window) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new (window as any).BarcodeDetector({ formats });
+  }
+  // Dynamically import the WASM-backed polyfill (only loaded on iOS/Safari)
+  const { BarcodeDetector } = await import("barcode-detector/ponyfill");
+  return new BarcodeDetector({ formats: formats as Array<"code_128" | "code_39" | "ean_13" | "ean_8" | "qr_code" | "itf"> });
 }
 
 export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProps) {
@@ -35,20 +40,13 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
-  const detectorRef = useRef<BarcodeDetector | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const zxingReaderRef = useRef<any>(null);
-  const scanControlsRef = useRef<{ stop: () => void } | null>(null);
+  const detectorRef = useRef<any>(null);
   const mountedRef = useRef(true);
 
   const stopCamera = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
-    if (scanControlsRef.current) {
-      try { scanControlsRef.current.stop(); } catch { /* ignore */ }
-      scanControlsRef.current = null;
-    }
-    zxingReaderRef.current = null;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -63,18 +61,18 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
     setScanning(false);
   }, [stopCamera]);
 
-  // Native BarcodeDetector scan loop (Chrome/Android)
-  const scanLoopNative = useCallback(() => {
+  // Single scan loop that works on all platforms (native + polyfill)
+  const scanLoop = useCallback(() => {
     const video = videoRef.current;
     const detector = detectorRef.current;
     if (!video || !detector || video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(scanLoopNative);
+      rafRef.current = requestAnimationFrame(scanLoop);
       return;
     }
 
     detector
       .detect(video)
-      .then((barcodes) => {
+      .then((barcodes: Array<{ rawValue: string }>) => {
         if (!mountedRef.current) return;
         for (const barcode of barcodes) {
           const digits = barcode.rawValue.replace(/\D/g, "");
@@ -89,30 +87,25 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
             return;
           }
         }
-        rafRef.current = requestAnimationFrame(scanLoopNative);
+        rafRef.current = requestAnimationFrame(scanLoop);
       })
       .catch(() => {
-        rafRef.current = requestAnimationFrame(scanLoopNative);
+        rafRef.current = requestAnimationFrame(scanLoop);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onScan, stopCamera, closeScanner]);
-
 
   const startCamera = useCallback(async () => {
     setError(null);
     setDetected(null);
     setScanning(false);
 
-    const useNative = isBarcodeDetectorSupported();
-
     try {
-      // Initialize the appropriate decoder
-      if (useNative) {
-        if (!detectorRef.current) {
-          detectorRef.current = new BarcodeDetector({
-            formats: ["code_128", "code_39", "ean_13", "ean_8", "qr_code", "itf"],
-          });
-        }
+      // Get BarcodeDetector (native or WASM polyfill)
+      if (!detectorRef.current) {
+        detectorRef.current = await getBarcodeDetector([
+          "code_128", "code_39", "ean_13", "ean_8", "qr_code", "itf",
+        ]);
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -125,69 +118,8 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
-
-        // Wait for video to have valid dimensions (needed on iOS Safari)
-        const video = videoRef.current;
-        if (video.videoWidth === 0 || video.videoHeight === 0) {
-          await new Promise<void>((resolve) => {
-            const onReady = () => {
-              video.removeEventListener("loadeddata", onReady);
-              resolve();
-            };
-            // If loadeddata already fired, check dimensions in rAF
-            if (video.readyState >= 2) {
-              resolve();
-            } else {
-              video.addEventListener("loadeddata", onReady);
-            }
-          });
-        }
-
         setScanning(true);
-
-        if (useNative) {
-          scanLoopNative();
-        } else {
-          // Use @zxing/browser for Safari/iOS fallback
-          const { BrowserMultiFormatReader } = await import("@zxing/browser");
-          const { BarcodeFormat, DecodeHintType } = await import("@zxing/library");
-
-          const hints = new Map();
-          hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-            BarcodeFormat.CODE_128,
-            BarcodeFormat.CODE_39,
-            BarcodeFormat.EAN_13,
-            BarcodeFormat.EAN_8,
-            BarcodeFormat.QR_CODE,
-            BarcodeFormat.ITF,
-          ]);
-          hints.set(DecodeHintType.TRY_HARDER, true);
-
-          const codeReader = new BrowserMultiFormatReader(hints);
-          zxingReaderRef.current = codeReader;
-
-          // Use scan() directly on the already-playing video element.
-          // decodeFromStream() re-initializes srcObject + play(), which
-          // causes the video to reset on iOS Safari and breaks scanning.
-          const controls = codeReader.scan(video, (result, err) => {
-            if (!mountedRef.current) return;
-            if (result) {
-              const digits = result.getText().replace(/\D/g, "");
-              if (digits.length === 15) {
-                setDetected(digits);
-                stopCamera();
-                setScanning(false);
-                setTimeout(() => {
-                  onScan(digits);
-                  closeScanner();
-                }, 800);
-              }
-            } else if (err && err.name !== "NotFoundException") {
-              console.error("[ImeiCameraScanner] ZXing decode error:", err);
-            }
-          });
-          scanControlsRef.current = controls;
-        }
+        scanLoop();
       }
     } catch (err) {
       const e = err as Error;
@@ -199,8 +131,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
         setError("Could not start camera: " + e.message);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanLoopNative]);
+  }, [scanLoop]);
 
   // Start camera when overlay opens
   useEffect(() => {
