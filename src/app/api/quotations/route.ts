@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
+import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
 import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate quotation number: QUO-YYYYMMDD-XXX
@@ -76,13 +77,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
-    for (const item of items) {
-      if (item.gstRate !== undefined && item.gstRate !== null && !VALID_GST_RATES.includes(Number(item.gstRate))) {
-        return NextResponse.json(
-          { error: `Invalid GST rate: ${item.gstRate}. Valid rates are: ${VALID_GST_RATES.join(", ")}` },
-          { status: 400 }
-        );
+    const saudiEnabled = isSaudiEInvoiceEnabled(session);
+
+    if (!saudiEnabled) {
+      const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
+      for (const item of items) {
+        if (item.gstRate !== undefined && item.gstRate !== null && !VALID_GST_RATES.includes(Number(item.gstRate))) {
+          return NextResponse.json(
+            { error: `Invalid GST rate: ${item.gstRate}. Valid rates are: ${VALID_GST_RATES.join(", ")}` },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -92,9 +97,9 @@ export async function POST(request: NextRequest) {
     const taxInclusive = isTaxInclusivePriceSession(session);
 
     // Build per-line gross amounts and taxable amounts (for tax-inclusive pricing)
-    const lineAmounts = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number }) => {
+    const lineAmounts = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; vatRate?: number }) => {
       const grossAmount = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
-      const taxRate = item.gstRate || 0;
+      const taxRate = saudiEnabled ? (item.vatRate !== undefined ? Number(item.vatRate) : SAUDI_VAT_RATE) : (item.gstRate || 0);
       const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(grossAmount, taxRate) : grossAmount;
       return { grossAmount, taxableAmount };
     });
@@ -102,20 +107,37 @@ export async function POST(request: NextRequest) {
     // Calculate subtotal (sum of tax-exclusive base amounts)
     const subtotal = lineAmounts.reduce((sum: number, la: { taxableAmount: number }) => sum + la.taxableAmount, 0);
 
-    // Compute GST
-    const orgGST = await getOrgGSTInfo(prisma, organizationId);
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
-      select: { gstin: true, gstStateCode: true },
-    });
-    // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
-    const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
-      taxableAmount: lineAmounts[idx].taxableAmount,
-      gstRate: item.gstRate || 0,
-      hsnCode: item.hsnCode || null,
-    }));
-    const gstResult = computeDocumentGST(orgGST, lineItemsForGST, customer?.gstin, customer?.gstStateCode);
-    const total = subtotal + gstResult.totalTax;
+    // Tax computation
+    let gstResult = { totalCgst: 0, totalSgst: 0, totalIgst: 0, totalTax: 0, placeOfSupply: null as string | null, isInterState: false, lineGST: [] as Array<{ hsnCode: string | null; gstRate: number; cgstRate: number; sgstRate: number; igstRate: number; cgstAmount: number; sgstAmount: number; igstAmount: number }> };
+    let totalVat: number | null = null;
+
+    if (saudiEnabled) {
+      // Saudi VAT: compute VAT on each line
+      let vatTotal = 0;
+      for (let idx = 0; idx < items.length; idx++) {
+        const taxableAmount = lineAmounts[idx].taxableAmount;
+        const rate = items[idx].vatRate !== undefined ? Number(items[idx].vatRate) : SAUDI_VAT_RATE;
+        vatTotal += Math.round(taxableAmount * rate) / 100;
+      }
+      totalVat = Math.round(vatTotal * 100) / 100;
+    } else {
+      // GST path
+      const orgGST = await getOrgGSTInfo(prisma, organizationId);
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        select: { gstin: true, gstStateCode: true },
+      });
+      // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
+      const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
+        taxableAmount: lineAmounts[idx].taxableAmount,
+        gstRate: item.gstRate || 0,
+        hsnCode: item.hsnCode || null,
+      }));
+      gstResult = computeDocumentGST(orgGST, lineItemsForGST, customer?.gstin, customer?.gstStateCode);
+    }
+
+    const totalTax = totalVat !== null ? totalVat : gstResult.totalTax;
+    const total = subtotal + totalTax;
 
     // Create the quotation
     const quotation = await prisma.quotation.create({
@@ -128,11 +150,12 @@ export async function POST(request: NextRequest) {
         status: "SENT",
         subtotal,
         total,
-        totalCgst: gstResult.totalCgst,
-        totalSgst: gstResult.totalSgst,
-        totalIgst: gstResult.totalIgst,
-        placeOfSupply: gstResult.placeOfSupply,
-        isInterState: gstResult.isInterState,
+        totalCgst: saudiEnabled ? 0 : gstResult.totalCgst,
+        totalSgst: saudiEnabled ? 0 : gstResult.totalSgst,
+        totalIgst: saudiEnabled ? 0 : gstResult.totalIgst,
+        placeOfSupply: saudiEnabled ? null : gstResult.placeOfSupply,
+        isInterState: saudiEnabled ? false : gstResult.isInterState,
+        totalVat: saudiEnabled ? totalVat : null,
         notes: notes || null,
         terms: terms || null,
         items: {
@@ -156,14 +179,14 @@ export async function POST(request: NextRequest) {
             unitPrice: item.unitPrice,
             discount: item.discount || 0,
             total: lineAmounts[idx].taxableAmount,
-            hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
-            gstRate: gstResult.lineGST[idx]?.gstRate || 0,
-            cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
-            sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
-            igstRate: gstResult.lineGST[idx]?.igstRate || 0,
-            cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
-            sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
-            igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
+            hsnCode: saudiEnabled ? null : (gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null),
+            gstRate: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.gstRate || 0),
+            cgstRate: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.cgstRate || 0),
+            sgstRate: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.sgstRate || 0),
+            igstRate: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.igstRate || 0),
+            cgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.cgstAmount || 0),
+            sgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.sgstAmount || 0),
+            igstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.igstAmount || 0),
           })),
         },
       },

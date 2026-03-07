@@ -169,6 +169,7 @@ export async function syncInvoiceRevenueJournal(
       totalCgst: true,
       totalSgst: true,
       totalIgst: true,
+      totalVat: true,
       branchId: true,
     },
   });
@@ -180,7 +181,8 @@ export async function syncInvoiceRevenueJournal(
   const totalCgst = Number(invoice.totalCgst);
   const totalSgst = Number(invoice.totalSgst);
   const totalIgst = Number(invoice.totalIgst);
-  const totalTax = totalCgst + totalSgst + totalIgst;
+  const totalVat = Number(invoice.totalVat || 0);
+  const totalTax = totalVat > 0 ? totalVat : (totalCgst + totalSgst + totalIgst);
 
   // Delete existing revenue journal entries for this invoice
   await tx.journalEntry.deleteMany({
@@ -200,24 +202,33 @@ export async function syncInvoiceRevenueJournal(
       { accountId: revenueAccount.id, description: "Sales Revenue", debit: 0, credit: subtotal },
     ];
 
-    // GST journal lines
+    // Tax journal lines
     if (totalTax > 0) {
-      if (totalCgst > 0) {
-        const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
-        if (cgstAccount) {
-          revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: totalCgst });
+      if (totalVat > 0) {
+        // Saudi VAT: single VAT output account
+        const vatAccount = await getSystemAccount(tx, organizationId, "2240");
+        if (vatAccount) {
+          revenueLines.push({ accountId: vatAccount.id, description: "VAT Output", debit: 0, credit: totalVat });
         }
-      }
-      if (totalSgst > 0) {
-        const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
-        if (sgstAccount) {
-          revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: totalSgst });
+      } else {
+        // GST: CGST/SGST/IGST accounts
+        if (totalCgst > 0) {
+          const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
+          if (cgstAccount) {
+            revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: totalCgst });
+          }
         }
-      }
-      if (totalIgst > 0) {
-        const igstAccount = await getSystemAccount(tx, organizationId, "2230");
-        if (igstAccount) {
-          revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: totalIgst });
+        if (totalSgst > 0) {
+          const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
+          if (sgstAccount) {
+            revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: totalSgst });
+          }
+        }
+        if (totalIgst > 0) {
+          const igstAccount = await getSystemAccount(tx, organizationId, "2230");
+          if (igstAccount) {
+            revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: totalIgst });
+          }
         }
       }
     }
@@ -252,6 +263,7 @@ export async function syncPurchaseJournal(
       totalCgst: true,
       totalSgst: true,
       totalIgst: true,
+      totalVat: true,
       branchId: true,
     },
   });
@@ -263,6 +275,7 @@ export async function syncPurchaseJournal(
   const totalCgst = Number(invoice.totalCgst);
   const totalSgst = Number(invoice.totalSgst);
   const totalIgst = Number(invoice.totalIgst);
+  const totalVat = Number(invoice.totalVat || 0);
 
   // Delete existing purchase journal entries
   await tx.journalEntry.deleteMany({
@@ -281,23 +294,32 @@ export async function syncPurchaseJournal(
       { accountId: apAccount.id, description: "Accounts Payable", debit: 0, credit: total },
     ];
 
-    // GST Input journal lines
-    if (totalCgst > 0) {
-      const cgstInput = await getSystemAccount(tx, organizationId, "1350");
-      if (cgstInput) {
-        purchaseLines.push({ accountId: cgstInput.id, description: "CGST Input", debit: totalCgst, credit: 0 });
+    // Tax Input journal lines
+    if (totalVat > 0) {
+      // Saudi VAT: single VAT input account
+      const vatInput = await getSystemAccount(tx, organizationId, "1380");
+      if (vatInput) {
+        purchaseLines.push({ accountId: vatInput.id, description: "VAT Input", debit: totalVat, credit: 0 });
       }
-    }
-    if (totalSgst > 0) {
-      const sgstInput = await getSystemAccount(tx, organizationId, "1360");
-      if (sgstInput) {
-        purchaseLines.push({ accountId: sgstInput.id, description: "SGST Input", debit: totalSgst, credit: 0 });
+    } else {
+      // GST: CGST/SGST/IGST input accounts
+      if (totalCgst > 0) {
+        const cgstInput = await getSystemAccount(tx, organizationId, "1350");
+        if (cgstInput) {
+          purchaseLines.push({ accountId: cgstInput.id, description: "CGST Input", debit: totalCgst, credit: 0 });
+        }
       }
-    }
-    if (totalIgst > 0) {
-      const igstInput = await getSystemAccount(tx, organizationId, "1370");
-      if (igstInput) {
-        purchaseLines.push({ accountId: igstInput.id, description: "IGST Input", debit: totalIgst, credit: 0 });
+      if (totalSgst > 0) {
+        const sgstInput = await getSystemAccount(tx, organizationId, "1360");
+        if (sgstInput) {
+          purchaseLines.push({ accountId: sgstInput.id, description: "SGST Input", debit: totalSgst, credit: 0 });
+        }
+      }
+      if (totalIgst > 0) {
+        const igstInput = await getSystemAccount(tx, organizationId, "1370");
+        if (igstInput) {
+          purchaseLines.push({ accountId: igstInput.id, description: "IGST Input", debit: totalIgst, credit: 0 });
+        }
       }
     }
 

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
+import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
 import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
@@ -85,13 +86,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
-    for (const item of items) {
-      if (item.gstRate !== undefined && item.gstRate !== null && !VALID_GST_RATES.includes(Number(item.gstRate))) {
-        return NextResponse.json(
-          { error: `Invalid GST rate: ${item.gstRate}. Valid rates are: ${VALID_GST_RATES.join(", ")}` },
-          { status: 400 }
-        );
+    const saudiEnabled = isSaudiEInvoiceEnabled(session);
+
+    if (!saudiEnabled) {
+      const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
+      for (const item of items) {
+        if (item.gstRate !== undefined && item.gstRate !== null && !VALID_GST_RATES.includes(Number(item.gstRate))) {
+          return NextResponse.json(
+            { error: `Invalid GST rate: ${item.gstRate}. Valid rates are: ${VALID_GST_RATES.join(", ")}` },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -121,9 +126,9 @@ export async function POST(request: NextRequest) {
     const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
 
     // Build per-line gross amounts and taxable amounts (for tax-inclusive pricing)
-    const lineAmounts = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number }) => {
+    const lineAmounts = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; vatRate?: number }) => {
       const grossAmount = item.quantity * item.unitCost * (1 - (item.discount || 0) / 100);
-      const taxRate = item.gstRate || 0;
+      const taxRate = saudiEnabled ? (item.vatRate !== undefined ? Number(item.vatRate) : SAUDI_VAT_RATE) : (item.gstRate || 0);
       const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(grossAmount, taxRate) : grossAmount;
       return { grossAmount, taxableAmount };
     });
@@ -133,32 +138,37 @@ export async function POST(request: NextRequest) {
 
     // Use a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
-      // Fetch org GST info and supplier GST details
-      const orgGST = await getOrgGSTInfo(tx, organizationId);
-      const supplier = await tx.supplier.findUnique({
-        where: { id: supplierId },
-        select: { gstin: true, gstStateCode: true },
-      });
+      let gstResult = { totalCgst: 0, totalSgst: 0, totalIgst: 0, totalTax: 0, placeOfSupply: null as string | null, isInterState: false, lineGST: [] as Array<{ hsnCode: string | null; gstRate: number; cgstRate: number; sgstRate: number; igstRate: number; cgstAmount: number; sgstAmount: number; igstAmount: number }> };
+      let totalVat: number | null = null;
 
-      // Build line items for GST computation
-      // NOTE: We do not multiply discount amount by conversionFactor here because unitCost should conceptually be for the selected unit.
-      const lineItemsForGST = items.map(
-        (item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
-          taxableAmount: lineAmounts[idx].taxableAmount,
-          gstRate: item.gstRate || 0,
-          hsnCode: item.hsnCode || null,
-        })
-      );
+      if (saudiEnabled) {
+        // Saudi VAT: compute 15% on each line
+        let vatTotal = 0;
+        for (let idx = 0; idx < items.length; idx++) {
+          const taxableAmount = lineAmounts[idx].taxableAmount;
+          const rate = items[idx].vatRate !== undefined ? Number(items[idx].vatRate) : SAUDI_VAT_RATE;
+          vatTotal += Math.round(taxableAmount * rate) / 100;
+        }
+        totalVat = Math.round(vatTotal * 100) / 100;
+      } else {
+        // GST path
+        const orgGST = await getOrgGSTInfo(tx, organizationId);
+        const supplier = await tx.supplier.findUnique({
+          where: { id: supplierId },
+          select: { gstin: true, gstStateCode: true },
+        });
+        const lineItemsForGST = items.map(
+          (item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
+            taxableAmount: lineAmounts[idx].taxableAmount,
+            gstRate: item.gstRate || 0,
+            hsnCode: item.hsnCode || null,
+          })
+        );
+        gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplier?.gstin, supplier?.gstStateCode);
+      }
 
-      // Compute GST
-      const gstResult = computeDocumentGST(
-        orgGST,
-        lineItemsForGST,
-        supplier?.gstin,
-        supplier?.gstStateCode
-      );
-
-      const total = subtotal + gstResult.totalTax;
+      const totalTax = totalVat !== null ? totalVat : gstResult.totalTax;
+      const total = subtotal + totalTax;
       const balanceDue = total;
 
       // Create the purchase invoice
@@ -174,11 +184,12 @@ export async function POST(request: NextRequest) {
           supplierInvoiceRef: supplierInvoiceRef || null,
           status: "RECEIVED",
           subtotal,
-          totalCgst: gstResult.totalCgst,
-          totalSgst: gstResult.totalSgst,
-          totalIgst: gstResult.totalIgst,
-          placeOfSupply: gstResult.placeOfSupply,
-          isInterState: gstResult.isInterState,
+          totalCgst: saudiEnabled ? 0 : gstResult.totalCgst,
+          totalSgst: saudiEnabled ? 0 : gstResult.totalSgst,
+          totalIgst: saudiEnabled ? 0 : gstResult.totalIgst,
+          placeOfSupply: saudiEnabled ? null : gstResult.placeOfSupply,
+          isInterState: saudiEnabled ? false : gstResult.isInterState,
+          totalVat: saudiEnabled ? totalVat : null,
           total,
           balanceDue,
           notes: notes || null,
@@ -203,14 +214,14 @@ export async function POST(request: NextRequest) {
               unitCost: item.unitCost,
               discount: item.discount || 0,
               total: lineAmounts[index].taxableAmount,
-              hsnCode: gstResult.lineGST[index].hsnCode,
-              gstRate: gstResult.lineGST[index].gstRate,
-              cgstRate: gstResult.lineGST[index].cgstRate,
-              sgstRate: gstResult.lineGST[index].sgstRate,
-              igstRate: gstResult.lineGST[index].igstRate,
-              cgstAmount: gstResult.lineGST[index].cgstAmount,
-              sgstAmount: gstResult.lineGST[index].sgstAmount,
-              igstAmount: gstResult.lineGST[index].igstAmount,
+              hsnCode: saudiEnabled ? null : (gstResult.lineGST[index]?.hsnCode || null),
+              gstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.gstRate || 0),
+              cgstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.cgstRate || 0),
+              sgstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.sgstRate || 0),
+              igstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.igstRate || 0),
+              cgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.cgstAmount || 0),
+              sgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.sgstAmount || 0),
+              igstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.igstAmount || 0),
             })),
           },
         },

@@ -467,6 +467,9 @@ model Quotation {
   placeOfSupply String?
   isInterState  Boolean @default(false)
 
+  // Saudi VAT
+  totalVat Decimal? @db.Decimal(12, 2)
+
   notes String?
   terms String?
 
@@ -1472,6 +1475,9 @@ model Expense {
   totalIgst     Decimal @default(0) @db.Decimal(12, 2)
   placeOfSupply String?
   isInterState  Boolean @default(false)
+
+  // Saudi VAT
+  totalVat Decimal? @db.Decimal(12, 2)
 
   notes          String?
   journalEntryId String?

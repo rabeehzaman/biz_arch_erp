@@ -36,18 +36,12 @@ const DEFAULT_ACCOUNTS: AccountDef[] = [
   { code: "1100", name: "Cash (النقدية)", accountType: "ASSET", accountSubType: "CASH", parentCode: "1000", isSystem: true },
   { code: "1200", name: "Bank Accounts (حسابات البنوك)", accountType: "ASSET", accountSubType: "BANK", parentCode: "1000", isSystem: true },
   { code: "1300", name: "Accounts Receivable (حسابات المدينين)", accountType: "ASSET", accountSubType: "ACCOUNTS_RECEIVABLE", parentCode: "1000", isSystem: true },
-  { code: "1350", name: "CGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
-  { code: "1360", name: "SGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
-  { code: "1370", name: "IGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
   { code: "1400", name: "Inventory (المخزون)", accountType: "ASSET", accountSubType: "INVENTORY", parentCode: "1000", isSystem: true },
   { code: "1500", name: "Fixed Assets (الأصول الثابتة)", accountType: "ASSET", accountSubType: "FIXED_ASSET", parentCode: "1000", isSystem: false },
 
   // LIABILITIES
   { code: "2000", name: "Liabilities (الالتزامات)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", isSystem: true },
   { code: "2100", name: "Accounts Payable (حسابات الدائنين)", accountType: "LIABILITY", accountSubType: "ACCOUNTS_PAYABLE", parentCode: "2000", isSystem: true },
-  { code: "2210", name: "CGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
-  { code: "2220", name: "SGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
-  { code: "2230", name: "IGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
   { code: "2500", name: "Long-Term Liabilities (الالتزامات طويلة الأجل)", accountType: "LIABILITY", accountSubType: "LONG_TERM_LIABILITY", parentCode: "2000", isSystem: false },
 
   // EQUITY
@@ -115,6 +109,47 @@ export async function seedDefaultCOA(
   await _createCashBankAccounts(tx, organizationId, accountMap);
 
   return accountMap;
+}
+
+// ─── GST Accounts ──────────────────────────────────────────────────────────
+// Call this when gstEnabled is toggled ON for an org (India GST: CGST/SGST/IGST)
+
+const GST_ACCOUNTS: AccountDef[] = [
+  { code: "1350", name: "CGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "1360", name: "SGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "1370", name: "IGST Input", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "2210", name: "CGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2220", name: "SGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2230", name: "IGST Output", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+];
+
+export async function seedGSTAccounts(
+  tx: PrismaTransactionClient,
+  organizationId: string
+) {
+  const sorted = [...GST_ACCOUNTS].sort((a, b) => a.code.localeCompare(b.code));
+
+  for (const acct of sorted) {
+    let parentId: string | null = null;
+    if (acct.parentCode) {
+      const parent = await tx.account.findFirst({ where: { organizationId, code: acct.parentCode } });
+      parentId = parent?.id ?? null;
+    }
+
+    await tx.account.upsert({
+      where: { organizationId_code: { organizationId, code: acct.code } },
+      update: {},
+      create: {
+        code: acct.code,
+        name: acct.name,
+        accountType: acct.accountType,
+        accountSubType: acct.accountSubType,
+        parentId,
+        isSystem: acct.isSystem,
+        organizationId,
+      },
+    });
+  }
 }
 
 // ─── Saudi VAT Accounts ────────────────────────────────────────────────────

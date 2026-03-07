@@ -499,8 +499,8 @@ export async function POST(request: NextRequest) {
 
         // Tax journal lines
         if (saudiEnabled && totalVat && totalVat > 0) {
-          // Saudi VAT: use a single VAT output account (2210)
-          const vatAccount = await getSystemAccount(tx, organizationId, "2210");
+          // Saudi VAT: use VAT output account (2240)
+          const vatAccount = await getSystemAccount(tx, organizationId, "2240");
           if (vatAccount) revenueLines.push({ accountId: vatAccount.id, description: "VAT Output", debit: 0, credit: totalVat });
         } else {
           // GST journal lines

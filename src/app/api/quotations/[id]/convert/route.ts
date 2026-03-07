@@ -86,7 +86,7 @@ export async function POST(
       const invoiceDate = toMidnightUTC(); // Use current date for invoice
       const dueDate = toMidnightUTC(new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000)); // 30 days from now
 
-      // Create invoice from quotation (carry GST fields)
+      // Create invoice from quotation (carry GST/VAT fields)
       const newInvoice = await tx.invoice.create({
         data: {
           organizationId,
@@ -101,6 +101,7 @@ export async function POST(
           totalCgst: quotation.totalCgst,
           totalSgst: quotation.totalSgst,
           totalIgst: quotation.totalIgst,
+          totalVat: quotation.totalVat,
           placeOfSupply: quotation.placeOfSupply,
           isInterState: quotation.isInterState,
           notes: quotation.notes,

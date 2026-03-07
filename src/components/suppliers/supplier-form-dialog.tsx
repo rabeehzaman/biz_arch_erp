@@ -217,7 +217,7 @@ export function SupplierFormDialog({
                                 />
                             </div>
                         </div>
-                        {session?.user?.gstEnabled && (
+                        {session?.user?.gstEnabled && !(session?.user as any)?.saudiEInvoiceEnabled && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
                                     <Label htmlFor="sup-gstin">GSTIN</Label>

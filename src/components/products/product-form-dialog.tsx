@@ -282,7 +282,7 @@ export function ProductFormDialog({
                                 />
                             </div>
                         </div>
-                        {session?.user?.gstEnabled && (
+                        {session?.user?.gstEnabled && !(session?.user as any)?.saudiEInvoiceEnabled && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
                                     <Label htmlFor="prod-hsnCode">HSN Code</Label>

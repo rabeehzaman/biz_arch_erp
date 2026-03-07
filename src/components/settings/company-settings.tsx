@@ -16,12 +16,15 @@ import { Building2, CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_SETTINGS, type CompanySettingsFormData } from "@/lib/validations/settings";
 import { useLanguage } from "@/lib/i18n";
+import { useSession } from "next-auth/react";
 
 export function CompanySettings() {
   const [formData, setFormData] = useState<CompanySettingsFormData>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { t } = useLanguage();
+  const { data: session } = useSession();
+  const saudiEnabled = !!(session?.user as any)?.saudiEInvoiceEnabled;
 
   useEffect(() => {
     fetchSettings();
@@ -204,19 +207,21 @@ export function CompanySettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="companyGstNumber">{t("settings.gstNumber")}</Label>
-              <Input
-                id="companyGstNumber"
-                name="companyGstNumber"
-                value={formData.companyGstNumber}
-                onChange={handleChange}
-                placeholder="22AAAAA0000A1Z5"
-              />
-              <p className="text-xs text-slate-500">
-                Format: 22AAAAA0000A1Z5 (15 characters)
-              </p>
-            </div>
+            {!saudiEnabled && (
+              <div className="grid gap-2">
+                <Label htmlFor="companyGstNumber">{t("settings.gstNumber")}</Label>
+                <Input
+                  id="companyGstNumber"
+                  name="companyGstNumber"
+                  value={formData.companyGstNumber}
+                  onChange={handleChange}
+                  placeholder="22AAAAA0000A1Z5"
+                />
+                <p className="text-xs text-slate-500">
+                  Format: 22AAAAA0000A1Z5 (15 characters)
+                </p>
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="bankName">{t("settings.bankName")}</Label>

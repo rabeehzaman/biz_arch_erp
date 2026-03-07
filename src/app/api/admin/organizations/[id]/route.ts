@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedDefaultCOA, seedSaudiVATAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
+import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
 import { validateTRN } from "@/lib/saudi-vat/calculator";
 
 export async function GET(
@@ -252,7 +252,7 @@ export async function PUT(
 
         // Seed GST accounts if enabling GST
         if (gstEnabled) {
-          await seedDefaultCOA(tx as never, id);
+          await seedGSTAccounts(tx as never, id);
         }
 
         // Seed Saudi VAT accounts if enabling Saudi for first time

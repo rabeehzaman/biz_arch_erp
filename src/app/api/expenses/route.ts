@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
+import { getOrgId, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
 import { generateAutoNumber } from "@/lib/accounting/auto-number";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 
 export async function GET() {
   try {
@@ -69,25 +70,41 @@ export async function POST(request: NextRequest) {
       0
     );
 
-    // Compute GST for expense items
-    const orgGST = await getOrgGSTInfo(prisma, organizationId);
-    let supplierGstin: string | null = null;
-    let supplierStateCode: string | null = null;
-    if (supplierId) {
-      const supplier = await prisma.supplier.findUnique({
-        where: { id: supplierId },
-        select: { gstin: true, gstStateCode: true },
-      });
-      supplierGstin = supplier?.gstin ?? null;
-      supplierStateCode = supplier?.gstStateCode ?? null;
+    const saudiEnabled = isSaudiEInvoiceEnabled(session);
+
+    // Compute tax for expense items
+    let gstResult = { totalCgst: 0, totalSgst: 0, totalIgst: 0, totalTax: 0, placeOfSupply: null as string | null, isInterState: false, lineGST: [] as Array<{ hsnCode: string | null; gstRate: number; cgstRate: number; sgstRate: number; igstRate: number; cgstAmount: number; sgstAmount: number; igstAmount: number }> };
+    let totalVat: number | null = null;
+
+    if (saudiEnabled) {
+      // Saudi VAT: compute VAT per line
+      let vatTotal = 0;
+      for (const item of items) {
+        const rate = item.vatRate !== undefined ? Number(item.vatRate) : SAUDI_VAT_RATE;
+        vatTotal += item.amount * rate / 100;
+      }
+      totalVat = Math.round(vatTotal * 100) / 100;
+    } else {
+      const orgGST = await getOrgGSTInfo(prisma, organizationId);
+      let supplierGstin: string | null = null;
+      let supplierStateCode: string | null = null;
+      if (supplierId) {
+        const supplier = await prisma.supplier.findUnique({
+          where: { id: supplierId },
+          select: { gstin: true, gstStateCode: true },
+        });
+        supplierGstin = supplier?.gstin ?? null;
+        supplierStateCode = supplier?.gstStateCode ?? null;
+      }
+      const lineItemsForGST = items.map((item: { amount: number; gstRate?: number }) => ({
+        taxableAmount: item.amount,
+        gstRate: item.gstRate || 0,
+        hsnCode: null,
+      }));
+      gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplierGstin, supplierStateCode);
     }
-    const lineItemsForGST = items.map((item: { amount: number; gstRate?: number }) => ({
-      taxableAmount: item.amount,
-      gstRate: item.gstRate || 0,
-      hsnCode: null,
-    }));
-    const gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplierGstin, supplierStateCode);
-    const total = subtotal + gstResult.totalTax;
+    const totalTax = totalVat !== null ? totalVat : gstResult.totalTax;
+    const total = subtotal + totalTax;
 
     const expense = await prisma.expense.create({
       data: {
@@ -97,11 +114,12 @@ export async function POST(request: NextRequest) {
         description: description || null,
         subtotal,
         total,
-        totalCgst: gstResult.totalCgst,
-        totalSgst: gstResult.totalSgst,
-        totalIgst: gstResult.totalIgst,
-        placeOfSupply: gstResult.placeOfSupply,
-        isInterState: gstResult.isInterState,
+        totalCgst: saudiEnabled ? 0 : gstResult.totalCgst,
+        totalSgst: saudiEnabled ? 0 : gstResult.totalSgst,
+        totalIgst: saudiEnabled ? 0 : gstResult.totalIgst,
+        placeOfSupply: saudiEnabled ? null : gstResult.placeOfSupply,
+        isInterState: saudiEnabled ? false : gstResult.isInterState,
+        totalVat: saudiEnabled ? totalVat : null,
         notes: notes || null,
         organizationId,
         items: {
@@ -110,10 +128,10 @@ export async function POST(request: NextRequest) {
               accountId: item.accountId,
               description: item.description,
               amount: item.amount,
-              gstRate: gstResult.lineGST[idx]?.gstRate || 0,
-              cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
-              sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
-              igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
+              gstRate: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.gstRate || 0),
+              cgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.cgstAmount || 0),
+              sgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.sgstAmount || 0),
+              igstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.igstAmount || 0),
               organizationId,
             })
           ),

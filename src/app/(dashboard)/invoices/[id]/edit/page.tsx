@@ -53,6 +53,7 @@ interface LineItem {
   discount: number;
   gstRate: number;
   hsnCode: string;
+  vatRate: number;
 }
 
 export default function EditInvoicePage({
@@ -132,6 +133,7 @@ export default function EditInvoicePage({
           discount: 0,
           gstRate: Number(product.gstRate) || 0,
           hsnCode: product.hsnCode || "",
+          vatRate: 15,
         },
       ];
     });
@@ -197,7 +199,7 @@ export default function EditInvoicePage({
           paymentType: data.paymentType || "CASH",
         });
         setLineItems(
-          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitPrice: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
+          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitPrice: number; discount: number; gstRate?: number; hsnCode?: string; vatRate?: number }) => ({
             id: item.id,
             productId: item.product?.id || "",
             quantity: Number(item.quantity),
@@ -207,6 +209,7 @@ export default function EditInvoicePage({
             discount: Number(item.discount),
             gstRate: Number(item.gstRate) || 0,
             hsnCode: item.hsnCode || "",
+            vatRate: Number(item.vatRate) || 0,
           }))
         );
       } else {
@@ -235,6 +238,7 @@ export default function EditInvoicePage({
         discount: 0,
         gstRate: 0,
         hsnCode: "",
+        vatRate: saudiEnabled ? 15 : 0,
       },
     ]);
   };
@@ -266,6 +270,7 @@ export default function EditInvoicePage({
             unitPrice: Number(product.price),
             gstRate: Number(product.gstRate) || 0,
             hsnCode: product.hsnCode || "",
+            vatRate: saudiEnabled ? 15 : 0,
           };
         }
       }
@@ -312,6 +317,7 @@ export default function EditInvoicePage({
             discount: 0,
             gstRate: 0,
             hsnCode: "",
+            vatRate: 0,
           },
         ]);
       }, 0);
@@ -319,12 +325,13 @@ export default function EditInvoicePage({
   };
 
   const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
 
   const calculateSubtotal = () => {
     return lineItems.reduce((sum, item) => {
       const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
       if (taxInclusive) {
-        const rate = item.gstRate || 0;
+        const rate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
         return sum + (rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross);
       }
       return sum + gross;
@@ -334,7 +341,7 @@ export default function EditInvoicePage({
   const calculateTax = () => {
     return lineItems.reduce((sum, item) => {
       const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      const rate = item.gstRate || 0;
+      const rate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
       if (taxInclusive) {
         const base = rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross;
         return sum + (base * rate) / 100;
@@ -384,6 +391,7 @@ export default function EditInvoicePage({
               discount: item.discount,
               gstRate: item.gstRate,
               hsnCode: item.hsnCode,
+              ...(saudiEnabled && { vatRate: item.vatRate ?? 15 }),
             };
           }),
         }),
@@ -540,8 +548,9 @@ export default function EditInvoicePage({
                         )}
                         <TableHead className="w-[12%] font-semibold">Unit Price *</TableHead>
                         <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
-                        {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
-                        {session?.user?.gstEnabled ? (
+                        {session?.user?.gstEnabled && !saudiEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
+                        {saudiEnabled && <TableHead className="w-[8%] font-semibold">VAT %</TableHead>}
+                        {(session?.user?.gstEnabled || saudiEnabled) ? (
                           <>
                             <TableHead className="text-right font-semibold">Gross Amount</TableHead>
                             <TableHead className="text-right font-semibold">Net Amount</TableHead>
@@ -663,7 +672,7 @@ export default function EditInvoicePage({
                                 placeholder="0"
                               />
                             </TableCell>
-                            {session?.user?.gstEnabled && (
+                            {session?.user?.gstEnabled && !saudiEnabled && (
                               <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                 <Input
                                   type="number"
@@ -680,7 +689,24 @@ export default function EditInvoicePage({
                                 />
                               </TableCell>
                             )}
-                            {session?.user?.gstEnabled ? (
+                            {saudiEnabled && (
+                              <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                                <Input
+                                  type="number"
+                                  onFocus={(e) => e.target.select()}
+                                  min="0"
+                                  max="100"
+                                  step="0.01"
+                                  value={item.vatRate || ""}
+                                  onChange={(e) =>
+                                    updateLineItem(item.id, "vatRate", parseFloat(e.target.value) || 0)
+                                  }
+                                  className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                  placeholder="15"
+                                />
+                              </TableCell>
+                            )}
+                            {(session?.user?.gstEnabled || saudiEnabled) ? (
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                   {symbol}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
@@ -689,7 +715,7 @@ export default function EditInvoicePage({
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                                  {symbol}{((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                                  {symbol}{((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0)) / 100)).toFixed(2)}
                                 </TableCell>
                               </>
                             ) : (
@@ -726,7 +752,8 @@ export default function EditInvoicePage({
                     const availableStock = product?.availableStock ?? 0;
                     const hasStockShortfall = item.productId && item.quantity > availableStock;
                     const lineGross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-                    const lineNet = lineGross * (1 + (item.gstRate || 0) / 100);
+                    const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
+                    const lineNet = lineGross * (1 + taxRate / 100);
 
                     return (
                       <div key={item.id} className="p-3 space-y-3">
@@ -804,7 +831,7 @@ export default function EditInvoicePage({
                               placeholder="0"
                             />
                           </div>
-                          {session?.user?.gstEnabled && (
+                          {session?.user?.gstEnabled && !saudiEnabled && (
                             <div>
                               <Label className="text-xs text-slate-500">GST %</Label>
                               <Input
@@ -818,6 +845,23 @@ export default function EditInvoicePage({
                                   updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
                                 }
                                 placeholder="0"
+                              />
+                            </div>
+                          )}
+                          {saudiEnabled && (
+                            <div>
+                              <Label className="text-xs text-slate-500">VAT %</Label>
+                              <Input
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={item.vatRate || ""}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, "vatRate", parseFloat(e.target.value) || 0)
+                                }
+                                placeholder="15"
                               />
                             </div>
                           )}
@@ -845,8 +889,8 @@ export default function EditInvoicePage({
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span className="text-sm font-semibold">
-                            {session?.user?.gstEnabled
-                              ? `${symbol}${lineNet.toLocaleString("en-IN")}`
+                            {(session?.user?.gstEnabled || saudiEnabled)
+                              ? `${symbol}${lineNet.toFixed(2)}`
                               : `${symbol}${lineGross.toLocaleString("en-IN")}`}
                           </span>
                         </div>
@@ -902,8 +946,8 @@ export default function EditInvoicePage({
                   </div>
                   {calculateTax() > 0 && (
                     <div className="flex justify-between text-sm text-slate-500">
-                      <span>GST</span>
-                      <span>{symbol}{calculateTax().toLocaleString("en-IN")}</span>
+                      <span>{saudiEnabled ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
+                      <span>{symbol}{calculateTax().toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
