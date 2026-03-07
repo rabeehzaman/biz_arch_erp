@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
@@ -75,7 +76,7 @@ export default function EditQuotationPage({
   const { symbol } = useCurrency();
   const { unitConversions } = useUnitConversions();
 
-  const formRef = useRef<HTMLFormElement>(null);
+  const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const focusQuantity = useCallback((itemId: string) => {
@@ -506,6 +507,7 @@ export default function EditQuotationPage({
                                     return [baseOption, ...alternateOptions];
                                   })()}
                                   disabled={!item.productId}
+                                  onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                                 />
                               </TableCell>
                             )}
@@ -711,6 +713,7 @@ export default function EditQuotationPage({
                                   return [baseOption, ...alternateOptions];
                                 })()}
                                 disabled={!item.productId}
+                                onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                               />
                             </div>
                           )}

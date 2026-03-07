@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 
 interface Account {
   id: string;
@@ -29,6 +30,7 @@ interface Line {
 
 export default function NewJournalEntryPage() {
   const router = useRouter();
+  const { containerRef: formRef } = useEnterToTab();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -128,7 +130,7 @@ export default function NewJournalEntryPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form ref={formRef} onSubmit={handleSubmit}>
           <Card>
             <CardHeader>
               <CardTitle>Entry Details</CardTitle>

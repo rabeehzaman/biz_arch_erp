@@ -315,6 +315,7 @@ export default function NewCreditNotePage() {
                     }}
                     required
                     autoFocus
+                    onSelectFocusNext={(triggerRef: any) => focusNextFocusable(triggerRef)}
                   />
                 </div>
 
@@ -430,6 +431,7 @@ export default function NewCreditNotePage() {
                                 return [baseOption, ...alternateOptions];
                               })()}
                               disabled={!item.productId}
+                              onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                             />
                           </div>
                         )}
@@ -466,6 +468,7 @@ export default function NewCreditNotePage() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
                                 e.preventDefault();
+                                e.stopPropagation();
                                 const isLastItem = index === lineItems.length - 1;
                                 if (isLastItem) {
                                   addLineItem(true);

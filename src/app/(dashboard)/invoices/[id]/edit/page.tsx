@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
@@ -82,7 +83,8 @@ export default function EditInvoicePage({
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
-  const formRef = useRef<HTMLFormElement>(null);
+  const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
+  const paymentTypeRef = useRef<HTMLButtonElement>(null);
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const focusQuantity = useCallback((itemId: string) => {
@@ -316,17 +318,28 @@ export default function EditInvoicePage({
     }
   };
 
+  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+
   const calculateSubtotal = () => {
-    return lineItems.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice * (1 - item.discount / 100),
-      0
-    );
+    return lineItems.reduce((sum, item) => {
+      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      if (taxInclusive) {
+        const rate = item.gstRate || 0;
+        return sum + (rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross);
+      }
+      return sum + gross;
+    }, 0);
   };
 
   const calculateTax = () => {
     return lineItems.reduce((sum, item) => {
-      const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      const rate = item.gstRate || 0;
+      if (taxInclusive) {
+        const base = rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross;
+        return sum + (base * rate) / 100;
+      }
+      return sum + (gross * rate) / 100;
     }, 0);
   };
 
@@ -476,11 +489,12 @@ export default function EditInvoicePage({
                     <Label htmlFor="paymentType">Payment Type *</Label>
                     <Select
                       value={formData.paymentType}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, paymentType: value })
-                      }
+                      onValueChange={(value) => {
+                        setFormData({ ...formData, paymentType: value });
+                        setTimeout(() => focusNextFocusable(paymentTypeRef), 10);
+                      }}
                     >
-                      <SelectTrigger id="paymentType">
+                      <SelectTrigger id="paymentType" ref={paymentTypeRef}>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -608,6 +622,7 @@ export default function EditInvoicePage({
                                     return [baseOption, ...alternateOptions];
                                   })()}
                                   disabled={!item.productId}
+                                  onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                                 />
                               </TableCell>
                             )}
@@ -822,6 +837,7 @@ export default function EditInvoicePage({
                                   return [baseOption, ...alternateOptions];
                                 })()}
                                 disabled={!item.productId}
+                                onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                               />
                             </div>
                           )}

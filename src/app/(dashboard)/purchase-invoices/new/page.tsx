@@ -572,6 +572,7 @@ export default function NewPurchaseInvoicePage() {
                                     return [baseOption, ...alternateOptions];
                                   })()}
                                   disabled={!item.productId}
+                                  onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                                 />
                               </TableCell>
                             )}
@@ -893,6 +894,7 @@ export default function NewPurchaseInvoicePage() {
                                   return [baseOption, ...alternateOptions];
                                 })()}
                                 disabled={!item.productId}
+                                onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                               />
                             </div>
                           )}

@@ -330,6 +330,7 @@ export default function NewDebitNotePage() {
                     onSupplierCreated={fetchSuppliers}
                     required
                     autoFocus
+                    onSelectFocusNext={(triggerRef: any) => focusNextFocusable(triggerRef)}
                   />
                 </div>
 
@@ -448,6 +449,7 @@ export default function NewDebitNotePage() {
                                 return [baseOption, ...alternateOptions];
                               })()}
                               disabled={!item.productId}
+                              onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                             />
                           </div>
                         )}

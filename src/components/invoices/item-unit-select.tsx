@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +26,7 @@ interface ItemUnitSelectProps {
     required?: boolean;
     disabled?: boolean;
     className?: string; // Add className prop for flexibility
-    onSelectFocusNext?: () => void;
+    onSelectFocusNext?: (triggerRef: React.RefObject<HTMLButtonElement | null>) => void;
 }
 
 export function ItemUnitSelect({
@@ -51,7 +51,7 @@ export function ItemUnitSelect({
         onValueChange(newValue);
         if (onSelectFocusNext) {
             setTimeout(() => {
-                onSelectFocusNext();
+                onSelectFocusNext(triggerRef);
             }, 10);
         }
     };

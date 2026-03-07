@@ -101,6 +101,7 @@ export default function NewInvoicePage() {
   const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const saveAndNew = useRef(false);
+  const paymentTypeRef = useRef<HTMLButtonElement>(null);
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
@@ -352,25 +353,29 @@ export default function NewInvoicePage() {
     }));
   };
 
+  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
+  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+
   const calculateSubtotal = () => {
-    return lineItems.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice * (1 - item.discount / 100),
-      0
-    );
+    return lineItems.reduce((sum, item) => {
+      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      if (taxInclusive) {
+        const rate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
+        return sum + (rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross);
+      }
+      return sum + gross;
+    }, 0);
   };
 
-  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
-
   const calculateTax = () => {
-    if (saudiEnabled) {
-      return lineItems.reduce((sum, item) => {
-        const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
-        return sum + (lineTotal * (item.vatRate || 0)) / 100;
-      }, 0);
-    }
     return lineItems.reduce((sum, item) => {
-      const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      const rate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
+      if (taxInclusive) {
+        const base = rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross;
+        return sum + (base * rate) / 100;
+      }
+      return sum + (gross * rate) / 100;
     }, 0);
   };
 
@@ -534,11 +539,12 @@ export default function NewInvoicePage() {
                     <Label htmlFor="paymentType">Payment Type *</Label>
                     <Select
                       value={formData.paymentType}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, paymentType: value })
-                      }
+                      onValueChange={(value) => {
+                        setFormData({ ...formData, paymentType: value });
+                        setTimeout(() => focusNextFocusable(paymentTypeRef), 10);
+                      }}
                     >
-                      <SelectTrigger id="paymentType">
+                      <SelectTrigger id="paymentType" ref={paymentTypeRef}>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -683,6 +689,7 @@ export default function NewInvoicePage() {
                                       return [baseOption, ...alternateOptions];
                                     })()}
                                     disabled={!item.productId}
+                                    onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                                   />
                                 </TableCell>
                               )}
@@ -1000,6 +1007,7 @@ export default function NewInvoicePage() {
                                   return [baseOption, ...alternateOptions];
                                 })()}
                                 disabled={!item.productId}
+                                onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                               />
                             </div>
                           )}
@@ -1081,6 +1089,9 @@ export default function NewInvoicePage() {
                 <div className="space-y-2 max-w-xs ml-auto">
                   {saudiEnabled && (
                     <div className="text-xs text-slate-500 text-right mb-2 font-medium">VAT Invoice (ZATCA Phase 1)</div>
+                  )}
+                  {taxInclusive && (
+                    <div className="text-xs text-blue-600 text-right mb-2 font-medium">Prices include tax</div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>

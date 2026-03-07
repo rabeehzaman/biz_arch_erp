@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
@@ -76,7 +77,7 @@ export default function EditPurchaseInvoicePage({
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
-  const formRef = useRef<HTMLFormElement>(null);
+  const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const focusQuantity = useCallback((itemId: string) => {
@@ -520,6 +521,7 @@ export default function EditPurchaseInvoicePage({
                                     return [baseOption, ...alternateOptions];
                                   })()}
                                   disabled={!item.productId}
+                                  onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                                 />
                               </TableCell>
                             )}
@@ -725,6 +727,7 @@ export default function EditPurchaseInvoicePage({
                                   return [baseOption, ...alternateOptions];
                                 })()}
                                 disabled={!item.productId}
+                                onSelectFocusNext={(ref) => focusNextFocusable(ref)}
                               />
                             </div>
                           )}
