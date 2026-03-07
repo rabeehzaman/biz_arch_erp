@@ -24,9 +24,13 @@ export function generateReceiptHtml(data: ReceiptData): string {
   body {
     width: 80mm;
     padding: 0 4mm;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Noto Sans Arabic', sans-serif;
     font-size: 11px;
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  img {
+    max-width: 100%;
   }
 </style>
 </head>
@@ -57,21 +61,35 @@ export function printReceipt(html: string): void {
 
   // Wait for content to render before printing
   iframe.contentWindow?.addEventListener("afterprint", () => {
-    document.body.removeChild(iframe);
+    if (iframe.parentNode) document.body.removeChild(iframe);
   });
 
+  // Wait for all images (logo, QR) to load before printing
+  const waitAndPrint = () => {
+    const images = doc.querySelectorAll("img");
+    const imagePromises = Array.from(images).map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve(); // Don't block print on failed images
+      });
+    });
+
+    Promise.all(imagePromises).then(() => {
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error("Print failed:", e);
+        }
+        // Fallback cleanup if afterprint doesn't fire
+        setTimeout(() => {
+          if (iframe.parentNode) document.body.removeChild(iframe);
+        }, 5000);
+      }, 100);
+    });
+  };
+
   // Small delay to ensure styles are applied
-  setTimeout(() => {
-    try {
-      iframe.contentWindow?.print();
-    } catch (e) {
-      console.error("Print failed:", e);
-    }
-    // Fallback cleanup if afterprint doesn't fire (some browsers)
-    setTimeout(() => {
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe);
-      }
-    }, 5000);
-  }, 250);
+  setTimeout(waitAndPrint, 150);
 }

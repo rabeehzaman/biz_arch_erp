@@ -55,6 +55,7 @@ interface OrganizationDetails {
     brandColor: string | null;
     language: string;
     currency: string;
+    posAccountingMode: string;
     createdAt: string;
     users: Array<{
         id: string;
@@ -107,6 +108,7 @@ export default function OrganizationDetailsPage() {
     const [brandColor, setBrandColor] = useState("");
     const [language, setLanguage] = useState("en");
     const [currency, setCurrency] = useState("INR");
+    const [posAccountingMode, setPosAccountingMode] = useState("DIRECT");
     const [saving, setSaving] = useState(false);
 
     // Delete state
@@ -162,6 +164,7 @@ export default function OrganizationDetailsPage() {
         setBrandColor(data.brandColor || "");
         setLanguage(data.language || "en");
         setCurrency(data.currency || "INR");
+        setPosAccountingMode(data.posAccountingMode || "DIRECT");
     };
 
     const fetchOrganization = useCallback(async () => {
@@ -261,6 +264,7 @@ export default function OrganizationDetailsPage() {
                     brandColor: brandColor || null,
                     language,
                     currency,
+                    posAccountingMode,
                 }),
             });
 
@@ -858,6 +862,30 @@ export default function OrganizationDetailsPage() {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* POS Accounting Mode */}
+                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                        <div className="space-y-0.5">
+                                            <Label className="flex items-center gap-2">
+                                                <Receipt className="h-4 w-4" />
+                                                POS Accounting Mode
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground max-w-md">
+                                                <strong>Direct:</strong> POS payments go directly to Cash/Bank in real-time.
+                                                <br />
+                                                <strong>Clearing Account:</strong> Payments are held in &quot;POS Undeposited Funds&quot; until session close, when they are transferred to a selected account.
+                                            </p>
+                                        </div>
+                                        <Select value={posAccountingMode} onValueChange={setPosAccountingMode}>
+                                            <SelectTrigger className="w-56">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="DIRECT">Direct (Real-time)</SelectItem>
+                                                <SelectItem value="CLEARING_ACCOUNT">Clearing Account</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </TabsContent>
 
                                 {/* INVOICE & PDF TAB */}

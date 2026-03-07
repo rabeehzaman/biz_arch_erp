@@ -42,6 +42,9 @@ model Organization {
   pdfFooterImageUrl     String?  // Edge-to-edge footer image URL for A4 invoices
   brandColor            String?  // Hex color for PDF branding, e.g. "#2a3b38"
 
+  // POS Accounting
+  posAccountingMode     String   @default("DIRECT")  // "DIRECT" or "CLEARING_ACCOUNT"
+
   // Localization
   language              String   @default("en")  // "en" or "ar" — org-wide UI language
   currency              String   @default("INR") // "INR" or "SAR" — org-wide currency
@@ -1344,6 +1347,7 @@ enum JournalSourceType {
   DEBIT_NOTE
   TRANSFER
   OPENING_BALANCE
+  POS_SESSION_CLOSE
 }
 
 enum ExpenseStatus {
@@ -1359,6 +1363,7 @@ enum CashBankTransactionType {
   TRANSFER_IN
   TRANSFER_OUT
   OPENING_BALANCE
+  ADJUSTMENT
 }
 
 // ==================== CHART OF ACCOUNTS ====================

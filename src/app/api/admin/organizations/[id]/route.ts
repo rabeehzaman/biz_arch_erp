@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedDefaultCOA, seedSaudiVATAccounts } from "@/lib/accounting/seed-coa";
+import { seedDefaultCOA, seedSaudiVATAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
 import { validateTRN } from "@/lib/saudi-vat/calculator";
 
 export async function GET(
@@ -97,6 +97,7 @@ export async function PUT(
       pdfHeaderImageUrl,
       pdfFooterImageUrl,
       brandColor,
+      posAccountingMode,
     } = body;
 
     // Basic field update validation
@@ -127,6 +128,14 @@ export async function PUT(
     if (brandColor && !/^#[0-9a-fA-F]{6}$/.test(brandColor)) {
       return NextResponse.json(
         { error: "Brand color must be a valid hex color (e.g. #2a3b38)" },
+        { status: 400 }
+      );
+    }
+
+    // Validate POS accounting mode
+    if (posAccountingMode !== undefined && !["DIRECT", "CLEARING_ACCOUNT"].includes(posAccountingMode)) {
+      return NextResponse.json(
+        { error: "POS accounting mode must be 'DIRECT' or 'CLEARING_ACCOUNT'" },
         { status: 400 }
       );
     }
@@ -187,6 +196,16 @@ export async function PUT(
       seedVATAccounts = !current?.saudiEInvoiceEnabled;
     }
 
+    // Check if enabling POS clearing account for the first time
+    let seedPOSAccounts = false;
+    if (posAccountingMode === "CLEARING_ACCOUNT") {
+      const current = await prisma.organization.findUnique({
+        where: { id },
+        select: { posAccountingMode: true },
+      });
+      seedPOSAccounts = current?.posAccountingMode !== "CLEARING_ACCOUNT";
+    }
+
     // Build update data
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
@@ -220,6 +239,7 @@ export async function PUT(
     if (pdfHeaderImageUrl !== undefined) updateData.pdfHeaderImageUrl = pdfHeaderImageUrl || null;
     if (pdfFooterImageUrl !== undefined) updateData.pdfFooterImageUrl = pdfFooterImageUrl || null;
     if (brandColor !== undefined) updateData.brandColor = brandColor || null;
+    if (posAccountingMode !== undefined) updateData.posAccountingMode = posAccountingMode;
 
     const organization = await prisma.$transaction(
       async (tx) => {
@@ -236,6 +256,11 @@ export async function PUT(
         // Seed Saudi VAT accounts if enabling Saudi for first time
         if (seedVATAccounts) {
           await seedSaudiVATAccounts(tx as never, id);
+        }
+
+        // Seed POS clearing accounts if enabling clearing account mode for first time
+        if (seedPOSAccounts) {
+          await seedPOSClearingAccounts(tx as never, id);
         }
 
         // Upsert invoice PDF format setting

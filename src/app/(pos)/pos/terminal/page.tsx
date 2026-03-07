@@ -24,6 +24,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { PageAnimation } from "@/components/ui/page-animation";
 
 import { cn } from "@/lib/utils";
@@ -143,6 +151,26 @@ function POSTerminalContent() {
   const [showHeldSheet, setShowHeldSheet] = useState(false);
   const [closingCash, setClosingCash] = useState("");
   const [isClosingSession, setIsClosingSession] = useState(false);
+  const [settleCashAccountId, setSettleCashAccountId] = useState("");
+  const [settleBankAccountId, setSettleBankAccountId] = useState("");
+
+  // Fetch org settings for POS accounting mode
+  const { data: orgSettings } = useSWR<{ posAccountingMode: string }>(
+    posSession ? "/api/pos/org-settings" : null,
+    fetcher
+  );
+  const isClearingMode = orgSettings?.posAccountingMode === "CLEARING_ACCOUNT";
+
+  // Fetch Cash/Bank accounts for settlement (only in clearing mode)
+  interface CashBankAccountOption {
+    id: string;
+    name: string;
+    accountSubType: string;
+  }
+  const { data: cashBankAccounts = [] } = useSWR<CashBankAccountOption[]>(
+    isClearingMode && showCloseDialog ? "/api/cash-bank-accounts?activeOnly=true" : null,
+    fetcher
+  );
 
   // POS Session Summary (for Expected Cash during closing)
   const { data: sessionSummary, isLoading: isLoadingSummary } = useSWR<{ paymentBreakdown: { method: string; total: number }[] }>(
@@ -288,7 +316,13 @@ function POSTerminalContent() {
       const res = await fetch(`/api/pos/sessions/${posSession.id}/close`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ closingCash: parseFloat(closingCash) || 0 }),
+        body: JSON.stringify({
+          closingCash: parseFloat(closingCash) || 0,
+          ...(isClearingMode && {
+            settleCashAccountId: settleCashAccountId || undefined,
+            settleBankAccountId: settleBankAccountId || undefined,
+          }),
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -345,6 +379,7 @@ function POSTerminalContent() {
 
       const result = await res.json();
       const change = result.change || 0;
+      const receiptMeta = result.receiptMeta;
 
       // Build receipt data before clearing cart
       const receiptData: ReceiptData = {
@@ -376,6 +411,14 @@ function POSTerminalContent() {
           amount: parseFloat(p.amount),
         })),
         change,
+        // Enhanced fields from checkout response
+        logoUrl: receiptMeta?.logoUrl || undefined,
+        qrCodeDataURL: receiptMeta?.qrCodeDataURL || undefined,
+        vatNumber: receiptMeta?.vatNumber || companySettings?.companyGstNumber || undefined,
+        arabicName: receiptMeta?.arabicName || undefined,
+        taxLabel: receiptMeta?.taxLabel || undefined,
+        brandColor: receiptMeta?.brandColor || undefined,
+        currency: receiptMeta?.currency || undefined,
       };
       setLastReceiptData(receiptData);
 
@@ -727,12 +770,53 @@ function POSTerminalContent() {
                 autoFocus
               />
             </div>
+
+            {/* Settlement Account Selectors (only in clearing account mode) */}
+            {isClearingMode && (
+              <div className="space-y-3 border-t pt-4">
+                <p className="text-xs text-muted-foreground font-medium">Settlement Accounts</p>
+                <div className="space-y-2">
+                  <Label className="text-sm">Deposit Cash To *</Label>
+                  <Select value={settleCashAccountId} onValueChange={setSettleCashAccountId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select cash account..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cashBankAccounts
+                        .filter((a) => a.accountSubType === "CASH")
+                        .map((a) => (
+                          <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Deposit Non-Cash To</Label>
+                  <Select value={settleBankAccountId} onValueChange={setSettleBankAccountId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select bank account (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cashBankAccounts
+                        .filter((a) => a.accountSubType === "BANK")
+                        .map((a) => (
+                          <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">If not selected, non-cash payments go to the cash account above.</p>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCloseDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={closeSession} disabled={isClosingSession}>
+            <Button
+              onClick={closeSession}
+              disabled={isClosingSession || (isClearingMode && !settleCashAccountId)}
+            >
               {isClosingSession && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Close Session
             </Button>

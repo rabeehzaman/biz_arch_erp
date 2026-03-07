@@ -12,12 +12,17 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
   return {
     header: {
       storeName: data.storeName,
+      arabicName: data.arabicName,
       address: [data.storeAddress, data.storeCity, data.storeState]
         .filter(Boolean)
         .join(", "),
       phone: data.storePhone,
-      vatNumber: data.storeGstin,
+      vatNumber: data.vatNumber || data.storeGstin,
     },
+    logoUrl: data.logoUrl,
+    qrCodeDataURL: data.qrCodeDataURL,
+    brandColor: data.brandColor,
+    taxLabel: data.taxLabel || "Tax",
     invoiceNo: data.invoiceNumber,
     date: data.date instanceof Date
       ? data.date.toLocaleString()

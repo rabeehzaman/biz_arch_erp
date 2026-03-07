@@ -155,6 +155,43 @@ export async function seedSaudiVATAccounts(
   }
 }
 
+// ─── POS Clearing Accounts ─────────────────────────────────────────────────
+// Call this when posAccountingMode is set to CLEARING_ACCOUNT for an org
+
+const POS_CLEARING_ACCOUNTS: AccountDef[] = [
+  { code: "1150", name: "POS Undeposited Funds", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: true },
+  { code: "6150", name: "Cash Short and Over", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: true },
+];
+
+export async function seedPOSClearingAccounts(
+  tx: PrismaTransactionClient,
+  organizationId: string
+) {
+  const sorted = [...POS_CLEARING_ACCOUNTS].sort((a, b) => a.code.localeCompare(b.code));
+
+  for (const acct of sorted) {
+    let parentId: string | null = null;
+    if (acct.parentCode) {
+      const parent = await tx.account.findFirst({ where: { organizationId, code: acct.parentCode } });
+      parentId = parent?.id ?? null;
+    }
+
+    await tx.account.upsert({
+      where: { organizationId_code: { organizationId, code: acct.code } },
+      update: {},
+      create: {
+        code: acct.code,
+        name: acct.name,
+        accountType: acct.accountType,
+        accountSubType: acct.accountSubType,
+        parentId,
+        isSystem: acct.isSystem,
+        organizationId,
+      },
+    });
+  }
+}
+
 // ─── Original seedDefaultCOA continues below ───────────────────────────────
 // (split to reuse the seedSaudiVATAccounts separately)
 

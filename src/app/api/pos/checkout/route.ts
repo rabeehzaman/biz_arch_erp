@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
+import { getOrgId, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
 import { consumeStockFIFO } from "@/lib/inventory/fifo";
 import {
   createAutoJournalEntry,
@@ -9,6 +9,10 @@ import {
   getDefaultCashBankAccount,
 } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
+import { calculateLineVAT, calculateDocumentVAT, determineSaudiInvoiceType, type LineVATResult } from "@/lib/saudi-vat/calculator";
+import { generateTLVQRCode, generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
+import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash } from "@/lib/saudi-vat/invoice-hash";
+import { SAUDI_VAT_RATE, type VATCategory } from "@/lib/saudi-vat/constants";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Tx = any;
@@ -110,13 +114,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
-    for (const item of items) {
-      if (item.gstRate !== undefined && item.gstRate !== null && !VALID_GST_RATES.includes(Number(item.gstRate))) {
-        return NextResponse.json(
-          { error: `Invalid GST rate: ${item.gstRate}. Valid rates are: ${VALID_GST_RATES.join(", ")}` },
-          { status: 400 }
-        );
+    // Fetch org for ZATCA/branding info
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        saudiEInvoiceEnabled: true,
+        vatNumber: true,
+        arabicName: true,
+        name: true,
+        pdfHeaderImageUrl: true,
+        brandColor: true,
+        currency: true,
+        gstEnabled: true,
+        posAccountingMode: true,
+      },
+    });
+
+    const saudiEnabled = isSaudiEInvoiceEnabled(session) || org?.saudiEInvoiceEnabled;
+
+    if (!saudiEnabled) {
+      const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
+      for (const item of items) {
+        if (item.gstRate !== undefined && item.gstRate !== null && !VALID_GST_RATES.includes(Number(item.gstRate))) {
+          return NextResponse.json(
+            { error: `Invalid GST rate: ${item.gstRate}. Valid rates are: ${VALID_GST_RATES.join(", ")}` },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -161,25 +185,86 @@ export async function POST(request: NextRequest) {
         0
       );
 
-      // Compute GST (POS is typically intra-state B2C)
-      const orgGST = await getOrgGSTInfo(tx, organizationId);
-      let customerGstin: string | null = null;
-      let customerStateCode: string | null = null;
-      if (resolvedCustomerId) {
-        const cust = await tx.customer.findUnique({
-          where: { id: resolvedCustomerId },
-          select: { gstin: true, gstStateCode: true },
+      // Tax calculation — branch between Saudi VAT and GST
+      let totalTax = 0;
+      let gstResult = { totalCgst: 0, totalSgst: 0, totalIgst: 0, placeOfSupply: null as string | null, isInterState: false, lineGST: [] as Array<{ hsnCode: string | null; gstRate: number; cgstRate: number; sgstRate: number; igstRate: number; cgstAmount: number; sgstAmount: number; igstAmount: number }> };
+
+      // Saudi VAT vars
+      let totalVat: number | null = null;
+      let saudiInvoiceType: string | null = null;
+      let qrCodeData: string | null = null;
+      let invoiceUuid: string | null = null;
+      let invoiceCounterValue: number | null = null;
+      let previousInvoiceHash: string | null = null;
+      let invoiceHash: string | null = null;
+      let lineVATResults: LineVATResult[] = [];
+
+      if (saudiEnabled) {
+        // POS is always B2C (simplified)
+        saudiInvoiceType = determineSaudiInvoiceType();
+
+        // Compute VAT per line
+        lineVATResults = items.map((item) => {
+          const taxableAmount = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+          return calculateLineVAT({ taxableAmount, vatRate: SAUDI_VAT_RATE });
         });
-        customerGstin = cust?.gstin ?? null;
-        customerStateCode = cust?.gstStateCode ?? null;
+
+        const docVAT = calculateDocumentVAT(lineVATResults);
+        totalVat = docVAT.totalVat;
+        totalTax = totalVat;
+
+        // Generate Saudi invoice metadata
+        invoiceUuid = generateInvoiceUUID();
+        invoiceCounterValue = await getNextICV(tx as unknown as Parameters<typeof getNextICV>[0], organizationId);
+        previousInvoiceHash = await getLastInvoiceHash(tx as unknown as Parameters<typeof getLastInvoiceHash>[0], organizationId);
+
+        const sellerName = org?.arabicName || org?.name || "";
+        const sellerVat = org?.vatNumber || "";
+        const totalInclVat = subtotal + (totalVat ?? 0);
+        const totalInclVatStr = totalInclVat.toFixed(2);
+        const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+        const vatStr = totalVat.toFixed(2);
+
+        invoiceHash = computeInvoiceHash({
+          invoiceNumber: "", // Will be set after generation
+          issueDate: timestamp,
+          sellerVatNumber: sellerVat,
+          totalInclVat: totalInclVatStr,
+          totalVat: vatStr,
+        });
+
+        if (sellerVat) {
+          const tlv = generateTLVQRCode({
+            sellerName,
+            vatNumber: sellerVat,
+            timestamp,
+            totalWithVat: totalInclVatStr,
+            totalVat: vatStr,
+          });
+          qrCodeData = tlv;
+        }
+      } else {
+        // GST path (existing)
+        const orgGST = await getOrgGSTInfo(tx, organizationId);
+        let customerGstin: string | null = null;
+        let customerStateCode: string | null = null;
+        if (resolvedCustomerId) {
+          const cust = await tx.customer.findUnique({
+            where: { id: resolvedCustomerId },
+            select: { gstin: true, gstStateCode: true },
+          });
+          customerGstin = cust?.gstin ?? null;
+          customerStateCode = cust?.gstStateCode ?? null;
+        }
+        const lineItemsForGST = items.map((item) => ({
+          taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+          gstRate: item.gstRate || 0,
+          hsnCode: item.hsnCode || null,
+        }));
+        gstResult = computeDocumentGST(orgGST, lineItemsForGST, customerGstin, customerStateCode);
+        totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
       }
-      const lineItemsForGST = items.map((item) => ({
-        taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
-        gstRate: item.gstRate || 0,
-        hsnCode: item.hsnCode || null,
-      }));
-      const gstResult = computeDocumentGST(orgGST, lineItemsForGST, customerGstin, customerStateCode);
-      const totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
+
       const total = subtotal + totalTax;
       const totalPayment = payments.reduce((sum, p) => sum + p.amount, 0);
       const change = Math.max(0, totalPayment - total);
@@ -215,52 +300,106 @@ export async function POST(request: NextRequest) {
       const invoiceNumber = await generateInvoiceNumber(organizationId, tx);
 
       // ── 5. Create Invoice ────────────────────────────────────────────
-      const invoice = await tx.invoice.create({
-        data: {
-          organizationId,
+
+      // Update invoice hash with actual invoice number now that it's generated
+      if (saudiEnabled && invoiceHash !== null) {
+        const sellerVat = org?.vatNumber || "";
+        const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+        invoiceHash = computeInvoiceHash({
           invoiceNumber,
-          branchId: posSession.branchId,
-          warehouseId: posSession.warehouseId,
-          customerId: resolvedCustomerId,
-          createdById: userId,
-          sourceType: "POS",
-          posSessionId: posSession.id,
-          issueDate: now,
-          dueDate: now,
-          subtotal,
-          total,
-          amountPaid: Math.min(totalPayment, total),
-          balanceDue: Math.max(0, total - totalPayment),
+          issueDate: timestamp,
+          sellerVatNumber: sellerVat,
+          totalInclVat: (subtotal + (totalVat ?? 0)).toFixed(2),
+          totalVat: (totalVat ?? 0).toFixed(2),
+        });
+      }
+
+      const invoiceData: Record<string, unknown> = {
+        organizationId,
+        invoiceNumber,
+        branchId: posSession.branchId,
+        warehouseId: posSession.warehouseId,
+        customerId: resolvedCustomerId,
+        createdById: userId,
+        sourceType: "POS",
+        posSessionId: posSession.id,
+        issueDate: now,
+        dueDate: now,
+        subtotal,
+        total,
+        amountPaid: Math.min(totalPayment, total),
+        balanceDue: Math.max(0, total - totalPayment),
+        notes: notes || null,
+      };
+
+      if (saudiEnabled) {
+        Object.assign(invoiceData, {
+          saudiInvoiceType,
+          totalVat,
+          qrCodeData,
+          invoiceUuid,
+          invoiceCounterValue,
+          previousInvoiceHash,
+          invoiceHash,
+          totalCgst: 0,
+          totalSgst: 0,
+          totalIgst: 0,
+        });
+      } else {
+        Object.assign(invoiceData, {
           totalCgst: gstResult.totalCgst,
           totalSgst: gstResult.totalSgst,
           totalIgst: gstResult.totalIgst,
           placeOfSupply: gstResult.placeOfSupply,
           isInterState: gstResult.isInterState,
-          notes: notes || null,
+        });
+      }
+
+      // Build line items
+      const lineItemsData = items.map((item, idx) => {
+        const base: Record<string, unknown> = {
+          organizationId,
+          productId: item.productId || null,
+          description: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discount: item.discount || 0,
+          total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+          costOfGoodsSold: 0,
+        };
+
+        if (saudiEnabled && lineVATResults[idx]) {
+          Object.assign(base, {
+            vatRate: lineVATResults[idx].vatRate,
+            vatAmount: lineVATResults[idx].vatAmount,
+            vatCategory: lineVATResults[idx].vatCategory || "S",
+            gstRate: 0,
+            cgstRate: 0, sgstRate: 0, igstRate: 0,
+            cgstAmount: 0, sgstAmount: 0, igstAmount: 0,
+          });
+        } else {
+          Object.assign(base, {
+            hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+            gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+            cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+            sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+            igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+            cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+            sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+            igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
+          });
+        }
+
+        return base;
+      });
+
+      const invoice = await tx.invoice.create({
+        data: {
+          ...invoiceData,
           items: {
-            create: items.map((item, idx) => ({
-              organizationId,
-              productId: item.productId || null,
-              description: item.name,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              discount: item.discount || 0,
-              total:
-                item.quantity *
-                item.unitPrice *
-                (1 - (item.discount || 0) / 100),
-              hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
-              gstRate: gstResult.lineGST[idx]?.gstRate || 0,
-              cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
-              sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
-              igstRate: gstResult.lineGST[idx]?.igstRate || 0,
-              cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
-              sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
-              igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
-              costOfGoodsSold: 0,
-            })),
+            create: lineItemsData,
           },
-        },
+        } as Parameters<typeof tx.invoice.create>[0]["data"],
         include: {
           items: true,
           customer: true,
@@ -352,18 +491,25 @@ export async function POST(request: NextRequest) {
             },
           ];
 
-        // GST journal lines
-        if (gstResult.totalCgst > 0) {
-          const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
-          if (cgstAccount) revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: gstResult.totalCgst });
-        }
-        if (gstResult.totalSgst > 0) {
-          const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
-          if (sgstAccount) revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: gstResult.totalSgst });
-        }
-        if (gstResult.totalIgst > 0) {
-          const igstAccount = await getSystemAccount(tx, organizationId, "2230");
-          if (igstAccount) revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: gstResult.totalIgst });
+        // Tax journal lines
+        if (saudiEnabled && totalVat && totalVat > 0) {
+          // Saudi VAT: use a single VAT output account (2210)
+          const vatAccount = await getSystemAccount(tx, organizationId, "2210");
+          if (vatAccount) revenueLines.push({ accountId: vatAccount.id, description: "VAT Output", debit: 0, credit: totalVat });
+        } else {
+          // GST journal lines
+          if (gstResult.totalCgst > 0) {
+            const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
+            if (cgstAccount) revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: gstResult.totalCgst });
+          }
+          if (gstResult.totalSgst > 0) {
+            const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
+            if (sgstAccount) revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: gstResult.totalSgst });
+          }
+          if (gstResult.totalIgst > 0) {
+            const igstAccount = await getSystemAccount(tx, organizationId, "2230");
+            if (igstAccount) revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: gstResult.totalIgst });
+          }
         }
 
         await createAutoJournalEntry(tx, organizationId, {
@@ -464,63 +610,97 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // Payment journal entry: DR Cash/Bank, CR Accounts Receivable
+        // Payment journal entry: DR Cash/Bank (or Clearing Account), CR Accounts Receivable
         // Use allocationAmount so AR is correctly reduced (not over-credited)
         if (allocationAmount > 0) {
-          const cashBankInfo = await getDefaultCashBankAccount(
-            tx,
-            organizationId,
-            payment.method,
-            posSession.branchId
-          );
+          const isClearingMode = org?.posAccountingMode === "CLEARING_ACCOUNT";
 
-          if (arAccount && cashBankInfo) {
-            await createAutoJournalEntry(tx, organizationId, {
-              date: now,
-              description: `POS Payment ${paymentNumber}`,
-              sourceType: "PAYMENT",
-              sourceId: newPayment.id,
-              branchId: posSession.branchId,
-              lines: [
-                {
-                  accountId: cashBankInfo.accountId,
-                  description: "Cash/Bank",
-                  debit: allocationAmount,
-                  credit: 0,
-                },
-                {
-                  accountId: arAccount.id,
-                  description: "Accounts Receivable",
-                  debit: 0,
-                  credit: allocationAmount,
-                },
-              ],
-            });
+          if (isClearingMode) {
+            // CLEARING_ACCOUNT mode: DR POS Undeposited Funds, CR AR
+            // Cash/Bank updates happen at session close
+            const clearingAccount = await getSystemAccount(tx, organizationId, "1150");
 
-            // Update CashBankAccount balance (only the amount actually kept)
-            await tx.cashBankAccount.update({
-              where: { id: cashBankInfo.cashBankAccountId },
-              data: { balance: { increment: allocationAmount } },
-            });
-
-            // Create CashBankTransaction record
-            const updatedCB = await tx.cashBankAccount.findUnique({
-              where: { id: cashBankInfo.cashBankAccountId },
-            });
-
-            await tx.cashBankTransaction.create({
-              data: {
-                cashBankAccountId: cashBankInfo.cashBankAccountId,
-                transactionType: "DEPOSIT",
-                amount: allocationAmount,
-                runningBalance: Number(updatedCB?.balance || 0),
+            if (arAccount && clearingAccount) {
+              await createAutoJournalEntry(tx, organizationId, {
+                date: now,
                 description: `POS Payment ${paymentNumber}`,
-                referenceType: "PAYMENT",
-                referenceId: newPayment.id,
-                transactionDate: now,
-                organizationId,
-              },
-            });
+                sourceType: "PAYMENT",
+                sourceId: newPayment.id,
+                branchId: posSession.branchId,
+                lines: [
+                  {
+                    accountId: clearingAccount.id,
+                    description: "POS Undeposited Funds",
+                    debit: allocationAmount,
+                    credit: 0,
+                  },
+                  {
+                    accountId: arAccount.id,
+                    description: "Accounts Receivable",
+                    debit: 0,
+                    credit: allocationAmount,
+                  },
+                ],
+              });
+            }
+            // No CashBankAccount or CashBankTransaction updates in clearing mode
+          } else {
+            // DIRECT mode (default): DR Cash/Bank, CR AR — update balances immediately
+            const cashBankInfo = await getDefaultCashBankAccount(
+              tx,
+              organizationId,
+              payment.method,
+              posSession.branchId
+            );
+
+            if (arAccount && cashBankInfo) {
+              await createAutoJournalEntry(tx, organizationId, {
+                date: now,
+                description: `POS Payment ${paymentNumber}`,
+                sourceType: "PAYMENT",
+                sourceId: newPayment.id,
+                branchId: posSession.branchId,
+                lines: [
+                  {
+                    accountId: cashBankInfo.accountId,
+                    description: "Cash/Bank",
+                    debit: allocationAmount,
+                    credit: 0,
+                  },
+                  {
+                    accountId: arAccount.id,
+                    description: "Accounts Receivable",
+                    debit: 0,
+                    credit: allocationAmount,
+                  },
+                ],
+              });
+
+              // Update CashBankAccount balance (only the amount actually kept)
+              await tx.cashBankAccount.update({
+                where: { id: cashBankInfo.cashBankAccountId },
+                data: { balance: { increment: allocationAmount } },
+              });
+
+              // Create CashBankTransaction record
+              const updatedCB = await tx.cashBankAccount.findUnique({
+                where: { id: cashBankInfo.cashBankAccountId },
+              });
+
+              await tx.cashBankTransaction.create({
+                data: {
+                  cashBankAccountId: cashBankInfo.cashBankAccountId,
+                  transactionType: "DEPOSIT",
+                  amount: allocationAmount,
+                  runningBalance: Number(updatedCB?.balance || 0),
+                  description: `POS Payment ${paymentNumber}`,
+                  referenceType: "PAYMENT",
+                  referenceId: newPayment.id,
+                  transactionDate: now,
+                  organizationId,
+                },
+              });
+            }
           }
         }
 
@@ -588,7 +768,28 @@ export async function POST(request: NextRequest) {
       };
     }, { timeout: 30000 });
 
-    return NextResponse.json(result, { status: 201 });
+    // Generate QR code data URL for receipt (outside transaction)
+    let qrCodeDataURL: string | undefined;
+    if (result.invoice?.qrCodeData) {
+      try {
+        qrCodeDataURL = await generateQRCodeDataURL(result.invoice.qrCodeData);
+      } catch (e) {
+        console.error("QR code generation failed:", e);
+      }
+    }
+
+    return NextResponse.json({
+      ...result,
+      receiptMeta: {
+        logoUrl: org?.pdfHeaderImageUrl || null,
+        brandColor: org?.brandColor || null,
+        vatNumber: org?.vatNumber || null,
+        arabicName: org?.arabicName || null,
+        taxLabel: saudiEnabled ? "VAT" : org?.gstEnabled ? "GST" : "Tax",
+        qrCodeDataURL: qrCodeDataURL || null,
+        currency: org?.currency || "INR",
+      },
+    }, { status: 201 });
   } catch (error) {
     // Handle known business errors with appropriate status codes
     if (error instanceof Error && error.message === "NO_OPEN_SESSION") {
