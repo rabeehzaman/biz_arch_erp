@@ -39,6 +39,7 @@ export interface ReceiptData {
   taxLabel?: string;
   brandColor?: string;
   currency?: string;
+  isTaxInclusivePrice?: boolean;
 }
 
 // Payment method Arabic translations (standard Saudi terms)
@@ -271,8 +272,14 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
                 ? `ضريبة القيمة المضافة / VAT ${data.taxRate > 0 ? `(${data.taxRate}%)` : "(15%)"}`
                 : `${taxLbl} ${data.taxRate > 0 ? `(${data.taxRate}%)` : ""}`
               }
+              {data.isTaxInclusivePrice ? " (incl.)" : ""}
             </span>
             <span>{formatCurrency(data.taxAmount, cur)}</span>
+          </div>
+        )}
+        {data.isTaxInclusivePrice && (
+          <div style={{ fontSize: "9px", color: "#888", textAlign: "center", marginTop: "2px" }}>
+            {isZatca ? "الأسعار شاملة الضريبة / Prices include tax" : "Prices include tax"}
           </div>
         )}
         <div style={{

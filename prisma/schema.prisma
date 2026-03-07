@@ -45,6 +45,9 @@ model Organization {
   // POS Accounting
   posAccountingMode     String   @default("DIRECT")  // "DIRECT" or "CLEARING_ACCOUNT"
 
+  // Tax-Inclusive Pricing
+  isTaxInclusivePrice   Boolean  @default(false)
+
   // Localization
   language              String   @default("en")  // "en" or "ar" — org-wide UI language
   currency              String   @default("INR") // "INR" or "SAR" — org-wide currency

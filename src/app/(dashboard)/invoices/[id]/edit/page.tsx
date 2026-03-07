@@ -893,6 +893,9 @@ export default function EditInvoicePage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-w-xs ml-auto">
+                  {taxInclusive && (
+                    <div className="text-xs text-blue-600 text-right mb-2 font-medium">Prices include tax</div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
                     <span>{symbol}{calculateSubtotal().toLocaleString("en-IN")}</span>

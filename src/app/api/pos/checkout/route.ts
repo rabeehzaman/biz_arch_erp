@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
+import { getOrgId, isSaudiEInvoiceEnabled, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
+import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { consumeStockFIFO } from "@/lib/inventory/fifo";
 import {
   createAutoJournalEntry,
@@ -127,10 +128,12 @@ export async function POST(request: NextRequest) {
         currency: true,
         gstEnabled: true,
         posAccountingMode: true,
+        isTaxInclusivePrice: true,
       },
     });
 
     const saudiEnabled = isSaudiEInvoiceEnabled(session) || org?.saudiEInvoiceEnabled;
+    const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
 
     if (!saudiEnabled) {
       const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
@@ -178,12 +181,15 @@ export async function POST(request: NextRequest) {
       // ── 3. Calculate totals ──────────────────────────────────────────
       const now = new Date();
 
-      const subtotal = items.reduce(
-        (sum, item) =>
-          sum +
-          item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
-        0
-      );
+      // Build per-line gross amounts and taxable amounts (for tax-inclusive pricing)
+      const lineAmounts = items.map((item) => {
+        const grossAmount = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+        const taxRate = saudiEnabled ? SAUDI_VAT_RATE : (item.gstRate || 0);
+        const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(grossAmount, taxRate) : grossAmount;
+        return { grossAmount, taxableAmount };
+      });
+
+      const subtotal = lineAmounts.reduce((sum: number, la: { taxableAmount: number }) => sum + la.taxableAmount, 0);
 
       // Tax calculation — branch between Saudi VAT and GST
       let totalTax = 0;
@@ -203,9 +209,9 @@ export async function POST(request: NextRequest) {
         // POS is always B2C (simplified)
         saudiInvoiceType = determineSaudiInvoiceType();
 
-        // Compute VAT per line
-        lineVATResults = items.map((item) => {
-          const taxableAmount = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+        // Compute VAT per line (using tax-exclusive base from lineAmounts)
+        lineVATResults = items.map((_item, idx) => {
+          const taxableAmount = lineAmounts[idx].taxableAmount;
           return calculateLineVAT({ taxableAmount, vatRate: SAUDI_VAT_RATE });
         });
 
@@ -256,8 +262,8 @@ export async function POST(request: NextRequest) {
           customerGstin = cust?.gstin ?? null;
           customerStateCode = cust?.gstStateCode ?? null;
         }
-        const lineItemsForGST = items.map((item) => ({
-          taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+        const lineItemsForGST = items.map((item, idx) => ({
+          taxableAmount: lineAmounts[idx].taxableAmount,
           gstRate: item.gstRate || 0,
           hsnCode: item.hsnCode || null,
         }));
@@ -364,7 +370,7 @@ export async function POST(request: NextRequest) {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discount: item.discount || 0,
-          total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+          total: lineAmounts[idx].taxableAmount,
           costOfGoodsSold: 0,
         };
 
@@ -788,6 +794,7 @@ export async function POST(request: NextRequest) {
         taxLabel: saudiEnabled ? "VAT" : org?.gstEnabled ? "GST" : "Tax",
         qrCodeDataURL: qrCodeDataURL || null,
         currency: org?.currency || "INR",
+        isTaxInclusivePrice: taxInclusive || false,
       },
     }, { status: 201 });
   } catch (error) {

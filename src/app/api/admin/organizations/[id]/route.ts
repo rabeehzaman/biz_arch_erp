@@ -98,6 +98,7 @@ export async function PUT(
       pdfFooterImageUrl,
       brandColor,
       posAccountingMode,
+      isTaxInclusivePrice,
     } = body;
 
     // Basic field update validation
@@ -240,6 +241,7 @@ export async function PUT(
     if (pdfFooterImageUrl !== undefined) updateData.pdfFooterImageUrl = pdfFooterImageUrl || null;
     if (brandColor !== undefined) updateData.brandColor = brandColor || null;
     if (posAccountingMode !== undefined) updateData.posAccountingMode = posAccountingMode;
+    if (isTaxInclusivePrice !== undefined) updateData.isTaxInclusivePrice = isTaxInclusivePrice;
 
     const organization = await prisma.$transaction(
       async (tx) => {

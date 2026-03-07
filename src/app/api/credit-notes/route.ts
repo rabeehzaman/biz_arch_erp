@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
+import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
+import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import {
   createStockLotFromCreditNote,
   getOriginalCOGSForInvoiceItem,
@@ -124,17 +125,18 @@ export async function POST(request: NextRequest) {
 
     const creditNoteNumber = await generateCreditNoteNumber(organizationId);
     const creditNoteDate = toMidnightUTC(issueDate);
+    const taxInclusive = isTaxInclusivePriceSession(session);
 
-    // Calculate subtotal with item-level discounts
-    const subtotal = items.reduce(
-      (
-        sum: number,
-        item: { quantity: number; unitPrice: number; discount?: number }
-      ) =>
-        sum +
-        item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
-      0
-    );
+    // Build per-line gross amounts and taxable amounts (for tax-inclusive pricing)
+    const lineAmounts = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number }) => {
+      const grossAmount = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+      const taxRate = item.gstRate || 0;
+      const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(grossAmount, taxRate) : grossAmount;
+      return { grossAmount, taxableAmount };
+    });
+
+    // Calculate subtotal (sum of tax-exclusive base amounts)
+    const subtotal = lineAmounts.reduce((sum: number, la: { taxableAmount: number }) => sum + la.taxableAmount, 0);
 
     // Use a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
@@ -145,8 +147,8 @@ export async function POST(request: NextRequest) {
         select: { gstin: true, gstStateCode: true },
       });
       // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
-      const lineItems = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
-        taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+      const lineItems = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
+        taxableAmount: lineAmounts[idx].taxableAmount,
         gstRate: item.gstRate || 0,
         hsnCode: item.hsnCode || null,
       }));
@@ -199,10 +201,7 @@ export async function POST(request: NextRequest) {
                 conversionFactor: item.conversionFactor || 1,
                 unitPrice: item.unitPrice,
                 discount: item.discount || 0,
-                total:
-                  item.quantity *
-                  item.unitPrice *
-                  (1 - (item.discount || 0) / 100),
+                total: lineAmounts[idx].taxableAmount,
                 hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
                 gstRate: gstResult.lineGST[idx]?.gstRate || 0,
                 cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,

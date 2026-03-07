@@ -29,3 +29,7 @@ export function isSaudiEInvoiceEnabled(session: Session): boolean {
 export function isWeighMachineEnabled(session: Session): boolean {
   return (session.user as { isWeighMachineEnabled?: boolean }).isWeighMachineEnabled === true;
 }
+
+export function isTaxInclusivePrice(session: Session): boolean {
+  return (session.user as { isTaxInclusivePrice?: boolean }).isTaxInclusivePrice === true;
+}

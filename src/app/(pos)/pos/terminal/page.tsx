@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useCallback, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
@@ -101,6 +102,8 @@ interface Customer {
 function POSTerminalContent() {
   const { fmt } = useCurrency();
   const { t } = useLanguage();
+  const { data: authSession } = useSession();
+  const taxInclusive = !!(authSession?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId");
@@ -348,7 +351,7 @@ function POSTerminalContent() {
   const handleCheckout = async (payments: PaymentEntry[]) => {
     setIsProcessing(true);
     try {
-      const { subtotal } = calculateCartTotal(cart);
+      const { subtotal } = calculateCartTotal(cart, taxInclusive);
       const res = await fetch("/api/pos/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -404,12 +407,12 @@ function POSTerminalContent() {
             lineTotal,
           };
         }),
-        subtotal: Number(result.invoice?.subtotal) || calculateCartTotal(cart).subtotal,
+        subtotal: Number(result.invoice?.subtotal) || calculateCartTotal(cart, taxInclusive).subtotal,
         taxRate: receiptMeta?.taxLabel === "VAT" ? 15 : 0,
         taxAmount: receiptMeta?.taxLabel === "VAT"
           ? Number(result.invoice?.totalVat || 0)
-          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || calculateCartTotal(cart).taxAmount,
-        total: Number(result.invoice?.total) || calculateCartTotal(cart).total,
+          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || calculateCartTotal(cart, taxInclusive).taxAmount,
+        total: Number(result.invoice?.total) || calculateCartTotal(cart, taxInclusive).total,
         payments: payments.map((p) => ({
           method: p.method,
           amount: parseFloat(p.amount),
@@ -423,6 +426,7 @@ function POSTerminalContent() {
         taxLabel: receiptMeta?.taxLabel || undefined,
         brandColor: receiptMeta?.brandColor || undefined,
         currency: receiptMeta?.currency || undefined,
+        isTaxInclusivePrice: receiptMeta?.isTaxInclusivePrice || false,
       };
       setLastReceiptData(receiptData);
 
@@ -463,7 +467,7 @@ function POSTerminalContent() {
   const holdOrder = async () => {
     if (cart.length === 0) return;
     try {
-      const { subtotal } = calculateCartTotal(cart);
+      const { subtotal } = calculateCartTotal(cart, taxInclusive);
       const res = await fetch("/api/pos/held-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -543,7 +547,7 @@ function POSTerminalContent() {
 
   // ── Active Session → Full POS Interface ────────────────────────────
 
-  const { total } = calculateCartTotal(cart);
+  const { total } = calculateCartTotal(cart, taxInclusive);
 
   return (
     <PageAnimation className="flex h-screen flex-col">
@@ -650,7 +654,7 @@ function POSTerminalContent() {
               {/* Cart Summary & Actions */}
               {cart.length > 0 && (
                 <div className="border-t p-3 space-y-3">
-                  <CartSummary items={cart} />
+                  <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} />
                   <div className="flex gap-2">
                     <Button
                       variant="outline"

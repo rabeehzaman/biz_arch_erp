@@ -41,6 +41,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 weighMachineDecimalPlaces: true,
                 gstStateCode: true,
                 saudiEInvoiceEnabled: true,
+                isTaxInclusivePrice: true,
                 language: true,
                 currency: true,
               },
@@ -79,6 +80,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           weighMachineDecimalPlaces: user.organization?.weighMachineDecimalPlaces ?? 3,
           gstStateCode: user.organization?.gstStateCode ?? null,
           saudiEInvoiceEnabled: user.organization?.saudiEInvoiceEnabled ?? false,
+          isTaxInclusivePrice: user.organization?.isTaxInclusivePrice ?? false,
           language: user.language ?? user.organization?.language ?? "en",
           currency: user.organization?.currency ?? "INR",
         };

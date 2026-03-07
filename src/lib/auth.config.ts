@@ -62,6 +62,7 @@ export const authConfig: NextAuthConfig = {
         token.weighMachineDecimalPlaces = (user as { weighMachineDecimalPlaces?: number | null }).weighMachineDecimalPlaces ?? 3;
         token.gstStateCode = (user as { gstStateCode?: string | null }).gstStateCode ?? null;
         token.saudiEInvoiceEnabled = (user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled ?? false;
+        token.isTaxInclusivePrice = (user as { isTaxInclusivePrice?: boolean }).isTaxInclusivePrice ?? false;
         token.language = (user as { language?: string }).language ?? "en";
         token.currency = (user as { currency?: string }).currency ?? "INR";
       }
@@ -90,6 +91,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as { weighMachineDecimalPlaces?: number | null }).weighMachineDecimalPlaces = token.weighMachineDecimalPlaces as number | null;
         (session.user as { gstStateCode?: string | null }).gstStateCode = token.gstStateCode as string | null;
         (session.user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled = token.saudiEInvoiceEnabled as boolean;
+        (session.user as { isTaxInclusivePrice?: boolean }).isTaxInclusivePrice = token.isTaxInclusivePrice as boolean;
         (session.user as { language?: string }).language = token.language as string ?? "en";
         (session.user as { currency?: string }).currency = token.currency as string ?? "INR";
       }

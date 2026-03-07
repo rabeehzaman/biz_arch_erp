@@ -263,17 +263,28 @@ export default function EditQuotationPage({
     }
   };
 
+  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
+
   const calculateSubtotal = () => {
-    return lineItems.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice * (1 - item.discount / 100),
-      0
-    );
+    return lineItems.reduce((sum, item) => {
+      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      if (taxInclusive) {
+        const rate = item.gstRate || 0;
+        return sum + (rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross);
+      }
+      return sum + gross;
+    }, 0);
   };
 
   const calculateTax = () => {
     return lineItems.reduce((sum, item) => {
-      const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      const rate = item.gstRate || 0;
+      if (taxInclusive) {
+        const base = rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross;
+        return sum + (base * rate) / 100;
+      }
+      return sum + (gross * rate) / 100;
     }, 0);
   };
 
@@ -769,6 +780,9 @@ export default function EditQuotationPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-w-xs ml-auto">
+                  {taxInclusive && (
+                    <div className="text-xs text-blue-600 text-right mb-2 font-medium">Prices include tax</div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
                     <span>{symbol}{calculateSubtotal().toLocaleString("en-IN")}</span>

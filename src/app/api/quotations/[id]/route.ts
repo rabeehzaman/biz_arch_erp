@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
+import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
+import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 
@@ -132,13 +133,18 @@ export async function PUT(
     if (body.items !== undefined) {
       const items = body.items;
       const customerId = body.customerId || existingQuotation.customerId;
+      const taxInclusive = isTaxInclusivePriceSession(session);
+
+      // Build per-line gross amounts and taxable amounts
+      const lineAmounts = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number }) => {
+        const grossAmount = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+        const taxRate = item.gstRate || 0;
+        const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(grossAmount, taxRate) : grossAmount;
+        return { grossAmount, taxableAmount };
+      });
 
       // Calculate subtotal
-      const subtotal = items.reduce(
-        (sum: number, item: { quantity: number; unitPrice: number; discount?: number }) =>
-          sum + item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
-        0
-      );
+      const subtotal = lineAmounts.reduce((sum: number, la: { taxableAmount: number }) => sum + la.taxableAmount, 0);
 
       // Compute GST
       const orgGST = await getOrgGSTInfo(prisma, organizationId);
@@ -147,8 +153,8 @@ export async function PUT(
         select: { gstin: true, gstStateCode: true },
       });
       // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
-      const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
-        taxableAmount: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+      const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
+        taxableAmount: lineAmounts[idx].taxableAmount,
         gstRate: item.gstRate || 0,
         hsnCode: item.hsnCode || null,
       }));
@@ -185,7 +191,7 @@ export async function PUT(
           conversionFactor: item.conversionFactor || 1,
           unitPrice: item.unitPrice,
           discount: item.discount || 0,
-          total: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
+          total: lineAmounts[idx].taxableAmount,
           hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
           gstRate: gstResult.lineGST[idx]?.gstRate || 0,
           cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,

@@ -56,6 +56,7 @@ interface OrganizationDetails {
     language: string;
     currency: string;
     posAccountingMode: string;
+    isTaxInclusivePrice: boolean;
     createdAt: string;
     users: Array<{
         id: string;
@@ -109,6 +110,7 @@ export default function OrganizationDetailsPage() {
     const [language, setLanguage] = useState("en");
     const [currency, setCurrency] = useState("INR");
     const [posAccountingMode, setPosAccountingMode] = useState("DIRECT");
+    const [isTaxInclusivePrice, setIsTaxInclusivePrice] = useState(false);
     const [saving, setSaving] = useState(false);
 
     // Delete state
@@ -165,6 +167,7 @@ export default function OrganizationDetailsPage() {
         setLanguage(data.language || "en");
         setCurrency(data.currency || "INR");
         setPosAccountingMode(data.posAccountingMode || "DIRECT");
+        setIsTaxInclusivePrice(data.isTaxInclusivePrice || false);
     };
 
     const fetchOrganization = useCallback(async () => {
@@ -265,6 +268,7 @@ export default function OrganizationDetailsPage() {
                     language,
                     currency,
                     posAccountingMode,
+                    isTaxInclusivePrice,
                 }),
             });
 
@@ -675,6 +679,23 @@ export default function OrganizationDetailsPage() {
                                             }}
                                         />
                                     </div>
+
+                                    {/* Tax-Inclusive Pricing */}
+                                    {(gstEnabled || saudiEInvoiceEnabled) && (
+                                        <div className="flex items-center justify-between pt-6 border-t border-border">
+                                            <div className="space-y-0.5">
+                                                <Label htmlFor="isTaxInclusivePrice">Tax-Inclusive Pricing</Label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Selling prices already include tax. The system will back-calculate the tax-exclusive base amount.
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                id="isTaxInclusivePrice"
+                                                checked={isTaxInclusivePrice}
+                                                onCheckedChange={setIsTaxInclusivePrice}
+                                            />
+                                        </div>
+                                    )}
 
                                     {saudiEInvoiceEnabled && (
                                         <div className="space-y-4 pl-4 border-l-2 border-muted mt-4 max-w-md">

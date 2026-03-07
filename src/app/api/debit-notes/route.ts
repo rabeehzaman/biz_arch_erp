@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
+import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
+import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import {
   consumeStockForDebitNote,
   checkReturnableStock,
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
     // Validate warehouse is provided when multi-branch is enabled
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { multiBranchEnabled: true },
+      select: { multiBranchEnabled: true, isTaxInclusivePrice: true },
     });
     if (org?.multiBranchEnabled && !warehouseId) {
       return NextResponse.json(
@@ -129,16 +130,18 @@ export async function POST(request: NextRequest) {
     }
     const debitNoteNumber = await generateDebitNoteNumber(organizationId);
     const debitNoteDate = toMidnightUTC(issueDate);
+    const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
 
-    // Calculate subtotal with item-level discounts
-    const subtotal = items.reduce(
-      (
-        sum: number,
-        item: { quantity: number; unitCost: number; discount?: number }
-      ) =>
-        sum + item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
-      0
-    );
+    // Build per-line gross amounts and taxable amounts (for tax-inclusive pricing)
+    const lineAmounts = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number }) => {
+      const grossAmount = item.quantity * item.unitCost * (1 - (item.discount || 0) / 100);
+      const taxRate = item.gstRate || 0;
+      const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(grossAmount, taxRate) : grossAmount;
+      return { grossAmount, taxableAmount };
+    });
+
+    // Calculate subtotal (sum of tax-exclusive base amounts)
+    const subtotal = lineAmounts.reduce((sum: number, la: { taxableAmount: number }) => sum + la.taxableAmount, 0);
 
     // Check stock availability for all items before proceeding
     for (const item of items) {
@@ -178,8 +181,8 @@ export async function POST(request: NextRequest) {
         select: { gstin: true, gstStateCode: true },
       });
       // NOTE: We do not multiply discount amount by conversionFactor here because unitCost should conceptually be for the selected unit.
-      const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }) => ({
-        taxableAmount: item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+      const lineItemsForGST = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
+        taxableAmount: lineAmounts[idx].taxableAmount,
         gstRate: item.gstRate || 0,
         hsnCode: item.hsnCode || null,
       }));
@@ -229,8 +232,7 @@ export async function POST(request: NextRequest) {
                 conversionFactor: item.conversionFactor || 1,
                 unitCost: item.unitCost,
                 discount: item.discount || 0,
-                total:
-                  item.quantity * item.unitCost * (1 - (item.discount || 0) / 100),
+                total: lineAmounts[idx].taxableAmount,
                 hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
                 gstRate: gstResult.lineGST[idx]?.gstRate || 0,
                 cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
