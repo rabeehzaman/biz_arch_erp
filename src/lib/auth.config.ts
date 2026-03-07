@@ -45,7 +45,7 @@ export const authConfig: NextAuthConfig = {
 
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session: sessionUpdate }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
@@ -64,6 +64,12 @@ export const authConfig: NextAuthConfig = {
         token.saudiEInvoiceEnabled = (user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled ?? false;
         token.language = (user as { language?: string }).language ?? "en";
         token.currency = (user as { currency?: string }).currency ?? "INR";
+      }
+      // Handle client-side session updates (e.g. language switch)
+      if (trigger === "update" && sessionUpdate) {
+        if ((sessionUpdate as { language?: string }).language) {
+          token.language = (sessionUpdate as { language: string }).language;
+        }
       }
       return token;
     },

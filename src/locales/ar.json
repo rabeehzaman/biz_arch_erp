@@ -48,6 +48,9 @@
         "manageOps": "إدارة العمليات التجارية",
         "searchPlaceholder": "بحث أو انتقل إلى...",
         "profile": "الملف الشخصي",
+        "language": "اللغة",
+        "english": "English",
+        "arabic": "العربية",
         "signOut": "تسجيل الخروج"
     },
     "settings": {

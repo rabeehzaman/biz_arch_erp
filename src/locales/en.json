@@ -48,6 +48,9 @@
         "manageOps": "Manage your business operations",
         "searchPlaceholder": "Search or jump to...",
         "profile": "Profile",
+        "language": "Language",
+        "english": "English",
+        "arabic": "العربية",
         "signOut": "Sign Out"
     },
     "settings": {

@@ -9,19 +9,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "next-auth/react";
-import { LogOut, User, Building2, Search } from "lucide-react";
+import { LogOut, User, Building2, Search, Globe, Check } from "lucide-react";
 import { MobileSidebar } from "./sidebar";
 import { useEffect, useState } from "react";
 import { useCommandPalette } from "@/components/command-palette/command-palette-provider";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, type Language } from "@/lib/i18n";
 
 export function Header() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const { setOpen } = useCommandPalette();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [orgName, setOrgName] = useState<string>("");
+  const [switchingLang, setSwitchingLang] = useState(false);
 
   const initials = session?.user?.name
     ?.split(" ")
@@ -42,6 +47,27 @@ export function Header() {
         .catch(() => { });
     }
   }, [session?.user?.organizationId]);
+
+  const handleLanguageSwitch = async (newLang: Language) => {
+    if (newLang === lang || switchingLang) return;
+    setSwitchingLang(true);
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language: newLang }),
+      });
+      if (res.ok) {
+        // Update the JWT session with the new language, then reload
+        await update({ language: newLang });
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error("Failed to switch language:", err);
+    } finally {
+      setSwitchingLang(false);
+    }
+  };
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
@@ -98,6 +124,24 @@ export function Header() {
             <User className="mr-2 h-4 w-4" />
             {t("header.profile")}
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Globe className="mr-2 h-4 w-4" />
+              {t("header.language")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => handleLanguageSwitch("en")} disabled={switchingLang}>
+                  <Check className={`mr-2 h-4 w-4 ${lang === "en" ? "opacity-100" : "opacity-0"}`} />
+                  {t("header.english")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleLanguageSwitch("ar")} disabled={switchingLang}>
+                  <Check className={`mr-2 h-4 w-4 ${lang === "ar" ? "opacity-100" : "opacity-0"}`} />
+                  {t("header.arabic")}
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-red-600 focus:text-red-600"
@@ -111,3 +155,4 @@ export function Header() {
     </header>
   );
 }
+

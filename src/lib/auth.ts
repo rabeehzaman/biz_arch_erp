@@ -79,7 +79,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           weighMachineDecimalPlaces: user.organization?.weighMachineDecimalPlaces ?? 3,
           gstStateCode: user.organization?.gstStateCode ?? null,
           saudiEInvoiceEnabled: user.organization?.saudiEInvoiceEnabled ?? false,
-          language: user.organization?.language ?? "en",
+          language: user.language ?? user.organization?.language ?? "en",
           currency: user.organization?.currency ?? "INR",
         };
       },
