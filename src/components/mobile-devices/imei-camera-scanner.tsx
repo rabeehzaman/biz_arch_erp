@@ -38,15 +38,17 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
   const detectorRef = useRef<BarcodeDetector | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const zxingReaderRef = useRef<any>(null);
+  const scanControlsRef = useRef<{ stop: () => void } | null>(null);
   const mountedRef = useRef(true);
 
   const stopCamera = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
-    if (zxingReaderRef.current?.reset) {
-      try { zxingReaderRef.current.reset(); } catch { /* ignore */ }
-      zxingReaderRef.current = null;
+    if (scanControlsRef.current) {
+      try { scanControlsRef.current.stop(); } catch { /* ignore */ }
+      scanControlsRef.current = null;
     }
+    zxingReaderRef.current = null;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -123,12 +125,30 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+
+        // Wait for video to have valid dimensions (needed on iOS Safari)
+        const video = videoRef.current;
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          await new Promise<void>((resolve) => {
+            const onReady = () => {
+              video.removeEventListener("loadeddata", onReady);
+              resolve();
+            };
+            // If loadeddata already fired, check dimensions in rAF
+            if (video.readyState >= 2) {
+              resolve();
+            } else {
+              video.addEventListener("loadeddata", onReady);
+            }
+          });
+        }
+
         setScanning(true);
 
         if (useNative) {
           scanLoopNative();
         } else {
-          // Use @zxing/browser high-level API (works on Safari/iOS)
+          // Use @zxing/browser for Safari/iOS fallback
           const { BrowserMultiFormatReader } = await import("@zxing/browser");
           const { BarcodeFormat, DecodeHintType } = await import("@zxing/library");
 
@@ -146,7 +166,10 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
           const codeReader = new BrowserMultiFormatReader(hints);
           zxingReaderRef.current = codeReader;
 
-          codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+          // Use scan() directly on the already-playing video element.
+          // decodeFromStream() re-initializes srcObject + play(), which
+          // causes the video to reset on iOS Safari and breaks scanning.
+          const controls = codeReader.scan(video, (result, err) => {
             if (!mountedRef.current) return;
             if (result) {
               const digits = result.getText().replace(/\D/g, "");
@@ -163,6 +186,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
               console.error("[ImeiCameraScanner] ZXing decode error:", err);
             }
           });
+          scanControlsRef.current = controls;
         }
       }
     } catch (err) {
@@ -229,6 +253,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
             <video
               ref={videoRef}
               className="h-full w-full object-cover"
+              autoPlay
               playsInline
               muted
             />
