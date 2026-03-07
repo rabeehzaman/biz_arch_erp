@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { UserCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/lib/i18n";
 
 interface Customer {
   id: string;
@@ -20,6 +21,7 @@ export function CustomerSelect({
   selectedCustomer,
   onSelect,
 }: CustomerSelectProps) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -29,7 +31,7 @@ export function CustomerSelect({
       fetch("/api/customers")
         .then((res) => res.json())
         .then((data) => setCustomers(data))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [isOpen]);
 
@@ -50,7 +52,7 @@ export function CustomerSelect({
       >
         <UserCircle className="h-4 w-4 text-muted-foreground" />
         <span className={selectedCustomer ? "font-medium" : "text-muted-foreground"}>
-          {selectedCustomer ? selectedCustomer.name : "Walk-in Customer"}
+          {selectedCustomer ? selectedCustomer.name : t("pos.walkInCustomerDefault").split(" (")[0]}
         </span>
         {selectedCustomer && (
           <Button
@@ -73,7 +75,7 @@ export function CustomerSelect({
     <div className="rounded-lg border bg-white shadow-lg">
       <div className="p-2">
         <Input
-          placeholder="Search customers..."
+          placeholder={t("pos.searchCustomers")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           autoFocus
@@ -88,7 +90,7 @@ export function CustomerSelect({
           }}
           className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 text-muted-foreground"
         >
-          Walk-in Customer (default)
+          {t("pos.walkInCustomerDefault")}
         </button>
         {filtered.map((customer) => (
           <button
@@ -113,7 +115,7 @@ export function CustomerSelect({
           className="w-full text-xs"
           onClick={() => setIsOpen(false)}
         >
-          Cancel
+          {t("pos.cancel")}
         </Button>
       </div>
     </div>

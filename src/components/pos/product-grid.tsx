@@ -2,6 +2,7 @@
 
 import { ProductTile } from "./product-tile";
 import { PackageX } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 interface Product {
   id: string;
@@ -26,6 +27,7 @@ export function ProductGrid({
   selectedCategory,
   onAddToCart,
 }: ProductGridProps) {
+  const { t } = useLanguage();
   const filtered = products.filter((p) => {
     const matchesSearch =
       !searchQuery ||
@@ -40,8 +42,8 @@ export function ProductGrid({
     return (
       <div className="flex flex-1 flex-col items-center justify-center text-muted-foreground py-12">
         <PackageX className="h-12 w-12 mb-3 opacity-50" />
-        <p className="text-lg font-medium">No products found</p>
-        <p className="text-sm">Try adjusting your search or category filter</p>
+        <p className="text-lg font-medium">{t("pos.noProductsFound")}</p>
+        <p className="text-sm">{t("pos.tryAdjustingSearch")}</p>
       </div>
     );
   }

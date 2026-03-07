@@ -107,7 +107,7 @@ export function PaymentPanel({
             size="sm"
             onClick={() => setMode("single")}
           >
-            Single Payment
+            {t("pos.singlePayment")}
           </Button>
           <Button
             variant={mode === "split" ? "default" : "outline"}
@@ -115,7 +115,7 @@ export function PaymentPanel({
             onClick={() => setMode("split")}
           >
             <Split className="h-3 w-3 mr-1" />
-            Split
+            {t("pos.split")}
           </Button>
         </div>
 
@@ -146,17 +146,17 @@ export function PaymentPanel({
             ) : (
               <div className="space-y-3">
                 <div className="rounded-lg bg-slate-50 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">Amount</p>
+                  <p className="text-sm text-muted-foreground">{t("pos.amount")}</p>
                   <p className="text-3xl font-bold">{formatCurrency(total)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">
-                    Reference / Transaction ID
+                    {t("pos.referenceOrTransactionId")}
                   </label>
                   <Input
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
-                    placeholder="Enter reference number"
+                    placeholder={t("pos.enterReferenceNumber")}
                     className="mt-1"
                   />
                 </div>
@@ -180,7 +180,7 @@ export function PaymentPanel({
                   className="h-4 w-4 rounded border-gray-300 text-primary"
                 />
                 <label htmlFor="credit-sale" className="text-sm font-medium cursor-pointer">
-                  Mark as Credit Sale (Partial/No Payment)
+                  {t("pos.markAsCreditSale")}
                 </label>
               </div>
             </div>
@@ -189,11 +189,11 @@ export function PaymentPanel({
               <div className="rounded-lg bg-orange-50 p-4 border border-orange-200 mt-2">
                 {!hasCustomer ? (
                   <p className="text-sm text-red-600 font-medium font-bold text-center">
-                    A customer MUST be selected for a credit sale.
+                    {t("pos.customerMustBeSelectedForCreditSale")}
                   </p>
                 ) : (
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-orange-800 font-medium">Balance Due:</span>
+                    <span className="text-orange-800 font-medium">{t("pos.balanceDue")}:</span>
                     <span className="text-orange-800 font-bold text-lg">{formatCurrency(balanceDue)}</span>
                   </div>
                 )}

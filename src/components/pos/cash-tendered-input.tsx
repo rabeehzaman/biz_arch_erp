@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Numpad } from "./numpad";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface CashTenderedInputProps {
   total: number;
@@ -17,6 +18,7 @@ export function CashTenderedInput({
   onChange,
 }: CashTenderedInputProps) {
   const { fmt: formatCurrency } = useCurrency();
+  const { t } = useLanguage();
   const numericValue = parseFloat(value) || 0;
   const change = numericValue - total;
 
@@ -26,7 +28,7 @@ export function CashTenderedInput({
     <div className="space-y-4">
       <div>
         <label className="text-sm font-medium text-muted-foreground">
-          Cash Received
+          {t("pos.cashReceived")}
         </label>
         <Input
           type="number"
@@ -46,7 +48,7 @@ export function CashTenderedInput({
           onClick={() => onChange(total.toFixed(2))}
           className="text-xs"
         >
-          Exact {formatCurrency(total)}
+          {t("pos.exact")} {formatCurrency(total)}
         </Button>
         {quickAmounts.slice(0, 4).map((amount) => (
           <Button
@@ -71,7 +73,7 @@ export function CashTenderedInput({
 
       {numericValue > 0 && (
         <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-center">
-          <p className="text-sm text-green-700">Change</p>
+          <p className="text-sm text-green-700">{t("pos.change")}</p>
           <p className="text-2xl font-bold text-green-700">
             {formatCurrency(Math.max(0, change))}
           </p>

@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { Package } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface ProductTileProps {
   product: {
@@ -19,6 +20,7 @@ interface ProductTileProps {
 
 export function ProductTile({ product, onAdd }: ProductTileProps) {
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
   const outOfStock = !product.isService && product.stockQuantity <= 0;
   const lowStock = !product.isService && product.stockQuantity > 0 && product.stockQuantity <= 5;
 
@@ -51,11 +53,11 @@ export function ProductTile({ product, onAdd }: ProductTileProps) {
         {fmt(Number(product.price))}
       </span>
       {outOfStock && (
-        <span className="text-xs text-red-500 font-medium mt-1">Out of Stock</span>
+        <span className="text-xs text-red-500 font-medium mt-1">{t("products.outOfStock")}</span>
       )}
       {lowStock && (
         <span className="text-xs text-orange-500 font-medium mt-1">
-          {product.stockQuantity} left
+          {product.stockQuantity} {t("pos.left")}
         </span>
       )}
     </button>

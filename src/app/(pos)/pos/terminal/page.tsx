@@ -607,7 +607,7 @@ function POSTerminalContent() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h2 className="text-lg font-bold">
-              {mobileView === "payment" ? t("pos.checkout") : "Cart"}
+              {mobileView === "payment" ? t("pos.checkout") : t("pos.cart")}
             </h2>
             {cart.length > 0 && (
               <div className="ml-auto text-sm font-bold text-primary">
@@ -631,8 +631,8 @@ function POSTerminalContent() {
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <ShoppingCart className="h-12 w-12 mb-3 opacity-30" />
-                    <p className="text-sm">Empty</p>
-                    <p className="text-xs">Add products</p>
+                    <p className="text-sm">{t("pos.emptyCart")}</p>
+                    <p className="text-xs">{t("pos.addProducts")}</p>
                   </div>
                 ) : (
                   cart.map((item) => (
@@ -718,19 +718,19 @@ function POSTerminalContent() {
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Close POS Session</DialogTitle>
+            <DialogTitle>{t("pos.closePosSession")}</DialogTitle>
             <DialogDescription>
-              Enter the closing cash amount to end this session.
+              {t("pos.enterClosingCashAmount")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">Session</span>
+                <span className="text-muted-foreground">{t("pos.session")}</span>
                 <p className="font-medium">{posSession.sessionNumber}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Opened</span>
+                <span className="text-muted-foreground">{t("pos.opened")}</span>
                 <p className="font-medium">
                   {formatDistanceToNow(new Date(posSession.openedAt), { addSuffix: true })}
                 </p>
@@ -742,11 +742,11 @@ function POSTerminalContent() {
                 </p>
               </div>
               <div>
-                <span className="text-muted-foreground">Transactions</span>
+                <span className="text-muted-foreground">{t("pos.transactions")}</span>
                 <p className="font-medium">{posSession.totalTransactions}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Expected Cash</span>
+                <span className="text-muted-foreground">{t("pos.expectedCash")}</span>
                 <p className="font-medium">
                   {isLoadingSummary ? (
                     <Loader2 className="h-3 w-3 animate-spin inline" />
@@ -758,13 +758,13 @@ function POSTerminalContent() {
             </div>
             <div>
               <div className="flex justify-between items-end mb-1">
-                <label className="text-sm font-medium">Counted Closing Cash</label>
+                <label className="text-sm font-medium">{t("pos.countedClosingCash")}</label>
                 {closingCash && !isLoadingSummary && (
                   <span className={cn(
                     "text-sm font-medium",
                     cashDifference > 0 ? "text-green-600" : (cashDifference < 0 ? "text-red-600" : "text-slate-600")
                   )}>
-                    Diff: {cashDifference > 0 ? "+" : ""}{fmt(cashDifference)}
+                    {t("pos.diff")} {cashDifference > 0 ? "+" : ""}{fmt(cashDifference)}
                   </span>
                 )}
               </div>
@@ -784,10 +784,10 @@ function POSTerminalContent() {
               <div className="space-y-3 border-t pt-4">
                 <p className="text-xs text-muted-foreground font-medium">Settlement Accounts</p>
                 <div className="space-y-2">
-                  <Label className="text-sm">Deposit Cash To *</Label>
+                  <Label className="text-sm">{t("pos.depositCashTo")}</Label>
                   <Select value={settleCashAccountId} onValueChange={setSettleCashAccountId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select cash account..." />
+                      <SelectValue placeholder={t("pos.selectCashAccount")} />
                     </SelectTrigger>
                     <SelectContent>
                       {cashBankAccounts
@@ -799,10 +799,10 @@ function POSTerminalContent() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm">Deposit Non-Cash To</Label>
+                  <Label className="text-sm">{t("pos.depositNonCashTo")}</Label>
                   <Select value={settleBankAccountId} onValueChange={setSettleBankAccountId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select bank account (optional)" />
+                      <SelectValue placeholder={t("pos.selectBankAccountOptional")} />
                     </SelectTrigger>
                     <SelectContent>
                       {cashBankAccounts
@@ -812,21 +812,21 @@ function POSTerminalContent() {
                         ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">If not selected, non-cash payments go to the cash account above.</p>
+                  <p className="text-xs text-muted-foreground">{t("pos.ifNotSelectedNonCashPaymentsGoToCashAccount")}</p>
                 </div>
               </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCloseDialog(false)}>
-              Cancel
+              {t("pos.cancel")}
             </Button>
             <Button
               onClick={closeSession}
               disabled={isClosingSession || (isClearingMode && !settleCashAccountId)}
             >
               {isClosingSession && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Close Session
+              {t("pos.closePosSession")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -842,7 +842,7 @@ function POSTerminalContent() {
             {heldOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
                 <PauseCircle className="h-12 w-12 mb-3 opacity-30" />
-                <p className="text-sm">Empty</p>
+                <p className="text-sm">{t("pos.emptyCart")}</p>
               </div>
             ) : (
               <div className="p-4 space-y-3">

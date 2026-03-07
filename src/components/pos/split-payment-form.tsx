@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
 import { PaymentMethodButton } from "./payment-method-button";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 export interface PaymentEntry {
   method: string;
@@ -26,6 +27,7 @@ export function SplitPaymentForm({
   onUpdate,
 }: SplitPaymentFormProps) {
   const { fmt: formatCurrency } = useCurrency();
+  const { t } = useLanguage();
   const totalPaid = payments.reduce(
     (sum, p) => sum + (parseFloat(p.amount) || 0),
     0
@@ -52,17 +54,17 @@ export function SplitPaymentForm({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Split Payment</h3>
+        <h3 className="font-medium">{t("pos.splitPayment")}</h3>
         <Button variant="outline" size="sm" onClick={addPayment}>
           <Plus className="h-3 w-3 mr-1" />
-          Add
+          {t("pos.add")}
         </Button>
       </div>
 
       {payments.map((payment, index) => (
         <div key={index} className="rounded-lg border p-3 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Payment {index + 1}</span>
+            <span className="text-sm font-medium">{t("pos.paymentIndex").replace("{index}", String(index + 1))}</span>
             {payments.length > 1 && (
               <Button
                 variant="ghost"
@@ -87,7 +89,7 @@ export function SplitPaymentForm({
           <div className="flex gap-2">
             <Input
               type="number"
-              placeholder="Amount"
+              placeholder={t("pos.amount")}
               value={payment.amount}
               onChange={(e) => updatePayment(index, "amount", e.target.value)}
               className="flex-1"
@@ -96,7 +98,7 @@ export function SplitPaymentForm({
             />
             {payment.method !== "CASH" && (
               <Input
-                placeholder="Reference"
+                placeholder={t("pos.reference")}
                 value={payment.reference}
                 onChange={(e) =>
                   updatePayment(index, "reference", e.target.value)
@@ -110,15 +112,15 @@ export function SplitPaymentForm({
 
       <div className="rounded-lg bg-slate-50 p-3 space-y-1">
         <div className="flex justify-between text-sm">
-          <span>Total Due</span>
+          <span>{t("pos.totalDue")}</span>
           <span className="font-medium">{formatCurrency(total)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span>Total Paid</span>
+          <span>{t("pos.totalPaid")}</span>
           <span className="font-medium">{formatCurrency(totalPaid)}</span>
         </div>
         <div className="flex justify-between text-sm font-bold">
-          <span>{remaining >= 0 ? "Remaining" : "Change"}</span>
+          <span>{remaining >= 0 ? t("pos.remaining") : t("pos.change")}</span>
           <span className={remaining < 0 ? "text-green-600" : remaining > 0 ? "text-red-600" : ""}>
             {formatCurrency(Math.abs(remaining))}
           </span>

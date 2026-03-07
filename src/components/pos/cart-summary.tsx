@@ -18,7 +18,7 @@ export function CartSummary({ items, isTaxInclusivePrice }: CartSummaryProps) {
   return (
     <div className="space-y-2">
       {isTaxInclusivePrice && (
-        <div className="text-xs text-blue-600 text-right font-medium">Prices include tax</div>
+        <div className="text-xs text-blue-600 text-right font-medium">{t("common.pricesIncludeTax") || "Prices include tax"}</div>
       )}
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">{t("common.subtotal") || "Subtotal"}</span>

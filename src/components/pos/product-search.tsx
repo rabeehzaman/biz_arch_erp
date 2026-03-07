@@ -4,6 +4,7 @@ import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
+import { useLanguage } from "@/lib/i18n";
 
 interface ProductSearchProps {
   value: string;
@@ -11,6 +12,7 @@ interface ProductSearchProps {
 }
 
 export function ProductSearch({ value, onChange }: ProductSearchProps) {
+  const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -18,7 +20,7 @@ export function ProductSearch({ value, onChange }: ProductSearchProps) {
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         ref={inputRef}
-        placeholder="Search products by name or SKU..."
+        placeholder={t("pos.searchProductsByNameOrSku")}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="pl-9 pr-9 h-10"

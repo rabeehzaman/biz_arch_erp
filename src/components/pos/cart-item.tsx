@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/lib/i18n";
 import { Minus, Plus, Trash2, Percent } from "lucide-react";
 
 export interface CartItemData {
@@ -31,6 +32,7 @@ export function CartItem({
   onRemove,
 }: CartItemProps) {
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
   const [showDiscountInput, setShowDiscountInput] = useState(false);
   const [discountValue, setDiscountValue] = useState(item.discount.toString());
   const lineTotal = item.quantity * item.price * (1 - item.discount / 100);
@@ -55,12 +57,11 @@ export function CartItem({
                 setDiscountValue(item.discount.toString());
                 setShowDiscountInput(!showDiscountInput);
               }}
-              className={`inline-flex items-center gap-0.5 px-1 rounded hover:bg-slate-100 ${
-                item.discount > 0 ? "text-green-600 font-medium" : "text-slate-400"
-              }`}
+              className={`inline-flex items-center gap-0.5 px-1 rounded hover:bg-slate-100 ${item.discount > 0 ? "text-green-600 font-medium" : "text-slate-400"
+                }`}
             >
               <Percent className="h-2.5 w-2.5" />
-              {item.discount > 0 ? `${item.discount}%` : "Disc"}
+              {item.discount > 0 ? `${item.discount}%` : t("pos.disc")}
             </button>
           </div>
         </div>
@@ -116,7 +117,7 @@ export function CartItem({
           />
           <span className="text-xs text-muted-foreground">%</span>
           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={applyDiscount}>
-            Apply
+            {t("pos.apply")}
           </Button>
           {item.discount > 0 && (
             <Button
@@ -128,7 +129,7 @@ export function CartItem({
                 setShowDiscountInput(false);
               }}
             >
-              Clear
+              {t("pos.clear")}
             </Button>
           )}
         </div>

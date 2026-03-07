@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Banknote, CreditCard, Smartphone, Building2 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 const methodIcons: Record<string, React.ElementType> = {
   CASH: Banknote,
@@ -10,12 +11,7 @@ const methodIcons: Record<string, React.ElementType> = {
   BANK_TRANSFER: Building2,
 };
 
-const methodLabels: Record<string, string> = {
-  CASH: "Cash",
-  CREDIT_CARD: "Card",
-  UPI: "UPI",
-  BANK_TRANSFER: "Bank",
-};
+
 
 interface PaymentMethodButtonProps {
   method: string;
@@ -28,7 +24,16 @@ export function PaymentMethodButton({
   isSelected,
   onClick,
 }: PaymentMethodButtonProps) {
+  const { t } = useLanguage();
   const Icon = methodIcons[method] || Banknote;
+
+  const methodLabels: Record<string, string> = {
+    CASH: t("payments.cash") || "Cash",
+    CREDIT_CARD: t("pos.card") || "Card",
+    UPI: "UPI",
+    BANK_TRANSFER: t("pos.bankMethod") || "Bank",
+  };
+
   const label = methodLabels[method] || method;
 
   return (

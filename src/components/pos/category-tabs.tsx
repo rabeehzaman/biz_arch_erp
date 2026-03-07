@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 interface Category {
   id: string;
@@ -16,6 +17,7 @@ interface CategoryTabsProps {
 }
 
 export function CategoryTabs({ categories, selected, onSelect }: CategoryTabsProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
       <button
@@ -27,7 +29,7 @@ export function CategoryTabs({ categories, selected, onSelect }: CategoryTabsPro
             : "bg-white text-slate-600 hover:bg-slate-100 border"
         )}
       >
-        All
+        {t("pos.allOptions")}
       </button>
       {categories.map((cat) => (
         <button
