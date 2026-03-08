@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,54 @@ interface LineItem {
   selectedImeis: string[];
 }
 
+type InvoiceTaxMode = "none" | "gst" | "vat";
+
+function roundCurrency(amount: number) {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
+function getInvoiceTaxMode(gstEnabled: boolean | undefined, saudiEnabled: boolean): InvoiceTaxMode {
+  if (saudiEnabled) return "vat";
+  if (gstEnabled) return "gst";
+  return "none";
+}
+
+function getInvoiceLineAmounts(item: LineItem, taxMode: InvoiceTaxMode, taxInclusive: boolean) {
+  const quantity = Number(item.quantity) || 0;
+  const unitPrice = Number(item.unitPrice) || 0;
+  const discount = Number(item.discount) || 0;
+  const taxRate = taxMode === "vat"
+    ? Number(item.vatRate) || 0
+    : taxMode === "gst"
+      ? Number(item.gstRate) || 0
+      : 0;
+  const discountedAmount = quantity * unitPrice * (1 - discount / 100);
+
+  if (taxInclusive && taxRate > 0) {
+    const subtotal = roundCurrency(discountedAmount / (1 + taxRate / 100));
+    const tax = roundCurrency(discountedAmount - subtotal);
+
+    return {
+      subtotal,
+      tax,
+      total: roundCurrency(discountedAmount),
+    };
+  }
+
+  const subtotal = roundCurrency(discountedAmount);
+  const tax = roundCurrency(discountedAmount * (taxRate / 100));
+
+  return {
+    subtotal,
+    tax,
+    total: roundCurrency(subtotal + tax),
+  };
+}
+
+function getLineAmountKey(itemId: string, subtotal: number, total: number) {
+  return `${itemId}:${subtotal}:${total}`;
+}
+
 export default function NewInvoicePage() {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -96,8 +144,8 @@ export default function NewInvoicePage() {
   ]);
   const [availableDevices, setAvailableDevices] = useState<Record<string, MobileDeviceOption[]>>({});
 
-  const { data: session } = useSession();
-  const { symbol } = useCurrency();
+  const { data: session, status: sessionStatus } = useSession();
+  const { fmt } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const saveAndNew = useRef(false);
@@ -355,33 +403,23 @@ export default function NewInvoicePage() {
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const taxMode = getInvoiceTaxMode(session?.user?.gstEnabled, saudiEnabled);
 
-  const calculateSubtotal = () => {
-    return lineItems.reduce((sum, item) => {
-      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      if (taxInclusive) {
-        const rate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-        return sum + (rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross);
-      }
-      return sum + gross;
-    }, 0);
-  };
+  const totals = useMemo(() => {
+    return lineItems.reduce(
+      (summary, item) => {
+        if (!item.productId) return summary;
 
-  const calculateTax = () => {
-    return lineItems.reduce((sum, item) => {
-      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      const rate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-      if (taxInclusive) {
-        const base = rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross;
-        return sum + (base * rate) / 100;
-      }
-      return sum + (gross * rate) / 100;
-    }, 0);
-  };
+        const amounts = getInvoiceLineAmounts(item, taxMode, taxInclusive);
+        summary.subtotal = roundCurrency(summary.subtotal + amounts.subtotal);
+        summary.tax = roundCurrency(summary.tax + amounts.tax);
+        summary.total = roundCurrency(summary.total + amounts.total);
 
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
-  };
+        return summary;
+      },
+      { subtotal: 0, tax: 0, total: 0 }
+    );
+  }, [lineItems, taxInclusive, taxMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -467,6 +505,16 @@ export default function NewInvoicePage() {
     }
   };
 
+  if (sessionStatus === "loading") {
+    return (
+      <PageAnimation>
+        <div className="flex items-center justify-center py-8">
+          <div className="text-slate-500">Loading...</div>
+        </div>
+      </PageAnimation>
+    );
+  }
+
   return (
     <PageAnimation>
       <div className="space-y-6">
@@ -507,7 +555,7 @@ export default function NewInvoicePage() {
                       }
                       onCustomerCreated={fetchCustomers}
                       required
-                      onSelectFocusNext={(triggerRef: any) => focusNextFocusable(triggerRef)}
+                      onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
                       autoFocus={true}
                     />
                   </div>
@@ -593,9 +641,9 @@ export default function NewInvoicePage() {
                         )}
                         <TableHead className="font-semibold">Unit Price *</TableHead>
                         <TableHead className="font-semibold">Disc %</TableHead>
-                        {session?.user?.gstEnabled && <TableHead className="font-semibold">GST %</TableHead>}
-                        {saudiEnabled && <TableHead className="font-semibold">VAT %</TableHead>}
-                        {(session?.user?.gstEnabled || saudiEnabled) ? (
+                        {taxMode === "gst" && <TableHead className="font-semibold">GST %</TableHead>}
+                        {taxMode === "vat" && <TableHead className="font-semibold">VAT %</TableHead>}
+                        {taxMode !== "none" ? (
                           <>
                             <TableHead className="text-right font-semibold">Gross Amount</TableHead>
                             <TableHead className="text-right font-semibold">Net Amount</TableHead>
@@ -611,9 +659,9 @@ export default function NewInvoicePage() {
                         const product = products.find((p) => p.id === item.productId);
                         const availableStock = product?.availableStock ?? 0;
                         const hasStockShortfall = item.productId && !product?.isService && item.quantity > availableStock;
-                        const shortfall = item.quantity - availableStock;
                         const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
                         const devices = isImeiTracked ? (availableDevices[item.productId] || []) : [];
+                        const lineAmounts = getInvoiceLineAmounts(item, taxMode, taxInclusive);
 
                         return (
                           <Fragment key={item.id}>
@@ -636,7 +684,7 @@ export default function NewInvoicePage() {
                                     }
                                     onProductCreated={fetchProducts}
                                     onSelect={() => focusQuantity(item.id)}
-                                    onSelectFocusNext={(triggerRef: any) => focusNextFocusable(triggerRef)}
+                                    onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
                                   />
                                 </div>
                               </TableCell>
@@ -749,7 +797,7 @@ export default function NewInvoicePage() {
                                   placeholder="0"
                                 />
                               </TableCell>
-                              {session?.user?.gstEnabled && (
+                              {taxMode === "gst" && (
                                 <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                   <Input
                                     type="number"
@@ -766,7 +814,7 @@ export default function NewInvoicePage() {
                                   />
                                 </TableCell>
                               )}
-                              {saudiEnabled && (
+                              {taxMode === "vat" && (
                                 <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                   <Input
                                     type="number"
@@ -783,24 +831,27 @@ export default function NewInvoicePage() {
                                   />
                                 </TableCell>
                               )}
-                              {(session?.user?.gstEnabled || saudiEnabled) ? (
+                              {taxMode !== "none" ? (
                                 <>
                                   <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                    {symbol}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toFixed(2)}
+                                    <span key={getLineAmountKey(item.id, lineAmounts.subtotal, lineAmounts.total)}>
+                                      {fmt(lineAmounts.subtotal)}
+                                    </span>
                                     {item.discount > 0 && (
                                       <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                     )}
                                   </TableCell>
                                   <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                                    {saudiEnabled
-                                      ? `${symbol}${((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.vatRate || 0) / 100)).toFixed(2)}`
-                                      : `${symbol}${((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}`
-                                    }
+                                    <span key={`${getLineAmountKey(item.id, lineAmounts.subtotal, lineAmounts.total)}:net`}>
+                                      {fmt(lineAmounts.total)}
+                                    </span>
                                   </TableCell>
                                 </>
                               ) : (
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                  {symbol}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                  <span key={`${getLineAmountKey(item.id, lineAmounts.subtotal, lineAmounts.total)}:single`}>
+                                    {fmt(lineAmounts.total)}
+                                  </span>
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                   )}
@@ -864,15 +915,13 @@ export default function NewInvoicePage() {
 
                 {/* Mobile Card Layout */}
                 <div className="sm:hidden divide-y divide-slate-200">
-                  {lineItems.map((item, index) => {
+                  {lineItems.map((item) => {
                     const product = products.find((p) => p.id === item.productId);
                     const availableStock = product?.availableStock ?? 0;
                     const hasStockShortfall = item.productId && !product?.isService && item.quantity > availableStock;
                     const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
                     const devices = isImeiTracked ? (availableDevices[item.productId] || []) : [];
-                    const lineGross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-                    const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-                    const lineNet = lineGross * (1 + taxRate / 100);
+                    const lineAmounts = getInvoiceLineAmounts(item, taxMode, taxInclusive);
 
                     return (
                       <div key={item.id} className="p-3 space-y-3">
@@ -894,7 +943,7 @@ export default function NewInvoicePage() {
                               }
                               onProductCreated={fetchProducts}
                               onSelect={() => focusQuantity(item.id)}
-                              onSelectFocusNext={(triggerRef: any) => focusNextFocusable(triggerRef)}
+                              onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
                             />
                           </div>
                           <Button
@@ -959,7 +1008,7 @@ export default function NewInvoicePage() {
                               placeholder="0"
                             />
                           </div>
-                          {session?.user?.gstEnabled && (
+                          {taxMode === "gst" && (
                             <div>
                               <Label className="text-xs text-slate-500">GST %</Label>
                               <Input
@@ -976,7 +1025,7 @@ export default function NewInvoicePage() {
                               />
                             </div>
                           )}
-                          {saudiEnabled && (
+                          {taxMode === "vat" && (
                             <div>
                               <Label className="text-xs text-slate-500">VAT %</Label>
                               <Input
@@ -1016,10 +1065,11 @@ export default function NewInvoicePage() {
                         </div>
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
-                          <span className="text-sm font-semibold">
-                            {(session?.user?.gstEnabled || saudiEnabled)
-                              ? `${symbol}${lineNet.toFixed(2)}`
-                              : `${symbol}${lineGross.toLocaleString("en-IN")}`}
+                          <span
+                            key={`${getLineAmountKey(item.id, lineAmounts.subtotal, lineAmounts.total)}:mobile`}
+                            className="text-sm font-semibold"
+                          >
+                            {fmt(lineAmounts.total)}
                           </span>
                         </div>
 
@@ -1089,7 +1139,7 @@ export default function NewInvoicePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-w-xs ml-auto">
-                  {saudiEnabled && (
+                  {taxMode === "vat" && (
                     <div className="text-xs text-slate-500 text-right mb-2 font-medium">VAT Invoice (ZATCA Phase 1)</div>
                   )}
                   {taxInclusive && (
@@ -1097,17 +1147,17 @@ export default function NewInvoicePage() {
                   )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>{symbol}{calculateSubtotal().toLocaleString("en-IN")}</span>
+                    <span key={`summary-subtotal:${totals.subtotal}`}>{fmt(totals.subtotal)}</span>
                   </div>
-                  {calculateTax() > 0 && (
+                  {totals.tax > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>{saudiEnabled ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
-                      <span>{symbol}{calculateTax().toLocaleString("en-IN")}</span>
+                      <span>{taxMode === "vat" ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
+                      <span key={`summary-tax:${totals.tax}`}>{fmt(totals.tax)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span>{symbol}{calculateTotal().toLocaleString("en-IN")}</span>
+                    <span key={`summary-total:${totals.total}`}>{fmt(totals.total)}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex justify-end gap-2">

@@ -53,11 +53,11 @@ export function Combobox<T>({
   // Ensure items is always an array
   const safeItems = Array.isArray(items) ? items : [];
 
-  // Get the selected item
-  const selectedItem = React.useMemo(
-    () => safeItems.find((item) => getId(item) === value),
-    [safeItems, value, getId]
-  );
+  const selectedLabel = React.useMemo(() => {
+    if (!value) return "";
+    const selectedItem = safeItems.find((item) => getId(item) === value);
+    return selectedItem ? getLabel(selectedItem) : "";
+  }, [safeItems, value, getId, getLabel]);
 
   // Filter items based on search query
   const filteredItems = React.useMemo(() => {
@@ -172,8 +172,11 @@ export function Combobox<T>({
             className
           )}
         >
-          <span className={cn(!selectedItem && "text-slate-500")}>
-            {selectedItem ? getLabel(selectedItem) : placeholder}
+          <span
+            key={value || "__placeholder"}
+            className={cn(!selectedLabel && "text-slate-500")}
+          >
+            {selectedLabel || placeholder}
           </span>
           <div className="flex items-center gap-1">
             {value && !disabled && (
