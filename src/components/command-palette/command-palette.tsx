@@ -27,10 +27,11 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 import { useCommandPalette } from "./command-palette-provider";
 import { useRecentCommands } from "./use-recent-commands";
 import { useCommandSearch } from "./use-command-search";
-import { isIMEI, isPartialIMEI, extractIMEI } from "./utils/imei-detector";
+import { isPartialIMEI, extractIMEI } from "./utils/imei-detector";
 import { tryEvaluate } from "./utils/calculator";
 import {
   coreNav,
@@ -94,6 +95,7 @@ export function CommandPalette() {
   const [search, setSearch] = useState("");
   const router = useRouter();
   const { data: session } = useSession();
+  const { tt } = useLanguage();
   const { recents, addRecent, clearRecents } = useRecentCommands();
 
   const { symbol } = useCurrency();
@@ -142,7 +144,7 @@ export function CommandPalette() {
   return (
     <CommandDialog open={open} onOpenChange={handleOpenChange}>
       <CommandInput
-        placeholder="Search pages, records, actions..."
+        placeholder={tt("Search pages, records, actions...")}
         value={search}
         onValueChange={setSearch}
       />
@@ -150,37 +152,50 @@ export function CommandPalette() {
       <CommandList>
         {/* IMEI Detection */}
         {imei && isMobileShopEnabled && (
-          <CommandGroup heading="IMEI">
+          <CommandGroup heading={tt("IMEI")}>
             <CommandItem
               value={`imei-${imei}`}
-              onSelect={() => navigate(`/mobile-shop/imei-lookup?imei=${imei}`, `IMEI: ${imei}`, "Smartphone")}
+              onSelect={() =>
+                navigate(
+                  `/mobile-shop/imei-lookup?imei=${imei}`,
+                  `${tt("IMEI")}: ${imei}`,
+                  "Smartphone"
+                )
+              }
             >
               <Smartphone className="h-4 w-4 text-emerald-600" />
               <div className="flex flex-col">
-                <span className="font-medium">Lookup IMEI: {imei}</span>
-                <span className="text-xs text-slate-400">Open device info page</span>
+                <span className="font-medium">
+                  {tt("Lookup IMEI")}: {imei}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {tt("Open device info page")}
+                </span>
               </div>
             </CommandItem>
           </CommandGroup>
         )}
 
         {partialImei && isMobileShopEnabled && (
-          <CommandGroup heading="IMEI">
+          <CommandGroup heading={tt("IMEI")}>
             <CommandItem value="imei-partial" disabled>
               <Smartphone className="h-4 w-4 text-slate-300" />
-              <span className="text-slate-400">Keep typing to complete IMEI ({search.replace(/[\s-]/g, "").length}/15 digits)</span>
+              <span className="text-slate-400">
+                {tt("Keep typing to complete IMEI")} (
+                {search.replace(/[\s-]/g, "").length}/15 digits)
+              </span>
             </CommandItem>
           </CommandGroup>
         )}
 
         {/* Calculator */}
         {calcResult && (
-          <CommandGroup heading="Calculator">
+          <CommandGroup heading={tt("Calculator")}>
             <CommandItem
               value={`calc-${search}`}
               onSelect={() => {
                 navigator.clipboard.writeText(calcResult).catch(() => {});
-                toast.success(`Copied ${calcResult} to clipboard`);
+                toast.success(tt(`Copied ${calcResult} to clipboard`));
                 setOpen(false);
                 setSearch("");
               }}
@@ -188,7 +203,9 @@ export function CommandPalette() {
               <Calculator className="h-4 w-4 text-blue-500" />
               <div className="flex flex-col">
                 <span className="font-medium">= {calcResult}</span>
-                <span className="text-xs text-slate-400">Click to copy result</span>
+                <span className="text-xs text-slate-400">
+                  {tt("Click to copy result")}
+                </span>
               </div>
             </CommandItem>
           </CommandGroup>
@@ -197,7 +214,7 @@ export function CommandPalette() {
         {/* Recent (shown when no search) */}
         {isEmpty && recents.length > 0 && (
           <>
-            <CommandGroup heading="Recent">
+            <CommandGroup heading={tt("Recent")}>
               {recents.map((item) => (
                 <CommandItem
                   key={item.id}
@@ -214,7 +231,7 @@ export function CommandPalette() {
                 className="text-slate-400"
               >
                 <X className="h-4 w-4" />
-                <span>Clear recent history</span>
+                <span>{tt("Clear recent history")}</span>
               </CommandItem>
             </CommandGroup>
             <CommandSeparator />
@@ -223,22 +240,22 @@ export function CommandPalette() {
 
         {/* Quick Actions */}
         {nav.quickActions.length > 0 && (
-          <CommandGroup heading="Quick Actions">
+          <CommandGroup heading={tt("Quick Actions")}>
             {nav.quickActions.map((item) => (
               <CommandItem
                 key={item.href}
-                value={`action-${item.name}-${item.keywords?.join(" ")}`}
-                onSelect={() => navigate(item.href, item.name, item.name)}
+                value={`action-${item.name}-${tt(item.name)}-${item.keywords?.join(" ")}`}
+                onSelect={() => navigate(item.href, tt(item.name), item.name)}
               >
                 <item.icon className="h-4 w-4 text-emerald-600" />
-                <span>{item.name}</span>
+                <span>{tt(item.name)}</span>
               </CommandItem>
             ))}
           </CommandGroup>
         )}
 
         {/* Navigation */}
-        <CommandGroup heading="Navigation">
+        <CommandGroup heading={tt("Navigation")}>
           {nav.core.map((item) => (
             <NavCommandItem key={item.href} item={item} onSelect={navigate} />
           ))}
@@ -264,7 +281,7 @@ export function CommandPalette() {
 
         {/* Reports */}
         {nav.reports.length > 0 && (
-          <CommandGroup heading="Reports">
+          <CommandGroup heading={tt("Reports")}>
             {nav.reports.map((item) => (
               <NavCommandItem key={item.href} item={item} onSelect={navigate} />
             ))}
@@ -273,7 +290,7 @@ export function CommandPalette() {
 
         {/* Superadmin */}
         {nav.admin.length > 0 && (
-          <CommandGroup heading="Admin">
+          <CommandGroup heading={tt("Admin")}>
             {nav.admin.map((item) => (
               <NavCommandItem key={item.href} item={item} onSelect={navigate} />
             ))}
@@ -282,16 +299,16 @@ export function CommandPalette() {
 
         {/* Entity search results */}
         {isSearching && loading && (
-          <CommandGroup heading="Searching...">
+          <CommandGroup heading={tt("Searching...")}>
             <CommandItem value="loading" disabled>
               <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-              <span className="text-slate-400">Searching records...</span>
+              <span className="text-slate-400">{tt("Searching records...")}</span>
             </CommandItem>
           </CommandGroup>
         )}
 
         {isSearching && !loading && results.products && results.products.length > 0 && (
-          <CommandGroup heading="Products">
+          <CommandGroup heading={tt("Products")}>
             {results.products.map((p) => (
               <CommandItem
                 key={p.id}
@@ -314,7 +331,7 @@ export function CommandPalette() {
         )}
 
         {isSearching && !loading && results.customers && results.customers.length > 0 && (
-          <CommandGroup heading="Customers">
+          <CommandGroup heading={tt("Customers")}>
             {results.customers.map((c) => (
               <CommandItem
                 key={c.id}
@@ -335,7 +352,7 @@ export function CommandPalette() {
         )}
 
         {isSearching && !loading && results.suppliers && results.suppliers.length > 0 && (
-          <CommandGroup heading="Suppliers">
+          <CommandGroup heading={tt("Suppliers")}>
             {results.suppliers.map((s) => (
               <CommandItem
                 key={s.id}
@@ -353,7 +370,7 @@ export function CommandPalette() {
         )}
 
         {isSearching && !loading && results.invoices && results.invoices.length > 0 && (
-          <CommandGroup heading="Sales Invoices">
+          <CommandGroup heading={tt("Sales Invoices")}>
             {results.invoices.map((inv) => (
               <CommandItem
                 key={inv.id}
@@ -378,7 +395,7 @@ export function CommandPalette() {
         )}
 
         {isSearching && !loading && results.purchaseInvoices && results.purchaseInvoices.length > 0 && (
-          <CommandGroup heading="Purchase Invoices">
+          <CommandGroup heading={tt("Purchase Invoices")}>
             {results.purchaseInvoices.map((inv) => (
               <CommandItem
                 key={inv.id}
@@ -398,7 +415,7 @@ export function CommandPalette() {
         )}
 
         {isSearching && !loading && results.devices && results.devices.length > 0 && (
-          <CommandGroup heading="Devices">
+          <CommandGroup heading={tt("Devices")}>
             {results.devices.map((d) => (
               <CommandItem
                 key={d.id}
@@ -417,7 +434,7 @@ export function CommandPalette() {
         )}
 
         {isSearching && !loading && !hasEntityResults && !imei && !partialImei && (
-          <CommandEmpty>No results found for &quot;{search}&quot;</CommandEmpty>
+          <CommandEmpty>{tt(`No results found for "${search}"`)}</CommandEmpty>
         )}
       </CommandList>
 
@@ -426,18 +443,18 @@ export function CommandPalette() {
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <kbd className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">↑↓</kbd>
-            Navigate
+            {tt("Navigate")}
           </span>
           <span className="flex items-center gap-1">
             <kbd className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">↵</kbd>
-            Select
+            {tt("Select")}
           </span>
           <span className="flex items-center gap-1">
             <kbd className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd>
-            Close
+            {tt("Close")}
           </span>
         </div>
-        <span>BizArch ERP</span>
+        <span>{tt("BizArch ERP")}</span>
       </div>
     </CommandDialog>
   );
@@ -450,13 +467,16 @@ function NavCommandItem({
   item: NavDef;
   onSelect: (href: string, label: string, iconName: string) => void;
 }) {
+  const { tt } = useLanguage();
+  const translatedName = tt(item.name);
+
   return (
     <CommandItem
-      value={`nav-${item.href}-${item.name}-${item.keywords?.join(" ")}`}
-      onSelect={() => onSelect(item.href, item.name, item.name)}
+      value={`nav-${item.href}-${item.name}-${translatedName}-${item.keywords?.join(" ")}`}
+      onSelect={() => onSelect(item.href, translatedName, item.name)}
     >
       <item.icon className="h-4 w-4 text-slate-400" />
-      <span>{item.name}</span>
+      <span>{translatedName}</span>
     </CommandItem>
   );
 }

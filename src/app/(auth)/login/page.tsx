@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,16 +12,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Building2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { PageAnimation } from "@/components/ui/page-animation";
 import Image from "next/image";
+import { persistLanguagePreference, useLanguage } from "@/lib/i18n";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { lang, setLanguage, tt } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +56,38 @@ export default function LoginPage() {
         style={{ backgroundImage: "url('/erp_login_background_light.png')" }}
       >
         <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px] z-0"></div>
+        <div className="absolute inset-x-4 top-4 z-10 flex justify-end">
+          <div className="inline-flex overflow-hidden rounded-lg border border-white/40 bg-white/80 shadow-sm backdrop-blur">
+            <button
+              type="button"
+              onClick={() => {
+                setLanguage("en");
+                persistLanguagePreference("en");
+              }}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                lang === "en"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-700 hover:bg-white"
+              }`}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLanguage("ar");
+                persistLanguagePreference("ar");
+              }}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                lang === "ar"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-700 hover:bg-white"
+              }`}
+            >
+              العربية
+            </button>
+          </div>
+        </div>
         <Card className="w-full max-w-md relative z-10 shadow-xl border-white/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-6">
@@ -63,9 +95,9 @@ export default function LoginPage() {
                 <Image src="/logo.png" alt="BizArch Logo" width={80} height={80} className="object-contain" priority />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">BizArch ERP</CardTitle>
+            <CardTitle className="text-2xl font-bold">{tt("BizArch ERP")}</CardTitle>
             <CardDescription>
-              Enter your credentials to access your account
+              {tt("Enter your credentials to access your account")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -76,7 +108,7 @@ export default function LoginPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{tt("Email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -88,11 +120,11 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{tt("Password")}</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder={tt("Enter your password")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -103,10 +135,10 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    {tt("Signing in...")}
                   </>
                 ) : (
-                  "Sign In"
+                  tt("Sign In")
                 )}
               </Button>
             </form>
