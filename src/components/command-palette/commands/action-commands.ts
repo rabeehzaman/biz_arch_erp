@@ -1,5 +1,4 @@
 import {
-  Plus,
   FileText,
   FileCheck,
   Receipt,

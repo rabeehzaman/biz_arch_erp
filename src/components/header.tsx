@@ -19,12 +19,16 @@ import { LogOut, User, Building2, Search, Globe, Check } from "lucide-react";
 import { MobileSidebar } from "./sidebar";
 import { useEffect, useState } from "react";
 import { useCommandPalette } from "@/components/command-palette/command-palette-provider";
-import { useLanguage, type Language } from "@/lib/i18n";
+import {
+  persistLanguagePreference,
+  useLanguage,
+  type Language,
+} from "@/lib/i18n";
 
 export function Header() {
   const { data: session, update } = useSession();
   const { setOpen } = useCommandPalette();
-  const { t, lang } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
   const [orgName, setOrgName] = useState<string>("");
   const [switchingLang, setSwitchingLang] = useState(false);
 
@@ -51,6 +55,8 @@ export function Header() {
   const handleLanguageSwitch = async (newLang: Language) => {
     if (newLang === lang || switchingLang) return;
     setSwitchingLang(true);
+    setLanguage(newLang);
+    persistLanguagePreference(newLang);
     try {
       const res = await fetch("/api/users/me", {
         method: "PATCH",
@@ -61,9 +67,14 @@ export function Header() {
         // Update the JWT session with the new language, then reload
         await update({ language: newLang });
         window.location.reload();
+      } else {
+        setLanguage(lang);
+        persistLanguagePreference(lang);
       }
     } catch (err) {
       console.error("Failed to switch language:", err);
+      setLanguage(lang);
+      persistLanguagePreference(lang);
     } finally {
       setSwitchingLang(false);
     }
@@ -155,4 +166,3 @@ export function Header() {
     </header>
   );
 }
-

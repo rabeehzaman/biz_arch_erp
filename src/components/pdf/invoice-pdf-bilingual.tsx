@@ -7,7 +7,6 @@ import {
     StyleSheet,
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
-import { numberToWordsLocalized } from "@/lib/number-to-words";
 import { Font } from "@react-pdf/renderer";
 import path from "path";
 
@@ -40,7 +39,13 @@ const THEME = {
 };
 
 // Helper: renders standard Arial text
-const Ar = ({ children, style }: { children: React.ReactNode; style?: any }) => (
+const Ar = ({
+    children,
+    style,
+}: {
+    children: React.ReactNode;
+    style?: React.ComponentProps<typeof Text>["style"];
+}) => (
     <Text style={[{ fontFamily: ARIAL_FONT }, style]}>{children}</Text>
 );
 
@@ -347,8 +352,8 @@ export function InvoiceBilingualPDF({
     footerImageUrl,
 }: InvoiceBilingualProps) {
     const isSimplified = invoice.saudiInvoiceType === "SIMPLIFIED";
-    const enTitle = "Tax Invoice";
-    const arTitle = "فاتورة ضريبية";
+    const enTitle = title || (isSimplified ? "Simplified Tax Invoice" : "Tax Invoice");
+    const arTitle = isSimplified ? "فاتورة ضريبية مبسطة" : "فاتورة ضريبية";
 
     // Pre-compute lines
     const itemsComputed = invoice.items.map((item) => {
