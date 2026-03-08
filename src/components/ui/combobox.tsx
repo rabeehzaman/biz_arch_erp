@@ -278,8 +278,7 @@ export function Combobox<T>({
                       isSelected && "bg-slate-100"
                     )}
                     onMouseDown={(e) => {
-                      // Keep focus on the search input until click commits the selection.
-                      e.preventDefault();
+                      // Allow default to let the click through, but don't focus the list
                     }}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => handleSelect(itemId)}

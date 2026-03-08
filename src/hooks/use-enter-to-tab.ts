@@ -41,8 +41,8 @@ export function useEnterToTab<T extends HTMLElement = HTMLFormElement>() {
             }
         };
 
-        container.addEventListener("keydown", handleKeyDown);
-        return () => container.removeEventListener("keydown", handleKeyDown);
+        // container.addEventListener("keydown", handleKeyDown);
+        // return () => container.removeEventListener("keydown", handleKeyDown);
     }, []);
 
     // Create a helper to programmatically focus the NEXT logical element after a specific element
