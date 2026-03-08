@@ -34,6 +34,7 @@ export interface ReceiptData {
   change: number;
   // Enhanced fields
   logoUrl?: string;
+  logoHeight?: number;
   qrCodeDataURL?: string;
   vatNumber?: string;
   arabicName?: string;
@@ -110,7 +111,7 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
             src={data.logoUrl}
             alt="Logo"
             style={{
-              maxHeight: "80px",
+              maxHeight: `${data.logoHeight ?? 80}px`,
               maxWidth: "55mm",
               objectFit: "contain",
               display: "inline-block",

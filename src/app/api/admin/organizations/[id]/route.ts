@@ -97,6 +97,9 @@ export async function PUT(
       pdfHeaderImageUrl,
       pdfFooterImageUrl,
       brandColor,
+      invoiceLogoHeight,
+      posReceiptLogoUrl,
+      posReceiptLogoHeight,
       posAccountingMode,
       isTaxInclusivePrice,
     } = body;
@@ -240,6 +243,9 @@ export async function PUT(
     if (pdfHeaderImageUrl !== undefined) updateData.pdfHeaderImageUrl = pdfHeaderImageUrl || null;
     if (pdfFooterImageUrl !== undefined) updateData.pdfFooterImageUrl = pdfFooterImageUrl || null;
     if (brandColor !== undefined) updateData.brandColor = brandColor || null;
+    if (invoiceLogoHeight !== undefined) updateData.invoiceLogoHeight = Number(invoiceLogoHeight) || 60;
+    if (posReceiptLogoUrl !== undefined) updateData.posReceiptLogoUrl = posReceiptLogoUrl || null;
+    if (posReceiptLogoHeight !== undefined) updateData.posReceiptLogoHeight = Number(posReceiptLogoHeight) || 80;
     if (posAccountingMode !== undefined) updateData.posAccountingMode = posAccountingMode;
     if (isTaxInclusivePrice !== undefined) updateData.isTaxInclusivePrice = isTaxInclusivePrice;
 

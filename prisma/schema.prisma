@@ -41,6 +41,11 @@ model Organization {
   pdfHeaderImageUrl     String?  // Edge-to-edge header image URL for A4 invoices
   pdfFooterImageUrl     String?  // Edge-to-edge footer image URL for A4 invoices
   brandColor            String?  // Hex color for PDF branding, e.g. "#2a3b38"
+  invoiceLogoHeight     Int?     @default(60)   // Logo height (px) on invoice PDF
+
+  // POS Receipt Customization
+  posReceiptLogoUrl     String?  // Separate logo URL for POS receipts (falls back to pdfHeaderImageUrl)
+  posReceiptLogoHeight  Int?     @default(80)   // Logo height (px) on POS receipt
 
   // POS Accounting
   posAccountingMode     String   @default("DIRECT")  // "DIRECT" or "CLEARING_ACCOUNT"

@@ -125,6 +125,8 @@ export async function POST(request: NextRequest) {
         arabicName: true,
         name: true,
         pdfHeaderImageUrl: true,
+        posReceiptLogoUrl: true,
+        posReceiptLogoHeight: true,
         brandColor: true,
         currency: true,
         gstEnabled: true,
@@ -798,7 +800,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ...result,
       receiptMeta: {
-        logoUrl: org?.pdfHeaderImageUrl || null,
+        logoUrl: org?.posReceiptLogoUrl || org?.pdfHeaderImageUrl || null,
+        logoHeight: org?.posReceiptLogoHeight ?? 80,
         brandColor: org?.brandColor || null,
         vatNumber: org?.vatNumber || null,
         arabicName: org?.arabicName || null,

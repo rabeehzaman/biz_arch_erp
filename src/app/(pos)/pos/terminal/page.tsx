@@ -469,6 +469,7 @@ function POSTerminalContent() {
         change,
         // Enhanced fields from checkout response
         logoUrl: receiptMeta?.logoUrl || undefined,
+        logoHeight: receiptMeta?.logoHeight || undefined,
         qrCodeDataURL: receiptMeta?.qrCodeDataURL || undefined,
         vatNumber: receiptMeta?.vatNumber || companySettings?.companyGstNumber || undefined,
         arabicName: receiptMeta?.arabicName || undefined,

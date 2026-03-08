@@ -53,6 +53,9 @@ interface OrganizationDetails {
     pdfHeaderImageUrl: string | null;
     pdfFooterImageUrl: string | null;
     brandColor: string | null;
+    invoiceLogoHeight: number | null;
+    posReceiptLogoUrl: string | null;
+    posReceiptLogoHeight: number | null;
     language: string;
     currency: string;
     posAccountingMode: string;
@@ -107,6 +110,9 @@ export default function OrganizationDetailsPage() {
     const [pdfHeaderImageUrl, setPdfHeaderImageUrl] = useState("");
     const [pdfFooterImageUrl, setPdfFooterImageUrl] = useState("");
     const [brandColor, setBrandColor] = useState("");
+    const [invoiceLogoHeight, setInvoiceLogoHeight] = useState(60);
+    const [posReceiptLogoUrl, setPosReceiptLogoUrl] = useState("");
+    const [posReceiptLogoHeight, setPosReceiptLogoHeight] = useState(80);
     const [language, setLanguage] = useState("en");
     const [currency, setCurrency] = useState("INR");
     const [posAccountingMode, setPosAccountingMode] = useState("DIRECT");
@@ -164,6 +170,9 @@ export default function OrganizationDetailsPage() {
         setPdfHeaderImageUrl(data.pdfHeaderImageUrl || "");
         setPdfFooterImageUrl(data.pdfFooterImageUrl || "");
         setBrandColor(data.brandColor || "");
+        setInvoiceLogoHeight(data.invoiceLogoHeight ?? 60);
+        setPosReceiptLogoUrl(data.posReceiptLogoUrl || "");
+        setPosReceiptLogoHeight(data.posReceiptLogoHeight ?? 80);
         setLanguage(data.language || "en");
         setCurrency(data.currency || "INR");
         setPosAccountingMode(data.posAccountingMode || "DIRECT");
@@ -265,6 +274,9 @@ export default function OrganizationDetailsPage() {
                     pdfHeaderImageUrl,
                     pdfFooterImageUrl,
                     brandColor: brandColor || null,
+                    invoiceLogoHeight,
+                    posReceiptLogoUrl: posReceiptLogoUrl || null,
+                    posReceiptLogoHeight,
                     language,
                     currency,
                     posAccountingMode,
@@ -981,6 +993,18 @@ export default function OrganizationDetailsPage() {
                                                     placeholder="https://example.com/logo.png"
                                                 />
                                             </div>
+                                            <div className="space-y-2 max-w-md mt-4">
+                                                <Label className="text-xs">Invoice Logo Height: {invoiceLogoHeight}px</Label>
+                                                <input
+                                                    type="range"
+                                                    min={20}
+                                                    max={200}
+                                                    value={invoiceLogoHeight}
+                                                    onChange={(e) => setInvoiceLogoHeight(Number(e.target.value))}
+                                                    className="w-full"
+                                                />
+                                                <p className="text-xs text-muted-foreground">Controls the maximum height of the logo on the invoice PDF.</p>
+                                            </div>
 
                                             <div className="space-y-0.5 mb-2 mt-6">
                                                 <Label>Brand Color</Label>
@@ -1009,6 +1033,36 @@ export default function OrganizationDetailsPage() {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* POS Receipt Logo */}
+                                    <div className="space-y-4 pt-6 border-t border-border mt-4">
+                                        <div className="space-y-0.5 mb-2">
+                                            <Label>POS Receipt Logo</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Logo shown on POS thermal receipts. If left blank, the invoice logo above is used as fallback.
+                                            </p>
+                                        </div>
+                                        <div className="space-y-2 max-w-md">
+                                            <Label className="text-xs">POS Logo URL</Label>
+                                            <Input
+                                                value={posReceiptLogoUrl}
+                                                onChange={(e) => setPosReceiptLogoUrl(e.target.value)}
+                                                placeholder="https://example.com/pos-logo.png (or leave blank to use invoice logo)"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 max-w-md">
+                                            <Label className="text-xs">POS Logo Height: {posReceiptLogoHeight}px</Label>
+                                            <input
+                                                type="range"
+                                                min={20}
+                                                max={200}
+                                                value={posReceiptLogoHeight}
+                                                onChange={(e) => setPosReceiptLogoHeight(Number(e.target.value))}
+                                                className="w-full"
+                                            />
+                                            <p className="text-xs text-muted-foreground">Controls the maximum height of the logo on POS thermal receipts.</p>
+                                        </div>
+                                    </div>
                                 </TabsContent>
 
                             </Tabs>
