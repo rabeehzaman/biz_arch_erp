@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import {
   Loader2,
@@ -16,12 +16,22 @@ import {
   ShoppingBag,
   User,
   AlertTriangle,
+  History,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
 
@@ -80,9 +90,28 @@ export default function POSDashboardPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [openingState, setOpeningState] = useState<OpeningState | null>(null);
+  const [sessionsLocationKey, setSessionsLocationKey] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const { data, isLoading, mutate } = useSWR<DashboardData>(
     "/api/pos/dashboard",
+    fetcher
+  );
+
+  // Parse branchId/warehouseId from the location key for session history
+  const sessionsBranchId = sessionsLocationKey?.split("-")[0] ?? null;
+  const sessionsWarehouseId = sessionsLocationKey?.split("-")[1] ?? null;
+
+  const { data: closedSessions, isLoading: isLoadingSessions } = useSWR(
+    sessionsLocationKey
+      ? `/api/pos/sessions?status=CLOSED&branchId=${sessionsBranchId}&warehouseId=${sessionsWarehouseId}&limit=50`
+      : null,
+    fetcher
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: sessionSummary, isLoading: isLoadingSummary } = useSWR<any>(
+    selectedSessionId ? `/api/pos/sessions/${selectedSessionId}/summary` : null,
     fetcher
   );
 
@@ -356,12 +385,221 @@ export default function POSDashboardPage() {
                       </>
                     )}
                   </div>
+
+                  {/* Session History footer */}
+                  <div className="border-t px-4 py-2">
+                    <button
+                      className="flex w-full items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+                      onClick={() => {
+                        setSessionsLocationKey(key);
+                        setSelectedSessionId(null);
+                      }}
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      {t("pos.sessionHistory")}
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Session History Dialog */}
+      <Dialog
+        open={sessionsLocationKey !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSessionsLocationKey(null);
+            setSelectedSessionId(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedSessionId ? t("pos.sessionDetail") : t("pos.sessionHistory")}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              {t("pos.sessionHistory")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSessionId ? (
+            /* Detail View */
+            isLoadingSummary ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : sessionSummary ? (
+              <div className="space-y-4">
+                <button
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setSelectedSessionId(null)}
+                >
+                  {lang === "ar" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                  {t("pos.backToList")}
+                </button>
+
+                {/* Session info */}
+                <div className="rounded-lg border p-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("pos.session")}</span>
+                    <span className="font-medium">{sessionSummary.session.sessionNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("pos.cashier")}</span>
+                    <span>{sessionSummary.session.user?.name || sessionSummary.session.user?.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("pos.opened")}</span>
+                    <span>{format(new Date(sessionSummary.session.openedAt), "dd/MM/yyyy HH:mm")}</span>
+                  </div>
+                  {sessionSummary.session.closedAt && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t("pos.closedDate")}</span>
+                      <span>{format(new Date(sessionSummary.session.closedAt), "dd/MM/yyyy HH:mm")}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Financial summary */}
+                <div className="rounded-lg border p-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("pos.openingCash")}</span>
+                    <span>{fmt(Number(sessionSummary.session.openingCash))}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("pos.expectedCash")}</span>
+                    <span>{fmt(Number(sessionSummary.session.expectedCash ?? 0))}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("pos.closingCash")}</span>
+                    <span>{fmt(Number(sessionSummary.session.closingCash ?? 0))}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-muted-foreground">{t("pos.cashDifference")}</span>
+                    {(() => {
+                      const diff = Number(sessionSummary.session.closingCash ?? 0) - Number(sessionSummary.session.expectedCash ?? 0);
+                      return (
+                        <span className={cn(
+                          "font-medium",
+                          diff > 0 && "text-green-600",
+                          diff < 0 && "text-red-600"
+                        )}>
+                          {diff > 0 ? "+" : ""}{fmt(diff)}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("pos.invoiceCount")}</span>
+                    <span>{sessionSummary.invoices?.length ?? 0}</span>
+                  </div>
+                </div>
+
+                {/* Payment Breakdown */}
+                {sessionSummary.paymentBreakdown?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">{t("pos.paymentBreakdown")}</h4>
+                    <div className="rounded-lg border divide-y text-sm">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {sessionSummary.paymentBreakdown.map((pb: any) => (
+                        <div key={pb.method} className="flex justify-between px-3 py-2">
+                          <span>{pb.method} ({pb.count})</span>
+                          <span className="font-medium">{fmt(pb.total)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Products */}
+                {sessionSummary.topProducts?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">{t("pos.topProducts")}</h4>
+                    <div className="rounded-lg border divide-y text-sm">
+                      <div className="flex px-3 py-1.5 text-xs text-muted-foreground font-medium bg-muted/50">
+                        <span className="flex-1">{t("common.product")}</span>
+                        <span className="w-20 text-center">{t("pos.qtySold")}</span>
+                        <span className="w-24 text-end">{t("pos.revenue")}</span>
+                      </div>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {sessionSummary.topProducts.map((p: any, i: number) => (
+                        <div key={i} className="flex px-3 py-2 items-center">
+                          <span className="flex-1 truncate">{p.name}</span>
+                          <span className="w-20 text-center">{p.quantity}</span>
+                          <span className="w-24 text-end font-medium">{fmt(p.revenue)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null
+          ) : (
+            /* List View */
+            isLoadingSessions ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !closedSessions?.length ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <History className="h-10 w-10 mb-3 opacity-30" />
+                <p className="font-medium">{t("pos.noClosedSessions")}</p>
+                <p className="text-xs mt-1">{t("pos.noClosedSessionsDesc")}</p>
+              </div>
+            ) : (
+              <div className="divide-y rounded-lg border max-h-[60vh] overflow-y-auto">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {closedSessions.map((s: any) => {
+                  const diff = Number(s.closingCash ?? 0) - Number(s.expectedCash ?? 0);
+                  return (
+                    <button
+                      key={s.id}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-start hover:bg-muted/50 transition-colors"
+                      onClick={() => setSelectedSessionId(s.id)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{s.sessionNumber}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {s._count?.invoices ?? 0} {t("pos.invoiceCount")}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <span>{s.user?.name || s.user?.email}</span>
+                          <span>·</span>
+                          <span>
+                            {s.closedAt
+                              ? format(new Date(s.closedAt), "dd/MM/yyyy HH:mm")
+                              : format(new Date(s.openedAt), "dd/MM/yyyy HH:mm")}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-end shrink-0">
+                        <div className="text-sm font-medium">{fmt(Number(s.totalSales))}</div>
+                        {s.closingCash != null && (
+                          <div className={cn(
+                            "text-xs",
+                            diff === 0 && "text-muted-foreground",
+                            diff > 0 && "text-green-600",
+                            diff < 0 && "text-red-600"
+                          )}>
+                            {diff > 0 ? "+" : ""}{fmt(diff)}
+                          </div>
+                        )}
+                      </div>
+                      {lang === "ar" ? <ChevronLeft className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -835,7 +835,21 @@
         "ifNotSelectedNonCashPaymentsGoToCashAccount": "If not selected, non-cash payments go to the cash account above.",
         "cancel": "Cancel",
         "completeSale": "Complete Sale",
-        "processing": "Processing..."
+        "processing": "Processing...",
+        "sessionHistory": "Session History",
+        "noClosedSessions": "No Closed Sessions",
+        "noClosedSessionsDesc": "There are no closed sessions for this register yet.",
+        "cashier": "Cashier",
+        "closedDate": "Closed",
+        "cashDifference": "Cash Difference",
+        "closingCash": "Closing Cash",
+        "paymentBreakdown": "Payment Breakdown",
+        "topProducts": "Top Products",
+        "qtySold": "Qty Sold",
+        "revenue": "Revenue",
+        "backToList": "Back to list",
+        "sessionDetail": "Session Detail",
+        "invoiceCount": "Invoices"
     },
     "pdf": {
         "invoiceTitle": "ESTIMATE",

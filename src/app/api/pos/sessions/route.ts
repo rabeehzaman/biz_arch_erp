@@ -36,16 +36,28 @@ export async function GET(request: NextRequest) {
     const organizationId = getOrgId(session);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const branchIdParam = searchParams.get("branchId");
+    const warehouseIdParam = searchParams.get("warehouseId");
+    const limitParam = searchParams.get("limit");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { organizationId };
     if (status) {
       where.status = status;
     }
+    if (branchIdParam !== null) {
+      where.branchId = branchIdParam === "null" ? null : branchIdParam;
+    }
+    if (warehouseIdParam !== null) {
+      where.warehouseId = warehouseIdParam === "null" ? null : warehouseIdParam;
+    }
+
+    const take = limitParam ? parseInt(limitParam) : 50;
 
     const sessions = await prisma.pOSSession.findMany({
       where,
       orderBy: { openedAt: "desc" },
+      take,
       include: {
         user: {
           select: { id: true, name: true, email: true },

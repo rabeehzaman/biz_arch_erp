@@ -781,7 +781,21 @@
         "ifNotSelectedNonCashPaymentsGoToCashAccount": "إذا لم يتم تحديده، ستذهب المدفوعات غير النقدية إلى حساب النقد أعلاه.",
         "cancel": "إلغاء",
         "completeSale": "إتمام البيع",
-        "processing": "جاري المعالجة..."
+        "processing": "جاري المعالجة...",
+        "sessionHistory": "سجل الجلسات",
+        "noClosedSessions": "لا توجد جلسات مغلقة",
+        "noClosedSessionsDesc": "لا توجد جلسات مغلقة لهذا السجل بعد.",
+        "cashier": "الكاشير",
+        "closedDate": "تم الإغلاق",
+        "cashDifference": "فرق النقد",
+        "closingCash": "النقد الختامي",
+        "paymentBreakdown": "تفصيل المدفوعات",
+        "topProducts": "أفضل المنتجات",
+        "qtySold": "الكمية المباعة",
+        "revenue": "الإيرادات",
+        "backToList": "العودة للقائمة",
+        "sessionDetail": "تفاصيل الجلسة",
+        "invoiceCount": "الفواتير"
     },
     "pdf": {
         "invoiceTitle": "تقدير",
