@@ -122,7 +122,7 @@ export async function GET() {
 }
 
 // POST: Fix product costs to MRP
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {

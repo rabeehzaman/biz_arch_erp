@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -46,7 +46,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -92,7 +92,6 @@ export async function DELETE(
 
       // Reverse all invoice allocations using tracked amounts
       for (const allocation of payment.allocations) {
-        const invoice = allocation.invoice;
         const allocatedAmount = Number(allocation.amount);
 
         await tx.invoice.update({

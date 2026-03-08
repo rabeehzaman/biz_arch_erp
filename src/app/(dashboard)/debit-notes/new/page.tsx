@@ -310,7 +310,7 @@ export default function NewDebitNotePage() {
           <div className="text-sm text-orange-800">
             <strong>Stock Validation:</strong> Debit notes will check if you have
             sufficient stock available before processing the return. Make sure the
-            products you're returning are still in your inventory.
+            products you&apos;re returning are still in your inventory.
           </div>
         </div>
 

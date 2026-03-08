@@ -14,8 +14,6 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const warehouseId = searchParams.get("warehouseId") || undefined;
         const branchId = searchParams.get("branchId") || undefined;
-        const lowStockOnly = searchParams.get("lowStockOnly") === "true";
-
         // Build lot filter
         const lotWhere: any = {
             organizationId,

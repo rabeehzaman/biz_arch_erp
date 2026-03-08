@@ -1,6 +1,6 @@
 // Saudi VAT calculation engine for ZATCA Phase 1
 
-import { TRN_REGEX, SAUDI_VAT_RATE, VATCategory, SaudiInvoiceType } from "./constants";
+import { TRN_REGEX, VATCategory, SaudiInvoiceType } from "./constants";
 
 export { TRN_REGEX, SAUDI_VAT_RATE } from "./constants";
 

@@ -69,6 +69,8 @@ export default function CreditNoteDetailPage() {
 
   useEffect(() => {
     fetchCreditNote();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCreditNote = async () => {

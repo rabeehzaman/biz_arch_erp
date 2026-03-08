@@ -50,7 +50,7 @@ export function useCommandSearch(
           endpoints.push(fetchJson(`/api/mobile-devices?search=${encodeURIComponent(query.trim())}`));
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const raw = (await Promise.all(endpoints)) as any[];
 
         if (signal.aborted) return;

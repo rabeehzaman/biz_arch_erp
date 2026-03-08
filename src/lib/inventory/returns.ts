@@ -1,4 +1,3 @@
-import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/client";
 import {

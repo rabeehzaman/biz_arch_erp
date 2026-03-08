@@ -14,25 +14,13 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Search, Package, ArrowRight, AlertTriangle } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
-import { UnitSelect } from "@/components/units/unit-select";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
@@ -42,6 +30,7 @@ interface Product {
   name: string;
   description: string | null;
   price: number;
+  cost: number;
   unitId: string | null;
   unit: {
     id: string;
@@ -322,7 +311,7 @@ function ProductsPageContent() {
                   </CardHeader>
                   <CardContent>
                     {isProductsLoading ? (
-                      <TableSkeleton columns={6} rows={5} />
+                      <TableSkeleton columns={7} rows={5} />
                     ) : filteredProducts.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Package className="h-12 w-12 text-slate-300" />
@@ -340,6 +329,7 @@ function ProductsPageContent() {
                             <TableHead>{t("common.name")}</TableHead>
                             <TableHead className="hidden sm:table-cell">{t("products.sku")}</TableHead>
                             <TableHead>{t("common.price")}</TableHead>
+                            <TableHead className="hidden md:table-cell">{t("common.cost")}</TableHead>
                             <TableHead className="hidden sm:table-cell">{t("common.unit")}</TableHead>
                             <TableHead>{t("common.status")}</TableHead>
                             <TableHead className="text-right">{t("common.actions")}</TableHead>
@@ -362,6 +352,9 @@ function ProductsPageContent() {
                                 {product.sku || "-"}
                               </TableCell>
                               <TableCell>{formatAmount(Number(product.price))}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {formatAmount(Number(product.cost))}
+                              </TableCell>
                               <TableCell className="hidden sm:table-cell">
                                 {product.unit?.name || "-"}
                               </TableCell>

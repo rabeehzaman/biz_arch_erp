@@ -85,6 +85,8 @@ export default function NewCreditNotePage() {
 
   useEffect(() => {
     fetchProducts();
+    // Product options are refreshed from the selected warehouse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [warehouseId]);
 
   const fetchCustomers = async () => {

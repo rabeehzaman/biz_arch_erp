@@ -22,7 +22,7 @@ export default async function DashboardLayout({
       let organizationId;
       try {
         organizationId = getOrgId(session);
-      } catch (e) {
+      } catch (_error) {
         // ignore
       }
 
@@ -37,7 +37,7 @@ export default async function DashboardLayout({
         if (setting && setting.value) {
           try {
             disabledSidebarItems = JSON.parse(setting.value);
-          } catch (e) {
+          } catch (_error) {
             // ignore
           }
         }

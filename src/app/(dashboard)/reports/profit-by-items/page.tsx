@@ -104,6 +104,8 @@ export default function ProfitByItemsPage() {
   useEffect(() => {
     fetchProducts();
     fetchReport();
+    // Initial report load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProducts = async () => {

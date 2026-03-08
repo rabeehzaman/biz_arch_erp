@@ -98,6 +98,8 @@ export default function NewQuotationPage() {
 
   useEffect(() => {
     fetchProducts();
+    // Refresh product options from the selected warehouse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
 
   // Global keyboard shortcuts
@@ -117,6 +119,8 @@ export default function NewQuotationPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // Keyboard shortcuts stay bound for the lifetime of the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCustomers = async () => {
@@ -134,10 +138,10 @@ export default function NewQuotationPage() {
     setProducts(data);
   };
 
-  const addLineItem = (focusNewProduct: boolean = false) => {
+  const addLineItem = useCallback((focusNewProduct: boolean = false) => {
     const newId = Date.now().toString();
-    setLineItems([
-      ...lineItems,
+    setLineItems((prev) => [
+      ...prev,
       {
         id: newId,
         productId: "",
@@ -159,7 +163,7 @@ export default function NewQuotationPage() {
         }
       }, 50);
     }
-  };
+  }, []);
 
   const removeLineItem = (id: string) => {
     if (lineItems.length === 1) return;
@@ -432,7 +436,6 @@ export default function NewQuotationPage() {
                     </TableHeader>
                     <TableBody>
                       {lineItems.map((item, index) => {
-                        const product = products.find((p) => p.id === item.productId);
                         return (
                           <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">

@@ -1,5 +1,5 @@
 import { prisma } from "./src/lib/prisma";
-import { getProductStock, consumeStockFIFO } from "./src/lib/inventory/fifo";
+import { consumeStockFIFO } from "./src/lib/inventory/fifo";
 
 async function main() {
   const org = await prisma.organization.findFirst();

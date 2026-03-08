@@ -16,7 +16,7 @@ import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type Tx = any;
 
 // Generate invoice number inside a transaction: INV-YYYYMMDD-XXX

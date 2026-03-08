@@ -128,6 +128,8 @@ export default function PaymentsPage() {
     fetchCustomers();
     fetchInvoices();
     fetchAccounts();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchPayments = async () => {

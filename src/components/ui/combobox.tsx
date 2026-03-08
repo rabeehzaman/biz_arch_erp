@@ -49,9 +49,12 @@ export function Combobox<T>({
   const listRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const justClosedRef = React.useRef(false);
+  const listboxId = React.useId();
 
   // Ensure items is always an array
-  const safeItems = Array.isArray(items) ? items : [];
+  const safeItems = React.useMemo(() => {
+    return Array.isArray(items) ? items : [];
+  }, [items]);
 
   const selectedLabel = React.useMemo(() => {
     if (!value) return "";
@@ -69,6 +72,29 @@ export function Combobox<T>({
   React.useEffect(() => {
     setHighlightedIndex(0);
   }, [filteredItems]);
+
+  const handleSelect = React.useCallback((selectedValue: string) => {
+    onValueChange(selectedValue);
+    justClosedRef.current = true;
+    setOpen(false);
+    setSearchQuery("");
+
+    // Manage focus uniformly after a selection is made
+    setTimeout(() => {
+      let focusHandled = false;
+      if (onSelect) {
+        onSelect();
+        focusHandled = true;
+      }
+      if (onSelectFocusNext) {
+        onSelectFocusNext(triggerRef);
+        focusHandled = true;
+      }
+      if (!focusHandled) {
+        triggerRef.current?.focus();
+      }
+    }, 10);
+  }, [onSelect, onSelectFocusNext, onValueChange]);
 
   // Keyboard navigation
   React.useEffect(() => {
@@ -101,7 +127,7 @@ export function Combobox<T>({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, filteredItems, highlightedIndex]);
+  }, [filteredItems, getId, handleSelect, highlightedIndex, open]);
 
   // Scroll highlighted item into view
   React.useEffect(() => {
@@ -116,29 +142,6 @@ export function Combobox<T>({
     }
   }, [highlightedIndex, open]);
 
-  const handleSelect = (selectedValue: string) => {
-    onValueChange(selectedValue);
-    justClosedRef.current = true;
-    setOpen(false);
-    setSearchQuery("");
-
-    // Manage focus uniformly after a selection is made
-    setTimeout(() => {
-      let focusHandled = false;
-      if (onSelect) {
-        onSelect();
-        focusHandled = true;
-      }
-      if (onSelectFocusNext) {
-        onSelectFocusNext(triggerRef);
-        focusHandled = true;
-      }
-      if (!focusHandled) {
-        triggerRef.current?.focus();
-      }
-    }, 10);
-  };
-
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onValueChange("");
@@ -152,6 +155,7 @@ export function Combobox<T>({
           ref={triggerRef}
           type="button"
           role="combobox"
+          aria-controls={listboxId}
           aria-expanded={open}
           aria-required={required}
           disabled={disabled}
@@ -213,6 +217,7 @@ export function Combobox<T>({
             />
           </div>
           <div
+            id={listboxId}
             ref={listRef}
             role="listbox"
             className="max-h-60 overflow-y-auto p-1"

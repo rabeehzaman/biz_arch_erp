@@ -143,7 +143,7 @@ export default function POSDashboardPage() {
     fetcher
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { data: sessionSummary, isLoading: isLoadingSummary } = useSWR<any>(
     selectedSessionId ? `/api/pos/sessions/${selectedSessionId}/summary` : null,
     fetcher
@@ -691,7 +691,7 @@ export default function POSDashboardPage() {
                   <div>
                     <h4 className="text-sm font-medium mb-2">{t("pos.paymentBreakdown")}</h4>
                     <div className="rounded-lg border divide-y text-sm">
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      { }
                       {sessionSummary.paymentBreakdown.map((pb: any) => (
                         <div key={pb.method} className="flex justify-between px-3 py-2">
                           <span>{pb.method} ({pb.count})</span>
@@ -712,7 +712,7 @@ export default function POSDashboardPage() {
                         <span className="w-20 text-center">{t("pos.qtySold")}</span>
                         <span className="w-24 text-end">{t("pos.revenue")}</span>
                       </div>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      { }
                       {sessionSummary.topProducts.map((p: any, i: number) => (
                         <div key={i} className="flex px-3 py-2 items-center">
                           <span className="flex-1 truncate">{p.name}</span>
@@ -739,7 +739,7 @@ export default function POSDashboardPage() {
               </div>
             ) : (
               <div className="divide-y rounded-lg border max-h-[60vh] overflow-y-auto">
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                { }
                 {closedSessions.map((s: any) => {
                   const diff = Number(s.closingCash ?? 0) - Number(s.expectedCash ?? 0);
                   return (

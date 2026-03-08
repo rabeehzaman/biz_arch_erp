@@ -86,6 +86,8 @@ export default function ExpenseReportPage() {
 
   useEffect(() => {
     fetchReport();
+    // Initial report load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

@@ -52,7 +52,7 @@ export async function PUT(
     const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
-    const { name, description, price, unitId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode } = body;
+    const { name, description, price, cost, unitId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode } = body;
 
     const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
     if (gstRate !== undefined && gstRate !== null && !VALID_GST_RATES.includes(Number(gstRate))) {
@@ -68,6 +68,7 @@ export async function PUT(
         name,
         description,
         price,
+        ...(cost !== undefined && { cost }),
         unitId,
         sku,
         barcode,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
+import { seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
 import { validateTRN } from "@/lib/saudi-vat/calculator";
 
 export async function GET(

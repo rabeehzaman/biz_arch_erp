@@ -16,7 +16,7 @@ export function tryEvaluate(input: string): string | null {
   if (!/\d/.test(trimmed)) return null;
 
   try {
-    // eslint-disable-next-line no-new-func
+     
     const result = new Function(`"use strict"; return (${trimmed})`)();
     if (typeof result === "number" && isFinite(result)) {
       // Format with Indian locale, up to 4 decimal places

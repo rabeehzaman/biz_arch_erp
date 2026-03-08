@@ -1,7 +1,7 @@
 // Journal entry helpers for auto-generated double-entry accounting
 import { generateAutoNumber } from "./auto-number";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type Tx = any;
 
 export async function getSystemAccount(

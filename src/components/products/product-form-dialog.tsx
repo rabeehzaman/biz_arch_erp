@@ -30,6 +30,7 @@ interface Product {
     name: string;
     description: string | null;
     price: number;
+    cost: number;
     unitId: string | null;
     unit: {
         id: string;
@@ -63,12 +64,14 @@ export function ProductFormDialog({
     productToEdit
 }: ProductFormDialogProps) {
     const { data: session } = useSession();
+    const sessionUser = session?.user as ({ gstEnabled?: boolean } & { saudiEInvoiceEnabled?: boolean } & { isMobileShopModuleEnabled?: boolean } & { isWeighMachineEnabled?: boolean } & { weighMachineProductCodeLen?: number }) | undefined;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [formData, setFormData] = useState({
         name: "",
         description: "",
         price: "",
+        cost: "",
         unitId: "",
         sku: "",
         barcode: "",
@@ -85,6 +88,7 @@ export function ProductFormDialog({
                 name: productToEdit.name,
                 description: productToEdit.description || "",
                 price: productToEdit.price.toString(),
+                cost: productToEdit.cost.toString(),
                 unitId: productToEdit.unitId || productToEdit.unit?.id || "",
                 sku: productToEdit.sku || "",
                 barcode: productToEdit.barcode || "",
@@ -108,6 +112,8 @@ export function ProductFormDialog({
         if (!formData.name.trim()) errors.name = "Name is required";
         if (!formData.price || parseFloat(formData.price) < 0)
             errors.price = "A valid price is required";
+        if (formData.cost && parseFloat(formData.cost) < 0)
+            errors.cost = "Cost cannot be negative";
         if (!formData.unitId) errors.unitId = "Unit is required";
 
         if (Object.keys(errors).length > 0) {
@@ -121,6 +127,7 @@ export function ProductFormDialog({
             name: formData.name,
             description: formData.description || null,
             price: parseFloat(formData.price),
+            cost: parseFloat(formData.cost || "0"),
             unitId: formData.unitId,
             sku: formData.sku || null,
             barcode: formData.barcode || null,
@@ -160,8 +167,9 @@ export function ProductFormDialog({
             if (onSuccess) {
                 onSuccess(newProduct);
             }
-        } catch (error: any) {
-            toast.error(error.message || "Failed to save product");
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Failed to save product";
+            toast.error(message);
             console.error("Failed to save product:", error);
         } finally {
             setIsSubmitting(false);
@@ -174,6 +182,7 @@ export function ProductFormDialog({
             name: "",
             description: "",
             price: "",
+            cost: "",
             unitId: "",
             sku: "",
             barcode: "",
@@ -251,6 +260,31 @@ export function ProductFormDialog({
                                     <p className="text-sm text-red-500">{formErrors.price}</p>
                                 )}
                             </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="prod-cost">Cost</Label>
+                                <Input
+                                    id="prod-cost"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={formData.cost}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, cost: e.target.value });
+                                        setFormErrors((prev) => ({ ...prev, cost: "" }));
+                                    }}
+                                    className={formErrors.cost ? "border-red-500" : ""}
+                                    placeholder="0.00"
+                                />
+                                {formErrors.cost ? (
+                                    <p className="text-sm text-red-500">{formErrors.cost}</p>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground">
+                                        Used as the default purchase/fallback cost when no stock lot cost is available.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <UnitSelect
                                     value={formData.unitId}
@@ -262,8 +296,6 @@ export function ProductFormDialog({
                                     error={formErrors.unitId}
                                 />
                             </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-sku">SKU</Label>
                                 <Input
@@ -273,6 +305,8 @@ export function ProductFormDialog({
                                     placeholder="Optional product code"
                                 />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-barcode">Barcode</Label>
                                 <Input
@@ -283,7 +317,7 @@ export function ProductFormDialog({
                                 />
                             </div>
                         </div>
-                        {session?.user?.gstEnabled && !(session?.user as any)?.saudiEInvoiceEnabled && (
+                        {sessionUser?.gstEnabled && !sessionUser.saudiEInvoiceEnabled && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
                                     <Label htmlFor="prod-hsnCode">HSN Code</Label>
@@ -325,7 +359,7 @@ export function ProductFormDialog({
                             <Label htmlFor="prod-isService">Service product (no inventory tracking)</Label>
                         </div>
 
-                        {session?.user?.isMobileShopModuleEnabled && !formData.isService && (
+                        {sessionUser?.isMobileShopModuleEnabled && !formData.isService && (
                             <div className="flex items-center gap-2">
                                 <input
                                     type="checkbox"
@@ -340,7 +374,7 @@ export function ProductFormDialog({
                             </div>
                         )}
 
-                        {(session?.user as { isWeighMachineEnabled?: boolean })?.isWeighMachineEnabled && !formData.isService && (
+                        {sessionUser?.isWeighMachineEnabled && !formData.isService && (
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-weighMachineCode">Weigh Machine Code</Label>
                                 <Input
@@ -350,7 +384,7 @@ export function ProductFormDialog({
                                         setFormData({ ...formData, weighMachineCode: e.target.value.replace(/\D/g, "") })
                                     }
                                     placeholder="e.g. 12345"
-                                    maxLength={(session?.user as { weighMachineProductCodeLen?: number })?.weighMachineProductCodeLen ?? 5}
+                                    maxLength={sessionUser?.weighMachineProductCodeLen ?? 5}
                                     className="font-mono"
                                 />
                                 <p className="text-xs text-muted-foreground">

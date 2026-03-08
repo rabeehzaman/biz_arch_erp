@@ -76,6 +76,8 @@ export default function PurchaseInvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
+    // Refresh when the status filter changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   const fetchInvoices = async () => {

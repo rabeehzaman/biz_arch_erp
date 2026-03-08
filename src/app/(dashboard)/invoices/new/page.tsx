@@ -154,12 +154,12 @@ export default function NewInvoicePage() {
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const weighMachineEnabled = !!(session?.user as { isWeighMachineEnabled?: boolean })?.isWeighMachineEnabled;
-  const weighMachineConfig: WeighMachineConfig = {
+  const weighMachineConfig = useMemo<WeighMachineConfig>(() => ({
     prefix: (session?.user as { weighMachineBarcodePrefix?: string | null })?.weighMachineBarcodePrefix ?? "77",
     productCodeLen: (session?.user as { weighMachineProductCodeLen?: number | null })?.weighMachineProductCodeLen ?? 5,
     weightDigits: (session?.user as { weighMachineWeightDigits?: number | null })?.weighMachineWeightDigits ?? 5,
     decimalPlaces: (session?.user as { weighMachineDecimalPlaces?: number | null })?.weighMachineDecimalPlaces ?? 3,
-  };
+  }), [session]);
 
   const handleWeightScan = useCallback((barcode: string) => {
     const parsed = parseWeightBarcode(barcode, weighMachineConfig);
@@ -218,6 +218,8 @@ export default function NewInvoicePage() {
 
   useEffect(() => {
     fetchProducts();
+    // Refresh product options from the selected warehouse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
 
   // Global keyboard shortcuts
@@ -240,6 +242,8 @@ export default function NewInvoicePage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // Keyboard shortcuts stay bound for the lifetime of the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCustomers = async () => {
@@ -257,10 +261,10 @@ export default function NewInvoicePage() {
     setProducts(data);
   };
 
-  const addLineItem = (focusNewProduct: boolean = false) => {
+  const addLineItem = useCallback((focusNewProduct: boolean = false) => {
     const newId = Date.now().toString();
-    setLineItems([
-      ...lineItems,
+    setLineItems((prev) => [
+      ...prev,
       {
         id: newId,
         productId: "",
@@ -284,7 +288,7 @@ export default function NewInvoicePage() {
         }
       }, 50);
     }
-  };
+  }, []);
 
   const removeLineItem = (id: string) => {
     if (lineItems.length === 1) return;

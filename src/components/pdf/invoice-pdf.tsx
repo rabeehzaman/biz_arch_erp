@@ -271,7 +271,7 @@ const formatCurrency = (amount: number): string => {
   });
 };
 
-export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo, lang = "en" }: InvoicePDFProps) {
+export function InvoicePDF({ invoice, type: _type, title = "ESTIMATE", balanceInfo, lang = "en" }: InvoicePDFProps) {
   const isSaudi = !!invoice.saudiInvoiceType;
   const l = lang as Language;
   const t = (key: string) => translate(key, l);
@@ -303,12 +303,6 @@ export function InvoicePDF({ invoice, type, title = "ESTIMATE", balanceInfo, lan
   }, 0);
 
   // Calculate discount percentage for each item
-  const itemsWithDiscountPercent = invoice.items.map((item) => ({
-    ...item,
-    discountPercent: item.discount,
-    discountAmount: (item.quantity * item.unitPrice * item.discount) / 100,
-  }));
-
   // Customer location string
   const customerLocation = [invoice.customer.city, invoice.customer.state]
     .filter(Boolean)

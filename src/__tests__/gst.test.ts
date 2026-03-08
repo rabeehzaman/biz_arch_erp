@@ -16,27 +16,6 @@
  * - API validation
  */
 
-import prisma from "@/lib/prisma";
-
-// Types for testing
-interface TestOrg {
-  id: string;
-  gstin: string;
-  gstStateCode: string;
-}
-
-interface TestProduct {
-  id: string;
-  hsnCode: string;
-  gstRate: number;
-}
-
-interface TestCustomer {
-  id: string;
-  gstin: string;
-  gstStateCode: string;
-}
-
 // ==================== HELPER FUNCTIONS ====================
 
 /**
@@ -73,30 +52,9 @@ function calculateInterStateTax(amount: number, taxRate: number) {
   };
 }
 
-/**
- * Verify GST amounts match expected values
- */
-function assertGSTMatch(actual: any, expected: any, tolerance: number = 0.01) {
-  const fields = ['cgstAmount', 'sgstAmount', 'igstAmount', 'totalTax'];
-
-  for (const field of fields) {
-    const diff = Math.abs(actual[field] - expected[field]);
-    if (diff > tolerance) {
-      throw new Error(
-        `${field} mismatch: expected ${expected[field]}, got ${actual[field]} (diff: ${diff})`
-      );
-    }
-  }
-}
-
 // ==================== TEST SUITE ====================
 
 describe("GST Implementation Tests", () => {
-  let testOrg: TestOrg;
-  let testProduct: TestProduct;
-  let sameStateCustomer: TestCustomer;
-  let interStateCustomer: TestCustomer;
-
   // ==================== SETUP TESTS ====================
 
   describe("Organization Setup", () => {

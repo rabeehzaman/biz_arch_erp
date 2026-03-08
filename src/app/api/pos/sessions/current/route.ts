@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("sessionId");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let where: any;
 
     if (sessionId) {

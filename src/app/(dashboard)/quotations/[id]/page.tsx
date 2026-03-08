@@ -86,6 +86,8 @@ export default function QuotationDetailPage({
 
   useEffect(() => {
     fetchQuotation();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchQuotation = async () => {

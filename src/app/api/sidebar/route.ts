@@ -28,7 +28,7 @@ export async function GET() {
         if (setting && setting.value) {
             try {
                 disabledSidebarItems = JSON.parse(setting.value);
-            } catch (e) {
+      } catch (_error) {
                 // ignore
             }
         }

@@ -1,6 +1,6 @@
 // Shared helpers for identifying a POS register by its branch/warehouse location.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type Tx = any;
 
 export function buildPOSLocationKey(

@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // Check authentication and admin role
     const session = await auth();
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET method to check what would be fixed (dry run)
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Check authentication and admin role
     const session = await auth();

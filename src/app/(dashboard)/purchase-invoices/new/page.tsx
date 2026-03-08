@@ -113,6 +113,8 @@ export default function NewPurchaseInvoicePage() {
 
   useEffect(() => {
     fetchProducts();
+    // Refresh product options from the selected warehouse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
 
   // Global keyboard shortcuts
@@ -132,6 +134,8 @@ export default function NewPurchaseInvoicePage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // Keyboard shortcuts stay bound for the lifetime of the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSuppliers = async () => {
@@ -149,10 +153,10 @@ export default function NewPurchaseInvoicePage() {
     setProducts(data);
   };
 
-  const addLineItem = (focusNewProduct: boolean = false) => {
+  const addLineItem = useCallback((focusNewProduct: boolean = false) => {
     const newId = Date.now().toString();
-    setLineItems([
-      ...lineItems,
+    setLineItems((prev) => [
+      ...prev,
       {
         id: newId,
         productId: "",
@@ -176,7 +180,7 @@ export default function NewPurchaseInvoicePage() {
         }
       }, 50);
     }
-  };
+  }, []);
 
   const removeLineItem = (id: string) => {
     if (lineItems.length === 1) return;

@@ -100,7 +100,7 @@ import { useLanguage } from "@/lib/i18n";
 
 export default function SupplierPaymentsPage() {
   const { t, lang } = useLanguage();
-  const { symbol, fmt } = useCurrency();
+  const { symbol } = useCurrency();
   const [payments, setPayments] = useState<SupplierPayment[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);

@@ -118,7 +118,7 @@ export default function OpeningStockPage() {
   const [saving, setSaving] = useState(false);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [_deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchData();

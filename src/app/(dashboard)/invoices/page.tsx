@@ -58,6 +58,8 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchInvoices = async () => {

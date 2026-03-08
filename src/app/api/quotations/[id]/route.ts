@@ -106,7 +106,7 @@ export async function PUT(
     const saudiEnabled = isSaudiEInvoiceEnabled(session);
 
     // If updating items, recalculate totals
-    let updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (body.customerId !== undefined) {
       updateData.customerId = body.customerId;

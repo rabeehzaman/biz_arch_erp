@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type Tx = any;
 
 // Generate session number inside a transaction: POS-YYYYMMDD-XXX
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const warehouseIdParam = searchParams.get("warehouseId");
     const limitParam = searchParams.get("limit");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const where: any = { organizationId };
     if (status) {
       where.status = status;

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
 import prisma from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/client";
 

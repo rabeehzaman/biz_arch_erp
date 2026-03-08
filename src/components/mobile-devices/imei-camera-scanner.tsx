@@ -23,7 +23,7 @@ async function getBarcodeDetector(
   formats: string[]
 ): Promise<{ detect(image: ImageBitmapSource): Promise<Array<{ rawValue: string; format: string }>> }> {
   if (typeof window !== "undefined" && "BarcodeDetector" in window) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     return new (window as any).BarcodeDetector({ formats });
   }
   // Dynamically import the WASM-backed polyfill (only loaded on iOS/Safari)
@@ -40,7 +40,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const detectorRef = useRef<any>(null);
   const mountedRef = useRef(true);
 
@@ -62,11 +62,11 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
   }, [stopCamera]);
 
   // Single scan loop that works on all platforms (native + polyfill)
-  const scanLoop = useCallback(() => {
+  const scanLoop = useCallback(function scanFrame() {
     const video = videoRef.current;
     const detector = detectorRef.current;
     if (!video || !detector || video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(scanLoop);
+      rafRef.current = requestAnimationFrame(scanFrame);
       return;
     }
 
@@ -87,12 +87,12 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
             return;
           }
         }
-        rafRef.current = requestAnimationFrame(scanLoop);
+        rafRef.current = requestAnimationFrame(scanFrame);
       })
       .catch(() => {
-        rafRef.current = requestAnimationFrame(scanLoop);
+        rafRef.current = requestAnimationFrame(scanFrame);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [onScan, stopCamera, closeScanner]);
 
   const startCamera = useCallback(async () => {

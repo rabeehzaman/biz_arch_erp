@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             price: true,
+            cost: true,
             unitId: true,
             unit: {
               select: {
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
     // Calculate available stock for each product
     const productsWithStock = products.map((product) => {
       const availableStock = product.stockLots.reduce(
-        (sum: number, lot: any) => sum + Number(lot.remainingQuantity),
+        (sum, lot) => sum + Number(lot.remainingQuantity),
         0
       );
       return {
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, description, price, unitId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode } = body;
+    const { name, description, price, cost, unitId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -133,6 +134,7 @@ export async function POST(request: NextRequest) {
           name,
           description: description || null,
           price,
+          cost: cost ?? 0,
           unitId,
           sku: sku || null,
           barcode: barcode || null,
@@ -151,13 +153,18 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(product, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to create product:", error);
 
     let errorMessage = "Failed to create product";
     let statusCode = 500;
 
-    if (error.code === 'P2002') {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
       statusCode = 400;
       errorMessage = "A product with this SKU or Barcode already exists.";
     }

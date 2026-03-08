@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, use } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,12 +97,12 @@ export default function EditInvoicePage({
   }, []);
 
   const weighMachineEnabled = !!(session?.user as { isWeighMachineEnabled?: boolean })?.isWeighMachineEnabled;
-  const weighMachineConfig: WeighMachineConfig = {
+  const weighMachineConfig = useMemo<WeighMachineConfig>(() => ({
     prefix: (session?.user as { weighMachineBarcodePrefix?: string | null })?.weighMachineBarcodePrefix ?? "77",
     productCodeLen: (session?.user as { weighMachineProductCodeLen?: number | null })?.weighMachineProductCodeLen ?? 5,
     weightDigits: (session?.user as { weighMachineWeightDigits?: number | null })?.weighMachineWeightDigits ?? 5,
     decimalPlaces: (session?.user as { weighMachineDecimalPlaces?: number | null })?.weighMachineDecimalPlaces ?? 3,
-  };
+  }), [session]);
 
   const handleWeightScan = useCallback((barcode: string) => {
     const parsed = parseWeightBarcode(barcode, weighMachineConfig);
@@ -146,10 +146,14 @@ export default function EditInvoicePage({
   useEffect(() => {
     fetchCustomers();
     fetchInvoice();
+    // Initial customer and invoice load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
     fetchProducts();
+    // Refresh product options from the selected warehouse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
 
   useEffect(() => {
@@ -166,6 +170,8 @@ export default function EditInvoicePage({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // Keyboard shortcuts stay bound for the lifetime of the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCustomers = async () => {
@@ -225,9 +231,12 @@ export default function EditInvoicePage({
     }
   };
 
-  const addLineItem = () => {
-    setLineItems([
-      ...lineItems,
+  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
+
+  const addLineItem = useCallback(() => {
+    setLineItems((prev) => [
+      ...prev,
       {
         id: Date.now().toString(),
         productId: "",
@@ -241,7 +250,7 @@ export default function EditInvoicePage({
         vatRate: saudiEnabled ? 15 : 0,
       },
     ]);
-  };
+  }, [saudiEnabled]);
 
   const removeLineItem = (id: string) => {
     if (lineItems.length === 1) return;
@@ -323,9 +332,6 @@ export default function EditInvoicePage({
       }, 0);
     }
   };
-
-  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
-  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
 
   const calculateSubtotal = () => {
     return lineItems.reduce((sum, item) => {
@@ -566,8 +572,6 @@ export default function EditInvoicePage({
                         const product = products.find((p) => p.id === item.productId);
                         const availableStock = product?.availableStock ?? 0;
                         const hasStockShortfall = item.productId && item.quantity > availableStock;
-                        const shortfall = item.quantity - availableStock;
-
                         return (
                           <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">

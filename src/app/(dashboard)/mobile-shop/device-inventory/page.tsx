@@ -76,11 +76,15 @@ export default function DeviceInventoryPage() {
 
   useEffect(() => {
     fetchDevices();
+    // Refresh immediately when the status filter changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchDevices(), 300);
     return () => clearTimeout(timer);
+    // Debounced refresh for search input.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   const handleDelete = async (id: string) => {

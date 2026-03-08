@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ export function CustomerFormDialog({
     customerToEdit,
 }: CustomerFormDialogProps) {
     const { data: session } = useSession();
+    const defaultCountry = (session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India";
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
@@ -68,6 +69,26 @@ export function CustomerFormDialog({
         district: "",
     });
 
+    const resetForm = useCallback(() => {
+        setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            country: defaultCountry,
+            gstin: "",
+            gstStateCode: "",
+            notes: "",
+            ccNo: "",
+            buildingNo: "",
+            addNo: "",
+            district: "",
+        });
+    }, [defaultCountry]);
+
     useEffect(() => {
         if (customerToEdit && open) {
             setFormData({
@@ -78,7 +99,7 @@ export function CustomerFormDialog({
                 city: customerToEdit.city || "",
                 state: customerToEdit.state || "",
                 zipCode: customerToEdit.zipCode || "",
-                country: customerToEdit.country || ((session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India"),
+                country: customerToEdit.country || defaultCountry,
                 gstin: customerToEdit.gstin || "",
                 gstStateCode: customerToEdit.gstStateCode || "",
                 notes: customerToEdit.notes || "",
@@ -90,12 +111,12 @@ export function CustomerFormDialog({
         } else if (open && !customerToEdit) {
             setFormData(prev => ({
                 ...prev,
-                country: (session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India"
+                country: defaultCountry
             }));
         } else if (!open) {
             resetForm();
         }
-    }, [customerToEdit, open, session]);
+    }, [customerToEdit, defaultCountry, open, resetForm]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -110,7 +131,7 @@ export function CustomerFormDialog({
             city: formData.city || null,
             state: formData.state || null,
             zipCode: formData.zipCode || null,
-            country: formData.country || ((session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India"),
+            country: formData.country || defaultCountry,
             gstin: formData.gstin || null,
             gstStateCode: formData.gstStateCode || null,
             notes: formData.notes || null,
@@ -151,26 +172,6 @@ export function CustomerFormDialog({
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const resetForm = () => {
-        setFormData({
-            name: "",
-            email: "",
-            phone: "",
-            address: "",
-            city: "",
-            state: "",
-            zipCode: "",
-            country: (session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India",
-            gstin: "",
-            gstStateCode: "",
-            notes: "",
-            ccNo: "",
-            buildingNo: "",
-            addNo: "",
-            district: "",
-        });
     };
 
     return (

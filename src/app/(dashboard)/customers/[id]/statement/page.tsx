@@ -78,6 +78,8 @@ export default function CustomerStatementPage({
 
   useEffect(() => {
     fetchStatement();
+    // Load the statement when the page first opens for this customer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchStatement = async () => {

@@ -70,6 +70,8 @@ export default function DebitNoteDetailPage() {
 
   useEffect(() => {
     fetchDebitNote();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchDebitNote = async () => {

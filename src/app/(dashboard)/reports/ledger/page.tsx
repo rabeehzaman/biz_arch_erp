@@ -22,7 +22,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { FileText, Download } from "lucide-react";
-import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 
@@ -56,7 +55,7 @@ export default function UnifiedLedgerPage() {
                     if (!res.ok) throw new Error("Failed to load ledger");
                     const data = await res.json();
                     setTransactions(data);
-                } catch (error) {
+                } catch {
                     toast.error("Failed to load ledger transactions");
                 } finally {
                     setIsLoadingData(false);
@@ -85,7 +84,7 @@ export default function UnifiedLedgerPage() {
                 if (!res.ok) throw new Error("Failed to fetch");
                 const data = await res.json();
                 setEntities(data);
-            } catch (error) {
+            } catch {
                 toast.error("Failed to load entities");
             } finally {
                 setIsLoadingEntities(false);
@@ -104,7 +103,7 @@ export default function UnifiedLedgerPage() {
             if (!res.ok) throw new Error("Failed to load ledger");
             const data = await res.json();
             setTransactions(data);
-        } catch (error) {
+        } catch {
             toast.error("Failed to load ledger transactions");
         } finally {
             setIsLoadingData(false);

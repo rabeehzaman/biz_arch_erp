@@ -35,6 +35,8 @@ export function BranchWarehouseSelector({
 }: BranchWarehouseSelectorProps) {
     const { data: session } = useSession();
     const multiBranchEnabled = session?.user?.multiBranchEnabled;
+    const userId = session?.user?.id;
+    const userRole = session?.user?.role;
 
     const [branches, setBranches] = useState<Branch[]>([]);
     const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -60,13 +62,13 @@ export function BranchWarehouseSelector({
                     const wData = await warehouseRes.json();
 
                     const userAccess = wData.filter((a: any) =>
-                        session?.user?.role === 'admin' ||
-                        session?.user?.role === 'superadmin' ||
-                        a.userId === session?.user?.id
+                        userRole === 'admin' ||
+                        userRole === 'superadmin' ||
+                        a.userId === userId
                     );
 
                     let availableWarehouses: any[] = [];
-                    if (session?.user?.role === 'admin' || session?.user?.role === 'superadmin') {
+                    if (userRole === 'admin' || userRole === 'superadmin') {
                         // Admins get all warehouses
                         const allWarehousesRes = await fetch("/api/warehouses");
                         if (allWarehousesRes.ok) {
@@ -87,7 +89,7 @@ export function BranchWarehouseSelector({
         }
 
         fetchData();
-    }, [multiBranchEnabled]);
+    }, [multiBranchEnabled, userId, userRole]);
 
     // Handle case where user only has access to a subset of warehouses for the branch
     const availableWarehouses = warehouses.filter(w => !branchId || w.branchId === branchId);

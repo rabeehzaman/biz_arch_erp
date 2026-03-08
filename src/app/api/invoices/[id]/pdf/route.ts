@@ -196,7 +196,7 @@ export async function GET(
         paymentType: invoice.paymentType,
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       pdfBuffer = await renderToBuffer(
         createElement(InvoiceA4VATPDF, {
           invoice: vatInvoice,
@@ -255,7 +255,7 @@ export async function GET(
         paymentType: invoice.paymentType,
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       pdfBuffer = await renderToBuffer(
         createElement(InvoiceBilingualPDF, {
           invoice: bilingualInvoice,
@@ -312,7 +312,7 @@ export async function GET(
       };
 
       const A4Component = invoicePdfFormat === "A4_GST2" ? InvoiceA4GST2PDF : InvoiceA4PDF;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       pdfBuffer = await renderToBuffer(
         createElement(A4Component, {
           invoice: a4Invoice,
@@ -378,7 +378,7 @@ export async function GET(
         paymentType: invoice.paymentType,
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       pdfBuffer = await renderToBuffer(
         createElement(InvoiceModernGSTPDF, {
           invoice: modernInvoice,
@@ -390,7 +390,7 @@ export async function GET(
         }) as any
       );
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       pdfBuffer = await renderToBuffer(
         createElement(InvoicePDF, {
           invoice: pdfInvoice,

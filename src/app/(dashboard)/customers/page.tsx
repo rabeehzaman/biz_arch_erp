@@ -20,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
@@ -32,10 +31,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Search, Users, MoreHorizontal, Wallet, FileText, UserPlus, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Users, MoreHorizontal, Wallet, FileText, UserPlus } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
@@ -109,6 +107,8 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers();
     fetchUsers();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCustomers = async () => {

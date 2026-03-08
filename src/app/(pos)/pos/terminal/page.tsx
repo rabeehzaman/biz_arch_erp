@@ -233,7 +233,7 @@ function POSTerminalContent() {
 
   // ── Cart Handlers ──────────────────────────────────────────────────
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const addToCart = useCallback((product: any) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id);

@@ -78,6 +78,8 @@ export default function SupplierStatementPage({
 
   useEffect(() => {
     fetchStatement();
+    // Load the statement when the page first opens for this supplier.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchStatement = async () => {

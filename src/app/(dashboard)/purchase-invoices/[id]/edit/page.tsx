@@ -92,10 +92,14 @@ export default function EditPurchaseInvoicePage({
   useEffect(() => {
     fetchSuppliers();
     fetchInvoice();
+    // Initial supplier and invoice load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
     fetchProducts();
+    // Refresh product options from the selected warehouse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
 
   useEffect(() => {
@@ -112,6 +116,8 @@ export default function EditPurchaseInvoicePage({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // Keyboard shortcuts stay bound for the lifetime of the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSuppliers = async () => {
@@ -170,9 +176,9 @@ export default function EditPurchaseInvoicePage({
     }
   };
 
-  const addLineItem = () => {
-    setLineItems([
-      ...lineItems,
+  const addLineItem = useCallback(() => {
+    setLineItems((prev) => [
+      ...prev,
       {
         id: Date.now().toString(),
         productId: "",
@@ -186,7 +192,7 @@ export default function EditPurchaseInvoicePage({
         vatRate: 15,
       },
     ]);
-  };
+  }, []);
 
   const removeLineItem = (id: string) => {
     if (lineItems.length === 1) return;
@@ -474,7 +480,6 @@ export default function EditPurchaseInvoicePage({
                     </TableHeader>
                     <TableBody>
                       {lineItems.map((item) => {
-                        const product = products.find((p) => p.id === item.productId);
                         return (
                           <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">

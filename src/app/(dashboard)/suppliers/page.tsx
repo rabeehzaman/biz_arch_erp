@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import {
   Table,
@@ -33,7 +32,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Search, Truck, MoreHorizontal, Wallet } from "lucide-react";
@@ -63,7 +61,6 @@ interface Supplier {
 import { useLanguage } from "@/lib/i18n";
 
 export default function SuppliersPage() {
-  const { data: session } = useSession();
   const { t, lang } = useLanguage();
   const { symbol } = useCurrency();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);

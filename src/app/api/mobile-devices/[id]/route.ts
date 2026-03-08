@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isMobileShopModuleEnabled } from "@/lib/auth-utils";
-import { isBackdated, hasZeroCOGSItems, recalculateFromDate } from "@/lib/inventory/fifo";
+import { recalculateFromDate } from "@/lib/inventory/fifo";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
 
 export async function GET(
@@ -119,8 +119,6 @@ export async function PUT(
     }
 
     const device = await prisma.$transaction(async (tx) => {
-      let finalProductId = existing.productId;
-
       if (body.createProduct && body.productName) {
         const newProduct = await tx.product.create({
           data: {
@@ -136,7 +134,6 @@ export async function PUT(
           }
         });
         updateData.productId = newProduct.id;
-        finalProductId = newProduct.id;
       }
 
       const updatedDevice = await tx.mobileDevice.update({

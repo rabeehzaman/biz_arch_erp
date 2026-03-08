@@ -1,8 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useEffect, useRef } from "react";
 import {
     Select,
     SelectContent,
@@ -10,7 +8,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 
 interface UnitOption {
     id: string;
@@ -33,7 +30,6 @@ export function ItemUnitSelect({
     value,
     onValueChange,
     options,
-    required = false,
     disabled = false,
     className,
     onSelectFocusNext,

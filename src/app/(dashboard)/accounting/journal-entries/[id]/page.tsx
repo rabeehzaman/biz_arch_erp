@@ -65,6 +65,8 @@ export default function JournalEntryDetailPage({
 
   useEffect(() => {
     fetchEntry();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchEntry = async () => {

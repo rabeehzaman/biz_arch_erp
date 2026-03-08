@@ -3,7 +3,7 @@
 
 import { calculateFullDocumentGST } from "./calculator";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type Tx = any;
 
 interface GSTOrgInfo {

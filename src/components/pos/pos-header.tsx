@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Building2, Clock, LogOut, MapPin, PauseCircle, Printer } from "lucide-react";
+import { ArrowLeft, Clock, LogOut, MapPin, PauseCircle, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";

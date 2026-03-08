@@ -1,7 +1,7 @@
 // Generic auto-number generator: PREFIX-YYYYMMDD-XXX
 // Reusable for JV (journal vouchers), EXP (expenses), etc.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export async function generateAutoNumber(
   model: any,
   numberField: string,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,22 @@ export function SupplierFormDialog({
         notes: "",
     });
 
+    const resetForm = useCallback(() => {
+        setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            country: defaultCountry,
+            gstin: "",
+            gstStateCode: "",
+            notes: "",
+        });
+    }, [defaultCountry]);
+
     useEffect(() => {
         if (supplierToEdit && open) {
             setFormData({
@@ -88,7 +104,7 @@ export function SupplierFormDialog({
         } else if (!open) {
             resetForm();
         }
-    }, [supplierToEdit, open, session]);
+    }, [defaultCountry, open, resetForm, supplierToEdit]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -140,22 +156,6 @@ export function SupplierFormDialog({
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const resetForm = () => {
-        setFormData({
-            name: "",
-            email: "",
-            phone: "",
-            address: "",
-            city: "",
-            state: "",
-            zipCode: "",
-            country: defaultCountry,
-            gstin: "",
-            gstStateCode: "",
-            notes: "",
-        });
     };
 
     return (

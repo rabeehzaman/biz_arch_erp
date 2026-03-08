@@ -169,7 +169,7 @@ export async function GET(
         saudiInvoiceType: undefined as string | undefined,
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       pdfBuffer = await renderToBuffer(
         createElement(InvoiceA4VATPDF, {
           invoice: vatInvoice,
@@ -180,7 +180,7 @@ export async function GET(
         }) as any
       );
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       pdfBuffer = await renderToBuffer(
         createElement(InvoicePDF, {
           invoice: pdfInvoice,

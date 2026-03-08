@@ -1,22 +1,23 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import type { RecentItem } from "./types";
 
 const STORAGE_KEY = "bizarch-command-history";
 const MAX_RECENT = 8;
 
 export function useRecentCommands() {
-  const [recents, setRecents] = useState<RecentItem[]>([]);
-
-  useEffect(() => {
+  const [recents, setRecents] = useState<RecentItem[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setRecents(JSON.parse(stored));
+      if (stored) {
+        return JSON.parse(stored) as RecentItem[];
+      }
     } catch {
       // ignore
     }
-  }, []);
+    return [];
+  });
 
   const addRecent = useCallback((item: RecentItem) => {
     setRecents((prev) => {

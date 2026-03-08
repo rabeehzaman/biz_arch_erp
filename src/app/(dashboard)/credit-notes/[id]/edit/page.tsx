@@ -90,6 +90,8 @@ export default function EditCreditNotePage({
 
     useEffect(() => {
         fetchProducts();
+        // Product options are refreshed from the selected warehouse.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [warehouseId]);
 
     const fetchCustomers = async () => {
@@ -150,7 +152,7 @@ export default function EditCreditNotePage({
             } else {
                 addLineItem();
             }
-        } catch (error) {
+        } catch (_error) {
             toast.error("Failed to load credit note");
             router.push("/credit-notes");
         } finally {

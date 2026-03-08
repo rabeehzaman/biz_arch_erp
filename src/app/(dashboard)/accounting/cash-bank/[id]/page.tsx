@@ -76,6 +76,8 @@ export default function CashBankDetailPage({
 
   useEffect(() => {
     fetchAccount();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchAccount = async () => {

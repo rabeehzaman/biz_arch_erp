@@ -30,7 +30,7 @@ export function DashboardContent() {
   const { stats, isLoading, isError } = useDashboardStats();
   const { data: session } = useSession();
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { fmt } = useCurrency();
 
   const formatAmount = (amount: number) => {

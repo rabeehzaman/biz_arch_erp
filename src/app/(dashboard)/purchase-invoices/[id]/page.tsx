@@ -126,6 +126,8 @@ export default function PurchaseInvoiceDetailPage({
 
   useEffect(() => {
     fetchInvoice();
+    // Initial load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
