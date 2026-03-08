@@ -57,6 +57,8 @@ export function Combobox<T>({
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  // Track whether we just made a selection so we don't re-open on the focus-back
+  const justSelectedRef = React.useRef(false);
 
   const safeItems = Array.isArray(items) ? items : [];
   const selectedItem = safeItems.find((item) => getId(item) === value);
@@ -83,6 +85,7 @@ export function Combobox<T>({
 
   const handleSelect = React.useCallback(
     (selectedValue: string) => {
+      justSelectedRef.current = true;
       onValueChange(selectedValue);
       setOpen(false);
       setSearchQuery("");
@@ -100,19 +103,32 @@ export function Combobox<T>({
         if (!focusHandled) {
           triggerRef.current?.focus();
         }
+        // Reset the guard after focus settle
+        setTimeout(() => {
+          justSelectedRef.current = false;
+        }, 200);
       }, 10);
     },
     [onSelect, onSelectFocusNext, onValueChange]
   );
 
-  const handleClear = (e: React.MouseEvent) => {
+  const handleOpenChange = React.useCallback((nextOpen: boolean) => {
+    // When closing, reset search
+    if (!nextOpen) {
+      setSearchQuery("");
+    }
+    setOpen(nextOpen);
+  }, []);
+
+  const handleClear = (e: React.MouseEvent | React.PointerEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onValueChange("");
     setSearchQuery("");
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           ref={triggerRef}
@@ -124,10 +140,13 @@ export function Combobox<T>({
             "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
-          onClick={(e) => {
-            // Let normal click open it
-          }}
           type="button"
+          onFocus={() => {
+            // Only auto-open if not just selected and flag is set
+            if (autoOpenOnFocus && !disabled && !justSelectedRef.current) {
+              setOpen(true);
+            }
+          }}
         >
           <span className={cn("truncate", !selectedItem && "text-slate-500")}>
             {selectedItem ? getLabel(selectedItem) : placeholder}
@@ -136,11 +155,7 @@ export function Combobox<T>({
             {value && !disabled && (
               <X
                 className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-pointer"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleClear(e as any);
-                }}
+                onPointerDown={handleClear}
               />
             )}
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -150,11 +165,11 @@ export function Combobox<T>({
 
       <PopoverContent
         align="start"
-        className="w-[var(--radix-popover-trigger-width)] p-0 z-[100] shadow-md relative"
+        className="w-[var(--radix-popover-trigger-width)] p-0 z-[100] shadow-md"
         onCloseAutoFocus={(e) => {
-          // ensure trigger focuses after closing
+          // Prevent Radix from trying to restore focus automatically;
+          // we handle focus ourselves in handleSelect
           e.preventDefault();
-          triggerRef.current?.focus();
         }}
       >
         <Command shouldFilter={false}>
