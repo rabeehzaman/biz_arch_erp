@@ -1,21 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
-
+import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { Search, Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Command,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 interface ComboboxProps<T> {
   items: T[];
@@ -57,25 +45,24 @@ export function Combobox<T>({
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const triggerRef = React.useRef<HTMLButtonElement>(null);
-  // Track whether we just made a selection so we don't re-open on the focus-back
-  const justSelectedRef = React.useRef(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const safeItems = Array.isArray(items) ? items : [];
   const selectedItem = safeItems.find((item) => getId(item) === value);
 
-  // Filter items using custom filtering logic, caps to 100 for high performance rendering
   const filteredItems = React.useMemo(() => {
     let result = safeItems;
     if (searchQuery) {
-      result = safeItems.filter((item) => filterFn(item, searchQuery));
+      result = safeItems.filter((item) => filterFn(item, searchQuery.toLowerCase()));
     }
+
     const capped = result.slice(0, 100);
 
-    // Keep the selected item in the list even if scroll limit hits
+    // Always keep selected item visible
     if (value && !capped.some((item) => getId(item) === value)) {
-      const selectedMatch = result.find((item) => getId(item) === value);
-      if (selectedMatch) {
-        capped.unshift(selectedMatch);
+      const sel = result.find((item) => getId(item) === value);
+      if (sel) {
+        capped.unshift(sel);
         if (capped.length > 100) capped.pop();
       }
     }
@@ -83,70 +70,69 @@ export function Combobox<T>({
     return capped;
   }, [safeItems, searchQuery, filterFn, value, getId]);
 
-  const handleSelect = React.useCallback(
-    (selectedValue: string) => {
-      justSelectedRef.current = true;
-      onValueChange(selectedValue);
-      setOpen(false);
-      setSearchQuery("");
-
-      setTimeout(() => {
-        let focusHandled = false;
-        if (onSelect) {
-          onSelect();
-          focusHandled = true;
-        }
-        if (onSelectFocusNext) {
-          onSelectFocusNext(triggerRef);
-          focusHandled = true;
-        }
-        if (!focusHandled) {
-          triggerRef.current?.focus();
-        }
-        // Reset the guard after focus settle
-        setTimeout(() => {
-          justSelectedRef.current = false;
-        }, 200);
-      }, 10);
-    },
-    [onSelect, onSelectFocusNext, onValueChange]
-  );
-
-  const handleOpenChange = React.useCallback((nextOpen: boolean) => {
-    // When closing, reset search
-    if (!nextOpen) {
-      setSearchQuery("");
+  const openDropdown = () => {
+    if (!disabled) {
+      setOpen(true);
+      // Focus the search input after open
+      setTimeout(() => inputRef.current?.focus(), 0);
     }
-    setOpen(nextOpen);
-  }, []);
+  };
 
-  const handleClear = (e: React.MouseEvent | React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onValueChange("");
+  const closeDropdown = () => {
+    setOpen(false);
     setSearchQuery("");
   };
 
+  const handleItemClick = (itemId: string) => {
+    onValueChange(itemId);
+    closeDropdown();
+
+    setTimeout(() => {
+      let focusHandled = false;
+      if (onSelect) {
+        onSelect();
+        focusHandled = true;
+      }
+      if (onSelectFocusNext) {
+        onSelectFocusNext(triggerRef);
+        focusHandled = true;
+      }
+      if (!focusHandled) {
+        triggerRef.current?.focus();
+      }
+    }, 10);
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onValueChange("");
+    setSearchQuery("");
+    triggerRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      closeDropdown();
+      triggerRef.current?.focus();
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
+    <PopoverPrimitive.Root open={open} onOpenChange={(o) => { if (!o) closeDropdown(); }}>
+      <PopoverPrimitive.Trigger asChild>
         <button
           ref={triggerRef}
+          type="button"
           role="combobox"
           aria-expanded={open}
+          aria-required={required}
           disabled={disabled}
           autoFocus={autoFocus}
+          onClick={() => (open ? closeDropdown() : openDropdown())}
           className={cn(
-            "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
-          type="button"
-          onFocus={() => {
-            // Only auto-open if not just selected and flag is set
-            if (autoOpenOnFocus && !disabled && !justSelectedRef.current) {
-              setOpen(true);
-            }
-          }}
         >
           <span className={cn("truncate", !selectedItem && "text-slate-500")}>
             {selectedItem ? getLabel(selectedItem) : placeholder}
@@ -155,67 +141,85 @@ export function Combobox<T>({
             {value && !disabled && (
               <X
                 className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-pointer"
-                onPointerDown={handleClear}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => handleClear(e)}
               />
             )}
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>
         </button>
-      </PopoverTrigger>
+      </PopoverPrimitive.Trigger>
 
-      <PopoverContent
-        align="start"
-        className="w-[var(--radix-popover-trigger-width)] p-0 z-[100] shadow-md"
-        onCloseAutoFocus={(e) => {
-          // Prevent Radix from trying to restore focus automatically;
-          // we handle focus ourselves in handleSelect
-          e.preventDefault();
-        }}
-      >
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Search..."
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-          />
-          <CommandList className="max-h-60 overflow-y-auto">
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+          align="start"
+          sideOffset={4}
+          className="z-[200] w-[var(--radix-popover-trigger-width)] rounded-md border border-slate-200 bg-white shadow-md outline-none"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            inputRef.current?.focus();
+          }}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+          }}
+          onKeyDown={handleKeyDown}
+        >
+          {/* Search input */}
+          <div className="flex items-center border-b border-slate-200 px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-slate-500"
+              // CRITICAL: prevent mousedown from stealing focus away from the input
+              onMouseDown={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          {/* Items list */}
+          <div className="max-h-60 overflow-y-auto p-1">
             {filteredItems.length === 0 ? (
-              <div className="py-6 text-center text-sm text-slate-500">
-                {emptyText}
-              </div>
+              <div className="py-6 text-center text-sm text-slate-500">{emptyText}</div>
             ) : (
-              <CommandGroup>
-                {filteredItems.map((item) => {
-                  const itemId = getId(item);
-                  const isSelected = value === itemId;
+              filteredItems.map((item) => {
+                const itemId = getId(item);
+                const isSelected = value === itemId;
 
-                  return (
-                    <CommandItem
-                      key={itemId}
-                      value={itemId}
-                      onSelect={() => handleSelect(itemId)}
+                return (
+                  <div
+                    key={itemId}
+                    role="option"
+                    aria-selected={isSelected}
+                    className={cn(
+                      "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100",
+                      isSelected && "bg-slate-100"
+                    )}
+                    // preventDefault on mousedown keeps the input focused so the popover stays open
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleItemClick(itemId)}
+                  >
+                    <Check
                       className={cn(
-                        "flex items-center gap-2 px-2 py-2 cursor-pointer w-full text-left outline-none",
-                        isSelected && "bg-slate-100 font-medium"
+                        "mr-2 h-4 w-4 shrink-0",
+                        isSelected ? "opacity-100" : "opacity-0"
                       )}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4 shrink-0",
-                          isSelected ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <div className="flex-1 overflow-hidden">
-                        {renderItem ? renderItem(item) : getLabel(item)}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
+                    />
+                    <div className="flex-1 overflow-hidden">
+                      {renderItem ? renderItem(item) : getLabel(item)}
+                    </div>
+                  </div>
+                );
+              })
             )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          </div>
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
   );
 }
