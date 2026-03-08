@@ -57,7 +57,7 @@ export default function NewExpensePage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/accounts").then((r) => r.json()),
-      fetch("/api/suppliers").then((r) => r.json()),
+      fetch("/api/suppliers?compact=true").then((r) => r.json()),
     ]).then(([accountsData, suppliersData]) => {
       // Only show expense-type accounts
       setAccounts(

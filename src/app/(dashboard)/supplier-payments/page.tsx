@@ -144,7 +144,7 @@ export default function SupplierPaymentsPage() {
   };
 
   const fetchSuppliers = async () => {
-    const response = await fetch("/api/suppliers");
+    const response = await fetch("/api/suppliers?compact=true");
     const data = await response.json();
     setSuppliers(data);
   };

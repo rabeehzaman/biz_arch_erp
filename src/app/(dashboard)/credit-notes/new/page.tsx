@@ -89,7 +89,7 @@ export default function NewCreditNotePage() {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch("/api/customers");
+      const response = await fetch("/api/customers?compact=true");
       if (response.ok) {
         const data = await response.json();
         setCustomers(data);
@@ -101,7 +101,7 @@ export default function NewCreditNotePage() {
 
   const fetchProducts = async () => {
     try {
-      const url = warehouseId ? `/api/products?warehouseId=${warehouseId}` : "/api/products";
+      const url = warehouseId ? `/api/products?warehouseId=${warehouseId}&compact=true` : "/api/products?compact=true";
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();

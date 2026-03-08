@@ -48,6 +48,8 @@ export function SupplierFormDialog({
     supplierToEdit,
 }: SupplierFormDialogProps) {
     const { data: session } = useSession();
+    const isSaudi = !!(session?.user as any)?.saudiEInvoiceEnabled;
+    const defaultCountry = isSaudi ? "Saudi Arabia" : "India";
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
@@ -57,7 +59,7 @@ export function SupplierFormDialog({
         city: "",
         state: "",
         zipCode: "",
-        country: "India",
+        country: defaultCountry,
         gstin: "",
         gstStateCode: "",
         notes: "",
@@ -73,18 +75,24 @@ export function SupplierFormDialog({
                 city: supplierToEdit.city || "",
                 state: supplierToEdit.state || "",
                 zipCode: supplierToEdit.zipCode || "",
-                country: supplierToEdit.country || "India",
+                country: supplierToEdit.country || defaultCountry,
                 gstin: supplierToEdit.gstin || "",
                 gstStateCode: supplierToEdit.gstStateCode || "",
                 notes: supplierToEdit.notes || "",
             });
+        } else if (open && !supplierToEdit) {
+            setFormData(prev => ({
+                ...prev,
+                country: defaultCountry,
+            }));
         } else if (!open) {
             resetForm();
         }
-    }, [supplierToEdit, open]);
+    }, [supplierToEdit, open, session]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         setIsSubmitting(true);
 
         const payload = {
@@ -95,7 +103,7 @@ export function SupplierFormDialog({
             city: formData.city || null,
             state: formData.state || null,
             zipCode: formData.zipCode || null,
-            country: formData.country || "India",
+            country: formData.country || defaultCountry,
             gstin: formData.gstin || null,
             gstStateCode: formData.gstStateCode || null,
             notes: formData.notes || null,
@@ -143,7 +151,7 @@ export function SupplierFormDialog({
             city: "",
             state: "",
             zipCode: "",
-            country: "India",
+            country: defaultCountry,
             gstin: "",
             gstStateCode: "",
             notes: "",

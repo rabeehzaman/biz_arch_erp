@@ -102,6 +102,7 @@ export function ProductFormDialog({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
 
         const errors: Record<string, string> = {};
         if (!formData.name.trim()) errors.name = "Name is required";

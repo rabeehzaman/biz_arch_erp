@@ -120,15 +120,15 @@ export default function NewQuotationPage() {
   }, []);
 
   const fetchCustomers = async () => {
-    const response = await fetch("/api/customers");
+    const response = await fetch("/api/customers?compact=true");
     const data = await response.json();
     setCustomers(data);
   };
 
   const fetchProducts = async () => {
     const url = formData.warehouseId
-      ? `/api/products?warehouseId=${formData.warehouseId}`
-      : "/api/products";
+      ? `/api/products?warehouseId=${formData.warehouseId}&compact=true`
+      : "/api/products?compact=true";
     const response = await fetch(url);
     const data = await response.json();
     setProducts(data);

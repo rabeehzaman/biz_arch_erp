@@ -45,20 +45,30 @@ export function Combobox<T>({
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
+  const [portalContainer, setPortalContainer] = React.useState<HTMLElement | null>(null);
+  const listId = React.useId();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const justClosedRef = React.useRef(false);
   const isPointerDownRef = React.useRef(false);
 
-  // Ensure items is always an array
   const safeItems = Array.isArray(items) ? items : [];
+  const selectedItem = safeItems.find((item) => getId(item) === value);
 
-  // Get the selected item
-  const selectedItem = React.useMemo(
-    () => safeItems.find((item) => getId(item) === value),
-    [safeItems, value, getId]
-  );
+  // DEBUG: trace every render and commit
+  const renderCountRef = React.useRef(0);
+  renderCountRef.current++;
+  const rc = renderCountRef.current;
+  if (placeholder?.includes('customer')) {
+    console.log('[CB-R#' + rc + '] v=' + (value || '(empty)') + ' sel=' + (selectedItem ? getLabel(selectedItem) : 'NULL') + ' open=' + open);
+  }
+  React.useEffect(() => {
+    if (placeholder?.includes('customer')) {
+      const span = triggerRef.current?.querySelector('span');
+      console.log('[CB-E#' + rc + '] domText="' + (span?.textContent || '') + '" v=' + (value || '(empty)'));
+    }
+  });
 
   // Filter items based on search query
   const filteredItems = React.useMemo(() => {
@@ -86,6 +96,36 @@ export function Combobox<T>({
   React.useEffect(() => {
     setHighlightedIndex(0);
   }, [filteredItems]);
+
+  React.useEffect(() => {
+    const dialogContent = triggerRef.current?.closest(
+      '[data-slot="dialog-content"]'
+    );
+    setPortalContainer(dialogContent instanceof HTMLElement ? dialogContent : null);
+  }, []);
+
+  const handleSelect = React.useCallback((selectedValue: string) => {
+    onValueChange(selectedValue);
+    justClosedRef.current = true;
+    setOpen(false);
+    setSearchQuery("");
+
+    // Manage focus uniformly after a selection is made.
+    setTimeout(() => {
+      let focusHandled = false;
+      if (onSelect) {
+        onSelect();
+        focusHandled = true;
+      }
+      if (onSelectFocusNext) {
+        onSelectFocusNext(triggerRef);
+        focusHandled = true;
+      }
+      if (!focusHandled) {
+        triggerRef.current?.focus();
+      }
+    }, 10);
+  }, [onSelect, onSelectFocusNext, onValueChange]);
 
   // Keyboard navigation
   React.useEffect(() => {
@@ -118,7 +158,7 @@ export function Combobox<T>({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, filteredItems, highlightedIndex]);
+  }, [open, filteredItems, highlightedIndex, handleSelect, getId]);
 
   // Scroll highlighted item into view
   React.useEffect(() => {
@@ -133,29 +173,6 @@ export function Combobox<T>({
     }
   }, [highlightedIndex, open]);
 
-  const handleSelect = (selectedValue: string) => {
-    onValueChange(selectedValue);
-    justClosedRef.current = true;
-    setOpen(false);
-    setSearchQuery("");
-
-    // Manage focus uniformly after a selection is made
-    setTimeout(() => {
-      let focusHandled = false;
-      if (onSelect) {
-        onSelect();
-        focusHandled = true;
-      }
-      if (onSelectFocusNext) {
-        onSelectFocusNext(triggerRef);
-        focusHandled = true;
-      }
-      if (!focusHandled) {
-        triggerRef.current?.focus();
-      }
-    }, 10);
-  };
-
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onValueChange("");
@@ -169,6 +186,7 @@ export function Combobox<T>({
           ref={triggerRef}
           type="button"
           role="combobox"
+          aria-controls={listId}
           aria-expanded={open}
           aria-required={required}
           disabled={disabled}
@@ -210,7 +228,7 @@ export function Combobox<T>({
           </div>
         </button>
       </PopoverPrimitive.Trigger>
-      <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Portal container={portalContainer ?? undefined}>
         <PopoverPrimitive.Content
           align="start"
           className="z-50 w-[var(--radix-popover-trigger-width)] rounded-md border border-slate-200 bg-white p-0 shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
@@ -235,6 +253,7 @@ export function Combobox<T>({
           </div>
           <div
             ref={listRef}
+            id={listId}
             role="listbox"
             className="max-h-60 overflow-y-auto p-1"
           >
@@ -258,6 +277,10 @@ export function Combobox<T>({
                       isHighlighted && "bg-slate-100",
                       isSelected && "bg-slate-100"
                     )}
+                    onMouseDown={(e) => {
+                      // Keep focus on the search input until click commits the selection.
+                      e.preventDefault();
+                    }}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => handleSelect(itemId)}
                   >

@@ -99,6 +99,7 @@ export function CustomerFormDialog({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         setIsSubmitting(true);
 
         const payload = {

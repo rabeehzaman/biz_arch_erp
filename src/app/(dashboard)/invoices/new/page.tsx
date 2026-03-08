@@ -195,15 +195,15 @@ export default function NewInvoicePage() {
   }, []);
 
   const fetchCustomers = async () => {
-    const response = await fetch("/api/customers");
+    const response = await fetch("/api/customers?compact=true");
     const data = await response.json();
     setCustomers(data);
   };
 
   const fetchProducts = async () => {
     const url = formData.warehouseId
-      ? `/api/products?warehouseId=${formData.warehouseId}`
-      : "/api/products";
+      ? `/api/products?warehouseId=${formData.warehouseId}&compact=true`
+      : "/api/products?compact=true";
     const response = await fetch(url);
     const data = await response.json();
     setProducts(data);
@@ -584,15 +584,15 @@ export default function NewInvoicePage() {
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow>
-                        <TableHead className="w-[30%] font-semibold">Product *</TableHead>
-                        <TableHead className="w-[10%] font-semibold">Quantity *</TableHead>
+                        <TableHead className="font-semibold" style={{ width: '30%' }}>Product *</TableHead>
+                        <TableHead className="font-semibold">Quantity *</TableHead>
                         {session?.user?.multiUnitEnabled && (
-                          <TableHead className="w-[12%] font-semibold">Unit</TableHead>
+                          <TableHead className="font-semibold">Unit</TableHead>
                         )}
-                        <TableHead className="w-[12%] font-semibold">Unit Price *</TableHead>
-                        <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
-                        {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
-                        {saudiEnabled && <TableHead className="w-[8%] font-semibold">VAT %</TableHead>}
+                        <TableHead className="font-semibold">Unit Price *</TableHead>
+                        <TableHead className="font-semibold">Disc %</TableHead>
+                        {session?.user?.gstEnabled && <TableHead className="font-semibold">GST %</TableHead>}
+                        {saudiEnabled && <TableHead className="font-semibold">VAT %</TableHead>}
                         {(session?.user?.gstEnabled || saudiEnabled) ? (
                           <>
                             <TableHead className="text-right font-semibold">Gross Amount</TableHead>

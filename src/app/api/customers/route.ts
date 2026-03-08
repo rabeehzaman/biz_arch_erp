@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -13,13 +13,37 @@ export async function GET() {
     const organizationId = getOrgId(session);
     const userId = session.user.id;
     const isAdmin = session.user.role === "admin";
+    const { searchParams } = new URL(request.url);
+    const compact = searchParams.get("compact") === "true";
 
+    const where = isAdmin
+      ? { organizationId }
+      : {
+          organizationId,
+          assignments: { some: { userId } },
+        };
     let customers;
+
+    if (compact) {
+      const customers = await prisma.customer.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          balance: true,
+        },
+      });
+
+      return NextResponse.json(customers);
+    }
 
     if (isAdmin) {
       // Admin sees all customers in their org
       customers = await prisma.customer.findMany({
-        where: { organizationId },
+        where,
         orderBy: { createdAt: "desc" },
         include: {
           _count: {
@@ -37,10 +61,7 @@ export async function GET() {
     } else {
       // Regular user sees only customers assigned to them
       customers = await prisma.customer.findMany({
-        where: {
-          organizationId,
-          assignments: { some: { userId } },
-        },
+        where,
         orderBy: { createdAt: "desc" },
         include: {
           _count: {
@@ -103,7 +124,7 @@ export async function POST(request: NextRequest) {
         city: city || null,
         state: state || null,
         zipCode: zipCode || null,
-        country: country || "India",
+        country: country || ((session.user as any).saudiEInvoiceEnabled ? "Saudi Arabia" : "India"),
         notes: notes || null,
         gstin: gstin || null,
         gstStateCode: gstStateCode || null,

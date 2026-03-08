@@ -15,26 +15,61 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const excludeServices = searchParams.get("excludeServices") === "true";
     const warehouseId = searchParams.get("warehouseId");
+    const compact = searchParams.get("compact") === "true";
 
-    const products = await prisma.product.findMany({
+    const baseWhere = {
+      organizationId,
+      ...(excludeServices ? { isService: false } : {}),
+    };
+
+    const stockLotsSelect = {
       where: {
-        organizationId,
-        ...(excludeServices ? { isService: false } : {})
+        remainingQuantity: { gt: 0 },
+        ...(warehouseId ? { warehouseId } : {}),
       },
-      include: {
-        unit: true,
-        stockLots: {
+      select: {
+        remainingQuantity: true,
+      },
+    };
+
+    const products = compact
+      ? await prisma.product.findMany({
           where: {
-            remainingQuantity: { gt: 0 },
-            ...(warehouseId ? { warehouseId } : {})
+            ...baseWhere,
           },
           select: {
-            remainingQuantity: true,
+            id: true,
+            name: true,
+            price: true,
+            unitId: true,
+            unit: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+            sku: true,
+            barcode: true,
+            isService: true,
+            isImeiTracked: true,
+            gstRate: true,
+            hsnCode: true,
+            weighMachineCode: true,
+            stockLots: stockLotsSelect,
           },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+          orderBy: { createdAt: "desc" },
+        })
+      : await prisma.product.findMany({
+          where: {
+            ...baseWhere,
+          },
+          include: {
+            unit: true,
+            stockLots: stockLotsSelect,
+          },
+          orderBy: { createdAt: "desc" },
+        });
 
     // Calculate available stock for each product
     const productsWithStock = products.map((product) => {

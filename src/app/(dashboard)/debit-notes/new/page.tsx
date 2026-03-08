@@ -83,7 +83,7 @@ export default function NewDebitNotePage() {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch("/api/suppliers");
+      const response = await fetch("/api/suppliers?compact=true");
       if (response.ok) {
         const data = await response.json();
         setSuppliers(data);
@@ -95,7 +95,7 @@ export default function NewDebitNotePage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch("/api/products");
+      const response = await fetch("/api/products?compact=true");
       if (response.ok) {
         const data = await response.json();
         setProducts(data);

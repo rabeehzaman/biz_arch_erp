@@ -102,6 +102,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
 
         if (formData.fromUnitId === formData.toUnitId) {
             toast.error("From and To units must be different");

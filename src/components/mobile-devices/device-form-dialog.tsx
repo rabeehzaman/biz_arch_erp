@@ -100,8 +100,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
       } else {
         resetForm();
       }
-      fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers).catch(() => { });
-      fetch("/api/products?excludeServices=true").then((r) => r.json()).then((data) => setProducts(data.filter((p: Product) => p.isImeiTracked))).catch(() => { });
+      fetch("/api/suppliers?compact=true").then((r) => r.json()).then(setSuppliers).catch(() => { });
+      fetch("/api/products?excludeServices=true&compact=true").then((r) => r.json()).then((data) => setProducts(data.filter((p: Product) => p.isImeiTracked))).catch(() => { });
     }
   }, [open, editDevice]);
 
@@ -149,6 +149,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!formData.imei1 || !formData.supplierId || !formData.costPrice) {
       toast.error("IMEI 1, Supplier, and Cost Price are required");
       return;

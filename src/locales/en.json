@@ -125,6 +125,8 @@
         "discount": "Discount",
         "total": "Total",
         "subtotal": "Subtotal",
+        "tax": "Tax",
+        "pricesIncludeTax": "Prices include tax",
         "netTotal": "Net Total",
         "balanceDue": "Balance Due",
         "paid": "Paid",

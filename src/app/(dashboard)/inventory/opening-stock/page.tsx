@@ -129,10 +129,10 @@ export default function OpeningStockPage() {
     try {
       const [stocksRes, productsRes, branchesRes, warehousesRes, suppliersRes] = await Promise.all([
         fetch("/api/opening-stocks"),
-        fetch("/api/products"),
+        fetch("/api/products?compact=true"),
         fetch("/api/branches"),
         fetch("/api/warehouses"),
-        fetch("/api/suppliers"),
+        fetch("/api/suppliers?compact=true"),
       ]);
 
       if (stocksRes.ok) setOpeningStocks(await stocksRes.json());

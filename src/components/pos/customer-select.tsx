@@ -28,7 +28,7 @@ export function CustomerSelect({
 
   useEffect(() => {
     if (isOpen) {
-      fetch("/api/customers")
+      fetch("/api/customers?compact=true")
         .then((res) => res.json())
         .then((data) => setCustomers(data))
         .catch(() => { });

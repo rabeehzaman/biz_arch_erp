@@ -48,6 +48,7 @@ interface LineItem {
   discount: number;
   gstRate: number;
   hsnCode: string;
+  vatRate: number;
 }
 
 export default function EditPurchaseInvoicePage({
@@ -114,15 +115,15 @@ export default function EditPurchaseInvoicePage({
   }, []);
 
   const fetchSuppliers = async () => {
-    const response = await fetch("/api/suppliers");
+    const response = await fetch("/api/suppliers?compact=true");
     const data = await response.json();
     setSuppliers(data);
   };
 
   const fetchProducts = async () => {
     const url = formData.warehouseId
-      ? `/api/products?warehouseId=${formData.warehouseId}`
-      : "/api/products";
+      ? `/api/products?warehouseId=${formData.warehouseId}&compact=true`
+      : "/api/products?compact=true";
     const response = await fetch(url);
     const data = await response.json();
     setProducts(data);
@@ -143,7 +144,7 @@ export default function EditPurchaseInvoicePage({
           warehouseId: data.warehouseId || "",
         });
         setLineItems(
-          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitCost: number; discount: number; gstRate?: number; hsnCode?: string }) => ({
+          data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitCost: number; discount: number; gstRate?: number; hsnCode?: string; vatRate?: number }) => ({
             id: item.id,
             productId: item.product?.id || "",
             quantity: Number(item.quantity),
@@ -153,6 +154,7 @@ export default function EditPurchaseInvoicePage({
             discount: Number(item.discount),
             gstRate: Number(item.gstRate) || 0,
             hsnCode: item.hsnCode || "",
+            vatRate: item.vatRate !== undefined ? Number(item.vatRate) : 15,
           }))
         );
       } else {
@@ -181,6 +183,7 @@ export default function EditPurchaseInvoicePage({
         discount: 0,
         gstRate: 0,
         hsnCode: "",
+        vatRate: 15,
       },
     ]);
   };
@@ -259,11 +262,15 @@ export default function EditPurchaseInvoicePage({
             discount: 0,
             gstRate: 0,
             hsnCode: "",
+            vatRate: 15,
           },
         ]);
       }, 0);
     }
   };
+
+  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
+  const taxEnabled = session?.user?.gstEnabled || saudiEnabled;
 
   const calculateSubtotal = () => {
     return lineItems.reduce(
@@ -275,7 +282,8 @@ export default function EditPurchaseInvoicePage({
   const calculateTax = () => {
     return lineItems.reduce((sum, item) => {
       const lineTotal = item.quantity * item.unitCost * (1 - item.discount / 100);
-      return sum + (lineTotal * (item.gstRate || 0)) / 100;
+      const rate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
+      return sum + (lineTotal * rate) / 100;
     }, 0);
   };
 
@@ -319,6 +327,7 @@ export default function EditPurchaseInvoicePage({
               discount: item.discount,
               gstRate: item.gstRate,
               hsnCode: item.hsnCode,
+              ...(saudiEnabled && { vatRate: item.vatRate ?? 15 }),
             };
           }),
         }),
@@ -443,15 +452,16 @@ export default function EditPurchaseInvoicePage({
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow>
-                        <TableHead className="w-[30%] font-semibold">Product *</TableHead>
-                        <TableHead className="w-[10%] font-semibold">Quantity *</TableHead>
+                        <TableHead className="font-semibold" style={{ width: '30%' }}>Product *</TableHead>
+                        <TableHead className="font-semibold">Quantity *</TableHead>
                         {session?.user?.multiUnitEnabled && (
-                          <TableHead className="w-[12%] font-semibold">Unit</TableHead>
+                          <TableHead className="font-semibold">Unit</TableHead>
                         )}
-                        <TableHead className="w-[12%] font-semibold">Unit Cost *</TableHead>
-                        <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
-                        {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
-                        {session?.user?.gstEnabled ? (
+                        <TableHead className="font-semibold">Unit Cost *</TableHead>
+                        <TableHead className="font-semibold">Disc %</TableHead>
+                        {saudiEnabled && <TableHead className="font-semibold">VAT %</TableHead>}
+                        {session?.user?.gstEnabled && <TableHead className="font-semibold">GST %</TableHead>}
+                        {taxEnabled ? (
                           <>
                             <TableHead className="text-right font-semibold">Gross Amount</TableHead>
                             <TableHead className="text-right font-semibold">Net Amount</TableHead>
@@ -562,6 +572,23 @@ export default function EditPurchaseInvoicePage({
                                 placeholder="0"
                               />
                             </TableCell>
+                            {saudiEnabled && (
+                              <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                                <Input
+                                  type="number"
+                                  onFocus={(e) => e.target.select()}
+                                  min="0"
+                                  max="100"
+                                  step="0.01"
+                                  value={item.vatRate ?? 15}
+                                  onChange={(e) =>
+                                    updateLineItem(item.id, "vatRate", parseFloat(e.target.value) || 0)
+                                  }
+                                  className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                  placeholder="15"
+                                />
+                              </TableCell>
+                            )}
                             {session?.user?.gstEnabled && (
                               <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                 <Input
@@ -579,7 +606,7 @@ export default function EditPurchaseInvoicePage({
                                 />
                               </TableCell>
                             )}
-                            {session?.user?.gstEnabled ? (
+                            {taxEnabled ? (
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                   {symbol}{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
@@ -588,7 +615,7 @@ export default function EditPurchaseInvoicePage({
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                                  {symbol}{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                                  {symbol}{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0)) / 100)).toLocaleString("en-IN")}
                                 </TableCell>
                               </>
                             ) : (
@@ -622,7 +649,8 @@ export default function EditPurchaseInvoicePage({
                 <div className="sm:hidden divide-y divide-slate-200">
                   {lineItems.map((item) => {
                     const lineGross = item.quantity * item.unitCost * (1 - item.discount / 100);
-                    const lineNet = lineGross * (1 + (item.gstRate || 0) / 100);
+                    const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
+                    const lineNet = lineGross * (1 + taxRate / 100);
 
                     return (
                       <div key={item.id} className="p-3 space-y-3">
@@ -694,6 +722,23 @@ export default function EditPurchaseInvoicePage({
                               placeholder="0"
                             />
                           </div>
+                          {saudiEnabled && (
+                            <div>
+                              <Label className="text-xs text-slate-500">VAT %</Label>
+                              <Input
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={item.vatRate ?? 15}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, "vatRate", parseFloat(e.target.value) || 0)
+                                }
+                                placeholder="15"
+                              />
+                            </div>
+                          )}
                           {session?.user?.gstEnabled && (
                             <div>
                               <Label className="text-xs text-slate-500">GST %</Label>
@@ -735,7 +780,7 @@ export default function EditPurchaseInvoicePage({
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span className="text-sm font-semibold">
-                            {session?.user?.gstEnabled
+                            {taxEnabled
                               ? `${symbol}${lineNet.toLocaleString("en-IN")}`
                               : `${symbol}${lineGross.toLocaleString("en-IN")}`}
                           </span>
@@ -784,7 +829,7 @@ export default function EditPurchaseInvoicePage({
                   </div>
                   {calculateTax() > 0 && (
                     <div className="flex justify-between text-sm text-slate-500">
-                      <span>GST</span>
+                      <span>{saudiEnabled ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
                       <span>{symbol}{calculateTax().toLocaleString("en-IN")}</span>
                     </div>
                   )}

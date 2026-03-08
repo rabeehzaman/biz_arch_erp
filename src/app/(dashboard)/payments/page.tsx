@@ -145,7 +145,7 @@ export default function PaymentsPage() {
   };
 
   const fetchCustomers = async () => {
-    const response = await fetch("/api/customers");
+    const response = await fetch("/api/customers?compact=true");
     const data = await response.json();
     setCustomers(data);
   };

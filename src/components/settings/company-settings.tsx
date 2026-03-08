@@ -53,6 +53,7 @@ export function CompanySettings() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsSaving(true);
 
     try {

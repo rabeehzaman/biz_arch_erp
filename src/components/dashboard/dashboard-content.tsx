@@ -152,9 +152,9 @@ export function DashboardContent() {
                 <p className="text-sm text-slate-500">
                   {t("dashboard.activeBranches")}
                 </p>
-                <p className="text-2xl font-bold">
+                <div className="text-2xl font-bold">
                   {isLoading ? <Skeleton className="h-8 w-10" /> : (stats as any)?.totalBranches ?? 0}
-                </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -167,9 +167,9 @@ export function DashboardContent() {
                 <p className="text-sm text-slate-500">
                   {t("dashboard.activeWarehouses")}
                 </p>
-                <p className="text-2xl font-bold">
+                <div className="text-2xl font-bold">
                   {isLoading ? <Skeleton className="h-8 w-10" /> : (stats as any)?.totalWarehouses ?? 0}
-                </p>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -73,6 +73,7 @@ export function UnitsSettings() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     const payload = {
       code: formData.code.toLowerCase(),
