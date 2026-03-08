@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { buildPOSLocationKey } from "@/lib/pos/register-config";
 
 export async function GET() {
   try {
@@ -88,7 +89,37 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ locations, openSessions });
+    const registerConfigs = await prisma.pOSRegisterConfig.findMany({
+      where: { organizationId },
+      include: {
+        defaultCashAccount: { select: { id: true, name: true } },
+        defaultBankAccount: { select: { id: true, name: true } },
+      },
+    });
+    const configMap = new Map(
+      registerConfigs.map((config) => [config.locationKey, config])
+    );
+
+    const locationsWithConfig = locations.map((location) => {
+      const config = configMap.get(
+        buildPOSLocationKey(location.branchId, location.warehouseId)
+      );
+
+      return {
+        ...location,
+        registerConfig: config
+          ? {
+            id: config.id,
+            defaultCashAccountId: config.defaultCashAccountId,
+            defaultBankAccountId: config.defaultBankAccountId,
+            defaultCashAccount: config.defaultCashAccount,
+            defaultBankAccount: config.defaultBankAccount,
+          }
+          : null,
+      };
+    });
+
+    return NextResponse.json({ locations: locationsWithConfig, openSessions });
   } catch (error) {
     console.error("Failed to fetch POS dashboard:", error);
     return NextResponse.json(

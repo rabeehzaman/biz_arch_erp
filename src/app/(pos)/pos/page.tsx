@@ -19,6 +19,7 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
+  Settings2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -28,14 +29,32 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const SYSTEM_DEFAULT_VALUE = "__system_default__";
+
+interface RegisterConfig {
+  id: string;
+  defaultCashAccountId: string | null;
+  defaultBankAccountId: string | null;
+  defaultCashAccount: { id: string; name: string } | null;
+  defaultBankAccount: { id: string; name: string } | null;
+}
 
 interface Location {
   branchId: string | null;
@@ -44,6 +63,7 @@ interface Location {
   warehouseId: string | null;
   warehouseName: string | null;
   warehouseCode: string | null;
+  registerConfig: RegisterConfig | null;
 }
 
 interface OpenSession {
@@ -63,6 +83,12 @@ interface OpenSession {
 interface DashboardData {
   locations: Location[];
   openSessions: OpenSession[];
+}
+
+interface CashBankAccountOption {
+  id: string;
+  name: string;
+  accountSubType: string;
 }
 
 type OpeningState = {
@@ -92,6 +118,10 @@ export default function POSDashboardPage() {
   const [openingState, setOpeningState] = useState<OpeningState | null>(null);
   const [sessionsLocationKey, setSessionsLocationKey] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [configLocationKey, setConfigLocationKey] = useState<string | null>(null);
+  const [configCashAccountId, setConfigCashAccountId] = useState(SYSTEM_DEFAULT_VALUE);
+  const [configBankAccountId, setConfigBankAccountId] = useState(SYSTEM_DEFAULT_VALUE);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   const { data, isLoading, mutate } = useSWR<DashboardData>(
     "/api/pos/dashboard",
@@ -108,6 +138,10 @@ export default function POSDashboardPage() {
       : null,
     fetcher
   );
+  const { data: cashBankAccounts = [] } = useSWR<CashBankAccountOption[]>(
+    configLocationKey ? "/api/cash-bank-accounts?activeOnly=true" : null,
+    fetcher
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: sessionSummary, isLoading: isLoadingSummary } = useSWR<any>(
@@ -117,6 +151,9 @@ export default function POSDashboardPage() {
 
   const locations = data?.locations ?? [];
   const openSessions = data?.openSessions ?? [];
+  const selectedConfigLocation = locations.find(
+    (loc) => getLocationKey(loc) === configLocationKey
+  ) ?? null;
 
   // Filter locations by search
   const filtered = searchQuery
@@ -169,6 +206,51 @@ export default function POSDashboardPage() {
       setOpeningState((prev) =>
         prev?.locationKey === key ? { ...prev, isOpening: false } : prev
       );
+    }
+  };
+
+  const openRegisterConfig = (loc: Location) => {
+    setConfigLocationKey(getLocationKey(loc));
+    setConfigCashAccountId(
+      loc.registerConfig?.defaultCashAccountId || SYSTEM_DEFAULT_VALUE
+    );
+    setConfigBankAccountId(
+      loc.registerConfig?.defaultBankAccountId || SYSTEM_DEFAULT_VALUE
+    );
+  };
+
+  const saveRegisterConfig = async () => {
+    if (!selectedConfigLocation) return;
+
+    setIsSavingConfig(true);
+    try {
+      const res = await fetch("/api/pos/register-configs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branchId: selectedConfigLocation.branchId,
+          warehouseId: selectedConfigLocation.warehouseId,
+          defaultCashAccountId:
+            configCashAccountId === SYSTEM_DEFAULT_VALUE ? null : configCashAccountId,
+          defaultBankAccountId:
+            configBankAccountId === SYSTEM_DEFAULT_VALUE ? null : configBankAccountId,
+        }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json();
+        throw new Error(payload.error || "Failed to save register accounts");
+      }
+
+      await mutate();
+      setConfigLocationKey(null);
+      toast.success("Register accounts saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save register accounts"
+      );
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -247,7 +329,16 @@ export default function POSDashboardPage() {
                         </p>
                       )}
                     </div>
-                    <div className="shrink-0 ml-2">
+                    <div className="shrink-0 ml-2 flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900"
+                        onClick={() => openRegisterConfig(loc)}
+                        title="Register accounts"
+                      >
+                        <Settings2 className="h-4 w-4" />
+                      </Button>
                       {!session && (
                         <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
                           {t("pos.openingControl")}
@@ -384,6 +475,21 @@ export default function POSDashboardPage() {
                         )}
                       </>
                     )}
+
+                    <div className="mt-3 rounded-lg border bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Cash</span>
+                        <span className="truncate text-right font-medium text-slate-800">
+                          {loc.registerConfig?.defaultCashAccount?.name || "System default"}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <span>Bank</span>
+                        <span className="truncate text-right font-medium text-slate-800">
+                          {loc.registerConfig?.defaultBankAccount?.name || "System default"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Session History footer */}
@@ -405,6 +511,87 @@ export default function POSDashboardPage() {
           </div>
         )}
       </div>
+
+      <Dialog
+        open={configLocationKey !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfigLocationKey(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Register Accounts</DialogTitle>
+            <DialogDescription>
+              Set the default cash and bank accounts for this register. Direct mode uses them automatically. Clearing mode pre-fills them during session close.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedConfigLocation && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg border bg-slate-50 px-3 py-2 text-sm">
+                <div className="font-medium">{selectedConfigLocation.branchName}</div>
+                {selectedConfigLocation.warehouseName && (
+                  <div className="text-muted-foreground">{selectedConfigLocation.warehouseName}</div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Default Cash Account</Label>
+                <Select value={configCashAccountId} onValueChange={setConfigCashAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select cash account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SYSTEM_DEFAULT_VALUE}>System default</SelectItem>
+                    {cashBankAccounts
+                      .filter((account) => account.accountSubType === "CASH")
+                      .map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Default Bank Account</Label>
+                <Select value={configBankAccountId} onValueChange={setConfigBankAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bank account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SYSTEM_DEFAULT_VALUE}>System default</SelectItem>
+                    {cashBankAccounts
+                      .filter((account) => account.accountSubType === "BANK")
+                      .map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfigLocationKey(null)}
+              disabled={isSavingConfig}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={saveRegisterConfig} disabled={isSavingConfig}>
+              {isSavingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Accounts
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Session History Dialog */}
       <Dialog

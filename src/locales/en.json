@@ -834,6 +834,7 @@
         "selectCashAccount": "Select cash account...",
         "depositNonCashTo": "Deposit Non-Cash To",
         "selectBankAccountOptional": "Select bank account (optional)",
+        "useCashAccountFallback": "Use cash account above",
         "ifNotSelectedNonCashPaymentsGoToCashAccount": "If not selected, non-cash payments go to the cash account above.",
         "cancel": "Cancel",
         "completeSale": "Complete Sale",

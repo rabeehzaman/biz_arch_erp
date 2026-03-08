@@ -13,7 +13,8 @@ import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { calculateLineVAT, calculateDocumentVAT, determineSaudiInvoiceType, type LineVATResult } from "@/lib/saudi-vat/calculator";
 import { generateTLVQRCode, generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
 import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash } from "@/lib/saudi-vat/invoice-hash";
-import { SAUDI_VAT_RATE, type VATCategory } from "@/lib/saudi-vat/constants";
+import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
+import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Tx = any;
@@ -160,6 +161,13 @@ export async function POST(request: NextRequest) {
       if (!posSession) {
         throw new Error("NO_OPEN_SESSION");
       }
+
+      const registerConfig = await getPOSRegisterConfig(
+        tx,
+        organizationId,
+        posSession.branchId,
+        posSession.warehouseId
+      );
 
       // ── 2. Resolve customer ──────────────────────────────────────────
       let resolvedCustomerId = customerId;
@@ -656,7 +664,10 @@ export async function POST(request: NextRequest) {
               tx,
               organizationId,
               payment.method,
-              posSession.branchId
+              posSession.branchId,
+              payment.method === "CASH"
+                ? registerConfig?.defaultCashAccountId
+                : registerConfig?.defaultBankAccountId
             );
 
             if (arAccount && cashBankInfo) {

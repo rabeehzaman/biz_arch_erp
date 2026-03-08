@@ -339,7 +339,8 @@ export async function getDefaultCashBankAccount(
   tx: Tx,
   organizationId: string,
   paymentMethod: string,
-  branchId?: string | null
+  branchId?: string | null,
+  preferredCashBankAccountId?: string | null
 ): Promise<{ accountId: string; cashBankAccountId: string } | null> {
   const subType =
     paymentMethod === "CASH" ? "CASH" : "BANK";
@@ -349,6 +350,23 @@ export async function getDefaultCashBankAccount(
     accountSubType: subType,
     isActive: true,
   };
+
+  if (preferredCashBankAccountId) {
+    const preferredAccount = await tx.cashBankAccount.findFirst({
+      where: {
+        ...where,
+        id: preferredCashBankAccountId,
+      },
+      select: { id: true, accountId: true },
+    });
+
+    if (preferredAccount) {
+      return {
+        accountId: preferredAccount.accountId,
+        cashBankAccountId: preferredAccount.id,
+      };
+    }
+  }
 
   // If branchId is provided, prefer branch-specific accounts first
   if (branchId) {

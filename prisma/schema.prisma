@@ -93,6 +93,7 @@ model Organization {
   productCategories          ProductCategory[]
   posSessions                POSSession[]
   posHeldOrders              POSHeldOrder[]
+  posRegisterConfigs         POSRegisterConfig[]
   unitConversions            UnitConversion[]
   branches                   Branch[]
   warehouses                 Warehouse[]
@@ -1427,6 +1428,8 @@ model CashBankAccount {
 
   transactions CashBankTransaction[]
   expenses     Expense[]
+  defaultCashRegisterConfigs POSRegisterConfig[] @relation("POSRegisterDefaultCashAccount")
+  defaultBankRegisterConfigs POSRegisterConfig[] @relation("POSRegisterDefaultBankAccount")
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -1605,6 +1608,7 @@ model Branch {
   stockTransfersFrom StockTransfer[]       @relation("SourceBranch")
   stockTransfersTo   StockTransfer[]       @relation("DestinationBranch")
   userAccess         UserWarehouseAccess[]
+  posRegisterConfigs POSRegisterConfig[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -1637,11 +1641,35 @@ model Warehouse {
   stockTransfersTo   StockTransfer[]       @relation("DestinationWarehouse")
   stockTransferItems StockTransferItem[]
   userAccess         UserWarehouseAccess[]
+  posRegisterConfigs POSRegisterConfig[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
   @@index([branchId])
   @@map("warehouses")
+}
+
+model POSRegisterConfig {
+  id                   String           @id @default(cuid())
+  locationKey          String
+  organizationId       String
+  organization         Organization     @relation(fields: [organizationId], references: [id])
+  branchId             String?
+  branch               Branch?          @relation(fields: [branchId], references: [id])
+  warehouseId          String?
+  warehouse            Warehouse?       @relation(fields: [warehouseId], references: [id])
+  defaultCashAccountId String?
+  defaultCashAccount   CashBankAccount? @relation("POSRegisterDefaultCashAccount", fields: [defaultCashAccountId], references: [id])
+  defaultBankAccountId String?
+  defaultBankAccount   CashBankAccount? @relation("POSRegisterDefaultBankAccount", fields: [defaultBankAccountId], references: [id])
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@unique([organizationId, locationKey])
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([warehouseId])
+  @@map("pos_register_configs")
 }
 
 // ==================== STOCK TRANSFERS ====================

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useEffect } from "react";
+import { Suspense, useState, useCallback, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
@@ -50,6 +50,7 @@ import { smartPrintReceipt } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const USE_CASH_ACCOUNT_VALUE = "__use_cash_account__";
 
 interface POSSessionData {
   id: string;
@@ -158,6 +159,7 @@ function POSTerminalContent() {
   const [isClosingSession, setIsClosingSession] = useState(false);
   const [settleCashAccountId, setSettleCashAccountId] = useState("");
   const [settleBankAccountId, setSettleBankAccountId] = useState("");
+  const autoFilledRef = useRef(false);
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string }>(
@@ -174,6 +176,17 @@ function POSTerminalContent() {
   }
   const { data: cashBankAccounts = [] } = useSWR<CashBankAccountOption[]>(
     isClearingMode && showCloseDialog ? "/api/cash-bank-accounts?activeOnly=true" : null,
+    fetcher
+  );
+  const { data: registerConfigData } = useSWR<{
+    config: {
+      defaultCashAccountId: string | null;
+      defaultBankAccountId: string | null;
+    } | null;
+  }>(
+    posSession
+      ? `/api/pos/register-configs?branchId=${posSession.branch?.id ?? "null"}&warehouseId=${posSession.warehouse?.id ?? "null"}`
+      : null,
     fetcher
   );
 
@@ -202,6 +215,21 @@ function POSTerminalContent() {
 
   const receiptPrintingEnabled = receiptSetting?.value === "true";
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
+
+  useEffect(() => {
+    if (!showCloseDialog || !isClearingMode) {
+      autoFilledRef.current = false; // reset when dialog closes
+      return;
+    }
+    if (autoFilledRef.current) return; // already auto-filled for this dialog open
+    autoFilledRef.current = true;
+    if (registerConfigData?.config?.defaultCashAccountId) {
+      setSettleCashAccountId(registerConfigData.config.defaultCashAccountId);
+    }
+    if (registerConfigData?.config?.defaultBankAccountId) {
+      setSettleBankAccountId(registerConfigData.config.defaultBankAccountId);
+    }
+  }, [showCloseDialog, isClearingMode, registerConfigData]);
 
   // ── Cart Handlers ──────────────────────────────────────────────────
 
@@ -324,8 +352,9 @@ function POSTerminalContent() {
         body: JSON.stringify({
           closingCash: parseFloat(closingCash) || 0,
           ...(isClearingMode && {
-            settleCashAccountId: settleCashAccountId || undefined,
-            settleBankAccountId: settleBankAccountId || undefined,
+            settleCashAccountId: settleCashAccountId || null,
+            settleBankAccountId:
+              settleBankAccountId === USE_CASH_ACCOUNT_VALUE ? null : settleBankAccountId || null,
           }),
         }),
       });
@@ -346,12 +375,25 @@ function POSTerminalContent() {
     }
   };
 
+  const openCloseSessionDialog = () => {
+    setClosingCash("");
+    if (isClearingMode) {
+      setSettleCashAccountId(registerConfigData?.config?.defaultCashAccountId || "");
+      setSettleBankAccountId(
+        registerConfigData?.config?.defaultBankAccountId || USE_CASH_ACCOUNT_VALUE
+      );
+    } else {
+      setSettleCashAccountId("");
+      setSettleBankAccountId(USE_CASH_ACCOUNT_VALUE);
+    }
+    setShowCloseDialog(true);
+  };
+
   // ── Checkout ───────────────────────────────────────────────────────
 
   const handleCheckout = async (payments: PaymentEntry[]) => {
     setIsProcessing(true);
     try {
-      const { subtotal } = calculateCartTotal(cart, taxInclusive);
       const res = await fetch("/api/pos/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -558,7 +600,7 @@ function POSTerminalContent() {
         warehouseName={posSession.warehouse?.name}
         heldOrdersCount={heldOrders.length}
         onHeldOrdersClick={() => setShowHeldSheet(true)}
-        onCloseSession={() => setShowCloseDialog(true)}
+        onCloseSession={openCloseSessionDialog}
         onBackToSessions={() => router.push("/pos")}
         onReprintReceipt={lastReceiptData ? () => {
           try {
@@ -715,7 +757,15 @@ function POSTerminalContent() {
       </div>
 
       {/* Close Session Dialog */}
-      <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
+      <Dialog
+        open={showCloseDialog}
+        onOpenChange={(open) => {
+          setShowCloseDialog(open);
+          if (!open) {
+            setClosingCash("");
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("pos.closePosSession")}</DialogTitle>
@@ -805,6 +855,9 @@ function POSTerminalContent() {
                       <SelectValue placeholder={t("pos.selectBankAccountOptional")} />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={USE_CASH_ACCOUNT_VALUE}>
+                        {t("pos.useCashAccountFallback")}
+                      </SelectItem>
                       {cashBankAccounts
                         .filter((a) => a.accountSubType === "BANK")
                         .map((a) => (

@@ -780,6 +780,7 @@
         "selectCashAccount": "اختر حساب النقد...",
         "depositNonCashTo": "إيداع المدفوعات غير النقدية إلى",
         "selectBankAccountOptional": "اختر حساب البنك (اختياري)",
+        "useCashAccountFallback": "استخدم حساب النقد أعلاه",
         "ifNotSelectedNonCashPaymentsGoToCashAccount": "إذا لم يتم تحديده، ستذهب المدفوعات غير النقدية إلى حساب النقد أعلاه.",
         "cancel": "إلغاء",
         "completeSale": "إتمام البيع",

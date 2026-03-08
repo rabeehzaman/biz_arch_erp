@@ -4,8 +4,10 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import {
   createAutoJournalEntry,
+  getDefaultCashBankAccount,
   getSystemAccount,
 } from "@/lib/accounting/journal";
+import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 
 export async function PUT(
   request: NextRequest,
@@ -52,13 +54,63 @@ export async function PUT(
       select: { posAccountingMode: true },
     });
     const isClearingMode = org?.posAccountingMode === "CLEARING_ACCOUNT";
+    const registerConfig = await getPOSRegisterConfig(
+      prisma,
+      organizationId,
+      posSession.branchId,
+      posSession.warehouseId
+    );
+    const hasSettleCashAccountId = Object.prototype.hasOwnProperty.call(body, "settleCashAccountId");
+    const hasSettleBankAccountId = Object.prototype.hasOwnProperty.call(body, "settleBankAccountId");
+    const effectiveSettleCashAccountId = hasSettleCashAccountId
+      ? settleCashAccountId || null
+      : registerConfig?.defaultCashAccountId || null;
+    const effectiveSettleBankAccountId = hasSettleBankAccountId
+      ? settleBankAccountId || null
+      : registerConfig?.defaultBankAccountId || null;
 
     // Validate settlement accounts are required in clearing mode
-    if (isClearingMode && !settleCashAccountId) {
+    if (isClearingMode && !effectiveSettleCashAccountId) {
       return NextResponse.json(
         { error: "Cash settlement account is required in clearing account mode" },
         { status: 400 }
       );
+    }
+    if (isClearingMode && effectiveSettleCashAccountId) {
+      const validCashSettlement = await prisma.cashBankAccount.findFirst({
+        where: {
+          id: effectiveSettleCashAccountId,
+          organizationId,
+          isActive: true,
+          accountSubType: "CASH",
+        },
+        select: { id: true },
+      });
+
+      if (!validCashSettlement) {
+        return NextResponse.json(
+          { error: "Selected cash settlement account is invalid or inactive" },
+          { status: 400 }
+        );
+      }
+    }
+    if (effectiveSettleBankAccountId) {
+      const validBankSettlement = await prisma.cashBankAccount.findFirst({
+        where: {
+          id: effectiveSettleBankAccountId,
+          organizationId,
+          isActive: true,
+          accountSubType: "BANK",
+        },
+        select: { id: true },
+      });
+
+      if (!validBankSettlement) {
+        return NextResponse.json(
+          { error: "Selected bank settlement account is invalid or inactive" },
+          { status: 400 }
+        );
+      }
     }
 
     // Use a transaction for all close operations
@@ -106,9 +158,9 @@ export async function PUT(
 
         // Step A: Transfer declared cash from Clearing Account → selected Cash account
         const netCashDeposit = Number(closingCash) - Number(posSession.openingCash);
-        if (netCashDeposit > 0 && settleCashAccountId) {
+        if (netCashDeposit > 0 && effectiveSettleCashAccountId) {
           const cashCBA = await tx.cashBankAccount.findFirst({
-            where: { id: settleCashAccountId, organizationId, isActive: true },
+            where: { id: effectiveSettleCashAccountId, organizationId, isActive: true },
             select: { id: true, accountId: true },
           });
 
@@ -149,9 +201,9 @@ export async function PUT(
         }
 
         // Step B: Transfer non-cash payments from Clearing Account → selected Bank account
-        if (nonCashTotal > 0 && settleBankAccountId) {
+        if (nonCashTotal > 0 && effectiveSettleBankAccountId) {
           const bankCBA = await tx.cashBankAccount.findFirst({
-            where: { id: settleBankAccountId, organizationId, isActive: true },
+            where: { id: effectiveSettleBankAccountId, organizationId, isActive: true },
             select: { id: true, accountId: true },
           });
 
@@ -188,10 +240,14 @@ export async function PUT(
               },
             });
           }
-        } else if (nonCashTotal > 0 && settleCashAccountId && !settleBankAccountId) {
-          // Fallback: if no bank account selected, deposit non-cash to the same cash account
+        } else if (nonCashTotal > 0 && effectiveSettleCashAccountId && !effectiveSettleBankAccountId) {
+          // Fallback: cashier explicitly chose the "__use_cash_account__" sentinel for bank
+          // settlement (meaning no separate bank account is configured). Per business intent,
+          // all non-cash receipts (card, bank-transfer, etc.) are physically handed to a bank
+          // later from the cash drawer, so they are deposited into the same cash account here
+          // until a proper bank deposit is recorded separately.
           const fallbackCBA = await tx.cashBankAccount.findFirst({
-            where: { id: settleCashAccountId, organizationId, isActive: true },
+            where: { id: effectiveSettleCashAccountId, organizationId, isActive: true },
             select: { id: true, accountId: true },
           });
 
@@ -264,9 +320,15 @@ export async function PUT(
         // ── DIRECT mode: only handle cash difference ────────────────────
         if (Math.abs(cashDifference) >= 0.01) {
           const cashShortOverAccount = await getSystemAccount(tx, organizationId, "6150");
-          const cashAccount = await getSystemAccount(tx, organizationId, "1100");
+          const cashBankInfo = await getDefaultCashBankAccount(
+            tx,
+            organizationId,
+            "CASH",
+            posSession.branchId,
+            registerConfig?.defaultCashAccountId
+          );
 
-          if (cashShortOverAccount && cashAccount) {
+          if (cashShortOverAccount && cashBankInfo) {
             if (cashDifference < 0) {
               // Shortage: DR Cash Short & Over, CR Cash
               await createAutoJournalEntry(tx, organizationId, {
@@ -277,7 +339,7 @@ export async function PUT(
                 branchId: posSession.branchId,
                 lines: [
                   { accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: Math.abs(cashDifference), credit: 0 },
-                  { accountId: cashAccount.id, description: "Cash", debit: 0, credit: Math.abs(cashDifference) },
+                  { accountId: cashBankInfo.accountId, description: "Cash", debit: 0, credit: Math.abs(cashDifference) },
                 ],
               });
             } else {
@@ -289,64 +351,33 @@ export async function PUT(
                 sourceId: id,
                 branchId: posSession.branchId,
                 lines: [
-                  { accountId: cashAccount.id, description: "Cash", debit: cashDifference, credit: 0 },
+                  { accountId: cashBankInfo.accountId, description: "Cash", debit: cashDifference, credit: 0 },
                   { accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: 0, credit: cashDifference },
                 ],
               });
             }
 
             // Update CashBankAccount balance for the difference
-            const defaultCashCBA = await tx.cashBankAccount.findFirst({
-              where: { organizationId, accountSubType: "CASH", isActive: true, branchId: posSession.branchId || undefined },
-              orderBy: { isDefault: "desc" },
+            await tx.cashBankAccount.update({
+              where: { id: cashBankInfo.cashBankAccountId },
+              data: { balance: { increment: cashDifference } },
             });
-
-            if (!defaultCashCBA) {
-              // Fallback to any cash account in the org
-              const anyCashCBA = await tx.cashBankAccount.findFirst({
-                where: { organizationId, accountSubType: "CASH", isActive: true },
-                orderBy: { isDefault: "desc" },
-              });
-              if (anyCashCBA) {
-                await tx.cashBankAccount.update({
-                  where: { id: anyCashCBA.id },
-                  data: { balance: { increment: cashDifference } },
-                });
-                const updatedCB = await tx.cashBankAccount.findUnique({ where: { id: anyCashCBA.id } });
-                await tx.cashBankTransaction.create({
-                  data: {
-                    cashBankAccountId: anyCashCBA.id,
-                    transactionType: "ADJUSTMENT",
-                    amount: cashDifference,
-                    runningBalance: Number(updatedCB?.balance || 0),
-                    description: `POS Cash ${cashDifference < 0 ? "Shortage" : "Overage"} (${posSession.sessionNumber})`,
-                    referenceType: "POS_SESSION",
-                    referenceId: id,
-                    transactionDate: now,
-                    organizationId,
-                  },
-                });
-              }
-            } else {
-              await tx.cashBankAccount.update({
-                where: { id: defaultCashCBA.id },
-                data: { balance: { increment: cashDifference } },
-              });
-              const updatedCB = await tx.cashBankAccount.findUnique({ where: { id: defaultCashCBA.id } });
-              await tx.cashBankTransaction.create({
-                data: {
-                  cashBankAccountId: defaultCashCBA.id,
-                  transactionType: "ADJUSTMENT",
-                  amount: cashDifference,
-                  runningBalance: Number(updatedCB?.balance || 0),
-                  description: `POS Cash ${cashDifference < 0 ? "Shortage" : "Overage"} (${posSession.sessionNumber})`,
-                  referenceType: "POS_SESSION",
-                  referenceId: id,
-                  transactionDate: now,
-                  organizationId,
-                },
-              });
-            }
+            const updatedCB = await tx.cashBankAccount.findUnique({
+              where: { id: cashBankInfo.cashBankAccountId },
+            });
+            await tx.cashBankTransaction.create({
+              data: {
+                cashBankAccountId: cashBankInfo.cashBankAccountId,
+                transactionType: "ADJUSTMENT",
+                amount: cashDifference,
+                runningBalance: Number(updatedCB?.balance || 0),
+                description: `POS Cash ${cashDifference < 0 ? "Shortage" : "Overage"} (${posSession.sessionNumber})`,
+                referenceType: "POS_SESSION",
+                referenceId: id,
+                transactionDate: now,
+                organizationId,
+              },
+            });
           }
         }
       }
