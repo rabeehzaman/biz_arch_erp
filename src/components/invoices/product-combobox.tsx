@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useCurrency } from "@/hooks/use-currency";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
@@ -38,7 +37,6 @@ export function ProductCombobox({
   onSelectFocusNext,
   onProductCreated,
 }: ProductComboboxProps) {
-  const { symbol } = useCurrency();
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [localProduct, setLocalProduct] = useState<Product | null>(null);
 
@@ -96,7 +94,7 @@ export function ProductCombobox({
                 </div>
                 <div className="text-sm text-slate-500">
                   {product.sku && <span>SKU: {product.sku} | </span>}
-                  {symbol}{Number(product.price).toLocaleString("en-IN")}
+                  ₹{Number(product.price).toLocaleString("en-IN")}
                   {product.isService ? (
                     <span className="ml-2 text-blue-600">Service</span>
                   ) : (

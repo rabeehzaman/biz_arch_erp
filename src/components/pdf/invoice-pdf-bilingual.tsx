@@ -44,20 +44,10 @@ const Ar = ({
     style,
 }: {
     children: React.ReactNode;
-    // React PDF's Text style type is narrower than what this wrapper uses in practice.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    style?: any;
-}) => {
-    const normalizedStyles = Array.isArray(style)
-        ? style
-        : style
-            ? [style]
-            : [];
-
-    const textStyle = [{ fontFamily: ARIAL_FONT }, ...normalizedStyles];
-
-    return <Text style={textStyle}>{children}</Text>;
-};
+    style?: React.ComponentProps<typeof Text>["style"];
+}) => (
+    <Text style={[{ fontFamily: ARIAL_FONT }, ...(style ? (Array.isArray(style) ? style : [style]) : [])] as any}>{children}</Text>
+);
 
 const styles = StyleSheet.create({
     page: {
