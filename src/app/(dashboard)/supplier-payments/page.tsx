@@ -96,8 +96,10 @@ const methodLabels: Record<string, string> = {
   OTHER: "Other",
   ADJUSTMENT: "Adjustment",
 };
+import { useLanguage } from "@/lib/i18n";
 
 export default function SupplierPaymentsPage() {
+  const { t, lang } = useLanguage();
   const { symbol, fmt } = useCurrency();
   const [payments, setPayments] = useState<SupplierPayment[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -263,8 +265,8 @@ export default function SupplierPaymentsPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Supplier Payments</h2>
-            <p className="text-slate-500">Record payments to suppliers</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("payments.supplierPayments")}</h2>
+            <p className="text-slate-500">{t("payments.manageSupplierPayments")}</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -272,8 +274,8 @@ export default function SupplierPaymentsPage() {
           }}>
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Record Payment
+                <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
+                {t("payments.recordSupplierPayment")}
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -468,7 +470,7 @@ export default function SupplierPaymentsPage() {
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Search payments..."
+                  placeholder={t("payments.searchPaymentsPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -482,11 +484,11 @@ export default function SupplierPaymentsPage() {
             ) : filteredPayments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Wallet className="h-12 w-12 text-slate-300" />
-                <h3 className="mt-4 text-lg font-semibold">No payments found</h3>
+                <h3 className="mt-4 text-lg font-semibold">{t("payments.noPaymentsFound")}</h3>
                 <p className="text-sm text-slate-500">
                   {searchQuery
-                    ? "Try a different search term"
-                    : "Record your first supplier payment to get started"}
+                    ? t("common.noResultsFound")
+                    : t("payments.recordFirstSupplierPayment")}
                 </p>
               </div>
             ) : (

@@ -315,7 +315,8 @@
         "noQuotationsDesc": "Create your first quotation to get started",
         "searchQuotations": "Search quotations...",
         "quotationUpdated": "Quotation updated successfully",
-        "quotationDeleted": "Quotation deleted successfully"
+        "quotationDeleted": "Quotation deleted successfully",
+        "manageQuotations": "Create and manage quotations"
     },
     "creditNotes": {
         "title": "Credit Notes",
@@ -330,7 +331,10 @@
         "noCreditNotesDesc": "Create your first credit note to get started",
         "searchCreditNotes": "Search credit notes...",
         "creditNoteDeleted": "Credit note deleted successfully",
-        "selectInvoice": "Select Invoice"
+        "selectInvoice": "Select Invoice",
+        "manageCreditNotes": "Manage sales returns and customer credits",
+        "noCreditNotesFound": "No credit notes found",
+        "cnNo": "CN #"
     },
     "purchases": {
         "invoices": "Purchase Invoices",
@@ -371,7 +375,10 @@
         "noDebitNotesDesc": "Create your first debit note to get started",
         "searchDebitNotes": "Search debit notes...",
         "debitNoteDeleted": "Debit note deleted successfully",
-        "selectPurchaseInvoice": "Select Purchase Invoice"
+        "selectPurchaseInvoice": "Select Purchase Invoice",
+        "manageDebitNotes": "Manage purchase returns and supplier debits",
+        "noDebitNotesFound": "No debit notes found",
+        "dnNo": "DN #"
     },
     "customers": {
         "title": "Customers",
@@ -415,7 +422,10 @@
         "viewStatement": "View Statement",
         "contactInfo": "Contact Information",
         "gstin": "GSTIN",
-        "openingBalance": "Opening Balance"
+        "openingBalance": "Opening Balance",
+        "manageSuppliers": "Manage your supplier/vendor database",
+        "searchSuppliersPlaceholder": "...Search suppliers",
+        "addFirstSupplier": "Add your first supplier to get started"
     },
     "payments": {
         "customerPayments": "Customer Payments",
@@ -452,7 +462,12 @@
         "paymentType": "Payment Type",
         "cash2": "Cash",
         "credit": "Credit",
-        "supplierRefNo": "Supplier Invoice Ref"
+        "supplierRefNo": "Supplier Invoice Ref",
+        "manageSupplierPayments": "Record payments to suppliers",
+        "recordSupplierPayment": "Record Payment",
+        "noPaymentsFound": "No payments found",
+        "recordFirstSupplierPayment": "Record your first supplier payment to get started",
+        "searchPaymentsPlaceholder": "...Search payments"
     },
     "accounting": {
         "expenses": "Expenses",
@@ -967,60 +982,6 @@
         "customerRequired": "Customer is required",
         "amountRequired": "A valid amount is required",
         "paymentDateRequired": "Payment date is required"
-    },
-    "creditNotes": {
-        "title": "Credit Notes",
-        "newCreditNote": "New Credit Note",
-        "createCreditNote": "Create Credit Note",
-        "creditNoteNumber": "Credit Note Number",
-        "reason": "Reason",
-        "originalInvoice": "Original Invoice",
-        "creditNoteCreated": "Credit note created successfully",
-        "creditNoteDetails": "Credit Note Details",
-        "noCreditNotes": "No credit notes yet",
-        "noCreditNotesDesc": "Create your first credit note to get started",
-        "searchCreditNotes": "Search credit notes...",
-        "creditNoteDeleted": "Credit note deleted successfully",
-        "selectInvoice": "Select Invoice",
-        "manageCreditNotes": "Manage sales returns and customer credits",
-        "noCreditNotesFound": "No credit notes found",
-        "cnNo": "CN #"
-    },
-    "debitNotes": {
-        "title": "Debit Notes",
-        "newDebitNote": "New Debit Note",
-        "createDebitNote": "Create Debit Note",
-        "debitNoteNumber": "Debit Note Number",
-        "reason": "Reason",
-        "originalPurchaseInvoice": "Original Purchase Invoice",
-        "debitNoteCreated": "Debit note created successfully",
-        "debitNoteDetails": "Debit Note Details",
-        "noDebitNotes": "No debit notes yet",
-        "noDebitNotesDesc": "Create your first debit note to get started",
-        "searchDebitNotes": "Search debit notes...",
-        "debitNoteDeleted": "Debit note deleted successfully",
-        "selectPurchaseInvoice": "Select Purchase Invoice",
-        "manageDebitNotes": "Manage purchase returns and supplier debits",
-        "noDebitNotesFound": "No debit notes found",
-        "dnNo": "DN #"
-    },
-    "quotations": {
-        "title": "Quotations",
-        "newQuotation": "New Quotation",
-        "createQuotation": "Create Quotation",
-        "editQuotation": "Edit Quotation",
-        "quotationNumber": "Quotation Number",
-        "validUntil": "Valid Until",
-        "convertToInvoice": "Convert to Invoice",
-        "quotationCreated": "Quotation created successfully",
-        "quotationConverted": "Quotation converted to invoice",
-        "quotationDetails": "Quotation Details",
-        "noQuotations": "No quotations yet",
-        "noQuotationsDesc": "Create your first quotation to get started",
-        "searchQuotations": "Search quotations...",
-        "quotationUpdated": "Quotation updated successfully",
-        "quotationDeleted": "Quotation deleted successfully",
-        "manageQuotations": "Create and manage quotations"
     },
     "purchaseInvoices": {
         "manageInvoices": "Manage purchases from suppliers",

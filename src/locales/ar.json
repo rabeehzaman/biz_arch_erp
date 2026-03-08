@@ -368,7 +368,10 @@
         "viewStatement": "عرض كشف الحساب",
         "contactInfo": "معلومات التواصل",
         "gstin": "الرقم الضريبي",
-        "openingBalance": "الرصيد الافتتاحي"
+        "openingBalance": "الرصيد الافتتاحي",
+        "manageSuppliers": "إدارة قاعدة بيانات الموردين",
+        "searchSuppliersPlaceholder": "...بحث الموردين",
+        "addFirstSupplier": "أضف أول مورد للبدء"
     },
     "payments": {
         "customerPayments": "مدفوعات العملاء",
@@ -405,7 +408,12 @@
         "paymentType": "طريقة الدفع",
         "cash2": "نقداً",
         "credit": "آجل",
-        "supplierRefNo": "مرجع فاتورة المورد"
+        "supplierRefNo": "مرجع فاتورة المورد",
+        "manageSupplierPayments": "تسجيل المدفوعات للموردين",
+        "recordSupplierPayment": "تسجيل دفعة",
+        "noPaymentsFound": "لم يتم العثور على مدفوعات",
+        "recordFirstSupplierPayment": "قم بتسجيل دفعة المورد الأولى للبدء",
+        "searchPaymentsPlaceholder": "...بحث المدفوعات"
     },
     "accounting": {
         "expenses": "المصروفات",

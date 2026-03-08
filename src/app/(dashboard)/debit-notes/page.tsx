@@ -105,7 +105,7 @@ export default function DebitNotesPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{t("accounting.debitNotes")}</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{t("debitNotes.title")}</h2>
             <p className="text-slate-500">
               {t("debitNotes.manageDebitNotes")}
             </p>
@@ -113,7 +113,7 @@ export default function DebitNotesPage() {
           <Link href="/debit-notes/new" className="w-full sm:w-auto">
             <Button className="w-full">
               <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
-              {t("accounting.newDebitNote")}
+              {t("debitNotes.newDebitNote")}
             </Button>
           </Link>
         </div>
@@ -146,7 +146,7 @@ export default function DebitNotesPage() {
                 </p>
                 {!searchQuery && (
                   <Link href="/debit-notes/new" className="mt-4">
-                    <Button variant="outline">{t("accounting.newDebitNote")}</Button>
+                    <Button variant="outline">{t("debitNotes.newDebitNote")}</Button>
                   </Link>
                 )}
               </div>

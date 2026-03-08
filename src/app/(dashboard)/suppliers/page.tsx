@@ -60,9 +60,11 @@ interface Supplier {
     purchaseInvoices: number;
   };
 }
+import { useLanguage } from "@/lib/i18n";
 
 export default function SuppliersPage() {
   const { data: session } = useSession();
+  const { t, lang } = useLanguage();
   const { symbol } = useCurrency();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -185,15 +187,15 @@ export default function SuppliersPage() {
       <StaggerContainer className="space-y-6">
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Suppliers</h2>
-            <p className="text-slate-500">Manage your supplier/vendor database</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("suppliers.title")}</h2>
+            <p className="text-slate-500">{t("suppliers.manageSuppliers")}</p>
           </div>
           <Button className="w-full sm:w-auto" onClick={() => {
             setEditingSupplier(null);
             setIsDialogOpen(true);
           }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Supplier
+            <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
+            {t("suppliers.addSupplier")}
           </Button>
           <SupplierFormDialog
             open={isDialogOpen}
@@ -268,7 +270,7 @@ export default function SuppliersPage() {
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
-                    placeholder="Search suppliers..."
+                    placeholder={t("suppliers.searchSuppliersPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -282,11 +284,11 @@ export default function SuppliersPage() {
               ) : filteredSuppliers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Truck className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No suppliers found</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t("suppliers.noSuppliers")}</h3>
                   <p className="text-sm text-slate-500">
                     {searchQuery
-                      ? "Try a different search term"
-                      : "Add your first supplier to get started"}
+                      ? t("common.noResultsFound")
+                      : t("suppliers.addFirstSupplier")}
                   </p>
                 </div>
               ) : (

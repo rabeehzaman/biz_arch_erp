@@ -105,7 +105,7 @@ export default function CreditNotesPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{t("accounting.creditNotes")}</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{t("creditNotes.title")}</h2>
             <p className="text-slate-500">
               {t("creditNotes.manageCreditNotes")}
             </p>
@@ -113,7 +113,7 @@ export default function CreditNotesPage() {
           <Link href="/credit-notes/new" className="w-full sm:w-auto">
             <Button className="w-full">
               <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
-              {t("accounting.newCreditNote")}
+              {t("creditNotes.newCreditNote")}
             </Button>
           </Link>
         </div>
@@ -146,7 +146,7 @@ export default function CreditNotesPage() {
                 </p>
                 {!searchQuery && (
                   <Link href="/credit-notes/new" className="mt-4">
-                    <Button variant="outline">{t("accounting.newCreditNote")}</Button>
+                    <Button variant="outline">{t("creditNotes.newCreditNote")}</Button>
                   </Link>
                 )}
               </div>
