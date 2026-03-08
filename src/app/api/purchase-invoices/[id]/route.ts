@@ -266,9 +266,12 @@ export async function PUT(
         });
 
         if (updatedInvoice) {
-          for (const item of updatedInvoice.items) {
-            // Calculate net unit cost after discount
-            const netUnitCost = Number(item.unitCost) * (1 - (Number(item.discount) || 0) / 100);
+          for (let index = 0; index < updatedInvoice.items.length; index++) {
+            const item = updatedInvoice.items[index];
+            // Keep inventory valuation tax-exclusive when the org uses tax-inclusive pricing.
+            const netUnitCost = Number(item.quantity) > 0
+              ? Number(lineAmounts[index].taxableAmount) / Number(item.quantity)
+              : 0;
 
             // Calculate base unit cost (purchase price / conversion factor)
             const baseUnitCost = netUnitCost / Number(item.conversionFactor);

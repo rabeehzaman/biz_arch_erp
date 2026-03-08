@@ -541,6 +541,14 @@ export async function DELETE(
 
       // Delete payments linked to this invoice
       if (paymentIds.length > 0) {
+        await tx.journalEntry.deleteMany({
+          where: {
+            sourceType: "PAYMENT",
+            sourceId: { in: paymentIds },
+            organizationId,
+          },
+        });
+
         await tx.payment.deleteMany({
           where: { id: { in: paymentIds } },
         });

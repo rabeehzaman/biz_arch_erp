@@ -13,6 +13,10 @@ type PrismaTransactionClient = {
     }) => Promise<{ id: string } | null>;
   };
   cashBankAccount: {
+    findFirst: (args: {
+      where: { accountId?: string; organizationId?: string; name?: string };
+      select?: { id: true };
+    }) => Promise<{ id: string } | null>;
     upsert: (args: {
       where: { organizationId_name: { organizationId: string; name: string } };
       update: Record<string, unknown>;
@@ -337,37 +341,51 @@ async function _createCashBankAccounts(
   // Create default Cash account (linked to COA 1100)
   const cashAccountId = accountMap.get("1100");
   if (cashAccountId) {
-    await tx.cashBankAccount.upsert({
-      where: {
-        organizationId_name: { organizationId, name: "Cash (النقدية)" },
-      },
-      update: {},
-      create: {
-        name: "Cash (النقدية)",
-        accountId: cashAccountId,
-        accountSubType: "CASH",
-        isDefault: true,
-        organizationId,
-      },
+    const existingCashAccount = await tx.cashBankAccount.findFirst({
+      where: { accountId: cashAccountId },
+      select: { id: true },
     });
+
+    if (!existingCashAccount) {
+      await tx.cashBankAccount.upsert({
+        where: {
+          organizationId_name: { organizationId, name: "Cash (النقدية)" },
+        },
+        update: {},
+        create: {
+          name: "Cash (النقدية)",
+          accountId: cashAccountId,
+          accountSubType: "CASH",
+          isDefault: true,
+          organizationId,
+        },
+      });
+    }
   }
 
   // Create default Bank account (linked to COA 1200)
   const bankAccountId = accountMap.get("1200");
   if (bankAccountId) {
-    await tx.cashBankAccount.upsert({
-      where: {
-        organizationId_name: { organizationId, name: "Bank Account (حساب البنك)" },
-      },
-      update: {},
-      create: {
-        name: "Bank Account (حساب البنك)",
-        accountId: bankAccountId,
-        accountSubType: "BANK",
-        isDefault: false,
-        organizationId,
-      },
+    const existingBankAccount = await tx.cashBankAccount.findFirst({
+      where: { accountId: bankAccountId },
+      select: { id: true },
     });
+
+    if (!existingBankAccount) {
+      await tx.cashBankAccount.upsert({
+        where: {
+          organizationId_name: { organizationId, name: "Bank Account (حساب البنك)" },
+        },
+        update: {},
+        create: {
+          name: "Bank Account (حساب البنك)",
+          accountId: bankAccountId,
+          accountSubType: "BANK",
+          isDefault: false,
+          organizationId,
+        },
+      });
+    }
   }
 
   return accountMap;

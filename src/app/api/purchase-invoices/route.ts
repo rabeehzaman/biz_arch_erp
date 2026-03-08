@@ -236,10 +236,13 @@ export async function POST(request: NextRequest) {
       });
 
       // Create stock lots for each item
-      for (const item of invoice.items) {
-        // Calculate net unit cost after discount (per unit purchased)
-        const discountFactor = new Decimal(1).minus(new Decimal(item.discount || 0).div(100));
-        const netUnitCost = new Decimal(item.unitCost).mul(discountFactor);
+      for (let index = 0; index < invoice.items.length; index++) {
+        const item = invoice.items[index];
+        // Inventory valuation must use the tax-exclusive amount when purchase prices include tax.
+        const lineTaxableAmount = new Decimal(lineAmounts[index].taxableAmount);
+        const netUnitCost = new Decimal(item.quantity).gt(0)
+          ? lineTaxableAmount.div(new Decimal(item.quantity))
+          : new Decimal(0);
 
         // Calculate base unit cost (purchase price / conversion factor)
         const baseUnitCost = netUnitCost.div(new Decimal(item.conversionFactor));

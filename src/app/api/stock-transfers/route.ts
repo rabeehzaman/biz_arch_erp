@@ -164,13 +164,7 @@ export async function POST(request: NextRequest) {
                     },
                 },
                 include: {
-                    sourceBranch: { select: { id: true, name: true } },
-                    sourceWarehouse: { select: { id: true, name: true } },
-                    destinationBranch: { select: { id: true, name: true } },
-                    destinationWarehouse: { select: { id: true, name: true } },
-                    items: {
-                        include: { product: { select: { id: true, name: true, sku: true } } },
-                    },
+                    items: true,
                 },
             });
 
@@ -223,7 +217,7 @@ export async function POST(request: NextRequest) {
                     },
                 },
             });
-        });
+        }, { timeout: 30000 });
 
         return NextResponse.json(transfer, { status: 201 });
     } catch (error) {
@@ -231,7 +225,7 @@ export async function POST(request: NextRequest) {
         const status = typeof error === "object" && error && "status" in error
             ? Number((error as { status?: number }).status) || 500
             : 500;
-        const message = error instanceof Error && status !== 500
+        const message = error instanceof Error
             ? error.message
             : "Failed to create stock transfer";
         return NextResponse.json({ error: message }, { status });
