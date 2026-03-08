@@ -6,6 +6,8 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
+import "@/lib/pdf-fonts";
+import { ARABIC_FONT_FAMILY } from "@/lib/pdf-fonts";
 
 const styles = StyleSheet.create({
   page: {
@@ -21,11 +23,15 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 5,
     color: "#1e293b",
+    fontFamily: ARABIC_FONT_FAMILY,
+    textAlign: "right",
   },
   subtitle: {
     fontSize: 12,
     color: "#64748b",
     marginBottom: 20,
+    fontFamily: ARABIC_FONT_FAMILY,
+    textAlign: "right",
   },
   customerInfo: {
     marginBottom: 20,
@@ -38,6 +44,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 5,
     color: "#1e293b",
+    fontFamily: ARABIC_FONT_FAMILY,
+    textAlign: "right",
   },
   customerDetail: {
     fontSize: 10,
@@ -59,6 +67,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#64748b",
     marginBottom: 3,
+    fontFamily: ARABIC_FONT_FAMILY,
   },
   summaryValue: {
     fontSize: 14,
@@ -123,6 +132,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: "#ffffff",
     fontWeight: "bold",
+    fontFamily: ARABIC_FONT_FAMILY,
   },
   debitText: {
     color: "#dc2626",
@@ -146,6 +156,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 8,
     color: "#94a3b8",
+    fontFamily: ARABIC_FONT_FAMILY,
   },
   totalsRow: {
     flexDirection: "row",
@@ -196,14 +207,16 @@ const formatCurrency = (amount: number): string => {
   return amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+const balanceSide = (amount: number): string => (amount >= 0 ? "مدين" : "دائن");
+
 export function CustomerStatementPDF({ statement }: Props) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.title}>Customer Statement</Text>
+          <Text style={styles.title}>كشف حساب العميل</Text>
           <Text style={styles.subtitle}>
-            Generated on {format(new Date(statement.generatedAt), "dd MMM yyyy, hh:mm a")}
+            تم الإنشاء في {format(new Date(statement.generatedAt), "dd/MM/yyyy HH:mm")}
           </Text>
         </View>
 
@@ -222,45 +235,52 @@ export function CustomerStatementPDF({ statement }: Props) {
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>OPENING BALANCE</Text>
+            <Text style={styles.summaryLabel}>الرصيد الافتتاحي</Text>
             <Text style={statement.openingBalance >= 0 ? styles.summaryValuePositive : styles.summaryValueNegative}>
               {formatCurrency(Math.abs(statement.openingBalance))}
             </Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>TOTAL RECEIVABLE</Text>
+            <Text style={styles.summaryLabel}>إجمالي المستحق</Text>
             <Text style={styles.summaryValuePositive}>
               {formatCurrency(statement.totalDebits)}
             </Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>TOTAL RECEIVED</Text>
+            <Text style={styles.summaryLabel}>إجمالي المحصل</Text>
             <Text style={styles.summaryValueNegative}>
               {formatCurrency(statement.totalCredits)}
             </Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>CLOSING BALANCE</Text>
-            <Text style={statement.closingBalance >= 0 ? styles.summaryValuePositive : styles.summaryValueNegative}>
+            <Text style={styles.summaryLabel}>الرصيد الختامي</Text>
+            <Text
+              style={[
+                statement.closingBalance >= 0
+                  ? styles.summaryValuePositive
+                  : styles.summaryValueNegative,
+                { fontFamily: ARABIC_FONT_FAMILY },
+              ]}
+            >
               {formatCurrency(Math.abs(statement.closingBalance))}
-              {statement.closingBalance >= 0 ? " Dr" : " Cr"}
+              {` ${balanceSide(statement.closingBalance)}`}
             </Text>
           </View>
         </View>
 
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.colDate, styles.headerText]}>Date</Text>
-            <Text style={[styles.colRef, styles.headerText]}>Reference</Text>
-            <Text style={[styles.colDescription, styles.headerText]}>Description</Text>
-            <Text style={[styles.colDebit, styles.headerText]}>Receivable</Text>
-            <Text style={[styles.colCredit, styles.headerText]}>Received</Text>
-            <Text style={[styles.colBalance, styles.headerText]}>Balance</Text>
+            <Text style={[styles.colDate, styles.headerText]}>التاريخ</Text>
+            <Text style={[styles.colRef, styles.headerText]}>المرجع</Text>
+            <Text style={[styles.colDescription, styles.headerText]}>الوصف</Text>
+            <Text style={[styles.colDebit, styles.headerText]}>المستحق</Text>
+            <Text style={[styles.colCredit, styles.headerText]}>المحصّل</Text>
+            <Text style={[styles.colBalance, styles.headerText]}>الرصيد</Text>
           </View>
 
           {statement.transactions.length === 0 ? (
             <View style={styles.noTransactions}>
-              <Text>No transactions found</Text>
+              <Text style={{ fontFamily: ARABIC_FONT_FAMILY }}>لا توجد حركات</Text>
             </View>
           ) : (
             <>
@@ -282,17 +302,20 @@ export function CustomerStatementPDF({ statement }: Props) {
                   </Text>
                   <Text style={[
                     styles.colBalance,
-                    txn.runningBalance >= 0 ? styles.balancePositive : styles.balanceNegative
+                    txn.runningBalance >= 0 ? styles.balancePositive : styles.balanceNegative,
+                    { fontFamily: ARABIC_FONT_FAMILY },
                   ]}>
                     {formatCurrency(Math.abs(txn.runningBalance))}
-                    {txn.runningBalance >= 0 ? " Dr" : " Cr"}
+                    {` ${balanceSide(txn.runningBalance)}`}
                   </Text>
                 </View>
               ))}
               <View style={styles.totalsRow}>
                 <Text style={styles.colDate}></Text>
                 <Text style={styles.colRef}></Text>
-                <Text style={styles.colDescription}>TOTALS</Text>
+                <Text style={[styles.colDescription, { fontFamily: ARABIC_FONT_FAMILY }]}>
+                  الإجماليات
+                </Text>
                 <Text style={[styles.colDebit, styles.debitText]}>
                   {formatCurrency(statement.totalDebits)}
                 </Text>
@@ -301,9 +324,11 @@ export function CustomerStatementPDF({ statement }: Props) {
                 </Text>
                 <Text style={[
                   styles.colBalance,
-                  statement.closingBalance >= 0 ? styles.balancePositive : styles.balanceNegative
+                  statement.closingBalance >= 0 ? styles.balancePositive : styles.balanceNegative,
+                  { fontFamily: ARABIC_FONT_FAMILY },
                 ]}>
-                  {formatCurrency(Math.abs(statement.closingBalance))}
+                  {formatCurrency(Math.abs(statement.closingBalance))}{" "}
+                  {balanceSide(statement.closingBalance)}
                 </Text>
               </View>
             </>
@@ -311,7 +336,7 @@ export function CustomerStatementPDF({ statement }: Props) {
         </View>
 
         <Text style={styles.footer}>
-          This is a computer-generated statement and does not require a signature.
+          هذا كشف حساب مُنشأ آليًا ولا يتطلب توقيعًا.
         </Text>
       </Page>
     </Document>
