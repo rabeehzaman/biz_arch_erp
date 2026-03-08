@@ -17,6 +17,16 @@ export function useEnterToTab<T extends HTMLElement = HTMLFormElement>() {
                     return;
                 }
 
+                // Ignore if we're inside a cmdk combobox popup or radix popover
+                if (
+                    activeElement.closest('[cmdk-root]') ||
+                    activeElement.hasAttribute('cmdk-input') ||
+                    activeElement.closest('[role="dialog"]') ||
+                    activeElement.closest('[role="listbox"]')
+                ) {
+                    return;
+                }
+
                 // We only want to map Enter to Tab for basic inputs and selects.
                 // If it's a BUTTON (like a submit button, or a Combobox trigger), we let Enter do its default (click/open).
                 const tagName = activeElement.tagName.toUpperCase();
@@ -41,8 +51,8 @@ export function useEnterToTab<T extends HTMLElement = HTMLFormElement>() {
             }
         };
 
-        // container.addEventListener("keydown", handleKeyDown);
-        // return () => container.removeEventListener("keydown", handleKeyDown);
+        container.addEventListener("keydown", handleKeyDown);
+        return () => container.removeEventListener("keydown", handleKeyDown);
     }, []);
 
     // Create a helper to programmatically focus the NEXT logical element after a specific element

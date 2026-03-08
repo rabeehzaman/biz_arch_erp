@@ -1,9 +1,21 @@
 "use client";
 
 import * as React from "react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
-import { Search, Check, ChevronsUpDown, X } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
+
 import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface ComboboxProps<T> {
   items: T[];
@@ -44,45 +56,22 @@ export function Combobox<T>({
 }: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [highlightedIndex, setHighlightedIndex] = React.useState(0);
-  const [portalContainer, setPortalContainer] = React.useState<HTMLElement | null>(null);
-  const listId = React.useId();
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const listRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
-  const justClosedRef = React.useRef(false);
-  const isPointerDownRef = React.useRef(false);
 
   const safeItems = Array.isArray(items) ? items : [];
   const selectedItem = safeItems.find((item) => getId(item) === value);
 
-  // DEBUG: trace every render and commit
-  const renderCountRef = React.useRef(0);
-  renderCountRef.current++;
-  const rc = renderCountRef.current;
-  if (placeholder?.includes('customer')) {
-    console.log('[CB-R#' + rc + '] v=' + (value || '(empty)') + ' sel=' + (selectedItem ? getLabel(selectedItem) : 'NULL') + ' open=' + open);
-  }
-  React.useEffect(() => {
-    if (placeholder?.includes('customer')) {
-      const span = triggerRef.current?.querySelector('span');
-      console.log('[CB-E#' + rc + '] domText="' + (span?.textContent || '') + '" v=' + (value || '(empty)'));
-    }
-  });
-
-  // Filter items based on search query
+  // Filter items using custom filtering logic, caps to 100 for high performance rendering
   const filteredItems = React.useMemo(() => {
     let result = safeItems;
     if (searchQuery) {
-      result = safeItems.filter((item) => filterFn(item, searchQuery.toLowerCase()));
+      result = safeItems.filter((item) => filterFn(item, searchQuery));
     }
-
-    // Cap to 100 items for performance to prevent rendering delays with large datasets
     const capped = result.slice(0, 100);
 
-    // Ensure the selected item is always visible in the list if it matches the search
-    if (value && !capped.some(item => getId(item) === value)) {
-      const selectedMatch = result.find(item => getId(item) === value);
+    // Keep the selected item in the list even if scroll limit hits
+    if (value && !capped.some((item) => getId(item) === value)) {
+      const selectedMatch = result.find((item) => getId(item) === value);
       if (selectedMatch) {
         capped.unshift(selectedMatch);
         if (capped.length > 100) capped.pop();
@@ -92,86 +81,29 @@ export function Combobox<T>({
     return capped;
   }, [safeItems, searchQuery, filterFn, value, getId]);
 
-  // Reset highlighted index when filtered items change
-  React.useEffect(() => {
-    setHighlightedIndex(0);
-  }, [filteredItems]);
+  const handleSelect = React.useCallback(
+    (selectedValue: string) => {
+      onValueChange(selectedValue);
+      setOpen(false);
+      setSearchQuery("");
 
-  React.useEffect(() => {
-    const dialogContent = triggerRef.current?.closest(
-      '[data-slot="dialog-content"]'
-    );
-    setPortalContainer(dialogContent instanceof HTMLElement ? dialogContent : null);
-  }, []);
-
-  const handleSelect = React.useCallback((selectedValue: string) => {
-    onValueChange(selectedValue);
-    justClosedRef.current = true;
-    setOpen(false);
-    setSearchQuery("");
-
-    // Manage focus uniformly after a selection is made.
-    setTimeout(() => {
-      let focusHandled = false;
-      if (onSelect) {
-        onSelect();
-        focusHandled = true;
-      }
-      if (onSelectFocusNext) {
-        onSelectFocusNext(triggerRef);
-        focusHandled = true;
-      }
-      if (!focusHandled) {
-        triggerRef.current?.focus();
-      }
-    }, 10);
-  }, [onSelect, onSelectFocusNext, onValueChange]);
-
-  // Keyboard navigation
-  React.useEffect(() => {
-    if (!open) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setHighlightedIndex((prev) =>
-          prev < filteredItems.length - 1 ? prev + 1 : prev
-        );
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        if (filteredItems[highlightedIndex]) {
-          handleSelect(getId(filteredItems[highlightedIndex]));
+      setTimeout(() => {
+        let focusHandled = false;
+        if (onSelect) {
+          onSelect();
+          focusHandled = true;
         }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        setOpen(false);
-        // Return focus to trigger button
-        triggerRef.current?.focus();
-      } else if (e.key === "Tab") {
-        // Close the combobox and let Tab naturally move focus
-        setOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, filteredItems, highlightedIndex, handleSelect, getId]);
-
-  // Scroll highlighted item into view
-  React.useEffect(() => {
-    if (!open || !listRef.current) return;
-    const highlightedElement = listRef.current.children[
-      highlightedIndex
-    ] as HTMLElement;
-    if (highlightedElement) {
-      highlightedElement.scrollIntoView({
-        block: "nearest",
-      });
-    }
-  }, [highlightedIndex, open]);
+        if (onSelectFocusNext) {
+          onSelectFocusNext(triggerRef);
+          focusHandled = true;
+        }
+        if (!focusHandled) {
+          triggerRef.current?.focus();
+        }
+      }, 10);
+    },
+    [onSelect, onSelectFocusNext, onValueChange]
+  );
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -180,122 +112,95 @@ export function Combobox<T>({
   };
 
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
-      <PopoverPrimitive.Trigger asChild>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <button
           ref={triggerRef}
-          type="button"
           role="combobox"
-          aria-controls={listId}
           aria-expanded={open}
-          aria-required={required}
           disabled={disabled}
           autoFocus={autoFocus}
-          onPointerDown={() => {
-            isPointerDownRef.current = true;
-          }}
-          // Using onFocus allows standard tab cycling. 
-          // However, autoFocus will trigger this on mount, which is generally desired for the first field.
-          onFocus={() => {
-            if (isPointerDownRef.current) {
-              isPointerDownRef.current = false;
-              return;
-            }
-            if (justClosedRef.current) {
-              justClosedRef.current = false;
-              return;
-            }
-            if (autoOpenOnFocus && !disabled) {
-              setOpen(true);
-            }
-          }}
           className={cn(
             "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
+          onClick={(e) => {
+            // Let normal click open it
+          }}
+          type="button"
         >
-          <span className={cn(!selectedItem && "text-slate-500")}>
+          <span className={cn("truncate", !selectedItem && "text-slate-500")}>
             {selectedItem ? getLabel(selectedItem) : placeholder}
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0 ml-2">
             {value && !disabled && (
               <X
-                className="h-4 w-4 text-slate-400 hover:text-slate-600"
-                onClick={handleClear}
+                className="h-4 w-4 text-slate-400 hover:text-slate-600 cursor-pointer"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleClear(e as any);
+                }}
               />
             )}
-            <ChevronsUpDown className="h-4 w-4 text-slate-400" />
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>
         </button>
-      </PopoverPrimitive.Trigger>
-      <PopoverPrimitive.Portal container={portalContainer ?? undefined}>
-        <PopoverPrimitive.Content
-          align="start"
-          className="z-50 w-[var(--radix-popover-trigger-width)] rounded-md border border-slate-200 bg-white p-0 shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault();
-            inputRef.current?.focus();
-          }}
-          onCloseAutoFocus={(e) => {
-            e.preventDefault();
-          }}
-        >
-          <div className="flex items-center border-b border-slate-200 px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-slate-500"
-            />
-          </div>
-          <div
-            ref={listRef}
-            id={listId}
-            role="listbox"
-            className="max-h-60 overflow-y-auto p-1"
-          >
+      </PopoverTrigger>
+
+      <PopoverContent
+        align="start"
+        className="w-[var(--radix-popover-trigger-width)] p-0 z-[100] shadow-md relative"
+        onCloseAutoFocus={(e) => {
+          // ensure trigger focuses after closing
+          e.preventDefault();
+          triggerRef.current?.focus();
+        }}
+      >
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search..."
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+          />
+          <CommandList className="max-h-60 overflow-y-auto">
             {filteredItems.length === 0 ? (
               <div className="py-6 text-center text-sm text-slate-500">
                 {emptyText}
               </div>
             ) : (
-              filteredItems.map((item, index) => {
-                const itemId = getId(item);
-                const isSelected = value === itemId;
-                const isHighlighted = index === highlightedIndex;
+              <CommandGroup>
+                {filteredItems.map((item) => {
+                  const itemId = getId(item);
+                  const isSelected = value === itemId;
 
-                return (
-                  <div
-                    key={itemId}
-                    role="option"
-                    aria-selected={isSelected}
-                    className={cn(
-                      "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none",
-                      isHighlighted && "bg-slate-100",
-                      isSelected && "bg-slate-100"
-                    )}
-                    onMouseDown={(e) => {
-                      // Allow default to let the click through, but don't focus the list
-                    }}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                    onClick={() => handleSelect(itemId)}
-                  >
-                    {isSelected && (
-                      <Check className="mr-2 h-4 w-4 shrink-0" />
-                    )}
-                    <div className={cn(!isSelected && "ml-6", "flex-1")}>
-                      {renderItem ? renderItem(item) : getLabel(item)}
-                    </div>
-                  </div>
-                );
-              })
+                  return (
+                    <CommandItem
+                      key={itemId}
+                      value={itemId}
+                      onSelect={() => handleSelect(itemId)}
+                      className={cn(
+                        "flex items-center gap-2 px-2 py-2 cursor-pointer w-full text-left outline-none",
+                        isSelected && "bg-slate-100 font-medium"
+                      )}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4 shrink-0",
+                          isSelected ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex-1 overflow-hidden">
+                        {renderItem ? renderItem(item) : getLabel(item)}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
             )}
-          </div>
-        </PopoverPrimitive.Content>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
