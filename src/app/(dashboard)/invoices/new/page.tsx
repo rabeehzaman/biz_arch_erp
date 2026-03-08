@@ -521,6 +521,7 @@ export default function NewInvoicePage() {
                         setFormData({ ...formData, date: e.target.value })
                       }
                       required
+                      suppressHydrationWarning
                     />
                   </div>
                   <div className="grid gap-2">
@@ -533,6 +534,7 @@ export default function NewInvoicePage() {
                         setFormData({ ...formData, dueDate: e.target.value })
                       }
                       required
+                      suppressHydrationWarning
                     />
                   </div>
                   <div className="grid gap-2">

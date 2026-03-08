@@ -34,8 +34,10 @@ export function CustomerCombobox({
   autoFocus = false,
 }: CustomerComboboxProps) {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [localCustomer, setLocalCustomer] = useState<Customer | null>(null);
 
   const handleCustomerCreated = (newCustomer: Customer) => {
+    setLocalCustomer(newCustomer);
     // Auto-select the newly created customer
     onValueChange(newCustomer.id);
     if (onCustomerCreated) {
@@ -43,11 +45,15 @@ export function CustomerCombobox({
     }
   };
 
+  const combinedCustomers = localCustomer
+    ? [...customers.filter(c => c.id !== localCustomer.id), localCustomer]
+    : customers;
+
   return (
     <div className="flex items-center gap-2 w-full relative">
       <div className="flex-1">
         <Combobox
-          items={customers}
+          items={combinedCustomers}
           value={value}
           onValueChange={onValueChange}
           getId={(customer) => customer.id}

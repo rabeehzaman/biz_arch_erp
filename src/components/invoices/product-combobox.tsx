@@ -40,8 +40,10 @@ export function ProductCombobox({
 }: ProductComboboxProps) {
   const { symbol } = useCurrency();
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [localProduct, setLocalProduct] = useState<Product | null>(null);
 
   const handleProductCreated = (newProduct: any) => {
+    setLocalProduct(newProduct);
     // We get a raw Product back, it might not match exact Product definition for Combobox perfectly
     // if `unit` expects a string but API returns an object.
     // Let's assume onProductCreated handles refetching the perfectly shaped product list
@@ -51,11 +53,15 @@ export function ProductCombobox({
     }
   };
 
+  const combinedProducts = localProduct
+    ? [...products.filter(p => p.id !== localProduct.id), localProduct]
+    : products;
+
   return (
     <div className="flex items-center gap-2 w-full relative">
       <div className="flex-1">
         <Combobox
-          items={products}
+          items={combinedProducts}
           value={value}
           onValueChange={onValueChange}
           getId={(product) => product.id}
