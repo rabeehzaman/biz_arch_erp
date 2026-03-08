@@ -156,6 +156,7 @@ function POSTerminalContent() {
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showHeldSheet, setShowHeldSheet] = useState(false);
   const [closingCash, setClosingCash] = useState("");
+  const [debouncedClosingCash, setDebouncedClosingCash] = useState("");
   const [isClosingSession, setIsClosingSession] = useState(false);
   const [settleCashAccountId, setSettleCashAccountId] = useState("");
   const [settleBankAccountId, setSettleBankAccountId] = useState("");
@@ -196,12 +197,18 @@ function POSTerminalContent() {
     fetcher
   );
 
+  // Debounce closing cash input so diff doesn't flicker mid-typing
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedClosingCash(closingCash), 400);
+    return () => clearTimeout(timer);
+  }, [closingCash]);
+
   const expectedCash = posSession
     ? Number(posSession.openingCash) +
     (sessionSummary?.paymentBreakdown?.find((p) => p.method === "CASH")?.total || 0)
     : 0;
 
-  const cashDifference = parseFloat(closingCash || "0") - expectedCash;
+  const cashDifference = parseFloat(debouncedClosingCash || "0") - expectedCash;
 
   // Receipt printing
   const { data: receiptSetting } = useSWR<{ value: string }>(
@@ -766,15 +773,15 @@ function POSTerminalContent() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("pos.closePosSession")}</DialogTitle>
             <DialogDescription>
               {t("pos.enterClosingCashAmount")}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
               <div>
                 <span className="text-muted-foreground">{t("pos.session")}</span>
                 <p className="font-medium">{posSession.sessionNumber}</p>
@@ -870,13 +877,14 @@ function POSTerminalContent() {
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCloseDialog(false)}>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setShowCloseDialog(false)} className="w-full sm:w-auto">
               {t("pos.cancel")}
             </Button>
             <Button
               onClick={closeSession}
               disabled={isClosingSession || (isClearingMode && !settleCashAccountId)}
+              className="w-full sm:w-auto"
             >
               {isClosingSession && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("pos.closePosSession")}
@@ -904,7 +912,7 @@ function POSTerminalContent() {
                     key={order.id}
                     className="rounded-lg border bg-white p-3 space-y-2"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-medium">
                           {order.customer?.name || order.customerName || t("pos.walkInCustomer")}

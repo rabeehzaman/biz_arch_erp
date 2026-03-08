@@ -156,51 +156,86 @@ export async function PUT(
         const clearingAccount = await getSystemAccount(tx, organizationId, "1150");
         const cashShortOverAccount = await getSystemAccount(tx, organizationId, "6150");
 
-        // Step A: Transfer declared cash from Clearing Account → selected Cash account
-        const netCashDeposit = Number(closingCash) - Number(posSession.openingCash);
-        if (netCashDeposit > 0 && effectiveSettleCashAccountId) {
+        // Detect whether this session had its float journaled at open
+        // (i.e., the new Store Safe flow). This determines whether we deposit
+        // the full closingCash or only the net (closingCash - openingCash).
+        const floatJournaledAtOpen = await tx.journalEntry.findFirst({
+          where: { sourceType: "POS_SESSION_OPEN", sourceId: id, organizationId },
+          select: { id: true },
+        });
+
+        // Step A: Settle cash portion → Store Safe
+        // New flow: DR Store Safe closingCash (+ DR Cash Short if shortage)
+        //                          CR Clearing expectedCash
+        // Old flow: DR Store Safe (closingCash - openingCash), CR Clearing same
+        if (effectiveSettleCashAccountId && expectedCash > 0) {
           const cashCBA = await tx.cashBankAccount.findFirst({
             where: { id: effectiveSettleCashAccountId, organizationId, isActive: true },
             select: { id: true, accountId: true },
           });
 
           if (cashCBA && clearingAccount) {
-            await createAutoJournalEntry(tx, organizationId, {
-              date: now,
-              description: `POS Session Close - Cash Deposit (${posSession.sessionNumber})`,
-              sourceType: "POS_SESSION_CLOSE",
-              sourceId: id,
-              branchId: posSession.branchId,
-              lines: [
-                { accountId: cashCBA.accountId, description: "Cash Account", debit: netCashDeposit, credit: 0 },
-                { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: netCashDeposit },
-              ],
-            });
+            const depositAmount = floatJournaledAtOpen
+              ? Number(closingCash)                              // full deposit (new Store Safe flow)
+              : Number(closingCash) - Number(posSession.openingCash); // net deposit (legacy flow)
+            const clearingCredit = floatJournaledAtOpen
+              ? expectedCash   // float + sales — matches what was debited to clearing at open + sales
+              : depositAmount; // legacy: only sales proceeds credited back
 
-            // Update CashBankAccount balance
-            await tx.cashBankAccount.update({
-              where: { id: cashCBA.id },
-              data: { balance: { increment: netCashDeposit } },
-            });
+            const lines: { accountId: string; description: string; debit: number; credit: number }[] = [];
 
-            const updatedCB = await tx.cashBankAccount.findUnique({ where: { id: cashCBA.id } });
-            await tx.cashBankTransaction.create({
-              data: {
-                cashBankAccountId: cashCBA.id,
-                transactionType: "DEPOSIT",
-                amount: netCashDeposit,
-                runningBalance: Number(updatedCB?.balance || 0),
-                description: `POS Session Close - Cash Deposit (${posSession.sessionNumber})`,
-                referenceType: "POS_SESSION",
-                referenceId: id,
-                transactionDate: now,
-                organizationId,
-              },
-            });
+            if (depositAmount > 0) {
+              lines.push({ accountId: cashCBA.accountId, description: "Store Safe", debit: depositAmount, credit: 0 });
+            }
+
+            // Shortage or overage (only in new flow; legacy flow handled clearing separately)
+            if (floatJournaledAtOpen && cashShortOverAccount) {
+              if (cashDifference < -0.005) {
+                lines.push({ accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: Math.abs(cashDifference), credit: 0 });
+              } else if (cashDifference > 0.005) {
+                lines.push({ accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: 0, credit: cashDifference });
+              }
+            }
+
+            if (clearingCredit > 0) {
+              lines.push({ accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: clearingCredit });
+            }
+
+            if (lines.length >= 2) {
+              await createAutoJournalEntry(tx, organizationId, {
+                date: now,
+                description: `POS Session Close - Cash to Store Safe (${posSession.sessionNumber})`,
+                sourceType: "POS_SESSION_CLOSE",
+                sourceId: id,
+                branchId: posSession.branchId,
+                lines,
+              });
+
+              if (depositAmount > 0) {
+                await tx.cashBankAccount.update({
+                  where: { id: cashCBA.id },
+                  data: { balance: { increment: depositAmount } },
+                });
+                const updatedCB = await tx.cashBankAccount.findUnique({ where: { id: cashCBA.id } });
+                await tx.cashBankTransaction.create({
+                  data: {
+                    cashBankAccountId: cashCBA.id,
+                    transactionType: "DEPOSIT",
+                    amount: depositAmount,
+                    runningBalance: Number(updatedCB?.balance ?? 0),
+                    description: `POS Session Close - Cash to Store Safe (${posSession.sessionNumber})`,
+                    referenceType: "POS_SESSION",
+                    referenceId: id,
+                    transactionDate: now,
+                    organizationId,
+                  },
+                });
+              }
+            }
           }
         }
 
-        // Step B: Transfer non-cash payments from Clearing Account → selected Bank account
+        // Step B: Transfer non-cash payments from Clearing Account → Bank account
         if (nonCashTotal > 0 && effectiveSettleBankAccountId) {
           const bankCBA = await tx.cashBankAccount.findFirst({
             where: { id: effectiveSettleBankAccountId, organizationId, isActive: true },
@@ -231,7 +266,7 @@ export async function PUT(
                 cashBankAccountId: bankCBA.id,
                 transactionType: "DEPOSIT",
                 amount: nonCashTotal,
-                runningBalance: Number(updatedBank?.balance || 0),
+                runningBalance: Number(updatedBank?.balance ?? 0),
                 description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
                 referenceType: "POS_SESSION",
                 referenceId: id,
@@ -241,11 +276,7 @@ export async function PUT(
             });
           }
         } else if (nonCashTotal > 0 && effectiveSettleCashAccountId && !effectiveSettleBankAccountId) {
-          // Fallback: cashier explicitly chose the "__use_cash_account__" sentinel for bank
-          // settlement (meaning no separate bank account is configured). Per business intent,
-          // all non-cash receipts (card, bank-transfer, etc.) are physically handed to a bank
-          // later from the cash drawer, so they are deposited into the same cash account here
-          // until a proper bank deposit is recorded separately.
+          // Fallback: no separate bank account configured — deposit non-cash to Store Safe
           const fallbackCBA = await tx.cashBankAccount.findFirst({
             where: { id: effectiveSettleCashAccountId, organizationId, isActive: true },
             select: { id: true, accountId: true },
@@ -259,7 +290,7 @@ export async function PUT(
               sourceId: id,
               branchId: posSession.branchId,
               lines: [
-                { accountId: fallbackCBA.accountId, description: "Cash/Bank Account", debit: nonCashTotal, credit: 0 },
+                { accountId: fallbackCBA.accountId, description: "Store Safe", debit: nonCashTotal, credit: 0 },
                 { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: nonCashTotal },
               ],
             });
@@ -275,7 +306,7 @@ export async function PUT(
                 cashBankAccountId: fallbackCBA.id,
                 transactionType: "DEPOSIT",
                 amount: nonCashTotal,
-                runningBalance: Number(updatedFallback?.balance || 0),
+                runningBalance: Number(updatedFallback?.balance ?? 0),
                 description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
                 referenceType: "POS_SESSION",
                 referenceId: id,
@@ -286,10 +317,9 @@ export async function PUT(
           }
         }
 
-        // Step C: Handle cash difference (clearing mode)
-        if (Math.abs(cashDifference) >= 0.01 && clearingAccount && cashShortOverAccount) {
+        // Step C: Cash shortage/overage (legacy flow only — new flow embeds it in Step A)
+        if (!floatJournaledAtOpen && Math.abs(cashDifference) >= 0.01 && clearingAccount && cashShortOverAccount) {
           if (cashDifference < 0) {
-            // Shortage: DR Cash Short & Over, CR POS Undeposited Funds
             await createAutoJournalEntry(tx, organizationId, {
               date: now,
               description: `POS Cash Shortage (${posSession.sessionNumber})`,
@@ -302,7 +332,6 @@ export async function PUT(
               ],
             });
           } else {
-            // Overage: DR POS Undeposited Funds, CR Cash Short & Over
             await createAutoJournalEntry(tx, organizationId, {
               date: now,
               description: `POS Cash Overage (${posSession.sessionNumber})`,

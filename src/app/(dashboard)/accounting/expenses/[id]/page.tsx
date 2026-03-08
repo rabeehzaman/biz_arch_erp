@@ -191,8 +191,8 @@ export default function ExpenseDetailPage({
   return (
         <PageAnimation>
           <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 sm:items-center sm:gap-4">
               <Link href="/accounting/expenses">
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="h-4 w-4" />
@@ -205,22 +205,22 @@ export default function ExpenseDetailPage({
                 <p className="text-slate-500">{expense.description || "Expense"}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
               <Badge className={statusColors[expense.status]}>{expense.status}</Badge>
               {expense.status === "DRAFT" && (
-                <Button onClick={() => setConfirmAction("approve")}>
+                <Button onClick={() => setConfirmAction("approve")} className="w-full sm:w-auto">
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Approve
                 </Button>
               )}
               {expense.status === "APPROVED" && (
-                <Button onClick={() => setIsPayDialogOpen(true)}>
+                <Button onClick={() => setIsPayDialogOpen(true)} className="w-full sm:w-auto">
                   <Wallet className="mr-2 h-4 w-4" />
                   Pay
                 </Button>
               )}
               {expense.status !== "VOID" && expense.status !== "DRAFT" && (
-                <Button variant="destructive" onClick={() => setConfirmAction("void")}>
+                <Button variant="destructive" onClick={() => setConfirmAction("void")} className="w-full sm:w-auto">
                   <XCircle className="mr-2 h-4 w-4" />
                   Void
                 </Button>
@@ -233,7 +233,7 @@ export default function ExpenseDetailPage({
               <CardTitle>Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <span className="text-slate-500">Date</span>
                   <p className="font-medium">
@@ -263,7 +263,57 @@ export default function ExpenseDetailPage({
               <CardTitle>Line Items</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="space-y-3 sm:hidden">
+                {expense.items.map((item) => (
+                  <div key={item.id} className="rounded-lg border p-4 text-sm">
+                    <div className="font-medium text-slate-900">
+                      <span className="mr-2 font-mono text-slate-500">{item.account.code}</span>
+                      {item.account.name}
+                    </div>
+                    <div className="mt-2 text-slate-600">{item.description}</div>
+                    <div className="mt-3 flex items-center justify-between border-t pt-3">
+                      <span className="text-xs uppercase tracking-wide text-slate-400">Amount</span>
+                      <span className="font-semibold text-slate-900">{fmt(Number(item.amount))}</span>
+                    </div>
+                  </div>
+                ))}
+                <div className="rounded-lg border p-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Subtotal</span>
+                    <span className="font-medium">{fmt(Number(expense.subtotal))}</span>
+                  </div>
+                  {Number(expense.totalCgst) > 0 && (
+                    <div className="mt-2 flex justify-between text-slate-500">
+                      <span>CGST</span>
+                      <span>{fmt(Number(expense.totalCgst))}</span>
+                    </div>
+                  )}
+                  {Number(expense.totalSgst) > 0 && (
+                    <div className="mt-2 flex justify-between text-slate-500">
+                      <span>SGST</span>
+                      <span>{fmt(Number(expense.totalSgst))}</span>
+                    </div>
+                  )}
+                  {Number(expense.totalIgst) > 0 && (
+                    <div className="mt-2 flex justify-between text-slate-500">
+                      <span>IGST</span>
+                      <span>{fmt(Number(expense.totalIgst))}</span>
+                    </div>
+                  )}
+                  {Number(expense.totalCgst) === 0 && Number(expense.totalSgst) === 0 && Number(expense.totalIgst) === 0 && Number(expense.taxAmount) > 0 && (
+                    <div className="mt-2 flex justify-between text-slate-500">
+                      <span>Tax</span>
+                      <span>{fmt(Number(expense.taxAmount))}</span>
+                    </div>
+                  )}
+                  <div className="mt-3 flex items-center justify-between border-t pt-3 text-base font-semibold">
+                    <span>Total</span>
+                    <span>{fmt(Number(expense.total))}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden sm:block">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Account</TableHead>
@@ -341,13 +391,14 @@ export default function ExpenseDetailPage({
                     </TableCell>
                   </TableRow>
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
           {/* Pay Dialog */}
           <Dialog open={isPayDialogOpen} onOpenChange={setIsPayDialogOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <form onSubmit={handlePay}>
                 <DialogHeader>
                   <DialogTitle>Pay Expense</DialogTitle>
@@ -375,8 +426,8 @@ export default function ExpenseDetailPage({
                     </SelectContent>
                   </Select>
                 </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={!selectedAccountId}>
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button type="submit" disabled={!selectedAccountId} className="w-full sm:w-auto">
                     Pay {fmt(Number(expense.total))}
                   </Button>
                 </DialogFooter>
@@ -400,7 +451,7 @@ export default function ExpenseDetailPage({
                     : "This will void the expense and reverse any related transactions."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
+              <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={confirmAction === "approve" ? handleApprove : handleVoid}

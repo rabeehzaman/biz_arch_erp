@@ -44,6 +44,8 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -399,8 +401,12 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent
         side={isRTL ? "right" : "left"}
-        className="w-64 p-0 bg-slate-950 text-white border-slate-800 flex flex-col overflow-hidden"
+        className="flex h-full w-[min(20rem,85vw)] flex-col overflow-hidden border-slate-800 bg-slate-950 p-0 text-white"
       >
+        <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+        <SheetDescription className="sr-only">
+          Browse the BizArch ERP sections and open a page.
+        </SheetDescription>
         <div
           className="absolute inset-0 bg-cover bg-no-repeat bg-center z-0"
           style={{ backgroundImage: "url('/sidebar_bg.png')" }}

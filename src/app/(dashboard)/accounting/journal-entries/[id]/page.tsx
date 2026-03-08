@@ -129,8 +129,8 @@ export default function JournalEntryDetailPage({
   return (
         <PageAnimation>
           <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 sm:items-center sm:gap-4">
               <Link href="/accounting/journal-entries">
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="h-4 w-4" />
@@ -143,10 +143,10 @@ export default function JournalEntryDetailPage({
                 <p className="text-slate-500">{entry.description}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
               <Badge className={statusColors[entry.status]}>{entry.status}</Badge>
               {entry.status === "DRAFT" && (
-                <Button onClick={() => setConfirmAction("post")}>
+                <Button onClick={() => setConfirmAction("post")} className="w-full sm:w-auto">
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Post
                 </Button>
@@ -155,6 +155,7 @@ export default function JournalEntryDetailPage({
                 <Button
                   variant="destructive"
                   onClick={() => setConfirmAction("void")}
+                  className="w-full sm:w-auto"
                 >
                   <XCircle className="mr-2 h-4 w-4" />
                   Void
@@ -168,7 +169,7 @@ export default function JournalEntryDetailPage({
               <CardTitle>Entry Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <span className="text-slate-500">Date</span>
                   <p className="font-medium">
@@ -204,7 +205,51 @@ export default function JournalEntryDetailPage({
               <CardTitle>Lines</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="space-y-3 sm:hidden">
+                {entry.lines.map((line) => (
+                  <div key={line.id} className="rounded-lg border p-4 text-sm">
+                    <div className="font-medium text-slate-900">
+                      <span className="mr-2 font-mono text-slate-500">{line.account.code}</span>
+                      {line.account.name}
+                    </div>
+                    <div className="mt-2 text-slate-600">{line.description || "No description"}</div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 border-t pt-3">
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-slate-400">Debit</div>
+                        <div className="font-medium text-slate-900">
+                          {Number(line.debit) > 0
+                            ? Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })
+                            : "-"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-slate-400">Credit</div>
+                        <div className="font-medium text-slate-900">
+                          {Number(line.credit) > 0
+                            ? Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })
+                            : "-"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="rounded-lg border p-4 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Total Debit</span>
+                    <span className="font-semibold">
+                      {totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-slate-500">Total Credit</span>
+                    <span className="font-semibold">
+                      {totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden sm:block">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Account</TableHead>
@@ -257,7 +302,8 @@ export default function JournalEntryDetailPage({
                     </TableCell>
                   </TableRow>
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
@@ -278,7 +324,7 @@ export default function JournalEntryDetailPage({
                     : "This will create a reversal entry and mark the original as void. Are you sure?"}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
+              <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleAction}

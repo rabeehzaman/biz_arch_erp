@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,6 +67,23 @@ const pct = (n: number) => `${n.toFixed(1)}%`;
 
 function marginColor(m: number) {
     return m >= 20 ? "text-emerald-600" : m >= 10 ? "text-amber-600" : "text-red-600";
+}
+
+function MobileMetric({
+    label,
+    value,
+    className = "",
+}: {
+    label: string;
+    value: string | number;
+    className?: string;
+}) {
+    return (
+        <div className="rounded-lg bg-slate-50 p-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
+            <p className={`mt-1 text-sm font-semibold ${className}`}>{value}</p>
+        </div>
+    );
 }
 
 export default function BranchPLPage() {
@@ -163,12 +180,12 @@ export default function BranchPLPage() {
         <PageAnimation>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 className="text-2xl font-bold text-slate-900">Branch P&L Report</h2>
                         <p className="text-slate-500">Revenue, COGS and gross profit breakdown by branch (expand for warehouse detail)</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
                             <RefreshCw className="h-4 w-4" />
                             Refresh
@@ -183,16 +200,16 @@ export default function BranchPLPage() {
                 {/* Date Filters */}
                 <Card>
                     <CardContent className="p-4">
-                        <div className="flex flex-wrap gap-4 items-end">
+                        <div className="grid gap-4 sm:grid-cols-3">
                             <div className="space-y-1">
                                 <Label className="text-xs text-slate-500">From Date</Label>
-                                <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-40" />
+                                <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-xs text-slate-500">To Date</Label>
-                                <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40" />
+                                <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                             </div>
-                            <Button onClick={fetchData} size="sm">Apply</Button>
+                            <Button onClick={fetchData} size="sm" className="w-full self-end sm:w-auto">Apply</Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -200,7 +217,7 @@ export default function BranchPLPage() {
                 {/* Summary Cards */}
                 {totals && (
                     <StaggerContainer>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                             <StaggerItem>
                                 <Card><CardContent className="p-4">
                                     <p className="text-xs text-slate-500">Total Revenue</p>
@@ -234,13 +251,13 @@ export default function BranchPLPage() {
                 {/* Branch Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex flex-wrap items-center gap-2">
                             <GitBranch className="h-5 w-5" />
                             Branch Performance
-                            <span className="text-xs font-normal text-slate-400 ml-2">Click a branch row to expand warehouse details</span>
+                            <span className="ml-0 text-xs font-normal text-slate-400 sm:ml-2">Click a branch row to expand warehouse details</span>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-0 overflow-x-auto">
+                    <CardContent className="p-0">
                         {loading ? (
                             <TableSkeleton columns={9} rows={4} />
                         ) : rows.length === 0 ? (
@@ -249,122 +266,195 @@ export default function BranchPLPage() {
                                 <p className="font-medium">No data for this period</p>
                             </div>
                         ) : (
-                            <Table>
-                                <TableHeader className="bg-slate-50">
-                                    <TableRow>
-                                        <TableHead className="w-8"></TableHead>
-                                        <TableHead>Branch / Warehouse</TableHead>
-                                        <TableHead className="text-right">Invoices</TableHead>
-                                        <TableHead className="text-right">Revenue</TableHead>
-                                        <TableHead className="text-right">COGS</TableHead>
-                                        <TableHead className="text-right">Gross Profit</TableHead>
-                                        <TableHead className="text-right">Margin</TableHead>
-                                        <TableHead className="text-right">Collected</TableHead>
-                                        <TableHead className="text-right">Outstanding</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
+                            <>
+                                <div className="space-y-3 p-4 sm:hidden">
                                     {rows.map((row, i) => {
                                         const key = row.branchId ?? `unassigned-${i}`;
                                         const isOpen = expanded.has(key);
                                         const hasWarehouses = row.warehouses.length > 1 || (row.warehouses.length === 1 && row.warehouses[0].warehouseId !== null);
+
                                         return (
-                                            <>
-                                                {/* Branch row */}
-                                                <TableRow
-                                                    key={`branch-${i}`}
-                                                    className={`cursor-pointer hover:bg-slate-50 font-medium ${isOpen ? "bg-purple-50/50" : ""}`}
+                                            <div key={key} className="rounded-xl border bg-white p-4 shadow-sm">
+                                                <button
+                                                    type="button"
+                                                    className="flex w-full items-start justify-between gap-3 text-left"
                                                     onClick={() => hasWarehouses && toggleExpand(key)}
                                                 >
-                                                    <TableCell className="pl-4">
-                                                        {hasWarehouses ? (
-                                                            isOpen
-                                                                ? <ChevronDown className="h-4 w-4 text-slate-400" />
-                                                                : <ChevronRight className="h-4 w-4 text-slate-400" />
-                                                        ) : null}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="p-1.5 bg-purple-100 rounded">
-                                                                <GitBranch className="h-3.5 w-3.5 text-purple-600" />
-                                                            </div>
-                                                            <div>
-                                                                <span className="font-semibold text-slate-900">{row.branchName}</span>
-                                                                {row.branchCode && <span className="ml-2 text-xs text-slate-400">({row.branchCode})</span>}
-                                                            </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className="font-semibold text-slate-900">{row.branchName}</span>
+                                                            {row.branchCode && <span className="text-xs text-slate-400">({row.branchCode})</span>}
                                                             {!row.branchId && <Badge variant="outline" className="text-xs text-slate-400">Unassigned</Badge>}
                                                         </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right tabular-nums">{row.invoiceCount}</TableCell>
-                                                    <TableCell className="text-right tabular-nums font-medium">{fmt(row.revenue)}</TableCell>
-                                                    <TableCell className="text-right tabular-nums text-red-600">{fmt(row.cogs)}</TableCell>
-                                                    <TableCell className="text-right tabular-nums">
-                                                        <span className={row.grossProfit >= 0 ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold"}>
-                                                            {fmt(row.grossProfit)}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell className="text-right tabular-nums">
-                                                        <span className={`font-medium ${marginColor(row.grossMargin)}`}>{pct(row.grossMargin)}</span>
-                                                    </TableCell>
-                                                    <TableCell className="text-right tabular-nums text-emerald-600">{fmt(row.collected)}</TableCell>
-                                                    <TableCell className="text-right tabular-nums">
-                                                        <span className={row.outstanding > 0 ? "text-amber-600" : "text-slate-400"}>{fmt(row.outstanding)}</span>
-                                                    </TableCell>
-                                                </TableRow>
+                                                        <p className="mt-1 text-sm text-slate-500">{row.invoiceCount} invoices</p>
+                                                    </div>
+                                                    {hasWarehouses ? (
+                                                        isOpen ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />
+                                                    ) : null}
+                                                </button>
 
-                                                {/* Warehouse drill-down rows */}
-                                                {isOpen && row.warehouses.map((wh, wi) => (
-                                                    <TableRow key={`wh-${i}-${wi}`} className="bg-slate-50/80 hover:bg-slate-100/60">
-                                                        <TableCell></TableCell>
-                                                        <TableCell className="pl-10">
-                                                            <div className="flex items-center gap-2">
-                                                                <Warehouse className="h-3.5 w-3.5 text-indigo-400" />
-                                                                <span className="text-sm text-slate-700">{wh.warehouseName}</span>
-                                                                {wh.warehouseCode && <span className="text-xs text-slate-400">({wh.warehouseCode})</span>}
-                                                                {!wh.warehouseId && <span className="text-xs text-slate-400 italic">unassigned</span>}
+                                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                                    <MobileMetric label="Revenue" value={fmt(row.revenue)} />
+                                                    <MobileMetric label="COGS" value={fmt(row.cogs)} className="text-red-600" />
+                                                    <MobileMetric label="Gross Profit" value={fmt(row.grossProfit)} className={row.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
+                                                    <MobileMetric label="Margin" value={pct(row.grossMargin)} className={marginColor(row.grossMargin)} />
+                                                    <MobileMetric label="Collected" value={fmt(row.collected)} className="text-emerald-600" />
+                                                    <MobileMetric label="Outstanding" value={fmt(row.outstanding)} className={row.outstanding > 0 ? "text-amber-600" : "text-slate-500"} />
+                                                </div>
+
+                                                {isOpen && hasWarehouses && (
+                                                    <div className="mt-4 space-y-2 border-t pt-4">
+                                                        {row.warehouses.map((wh, wi) => (
+                                                            <div key={`wh-mobile-${i}-${wi}`} className="rounded-lg bg-slate-50 p-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Warehouse className="h-3.5 w-3.5 text-indigo-400" />
+                                                                    <span className="text-sm font-medium text-slate-700">{wh.warehouseName}</span>
+                                                                    {wh.warehouseCode && <span className="text-xs text-slate-400">({wh.warehouseCode})</span>}
+                                                                </div>
+                                                                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                                                    <MobileMetric label="Revenue" value={fmt(wh.revenue)} />
+                                                                    <MobileMetric label="Profit" value={fmt(wh.grossProfit)} className={wh.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
+                                                                    <MobileMetric label="Margin" value={pct(wh.grossMargin)} className={marginColor(wh.grossMargin)} />
+                                                                    <MobileMetric label="Outstanding" value={fmt(wh.outstanding)} className={wh.outstanding > 0 ? "text-amber-600" : "text-slate-500"} />
+                                                                </div>
                                                             </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right tabular-nums text-sm">{wh.invoiceCount}</TableCell>
-                                                        <TableCell className="text-right tabular-nums text-sm">{fmt(wh.revenue)}</TableCell>
-                                                        <TableCell className="text-right tabular-nums text-sm text-red-500">{fmt(wh.cogs)}</TableCell>
-                                                        <TableCell className="text-right tabular-nums text-sm">
-                                                            <span className={wh.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"}>
-                                                                {fmt(wh.grossProfit)}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell className="text-right tabular-nums text-sm">
-                                                            <span className={marginColor(wh.grossMargin)}>{pct(wh.grossMargin)}</span>
-                                                        </TableCell>
-                                                        <TableCell className="text-right tabular-nums text-sm text-emerald-600">{fmt(wh.collected)}</TableCell>
-                                                        <TableCell className="text-right tabular-nums text-sm">
-                                                            <span className={wh.outstanding > 0 ? "text-amber-600" : "text-slate-400"}>{fmt(wh.outstanding)}</span>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         );
                                     })}
 
-                                    {/* Totals row */}
                                     {totals && (
-                                        <TableRow className="bg-slate-100 font-bold border-t-2">
-                                            <TableCell></TableCell>
-                                            <TableCell>Total</TableCell>
-                                            <TableCell className="text-right tabular-nums">{totals.invoiceCount}</TableCell>
-                                            <TableCell className="text-right tabular-nums">{fmt(totals.revenue)}</TableCell>
-                                            <TableCell className="text-right tabular-nums text-red-600">{fmt(totals.cogs)}</TableCell>
-                                            <TableCell className="text-right tabular-nums">
-                                                <span className={totals.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"}>{fmt(totals.grossProfit)}</span>
-                                            </TableCell>
-                                            <TableCell className="text-right tabular-nums">
-                                                <span className={marginColor(overallMargin)}>{pct(overallMargin)}</span>
-                                            </TableCell>
-                                            <TableCell className="text-right tabular-nums text-emerald-600">{fmt(totals.collected)}</TableCell>
-                                            <TableCell className="text-right tabular-nums text-amber-600">{fmt(totals.outstanding)}</TableCell>
-                                        </TableRow>
+                                        <div className="rounded-xl border bg-slate-100 p-4">
+                                            <p className="font-semibold text-slate-900">Total</p>
+                                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                                <MobileMetric label="Revenue" value={fmt(totals.revenue)} />
+                                                <MobileMetric label="COGS" value={fmt(totals.cogs)} className="text-red-600" />
+                                                <MobileMetric label="Gross Profit" value={fmt(totals.grossProfit)} className={totals.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
+                                                <MobileMetric label="Margin" value={pct(overallMargin)} className={marginColor(overallMargin)} />
+                                                <MobileMetric label="Collected" value={fmt(totals.collected)} className="text-emerald-600" />
+                                                <MobileMetric label="Outstanding" value={fmt(totals.outstanding)} className="text-amber-600" />
+                                            </div>
+                                        </div>
                                     )}
-                                </TableBody>
-                            </Table>
+                                </div>
+
+                                <div className="hidden overflow-x-auto sm:block">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50">
+                                            <TableRow>
+                                                <TableHead className="w-8"></TableHead>
+                                                <TableHead>Branch / Warehouse</TableHead>
+                                                <TableHead className="text-right">Invoices</TableHead>
+                                                <TableHead className="text-right">Revenue</TableHead>
+                                                <TableHead className="text-right">COGS</TableHead>
+                                                <TableHead className="text-right">Gross Profit</TableHead>
+                                                <TableHead className="text-right">Margin</TableHead>
+                                                <TableHead className="text-right">Collected</TableHead>
+                                                <TableHead className="text-right">Outstanding</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {rows.map((row, i) => {
+                                                const key = row.branchId ?? `unassigned-${i}`;
+                                                const isOpen = expanded.has(key);
+                                                const hasWarehouses = row.warehouses.length > 1 || (row.warehouses.length === 1 && row.warehouses[0].warehouseId !== null);
+                                                return (
+                                                    <Fragment key={key}>
+                                                        <TableRow
+                                                            className={`cursor-pointer hover:bg-slate-50 font-medium ${isOpen ? "bg-purple-50/50" : ""}`}
+                                                            onClick={() => hasWarehouses && toggleExpand(key)}
+                                                        >
+                                                            <TableCell className="pl-4">
+                                                                {hasWarehouses ? (
+                                                                    isOpen
+                                                                        ? <ChevronDown className="h-4 w-4 text-slate-400" />
+                                                                        : <ChevronRight className="h-4 w-4 text-slate-400" />
+                                                                ) : null}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="p-1.5 bg-purple-100 rounded">
+                                                                        <GitBranch className="h-3.5 w-3.5 text-purple-600" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="font-semibold text-slate-900">{row.branchName}</span>
+                                                                        {row.branchCode && <span className="ml-2 text-xs text-slate-400">({row.branchCode})</span>}
+                                                                    </div>
+                                                                    {!row.branchId && <Badge variant="outline" className="text-xs text-slate-400">Unassigned</Badge>}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-right tabular-nums">{row.invoiceCount}</TableCell>
+                                                            <TableCell className="text-right tabular-nums font-medium">{fmt(row.revenue)}</TableCell>
+                                                            <TableCell className="text-right tabular-nums text-red-600">{fmt(row.cogs)}</TableCell>
+                                                            <TableCell className="text-right tabular-nums">
+                                                                <span className={row.grossProfit >= 0 ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold"}>
+                                                                    {fmt(row.grossProfit)}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell className="text-right tabular-nums">
+                                                                <span className={`font-medium ${marginColor(row.grossMargin)}`}>{pct(row.grossMargin)}</span>
+                                                            </TableCell>
+                                                            <TableCell className="text-right tabular-nums text-emerald-600">{fmt(row.collected)}</TableCell>
+                                                            <TableCell className="text-right tabular-nums">
+                                                                <span className={row.outstanding > 0 ? "text-amber-600" : "text-slate-400"}>{fmt(row.outstanding)}</span>
+                                                            </TableCell>
+                                                        </TableRow>
+
+                                                        {isOpen && row.warehouses.map((wh, wi) => (
+                                                            <TableRow key={`wh-${i}-${wi}`} className="bg-slate-50/80 hover:bg-slate-100/60">
+                                                                <TableCell></TableCell>
+                                                                <TableCell className="pl-10">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Warehouse className="h-3.5 w-3.5 text-indigo-400" />
+                                                                        <span className="text-sm text-slate-700">{wh.warehouseName}</span>
+                                                                        {wh.warehouseCode && <span className="text-xs text-slate-400">({wh.warehouseCode})</span>}
+                                                                        {!wh.warehouseId && <span className="text-xs text-slate-400 italic">unassigned</span>}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="text-right tabular-nums text-sm">{wh.invoiceCount}</TableCell>
+                                                                <TableCell className="text-right tabular-nums text-sm">{fmt(wh.revenue)}</TableCell>
+                                                                <TableCell className="text-right tabular-nums text-sm text-red-500">{fmt(wh.cogs)}</TableCell>
+                                                                <TableCell className="text-right tabular-nums text-sm">
+                                                                    <span className={wh.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"}>
+                                                                        {fmt(wh.grossProfit)}
+                                                                    </span>
+                                                                </TableCell>
+                                                                <TableCell className="text-right tabular-nums text-sm">
+                                                                    <span className={marginColor(wh.grossMargin)}>{pct(wh.grossMargin)}</span>
+                                                                </TableCell>
+                                                                <TableCell className="text-right tabular-nums text-sm text-emerald-600">{fmt(wh.collected)}</TableCell>
+                                                                <TableCell className="text-right tabular-nums text-sm">
+                                                                    <span className={wh.outstanding > 0 ? "text-amber-600" : "text-slate-400"}>{fmt(wh.outstanding)}</span>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </Fragment>
+                                                );
+                                            })}
+
+                                            {totals && (
+                                                <TableRow className="bg-slate-100 font-bold border-t-2">
+                                                    <TableCell></TableCell>
+                                                    <TableCell>Total</TableCell>
+                                                    <TableCell className="text-right tabular-nums">{totals.invoiceCount}</TableCell>
+                                                    <TableCell className="text-right tabular-nums">{fmt(totals.revenue)}</TableCell>
+                                                    <TableCell className="text-right tabular-nums text-red-600">{fmt(totals.cogs)}</TableCell>
+                                                    <TableCell className="text-right tabular-nums">
+                                                        <span className={totals.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"}>{fmt(totals.grossProfit)}</span>
+                                                    </TableCell>
+                                                    <TableCell className="text-right tabular-nums">
+                                                        <span className={marginColor(overallMargin)}>{pct(overallMargin)}</span>
+                                                    </TableCell>
+                                                    <TableCell className="text-right tabular-nums text-emerald-600">{fmt(totals.collected)}</TableCell>
+                                                    <TableCell className="text-right tabular-nums text-amber-600">{fmt(totals.outstanding)}</TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </>
                         )}
                     </CardContent>
                 </Card>

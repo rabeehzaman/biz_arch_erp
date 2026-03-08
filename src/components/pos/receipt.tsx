@@ -110,7 +110,7 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
             src={data.logoUrl}
             alt="Logo"
             style={{
-              maxHeight: "48px",
+              maxHeight: "80px",
               maxWidth: "55mm",
               objectFit: "contain",
               display: "inline-block",

@@ -110,7 +110,7 @@ export function BranchWarehouseSelector({
     if (!multiBranchEnabled) return null;
 
     return (
-        <div className="grid grid-cols-2 gap-4 border p-4 rounded-lg bg-slate-50 mb-4">
+        <div className="mb-4 grid grid-cols-1 gap-4 rounded-lg border bg-slate-50 p-4 sm:grid-cols-2">
             <div className="space-y-2">
                 <Label>Branch</Label>
                 <Select

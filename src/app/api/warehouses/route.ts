@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { provisionStoreSafe } from "@/lib/pos/store-safe";
 
 export async function GET(request: NextRequest) {
     try {
@@ -68,18 +69,31 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "A warehouse with this code already exists" }, { status: 409 });
         }
 
-        const warehouse = await prisma.warehouse.create({
-            data: {
-                organizationId,
+        const warehouse = await prisma.$transaction(async (tx) => {
+            const newWarehouse = await tx.warehouse.create({
+                data: {
+                    organizationId,
+                    branchId,
+                    name,
+                    code: normalizedCode,
+                    address: address || null,
+                },
+                include: {
+                    branch: { select: { id: true, name: true, code: true } },
+                    _count: { select: { stockLots: true } },
+                },
+            });
+
+            await provisionStoreSafe(tx, organizationId, {
                 branchId,
-                name,
-                code: normalizedCode,
-                address: address || null,
-            },
-            include: {
-                branch: { select: { id: true, name: true, code: true } },
-                _count: { select: { stockLots: true } },
-            },
+                branchCode: branch.code,
+                branchName: branch.name,
+                warehouseId: newWarehouse.id,
+                warehouseCode: normalizedCode,
+                warehouseName: name,
+            });
+
+            return newWarehouse;
         });
 
         return NextResponse.json(warehouse, { status: 201 });

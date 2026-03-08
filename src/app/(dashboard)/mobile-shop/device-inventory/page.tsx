@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
-import { Plus, Smartphone, Loader2, Trash2, Pencil } from "lucide-react";
+import { Plus, Smartphone, Loader2, Trash2, Pencil, AlertTriangle } from "lucide-react";
 import { DeviceFormDialog } from "@/components/mobile-devices/device-form-dialog";
 import { toast } from "sonner";
 
@@ -51,6 +51,7 @@ export default function DeviceInventoryPage() {
   const { symbol } = useCurrency();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -58,6 +59,7 @@ export default function DeviceInventoryPage() {
 
   const fetchDevices = async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -66,9 +68,14 @@ export default function DeviceInventoryPage() {
       if (res.ok) {
         const data = await res.json();
         setDevices(data);
+      } else {
+        const payload = await res.json().catch(() => ({}));
+        setDevices([]);
+        setErrorMessage(payload.error || "You do not have permission to view mobile devices.");
       }
     } catch {
-      toast.error("Failed to load devices");
+      setDevices([]);
+      setErrorMessage("Failed to load devices");
     } finally {
       setLoading(false);
     }
@@ -106,7 +113,7 @@ export default function DeviceInventoryPage() {
   return (
     <PageAnimation>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Smartphone className="h-6 w-6" />
@@ -152,93 +159,175 @@ export default function DeviceInventoryPage() {
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
+            ) : errorMessage ? (
+              <div className="flex flex-col items-center gap-3 px-6 py-12 text-center text-muted-foreground">
+                <AlertTriangle className="h-12 w-12 text-amber-500" />
+                <div className="space-y-1">
+                  <p className="font-medium text-slate-900">Unable to load devices</p>
+                  <p className="text-sm">{errorMessage}</p>
+                </div>
+              </div>
             ) : devices.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Smartphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No devices found</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="max-w-[120px]">IMEI</TableHead>
-                    <TableHead>Brand / Model</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden sm:table-cell">Condition</TableHead>
-                    <TableHead className="hidden md:table-cell text-right">Cost</TableHead>
-                    <TableHead className="hidden md:table-cell text-right">Selling</TableHead>
-                    <TableHead className="hidden sm:table-cell">Supplier</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                <div className="space-y-3 p-4 md:hidden">
                   {devices.map((device) => (
-                    <TableRow key={device.id}>
-                      <TableCell className="max-w-[120px] truncate font-mono text-xs">
-                        {device.imei1}
-                        {device.imei2 && (
-                          <div className="text-muted-foreground truncate">{device.imei2}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{device.brand} {device.model}</div>
-                        {device.color && (
-                          <div className="text-xs text-muted-foreground">
-                            {device.color}
-                            {device.storageCapacity && ` · ${device.storageCapacity}`}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
+                    <div key={device.id} className="rounded-xl border bg-card p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-mono text-xs font-medium text-slate-900">{device.imei1}</p>
+                          {device.imei2 && (
+                            <p className="truncate font-mono text-[11px] text-muted-foreground">{device.imei2}</p>
+                          )}
+                        </div>
                         <Badge className={statusColors[device.currentStatus] || ""}>
                           {device.currentStatus.replace("_", " ")}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm">
-                        {conditionLabels[device.conditionGrade] || device.conditionGrade}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-right text-sm">
-                        &#8377;{Number(device.costPrice).toLocaleString("en-IN")}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-right text-sm">
-                        {Number(device.sellingPrice) > 0
-                          ? `${symbol}${Number(device.sellingPrice).toLocaleString("en-IN")}`
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm">
-                        {device.supplier?.name || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 justify-end">
+                      </div>
+
+                      <div className="mt-3 space-y-1">
+                        <p className="font-medium text-slate-900">{device.brand} {device.model}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {[device.color, device.storageCapacity].filter(Boolean).join(" · ") || conditionLabels[device.conditionGrade] || device.conditionGrade}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Condition</p>
+                          <p>{conditionLabels[device.conditionGrade] || device.conditionGrade}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Supplier</p>
+                          <p className="truncate">{device.supplier?.name || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Cost</p>
+                          <p>{symbol}{Number(device.costPrice).toLocaleString("en-IN")}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Selling</p>
+                          <p>
+                            {Number(device.sellingPrice) > 0
+                              ? `${symbol}${Number(device.sellingPrice).toLocaleString("en-IN")}`
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-slate-400 hover:text-blue-500"
+                          onClick={() => {
+                            setEditDevice(device);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {device.currentStatus === "IN_STOCK" && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-blue-500"
-                            onClick={() => {
-                              setEditDevice(device);
-                              setDialogOpen(true);
-                            }}
+                            className="h-8 w-8 text-slate-400 hover:text-red-500"
+                            onClick={() => handleDelete(device.id)}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                          {device.currentStatus === "IN_STOCK" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-red-500"
-                              onClick={() => handleDelete(device.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
-              </div>
+                </div>
+
+                <div className="hidden overflow-x-auto md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="max-w-[120px]">IMEI</TableHead>
+                        <TableHead>Brand / Model</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="hidden sm:table-cell">Condition</TableHead>
+                        <TableHead className="hidden md:table-cell text-right">Cost</TableHead>
+                        <TableHead className="hidden md:table-cell text-right">Selling</TableHead>
+                        <TableHead className="hidden sm:table-cell">Supplier</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {devices.map((device) => (
+                        <TableRow key={device.id}>
+                          <TableCell className="max-w-[120px] truncate font-mono text-xs">
+                            {device.imei1}
+                            {device.imei2 && (
+                              <div className="text-muted-foreground truncate">{device.imei2}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{device.brand} {device.model}</div>
+                            {device.color && (
+                              <div className="text-xs text-muted-foreground">
+                                {device.color}
+                                {device.storageCapacity && ` · ${device.storageCapacity}`}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={statusColors[device.currentStatus] || ""}>
+                              {device.currentStatus.replace("_", " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-sm">
+                            {conditionLabels[device.conditionGrade] || device.conditionGrade}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-right text-sm">
+                            {symbol}{Number(device.costPrice).toLocaleString("en-IN")}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-right text-sm">
+                            {Number(device.sellingPrice) > 0
+                              ? `${symbol}${Number(device.sellingPrice).toLocaleString("en-IN")}`
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-sm">
+                            {device.supplier?.name || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400 hover:text-blue-500"
+                                onClick={() => {
+                                  setEditDevice(device);
+                                  setDialogOpen(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              {device.currentStatus === "IN_STOCK" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-400 hover:text-red-500"
+                                  onClick={() => handleDelete(device.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

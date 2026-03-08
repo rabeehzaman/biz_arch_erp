@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { provisionStoreSafe } from "@/lib/pos/store-safe";
 
 export async function GET() {
     try {
@@ -53,19 +54,29 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "A branch with this code already exists" }, { status: 409 });
         }
 
-        const branch = await prisma.branch.create({
-            data: {
-                organizationId,
-                name,
-                code: normalizedCode,
-                address: address || null,
-                city: city || null,
-                state: state || null,
-                phone: phone || null,
-            },
-            include: {
-                _count: { select: { warehouses: true } },
-            },
+        const branch = await prisma.$transaction(async (tx) => {
+            const newBranch = await tx.branch.create({
+                data: {
+                    organizationId,
+                    name,
+                    code: normalizedCode,
+                    address: address || null,
+                    city: city || null,
+                    state: state || null,
+                    phone: phone || null,
+                },
+                include: {
+                    _count: { select: { warehouses: true } },
+                },
+            });
+
+            await provisionStoreSafe(tx, organizationId, {
+                branchId: newBranch.id,
+                branchCode: normalizedCode,
+                branchName: name,
+            });
+
+            return newBranch;
         });
 
         return NextResponse.json(branch, { status: 201 });

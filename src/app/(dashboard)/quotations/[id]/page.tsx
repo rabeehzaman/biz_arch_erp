@@ -245,14 +245,14 @@ export default function QuotationDetailPage({
       <div className="space-y-6 print:space-y-4">
         {/* Header - Hidden on print */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
             <Link href="/quotations">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <h2 className="flex flex-wrap items-center gap-2 text-2xl font-bold text-slate-900">
                 Quotation {quotation.quotationNumber}
                 {getStatusBadge(quotation.status)}
               </h2>
@@ -263,22 +263,22 @@ export default function QuotationDetailPage({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
             {quotation.status !== "CONVERTED" && (
-              <Link href={`/quotations/${id}/edit`}>
-                <Button variant="outline">
+              <Link href={`/quotations/${id}/edit`} className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto">
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </Button>
               </Link>
             )}
-            <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading}>
+            <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading} className="w-full sm:w-auto">
               {isDownloading
                 ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 : <Download className="mr-2 h-4 w-4" />}
               {isDownloading ? "Downloading..." : "Download PDF"}
             </Button>
-            <Button variant="outline" onClick={handlePrint} disabled={isPrinting}>
+            <Button variant="outline" onClick={handlePrint} disabled={isPrinting} className="w-full sm:w-auto">
               {isPrinting
                 ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 : <Printer className="mr-2 h-4 w-4" />}
@@ -286,11 +286,11 @@ export default function QuotationDetailPage({
             </Button>
             {quotation.status === "SENT" && !isExpired && (
               <>
-                <Button onClick={handleConvertToInvoice} disabled={isConverting}>
+                <Button onClick={handleConvertToInvoice} disabled={isConverting} className="w-full sm:w-auto">
                   <FileCheck className="mr-2 h-4 w-4" />
                   {isConverting ? "Converting..." : "Convert to Invoice"}
                 </Button>
-                <Button variant="destructive" onClick={handleCancelQuotation}>
+                <Button variant="destructive" onClick={handleCancelQuotation} className="w-full sm:w-auto">
                   <Ban className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
@@ -331,7 +331,7 @@ export default function QuotationDetailPage({
         <Card className="print:shadow-none print:border-0">
           <CardContent className="p-4 sm:p-8 print:p-0">
             {/* Company Header */}
-            <div className="flex items-start justify-between mb-8 print:mb-6">
+            <div className="mb-8 flex flex-col gap-4 print:mb-6 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-slate-100 p-3">
                   <Building2 className="h-6 w-6 text-slate-600" />
@@ -343,14 +343,14 @@ export default function QuotationDetailPage({
                   <p className="text-slate-600">Quotation</p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <div className="text-sm text-slate-600">Quotation Number</div>
                 <div className="text-lg font-bold">{quotation.quotationNumber}</div>
               </div>
             </div>
 
             {/* Customer & Dates */}
-            <div className="grid grid-cols-2 gap-8 mb-8 print:mb-6">
+            <div className="mb-8 grid gap-8 print:mb-6 sm:grid-cols-2">
               <div>
                 <h3 className="text-sm font-semibold text-slate-600 mb-2">
                   Quotation To

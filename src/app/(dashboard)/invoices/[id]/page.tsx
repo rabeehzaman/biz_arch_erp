@@ -262,7 +262,7 @@ export default function InvoiceDetailPage({
       <div className="space-y-6 print:space-y-4">
         {/* Header - Hidden on print */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
             <Link href="/invoices">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-4 w-4" />
@@ -277,37 +277,37 @@ export default function InvoiceDetailPage({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/invoices/${id}/edit`}>
-              <Button variant="outline">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+            <Link href={`/invoices/${id}/edit`} className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto">
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </Button>
             </Link>
             {invoice && Number(invoice.balanceDue) > 0 && (
-              <Button onClick={() => setIsPaymentDialogOpen(true)}>
+              <Button onClick={() => setIsPaymentDialogOpen(true)} className="w-full sm:w-auto">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Record Payment
               </Button>
             )}
             {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
-              <Button variant="outline" onClick={handleMarkAsSent} disabled={isMarkingSent}>
+              <Button variant="outline" onClick={handleMarkAsSent} disabled={isMarkingSent} className="w-full sm:w-auto">
                 <Send className="mr-2 h-4 w-4" />
                 Mark as Sent
               </Button>
             )}
             {invoice?.sentAt && (
-              <span className="text-sm text-slate-500">
+              <span className="w-full text-sm text-slate-500 sm:w-auto">
                 Sent {format(new Date(invoice.sentAt), "dd MMM yyyy")}
               </span>
             )}
-            <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading}>
+            <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading} className="w-full sm:w-auto">
               {isDownloading
                 ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 : <Download className="mr-2 h-4 w-4" />}
               {isDownloading ? "Downloading..." : "Download PDF"}
             </Button>
-            <Button variant="outline" onClick={handlePrint} disabled={isPrinting}>
+            <Button variant="outline" onClick={handlePrint} disabled={isPrinting} className="w-full sm:w-auto">
               {isPrinting
                 ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 : <Printer className="mr-2 h-4 w-4" />}
@@ -317,9 +317,9 @@ export default function InvoiceDetailPage({
         </div>
 
         <Tabs defaultValue="invoice" className="w-full">
-          <TabsList className="print:hidden">
-            <TabsTrigger value="invoice">Invoice</TabsTrigger>
-            <TabsTrigger value="journal">Journal</TabsTrigger>
+          <TabsList className="print:hidden h-auto min-w-full justify-start gap-1 rounded-xl p-1 sm:min-w-0 sm:w-fit">
+            <TabsTrigger value="invoice" className="shrink-0">Invoice</TabsTrigger>
+            <TabsTrigger value="journal" className="shrink-0">Journal</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoice">
@@ -327,7 +327,7 @@ export default function InvoiceDetailPage({
             <Card className="print:shadow-none print:border-none">
               <CardContent className="p-4 sm:p-8">
                 {/* Company & Invoice Info */}
-                <div className="flex justify-between mb-8">
+                <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
                       <Building2 className="h-7 w-7 text-primary-foreground" />
@@ -337,13 +337,13 @@ export default function InvoiceDetailPage({
                       <p className="text-sm text-slate-500">Invoice</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <h2 className="text-xl font-bold">{invoice.invoiceNumber}</h2>
                   </div>
                 </div>
 
                 {/* Bill To & Dates */}
-                <div className="grid sm:grid-cols-2 gap-8 mb-8">
+                <div className="mb-8 grid gap-8 sm:grid-cols-2">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-500 mb-2">
                       Bill To
@@ -565,7 +565,7 @@ export default function InvoiceDetailPage({
 
         {/* Record Payment Dialog */}
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <form onSubmit={handleRecordPayment}>
               <DialogHeader>
                 <DialogTitle>Record Payment</DialogTitle>
@@ -630,8 +630,8 @@ export default function InvoiceDetailPage({
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="submit" disabled={isRecordingPayment}>
+              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button type="submit" disabled={isRecordingPayment} className="w-full sm:w-auto">
                   {isRecordingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isRecordingPayment ? "Recording..." : "Record Payment"}
                 </Button>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -122,7 +123,7 @@ export default function ImeiLookupPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="max-w-lg mx-auto space-y-2">
-              <div className="flex gap-2">
+              <div className="flex items-stretch gap-2">
                 <Input
                   autoFocus
                   placeholder="Scan or enter IMEI number..."
@@ -143,6 +144,10 @@ export default function ImeiLookupPage() {
                   }}
                 />
               </div>
+              <Button type="button" className="w-full" onClick={() => handleSearch()}>
+                <Search className="mr-2 h-4 w-4" />
+                Search Device
+              </Button>
               <p className="text-xs text-muted-foreground text-center">
                 Press Enter, tap the camera icon, or scan a barcode to search
               </p>

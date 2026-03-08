@@ -136,7 +136,7 @@ export default function CreditNoteDetailPage() {
     <PageAnimation>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
             <Link href="/credit-notes">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-4 w-4" />
@@ -149,14 +149,14 @@ export default function CreditNoteDetailPage() {
               <p className="text-slate-500">Credit Note Details</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/credit-notes/${creditNote.id}/edit`}>
-              <Button variant="outline">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+            <Link href={`/credit-notes/${creditNote.id}/edit`} className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto">
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Button>
             </Link>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>
@@ -296,7 +296,7 @@ export default function CreditNoteDetailPage() {
               ))}
             </div>
 
-            <div className="mt-4 space-y-2 max-w-xs ml-auto">
+            <div className="ml-auto mt-4 max-w-full space-y-2 sm:max-w-xs">
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
                 <span className="text-green-600">

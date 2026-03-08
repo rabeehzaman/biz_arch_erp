@@ -15,28 +15,45 @@ interface TableSkeletonProps {
 
 export function TableSkeleton({ columns, rows = 5 }: TableSkeletonProps) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {Array.from({ length: columns }).map((_, i) => (
-            <TableHead key={i}>
-              <Skeleton className="h-4 w-24" />
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <>
+      <div className="space-y-3 sm:hidden">
         {Array.from({ length: rows }).map((_, rowIndex) => (
-          <TableRow key={rowIndex}>
-            {Array.from({ length: columns }).map((_, colIndex) => (
-              <TableCell key={colIndex}>
-                <Skeleton className="h-4 w-full" />
-              </TableCell>
-            ))}
-          </TableRow>
+          <div key={rowIndex} className="rounded-lg border bg-card p-4 space-y-3">
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="h-4 w-2/3" />
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          </div>
         ))}
-      </TableBody>
-    </Table>
+      </div>
+
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {Array.from({ length: columns }).map((_, i) => (
+                <TableHead key={i}>
+                  <Skeleton className="h-4 w-24" />
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: rows }).map((_, rowIndex) => (
+              <TableRow key={rowIndex}>
+                {Array.from({ length: columns }).map((_, colIndex) => (
+                  <TableCell key={colIndex}>
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
 }
 

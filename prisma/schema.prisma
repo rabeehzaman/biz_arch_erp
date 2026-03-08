@@ -1355,6 +1355,7 @@ enum JournalSourceType {
   TRANSFER
   OPENING_BALANCE
   POS_SESSION_CLOSE
+  POS_SESSION_OPEN
 }
 
 enum ExpenseStatus {

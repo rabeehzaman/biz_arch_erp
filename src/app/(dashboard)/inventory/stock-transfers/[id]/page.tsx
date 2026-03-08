@@ -150,7 +150,7 @@ export default function StockTransferDetailPage({
         <PageAnimation>
             <div className="space-y-6 print:space-y-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-start gap-3 sm:items-center sm:gap-4">
                         <Button variant="ghost" size="icon" asChild>
                             <Link href="/inventory/stock-transfers">
                                 <ArrowLeft className="h-4 w-4" />
@@ -166,12 +166,13 @@ export default function StockTransferDetailPage({
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                         {transfer.status === "COMPLETED" && (
                             <Button
                                 variant="outline"
                                 onClick={() => setConfirmReverse(true)}
                                 disabled={reversing}
+                                className="w-full sm:w-auto"
                             >
                                 {reversing
                                     ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -179,7 +180,7 @@ export default function StockTransferDetailPage({
                                 Reverse
                             </Button>
                         )}
-                        <Button variant="outline" onClick={() => window.print()}>
+                        <Button variant="outline" onClick={() => window.print()} className="w-full sm:w-auto">
                             <Printer className="mr-2 h-4 w-4" />
                             Print
                         </Button>
@@ -219,12 +220,12 @@ export default function StockTransferDetailPage({
 
                 <Card className="print:shadow-none print:border-none">
                     <CardContent className="space-y-8 p-6 sm:p-8">
-                        <div className="flex items-start justify-between gap-4 border-b pb-6">
+                        <div className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <h1 className="text-2xl font-bold text-slate-900">Transfer Note</h1>
                                 <p className="text-sm text-slate-500">{transfer.transferNumber}</p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-left sm:text-right">
                                 <div className="text-sm text-slate-500">Transfer Date</div>
                                 <div className="font-semibold">{format(new Date(transfer.transferDate), "dd MMM yyyy")}</div>
                             </div>
@@ -278,40 +279,71 @@ export default function StockTransferDetailPage({
 
                         <div className="space-y-3">
                             <div className="text-lg font-semibold text-slate-900">Items</div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Product</TableHead>
-                                        <TableHead className="text-right">Qty</TableHead>
-                                        <TableHead className="text-right">Unit Cost</TableHead>
-                                        <TableHead className="text-right">Line Total</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {transfer.items.map((item) => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>
-                                                <div className="font-medium">{item.product.name}</div>
-                                                {item.product.sku && (
-                                                    <div className="text-xs text-slate-500">SKU: {item.product.sku}</div>
-                                                )}
-                                                {item.notes && (
-                                                    <div className="mt-1 text-xs text-slate-500">{item.notes}</div>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {Number(item.quantity).toLocaleString()}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {fmt(Number(item.unitCost))}
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium">
+                            <div className="space-y-3 sm:hidden">
+                                {transfer.items.map((item) => (
+                                    <div key={item.id} className="rounded-lg border p-4 text-sm">
+                                        <div className="font-medium text-slate-900">{item.product.name}</div>
+                                        {item.product.sku && (
+                                            <div className="mt-1 text-xs text-slate-500">SKU: {item.product.sku}</div>
+                                        )}
+                                        {item.notes && (
+                                            <div className="mt-2 text-xs text-slate-500">{item.notes}</div>
+                                        )}
+                                        <div className="mt-3 grid grid-cols-2 gap-3 text-slate-600">
+                                            <div>
+                                                <div className="text-xs uppercase tracking-wide text-slate-400">Qty</div>
+                                                <div className="font-medium text-slate-900">{Number(item.quantity).toLocaleString()}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs uppercase tracking-wide text-slate-400">Unit Cost</div>
+                                                <div className="font-medium text-slate-900">{fmt(Number(item.unitCost))}</div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 flex items-center justify-between border-t pt-3">
+                                            <span className="text-xs uppercase tracking-wide text-slate-400">Line Total</span>
+                                            <span className="font-semibold text-slate-900">
                                                 {fmt(Number(item.quantity) * Number(item.unitCost))}
-                                            </TableCell>
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="hidden sm:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Product</TableHead>
+                                            <TableHead className="text-right">Qty</TableHead>
+                                            <TableHead className="text-right">Unit Cost</TableHead>
+                                            <TableHead className="text-right">Line Total</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {transfer.items.map((item) => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{item.product.name}</div>
+                                                    {item.product.sku && (
+                                                        <div className="text-xs text-slate-500">SKU: {item.product.sku}</div>
+                                                    )}
+                                                    {item.notes && (
+                                                        <div className="mt-1 text-xs text-slate-500">{item.notes}</div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {Number(item.quantity).toLocaleString()}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {fmt(Number(item.unitCost))}
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">
+                                                    {fmt(Number(item.quantity) * Number(item.unitCost))}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

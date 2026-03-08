@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,12 +32,17 @@ export function Header() {
   const { t, lang, setLanguage } = useLanguage();
   const [orgName, setOrgName] = useState<string>("");
   const [switchingLang, setSwitchingLang] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const initials = session?.user?.name
     ?.split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase() || "U";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (session?.user?.organizationId) {
@@ -83,7 +89,11 @@ export function Header() {
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
       <div className="flex items-center gap-3 min-w-0">
-        <MobileSidebar />
+        {mounted ? (
+          <MobileSidebar />
+        ) : (
+          <div className="h-9 w-9 md:hidden" aria-hidden="true" />
+        )}
         <div className="min-w-0">
           <h1 className="text-base md:text-lg font-semibold text-slate-900 truncate">
             {t("header.welcome")}, {session?.user?.name?.split(" ")[0] || "User"}
@@ -113,56 +123,74 @@ export function Header() {
         </kbd>
       </button>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-full">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">{session?.user?.name}</p>
-              <p className="text-xs text-slate-500">{session?.user?.email}</p>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
-            {t("header.profile")}
-          </DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <Globe className="mr-2 h-4 w-4" />
-              {t("header.language")}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => handleLanguageSwitch("en")} disabled={switchingLang}>
-                  <Check className={`mr-2 h-4 w-4 ${lang === "en" ? "opacity-100" : "opacity-0"}`} />
-                  {t("header.english")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleLanguageSwitch("ar")} disabled={switchingLang}>
-                  <Check className={`mr-2 h-4 w-4 ${lang === "ar" ? "opacity-100" : "opacity-0"}`} />
-                  {t("header.arabic")}
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuPortal>
-          </DropdownMenuSub>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-red-600 focus:text-red-600"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+      <div className="flex items-center gap-2">
+        {mounted && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setOpen(true)}
           >
-            <LogOut className="mr-2 h-4 w-4" />
-            {t("header.signOut")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <Search className="h-4 w-4" />
+            <span className="sr-only">{t("header.searchPlaceholder")}</span>
+          </Button>
+        )}
+
+        {mounted ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-full">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{session?.user?.name}</p>
+                  <p className="text-xs text-slate-500">{session?.user?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                {t("header.profile")}
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Globe className="mr-2 h-4 w-4" />
+                  {t("header.language")}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => handleLanguageSwitch("en")} disabled={switchingLang}>
+                      <Check className={`mr-2 h-4 w-4 ${lang === "en" ? "opacity-100" : "opacity-0"}`} />
+                      {t("header.english")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleLanguageSwitch("ar")} disabled={switchingLang}>
+                      <Check className={`mr-2 h-4 w-4 ${lang === "ar" ? "opacity-100" : "opacity-0"}`} />
+                      {t("header.arabic")}
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                {t("header.signOut")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="h-9 w-9 rounded-full bg-slate-200" aria-hidden="true" />
+        )}
+      </div>
     </header>
   );
 }

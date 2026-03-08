@@ -118,7 +118,7 @@ export default function NewJournalEntryPage() {
   return (
     <PageAnimation>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href="/accounting/journal-entries">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
@@ -158,16 +158,16 @@ export default function NewJournalEntryPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <Label className="text-base font-semibold">Lines</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addLine}>
+                  <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={addLine}>
                     <Plus className="mr-2 h-3 w-3" />
                     Add Line
                   </Button>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="grid grid-cols-[1fr_1fr_120px_120px_40px] gap-2 text-xs font-medium text-slate-500 px-1">
+                  <div className="hidden grid-cols-[1fr_1fr_120px_120px_40px] gap-2 px-1 text-xs font-medium text-slate-500 sm:grid">
                     <span>Account</span>
                     <span>Description</span>
                     <span className="text-right">Debit</span>
@@ -176,69 +176,138 @@ export default function NewJournalEntryPage() {
                   </div>
 
                   {lines.map((line, index) => (
-                    <div
-                      key={index}
-                      className="grid grid-cols-[1fr_1fr_120px_120px_40px] gap-2 items-center"
-                    >
-                      <Combobox
-                        items={accounts}
-                        value={line.accountId}
-                        onValueChange={(v) => updateLine(index, "accountId", v)}
-                        getId={(a) => a.id}
-                        getLabel={(a) => `${a.code} - ${a.name}`}
-                        filterFn={(a, query) =>
-                          a.code.toLowerCase().includes(query.toLowerCase()) ||
-                          a.name.toLowerCase().includes(query.toLowerCase())
-                        }
-                        placeholder="Select account"
-                      />
+                    <div key={index}>
+                      <div className="hidden grid-cols-[1fr_1fr_120px_120px_40px] items-center gap-2 sm:grid">
+                        <Combobox
+                          items={accounts}
+                          value={line.accountId}
+                          onValueChange={(v) => updateLine(index, "accountId", v)}
+                          getId={(a) => a.id}
+                          getLabel={(a) => `${a.code} - ${a.name}`}
+                          filterFn={(a, query) =>
+                            a.code.toLowerCase().includes(query.toLowerCase()) ||
+                            a.name.toLowerCase().includes(query.toLowerCase())
+                          }
+                          placeholder="Select account"
+                        />
 
-                      <Input
-                        value={line.description}
-                        onChange={(e) =>
-                          updateLine(index, "description", e.target.value)
-                        }
-                        placeholder="Line description"
-                      />
+                        <Input
+                          value={line.description}
+                          onChange={(e) =>
+                            updateLine(index, "description", e.target.value)
+                          }
+                          placeholder="Line description"
+                        />
 
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={line.debit}
-                        onChange={(e) =>
-                          updateLine(index, "debit", e.target.value)
-                        }
-                        placeholder="0.00"
-                        className="text-right"
-                      />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={line.debit}
+                          onChange={(e) =>
+                            updateLine(index, "debit", e.target.value)
+                          }
+                          placeholder="0.00"
+                          className="text-right"
+                        />
 
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={line.credit}
-                        onChange={(e) =>
-                          updateLine(index, "credit", e.target.value)
-                        }
-                        placeholder="0.00"
-                        className="text-right"
-                      />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={line.credit}
+                          onChange={(e) =>
+                            updateLine(index, "credit", e.target.value)
+                          }
+                          placeholder="0.00"
+                          className="text-right"
+                        />
 
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeLine(index)}
-                        disabled={lines.length <= 2}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeLine(index)}
+                          disabled={lines.length <= 2}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-200 p-3 sm:hidden">
+                        <div className="flex items-start justify-between gap-3">
+                          <Label className="text-sm font-semibold">Line {index + 1}</Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeLine(index)}
+                            disabled={lines.length <= 2}
+                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="mt-3 space-y-3">
+                          <div className="grid gap-2">
+                            <Label className="text-xs text-slate-500">Account</Label>
+                            <Combobox
+                              items={accounts}
+                              value={line.accountId}
+                              onValueChange={(v) => updateLine(index, "accountId", v)}
+                              getId={(a) => a.id}
+                              getLabel={(a) => `${a.code} - ${a.name}`}
+                              filterFn={(a, query) =>
+                                a.code.toLowerCase().includes(query.toLowerCase()) ||
+                                a.name.toLowerCase().includes(query.toLowerCase())
+                              }
+                              placeholder="Select account"
+                            />
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label className="text-xs text-slate-500">Description</Label>
+                            <Input
+                              value={line.description}
+                              onChange={(e) => updateLine(index, "description", e.target.value)}
+                              placeholder="Line description"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-2">
+                              <Label className="text-xs text-slate-500">Debit</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={line.debit}
+                                onChange={(e) => updateLine(index, "debit", e.target.value)}
+                                placeholder="0.00"
+                                className="text-right"
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-xs text-slate-500">Credit</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={line.credit}
+                                onChange={(e) => updateLine(index, "credit", e.target.value)}
+                                placeholder="0.00"
+                                className="text-right"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
 
-                  <div className="grid grid-cols-[1fr_1fr_120px_120px_40px] gap-2 pt-3 border-t font-semibold">
+                  <div className="hidden grid-cols-[1fr_1fr_120px_120px_40px] gap-2 border-t pt-3 font-semibold sm:grid">
                     <span />
                     <span className="text-right">Totals:</span>
                     <span className="text-right font-mono">
@@ -254,6 +323,25 @@ export default function NewJournalEntryPage() {
                     <span />
                   </div>
 
+                  <div className="rounded-lg bg-slate-50 p-3 sm:hidden">
+                    <div className="flex items-center justify-between text-sm font-semibold">
+                      <span>Total Debit</span>
+                      <span className="font-mono">
+                        {totalDebit.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-sm font-semibold">
+                      <span>Total Credit</span>
+                      <span className="font-mono">
+                        {totalCredit.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  </div>
+
                   {!isBalanced && totalDebit + totalCredit > 0 && (
                     <p className="text-sm text-red-600">
                       Difference: {Math.abs(totalDebit - totalCredit).toLocaleString("en-IN", { minimumFractionDigits: 2 })} — debits must equal credits
@@ -262,14 +350,15 @@ export default function NewJournalEntryPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <Link href="/accounting/journal-entries">
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" className="w-full sm:w-auto">
                     Cancel
                   </Button>
                 </Link>
                 <Button
                   type="submit"
+                  className="w-full sm:w-auto"
                   disabled={isSubmitting || !isBalanced || totalDebit === 0}
                 >
                   {isSubmitting ? "Posting..." : "Post Journal"}

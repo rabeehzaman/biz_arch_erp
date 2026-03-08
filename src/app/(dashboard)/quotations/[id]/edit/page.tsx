@@ -372,7 +372,7 @@ export default function EditQuotationPage({
   return (
     <PageAnimation>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href={`/quotations/${id}`}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
@@ -397,7 +397,7 @@ export default function EditQuotationPage({
                   onBranchChange={(id) => setFormData(prev => ({ ...prev, branchId: id }))}
                   onWarehouseChange={(id) => setFormData(prev => ({ ...prev, warehouseId: id }))}
                 />
-                <div className="grid gap-4 sm:grid-cols-3 mt-4">
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="grid gap-2">
                     <Label htmlFor="customer">Customer *</Label>
                     <CustomerCombobox
@@ -802,9 +802,9 @@ export default function EditQuotationPage({
                 <CardTitle>Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 max-w-xs ml-auto">
+                <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
                   {taxInclusive && (
-                    <div className="text-xs text-blue-600 text-right mb-2 font-medium">Prices include tax</div>
+                    <div className="mb-2 text-left text-xs font-medium text-blue-600 sm:text-right">Prices include tax</div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
@@ -821,9 +821,10 @@ export default function EditQuotationPage({
                     <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toLocaleString("en-IN")}</span>
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                   <Button
                     type="submit"
+                    className="w-full sm:w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.issueDate || !formData.validUntil || !lineItems.some(item => item.productId)}
                   >
                     {isSubmitting ? "Updating..." : "Update Quotation"}

@@ -522,7 +522,7 @@ export default function NewInvoicePage() {
   return (
     <PageAnimation>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href="/invoices">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
@@ -548,7 +548,7 @@ export default function NewInvoicePage() {
                   onBranchChange={(id) => setFormData(prev => ({ ...prev, branchId: id }))}
                   onWarehouseChange={(id) => setFormData(prev => ({ ...prev, warehouseId: id }))}
                 />
-                <div className="grid gap-4 sm:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="grid gap-2">
                     <Label htmlFor="customer">Customer *</Label>
                     <CustomerCombobox
@@ -1142,12 +1142,12 @@ export default function NewInvoicePage() {
                 <CardTitle>Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 max-w-xs ml-auto">
+                <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
                   {taxMode === "vat" && (
-                    <div className="text-xs text-slate-500 text-right mb-2 font-medium">VAT Invoice (ZATCA Phase 1)</div>
+                    <div className="mb-2 text-left text-xs font-medium text-slate-500 sm:text-right">VAT Invoice (ZATCA Phase 1)</div>
                   )}
                   {taxInclusive && (
-                    <div className="text-xs text-blue-600 text-right mb-2 font-medium">Prices include tax</div>
+                    <div className="mb-2 text-left text-xs font-medium text-blue-600 sm:text-right">Prices include tax</div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
@@ -1164,10 +1164,11 @@ export default function NewInvoicePage() {
                     <span key={`summary-total:${totals.total}`}>{fmt(totals.total)}</span>
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                   <Button
                     type="button"
                     variant="outline"
+                    className="w-full sm:w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
                     onClick={() => {
                       saveAndNew.current = true;
@@ -1178,6 +1179,7 @@ export default function NewInvoicePage() {
                   </Button>
                   <Button
                     type="submit"
+                    className="w-full sm:w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
                   >
                     {isSubmitting ? "Creating..." : "Create Invoice"}

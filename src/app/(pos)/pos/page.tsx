@@ -265,7 +265,7 @@ export default function POSDashboardPage() {
   return (
     <div className="flex h-screen flex-col bg-slate-100">
       {/* Top Bar */}
-      <header className="flex h-14 items-center justify-between border-b bg-white px-4 shadow-sm">
+      <header className="flex flex-col gap-3 border-b bg-white px-4 py-3 shadow-sm sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:py-0">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -279,7 +279,7 @@ export default function POSDashboardPage() {
           <h1 className="text-lg font-bold">{t("pos.title")}</h1>
         </div>
 
-        <div className="relative w-64">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t("pos.searchRegisters")}
@@ -318,7 +318,7 @@ export default function POSDashboardPage() {
                   )}
                 >
                   {/* Card Header */}
-                  <div className="flex items-start justify-between p-4 pb-2">
+                  <div className="flex flex-col gap-3 p-4 pb-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <h3 className="font-semibold text-base truncate">
                         {loc.branchName}
@@ -329,7 +329,7 @@ export default function POSDashboardPage() {
                         </p>
                       )}
                     </div>
-                    <div className="shrink-0 ml-2 flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1 sm:ml-2 sm:shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -524,7 +524,7 @@ export default function POSDashboardPage() {
           <DialogHeader>
             <DialogTitle>Register Accounts</DialogTitle>
             <DialogDescription>
-              Set the default cash and bank accounts for this register. Direct mode uses them automatically. Clearing mode pre-fills them during session close.
+              Set the store safe and bank accounts for this register. In clearing mode, the opening float is issued from the store safe and all cash returns to it at session close.
             </DialogDescription>
           </DialogHeader>
 
@@ -538,7 +538,7 @@ export default function POSDashboardPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Default Cash Account</Label>
+                <Label>Store Safe Account</Label>
                 <Select value={configCashAccountId} onValueChange={setConfigCashAccountId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select cash account" />
@@ -577,15 +577,16 @@ export default function POSDashboardPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setConfigLocationKey(null)}
               disabled={isSavingConfig}
+              className="w-full sm:w-auto"
             >
               {t("common.cancel")}
             </Button>
-            <Button onClick={saveRegisterConfig} disabled={isSavingConfig}>
+            <Button onClick={saveRegisterConfig} disabled={isSavingConfig} className="w-full sm:w-auto">
               {isSavingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Accounts
             </Button>

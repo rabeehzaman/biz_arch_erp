@@ -77,16 +77,17 @@ export function PaymentPanel({
   };
 
   const paidAmount = getPaidAmount();
-  const balanceDue = Math.max(0, total - paidAmount);
+  const roundedTotal = Math.round(total * 100) / 100;
+  const balanceDue = Math.max(0, roundedTotal - paidAmount);
 
   const canComplete =
     mode === "single"
       ? isCreditSale
-        ? hasCustomer && paidAmount < total && paidAmount >= 0 // Must have customer for credit sale
+        ? hasCustomer && paidAmount < roundedTotal && paidAmount >= 0 // Must have customer for credit sale
         : selectedMethod === "CASH"
-          ? (parseFloat(cashTendered) || 0) >= total
+          ? (parseFloat(cashTendered) || 0) >= roundedTotal
           : true
-      : paidAmount >= total;
+      : paidAmount >= roundedTotal;
 
   return (
     <div className="flex h-full flex-col">

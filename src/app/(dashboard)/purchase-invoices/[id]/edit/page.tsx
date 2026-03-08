@@ -281,29 +281,25 @@ export default function EditPurchaseInvoicePage({
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const taxEnabled = session?.user?.gstEnabled || saudiEnabled;
+  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
 
-  const calculateSubtotal = () => {
-    return lineItems.reduce(
-      (sum, item) => sum + item.quantity * item.unitCost * (1 - item.discount / 100),
-      0
-    );
-  };
+  function getPurchaseLineAmounts(item: LineItem) {
+    const discountedAmount = item.quantity * item.unitCost * (1 - item.discount / 100);
+    const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
+    if (taxInclusive && taxRate > 0) {
+      const subtotalLine = Math.round((discountedAmount / (1 + taxRate / 100)) * 100) / 100;
+      const taxLine = Math.round((discountedAmount - subtotalLine) * 100) / 100;
+      return { gross: discountedAmount, subtotal: subtotalLine, tax: taxLine, net: discountedAmount };
+    }
+    const taxLine = Math.round((discountedAmount * taxRate / 100) * 100) / 100;
+    return { gross: discountedAmount, subtotal: discountedAmount, tax: taxLine, net: discountedAmount + taxLine };
+  }
 
-  const calculateTax = () => {
-    return lineItems.reduce((sum, item) => {
-      const lineTotal = item.quantity * item.unitCost * (1 - item.discount / 100);
-      const rate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-      return sum + (lineTotal * rate) / 100;
-    }, 0);
-  };
-
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
-  };
-
-  const subtotal = calculateSubtotal();
-  const tax = calculateTax();
-  const total = calculateTotal();
+  const subtotal = lineItems.reduce((sum, item) => sum + getPurchaseLineAmounts(item).subtotal, 0);
+  const tax = lineItems.reduce((sum, item) => sum + getPurchaseLineAmounts(item).tax, 0);
+  const total = taxInclusive
+    ? lineItems.reduce((sum, item) => sum + getPurchaseLineAmounts(item).net, 0)
+    : subtotal + tax;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,7 +369,7 @@ export default function EditPurchaseInvoicePage({
   return (
     <PageAnimation>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href={`/purchase-invoices/${id}`}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
@@ -488,9 +484,9 @@ export default function EditPurchaseInvoicePage({
                     </TableHeader>
                     <TableBody>
                       {lineItems.map((item) => {
-                        const lineGross = item.quantity * item.unitCost * (1 - item.discount / 100);
-                        const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-                        const lineNet = lineGross * (1 + taxRate / 100);
+                        const lineAmts = getPurchaseLineAmounts(item);
+                        const lineGross = lineAmts.gross;
+                        const lineNet = lineAmts.net;
                         const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
                         return (
                           <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
@@ -671,9 +667,9 @@ export default function EditPurchaseInvoicePage({
                 {/* Mobile Card Layout */}
                 <div className="sm:hidden divide-y divide-slate-200">
                   {lineItems.map((item) => {
-                    const lineGross = item.quantity * item.unitCost * (1 - item.discount / 100);
-                    const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-                    const lineNet = lineGross * (1 + taxRate / 100);
+                    const lineAmtsMob = getPurchaseLineAmounts(item);
+                    const lineGross = lineAmtsMob.gross;
+                    const lineNet = lineAmtsMob.net;
                     const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
 
                     return (
@@ -846,7 +842,7 @@ export default function EditPurchaseInvoicePage({
                     Updating this purchase invoice will automatically adjust stock levels for the selected products.
                   </p>
                 </div>
-                <div className="space-y-2 max-w-xs ml-auto">
+                <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
                     <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
@@ -862,9 +858,10 @@ export default function EditPurchaseInvoicePage({
                     <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toLocaleString("en-IN")}</span>
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                   <Button
                     type="submit"
+                    className="w-full sm:w-auto"
                     disabled={isSubmitting || !formData.supplierId || !formData.dueDate}
                   >
                     {isSubmitting ? "Updating..." : "Update Purchase Invoice"}

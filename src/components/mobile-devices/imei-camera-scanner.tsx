@@ -32,6 +32,8 @@ async function getBarcodeDetector(
 }
 
 export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  const [cameraAvailable, setCameraAvailable] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -95,6 +97,11 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
    
   }, [onScan, stopCamera, closeScanner]);
 
+  useEffect(() => {
+    setIsMounted(true);
+    setCameraAvailable(isCameraAvailable());
+  }, []);
+
   const startCamera = useCallback(async () => {
     setError(null);
     setDetected(null);
@@ -148,7 +155,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
     };
   }, [stopCamera]);
 
-  if (!show || !isCameraAvailable()) return null;
+  if (!show || !isMounted || !cameraAvailable) return null;
 
   return (
     <>
@@ -156,7 +163,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
         type="button"
         variant="outline"
         size="icon"
-        className="shrink-0"
+        className="h-12 w-12 shrink-0"
         onClick={() => setOpen(true)}
         title="Scan IMEI with camera"
       >

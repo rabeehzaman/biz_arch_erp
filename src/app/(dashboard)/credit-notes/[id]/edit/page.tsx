@@ -339,7 +339,7 @@ export default function EditCreditNotePage({
     return (
         <PageAnimation>
             <div className="space-y-6">
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-3 sm:items-center sm:gap-4">
                     <Link href={`/credit-notes/${id}`}>
                         <Button variant="ghost" size="icon">
                             <ArrowLeft className="h-4 w-4" />
@@ -365,7 +365,7 @@ export default function EditCreditNotePage({
                                 onBranchChange={setBranchId}
                                 onWarehouseChange={setWarehouseId}
                             />
-                            <div className="grid gap-4 sm:grid-cols-2 mt-4">
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="customer">Customer *</Label>
                                     <CustomerCombobox
@@ -417,9 +417,9 @@ export default function EditCreditNotePage({
 
                     <Card>
                         <CardHeader>
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <CardTitle>Items</CardTitle>
-                                <Button type="button" onClick={() => addLineItem(true)} variant="outline" size="sm">
+                                <Button type="button" onClick={() => addLineItem(true)} variant="outline" size="sm" className="w-full sm:w-auto">
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add Item
                                 </Button>
@@ -431,7 +431,7 @@ export default function EditCreditNotePage({
                                     const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
                                     const lineAmountKey = getLineAmountKey(item.id, lineTotal);
                                     return (
-                                    <div key={item.id} className="flex gap-2 items-start">
+                                    <div key={item.id} className="flex items-start gap-2">
                                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
                                             <div className="sm:col-span-5">
                                                 <Label>Product *</Label>
@@ -568,6 +568,7 @@ export default function EditCreditNotePage({
                                                 size="icon"
                                                 onClick={() => removeItem(item.id)}
                                                 disabled={lineItems.length === 1}
+                                                className="shrink-0"
                                             >
                                                 <Trash2 className="h-4 w-4 text-red-500" />
                                             </Button>
@@ -622,13 +623,13 @@ export default function EditCreditNotePage({
                         </CardContent>
                     </Card>
 
-                    <div className="flex justify-end gap-4">
-                        <Link href={`/credit-notes/${id}`}>
-                            <Button type="button" variant="outline">
+                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <Link href={`/credit-notes/${id}`} className="w-full sm:w-auto">
+                            <Button type="button" variant="outline" className="w-full sm:w-auto">
                                 Cancel
                             </Button>
                         </Link>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                             {isSubmitting ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 
  
 type Tx = any;
@@ -100,6 +102,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { openingCash = 0, branchId, warehouseId } = body;
 
+    // Fetch org accounting mode before the transaction
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { posAccountingMode: true },
+    });
+    const isClearingMode = org?.posAccountingMode === "CLEARING_ACCOUNT";
+
     // Wrap in transaction to prevent race conditions (duplicate sessions/numbers)
     const posSession = await prisma.$transaction(async (tx) => {
       // Validate branch exists and belongs to org (if provided)
@@ -138,7 +147,7 @@ export async function POST(request: NextRequest) {
 
       const sessionNumber = await generateSessionNumber(organizationId, tx);
 
-      return tx.pOSSession.create({
+      const newSession = await tx.pOSSession.create({
         data: {
           organizationId,
           sessionNumber,
@@ -149,18 +158,63 @@ export async function POST(request: NextRequest) {
           warehouseId: warehouseId || null,
         },
         include: {
-          user: {
-            select: { id: true, name: true, email: true },
-          },
-          branch: {
-            select: { id: true, name: true, code: true },
-          },
-          warehouse: {
-            select: { id: true, name: true, code: true },
-          },
+          user: { select: { id: true, name: true, email: true } },
+          branch: { select: { id: true, name: true, code: true } },
+          warehouse: { select: { id: true, name: true, code: true } },
         },
       });
-    });
+
+      // ── Float journal (clearing mode only) ──────────────────────────────
+      // DR Clearing (Undeposited Funds) / CR Store Safe
+      // This puts the opening float "in transit" through the clearing account
+      // so closing the session zeroes it out cleanly.
+      if (isClearingMode && Number(openingCash) > 0) {
+        const clearingAccount = await getSystemAccount(tx, organizationId, "1150");
+        const registerConfig = await getPOSRegisterConfig(tx, organizationId, branchId || null, warehouseId || null);
+        const storeSafe = registerConfig?.defaultCashAccountId
+          ? await tx.cashBankAccount.findFirst({
+              where: { id: registerConfig.defaultCashAccountId, organizationId, isActive: true },
+              select: { id: true, accountId: true },
+            })
+          : null;
+
+        if (clearingAccount && storeSafe) {
+          const now = new Date();
+          await createAutoJournalEntry(tx, organizationId, {
+            date: now,
+            description: `POS Float Issued - ${sessionNumber}`,
+            sourceType: "POS_SESSION_OPEN",
+            sourceId: newSession.id,
+            branchId: branchId || null,
+            lines: [
+              { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: Number(openingCash), credit: 0 },
+              { accountId: storeSafe.accountId, description: "Store Safe", debit: 0, credit: Number(openingCash) },
+            ],
+          });
+
+          await tx.cashBankAccount.update({
+            where: { id: storeSafe.id },
+            data: { balance: { decrement: Number(openingCash) } },
+          });
+          const updatedSafe = await tx.cashBankAccount.findUnique({ where: { id: storeSafe.id } });
+          await tx.cashBankTransaction.create({
+            data: {
+              cashBankAccountId: storeSafe.id,
+              transactionType: "WITHDRAWAL",
+              amount: Number(openingCash),
+              runningBalance: Number(updatedSafe?.balance ?? 0),
+              description: `POS Float Issued - ${sessionNumber}`,
+              referenceType: "POS_SESSION",
+              referenceId: newSession.id,
+              transactionDate: now,
+              organizationId,
+            },
+          });
+        }
+      }
+
+      return newSession;
+    }, { timeout: 20000 });
 
     return NextResponse.json(posSession, { status: 201 });
   } catch (error) {

@@ -134,8 +134,8 @@ export default function CashBankDetailPage({
   return (
         <PageAnimation>
           <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 sm:items-center sm:gap-4">
               <Link href="/accounting/cash-bank">
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="h-4 w-4" />
@@ -149,12 +149,12 @@ export default function CashBankDetailPage({
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setDialogType("withdrawal")}>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button variant="outline" onClick={() => setDialogType("withdrawal")} className="w-full sm:w-auto">
                 <Minus className="mr-2 h-4 w-4" />
                 Withdrawal
               </Button>
-              <Button onClick={() => setDialogType("deposit")}>
+              <Button onClick={() => setDialogType("deposit")} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Deposit
               </Button>
@@ -169,7 +169,7 @@ export default function CashBankDetailPage({
               <p className="text-3xl font-bold text-green-600">
                 {fmt(Number(account.balance))}
               </p>
-              <div className="flex gap-2 mt-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Badge variant="outline">
                   {account.accountSubType === "BANK" ? "Bank" : "Cash"}
                 </Badge>
@@ -187,53 +187,84 @@ export default function CashBankDetailPage({
               {account.transactions.length === 0 ? (
                 <p className="text-center py-4 text-slate-500">No transactions yet</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-3 sm:hidden">
                     {account.transactions.map((tx) => (
-                      <TableRow key={tx.id}>
-                        <TableCell>
-                          {format(new Date(tx.transactionDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {txTypeLabels[tx.transactionType] || tx.transactionType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{tx.description}</TableCell>
-                        <TableCell
-                          className={`text-right font-mono ${
-                            Number(tx.amount) >= 0 ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {Number(tx.amount) >= 0 ? "+" : ""}
-                          {Number(tx.amount).toLocaleString("en-IN", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {Number(tx.runningBalance).toLocaleString("en-IN", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </TableCell>
-                      </TableRow>
+                      <div key={tx.id} className="rounded-lg border p-4 text-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-medium text-slate-900">
+                              {format(new Date(tx.transactionDate), "dd MMM yyyy")}
+                            </div>
+                            <div className="mt-2">
+                              <Badge variant="outline">
+                                {txTypeLabels[tx.transactionType] || tx.transactionType}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className={`font-semibold ${Number(tx.amount) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {Number(tx.amount) >= 0 ? "+" : ""}
+                            {fmt(Number(tx.amount))}
+                          </div>
+                        </div>
+                        <div className="mt-3 text-slate-600">{tx.description}</div>
+                        <div className="mt-3 flex items-center justify-between border-t pt-3">
+                          <span className="text-xs uppercase tracking-wide text-slate-400">Running Balance</span>
+                          <span className="font-medium text-slate-900">{fmt(Number(tx.runningBalance))}</span>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {account.transactions.map((tx) => (
+                          <TableRow key={tx.id}>
+                            <TableCell>
+                              {format(new Date(tx.transactionDate), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {txTypeLabels[tx.transactionType] || tx.transactionType}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{tx.description}</TableCell>
+                            <TableCell
+                              className={`text-right font-mono ${
+                                Number(tx.amount) >= 0 ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {Number(tx.amount) >= 0 ? "+" : ""}
+                              {Number(tx.amount).toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {Number(tx.runningBalance).toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
 
           <Dialog open={!!dialogType} onOpenChange={() => setDialogType(null)}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <form onSubmit={handleTransaction}>
                 <DialogHeader>
                   <DialogTitle>
@@ -273,8 +304,8 @@ export default function CashBankDetailPage({
                     />
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit">
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button type="submit" className="w-full sm:w-auto">
                     {dialogType === "deposit" ? "Record Deposit" : "Record Withdrawal"}
                   </Button>
                 </DialogFooter>

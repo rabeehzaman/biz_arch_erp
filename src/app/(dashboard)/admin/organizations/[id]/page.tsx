@@ -426,8 +426,8 @@ export default function OrganizationDetailsPage() {
     return (
         <PageAnimation>
             <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                    <div className="flex items-start gap-3 sm:items-center sm:gap-4">
                         <Button variant="ghost" size="icon" asChild className="shrink-0">
                             <Link href="/admin/organizations">
                                 <ArrowLeft className="h-5 w-5" />
@@ -435,7 +435,7 @@ export default function OrganizationDetailsPage() {
                             </Link>
                         </Button>
                         <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <h1 className="text-2xl font-bold tracking-tight">{organization.name}</h1>
                                 <Badge variant="secondary">{organization.slug}</Badge>
                                 {organization.gstEnabled && <Badge variant="default">GST Enabled</Badge>}
@@ -463,7 +463,7 @@ export default function OrganizationDetailsPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <p className="text-sm font-medium text-muted-foreground">Created</p>
                                     <p className="text-sm">{new Date(organization.createdAt).toLocaleDateString()}</p>
@@ -498,8 +498,8 @@ export default function OrganizationDetailsPage() {
                             <CardDescription>Manage accessible menu items for this organization</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="flex items-center gap-4">
+                            <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-start gap-3 sm:items-center sm:gap-4">
                                     <div className="p-2 bg-primary/10 rounded-full text-primary">
                                         <Settings className="h-5 w-5" />
                                     </div>
@@ -508,7 +508,7 @@ export default function OrganizationDetailsPage() {
                                         <p className="text-sm text-muted-foreground">Control which sidebar items are visible</p>
                                     </div>
                                 </div>
-                                <Button variant="outline" onClick={() => setSidebarConfigOpen(true)}>Configure</Button>
+                                <Button variant="outline" onClick={() => setSidebarConfigOpen(true)} className="w-full sm:w-auto">Configure</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -524,29 +524,29 @@ export default function OrganizationDetailsPage() {
                         </CardHeader>
                         <CardContent>
                             <Tabs defaultValue="general" className="w-full">
-                                <div className="border-b mb-6">
-                                    <TabsList className="w-full justify-start rounded-none border-b-0 bg-transparent p-0">
+                                <div className="mb-6 overflow-x-auto border-b">
+                                    <TabsList className="h-auto min-w-full justify-start gap-1 rounded-xl border-b-0 bg-transparent p-1 sm:min-w-0 sm:w-fit">
                                         <TabsTrigger
                                             value="general"
-                                            className="relative h-10 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
                                         >
                                             General
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="taxation"
-                                            className="relative h-10 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
                                         >
                                             Taxation
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="modules"
-                                            className="relative h-10 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
                                         >
                                             Modules
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="invoice"
-                                            className="relative h-10 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
                                         >
                                             Invoice & PDF
                                         </TabsTrigger>
@@ -556,7 +556,7 @@ export default function OrganizationDetailsPage() {
                                 {/* GENERAL TAB */}
                                 <TabsContent value="general" className="space-y-6 mt-0">
                                     {/* Language */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label className="flex items-center gap-2">
                                                 <Globe className="h-4 w-4" />
@@ -567,7 +567,7 @@ export default function OrganizationDetailsPage() {
                                             </p>
                                         </div>
                                         <Select value={language} onValueChange={setLanguage}>
-                                            <SelectTrigger className="w-44">
+                                            <SelectTrigger className="w-full sm:w-44">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -578,7 +578,7 @@ export default function OrganizationDetailsPage() {
                                     </div>
 
                                     {/* Currency */}
-                                    <div className="flex items-center justify-between border-t border-border pt-6">
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label className="flex items-center gap-2">
                                                 <Globe className="h-4 w-4" />
@@ -589,7 +589,7 @@ export default function OrganizationDetailsPage() {
                                             </p>
                                         </div>
                                         <Select value={currency} onValueChange={setCurrency}>
-                                            <SelectTrigger className="w-44">
+                                            <SelectTrigger className="w-full sm:w-44">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -603,7 +603,7 @@ export default function OrganizationDetailsPage() {
                                 {/* TAXATION TAB */}
                                 <TabsContent value="taxation" className="space-y-6 mt-0">
                                     {/* GST */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label htmlFor="gstEnabled">Enable GST</Label>
                                             <p className="text-xs text-muted-foreground">
@@ -643,7 +643,7 @@ export default function OrganizationDetailsPage() {
                                                 </div>
                                             )}
 
-                                            <div className="flex items-center justify-between pt-4 border-t border-border">
+                                            <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="space-y-0.5">
                                                     <Label htmlFor="eInvoicingEnabled">Enable E-Invoicing</Label>
                                                     <p className="text-xs text-muted-foreground">
@@ -660,7 +660,7 @@ export default function OrganizationDetailsPage() {
                                     )}
 
                                     {/* Saudi E-Invoice */}
-                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label htmlFor="saudiEInvoiceEnabled">Enable Saudi E-Invoice (ZATCA)</Label>
                                             <p className="text-xs text-muted-foreground">
@@ -682,7 +682,7 @@ export default function OrganizationDetailsPage() {
 
                                     {/* Tax-Inclusive Pricing */}
                                     {(gstEnabled || saudiEInvoiceEnabled) && (
-                                        <div className="flex items-center justify-between pt-6 border-t border-border">
+                                        <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="space-y-0.5">
                                                 <Label htmlFor="isTaxInclusivePrice">Tax-Inclusive Pricing</Label>
                                                 <p className="text-xs text-muted-foreground">
@@ -759,7 +759,7 @@ export default function OrganizationDetailsPage() {
                                 {/* MODULES TAB */}
                                 <TabsContent value="modules" className="space-y-6 mt-0">
                                     {/* Alternate Units */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label htmlFor="multiUnitEnabled">Enable Alternate Units</Label>
                                             <p className="text-xs text-muted-foreground">
@@ -774,7 +774,7 @@ export default function OrganizationDetailsPage() {
                                     </div>
 
                                     {/* Multi-Branch */}
-                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label htmlFor="multiBranchEnabled">Enable Multi-Branch</Label>
                                             <p className="text-xs text-muted-foreground">
@@ -789,7 +789,7 @@ export default function OrganizationDetailsPage() {
                                     </div>
 
                                     {/* Mobile Shop */}
-                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label htmlFor="isMobileShopModuleEnabled">Enable Mobile Shop</Label>
                                             <p className="text-xs text-muted-foreground">
@@ -804,7 +804,7 @@ export default function OrganizationDetailsPage() {
                                     </div>
 
                                     {/* Weigh Machine */}
-                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label htmlFor="isWeighMachineEnabled" className="flex items-center gap-2">
                                                 <Scale className="h-4 w-4" />
@@ -823,7 +823,7 @@ export default function OrganizationDetailsPage() {
 
                                     {isWeighMachineEnabled && (
                                         <div className="space-y-4 pl-4 border-l-2 border-muted mt-4">
-                                            <div className="grid grid-cols-2 gap-3 max-w-sm">
+                                            <div className="grid max-w-sm grid-cols-1 gap-3 sm:grid-cols-2">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="weighMachineBarcodePrefix">Barcode Prefix</Label>
                                                     <Input
@@ -885,7 +885,7 @@ export default function OrganizationDetailsPage() {
                                     )}
 
                                     {/* POS Accounting Mode */}
-                                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label className="flex items-center gap-2">
                                                 <Receipt className="h-4 w-4" />
@@ -898,7 +898,7 @@ export default function OrganizationDetailsPage() {
                                             </p>
                                         </div>
                                         <Select value={posAccountingMode} onValueChange={setPosAccountingMode}>
-                                            <SelectTrigger className="w-56">
+                                            <SelectTrigger className="w-full sm:w-56">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -912,7 +912,7 @@ export default function OrganizationDetailsPage() {
                                 {/* INVOICE & PDF TAB */}
                                 <TabsContent value="invoice" className="space-y-6 mt-0">
                                     {/* Invoice PDF Format */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label>Invoice PDF Format</Label>
                                             <p className="text-xs text-muted-foreground">
@@ -920,7 +920,7 @@ export default function OrganizationDetailsPage() {
                                             </p>
                                         </div>
                                         <Select value={invoicePdfFormat} onValueChange={setInvoicePdfFormat}>
-                                            <SelectTrigger className="w-52">
+                                            <SelectTrigger className="w-full sm:w-52">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -1183,7 +1183,7 @@ export default function OrganizationDetailsPage() {
                                 {deleteError}
                             </div>
                         )}
-                        <AlertDialogFooter>
+                        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
                             <Button variant="destructive" onClick={handleDeleteOrg} disabled={isDeleting}>
                                 {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
@@ -1209,7 +1209,7 @@ export default function OrganizationDetailsPage() {
                                 {resetError}
                             </div>
                         )}
-                        <AlertDialogFooter>
+                        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                             <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
                             <Button variant="destructive" onClick={() => handleReset("transactions_only")} disabled={isResetting}>
                                 {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
@@ -1235,7 +1235,7 @@ export default function OrganizationDetailsPage() {
                                 {resetError}
                             </div>
                         )}
-                        <AlertDialogFooter>
+                        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                             <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
                             <Button variant="destructive" onClick={() => handleReset("complete_reset")} disabled={isResetting}>
                                 {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
@@ -1259,7 +1259,7 @@ export default function OrganizationDetailsPage() {
                                 {recalcError}
                             </div>
                         )}
-                        <AlertDialogFooter>
+                        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                             <AlertDialogCancel disabled={isRecalculating}>Cancel</AlertDialogCancel>
                             <Button onClick={handleRecalculateFIFO} disabled={isRecalculating}>
                                 {isRecalculating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
@@ -1316,7 +1316,7 @@ export default function OrganizationDetailsPage() {
                                 />
                             </div>
                         </div>
-                        <AlertDialogFooter>
+                        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                             <AlertDialogCancel disabled={isResettingPw}>Cancel</AlertDialogCancel>
                             <Button onClick={handleResetPassword} disabled={isResettingPw || !newPassword || !confirmPassword}>
                                 {isResettingPw ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}

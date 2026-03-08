@@ -135,7 +135,7 @@ export default function NewExpensePage() {
   return (
     <PageAnimation>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link href="/accounting/expenses">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
@@ -153,7 +153,7 @@ export default function NewExpensePage() {
               <CardTitle>Expense Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="grid gap-2">
                   <Label>Date *</Label>
                   <Input
@@ -190,12 +190,13 @@ export default function NewExpensePage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <Label className="text-base font-semibold">Line Items</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto"
                     onClick={addLine}
                   >
                     <Plus className="mr-2 h-3 w-3" />
@@ -204,7 +205,7 @@ export default function NewExpensePage() {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="grid grid-cols-[1fr_1fr_120px_40px] gap-2 text-xs font-medium text-slate-500 px-1">
+                  <div className="hidden grid-cols-[1fr_1fr_120px_40px] gap-2 px-1 text-xs font-medium text-slate-500 sm:grid">
                     <span>Expense Account</span>
                     <span>Description</span>
                     <span className="text-right">Amount</span>
@@ -212,58 +213,116 @@ export default function NewExpensePage() {
                   </div>
 
                   {lines.map((line, index) => (
-                    <div
-                      key={index}
-                      className="grid grid-cols-[1fr_1fr_120px_40px] gap-2 items-center"
-                    >
-                      <Select
-                        value={line.accountId}
-                        onValueChange={(v) =>
-                          updateLine(index, "accountId", v)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.code} - {a.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div key={index}>
+                      <div className="hidden grid-cols-[1fr_1fr_120px_40px] items-center gap-2 sm:grid">
+                        <Select
+                          value={line.accountId}
+                          onValueChange={(v) =>
+                            updateLine(index, "accountId", v)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {accounts.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.code} - {a.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
 
-                      <Input
-                        value={line.description}
-                        onChange={(e) =>
-                          updateLine(index, "description", e.target.value)
-                        }
-                        placeholder="Description"
-                      />
+                        <Input
+                          value={line.description}
+                          onChange={(e) =>
+                            updateLine(index, "description", e.target.value)
+                          }
+                          placeholder="Description"
+                        />
 
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={line.amount}
-                        onChange={(e) =>
-                          updateLine(index, "amount", e.target.value)
-                        }
-                        placeholder="0.00"
-                        className="text-right"
-                      />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={line.amount}
+                          onChange={(e) =>
+                            updateLine(index, "amount", e.target.value)
+                          }
+                          placeholder="0.00"
+                          className="text-right"
+                        />
 
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeLine(index)}
-                        disabled={lines.length <= 1}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeLine(index)}
+                          disabled={lines.length <= 1}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-200 p-3 sm:hidden">
+                        <div className="flex items-start justify-between gap-3">
+                          <Label className="text-sm font-semibold">Item {index + 1}</Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeLine(index)}
+                            disabled={lines.length <= 1}
+                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="mt-3 space-y-3">
+                          <div className="grid gap-2">
+                            <Label className="text-xs text-slate-500">Expense Account</Label>
+                            <Select
+                              value={line.accountId}
+                              onValueChange={(v) => updateLine(index, "accountId", v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select account" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {accounts.map((a) => (
+                                  <SelectItem key={a.id} value={a.id}>
+                                    {a.code} - {a.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label className="text-xs text-slate-500">Description</Label>
+                            <Input
+                              value={line.description}
+                              onChange={(e) => updateLine(index, "description", e.target.value)}
+                              placeholder="Description"
+                            />
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label className="text-xs text-slate-500">Amount</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={line.amount}
+                              onChange={(e) => updateLine(index, "amount", e.target.value)}
+                              placeholder="0.00"
+                              className="text-right"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
 
@@ -289,13 +348,13 @@ export default function NewExpensePage() {
                 />
               </div>
 
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <Link href="/accounting/expenses">
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" className="w-full sm:w-auto">
                     Cancel
                   </Button>
                 </Link>
-                <Button type="submit" disabled={isSubmitting || subtotal <= 0}>
+                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || subtotal <= 0}>
                   {isSubmitting ? "Creating..." : "Create Expense"}
                 </Button>
               </div>

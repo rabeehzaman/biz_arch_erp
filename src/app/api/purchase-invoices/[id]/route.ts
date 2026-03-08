@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
+import { getOrgId, isSaudiEInvoiceEnabled, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
+import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
@@ -100,6 +101,12 @@ export async function PUT(
     const oldDate = existingInvoice.invoiceDate;
     const newDate = invoiceDate ? toMidnightUTC(invoiceDate) : oldDate;
 
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { isTaxInclusivePrice: true },
+    });
+    const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
+
     await prisma.$transaction(async (tx) => {
       // If items are being updated
       if (items) {
@@ -129,11 +136,12 @@ export async function PUT(
           where: { purchaseInvoiceId: id },
         });
 
-        // Calculate new totals with item-level discounts
+        // Calculate new totals with item-level discounts (extract tax-exclusive base when tax-inclusive pricing)
         const lineAmounts = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; vatRate?: number }) => {
           const grossAmount = item.quantity * item.unitCost * (1 - (item.discount || 0) / 100);
           const taxRate = saudiEnabled ? (item.vatRate !== undefined ? Number(item.vatRate) : SAUDI_VAT_RATE) : (item.gstRate || 0);
-          return { grossAmount, taxableAmount: grossAmount, taxRate };
+          const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(grossAmount, taxRate) : grossAmount;
+          return { grossAmount, taxableAmount, taxRate };
         });
 
         const subtotal = lineAmounts.reduce((sum: number, la: { taxableAmount: number }) => sum + la.taxableAmount, 0);

@@ -55,6 +55,7 @@ export function POSHeader({
             className="h-8 w-8 shrink-0 text-slate-300 hover:text-white hover:bg-slate-800"
             onClick={onBackToSessions}
             title={t("pos.backToSessions")}
+            aria-label={t("pos.backToSessions")}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -89,8 +90,10 @@ export function POSHeader({
             className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
             onClick={onReprintReceipt}
             title={t("pos.reprintReceipt")}
+            aria-label={t("pos.reprintReceipt")}
           >
             <Printer className="h-4 w-4" />
+            <span className="sr-only">{t("pos.reprintReceipt")}</span>
           </Button>
         )}
 
@@ -99,9 +102,12 @@ export function POSHeader({
           size="sm"
           className="text-slate-300 hover:text-white hover:bg-slate-800 relative px-2"
           onClick={onHeldOrdersClick}
+          aria-label={t("pos.heldOrders")}
+          title={t("pos.heldOrders")}
         >
           <PauseCircle className="h-4 w-4" />
           <span className="hidden sm:inline ml-1">{t("pos.heldOrders").split(" ")[0]}</span>
+          <span className="sr-only">{t("pos.heldOrders")}</span>
           {heldOrdersCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold">
               {heldOrdersCount}
@@ -118,9 +124,12 @@ export function POSHeader({
           size="sm"
           className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
           onClick={onCloseSession}
+          aria-label={t("pos.endSession")}
+          title={t("pos.endSession")}
         >
           <LogOut className="h-4 w-4 sm:hidden" />
           <span className="hidden sm:inline">{t("pos.endSession")}</span>
+          <span className="sr-only sm:hidden">{t("pos.endSession")}</span>
         </Button>
 
         <Button
