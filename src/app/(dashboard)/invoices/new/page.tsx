@@ -503,7 +503,7 @@ export default function NewInvoicePage() {
                       customers={customers}
                       value={formData.customerId}
                       onValueChange={(value: string) =>
-                        setFormData({ ...formData, customerId: value })
+                        setFormData(prev => ({ ...prev, customerId: value }))
                       }
                       onCustomerCreated={fetchCustomers}
                       required
@@ -518,7 +518,7 @@ export default function NewInvoicePage() {
                       type="date"
                       value={formData.date}
                       onChange={(e) =>
-                        setFormData({ ...formData, date: e.target.value })
+                        setFormData(prev => ({ ...prev, date: e.target.value }))
                       }
                       required
                     />
@@ -530,7 +530,7 @@ export default function NewInvoicePage() {
                       type="date"
                       value={formData.dueDate}
                       onChange={(e) =>
-                        setFormData({ ...formData, dueDate: e.target.value })
+                        setFormData(prev => ({ ...prev, dueDate: e.target.value }))
                       }
                       required
                     />
@@ -540,7 +540,7 @@ export default function NewInvoicePage() {
                     <Select
                       value={formData.paymentType}
                       onValueChange={(value) => {
-                        setFormData({ ...formData, paymentType: value });
+                        setFormData(prev => ({ ...prev, paymentType: value }));
                         setTimeout(() => focusNextFocusable(paymentTypeRef), 10);
                       }}
                     >
@@ -1061,7 +1061,7 @@ export default function NewInvoicePage() {
                     id="notes"
                     value={formData.notes}
                     onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
+                      setFormData(prev => ({ ...prev, notes: e.target.value }))
                     }
                     placeholder="Notes to the customer..."
                   />
@@ -1072,7 +1072,7 @@ export default function NewInvoicePage() {
                     id="terms"
                     value={formData.terms}
                     onChange={(e) =>
-                      setFormData({ ...formData, terms: e.target.value })
+                      setFormData(prev => ({ ...prev, terms: e.target.value }))
                     }
                     placeholder="Payment terms..."
                   />

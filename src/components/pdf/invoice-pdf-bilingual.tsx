@@ -46,7 +46,7 @@ const Ar = ({
     children: React.ReactNode;
     style?: React.ComponentProps<typeof Text>["style"];
 }) => (
-    <Text style={[{ fontFamily: ARIAL_FONT }, style]}>{children}</Text>
+    <Text style={[{ fontFamily: ARIAL_FONT }, ...(style ? (Array.isArray(style) ? style : [style]) : [])] as any}>{children}</Text>
 );
 
 const styles = StyleSheet.create({

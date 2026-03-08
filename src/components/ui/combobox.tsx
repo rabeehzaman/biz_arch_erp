@@ -49,7 +49,6 @@ export function Combobox<T>({
   const listRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const justClosedRef = React.useRef(false);
-  const isPointerDownRef = React.useRef(false);
 
   // Ensure items is always an array
   const safeItems = Array.isArray(items) ? items : [];
@@ -62,25 +61,9 @@ export function Combobox<T>({
 
   // Filter items based on search query
   const filteredItems = React.useMemo(() => {
-    let result = safeItems;
-    if (searchQuery) {
-      result = safeItems.filter((item) => filterFn(item, searchQuery.toLowerCase()));
-    }
-
-    // Cap to 100 items for performance to prevent rendering delays with large datasets
-    const capped = result.slice(0, 100);
-
-    // Ensure the selected item is always visible in the list if it matches the search
-    if (value && !capped.some(item => getId(item) === value)) {
-      const selectedMatch = result.find(item => getId(item) === value);
-      if (selectedMatch) {
-        capped.unshift(selectedMatch);
-        if (capped.length > 100) capped.pop();
-      }
-    }
-
-    return capped;
-  }, [safeItems, searchQuery, filterFn, value, getId]);
+    if (!searchQuery) return safeItems;
+    return safeItems.filter((item) => filterFn(item, searchQuery.toLowerCase()));
+  }, [safeItems, searchQuery, filterFn]);
 
   // Reset highlighted index when filtered items change
   React.useEffect(() => {
@@ -173,16 +156,9 @@ export function Combobox<T>({
           aria-required={required}
           disabled={disabled}
           autoFocus={autoFocus}
-          onPointerDown={() => {
-            isPointerDownRef.current = true;
-          }}
           // Using onFocus allows standard tab cycling. 
           // However, autoFocus will trigger this on mount, which is generally desired for the first field.
           onFocus={() => {
-            if (isPointerDownRef.current) {
-              isPointerDownRef.current = false;
-              return;
-            }
             if (justClosedRef.current) {
               justClosedRef.current = false;
               return;

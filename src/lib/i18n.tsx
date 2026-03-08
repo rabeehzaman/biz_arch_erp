@@ -170,7 +170,6 @@ const extraLiteralTranslations: LiteralTranslationMap = {
     "أدخل البيانات لإضافة صنف جديد.",
   "Name": "الاسم",
   "Description *": "الوصف *",
-  "Description": "الوصف",
   "Price": "السعر",
   "Price *": "السعر *",
   "Unit": "الوحدة",
