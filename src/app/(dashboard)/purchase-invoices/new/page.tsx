@@ -65,6 +65,10 @@ interface LineItem {
   imeiNumbers: ImeiEntry[];
 }
 
+function getLineAmountKey(itemId: string, ...amounts: number[]) {
+  return `${itemId}:${amounts.map((amount) => amount.toFixed(2)).join(":")}`;
+}
+
 export default function NewPurchaseInvoicePage() {
   const router = useRouter();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -328,6 +332,10 @@ export default function NewPurchaseInvoicePage() {
     return calculateSubtotal() + calculateTax();
   };
 
+  const subtotal = calculateSubtotal();
+  const tax = calculateTax();
+  const total = calculateTotal();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -502,7 +510,7 @@ export default function NewPurchaseInvoicePage() {
                         <TableHead className="font-semibold">Unit Cost *</TableHead>
                         <TableHead className="font-semibold">Disc %</TableHead>
                         {saudiEnabled && <TableHead className="font-semibold">VAT %</TableHead>}
-                        {session?.user?.gstEnabled && <TableHead className="font-semibold">GST %</TableHead>}
+                        {session?.user?.gstEnabled && !saudiEnabled && <TableHead className="font-semibold">GST %</TableHead>}
                         {taxEnabled ? (
                           <>
                             <TableHead className="text-right font-semibold">Gross Amount</TableHead>
@@ -518,6 +526,10 @@ export default function NewPurchaseInvoicePage() {
                       {lineItems.map((item, index) => {
                         const product = products.find((p) => p.id === item.productId);
                         const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
+                        const lineGross = item.quantity * item.unitCost * (1 - item.discount / 100);
+                        const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
+                        const lineNet = lineGross * (1 + taxRate / 100);
+                        const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
                         return (
                           <Fragment key={item.id}><TableRow className="group hover:bg-slate-50 border-b">
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
@@ -659,7 +671,7 @@ export default function NewPurchaseInvoicePage() {
                                 />
                               </TableCell>
                             )}
-                            {session?.user?.gstEnabled && (
+                            {session?.user?.gstEnabled && !saudiEnabled && (
                               <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                 <Input
                                   type="number"
@@ -679,18 +691,24 @@ export default function NewPurchaseInvoicePage() {
                             {taxEnabled ? (
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                  {symbol}{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                  <span key={`${lineAmountKey}:gross`}>
+                                    {symbol}{lineGross.toLocaleString("en-IN")}
+                                  </span>
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                                  {symbol}{((item.quantity * item.unitCost * (1 - item.discount / 100)) * (1 + (saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0)) / 100)).toLocaleString("en-IN")}
+                                  <span key={`${lineAmountKey}:net`}>
+                                    {symbol}{lineNet.toLocaleString("en-IN")}
+                                  </span>
                                 </TableCell>
                               </>
                             ) : (
                               <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                {symbol}{(item.quantity * item.unitCost * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                <span key={`${lineAmountKey}:single`}>
+                                  {symbol}{lineGross.toLocaleString("en-IN")}
+                                </span>
                                 {item.discount > 0 && (
                                   <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                 )}
@@ -812,6 +830,7 @@ export default function NewPurchaseInvoicePage() {
                     const lineGross = item.quantity * item.unitCost * (1 - item.discount / 100);
                     const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
                     const lineNet = lineGross * (1 + taxRate / 100);
+                    const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
 
                     return (
                       <div key={item.id} className="p-3 space-y-3">
@@ -909,7 +928,7 @@ export default function NewPurchaseInvoicePage() {
                               />
                             </div>
                           )}
-                          {session?.user?.gstEnabled && (
+                          {session?.user?.gstEnabled && !saudiEnabled && (
                             <div>
                               <Label className="text-xs text-slate-500">GST %</Label>
                               <Input
@@ -949,7 +968,7 @@ export default function NewPurchaseInvoicePage() {
                         </div>
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
-                          <span className="text-sm font-semibold">
+                          <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">
                             {taxEnabled
                               ? `${symbol}${lineNet.toLocaleString("en-IN")}`
                               : `${symbol}${lineGross.toLocaleString("en-IN")}`}
@@ -1083,17 +1102,17 @@ export default function NewPurchaseInvoicePage() {
                 <div className="space-y-2 max-w-xs ml-auto">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>{symbol}{calculateSubtotal().toLocaleString("en-IN")}</span>
+                    <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
                   </div>
-                  {calculateTax() > 0 && (
+                  {tax > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>{saudiEnabled ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
-                      <span>{symbol}{calculateTax().toLocaleString("en-IN")}</span>
+                      <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span>{symbol}{calculateTotal().toLocaleString("en-IN")}</span>
+                    <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toLocaleString("en-IN")}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex justify-end">

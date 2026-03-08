@@ -49,6 +49,10 @@ interface LineItem {
   hsnCode: string;
 }
 
+function getLineAmountKey(itemId: string, ...amounts: number[]) {
+  return `${itemId}:${amounts.map((amount) => amount.toFixed(2)).join(":")}`;
+}
+
 export default function EditQuotationPage({
   params,
 }: {
@@ -298,6 +302,10 @@ export default function EditQuotationPage({
     return calculateSubtotal() + calculateTax();
   };
 
+  const subtotal = calculateSubtotal();
+  const tax = calculateTax();
+  const total = calculateTotal();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -467,6 +475,9 @@ export default function EditQuotationPage({
                     </TableHeader>
                     <TableBody>
                       {lineItems.map((item) => {
+                        const lineGross = item.quantity * item.unitPrice * (1 - item.discount / 100);
+                        const lineNet = lineGross * (1 + (item.gstRate || 0) / 100);
+                        const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
                         return (
                           <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
@@ -584,18 +595,24 @@ export default function EditQuotationPage({
                             {session?.user?.gstEnabled ? (
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                  {symbol}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                  <span key={`${lineAmountKey}:gross`}>
+                                    {symbol}{lineGross.toLocaleString("en-IN")}
+                                  </span>
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
-                                  {symbol}{((item.quantity * item.unitPrice * (1 - item.discount / 100)) * (1 + (item.gstRate || 0) / 100)).toLocaleString("en-IN")}
+                                  <span key={`${lineAmountKey}:net`}>
+                                    {symbol}{lineNet.toLocaleString("en-IN")}
+                                  </span>
                                 </TableCell>
                               </>
                             ) : (
                               <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
-                                {symbol}{(item.quantity * item.unitPrice * (1 - item.discount / 100)).toLocaleString("en-IN")}
+                                <span key={`${lineAmountKey}:single`}>
+                                  {symbol}{lineGross.toLocaleString("en-IN")}
+                                </span>
                                 {item.discount > 0 && (
                                   <div className="text-xs text-green-600">(-{item.discount}%)</div>
                                 )}
@@ -625,6 +642,7 @@ export default function EditQuotationPage({
                   {lineItems.map((item) => {
                     const lineGross = item.quantity * item.unitPrice * (1 - item.discount / 100);
                     const lineNet = lineGross * (1 + (item.gstRate || 0) / 100);
+                    const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
 
                     return (
                       <div key={item.id} className="p-3 space-y-3">
@@ -736,7 +754,7 @@ export default function EditQuotationPage({
                         </div>
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
-                          <span className="text-sm font-semibold">
+                          <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">
                             {session?.user?.gstEnabled
                               ? `${symbol}${lineNet.toLocaleString("en-IN")}`
                               : `${symbol}${lineGross.toLocaleString("en-IN")}`}
@@ -790,17 +808,17 @@ export default function EditQuotationPage({
                   )}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>{symbol}{calculateSubtotal().toLocaleString("en-IN")}</span>
+                    <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
                   </div>
-                  {calculateTax() > 0 && (
+                  {tax > 0 && (
                     <div className="flex justify-between text-sm text-slate-500">
                       <span>GST</span>
-                      <span>{symbol}{calculateTax().toLocaleString("en-IN")}</span>
+                      <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span>{symbol}{calculateTotal().toLocaleString("en-IN")}</span>
+                    <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toLocaleString("en-IN")}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex justify-end">

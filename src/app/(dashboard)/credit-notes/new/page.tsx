@@ -46,6 +46,10 @@ interface LineItem {
   discount: number;
 }
 
+function getLineAmountKey(itemId: string, ...amounts: number[]) {
+  return `${itemId}:${amounts.map((amount) => amount.toFixed(2)).join(":")}`;
+}
+
 export default function NewCreditNotePage() {
   const router = useRouter();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
@@ -211,6 +215,8 @@ export default function NewCreditNotePage() {
     return calculateSubtotal();
   };
 
+  const total = calculateTotal();
+
   const focusQuantity = (itemId: string) => {
     const quantityInput = quantityRefs.current.get(itemId);
     if (quantityInput) {
@@ -367,7 +373,10 @@ export default function NewCreditNotePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {lineItems.map((item, index) => (
+                {lineItems.map((item, index) => {
+                  const lineTotal = item.quantity * item.unitPrice * (1 - item.discount / 100);
+                  const lineAmountKey = getLineAmountKey(item.id, lineTotal);
+                  return (
                   <div key={item.id} className="flex gap-2 items-start">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
                       <div className="sm:col-span-5">
@@ -491,13 +500,9 @@ export default function NewCreditNotePage() {
                       </div>
 
                       <div className="flex items-center justify-end">
-                        <span className="text-sm font-medium">
+                        <span key={`${lineAmountKey}:line`} className="text-sm font-medium">
                           {symbol}
-                          {(
-                            item.quantity *
-                            item.unitPrice *
-                            (1 - item.discount / 100)
-                          ).toFixed(2)}
+                          {lineTotal.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -514,7 +519,7 @@ export default function NewCreditNotePage() {
                       </Button>
                     )}
                   </div>
-                ))}
+                )})}
               </div>
             </CardContent>
           </Card>
@@ -545,7 +550,7 @@ export default function NewCreditNotePage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>
-                  <span>{symbol}{calculateTotal().toFixed(2)}</span>
+                  <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>

@@ -45,6 +45,10 @@ interface LineItem {
   discount: number;
 }
 
+function getLineAmountKey(itemId: string, ...amounts: number[]) {
+  return `${itemId}:${amounts.map((amount) => amount.toFixed(2)).join(":")}`;
+}
+
 export default function NewDebitNotePage() {
   const router = useRouter();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
@@ -232,6 +236,10 @@ export default function NewDebitNotePage() {
     return calculateSubtotal() + calculateTax();
   };
 
+  const subtotal = calculateSubtotal();
+  const tax = calculateTax();
+  const total = calculateTotal();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -382,7 +390,10 @@ export default function NewDebitNotePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {items.map((item, index) => (
+                {items.map((item, index) => {
+                  const lineTotal = item.quantity * item.unitCost * (1 - item.discount / 100);
+                  const lineAmountKey = getLineAmountKey(item.id, lineTotal);
+                  return (
                   <div key={item.id} className="flex gap-2 items-start">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
                       <div className="sm:col-span-5">
@@ -508,13 +519,9 @@ export default function NewDebitNotePage() {
                       </div>
 
                       <div className="flex items-center justify-end">
-                        <span className="text-sm font-medium">
+                        <span key={`${lineAmountKey}:line`} className="text-sm font-medium">
                           {symbol}
-                          {(
-                            item.quantity *
-                            item.unitCost *
-                            (1 - item.discount / 100)
-                          ).toFixed(2)}
+                          {lineTotal.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -531,7 +538,7 @@ export default function NewDebitNotePage() {
                       </Button>
                     )}
                   </div>
-                ))}
+                )})}
               </div>
             </CardContent>
           </Card>
@@ -562,17 +569,17 @@ export default function NewDebitNotePage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span>{symbol}{calculateSubtotal().toFixed(2)}</span>
+                  <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toFixed(2)}</span>
                 </div>
-                {calculateTax() > 0 && (
+                {tax > 0 && (
                   <div className="flex justify-between text-sm text-slate-500">
                     <span>GST:</span>
-                    <span>{symbol}{calculateTax().toFixed(2)}</span>
+                    <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span>{symbol}{calculateTotal().toFixed(2)}</span>
+                  <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>
