@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts } from "@/lib/accounting/seed-coa";
+import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts } from "@/lib/accounting/seed-coa";
 
 export async function POST(
     request: NextRequest,
@@ -132,6 +132,7 @@ export async function POST(
                 }
                 if (org.saudiEInvoiceEnabled) {
                     await seedSaudiVATAccounts(prisma as never, id);
+                    await seedSaudiStandardAccounts(prisma as never, id);
                 }
             } catch (err) {
                 console.error("Failed to re-seed COA during reset:", err);

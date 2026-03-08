@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts } from "@/lib/accounting/seed-coa";
+import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts } from "@/lib/accounting/seed-coa";
 
 export async function POST() {
   try {
@@ -31,6 +31,7 @@ export async function POST() {
     }
     if (org?.saudiEInvoiceEnabled) {
       await seedSaudiVATAccounts(prisma as never, organizationId);
+      await seedSaudiStandardAccounts(prisma as never, organizationId);
     }
 
     const newCount = await prisma.account.count({

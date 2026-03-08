@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
+import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
 import { validateTRN } from "@/lib/saudi-vat/calculator";
 
 export async function GET(
@@ -258,6 +258,7 @@ export async function PUT(
         // Seed Saudi VAT accounts if enabling Saudi for first time
         if (seedVATAccounts) {
           await seedSaudiVATAccounts(tx as never, id);
+          await seedSaudiStandardAccounts(tx as never, id);
         }
 
         // Seed POS clearing accounts if enabling clearing account mode for first time

@@ -190,6 +190,105 @@ export async function seedSaudiVATAccounts(
   }
 }
 
+// ─── Saudi Standard Chart of Accounts (SOCPA/IFRS) ─────────────────────────
+// Full SOCPA-aligned COA for Saudi ZATCA orgs: fixed assets, GOSI, EOS,
+// zakat, government fees, payroll allowances, etc.
+
+const SAUDI_STANDARD_ACCOUNTS: AccountDef[] = [
+  // Assets (parent: 1000)
+  { code: "1310", name: "Notes Receivable (أوراق القبض)", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "1320", name: "Allowance for Doubtful Accounts (مخصص الديون المشكوك في تحصيلها)", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "1390", name: "Prepaid Expenses (مصروفات مدفوعة مقدماً)", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "1410", name: "Goods in Transit (بضاعة في الطريق)", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: false },
+  { code: "1450", name: "Other Current Assets (أصول متداولة أخرى)", accountType: "ASSET", accountSubType: "OTHER_ASSET", parentCode: "1000", isSystem: false },
+
+  // Fixed Assets (parent: 1500)
+  { code: "1510", name: "Furniture and Fixtures (الأثاث والتجهيزات)", accountType: "ASSET", accountSubType: "FIXED_ASSET", parentCode: "1500", isSystem: false },
+  { code: "1520", name: "Vehicles (المركبات)", accountType: "ASSET", accountSubType: "FIXED_ASSET", parentCode: "1500", isSystem: false },
+  { code: "1530", name: "Equipment (المعدات)", accountType: "ASSET", accountSubType: "FIXED_ASSET", parentCode: "1500", isSystem: false },
+  { code: "1540", name: "Leasehold Improvements (تحسينات المباني المستأجرة)", accountType: "ASSET", accountSubType: "FIXED_ASSET", parentCode: "1500", isSystem: false },
+  { code: "1590", name: "Accumulated Depreciation (مجمع الاستهلاك)", accountType: "ASSET", accountSubType: "FIXED_ASSET", parentCode: "1500", isSystem: false },
+
+  // Liabilities (parent: 2000)
+  { code: "2110", name: "Notes Payable (أوراق الدفع)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2250", name: "Accrued Expenses (مصروفات مستحقة)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2260", name: "GOSI Payable (التأمينات الاجتماعية المستحقة)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2270", name: "Withholding Tax Payable (ضريبة الاستقطاع المستحقة)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2280", name: "Zakat Payable (الزكاة المستحقة)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2290", name: "Employee Payables (مستحقات الموظفين)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+  { code: "2300", name: "Advance Revenue (إيرادات مقدمة)", accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY", parentCode: "2000", isSystem: false },
+
+  // Long-Term Liabilities (parent: 2500)
+  { code: "2510", name: "End of Service Benefits (مكافأة نهاية الخدمة)", accountType: "LIABILITY", accountSubType: "LONG_TERM_LIABILITY", parentCode: "2500", isSystem: false },
+  { code: "2520", name: "Long-Term Loans (قروض طويلة الأجل)", accountType: "LIABILITY", accountSubType: "LONG_TERM_LIABILITY", parentCode: "2500", isSystem: false },
+
+  // Equity (parent: 3000)
+  { code: "3150", name: "Statutory Reserve (الاحتياطي النظامي)", accountType: "EQUITY", accountSubType: "OTHER_EQUITY", parentCode: "3000", isSystem: false },
+  { code: "3300", name: "Owner's Drawings (المسحوبات الشخصية)", accountType: "EQUITY", accountSubType: "OTHER_EQUITY", parentCode: "3000", isSystem: false },
+
+  // Revenue (parent: 4000)
+  { code: "4300", name: "Sales Returns and Allowances (مردودات ومسموحات المبيعات)", accountType: "REVENUE", accountSubType: "OTHER_REVENUE", parentCode: "4000", isSystem: false },
+
+  // Operating Expenses (parent: 5200)
+  { code: "5270", name: "Maintenance and Repairs (الصيانة والإصلاح)", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5200", isSystem: false },
+  { code: "5280", name: "Communication Expenses (مصروفات الاتصالات)", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5200", isSystem: false },
+  { code: "5290", name: "Professional Fees (أتعاب مهنية)", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5200", isSystem: false },
+
+  // Payroll Expenses (parent: 5300)
+  { code: "5310", name: "GOSI Contribution (اشتراك التأمينات الاجتماعية)", accountType: "EXPENSE", accountSubType: "PAYROLL_EXPENSE", parentCode: "5300", isSystem: false },
+  { code: "5320", name: "End of Service Benefit Expense (مصروف مكافأة نهاية الخدمة)", accountType: "EXPENSE", accountSubType: "PAYROLL_EXPENSE", parentCode: "5300", isSystem: false },
+  { code: "5330", name: "Employee Benefits (مزايا الموظفين)", accountType: "EXPENSE", accountSubType: "PAYROLL_EXPENSE", parentCode: "5300", isSystem: false },
+  { code: "5340", name: "Medical Insurance (التأمين الطبي)", accountType: "EXPENSE", accountSubType: "PAYROLL_EXPENSE", parentCode: "5300", isSystem: false },
+  { code: "5350", name: "Housing Allowance (بدل السكن)", accountType: "EXPENSE", accountSubType: "PAYROLL_EXPENSE", parentCode: "5300", isSystem: false },
+  { code: "5360", name: "Transportation Allowance (بدل المواصلات)", accountType: "EXPENSE", accountSubType: "PAYROLL_EXPENSE", parentCode: "5300", isSystem: false },
+
+  // Government Fees & Zakat (parent: 5000, with 5700 as sub-parent)
+  { code: "5700", name: "Government Fees (الرسوم الحكومية)", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5000", isSystem: false },
+  { code: "5710", name: "Iqama Fees (رسوم الإقامة)", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5700", isSystem: false },
+  { code: "5720", name: "Municipality Fees (رسوم البلدية)", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5700", isSystem: false },
+  { code: "5730", name: "Chamber of Commerce Fees (رسوم الغرفة التجارية)", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", parentCode: "5700", isSystem: false },
+  { code: "5800", name: "Zakat Expense (مصروف الزكاة)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: false },
+  { code: "5810", name: "Income Tax Expense (مصروف ضريبة الدخل)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: false },
+];
+
+export async function seedSaudiStandardAccounts(
+  tx: PrismaTransactionClient,
+  organizationId: string
+) {
+  // Sort so parents (e.g. 5700) come before children (5710/5720/5730)
+  const sorted = [...SAUDI_STANDARD_ACCOUNTS].sort((a, b) => a.code.localeCompare(b.code));
+  const accountMap = new Map<string, string>(); // code -> id (for new parents like 5700)
+
+  for (const acct of sorted) {
+    // Find parent: check local map first (for new parents like 5700), then DB
+    let parentId: string | null = null;
+    if (acct.parentCode) {
+      if (accountMap.has(acct.parentCode)) {
+        parentId = accountMap.get(acct.parentCode)!;
+      } else {
+        const parent = await tx.account.findFirst({ where: { organizationId, code: acct.parentCode } });
+        parentId = parent?.id ?? null;
+      }
+    }
+
+    const created = await tx.account.upsert({
+      where: { organizationId_code: { organizationId, code: acct.code } },
+      update: {},
+      create: {
+        code: acct.code,
+        name: acct.name,
+        accountType: acct.accountType,
+        accountSubType: acct.accountSubType,
+        parentId,
+        isSystem: acct.isSystem,
+        organizationId,
+      },
+    });
+
+    accountMap.set(acct.code, created.id);
+  }
+}
+
 // ─── POS Clearing Accounts ─────────────────────────────────────────────────
 // Call this when posAccountingMode is set to CLEARING_ACCOUNT for an org
 
