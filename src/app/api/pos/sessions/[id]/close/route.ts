@@ -6,6 +6,7 @@ import {
   createAutoJournalEntry,
   getDefaultCashBankAccount,
   getSystemAccount,
+  ensureCashShortOverAccount,
 } from "@/lib/accounting/journal";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 
@@ -154,7 +155,7 @@ export async function PUT(
       // ── Settlement logic ──────────────────────────────────────────────
       if (isClearingMode) {
         const clearingAccount = await getSystemAccount(tx, organizationId, "1150");
-        const cashShortOverAccount = await getSystemAccount(tx, organizationId, "6150");
+        const cashShortOverAccount = await ensureCashShortOverAccount(tx, organizationId);
 
         // Detect whether this session had its float journaled at open
         // (i.e., the new Store Safe flow). This determines whether we deposit
@@ -348,7 +349,7 @@ export async function PUT(
       } else {
         // ── DIRECT mode: only handle cash difference ────────────────────
         if (Math.abs(cashDifference) >= 0.01) {
-          const cashShortOverAccount = await getSystemAccount(tx, organizationId, "6150");
+          const cashShortOverAccount = await ensureCashShortOverAccount(tx, organizationId);
           const cashBankInfo = await getDefaultCashBankAccount(
             tx,
             organizationId,

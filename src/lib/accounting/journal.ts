@@ -20,6 +20,75 @@ export async function getSystemAccount(
   }
 }
 
+export async function ensureCashShortOverAccount(
+  tx: Tx,
+  organizationId: string
+): Promise<{ id: string; code: string; name: string } | null> {
+  const existing = await getSystemAccount(tx, organizationId, "6150");
+  if (existing) return existing;
+
+  const parentAccount = await tx.account.findFirst({
+    where: { organizationId, code: "5000" },
+    select: { id: true },
+  });
+
+  if (!parentAccount) return null;
+
+  const account = await tx.account.upsert({
+    where: { organizationId_code: { organizationId, code: "6150" } },
+    update: {},
+    create: {
+      organizationId,
+      code: "6150",
+      name: "Cash Short and Over (العجز والزيادة في النقدية)",
+      accountType: "EXPENSE",
+      accountSubType: "OTHER_EXPENSE",
+      parentId: parentAccount.id,
+      isSystem: true,
+    },
+    select: { id: true, code: true, name: true },
+  });
+
+  return account;
+}
+
+export async function ensureRoundOffAccount(
+  tx: Tx,
+  organizationId: string
+): Promise<{ id: string; code: string; name: string } | null> {
+  const existing = await getSystemAccount(tx, organizationId, "6160");
+  if (existing) return existing;
+
+  const parentAccount = await tx.account.findFirst({
+    where: { organizationId, code: "5000" },
+    select: { id: true },
+  });
+
+  if (!parentAccount) return null;
+
+  const account = await tx.account.upsert({
+    where: {
+      organizationId_code: {
+        organizationId,
+        code: "6160",
+      },
+    },
+    update: {},
+    create: {
+      organizationId,
+      code: "6160",
+      name: "Round Off Adjustment (تسوية التقريب)",
+      accountType: "EXPENSE",
+      accountSubType: "OTHER_EXPENSE",
+      parentId: parentAccount.id,
+      isSystem: true,
+    },
+    select: { id: true, code: true, name: true },
+  });
+
+  return account;
+}
+
 export function validateJournalBalance(
   lines: Array<{ debit: number; credit: number }>
 ): boolean {
@@ -170,6 +239,7 @@ export async function syncInvoiceRevenueJournal(
       totalSgst: true,
       totalIgst: true,
       totalVat: true,
+      roundOffAmount: true,
       branchId: true,
     },
   });
@@ -182,6 +252,7 @@ export async function syncInvoiceRevenueJournal(
   const totalSgst = Number(invoice.totalSgst);
   const totalIgst = Number(invoice.totalIgst);
   const totalVat = Number(invoice.totalVat || 0);
+  const roundOffAmount = Number(invoice.roundOffAmount || 0);
   const totalTax = totalVat > 0 ? totalVat : (totalCgst + totalSgst + totalIgst);
 
   // Delete existing revenue journal entries for this invoice
@@ -233,6 +304,18 @@ export async function syncInvoiceRevenueJournal(
       }
     }
 
+    if (Math.abs(roundOffAmount) > 0.0001) {
+      const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
+      if (roundOffAccount) {
+        revenueLines.push({
+          accountId: roundOffAccount.id,
+          description: "Round Off Adjustment",
+          debit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
+          credit: roundOffAmount > 0 ? roundOffAmount : 0,
+        });
+      }
+    }
+
     await createAutoJournalEntry(tx, organizationId, {
       date: invoice.issueDate,
       description: `Sales Invoice ${invoice.invoiceNumber}`,
@@ -264,6 +347,7 @@ export async function syncPurchaseJournal(
       totalSgst: true,
       totalIgst: true,
       totalVat: true,
+      roundOffAmount: true,
       branchId: true,
     },
   });
@@ -276,6 +360,7 @@ export async function syncPurchaseJournal(
   const totalSgst = Number(invoice.totalSgst);
   const totalIgst = Number(invoice.totalIgst);
   const totalVat = Number(invoice.totalVat || 0);
+  const roundOffAmount = Number(invoice.roundOffAmount || 0);
 
   // Delete existing purchase journal entries
   await tx.journalEntry.deleteMany({
@@ -320,6 +405,18 @@ export async function syncPurchaseJournal(
         if (igstInput) {
           purchaseLines.push({ accountId: igstInput.id, description: "IGST Input", debit: totalIgst, credit: 0 });
         }
+      }
+    }
+
+    if (Math.abs(roundOffAmount) > 0.0001) {
+      const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
+      if (roundOffAccount) {
+        purchaseLines.push({
+          accountId: roundOffAccount.id,
+          description: "Round Off Adjustment",
+          debit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
+          credit: roundOffAmount > 0 ? roundOffAmount : 0,
+        });
       }
     }
 

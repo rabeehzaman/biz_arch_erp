@@ -49,6 +49,7 @@ import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
 import { smartPrintReceipt } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
+import { normalizeRoundOffMode } from "@/lib/round-off";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const USE_CASH_ACCOUNT_VALUE = "__use_cash_account__";
@@ -157,18 +158,18 @@ function POSTerminalContent() {
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showHeldSheet, setShowHeldSheet] = useState(false);
   const [closingCash, setClosingCash] = useState("");
-  const [debouncedClosingCash, setDebouncedClosingCash] = useState("");
   const [isClosingSession, setIsClosingSession] = useState(false);
   const [settleCashAccountId, setSettleCashAccountId] = useState("");
   const [settleBankAccountId, setSettleBankAccountId] = useState("");
   const autoFilledRef = useRef(false);
 
   // Fetch org settings for POS accounting mode
-  const { data: orgSettings } = useSWR<{ posAccountingMode: string }>(
+  const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string }>(
     posSession ? "/api/pos/org-settings" : null,
     fetcher
   );
   const isClearingMode = orgSettings?.posAccountingMode === "CLEARING_ACCOUNT";
+  const roundOffMode = normalizeRoundOffMode(orgSettings?.roundOffMode);
 
   // Fetch Cash/Bank accounts for settlement (only in clearing mode)
   interface CashBankAccountOption {
@@ -198,18 +199,12 @@ function POSTerminalContent() {
     fetcher
   );
 
-  // Debounce closing cash input so diff doesn't flicker mid-typing
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedClosingCash(closingCash), 400);
-    return () => clearTimeout(timer);
-  }, [closingCash]);
-
   const expectedCash = posSession
     ? Number(posSession.openingCash) +
     (sessionSummary?.paymentBreakdown?.find((p) => p.method === "CASH")?.total || 0)
     : 0;
 
-  const cashDifference = parseFloat(debouncedClosingCash || "0") - expectedCash;
+  const cashDifference = parseFloat(closingCash || "0") - expectedCash;
 
   // Receipt printing
   const { data: receiptSetting } = useSWR<{ value: string }>(
@@ -457,12 +452,13 @@ function POSTerminalContent() {
             lineTotal,
           };
         }),
-        subtotal: Number(result.invoice?.subtotal) || calculateCartTotal(cart, taxInclusive).subtotal,
+        subtotal: Number(result.invoice?.subtotal) || calculateCartTotal(cart, taxInclusive, roundOffMode).subtotal,
         taxRate: receiptMeta?.taxLabel === "VAT" ? 15 : 0,
         taxAmount: receiptMeta?.taxLabel === "VAT"
           ? Number(result.invoice?.totalVat || 0)
-          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || calculateCartTotal(cart, taxInclusive).taxAmount,
-        total: Number(result.invoice?.total) || calculateCartTotal(cart, taxInclusive).total,
+          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || calculateCartTotal(cart, taxInclusive, roundOffMode).taxAmount,
+        roundOffAmount: Number(result.invoice?.roundOffAmount || 0) || calculateCartTotal(cart, taxInclusive, roundOffMode).roundOffAmount,
+        total: Number(result.invoice?.total) || calculateCartTotal(cart, taxInclusive, roundOffMode).total,
         payments: payments.map((p) => ({
           method: p.method,
           amount: parseFloat(p.amount),
@@ -494,10 +490,6 @@ function POSTerminalContent() {
         toast.success(`Sale complete! Invoice: ${result.invoice?.invoiceNumber}`);
       }
 
-      if (result.warnings?.length > 0) {
-        result.warnings.forEach((w: string) => toast.warning(w));
-      }
-
       // Auto-print receipt (fire-and-forget)
       if (receiptPrintingEnabled) {
         try {
@@ -518,7 +510,7 @@ function POSTerminalContent() {
   const holdOrder = async () => {
     if (cart.length === 0) return;
     try {
-      const { subtotal } = calculateCartTotal(cart, taxInclusive);
+      const { subtotal } = calculateCartTotal(cart, taxInclusive, roundOffMode);
       const res = await fetch("/api/pos/held-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -598,7 +590,7 @@ function POSTerminalContent() {
 
   // ── Active Session → Full POS Interface ────────────────────────────
 
-  const { total } = calculateCartTotal(cart, taxInclusive);
+  const { total } = calculateCartTotal(cart, taxInclusive, roundOffMode);
 
   return (
     <PageAnimation className="flex h-screen flex-col">
@@ -705,7 +697,7 @@ function POSTerminalContent() {
               {/* Cart Summary & Actions */}
               {cart.length > 0 && (
                 <div className="border-t p-3 space-y-3">
-                  <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} />
+                  <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
