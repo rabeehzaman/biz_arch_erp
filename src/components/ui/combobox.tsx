@@ -49,6 +49,7 @@ export function Combobox<T>({
   const listRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const justClosedRef = React.useRef(false);
+  const isPointerDownRef = React.useRef(false);
   const listboxId = React.useId();
 
   // Ensure items is always an array
@@ -160,9 +161,19 @@ export function Combobox<T>({
           aria-required={required}
           disabled={disabled}
           autoFocus={autoFocus}
-          // Using onFocus allows standard tab cycling. 
+          onPointerDown={() => {
+            isPointerDownRef.current = true;
+          }}
+          // Using onFocus allows standard tab cycling.
           // However, autoFocus will trigger this on mount, which is generally desired for the first field.
+          // Skip auto-open when focus comes from a pointer click — let Radix's
+          // click-toggle handle it instead, avoiding the focus→click race condition
+          // where onFocus opens the popover and the subsequent click toggles it closed.
           onFocus={() => {
+            if (isPointerDownRef.current) {
+              isPointerDownRef.current = false;
+              return;
+            }
             if (justClosedRef.current) {
               justClosedRef.current = false;
               return;
