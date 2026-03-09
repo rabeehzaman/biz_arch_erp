@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { provisionStoreSafe } from "@/lib/pos/store-safe";
+import { buildPOSLocationKey } from "@/lib/pos/register-config";
 
 export async function GET(request: NextRequest) {
     try {
@@ -84,13 +84,34 @@ export async function POST(request: NextRequest) {
                 },
             });
 
-            await provisionStoreSafe(tx, organizationId, {
-                branchId,
-                branchCode: branch.code,
-                branchName: branch.name,
-                warehouseId: newWarehouse.id,
-                warehouseCode: normalizedCode,
-                warehouseName: name,
+            // Reuse the branch-level Store Safe (created when the branch was made).
+            // Just wire up a POSRegisterConfig for this specific warehouse location.
+            const branchConfig = await tx.pOSRegisterConfig.findUnique({
+                where: {
+                    organizationId_locationKey: {
+                        organizationId,
+                        locationKey: buildPOSLocationKey(branchId, null),
+                    },
+                },
+                select: { defaultCashAccountId: true, defaultBankAccountId: true },
+            });
+
+            await tx.pOSRegisterConfig.upsert({
+                where: {
+                    organizationId_locationKey: {
+                        organizationId,
+                        locationKey: buildPOSLocationKey(branchId, newWarehouse.id),
+                    },
+                },
+                create: {
+                    organizationId,
+                    locationKey: buildPOSLocationKey(branchId, newWarehouse.id),
+                    branchId,
+                    warehouseId: newWarehouse.id,
+                    defaultCashAccountId: branchConfig?.defaultCashAccountId ?? null,
+                    defaultBankAccountId: branchConfig?.defaultBankAccountId ?? null,
+                },
+                update: {},
             });
 
             return newWarehouse;
