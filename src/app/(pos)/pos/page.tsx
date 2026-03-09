@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings2,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -217,6 +218,11 @@ export default function POSDashboardPage() {
     setConfigBankAccountId(
       loc.registerConfig?.defaultBankAccountId || SYSTEM_DEFAULT_VALUE
     );
+  };
+
+  const closeSessionHistoryDialog = () => {
+    setSessionsLocationKey(null);
+    setSelectedSessionId(null);
   };
 
   const saveRegisterConfig = async () => {
@@ -604,159 +610,178 @@ export default function POSDashboardPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedSessionId ? t("pos.sessionDetail") : t("pos.sessionHistory")}
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              {t("pos.sessionHistory")}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent showCloseButton={false} className="sm:max-w-3xl">
+          <div className="flex items-start justify-between gap-4 border-b border-white/60 pb-4">
+            <DialogHeader className="p-0 text-left">
+              <DialogTitle className="text-2xl font-semibold text-slate-900">
+                {selectedSessionId ? t("pos.sessionDetail") : t("pos.sessionHistory")}
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm text-slate-500 not-sr-only">
+                {selectedSessionId ? t("pos.backToList") : t("pos.sessionHistory")}
+              </DialogDescription>
+            </DialogHeader>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={closeSessionHistoryDialog}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">{t("common.close")}</span>
+            </Button>
+          </div>
 
-          {selectedSessionId ? (
-            /* Detail View */
-            isLoadingSummary ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : sessionSummary ? (
-              <div className="space-y-4">
-                <button
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setSelectedSessionId(null)}
-                >
-                  {lang === "ar" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-                  {t("pos.backToList")}
-                </button>
+          <div className="mt-2">
+            {selectedSessionId ? (
+              isLoadingSummary ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : sessionSummary ? (
+                <div className="space-y-4">
+                  <button
+                    className="inline-flex items-center gap-1 rounded-full border border-white/65 bg-white/75 px-3 py-1.5 text-sm text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] transition-colors hover:text-foreground"
+                    onClick={() => setSelectedSessionId(null)}
+                  >
+                    {lang === "ar" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                    {t("pos.backToList")}
+                  </button>
 
-                {/* Session info */}
-                <div className="rounded-lg border p-3 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("pos.session")}</span>
-                    <span className="font-medium">{sessionSummary.session.sessionNumber}</span>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-[1.5rem] border border-white/70 bg-white/82 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)]">
+                      <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        {t("pos.session")}
+                      </h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">{t("pos.session")}</span>
+                          <span className="font-medium text-slate-900">{sessionSummary.session.sessionNumber}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">{t("pos.cashier")}</span>
+                          <span className="text-right">{sessionSummary.session.user?.name || sessionSummary.session.user?.email}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">{t("pos.opened")}</span>
+                          <span>{format(new Date(sessionSummary.session.openedAt), "dd/MM/yyyy HH:mm")}</span>
+                        </div>
+                        {sessionSummary.session.closedAt && (
+                          <div className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">{t("pos.closedDate")}</span>
+                            <span>{format(new Date(sessionSummary.session.closedAt), "dd/MM/yyyy HH:mm")}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[1.5rem] border border-white/70 bg-white/82 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)]">
+                      <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        {t("pos.paymentBreakdown")}
+                      </h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">{t("pos.openingCash")}</span>
+                          <span>{fmt(Number(sessionSummary.session.openingCash))}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">{t("pos.expectedCash")}</span>
+                          <span>{fmt(Number(sessionSummary.session.expectedCash ?? 0))}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">{t("pos.closingCash")}</span>
+                          <span>{fmt(Number(sessionSummary.session.closingCash ?? 0))}</span>
+                        </div>
+                        <div className="flex justify-between gap-4 border-t border-slate-200/80 pt-3">
+                          <span className="text-muted-foreground">{t("pos.cashDifference")}</span>
+                          {(() => {
+                            const diff = Number(sessionSummary.session.closingCash ?? 0) - Number(sessionSummary.session.expectedCash ?? 0);
+                            return (
+                              <span className={cn(
+                                "font-medium",
+                                diff > 0 && "text-green-600",
+                                diff < 0 && "text-red-600"
+                              )}>
+                                {diff > 0 ? "+" : ""}{fmt(diff)}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">{t("pos.invoiceCount")}</span>
+                          <span>{sessionSummary.invoices?.length ?? 0}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("pos.cashier")}</span>
-                    <span>{sessionSummary.session.user?.name || sessionSummary.session.user?.email}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("pos.opened")}</span>
-                    <span>{format(new Date(sessionSummary.session.openedAt), "dd/MM/yyyy HH:mm")}</span>
-                  </div>
-                  {sessionSummary.session.closedAt && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t("pos.closedDate")}</span>
-                      <span>{format(new Date(sessionSummary.session.closedAt), "dd/MM/yyyy HH:mm")}</span>
+
+                  {sessionSummary.paymentBreakdown?.length > 0 && (
+                    <div>
+                      <h4 className="mb-2 text-sm font-medium">{t("pos.paymentBreakdown")}</h4>
+                      <div className="overflow-hidden rounded-[1.25rem] border border-white/70 bg-white/82 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)] divide-y">
+                        {sessionSummary.paymentBreakdown.map((pb: any) => (
+                          <div key={pb.method} className="flex justify-between px-4 py-3 text-sm">
+                            <span>{pb.method} ({pb.count})</span>
+                            <span className="font-medium">{fmt(pb.total)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {sessionSummary.topProducts?.length > 0 && (
+                    <div>
+                      <h4 className="mb-2 text-sm font-medium">{t("pos.topProducts")}</h4>
+                      <div className="overflow-hidden rounded-[1.25rem] border border-white/70 bg-white/82 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)] divide-y text-sm">
+                        <div className="flex bg-muted/45 px-4 py-2 text-xs font-medium text-muted-foreground">
+                          <span className="flex-1">{t("common.product")}</span>
+                          <span className="w-20 text-center">{t("pos.qtySold")}</span>
+                          <span className="w-24 text-end">{t("pos.revenue")}</span>
+                        </div>
+                        {sessionSummary.topProducts.map((p: any, i: number) => (
+                          <div key={i} className="flex items-center px-4 py-3">
+                            <span className="flex-1 truncate">{p.name}</span>
+                            <span className="w-20 text-center">{p.quantity}</span>
+                            <span className="w-24 text-end font-medium">{fmt(p.revenue)}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-
-                {/* Financial summary */}
-                <div className="rounded-lg border p-3 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("pos.openingCash")}</span>
-                    <span>{fmt(Number(sessionSummary.session.openingCash))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("pos.expectedCash")}</span>
-                    <span>{fmt(Number(sessionSummary.session.expectedCash ?? 0))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("pos.closingCash")}</span>
-                    <span>{fmt(Number(sessionSummary.session.closingCash ?? 0))}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="text-muted-foreground">{t("pos.cashDifference")}</span>
-                    {(() => {
-                      const diff = Number(sessionSummary.session.closingCash ?? 0) - Number(sessionSummary.session.expectedCash ?? 0);
-                      return (
-                        <span className={cn(
-                          "font-medium",
-                          diff > 0 && "text-green-600",
-                          diff < 0 && "text-red-600"
-                        )}>
-                          {diff > 0 ? "+" : ""}{fmt(diff)}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t("pos.invoiceCount")}</span>
-                    <span>{sessionSummary.invoices?.length ?? 0}</span>
-                  </div>
-                </div>
-
-                {/* Payment Breakdown */}
-                {sessionSummary.paymentBreakdown?.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">{t("pos.paymentBreakdown")}</h4>
-                    <div className="rounded-lg border divide-y text-sm">
-                      { }
-                      {sessionSummary.paymentBreakdown.map((pb: any) => (
-                        <div key={pb.method} className="flex justify-between px-3 py-2">
-                          <span>{pb.method} ({pb.count})</span>
-                          <span className="font-medium">{fmt(pb.total)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Top Products */}
-                {sessionSummary.topProducts?.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">{t("pos.topProducts")}</h4>
-                    <div className="rounded-lg border divide-y text-sm">
-                      <div className="flex px-3 py-1.5 text-xs text-muted-foreground font-medium bg-muted/50">
-                        <span className="flex-1">{t("common.product")}</span>
-                        <span className="w-20 text-center">{t("pos.qtySold")}</span>
-                        <span className="w-24 text-end">{t("pos.revenue")}</span>
-                      </div>
-                      { }
-                      {sessionSummary.topProducts.map((p: any, i: number) => (
-                        <div key={i} className="flex px-3 py-2 items-center">
-                          <span className="flex-1 truncate">{p.name}</span>
-                          <span className="w-20 text-center">{p.quantity}</span>
-                          <span className="w-24 text-end font-medium">{fmt(p.revenue)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : null
-          ) : (
-            /* List View */
-            isLoadingSessions ? (
+              ) : null
+            ) : isLoadingSessions ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : !closedSessions?.length ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <History className="h-10 w-10 mb-3 opacity-30" />
+                <History className="mb-3 h-10 w-10 opacity-30" />
                 <p className="font-medium">{t("pos.noClosedSessions")}</p>
-                <p className="text-xs mt-1">{t("pos.noClosedSessionsDesc")}</p>
+                <p className="mt-1 text-xs">{t("pos.noClosedSessionsDesc")}</p>
               </div>
             ) : (
-              <div className="divide-y rounded-lg border max-h-[60vh] overflow-y-auto">
-                { }
+              <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
                 {closedSessions.map((s: any) => {
                   const diff = Number(s.closingCash ?? 0) - Number(s.expectedCash ?? 0);
                   return (
                     <button
                       key={s.id}
-                      className="flex w-full items-center gap-3 px-3 py-3 text-start hover:bg-muted/50 transition-colors"
+                      className="group flex w-full items-center gap-4 rounded-[1.5rem] border border-white/70 bg-white/84 px-4 py-4 text-start shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)] transition-all hover:-translate-y-0.5 hover:border-sky-200/80 hover:bg-white"
                       onClick={() => setSelectedSessionId(s.id)}
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{s.sessionNumber}</span>
-                          <span className="text-xs text-muted-foreground">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.25rem] bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(16,185,129,0.12))] text-sky-700">
+                        <History className="h-6 w-6" />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xl font-semibold text-slate-900">{s.sessionNumber}</span>
+                          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">
                             {s._count?.invoices ?? 0} {t("pos.invoiceCount")}
-                          </span>
+                          </Badge>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                           <span>{s.user?.name || s.user?.email}</span>
                           <span>·</span>
                           <span>
@@ -766,11 +791,12 @@ export default function POSDashboardPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="text-end shrink-0">
-                        <div className="text-sm font-medium">{fmt(Number(s.totalSales))}</div>
+
+                      <div className="shrink-0 text-end">
+                        <div className="text-2xl font-semibold text-slate-900">{fmt(Number(s.totalSales))}</div>
                         {s.closingCash != null && (
                           <div className={cn(
-                            "text-xs",
+                            "mt-1 text-sm",
                             diff === 0 && "text-muted-foreground",
                             diff > 0 && "text-green-600",
                             diff < 0 && "text-red-600"
@@ -779,13 +805,16 @@ export default function POSDashboardPage() {
                           </div>
                         )}
                       </div>
-                      {lang === "ar" ? <ChevronLeft className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-muted-foreground transition-colors group-hover:border-sky-200 group-hover:text-sky-700">
+                        {lang === "ar" ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                      </div>
                     </button>
                   );
                 })}
               </div>
-            )
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
