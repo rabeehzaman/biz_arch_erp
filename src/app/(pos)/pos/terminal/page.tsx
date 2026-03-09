@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useEffect, useRef } from "react";
+import { Suspense, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
@@ -50,6 +50,7 @@ import type { ReceiptData } from "@/components/pos/receipt";
 import { smartPrintReceipt } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
 import { normalizeRoundOffMode } from "@/lib/round-off";
+import { parseWeightBarcode, type WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const USE_CASH_ACCOUNT_VALUE = "__use_cash_account__";
@@ -76,6 +77,7 @@ interface POSProduct {
   stockQuantity: number;
   categoryId: string | null;
   category: { id: string; name: string; slug: string; color: string | null } | null;
+  weighMachineCode: string | null;
 }
 
 interface Category {
@@ -107,6 +109,15 @@ function POSTerminalContent() {
   const { t } = useLanguage();
   const { data: authSession } = useSession();
   const taxInclusive = !!(authSession?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
+
+  // Weigh machine config from session
+  const weighMachineEnabled = !!(authSession?.user as { isWeighMachineEnabled?: boolean })?.isWeighMachineEnabled;
+  const weighMachineConfig = useMemo<WeighMachineConfig>(() => ({
+    prefix: (authSession?.user as { weighMachineBarcodePrefix?: string | null })?.weighMachineBarcodePrefix ?? "77",
+    productCodeLen: (authSession?.user as { weighMachineProductCodeLen?: number | null })?.weighMachineProductCodeLen ?? 5,
+    weightDigits: (authSession?.user as { weighMachineWeightDigits?: number | null })?.weighMachineWeightDigits ?? 5,
+    decimalPlaces: (authSession?.user as { weighMachineDecimalPlaces?: number | null })?.weighMachineDecimalPlaces ?? 3,
+  }), [authSession]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId");
@@ -236,14 +247,14 @@ function POSTerminalContent() {
 
   // ── Cart Handlers ──────────────────────────────────────────────────
 
-   
-  const addToCart = useCallback((product: any) => {
+
+  const addToCart = useCallback((product: any, quantity?: number) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
         return prev.map((item) =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: quantity != null ? item.quantity + quantity : item.quantity + 1 }
             : item
         );
       }
@@ -253,7 +264,7 @@ function POSTerminalContent() {
           productId: product.id,
           name: product.name,
           price: Number(product.price),
-          quantity: 1,
+          quantity: quantity ?? 1,
           discount: 0,
           stockQuantity: product.stockQuantity,
           gstRate: Number(product.gstRate) || 0,
@@ -290,6 +301,23 @@ function POSTerminalContent() {
         if (barcodeBuffer.length > 0) {
           e.preventDefault();
 
+          // Try weigh machine barcode first
+          if (weighMachineEnabled) {
+            const parsed = parseWeightBarcode(barcodeBuffer, weighMachineConfig);
+            if (parsed) {
+              const weightProduct = products.find(p => p.weighMachineCode === parsed.productCode);
+              if (weightProduct) {
+                addToCart(weightProduct, parsed.weightKg);
+                toast.success(`${weightProduct.name} — ${parsed.weightKg} kg`);
+              } else {
+                toast.error(`Product not found for weigh code: ${parsed.productCode}`);
+              }
+              barcodeBuffer = "";
+              return;
+            }
+          }
+
+          // Fall back to regular barcode/SKU lookup
           const product = products.find(p => p.barcode === barcodeBuffer || p.sku === barcodeBuffer);
 
           if (product) {
@@ -308,7 +336,7 @@ function POSTerminalContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [posSession, products, showCloseDialog, showHeldSheet, view, addToCart]);
+  }, [posSession, products, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig]);
 
   const updateCartQuantity = useCallback((productId: string, qty: number) => {
     if (qty <= 0) {
@@ -766,14 +794,14 @@ function POSTerminalContent() {
           }
         }}
       >
-          <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("pos.closePosSession")}</DialogTitle>
             <DialogDescription>
               {t("pos.enterClosingCashAmount")}
             </DialogDescription>
           </DialogHeader>
-            <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4">
             <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
               <div>
                 <span className="text-muted-foreground">{t("pos.session")}</span>

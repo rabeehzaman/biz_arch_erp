@@ -45,6 +45,7 @@ export async function GET() {
       category: p.category,
       unit: p.unit,
       isService: p.isService,
+      weighMachineCode: p.weighMachineCode || null,
       stockQuantity: p.stockLots.reduce(
         (sum, lot) => sum + Number(lot.remainingQuantity),
         0
