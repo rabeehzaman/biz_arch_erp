@@ -7,6 +7,8 @@ import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
 
+const EDITABLE_QUOTATION_STATUSES = ["SENT", "CANCELLED", "EXPIRED"] as const;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -99,6 +101,16 @@ export async function PUT(
     if (body.status === "CONVERTED") {
       return NextResponse.json(
         { error: "Use the convert endpoint to convert quotation to invoice" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      body.status !== undefined &&
+      !EDITABLE_QUOTATION_STATUSES.includes(body.status as (typeof EDITABLE_QUOTATION_STATUSES)[number])
+    ) {
+      return NextResponse.json(
+        { error: `Invalid quotation status. Allowed values: ${EDITABLE_QUOTATION_STATUSES.join(", ")}` },
         { status: 400 }
       );
     }
