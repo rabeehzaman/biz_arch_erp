@@ -4,6 +4,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 const PrinterService = require('./printer-service');
+const { printRawToWindowsPrinter } = require('./winspool-raw');
 
 // ─── Configuration ──────────────────────────────────────────────
 const ERP_URL = process.env.ERP_URL || 'https://erp.bizarch.in';
@@ -230,10 +231,15 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
           deviceName: printerName || undefined,
           printBackground: true,
           margins: { marginType: 'none' },
-          pageSize: { width: 80000, height: 297000 },
+          pageSize: { width: 80000, height: 150000 },
         },
         (success, failureReason) => {
           printWin.destroy();
+          // Send ESC/POS partial cut command after HTML print succeeds
+          if (success && printerName) {
+            const cutBuffer = Buffer.from([0x1D, 0x56, 0x42, 0x00]); // GS V B 0 = partial cut
+            printRawToWindowsPrinter(printerName, cutBuffer, 'BizArch Cut').catch(() => {});
+          }
           resolve({
             success,
             error: success ? undefined : failureReason,
