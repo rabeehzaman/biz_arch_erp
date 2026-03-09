@@ -20,7 +20,7 @@ export function generateReceiptHtml(data: ReceiptData, options?: ReceiptHtmlOpti
 <meta charset="utf-8">
 <style>
   @page {
-    size: 80mm 150mm;
+    size: 80mm;
     margin: 0;
   }
   * {
@@ -36,8 +36,7 @@ export function generateReceiptHtml(data: ReceiptData, options?: ReceiptHtmlOpti
     text-rendering: geometricPrecision;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-    overflow: hidden;
-    page-break-after: always;
+    overflow: visible;
   }
   img {
     max-width: 100%;

@@ -224,6 +224,12 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
 
     await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
 
+    // Measure actual content height, convert px → microns, add 5mm padding
+    const contentHeightPx = await printWin.webContents.executeJavaScript(
+      'document.body.scrollHeight'
+    );
+    const heightMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 5000;
+
     return await new Promise((resolve) => {
       printWin.webContents.print(
         {
@@ -231,7 +237,7 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
           deviceName: printerName || undefined,
           printBackground: true,
           margins: { marginType: 'none' },
-          pageSize: { width: 80000, height: 150000 },
+          pageSize: { width: 80000, height: heightMicrons },
         },
         (success, failureReason) => {
           printWin.destroy();

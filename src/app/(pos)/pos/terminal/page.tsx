@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { Suspense, useState, useCallback, useEffect, useRef, useMemo, useReducer } from "react";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
@@ -104,6 +104,67 @@ interface Customer {
   phone: string | null;
 }
 
+type CartAction =
+  | { type: "ADD"; product: any; quantity?: number }
+  | { type: "SET_QTY"; productId: string; qty: number }
+  | { type: "SET_DISCOUNT"; productId: string; discount: number }
+  | { type: "REMOVE"; productId: string }
+  | { type: "CLEAR" }
+  | { type: "RESTORE"; items: CartItemData[] };
+
+function cartReducer(state: CartItemData[], action: CartAction): CartItemData[] {
+  switch (action.type) {
+    case "ADD": {
+      const { product, quantity } = action;
+      const idx = state.findIndex((item) => item.productId === product.id);
+      if (idx >= 0) {
+        const newState = [...state];
+        newState[idx] = {
+          ...newState[idx],
+          quantity: quantity != null ? quantity : newState[idx].quantity + 1,
+        };
+        return newState;
+      }
+      return [
+        ...state,
+        {
+          productId: product.id,
+          name: product.name,
+          price: Number(product.price),
+          quantity: quantity ?? 1,
+          discount: 0,
+          stockQuantity: product.stockQuantity,
+          gstRate: Number(product.gstRate) || 0,
+          hsnCode: product.hsnCode || undefined,
+        },
+      ];
+    }
+    case "SET_QTY": {
+      if (action.qty <= 0) {
+        return state.filter((item) => item.productId !== action.productId);
+      }
+      return state.map((item) =>
+        item.productId === action.productId ? { ...item, quantity: action.qty } : item
+      );
+    }
+    case "SET_DISCOUNT": {
+      return state.map((item) =>
+        item.productId === action.productId
+          ? { ...item, discount: Math.max(0, Math.min(100, action.discount)) }
+          : item
+      );
+    }
+    case "REMOVE":
+      return state.filter((item) => item.productId !== action.productId);
+    case "CLEAR":
+      return [];
+    case "RESTORE":
+      return action.items;
+    default:
+      return state;
+  }
+}
+
 function POSTerminalContent() {
   const { fmt } = useCurrency();
   const { t } = useLanguage();
@@ -156,7 +217,7 @@ function POSTerminalContent() {
   );
 
   // Cart state
-  const [cart, setCart] = useState<CartItemData[]>([]);
+  const [cart, dispatchCart] = useReducer(cartReducer, []);
   const [heldOrderId, setHeldOrderId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -249,31 +310,7 @@ function POSTerminalContent() {
 
 
   const addToCart = useCallback((product: any, quantity?: number) => {
-    setCart((prev) => {
-      const idx = prev.findIndex((item) => item.productId === product.id);
-      if (idx >= 0) {
-        const updated = prev.slice();
-        const existing = updated[idx];
-        updated[idx] = {
-          ...existing,
-          quantity: quantity != null ? quantity : existing.quantity + 1,
-        };
-        return updated;
-      }
-      return [
-        ...prev,
-        {
-          productId: product.id,
-          name: product.name,
-          price: Number(product.price),
-          quantity: quantity ?? 1,
-          discount: 0,
-          stockQuantity: product.stockQuantity,
-          gstRate: Number(product.gstRate) || 0,
-          hsnCode: product.hsnCode || undefined,
-        },
-      ];
-    });
+    dispatchCart({ type: "ADD", product, quantity });
   }, []);
 
   // ── Barcode Scanner Listener ───────────────────────────────────────
@@ -340,33 +377,19 @@ function POSTerminalContent() {
   }, [posSession, products, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig]);
 
   const updateCartQuantity = useCallback((productId: string, qty: number) => {
-    if (qty <= 0) {
-      setCart((prev) => prev.filter((item) => item.productId !== productId));
-      return;
-    }
-    setCart((prev) =>
-      prev.map((item) =>
-        item.productId === productId ? { ...item, quantity: qty } : item
-      )
-    );
+    dispatchCart({ type: "SET_QTY", productId, qty });
   }, []);
 
   const updateCartDiscount = useCallback((productId: string, discount: number) => {
-    setCart((prev) =>
-      prev.map((item) =>
-        item.productId === productId
-          ? { ...item, discount: Math.max(0, Math.min(100, discount)) }
-          : item
-      )
-    );
+    dispatchCart({ type: "SET_DISCOUNT", productId, discount });
   }, []);
 
   const removeFromCart = useCallback((productId: string) => {
-    setCart((prev) => prev.filter((item) => item.productId !== productId));
+    dispatchCart({ type: "REMOVE", productId });
   }, []);
 
   const clearCart = useCallback(() => {
-    setCart([]);
+    dispatchCart({ type: "CLEAR" });
     setHeldOrderId(null);
     setSelectedCustomer(null);
     setMobileView("products");
@@ -570,7 +593,7 @@ function POSTerminalContent() {
         price: currentProduct ? Number(currentProduct.price) : item.price,
       };
     });
-    setCart(restoredItems);
+    dispatchCart({ type: "RESTORE", items: restoredItems });
     setHeldOrderId(order.id);
     if (order.customerId && order.customer) {
       setSelectedCustomer({
