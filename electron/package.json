@@ -37,6 +37,7 @@
       "preload.js",
       "printer-service.js",
       "winspool-raw.js",
+      "loading.html",
       "node_modules/**/*",
       "package.json"
     ],

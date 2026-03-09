@@ -56,11 +56,27 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
 
 /**
  * Print via Electron's silent thermal printing.
+ * For "windows" connection type, prints styled HTML via the system printer driver.
+ * For "rawUsb" / "network", sends ESC/POS commands.
  */
 export async function electronPrint(data: ReceiptData): Promise<{ success: boolean; error?: string }> {
   if (!window.electronPOS) {
     return { success: false, error: "Electron POS bridge not available" };
   }
+
+  // Check connection type to decide print path
+  try {
+    const configResult = await window.electronPOS.getPrinterConfig();
+    if (configResult.success && configResult.config.connectionType === "windows") {
+      // Use styled HTML receipt via Windows printer driver
+      const html = generateReceiptHtml(data);
+      return window.electronPOS.printStyledReceipt(html, configResult.config);
+    }
+  } catch {
+    // Fall through to ESC/POS path
+  }
+
+  // ESC/POS path for rawUsb / network connections
   const mapped = mapReceiptToElectronFormat(data);
   return window.electronPOS.printReceipt(mapped);
 }

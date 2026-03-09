@@ -1,16 +1,18 @@
 // main.js — Electron main process
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 const PrinterService = require('./printer-service');
 
 // ─── Configuration ──────────────────────────────────────────────
-const ERP_URL = process.env.ERP_URL || 'https://your-erp-app.com';
+const ERP_URL = process.env.ERP_URL || 'https://erp.bizarch.in';
 const CONFIG_DIR = path.join(app.getPath('userData'));
 const CONFIG_FILE = path.join(CONFIG_DIR, 'printer-config.json');
 
 let mainWindow;
+let splashWindow;
+let loadTimeout;
 
 // ─── Printer Config Persistence ─────────────────────────────────
 function loadPrinterConfig() {
@@ -49,9 +51,36 @@ function createPrinterServiceFromConfig(configOverride) {
 
 // ─── Window Creation ────────────────────────────────────────────
 function createWindow() {
+  // ── Splash window ──
+  const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
+  splashWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    x: Math.round((screenW - 400) / 2),
+    y: Math.round((screenH - 300) / 2),
+    frame: false,
+    transparent: false,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    title: 'BizArch ERP',
+    webPreferences: { nodeIntegration: false, contextIsolation: true },
+  });
+  splashWindow.loadFile(path.join(__dirname, 'loading.html'));
+
+  // If user closes splash before main is ready, quit the app
+  splashWindow.on('closed', () => {
+    splashWindow = null;
+    if (!mainWindow || !mainWindow.isVisible()) {
+      app.quit();
+    }
+  });
+
+  // ── Main window (hidden until loaded) ──
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    show: false,
     title: 'BizArch ERP',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -64,6 +93,33 @@ function createWindow() {
   });
 
   mainWindow.loadURL(ERP_URL);
+
+  // ── Transition: splash → main ──
+  let transitioned = false;
+  function showMainWindow() {
+    if (transitioned) return;
+    transitioned = true;
+    if (loadTimeout) clearTimeout(loadTimeout);
+    mainWindow.show();
+    if (splashWindow) {
+      splashWindow.close();
+    }
+  }
+
+  mainWindow.webContents.on('did-finish-load', showMainWindow);
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDesc) => {
+    console.error(`Page failed to load: ${errorCode} - ${errorDesc}`);
+    showMainWindow();
+  });
+
+  // Fallback: show main after 30 seconds no matter what
+  loadTimeout = setTimeout(showMainWindow, 30000);
+
+  mainWindow.on('closed', () => {
+    if (loadTimeout) clearTimeout(loadTimeout);
+    mainWindow = null;
+  });
 
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
@@ -134,6 +190,42 @@ ipcMain.handle('open-cash-drawer', async (_event, config) => {
     const ps = createPrinterServiceFromConfig(config);
     await ps.openCashDrawer();
     return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Print styled HTML receipt via hidden BrowserWindow (for Windows printer driver)
+ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
+  try {
+    const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
+    const printerName = normalized.windowsPrinterName;
+
+    const printWin = new BrowserWindow({
+      show: false,
+      width: 302,   // ~80mm at 96dpi
+      height: 800,
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
+    });
+
+    await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+    return await new Promise((resolve) => {
+      printWin.webContents.print(
+        {
+          silent: true,
+          deviceName: printerName || undefined,
+          printBackground: true,
+        },
+        (success, failureReason) => {
+          printWin.destroy();
+          resolve({
+            success,
+            error: success ? undefined : failureReason,
+          });
+        }
+      );
+    });
   } catch (error) {
     return { success: false, error: error.message };
   }

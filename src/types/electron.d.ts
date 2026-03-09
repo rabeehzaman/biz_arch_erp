@@ -37,6 +37,10 @@ interface ElectronPOS {
     data: Record<string, unknown>,
     config?: Partial<ElectronPrinterConfig>
   ) => Promise<ElectronPrintResult>;
+  printStyledReceipt: (
+    html: string,
+    config?: Partial<ElectronPrinterConfig>
+  ) => Promise<ElectronPrintResult>;
   listPrinters: () => Promise<{ success: boolean; printers?: ElectronPrinter[]; error?: string }>;
   listUsbPrinters: () => Promise<{ success: boolean; printers?: ElectronUsbPrinter[]; error?: string }>;
   testPrinter: (config?: Partial<ElectronPrinterConfig>) => Promise<{ success: boolean; connected?: boolean; error?: string }>;
