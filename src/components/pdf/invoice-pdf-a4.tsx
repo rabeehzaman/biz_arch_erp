@@ -241,6 +241,7 @@ interface InvoiceA4PDFProps {
     totalCgst: number;
     totalSgst: number;
     totalIgst: number;
+    roundOffAmount?: number;
     total: number;
     amountPaid: number;
     balanceDue: number;
@@ -569,6 +570,12 @@ export function InvoiceA4PDF({
                 <View style={styles.totalsRow}>
                   <Text style={styles.totalsLabel}>IGST</Text>
                   <Text style={styles.totalsValue}>{formatCurrency(invoice.totalIgst)}</Text>
+                </View>
+              )}
+              {(invoice.roundOffAmount ?? 0) !== 0 && (
+                <View style={styles.totalsRow}>
+                  <Text style={styles.totalsLabel}>Round Off</Text>
+                  <Text style={styles.totalsValue}>{formatCurrency(invoice.roundOffAmount ?? 0)}</Text>
                 </View>
               )}
               <View style={styles.grandTotalRow}>

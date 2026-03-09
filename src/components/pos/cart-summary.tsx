@@ -4,16 +4,18 @@ import { Separator } from "@/components/ui/separator";
 import type { CartItemData } from "./cart-item";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { calculateRoundOff, type RoundOffMode } from "@/lib/round-off";
 
 interface CartSummaryProps {
   items: CartItemData[];
   isTaxInclusivePrice?: boolean;
+  roundOffMode?: RoundOffMode;
 }
 
-export function CartSummary({ items, isTaxInclusivePrice }: CartSummaryProps) {
+export function CartSummary({ items, isTaxInclusivePrice, roundOffMode }: CartSummaryProps) {
   const { fmt: formatCurrency } = useCurrency();
   const { t } = useLanguage();
-  const { subtotal, taxAmount, total } = calculateCartTotal(items, isTaxInclusivePrice);
+  const { subtotal, taxAmount, roundOffAmount, total } = calculateCartTotal(items, isTaxInclusivePrice, roundOffMode);
 
   return (
     <div className="space-y-2">
@@ -30,6 +32,12 @@ export function CartSummary({ items, isTaxInclusivePrice }: CartSummaryProps) {
           <span>{formatCurrency(taxAmount)}</span>
         </div>
       )}
+      {roundOffAmount !== 0 && (
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Round Off</span>
+          <span>{roundOffAmount > 0 ? "+" : ""}{formatCurrency(roundOffAmount)}</span>
+        </div>
+      )}
       <Separator />
       <div className="flex justify-between text-lg font-bold">
         <span>{t("common.total") || "Total"}</span>
@@ -39,7 +47,11 @@ export function CartSummary({ items, isTaxInclusivePrice }: CartSummaryProps) {
   );
 }
 
-export function calculateCartTotal(items: CartItemData[], taxInclusive?: boolean) {
+export function calculateCartTotal(
+  items: CartItemData[],
+  taxInclusive?: boolean,
+  roundOffMode: RoundOffMode = "NONE"
+) {
   if (taxInclusive) {
     // Back-calculate tax-exclusive base per line
     const subtotal = items.reduce((sum, item) => {
@@ -53,7 +65,12 @@ export function calculateCartTotal(items: CartItemData[], taxInclusive?: boolean
       const base = rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross;
       return sum + (base * rate) / 100;
     }, 0);
-    return { subtotal, taxAmount, total: subtotal + taxAmount };
+    const { roundOffAmount, roundedTotal } = calculateRoundOff(
+      subtotal + taxAmount,
+      roundOffMode,
+      roundOffMode !== "NONE"
+    );
+    return { subtotal, taxAmount, roundOffAmount, total: roundedTotal };
   }
   const subtotal = items.reduce(
     (sum, item) => sum + item.quantity * item.price * (1 - item.discount / 100),
@@ -63,5 +80,10 @@ export function calculateCartTotal(items: CartItemData[], taxInclusive?: boolean
     const lineTotal = item.quantity * item.price * (1 - item.discount / 100);
     return sum + (lineTotal * (item.gstRate || 0)) / 100;
   }, 0);
-  return { subtotal, taxAmount, total: subtotal + taxAmount };
+  const { roundOffAmount, roundedTotal } = calculateRoundOff(
+    subtotal + taxAmount,
+    roundOffMode,
+    roundOffMode !== "NONE"
+  );
+  return { subtotal, taxAmount, roundOffAmount, total: roundedTotal };
 }

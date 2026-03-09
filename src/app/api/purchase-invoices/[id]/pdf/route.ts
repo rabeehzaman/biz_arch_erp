@@ -109,6 +109,7 @@ export async function GET(
       totalCgst: Number(invoice.totalCgst),
       totalSgst: Number(invoice.totalSgst),
       totalIgst: Number(invoice.totalIgst),
+      roundOffAmount: Number(invoice.roundOffAmount),
       total: Number(invoice.total),
     };
 
@@ -159,6 +160,7 @@ export async function GET(
         items: vatItems,
         subtotal: Number(invoice.subtotal),
         totalVat: Number((invoice as any).totalVat ?? 0),
+        roundOffAmount: Number(invoice.roundOffAmount),
         total: Number(invoice.total),
         amountPaid: 0,
         balanceDue: Number(invoice.total),

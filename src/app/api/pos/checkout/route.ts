@@ -6,6 +6,7 @@ import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { consumeStockFIFO } from "@/lib/inventory/fifo";
 import {
   createAutoJournalEntry,
+  ensureRoundOffAccount,
   getSystemAccount,
   getDefaultCashBankAccount,
 } from "@/lib/accounting/journal";
@@ -15,6 +16,7 @@ import { generateTLVQRCode, generateQRCodeDataURL } from "@/lib/saudi-vat/qr-cod
 import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash } from "@/lib/saudi-vat/invoice-hash";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
+import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 
  
 type Tx = any;
@@ -117,23 +119,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch org for ZATCA/branding info
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: {
-        saudiEInvoiceEnabled: true,
-        vatNumber: true,
-        arabicName: true,
-        name: true,
-        pdfHeaderImageUrl: true,
-        posReceiptLogoUrl: true,
-        posReceiptLogoHeight: true,
-        brandColor: true,
-        currency: true,
-        gstEnabled: true,
-        posAccountingMode: true,
-        isTaxInclusivePrice: true,
-      },
-    });
+    const [org, roundOffMode] = await Promise.all([
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: {
+          saudiEInvoiceEnabled: true,
+          vatNumber: true,
+          arabicName: true,
+          name: true,
+          pdfHeaderImageUrl: true,
+          posReceiptLogoUrl: true,
+          posReceiptLogoHeight: true,
+          brandColor: true,
+          currency: true,
+          gstEnabled: true,
+          posAccountingMode: true,
+          isTaxInclusivePrice: true,
+        },
+      }),
+      getOrganizationRoundOffMode(prisma, organizationId),
+    ]);
 
     const saudiEnabled = isSaudiEInvoiceEnabled(session) || org?.saudiEInvoiceEnabled;
     const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
@@ -281,7 +286,13 @@ export async function POST(request: NextRequest) {
         totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
       }
 
-      const total = subtotal + totalTax;
+      const shouldApplyRoundOff = roundOffMode !== "NONE";
+      const { roundOffAmount, roundedTotal } = calculateRoundOff(
+        subtotal + totalTax,
+        roundOffMode,
+        shouldApplyRoundOff
+      );
+      const total = roundedTotal;
       const totalPayment = payments.reduce((sum, p) => sum + p.amount, 0);
       const change = Math.max(0, totalPayment - total);
 
@@ -345,6 +356,8 @@ export async function POST(request: NextRequest) {
         total,
         amountPaid: Math.min(totalPayment, total),
         balanceDue: Math.max(0, total - totalPayment),
+        roundOffAmount,
+        applyRoundOff: shouldApplyRoundOff,
         notes: notes || null,
       };
 
@@ -525,6 +538,18 @@ export async function POST(request: NextRequest) {
           if (gstResult.totalIgst > 0) {
             const igstAccount = await getSystemAccount(tx, organizationId, "2230");
             if (igstAccount) revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: gstResult.totalIgst });
+          }
+        }
+
+        if (Math.abs(roundOffAmount) > 0.0001) {
+          const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
+          if (roundOffAccount) {
+            revenueLines.push({
+              accountId: roundOffAccount.id,
+              description: "Round Off Adjustment",
+              debit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
+              credit: roundOffAmount > 0 ? roundOffAmount : 0,
+            });
           }
         }
 
@@ -809,6 +834,7 @@ export async function POST(request: NextRequest) {
         qrCodeDataURL: qrCodeDataURL || null,
         currency: org?.currency || "INR",
         isTaxInclusivePrice: taxInclusive || false,
+        roundOffMode,
       },
     }, { status: 201 });
   } catch (error) {

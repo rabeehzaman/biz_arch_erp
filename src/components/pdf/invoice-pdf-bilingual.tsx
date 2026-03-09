@@ -332,6 +332,7 @@ export interface InvoiceBilingualProps {
         items: InvoiceBilingualItem[];
         subtotal: number;
         totalVat: number;
+        roundOffAmount?: number;
         total: number;
         amountPaid: number;
         balanceDue: number;
@@ -654,6 +655,17 @@ export function InvoiceBilingualPDF({
                                 <Text style={[styles.totalsLabelTextMain, { color: "#2d6b4a" }]}>{formatCurrency(invoice.totalVat)}</Text>
                             </View>
                         </View>
+                        {(invoice.roundOffAmount ?? 0) !== 0 && (
+                            <View style={styles.totalsRow}>
+                                <View style={styles.totalsLabelBox}>
+                                    <Text style={styles.totalsLabelTextMain}>Round Off</Text>
+                                    <Ar style={styles.totalsLabelTextMain}>التقريب</Ar>
+                                </View>
+                                <View style={styles.totalsValueBox}>
+                                    <Text style={styles.totalsLabelTextMain}>{formatCurrency(invoice.roundOffAmount ?? 0)}</Text>
+                                </View>
+                            </View>
+                        )}
                         <View style={styles.totalsRow}>
                             <View style={styles.totalsLabelBox}>
                                 <Text style={[styles.totalsLabelTextMain, { color: THEME.primary }]}>NET+VAT</Text>

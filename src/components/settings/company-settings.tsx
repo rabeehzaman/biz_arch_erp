@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -269,6 +270,29 @@ export function CompanySettings() {
                 onChange={handleChange}
                 placeholder={t("settings.branch")}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="roundOffMode">Document Round Off</Label>
+              <Select
+                value={formData.roundOffMode}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, roundOffMode: value as CompanySettingsFormData["roundOffMode"] }))
+                }
+              >
+                <SelectTrigger id="roundOffMode">
+                  <SelectValue placeholder="Select round off mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">Disabled</SelectItem>
+                  <SelectItem value="NEAREST">Nearest whole amount</SelectItem>
+                  <SelectItem value="UP">Round up to next whole amount</SelectItem>
+                  <SelectItem value="DOWN">Round down to previous whole amount</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                Applies to invoice, POS, and purchase document totals.
+              </p>
             </div>
           </CardContent>
         </Card>

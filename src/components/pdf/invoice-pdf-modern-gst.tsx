@@ -301,6 +301,7 @@ interface InvoiceModernGSTProps {
         totalSgst?: number;
         totalIgst?: number;
         totalVat?: number;
+        roundOffAmount?: number;
         total: number;
         amountPaid: number;
         balanceDue: number;
@@ -567,6 +568,13 @@ export function InvoiceModernGSTPDF({
                             <View style={styles.summaryRow}>
                                 <Text style={styles.summaryLabel}>VAT</Text>
                                 <Text style={styles.summaryValue}>{fmt(invoice.totalVat ?? 0)}</Text>
+                            </View>
+                        )}
+
+                        {(invoice.roundOffAmount ?? 0) !== 0 && (
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>Round Off</Text>
+                                <Text style={styles.summaryValue}>{fmt(invoice.roundOffAmount ?? 0)}</Text>
                             </View>
                         )}
 

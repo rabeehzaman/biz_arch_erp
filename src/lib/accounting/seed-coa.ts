@@ -76,6 +76,7 @@ const DEFAULT_ACCOUNTS: AccountDef[] = [
   // Purchase Discounts is a contra-expense account (credit-normal). In journal entries, CREDIT this account to record discounts received.
   { code: "5600", name: "Purchase Discounts (خصومات المشتريات)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: false },
   { code: "5900", name: "Other Expenses (مصروفات أخرى)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: false },
+  { code: "6160", name: "Round Off Adjustment (تسوية التقريب)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: true },
 ];
 
 export async function seedDefaultCOA(

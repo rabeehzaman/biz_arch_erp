@@ -204,6 +204,7 @@ interface InvoiceA4GST2Props {
     totalCgst: number;
     totalSgst: number;
     totalIgst: number;
+    roundOffAmount?: number;
     total: number;
     amountPaid: number;
     balanceDue: number;
@@ -448,9 +449,16 @@ export function InvoiceA4GST2PDF({
               <Text style={{ fontSize: 7 }}>
                 {numberToWordsLocalized(invoice.total, "en")}
               </Text>
-              <Text style={{ fontSize: 8, fontWeight: "bold" }}>
-                Grand Total: {formatCurrency(invoice.total)}
-              </Text>
+              <View style={{ alignItems: "flex-end" }}>
+                {(invoice.roundOffAmount ?? 0) !== 0 && (
+                  <Text style={{ fontSize: 7 }}>
+                    Round Off: {formatCurrency(invoice.roundOffAmount ?? 0)}
+                  </Text>
+                )}
+                <Text style={{ fontSize: 8, fontWeight: "bold" }}>
+                  Grand Total: {formatCurrency(invoice.total)}
+                </Text>
+              </View>
             </View>
             {invoice.amountPaid > 0 && (
               <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 3, paddingBottom: 2 }}>

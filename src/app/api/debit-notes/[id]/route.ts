@@ -11,10 +11,11 @@ import {
   checkReturnableStock,
 } from "@/lib/inventory/returns";
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
-import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { createAutoJournalEntry, ensureRoundOffAccount, getSystemAccount } from "@/lib/accounting/journal";
 import { Decimal } from "@prisma/client/runtime/client";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
+import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 
 export async function GET(
   request: NextRequest,
@@ -87,6 +88,7 @@ export async function PUT(
       reason,
       notes,
       appliedToBalance = true,
+      applyRoundOff,
     } = body;
 
     if (!supplierId || !items || items.length === 0) {
@@ -108,6 +110,17 @@ export async function PUT(
     }
 
     const debitNoteDate = toMidnightUTC(issueDate);
+    const roundOffMode = await getOrganizationRoundOffMode(prisma, organizationId);
+    const debitNote = await prisma.debitNote.findUnique({
+      where: { id, organizationId },
+      select: { applyRoundOff: true },
+    });
+    if (!debitNote) {
+      return NextResponse.json(
+        { error: "Debit note not found" },
+        { status: 404 }
+      );
+    }
     const taxInclusive = isTaxInclusivePriceSession(session);
     const saudiEnabled = isSaudiEInvoiceEnabled(session);
 
@@ -153,7 +166,14 @@ export async function PUT(
       gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplier?.gstin, supplier?.gstStateCode);
       totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
     }
-    const total = subtotal + totalTax;
+    const shouldApplyRoundOff =
+      (applyRoundOff ?? debitNote.applyRoundOff) === true && roundOffMode !== "NONE";
+    const { roundOffAmount, roundedTotal } = calculateRoundOff(
+      subtotal + totalTax,
+      roundOffMode,
+      shouldApplyRoundOff
+    );
+    const total = roundedTotal;
 
     const result = await prisma.$transaction(async (tx) => {
       // Get the old debit note
@@ -246,6 +266,8 @@ export async function PUT(
           totalCgst: saudiEnabled ? 0 : gstResult.totalCgst,
           totalSgst: saudiEnabled ? 0 : gstResult.totalSgst,
           totalIgst: saudiEnabled ? 0 : gstResult.totalIgst,
+          roundOffAmount,
+          applyRoundOff: shouldApplyRoundOff,
           placeOfSupply: gstResult.placeOfSupply,
           isInterState: gstResult.isInterState,
           totalVat,
@@ -390,6 +412,17 @@ export async function PUT(
             if (gstResult.totalIgst > 0) {
               const igstAccount = await getSystemAccount(tx, organizationId, "1370");
               if (igstAccount) dnLines.push({ accountId: igstAccount.id, description: "IGST Input (Return)", debit: 0, credit: gstResult.totalIgst });
+            }
+          }
+          if (Math.abs(roundOffAmount) > 0.0001) {
+            const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
+            if (roundOffAccount) {
+              dnLines.push({
+                accountId: roundOffAccount.id,
+                description: "Round Off Adjustment",
+                debit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
+                credit: roundOffAmount > 0 ? roundOffAmount : 0,
+              });
             }
           }
           await createAutoJournalEntry(tx, organizationId, {

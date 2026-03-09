@@ -222,6 +222,7 @@ export interface InvoiceA4VATProps {
     items: InvoiceA4VATItem[];
     subtotal: number;
     totalVat: number;
+    roundOffAmount?: number;
     total: number;
     amountPaid: number;
     balanceDue: number;
@@ -504,6 +505,12 @@ export function InvoiceA4VATPDF({
                   <Text style={{ fontSize: 7 }}>VAT (15%)</Text>
                   <Ar style={{ fontSize: 7 }}>{"\u0636.\u0642.\u0645"}</Ar>
                 </View>
+                {(invoice.roundOffAmount ?? 0) !== 0 && (
+                  <View style={{ flexDirection: "row", gap: 4 }}>
+                    <Text style={{ fontSize: 7 }}>Round Off</Text>
+                    <Ar style={{ fontSize: 7 }}>{"\u0627\u0644\u062A\u0642\u0631\u064A\u0628"}</Ar>
+                  </View>
+                )}
                 <View style={{ flexDirection: "row", gap: 4 }}>
                   <Text style={{ fontSize: 8, fontWeight: "bold" }}>Grand Total</Text>
                   <Ar style={{ fontSize: 8, fontWeight: "bold" }}>{"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0643\u0644\u064A"}</Ar>
@@ -512,6 +519,9 @@ export function InvoiceA4VATPDF({
               <View style={{ alignItems: "flex-end" }}>
                 <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.subtotal)}</Text>
                 <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.totalVat)}</Text>
+                {(invoice.roundOffAmount ?? 0) !== 0 && (
+                  <Text style={{ fontSize: 7 }}>{formatCurrency(invoice.roundOffAmount ?? 0)}</Text>
+                )}
                 <Text style={{ fontSize: 8, fontWeight: "bold" }}>{formatCurrency(invoice.total)}</Text>
               </View>
             </View>

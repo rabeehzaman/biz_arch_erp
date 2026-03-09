@@ -247,6 +247,7 @@ interface InvoicePDFProps {
     totalCgst: number;
     totalSgst: number;
     totalIgst: number;
+    roundOffAmount?: number;
     total: number;
     // Saudi fields
     saudiInvoiceType?: string;
@@ -501,6 +502,14 @@ export function InvoicePDF({ invoice, type: _type, title = "ESTIMATE", balanceIn
                   </View>
                 )}
               </>
+            )}
+            {(invoice.roundOffAmount ?? 0) !== 0 && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Round Off</Text>
+                <Text style={styles.totalValue}>
+                  {formatAmt(invoice.roundOffAmount ?? 0)}
+                </Text>
+              </View>
             )}
             <View style={styles.netAmountRow}>
               <Text style={styles.netAmountLabel}>{t("pdf.netTotal")}</Text>

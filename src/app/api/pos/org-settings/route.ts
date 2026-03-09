@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { getOrganizationRoundOffMode } from "@/lib/round-off";
 
 export async function GET() {
     try {
@@ -12,14 +13,18 @@ export async function GET() {
 
         const organizationId = getOrgId(session);
 
-        const org = await prisma.organization.findUnique({
-            where: { id: organizationId },
-            select: { posAccountingMode: true, saudiEInvoiceEnabled: true },
-        });
+        const [org, roundOffMode] = await Promise.all([
+            prisma.organization.findUnique({
+                where: { id: organizationId },
+                select: { posAccountingMode: true, saudiEInvoiceEnabled: true },
+            }),
+            getOrganizationRoundOffMode(prisma, organizationId),
+        ]);
 
         return NextResponse.json({
             posAccountingMode: org?.posAccountingMode || "DIRECT",
             saudiEInvoiceEnabled: org?.saudiEInvoiceEnabled || false,
+            roundOffMode,
         });
     } catch (error) {
         console.error("Failed to fetch POS org settings:", error);

@@ -29,6 +29,7 @@ export interface ReceiptData {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
+  roundOffAmount?: number;
   total: number;
   payments: ReceiptPayment[];
   change: number;
@@ -282,6 +283,15 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
         {data.isTaxInclusivePrice && (
           <div style={{ fontSize: "9px", color: "#888", textAlign: "center", marginTop: "2px" }}>
             {isZatca ? "الأسعار شاملة الضريبة / Prices include tax" : "Prices include tax"}
+          </div>
+        )}
+        {data.roundOffAmount !== undefined && data.roundOffAmount !== 0 && (
+          <div style={{ ...rowStyle, fontSize: "11px", color: "#555", marginTop: "2px" }}>
+            <span>{bl("Round Off", "التقريب")}</span>
+            <span>
+              {data.roundOffAmount > 0 ? "+" : ""}
+              {formatCurrency(data.roundOffAmount, cur)}
+            </span>
           </div>
         )}
         <div style={{

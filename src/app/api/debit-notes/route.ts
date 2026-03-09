@@ -11,9 +11,10 @@ import {
 } from "@/lib/inventory/returns";
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
-import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { createAutoJournalEntry, ensureRoundOffAccount, getSystemAccount } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
+import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 
 // Generate debit note number: DN-YYYYMMDD-XXX
 async function generateDebitNoteNumber(organizationId: string) {
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
       appliedToBalance = true,
       branchId,
       warehouseId,
+      applyRoundOff,
     } = body;
 
     if (!supplierId || !items || items.length === 0) {
@@ -120,10 +122,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate warehouse is provided when multi-branch is enabled
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { multiBranchEnabled: true, isTaxInclusivePrice: true, saudiEInvoiceEnabled: true },
-    });
+    const [org, roundOffMode] = await Promise.all([
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { multiBranchEnabled: true, isTaxInclusivePrice: true, saudiEInvoiceEnabled: true },
+      }),
+      getOrganizationRoundOffMode(prisma, organizationId),
+    ]);
     if (org?.multiBranchEnabled && !warehouseId) {
       return NextResponse.json(
         { error: "Warehouse is required when multi-branch is enabled" },
@@ -208,7 +213,13 @@ export async function POST(request: NextRequest) {
         gstResult = computeDocumentGST(orgGST, lineItemsForGST, supplier?.gstin, supplier?.gstStateCode);
         totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
       }
-      const total = subtotal + totalTax;
+      const shouldApplyRoundOff = applyRoundOff === true && roundOffMode !== "NONE";
+      const { roundOffAmount, roundedTotal } = calculateRoundOff(
+        subtotal + totalTax,
+        roundOffMode,
+        shouldApplyRoundOff
+      );
+      const total = roundedTotal;
 
       // Create the debit note
       const debitNote = await tx.debitNote.create({
@@ -225,6 +236,8 @@ export async function POST(request: NextRequest) {
           totalCgst: saudiEnabled ? 0 : gstResult.totalCgst,
           totalSgst: saudiEnabled ? 0 : gstResult.totalSgst,
           totalIgst: saudiEnabled ? 0 : gstResult.totalIgst,
+          roundOffAmount,
+          applyRoundOff: shouldApplyRoundOff,
           placeOfSupply: gstResult.placeOfSupply,
           isInterState: gstResult.isInterState,
           totalVat,
@@ -349,6 +362,17 @@ export async function POST(request: NextRequest) {
             if (gstResult.totalIgst > 0) {
               const igstInput = await getSystemAccount(tx, organizationId, "1370");
               if (igstInput) journalLines.push({ accountId: igstInput.id, description: "IGST Input (Return)", debit: 0, credit: gstResult.totalIgst });
+            }
+          }
+          if (Math.abs(roundOffAmount) > 0.0001) {
+            const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
+            if (roundOffAccount) {
+              journalLines.push({
+                accountId: roundOffAccount.id,
+                description: "Round Off Adjustment",
+                debit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
+                credit: roundOffAmount > 0 ? roundOffAmount : 0,
+              });
             }
           }
           await createAutoJournalEntry(tx, organizationId, {

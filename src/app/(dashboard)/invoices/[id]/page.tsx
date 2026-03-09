@@ -74,6 +74,8 @@ interface Invoice {
   totalCgst: number;
   totalSgst: number;
   totalIgst: number;
+  roundOffAmount: number;
+  applyRoundOff: boolean;
   total: number;
   amountPaid: number;
   balanceDue: number;
@@ -518,6 +520,15 @@ export default function InvoiceDetailPage({
                           </div>
                         )}
                       </>
+                    )}
+                    {invoice.applyRoundOff && Number(invoice.roundOffAmount) !== 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>Round Off</span>
+                        <span>
+                          {Number(invoice.roundOffAmount) >= 0 ? "+" : ""}
+                          {symbol}{Number(invoice.roundOffAmount).toFixed(2)}
+                        </span>
+                      </div>
                     )}
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
                       <span>Total</span>

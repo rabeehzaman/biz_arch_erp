@@ -23,6 +23,9 @@ import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { parseWeightBarcode, WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
 import { useCurrency } from "@/hooks/use-currency";
+import { Switch } from "@/components/ui/switch";
+import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
+import { calculateRoundOff } from "@/lib/round-off";
 
 interface Customer {
   id: string;
@@ -408,12 +411,15 @@ export default function NewInvoicePage() {
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
   const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
+  const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
+  const [applyRoundOff, setApplyRoundOff] = useState(false);
   useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
+  useEffect(() => { setApplyRoundOff(roundOffEnabled); }, [roundOffEnabled]);
   const taxMode = getInvoiceTaxMode(session?.user?.gstEnabled, saudiEnabled);
   const taxEnabled = taxMode !== "none";
 
   const totals = useMemo(() => {
-    return lineItems.reduce(
+    const summary = lineItems.reduce(
       (summary, item) => {
         if (!item.productId) return summary;
 
@@ -426,7 +432,19 @@ export default function NewInvoicePage() {
       },
       { subtotal: 0, tax: 0, total: 0 }
     );
-  }, [lineItems, taxInclusive, taxMode]);
+
+    const { roundOffAmount, roundedTotal } = calculateRoundOff(
+      summary.total,
+      roundOffMode,
+      applyRoundOff
+    );
+
+    return {
+      ...summary,
+      roundOffAmount,
+      grandTotal: roundedTotal,
+    };
+  }, [applyRoundOff, lineItems, roundOffMode, taxInclusive, taxMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -461,6 +479,7 @@ export default function NewInvoicePage() {
           warehouseId: formData.warehouseId || undefined,
           paymentType: formData.paymentType,
           isTaxInclusive: taxInclusive,
+          applyRoundOff,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -1161,6 +1180,21 @@ export default function NewInvoicePage() {
               </CardHeader>
               <CardContent>
                 <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
+                  <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium">Apply Round Off</p>
+                      <p className="text-xs text-slate-500">
+                        {roundOffEnabled
+                          ? "Use organization round off rule on the final total."
+                          : "Enable a round off mode in Settings > Company."}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={applyRoundOff}
+                      onCheckedChange={setApplyRoundOff}
+                      disabled={!roundOffEnabled}
+                    />
+                  </div>
                   {taxMode === "vat" && (
                     <div className="mb-2 text-left text-xs font-medium text-slate-500 sm:text-right">VAT Invoice (ZATCA Phase 1)</div>
                   )}
@@ -1177,9 +1211,18 @@ export default function NewInvoicePage() {
                       <span key={`summary-tax:${totals.tax}`}>{fmt(totals.tax)}</span>
                     </div>
                   )}
+                  {applyRoundOff && totals.roundOffAmount !== 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Round Off</span>
+                      <span key={`summary-roundoff:${totals.roundOffAmount}`}>
+                        {totals.roundOffAmount >= 0 ? "+" : ""}
+                        {fmt(totals.roundOffAmount)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span key={`summary-total:${totals.total}`}>{fmt(totals.total)}</span>
+                    <span key={`summary-total:${totals.grandTotal}`}>{fmt(totals.grandTotal)}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

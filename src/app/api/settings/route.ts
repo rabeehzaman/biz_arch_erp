@@ -8,6 +8,7 @@ import {
   DEFAULT_SETTINGS,
   type CompanySettingsFormData,
 } from "@/lib/validations/settings";
+import { normalizeRoundOffMode } from "@/lib/round-off";
 
 export async function GET() {
   try {
@@ -34,7 +35,11 @@ export async function GET() {
     for (const [formKey, dbKey] of Object.entries(SETTINGS_KEY_MAP)) {
       const value = settingsMap.get(dbKey);
       if (value !== undefined) {
-        result[formKey as keyof CompanySettingsFormData] = value;
+        if (formKey === "roundOffMode") {
+          result.roundOffMode = normalizeRoundOffMode(value);
+        } else {
+          result[formKey as Exclude<keyof CompanySettingsFormData, "roundOffMode">] = value;
+        }
       }
     }
 

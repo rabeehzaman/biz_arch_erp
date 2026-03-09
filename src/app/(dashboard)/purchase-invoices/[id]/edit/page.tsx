@@ -21,6 +21,9 @@ import { useCurrency } from "@/hooks/use-currency";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
+import { Switch } from "@/components/ui/switch";
+import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
+import { calculateRoundOff } from "@/lib/round-off";
 
 interface Supplier {
   id: string;
@@ -82,6 +85,8 @@ export default function EditPurchaseInvoicePage({
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
+  const [applyRoundOff, setApplyRoundOff] = useState(false);
 
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -157,6 +162,7 @@ export default function EditPurchaseInvoicePage({
         if (data.isTaxInclusive !== null && data.isTaxInclusive !== undefined) {
           setTaxInclusive(data.isTaxInclusive);
         }
+        setApplyRoundOff(Boolean(data.applyRoundOff));
         setLineItems(
           data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitCost: number; discount: number; gstRate?: number; hsnCode?: string; vatRate?: number }) => ({
             id: item.id,
@@ -306,6 +312,11 @@ export default function EditPurchaseInvoicePage({
   const total = taxInclusive
     ? lineItems.reduce((sum, item) => sum + getPurchaseLineAmounts(item).net, 0)
     : subtotal + tax;
+  const { roundOffAmount, roundedTotal } = calculateRoundOff(
+    total,
+    roundOffMode,
+    applyRoundOff
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,6 +343,7 @@ export default function EditPurchaseInvoicePage({
           branchId: formData.branchId || undefined,
           warehouseId: formData.warehouseId || undefined,
           isTaxInclusive: taxInclusive,
+          applyRoundOff,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -864,6 +876,21 @@ export default function EditPurchaseInvoicePage({
                   </p>
                 </div>
                 <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
+                  <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium">Apply Round Off</p>
+                      <p className="text-xs text-slate-500">
+                        {roundOffEnabled
+                          ? "Use organization round off rule on the final total."
+                          : "Enable a round off mode in Settings > Company."}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={applyRoundOff}
+                      onCheckedChange={setApplyRoundOff}
+                      disabled={!roundOffEnabled}
+                    />
+                  </div>
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
                     <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
@@ -874,9 +901,18 @@ export default function EditPurchaseInvoicePage({
                       <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toLocaleString("en-IN")}</span>
                     </div>
                   )}
+                  {applyRoundOff && roundOffAmount !== 0 && (
+                    <div className="flex justify-between text-sm text-slate-500">
+                      <span>Round Off</span>
+                      <span key={`summary-roundoff:${roundOffAmount.toFixed(2)}`}>
+                        {roundOffAmount >= 0 ? "+" : ""}
+                        {symbol}{roundOffAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toLocaleString("en-IN")}</span>
+                    <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toLocaleString("en-IN")}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

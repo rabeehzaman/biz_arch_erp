@@ -39,6 +39,8 @@ interface DebitNote {
   totalCgst: number;
   totalSgst: number;
   totalIgst: number;
+  roundOffAmount: number;
+  applyRoundOff: boolean;
   total: number;
   reason: string | null;
   notes: string | null;
@@ -320,6 +322,15 @@ export default function DebitNoteDetailPage() {
                 <div className="flex justify-between text-sm text-slate-500">
                   <span>Tax:</span>
                   <span>{symbol}{Number(debitNote.taxAmount).toLocaleString("en-IN")}</span>
+                </div>
+              )}
+              {debitNote.applyRoundOff && Number(debitNote.roundOffAmount) !== 0 && (
+                <div className="flex justify-between text-sm text-slate-500">
+                  <span>Round Off:</span>
+                  <span>
+                    {Number(debitNote.roundOffAmount) >= 0 ? "+" : ""}
+                    {symbol}{Number(debitNote.roundOffAmount).toFixed(2)}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold border-t pt-2">

@@ -11,6 +11,7 @@ import { generateTLVQRCode } from "@/lib/saudi-vat/qr-code";
 import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash } from "@/lib/saudi-vat/invoice-hash";
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
+import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber(organizationId: string) {
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId, paymentType, isTaxInclusive } = body;
+    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId, paymentType, isTaxInclusive, applyRoundOff } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -107,10 +108,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate warehouse is provided when multi-branch is enabled
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { multiBranchEnabled: true, saudiEInvoiceEnabled: true, vatNumber: true, arabicName: true, name: true, isTaxInclusivePrice: true },
-    });
+    const [org, roundOffMode] = await Promise.all([
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { multiBranchEnabled: true, saudiEInvoiceEnabled: true, vatNumber: true, arabicName: true, name: true, isTaxInclusivePrice: true },
+      }),
+      getOrganizationRoundOffMode(prisma, organizationId),
+    ]);
     if (org?.multiBranchEnabled && !warehouseId) {
       return NextResponse.json(
         { error: "Warehouse is required when multi-branch is enabled" },
@@ -230,7 +234,13 @@ export async function POST(request: NextRequest) {
         totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
       }
 
-      const total = subtotal + totalTax;
+      const shouldApplyRoundOff = applyRoundOff === true && roundOffMode !== "NONE";
+      const { roundOffAmount, roundedTotal } = calculateRoundOff(
+        subtotal + totalTax,
+        roundOffMode,
+        shouldApplyRoundOff
+      );
+      const total = roundedTotal;
       const balanceDue = total;
 
       // Create the invoice
@@ -251,6 +261,8 @@ export async function POST(request: NextRequest) {
           totalCgst: gstResult.totalCgst,
           totalSgst: gstResult.totalSgst,
           totalIgst: gstResult.totalIgst,
+          roundOffAmount,
+          applyRoundOff: shouldApplyRoundOff,
           placeOfSupply: gstResult.placeOfSupply,
           isInterState: gstResult.isInterState,
           // Saudi fields

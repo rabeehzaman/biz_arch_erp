@@ -9,6 +9,7 @@ import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { calculateLineVAT, calculateDocumentVAT, LineVATResult } from "@/lib/saudi-vat/calculator";
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
+import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 
 // Helper to check if user can access an invoice (based on customer assignment)
 async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean, organizationId: string) {
@@ -110,7 +111,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, notes, terms, items, warehouseId: bodyWarehouseId, paymentType, isTaxInclusive } = body;
+    const { customerId, issueDate, dueDate, notes, terms, items, warehouseId: bodyWarehouseId, paymentType, isTaxInclusive, applyRoundOff } = body;
 
     const existingInvoice = await prisma.invoice.findUnique({
       where: { id, organizationId },
@@ -166,10 +167,13 @@ export async function PUT(
       });
 
       // Check tax-inclusive pricing
-      const org = await tx.organization.findUnique({
-        where: { id: organizationId },
-        select: { isTaxInclusivePrice: true },
-      });
+      const [org, roundOffMode] = await Promise.all([
+        tx.organization.findUnique({
+          where: { id: organizationId },
+          select: { isTaxInclusivePrice: true },
+        }),
+        getOrganizationRoundOffMode(tx, organizationId),
+      ]);
       const taxInclusive = isTaxInclusive ?? (isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice);
 
       const saudiEnabled = isSaudiEInvoiceEnabled(session);
@@ -215,7 +219,13 @@ export async function PUT(
         totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
       }
 
-      const total = subtotal + totalTax;
+      const shouldApplyRoundOff = (applyRoundOff ?? existingInvoice.applyRoundOff) === true && roundOffMode !== "NONE";
+      const { roundOffAmount, roundedTotal } = calculateRoundOff(
+        subtotal + totalTax,
+        roundOffMode,
+        shouldApplyRoundOff
+      );
+      const total = roundedTotal;
 
       // Calculate balance change for customer
       const oldTotal = Number(existingInvoice.total);
@@ -239,6 +249,8 @@ export async function PUT(
           totalCgst: saudiEnabled ? 0 : gstResult.totalCgst,
           totalSgst: saudiEnabled ? 0 : gstResult.totalSgst,
           totalIgst: saudiEnabled ? 0 : gstResult.totalIgst,
+          roundOffAmount,
+          applyRoundOff: shouldApplyRoundOff,
           placeOfSupply: saudiEnabled ? null : gstResult.placeOfSupply,
           isInterState: saudiEnabled ? false : gstResult.isInterState,
           totalVat: saudiEnabled ? totalVat : null,

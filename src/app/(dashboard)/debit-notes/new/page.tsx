@@ -18,6 +18,9 @@ import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { useCurrency } from "@/hooks/use-currency";
+import { Switch } from "@/components/ui/switch";
+import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
+import { calculateRoundOff } from "@/lib/round-off";
 
 interface Supplier {
   id: string;
@@ -79,6 +82,12 @@ export default function NewDebitNotePage() {
   const { data: session } = useSession();
   const { unitConversions } = useUnitConversions();
   const { symbol } = useCurrency();
+  const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
+  const [applyRoundOff, setApplyRoundOff] = useState(false);
+
+  useEffect(() => {
+    setApplyRoundOff(roundOffEnabled);
+  }, [roundOffEnabled]);
 
   useEffect(() => {
     fetchSuppliers();
@@ -239,6 +248,11 @@ export default function NewDebitNotePage() {
   const subtotal = calculateSubtotal();
   const tax = calculateTax();
   const total = calculateTotal();
+  const { roundOffAmount, roundedTotal } = calculateRoundOff(
+    total,
+    roundOffMode,
+    applyRoundOff
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,6 +291,7 @@ export default function NewDebitNotePage() {
           })),
           reason: reason || null,
           notes: notes || null,
+          applyRoundOff,
         }),
       });
 
@@ -567,6 +582,21 @@ export default function NewDebitNotePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
+                <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">Apply Round Off</p>
+                    <p className="text-xs text-slate-500">
+                      {roundOffEnabled
+                        ? "Use organization round off rule on the final total."
+                        : "Enable a round off mode in Settings > Company."}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={applyRoundOff}
+                    onCheckedChange={setApplyRoundOff}
+                    disabled={!roundOffEnabled}
+                  />
+                </div>
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
                   <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toFixed(2)}</span>
@@ -577,9 +607,18 @@ export default function NewDebitNotePage() {
                     <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toFixed(2)}</span>
                   </div>
                 )}
+                {applyRoundOff && roundOffAmount !== 0 && (
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>Round Off:</span>
+                    <span key={`summary-roundoff:${roundOffAmount.toFixed(2)}`}>
+                      {roundOffAmount >= 0 ? "+" : ""}
+                      {symbol}{roundOffAmount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toFixed(2)}</span>
+                  <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>

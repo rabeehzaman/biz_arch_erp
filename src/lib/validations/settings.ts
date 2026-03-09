@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_ROUND_OFF_MODE, ROUND_OFF_MODES } from "@/lib/round-off";
 
 export const companySettingsSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -29,6 +30,7 @@ export const companySettingsSchema = z.object({
     .optional()
     .or(z.literal("")),
   bankBranch: z.string().optional(),
+  roundOffMode: z.enum(ROUND_OFF_MODES).default(DEFAULT_ROUND_OFF_MODE),
 });
 
 export type CompanySettingsFormData = z.infer<typeof companySettingsSchema>;
@@ -47,6 +49,7 @@ export const SETTINGS_KEY_MAP: Record<keyof CompanySettingsFormData, string> = {
   bankAccountNumber: "company_bankAccountNumber",
   bankIfscCode: "company_bankIfscCode",
   bankBranch: "company_bankBranch",
+  roundOffMode: "company_roundOffMode",
 };
 
 export const POS_RECEIPT_PRINTING_KEY = "pos_receipt_printing";
@@ -65,4 +68,5 @@ export const DEFAULT_SETTINGS: CompanySettingsFormData = {
   bankAccountNumber: "",
   bankIfscCode: "",
   bankBranch: "",
+  roundOffMode: DEFAULT_ROUND_OFF_MODE,
 };
