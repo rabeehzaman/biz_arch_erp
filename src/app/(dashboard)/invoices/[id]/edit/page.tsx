@@ -26,6 +26,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
+import { createClientId } from "@/lib/client-id";
 
 interface Customer {
   id: string;
@@ -133,7 +134,7 @@ export default function EditInvoicePage({
       return [
         ...prev,
         {
-          id: Date.now().toString(),
+          id: createClientId("invoice-line"),
           productId: product.id,
           quantity: parsed.weightKg,
           unitId: product.unitId || "",
@@ -254,7 +255,7 @@ export default function EditInvoicePage({
     setLineItems((prev) => [
       ...prev,
       {
-        id: Date.now().toString(),
+        id: createClientId("invoice-line"),
         productId: "",
         quantity: 1,
         unitId: "",
@@ -333,7 +334,7 @@ export default function EditInvoicePage({
         setLineItems((prev) => [
           ...prev,
           {
-            id: Date.now().toString(),
+            id: createClientId("invoice-line"),
             productId: "",
             quantity: 1,
             unitId: "",
