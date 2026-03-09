@@ -88,6 +88,8 @@ const extraLiteralTranslations: LiteralTranslationMap = {
   "Sign In": "تسجيل الدخول",
   "Signing in...": "جارٍ تسجيل الدخول...",
   "Email": "البريد الإلكتروني",
+  "Simple invoicing and customer management":
+    "نظام مبسط للفوترة وإدارة العملاء",
   "Organizations": "المنشآت",
   "Organization": "المنشأة",
   "Manage tenant organizations": "إدارة المنشآت",
