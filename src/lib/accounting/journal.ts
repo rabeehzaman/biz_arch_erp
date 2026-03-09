@@ -451,6 +451,75 @@ export async function syncPurchaseJournal(
   }
 }
 
+export async function syncCashBankForJournalLines(
+  tx: Tx,
+  organizationId: string,
+  journalEntryId: string,
+  date: Date,
+  description: string,
+  lines: Array<{ accountId: string; debit: number; credit: number }>
+): Promise<void> {
+  for (const line of lines) {
+    const debit = Number(line.debit) || 0;
+    const credit = Number(line.credit) || 0;
+    if (debit === 0 && credit === 0) continue;
+
+    const cbAccount = await tx.cashBankAccount.findFirst({
+      where: { accountId: line.accountId, organizationId },
+    });
+    if (!cbAccount) continue;
+
+    const isDeposit = debit > 0;
+    const signedAmount = isDeposit ? debit : -credit;
+    const newBalance = Number(cbAccount.balance) + signedAmount;
+
+    await tx.cashBankAccount.update({
+      where: { id: cbAccount.id, organizationId },
+      data: { balance: newBalance },
+    });
+
+    await tx.cashBankTransaction.create({
+      data: {
+        cashBankAccountId: cbAccount.id,
+        transactionType: isDeposit ? "DEPOSIT" : "WITHDRAWAL",
+        amount: signedAmount,
+        runningBalance: newBalance,
+        description,
+        referenceType: "JOURNAL_ENTRY",
+        referenceId: journalEntryId,
+        transactionDate: date,
+        organizationId,
+      },
+    });
+  }
+}
+
+export async function removeCashBankTransactionsForJournalEntry(
+  tx: Tx,
+  organizationId: string,
+  journalEntryId: string
+): Promise<void> {
+  const txns = await tx.cashBankTransaction.findMany({
+    where: { referenceType: "JOURNAL_ENTRY", referenceId: journalEntryId, organizationId },
+  });
+
+  for (const txn of txns) {
+    const cbAccount = await tx.cashBankAccount.findFirst({
+      where: { id: txn.cashBankAccountId, organizationId },
+    });
+    if (cbAccount) {
+      await tx.cashBankAccount.update({
+        where: { id: cbAccount.id, organizationId },
+        data: { balance: Number(cbAccount.balance) - Number(txn.amount) },
+      });
+    }
+  }
+
+  await tx.cashBankTransaction.deleteMany({
+    where: { referenceType: "JOURNAL_ENTRY", referenceId: journalEntryId, organizationId },
+  });
+}
+
 // Helper to get the default cash or bank account for a payment method
 export async function getDefaultCashBankAccount(
   tx: Tx,

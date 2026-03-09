@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { validateJournalBalance } from "@/lib/accounting/journal";
+import { validateJournalBalance, syncCashBankForJournalLines, removeCashBankTransactionsForJournalEntry } from "@/lib/accounting/journal";
 
 export async function GET(
   _request: NextRequest,
@@ -76,14 +76,18 @@ export async function PUT(
     }
 
     const entry = await prisma.$transaction(async (tx) => {
-      // Delete existing lines
+      // Step 0: Remove old cash/bank transactions (safe no-op if entry was DRAFT)
+      await removeCashBankTransactionsForJournalEntry(tx, organizationId, id);
+
+      // Step 1: Delete existing lines
       if (lines) {
         await tx.journalEntryLine.deleteMany({
           where: { journalEntryId: id },
         });
       }
 
-      return tx.journalEntry.update({
+      // Step 2: Update journal entry
+      const updated = await tx.journalEntry.update({
         where: { id, organizationId },
         data: {
           ...(date && { date: new Date(date) }),
@@ -115,6 +119,13 @@ export async function PUT(
           },
         },
       });
+
+      // Step 3: Re-sync cash/bank transactions if POSTED and lines were updated
+      if (updated.status === "POSTED" && lines) {
+        await syncCashBankForJournalLines(tx, organizationId, updated.id, updated.date, updated.description, lines);
+      }
+
+      return updated;
     });
 
     return NextResponse.json(entry);
@@ -150,7 +161,10 @@ export async function DELETE(
 
     // Removed draft restriction to allow deleting posted entries
 
-    await prisma.journalEntry.delete({ where: { id, organizationId } });
+    await prisma.$transaction(async (tx) => {
+      await removeCashBankTransactionsForJournalEntry(tx, organizationId, id);
+      await tx.journalEntry.delete({ where: { id, organizationId } });
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

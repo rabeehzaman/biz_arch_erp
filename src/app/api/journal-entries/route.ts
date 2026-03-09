@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { generateAutoNumber } from "@/lib/accounting/auto-number";
-import { validateJournalBalance } from "@/lib/accounting/journal";
+import { validateJournalBalance, syncCashBankForJournalLines } from "@/lib/accounting/journal";
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,38 +77,49 @@ export async function POST(request: NextRequest) {
       organizationId
     );
 
-    const entry = await prisma.journalEntry.create({
-      data: {
-        journalNumber,
-        date: new Date(date),
-        description,
-        status: status === "POSTED" ? "POSTED" : "DRAFT",
-        sourceType: "MANUAL",
-        organizationId,
-        lines: {
-          create: lines.map(
-            (line: {
-              accountId: string;
-              description?: string;
-              debit: number;
-              credit: number;
-            }) => ({
-              accountId: line.accountId,
-              description: line.description || null,
-              debit: line.debit || 0,
-              credit: line.credit || 0,
-              organizationId,
-            })
-          ),
-        },
-      },
-      include: {
-        lines: {
-          include: {
-            account: { select: { id: true, code: true, name: true } },
+    const entryStatus = status === "POSTED" ? "POSTED" : "DRAFT";
+    const entryDate = new Date(date);
+
+    const entry = await prisma.$transaction(async (tx) => {
+      const created = await tx.journalEntry.create({
+        data: {
+          journalNumber,
+          date: entryDate,
+          description,
+          status: entryStatus,
+          sourceType: "MANUAL",
+          organizationId,
+          lines: {
+            create: lines.map(
+              (line: {
+                accountId: string;
+                description?: string;
+                debit: number;
+                credit: number;
+              }) => ({
+                accountId: line.accountId,
+                description: line.description || null,
+                debit: line.debit || 0,
+                credit: line.credit || 0,
+                organizationId,
+              })
+            ),
           },
         },
-      },
+        include: {
+          lines: {
+            include: {
+              account: { select: { id: true, code: true, name: true } },
+            },
+          },
+        },
+      });
+
+      if (created.status === "POSTED") {
+        await syncCashBankForJournalLines(tx, organizationId, created.id, entryDate, description, lines);
+      }
+
+      return created;
     });
 
     return NextResponse.json(entry, { status: 201 });
