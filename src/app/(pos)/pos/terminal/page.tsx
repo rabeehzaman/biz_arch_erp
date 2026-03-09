@@ -22,6 +22,7 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -899,6 +900,9 @@ function POSTerminalContent() {
         <SheetContent side="right" className="w-full sm:w-[400px] sm:max-w-[450px] p-0">
           <SheetHeader className="p-4 border-b">
             <SheetTitle>{t("pos.heldOrders")} ({heldOrders.length})</SheetTitle>
+            <SheetDescription className="sr-only">
+              Review, restore, or remove orders currently on hold for this POS session.
+            </SheetDescription>
           </SheetHeader>
           <div className="overflow-y-auto h-[calc(100%-65px)]">
             {heldOrders.length === 0 ? (
