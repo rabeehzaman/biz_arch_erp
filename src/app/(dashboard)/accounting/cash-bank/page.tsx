@@ -302,10 +302,10 @@ export default function CashBankPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 items-stretch">
               {accounts.map((account) => (
-                <Link key={account.id} href={`/accounting/cash-bank/${account.id}`}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <Link key={account.id} href={`/accounting/cash-bank/${account.id}`} className="flex">
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer w-full">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold">{account.name}</h3>
