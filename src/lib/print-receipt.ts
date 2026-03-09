@@ -13,7 +13,7 @@ export function generateReceiptHtml(data: ReceiptData): string {
 <meta charset="utf-8">
 <style>
   @page {
-    size: 80mm auto;
+    size: 80mm 297mm;
     margin: 0;
   }
   * {
@@ -24,13 +24,19 @@ export function generateReceiptHtml(data: ReceiptData): string {
   body {
     width: 80mm;
     padding: 0 4mm;
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Noto Sans Arabic', sans-serif;
-    font-size: 11px;
+    font-family: 'Arial', 'Noto Sans Arabic', sans-serif;
+    font-size: 12px;
+    text-rendering: geometricPrecision;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   img {
     max-width: 100%;
+  }
+  @media print {
+    body {
+      -webkit-font-smoothing: none;
+    }
   }
 </style>
 </head>

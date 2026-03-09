@@ -94,6 +94,19 @@ function createWindow() {
 
   mainWindow.loadURL(ERP_URL);
 
+  // ── Fix Electron rendering: backdrop-filter causes blur/clarity issues ──
+  mainWindow.webContents.on('dom-ready', () => {
+    mainWindow.webContents.insertCSS(`
+      body::after {
+        filter: none !important;
+      }
+      *, *::before, *::after {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+      }
+    `);
+  });
+
   // ── Transition: splash → main ──
   let transitioned = false;
   function showMainWindow() {
@@ -216,6 +229,8 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
           silent: true,
           deviceName: printerName || undefined,
           printBackground: true,
+          margins: { marginType: 'none' },
+          pageSize: { width: 80000, height: 297000 },
         },
         (success, failureReason) => {
           printWin.destroy();

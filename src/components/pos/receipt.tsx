@@ -75,10 +75,10 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
 
   const containerStyle: React.CSSProperties = {
     width: "72mm",
-    fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, 'Noto Sans Arabic', sans-serif",
-    fontSize: "11px",
+    fontFamily: "'Arial', 'Noto Sans Arabic', sans-serif",
+    fontSize: "12px",
     lineHeight: "1.5",
-    color: "#222",
+    color: "#000",
     padding: "3mm 0",
   };
 
@@ -126,13 +126,13 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
       {isZatca && (
         <div style={{
           ...centerStyle,
-          fontSize: "11px",
+          fontSize: "12px",
           fontWeight: 700,
           marginBottom: "4px",
-          color: color,
+          color: "#000",
         }}>
           <div>فاتورة ضريبية مبسطة</div>
-          <div style={{ fontSize: "9px", fontWeight: 500, color: "#666" }}>Simplified Tax Invoice</div>
+          <div style={{ fontSize: "10px", fontWeight: 600, color: "#000" }}>Simplified Tax Invoice</div>
         </div>
       )}
 
@@ -140,41 +140,41 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
       <div style={centerStyle}>
         {data.arabicName && (
           <div style={{
-            fontSize: "14px",
-            fontWeight: 700,
+            fontSize: "15px",
+            fontWeight: 800,
             direction: "rtl",
             marginBottom: "2px",
-            color: color,
+            color: "#000",
           }}>
             {data.arabicName}
           </div>
         )}
         <div style={{
-          fontWeight: 700,
-          fontSize: isZatca ? "13px" : "15px",
+          fontWeight: 800,
+          fontSize: isZatca ? "14px" : "16px",
           letterSpacing: "0.5px",
-          color: color,
+          color: "#000",
         }}>
           {data.storeName || "Store"}
         </div>
         {data.storeAddress && (
-          <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>{data.storeAddress}</div>
+          <div style={{ fontSize: "11px", fontWeight: 500, color: "#000", marginTop: "2px" }}>{data.storeAddress}</div>
         )}
         {(data.storeCity || data.storeState) && (
-          <div style={{ fontSize: "10px", color: "#555" }}>
+          <div style={{ fontSize: "11px", fontWeight: 500, color: "#000" }}>
             {[data.storeCity, data.storeState].filter(Boolean).join(", ")}
           </div>
         )}
         {data.storePhone && (
-          <div style={{ fontSize: "10px", color: "#555" }}>
+          <div style={{ fontSize: "11px", fontWeight: 500, color: "#000" }}>
             {isZatca ? "هاتف / " : ""}Tel: {data.storePhone}
           </div>
         )}
         {displayVat && (
           <div style={{
-            fontSize: "10px",
-            fontWeight: 600,
-            color: "#333",
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "#000",
             marginTop: "3px",
             padding: "2px 8px",
             background: "#f5f5f5",
@@ -194,11 +194,11 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
 
       {/* Invoice Info */}
       <div style={{ padding: "0 1px" }}>
-        <div style={{ ...rowStyle, fontWeight: 600, fontSize: "11px" }}>
+        <div style={{ ...rowStyle, fontWeight: 700, fontSize: "12px" }}>
           <span>{isZatca ? "رقم الفاتورة / " : ""}#{data.invoiceNumber}</span>
           <span>{format(data.date, "dd MMM yyyy")}</span>
         </div>
-        <div style={{ ...rowStyle, fontSize: "10px", color: "#666" }}>
+        <div style={{ ...rowStyle, fontSize: "11px", color: "#000" }}>
           {data.customerName ? (
             <span>{bl("Customer", "العميل")}: {data.customerName}</span>
           ) : (
@@ -215,10 +215,10 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
       <div style={{
         display: "flex",
         justifyContent: "space-between",
-        fontSize: "9px",
+        fontSize: "10px",
         fontWeight: 700,
         textTransform: isZatca ? "none" : "uppercase",
-        color: "#888",
+        color: "#000",
         letterSpacing: "0.3px",
         padding: "0 1px",
         marginBottom: "4px",
@@ -238,21 +238,21 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
             borderBottom: i < data.items.length - 1 ? "1px dotted #eee" : "none",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <span style={{ flex: 1, fontSize: "11px", fontWeight: 500, paddingRight: "4px" }}>
+              <span style={{ flex: 1, fontSize: "12px", fontWeight: 600, paddingRight: "4px" }}>
                 {item.name}
               </span>
-              <span style={{ width: "45px", textAlign: "center", fontSize: "10px", color: "#555" }}>
+              <span style={{ width: "45px", textAlign: "center", fontSize: "11px", color: "#000" }}>
                 {item.quantity}
               </span>
-              <span style={{ width: "55px", textAlign: "right", fontSize: "10px", color: "#555" }}>
+              <span style={{ width: "55px", textAlign: "right", fontSize: "11px", color: "#000" }}>
                 {formatCurrency(item.unitPrice, cur)}
               </span>
-              <span style={{ width: "60px", textAlign: "right", fontSize: "11px", fontWeight: 600 }}>
+              <span style={{ width: "60px", textAlign: "right", fontSize: "12px", fontWeight: 700 }}>
                 {formatCurrency(item.lineTotal, cur)}
               </span>
             </div>
             {item.discount > 0 && (
-              <div style={{ fontSize: "9px", color: "#e74c3c", marginTop: "1px" }}>
+              <div style={{ fontSize: "10px", color: "#e74c3c", marginTop: "1px" }}>
                 {isZatca ? `خصم / Disc: ${item.discount}%` : `Disc: ${item.discount}%`}
               </div>
             )}
@@ -265,12 +265,12 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
 
       {/* Totals */}
       <div style={{ padding: "0 1px" }}>
-        <div style={{ ...rowStyle, fontSize: "11px", color: "#555" }}>
+        <div style={{ ...rowStyle, fontSize: "12px", color: "#000" }}>
           <span>{bl("Subtotal", "المجموع الفرعي")}</span>
           <span>{formatCurrency(data.subtotal, cur)}</span>
         </div>
         {data.taxAmount > 0 && (
-          <div style={{ ...rowStyle, fontSize: "11px", color: "#555", marginTop: "2px" }}>
+          <div style={{ ...rowStyle, fontSize: "12px", color: "#000", marginTop: "2px" }}>
             <span>
               {isZatca
                 ? `ضريبة القيمة المضافة / VAT ${data.taxRate > 0 ? `(${data.taxRate}%)` : "(15%)"}`
@@ -282,12 +282,12 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
           </div>
         )}
         {data.isTaxInclusivePrice && (
-          <div style={{ fontSize: "9px", color: "#888", textAlign: "center", marginTop: "2px" }}>
+          <div style={{ fontSize: "10px", color: "#000", textAlign: "center", marginTop: "2px" }}>
             {isZatca ? "الأسعار شاملة الضريبة / Prices include tax" : "Prices include tax"}
           </div>
         )}
         {data.roundOffAmount !== undefined && data.roundOffAmount !== 0 && (
-          <div style={{ ...rowStyle, fontSize: "11px", color: "#555", marginTop: "2px" }}>
+          <div style={{ ...rowStyle, fontSize: "12px", color: "#000", marginTop: "2px" }}>
             <span>{bl("Round Off", "التقريب")}</span>
             <span>
               {data.roundOffAmount > 0 ? "+" : ""}
@@ -297,8 +297,8 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
         )}
         <div style={{
           ...rowStyle,
-          fontWeight: 700,
-          fontSize: "14px",
+          fontWeight: 800,
+          fontSize: "15px",
           marginTop: "6px",
           padding: "6px 8px",
           background: color,
@@ -316,10 +316,10 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
       {/* Payments */}
       <div style={{ padding: "0 1px" }}>
         <div style={{
-          fontSize: "9px",
+          fontSize: "10px",
           fontWeight: 700,
           textTransform: isZatca ? "none" : "uppercase",
-          color: "#888",
+          color: "#000",
           letterSpacing: "0.3px",
           marginBottom: "3px",
         }}>
@@ -328,8 +328,8 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
         {data.payments.map((p, i) => {
           const arMethod = PAYMENT_AR[p.method] || p.method;
           return (
-            <div key={i} style={{ ...rowStyle, fontSize: "11px" }}>
-              <span style={{ color: "#555" }}>
+            <div key={i} style={{ ...rowStyle, fontSize: "12px" }}>
+              <span style={{ color: "#000" }}>
                 {isZatca ? `${arMethod} / ${p.method}` : p.method}
               </span>
               <span style={{ fontWeight: 500 }}>{formatCurrency(p.amount, cur)}</span>
@@ -339,7 +339,7 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
         {data.change > 0 && (
           <div style={{
             ...rowStyle,
-            fontSize: "11px",
+            fontSize: "12px",
             fontWeight: 600,
             marginTop: "3px",
             padding: "3px 6px",
@@ -377,8 +377,8 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
             }}
           />
           <div style={{
-            fontSize: "8px",
-            color: "#999",
+            fontSize: "9px",
+            color: "#000",
             marginTop: "4px",
             letterSpacing: "0.5px",
           }}>
@@ -388,7 +388,7 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
             }
           </div>
           {isZatca && (
-            <div style={{ fontSize: "7px", color: "#bbb", marginTop: "1px" }}>
+            <div style={{ fontSize: "8px", color: "#000", marginTop: "1px" }}>
               Scan to Verify - ZATCA Compliant
             </div>
           )}
@@ -399,16 +399,16 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
       <div style={{
         ...centerStyle,
         marginTop: "8px",
-        fontSize: "10px",
-        color: "#888",
+        fontSize: "11px",
+        color: "#000",
       }}>
         {isZatca ? (
           <>
-            <div style={{ fontWeight: 500, direction: "rtl" }}>شكراً لزيارتكم</div>
-            <div style={{ fontSize: "9px" }}>Thank you for your visit!</div>
+            <div style={{ fontWeight: 600, direction: "rtl" }}>شكراً لزيارتكم</div>
+            <div style={{ fontSize: "10px" }}>Thank you for your visit!</div>
           </>
         ) : (
-          <div style={{ fontWeight: 500 }}>Thank you for your purchase!</div>
+          <div style={{ fontWeight: 600 }}>Thank you for your purchase!</div>
         )}
       </div>
     </div>
