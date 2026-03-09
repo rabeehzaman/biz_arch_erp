@@ -22,7 +22,7 @@ import { Plus, Pencil, Trash2, Search, GitBranch, Warehouse, Loader2, Star } fro
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { UserWarehouseSettings } from "@/components/settings/user-warehouse-settings";
+
 
 interface Branch {
     id: string;
@@ -53,9 +53,7 @@ function BranchesPageContent() {
     const router = useRouter();
     const activeTab = searchParams.get("tab") === "warehouses"
         ? "warehouses"
-        : searchParams.get("tab") === "user-access"
-            ? "user-access"
-            : "branches";
+        : "branches";
 
     // Branches state
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -237,9 +235,6 @@ function BranchesPageContent() {
                         <button onClick={() => switchTab("warehouses")} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === "warehouses" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300")}>
                             Warehouses
                         </button>
-                        <button onClick={() => switchTab("user-access")} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === "user-access" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300")}>
-                            User Access
-                        </button>
                     </nav>
                 </div>
 
@@ -397,13 +392,6 @@ function BranchesPageContent() {
                                 </Card>
                             </StaggerItem>
                         </StaggerContainer>
-                    </div>
-                )}
-
-                {/* User Access Tab */}
-                {activeTab === "user-access" && (
-                    <div className="space-y-4">
-                        <UserWarehouseSettings />
                     </div>
                 )}
 

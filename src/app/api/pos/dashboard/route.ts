@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { buildPOSLocationKey } from "@/lib/pos/register-config";
+import { getUserAllowedLocations } from "@/lib/pos/user-access";
 
 export async function GET() {
   try {
@@ -12,6 +13,9 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const allowedLocations = await getUserAllowedLocations(
+      prisma, organizationId, session.user.id!, (session.user as any).role || "user"
+    );
 
     // Fetch all active branches with their warehouses
     const branches = await prisma.branch.findMany({
@@ -73,6 +77,15 @@ export async function GET() {
       }
     }
 
+    // Filter locations by user access
+    const filteredLocations = allowedLocations === null
+      ? locations
+      : locations.filter((loc) =>
+          allowedLocations.some(
+            (a) => a.branchId === loc.branchId && a.warehouseId === loc.warehouseId
+          )
+        );
+
     // Fetch all OPEN POS sessions for this org
     const openSessions = await prisma.pOSSession.findMany({
       where: { organizationId, status: "OPEN" },
@@ -89,6 +102,15 @@ export async function GET() {
       },
     });
 
+    // Filter open sessions by user access
+    const filteredSessions = allowedLocations === null
+      ? openSessions
+      : openSessions.filter((s) =>
+          allowedLocations.some(
+            (a) => a.branchId === s.branchId && a.warehouseId === s.warehouseId
+          )
+        );
+
     const registerConfigs = await prisma.pOSRegisterConfig.findMany({
       where: { organizationId },
       include: {
@@ -100,7 +122,7 @@ export async function GET() {
       registerConfigs.map((config) => [config.locationKey, config])
     );
 
-    const locationsWithConfig = locations.map((location) => {
+    const locationsWithConfig = filteredLocations.map((location) => {
       const config = configMap.get(
         buildPOSLocationKey(location.branchId, location.warehouseId)
       );
@@ -119,7 +141,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ locations: locationsWithConfig, openSessions });
+    return NextResponse.json({ locations: locationsWithConfig, openSessions: filteredSessions });
   } catch (error) {
     console.error("Failed to fetch POS dashboard:", error);
     return NextResponse.json(

@@ -5,6 +5,7 @@ import { CompanySettings } from "@/components/settings/company-settings";
 import { UnitsSettings } from "@/components/settings/units-settings";
 import { AccountingSettings } from "@/components/settings/accounting-settings";
 import { POSSettings } from "@/components/settings/pos-settings";
+import { UserWarehouseSettings } from "@/components/settings/user-warehouse-settings";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 
@@ -27,6 +28,7 @@ export default function SettingsPage() {
               <TabsTrigger className="shrink-0 px-3 py-2" value="units">{t("settings.tabUnits")}</TabsTrigger>
               <TabsTrigger className="shrink-0 px-3 py-2" value="accounting">{t("settings.tabAccounting")}</TabsTrigger>
               <TabsTrigger className="shrink-0 px-3 py-2" value="pos">{t("settings.tabPOS")}</TabsTrigger>
+              <TabsTrigger className="shrink-0 px-3 py-2" value="users">{t("settings.tabUsers")}</TabsTrigger>
             </TabsList>
           </div>
           <TabsContent value="company" className="mt-6">
@@ -40,6 +42,9 @@ export default function SettingsPage() {
           </TabsContent>
           <TabsContent value="pos" className="mt-6">
             <POSSettings />
+          </TabsContent>
+          <TabsContent value="users" className="mt-6">
+            <UserWarehouseSettings />
           </TabsContent>
         </Tabs>
       </div>

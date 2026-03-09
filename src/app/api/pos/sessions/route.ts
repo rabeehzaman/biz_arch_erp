@@ -8,6 +8,7 @@ import {
   getSystemAccount,
 } from "@/lib/accounting/journal";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
+import { getUserAllowedLocations } from "@/lib/pos/user-access";
 
  
 type Tx = any;
@@ -46,7 +47,16 @@ export async function GET(request: NextRequest) {
     const warehouseIdParam = searchParams.get("warehouseId");
     const limitParam = searchParams.get("limit");
 
-     
+    const userRole = (session.user as any).role || "user";
+    const allowedLocations = await getUserAllowedLocations(
+      prisma, organizationId, session.user.id!, userRole
+    );
+
+    // If user has access records configured but none assigned, return empty
+    if (allowedLocations !== null && allowedLocations.length === 0) {
+      return NextResponse.json([]);
+    }
+
     const where: any = { organizationId };
     if (status) {
       where.status = status;
@@ -56,6 +66,14 @@ export async function GET(request: NextRequest) {
     }
     if (warehouseIdParam !== null) {
       where.warehouseId = warehouseIdParam === "null" ? null : warehouseIdParam;
+    }
+
+    // Filter by allowed locations for non-admin users
+    if (allowedLocations !== null) {
+      where.OR = allowedLocations.map((a) => ({
+        branchId: a.branchId,
+        warehouseId: a.warehouseId,
+      }));
     }
 
     const take = limitParam ? parseInt(limitParam) : 50;
@@ -132,6 +150,27 @@ export async function POST(request: NextRequest) {
         });
         if (!warehouse) {
           throw new Error("INVALID_WAREHOUSE");
+        }
+      }
+
+      // Validate user has access to this register
+      const role = (session.user as any).role || "user";
+      if (role !== "admin" && role !== "superadmin") {
+        const orgAccessCount = await tx.userWarehouseAccess.count({
+          where: { organizationId },
+        });
+        if (orgAccessCount > 0) {
+          const userAccess = await tx.userWarehouseAccess.findFirst({
+            where: {
+              organizationId,
+              userId,
+              branchId: branchId || undefined,
+              warehouseId: warehouseId || undefined,
+            },
+          });
+          if (!userAccess) {
+            throw new Error("ACCESS_DENIED");
+          }
         }
       }
 
@@ -241,6 +280,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(posSession, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === "ACCESS_DENIED") {
+      return NextResponse.json(
+        { error: "You do not have access to this POS register." },
+        { status: 403 }
+      );
+    }
     if (error instanceof Error && error.message === "INVALID_BRANCH") {
       return NextResponse.json(
         { error: "Invalid branch selected." },
