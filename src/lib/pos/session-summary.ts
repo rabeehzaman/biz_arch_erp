@@ -28,6 +28,7 @@ export interface POSSessionReportInvoice {
   customer: {
     id: string;
     name: string;
+    arabicName: string | null;
   };
   items: POSSessionReportInvoiceItem[];
 }
@@ -35,6 +36,7 @@ export interface POSSessionReportInvoice {
 export interface POSSessionSoldProduct {
   key: string;
   name: string;
+  arabicName: string | null;
   sku: string | null;
   quantity: number;
   revenue: number;
@@ -117,7 +119,7 @@ export async function getPOSSessionReportData(
     orderBy: { createdAt: "desc" },
     include: {
       customer: {
-        select: { id: true, name: true },
+        select: { id: true, name: true, arabicName: true },
       },
       items: {
         include: {
@@ -160,6 +162,7 @@ export async function getPOSSessionReportData(
       const existing = soldProductMap.get(key) || {
         key,
         name: item.product?.name || item.description,
+        arabicName: item.product?.arabicName || null,
         sku: item.product?.sku || null,
         quantity: 0,
         revenue: 0,
@@ -185,6 +188,7 @@ export async function getPOSSessionReportData(
     customer: {
       id: invoice.customer.id,
       name: invoice.customer.name,
+      arabicName: invoice.customer.arabicName,
     },
     items: invoice.items.map((item) => ({
       id: item.id,

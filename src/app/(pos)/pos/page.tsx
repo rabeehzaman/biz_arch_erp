@@ -10,6 +10,7 @@ import {
   Loader2,
   Search,
   ArrowLeft,
+  Download,
   Store,
   Clock,
   DollarSign,
@@ -19,6 +20,7 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
+  Printer,
   Settings2,
   X,
 } from "lucide-react";
@@ -123,6 +125,8 @@ export default function POSDashboardPage() {
   const [configCashAccountId, setConfigCashAccountId] = useState(SYSTEM_DEFAULT_VALUE);
   const [configBankAccountId, setConfigBankAccountId] = useState(SYSTEM_DEFAULT_VALUE);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
+  const [isPrintingReport, setIsPrintingReport] = useState(false);
 
   const { data, isLoading, mutate } = useSWR<DashboardData>(
     "/api/pos/dashboard",
@@ -218,6 +222,60 @@ export default function POSDashboardPage() {
     setConfigBankAccountId(
       loc.registerConfig?.defaultBankAccountId || SYSTEM_DEFAULT_VALUE
     );
+  };
+
+  const handleDownloadSessionReport = async () => {
+    if (!selectedSessionId) return;
+
+    setIsDownloadingReport(true);
+    try {
+      const response = await fetch(`/api/pos/sessions/${selectedSessionId}/pdf`);
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `pos-session-${sessionSummary?.session?.sessionNumber || selectedSessionId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      toast.success("POS session report downloaded");
+    } catch (error) {
+      console.error("Failed to download POS session report:", error);
+      toast.error("Failed to download POS session report");
+    } finally {
+      setIsDownloadingReport(false);
+    }
+  };
+
+  const handlePrintSessionReport = async () => {
+    if (!selectedSessionId) return;
+
+    setIsPrintingReport(true);
+    try {
+      const response = await fetch(`/api/pos/sessions/${selectedSessionId}/pdf?download=0`);
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const printWindow = window.open(url, "_blank");
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+    } catch (error) {
+      console.error("Failed to print POS session report:", error);
+      toast.error("Failed to print POS session report");
+    } finally {
+      setIsPrintingReport(false);
+    }
   };
 
   const closeSessionHistoryDialog = () => {
@@ -640,13 +698,43 @@ export default function POSDashboardPage() {
                 </div>
               ) : sessionSummary ? (
                 <div className="space-y-4">
-                  <button
-                    className="inline-flex items-center gap-1 rounded-full border border-white/65 bg-white/75 px-3 py-1.5 text-sm text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] transition-colors hover:text-foreground"
-                    onClick={() => setSelectedSessionId(null)}
-                  >
-                    {lang === "ar" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-                    {t("pos.backToList")}
-                  </button>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <button
+                      className="inline-flex items-center gap-1 rounded-full border border-white/65 bg-white/75 px-3 py-1.5 text-sm text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] transition-colors hover:text-foreground"
+                      onClick={() => setSelectedSessionId(null)}
+                    >
+                      {lang === "ar" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                      {t("pos.backToList")}
+                    </button>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePrintSessionReport}
+                        disabled={isPrintingReport || isDownloadingReport}
+                      >
+                        {isPrintingReport ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Printer className="mr-2 h-4 w-4" />
+                        )}
+                        {t("common.print")}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleDownloadSessionReport}
+                        disabled={isDownloadingReport || isPrintingReport}
+                      >
+                        {isDownloadingReport ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="mr-2 h-4 w-4" />
+                        )}
+                        {t("common.download")} PDF
+                      </Button>
+                    </div>
+                  </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
                     <div className="rounded-[1.5rem] border border-white/70 bg-white/82 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)]">
@@ -661,6 +749,18 @@ export default function POSDashboardPage() {
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">{t("pos.cashier")}</span>
                           <span className="text-right">{sessionSummary.session.user?.name || sessionSummary.session.user?.email}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">{t("settings.branch")}</span>
+                          <span className="text-right">
+                            {sessionSummary.session.branch?.name || "-"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Warehouse</span>
+                          <span className="text-right">
+                            {sessionSummary.session.warehouse?.name || "-"}
+                          </span>
                         </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">{t("pos.opened")}</span>
