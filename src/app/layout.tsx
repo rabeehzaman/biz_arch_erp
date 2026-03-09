@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Inter, Outfit, Noto_Naskh_Arabic } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -40,10 +41,12 @@ export default async function RootLayout({
   return (
     <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${outfit.variable} ${notoNaskhArabic.variable} antialiased font-sans`}
+        className={`${inter.variable} ${outfit.variable} ${notoNaskhArabic.variable} min-h-screen antialiased font-sans`}
       >
-        {children}
-        <Toaster richColors position="top-right" />
+        <ThemeProvider>
+          {children}
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

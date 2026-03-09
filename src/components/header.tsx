@@ -21,6 +21,7 @@ import { MobileSidebar } from "./sidebar";
 import { useEffect, useState } from "react";
 import { useCommandPalette } from "@/components/command-palette/command-palette-provider";
 import {
+  getLocale,
   persistLanguagePreference,
   useLanguage,
   type Language,
@@ -39,6 +40,11 @@ export function Header() {
     .map((n) => n[0])
     .join("")
     .toUpperCase() || "U";
+  const today = new Intl.DateTimeFormat(getLocale(lang), {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(new Date());
 
   useEffect(() => {
     setMounted(true);
@@ -87,109 +93,135 @@ export function Header() {
   };
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
-      <div className="flex items-center gap-3 min-w-0">
-        {mounted ? (
-          <MobileSidebar />
-        ) : (
-          <div className="h-9 w-9 md:hidden" aria-hidden="true" />
-        )}
-        <div className="min-w-0">
-          <h1 className="text-base md:text-lg font-semibold text-slate-900 truncate">
-            {t("header.welcome")}, {session?.user?.name?.split(" ")[0] || "User"}
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 hidden sm:block">
-            {orgName ? (
-              <span className="inline-flex items-center gap-1">
-                <Building2 className="h-3 w-3" />
-                {orgName}
-              </span>
+    <header className="px-4 pt-4 md:px-6 md:pt-5">
+      <div className="glass-panel relative overflow-hidden px-4 py-4 md:px-5">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_22%),radial-gradient(circle_at_84%_18%,rgba(59,130,246,0.12),transparent_18%),radial-gradient(circle_at_72%_88%,rgba(16,185,129,0.12),transparent_18%)]"
+        />
+        <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            {mounted ? (
+              <MobileSidebar />
             ) : (
-              t("header.manageOps")
+              <div className="h-10 w-10 md:hidden" aria-hidden="true" />
             )}
-          </p>
-        </div>
-      </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="section-chip">{today}</span>
+                <span className="surface-pill hidden sm:inline-flex">
+                  <Building2 className="h-3.5 w-3.5" />
+                  {orgName || t("header.manageOps")}
+                </span>
+              </div>
+              <h1 className="mt-3 truncate text-lg font-semibold text-slate-900 md:text-2xl">
+                <span className="gradient-heading">
+                  {t("header.welcome")}, {session?.user?.name?.split(" ")[0] || "User"}
+                </span>
+              </h1>
+              <p className="mt-1 text-sm text-slate-600">
+                {orgName ? (
+                  <span className="inline-flex items-center gap-1 sm:hidden">
+                    <Building2 className="h-3.5 w-3.5" />
+                    {orgName}
+                  </span>
+                ) : (
+                  t("header.manageOps")
+                )}
+              </p>
+            </div>
+          </div>
 
-      {/* Spotlight search trigger */}
-      <button
-        onClick={() => setOpen(true)}
-        className="hidden md:flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-white transition-colors mx-4 flex-1 max-w-xs"
-      >
-        <Search className="h-4 w-4 shrink-0" />
-        <span className="flex-1 text-left">{t("header.searchPlaceholder")}</span>
-        <kbd className="pointer-events-none hidden sm:inline-flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
-          <span className="text-[10px]">⌘</span>K
-        </kbd>
-      </button>
+          <div className="flex items-center gap-2 md:gap-3 xl:min-w-[25rem] xl:justify-end">
+            <button
+              onClick={() => setOpen(true)}
+              className="hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-white/70 bg-white/74 px-4 py-3 text-sm text-slate-500 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all hover:border-sky-200/80 hover:bg-white xl:flex"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(16,185,129,0.12))] text-sky-700">
+                <Search className="h-4 w-4 shrink-0" />
+              </div>
+              <span className="min-w-0 flex-1 truncate text-left font-medium text-slate-600">
+                {t("header.searchPlaceholder")}
+              </span>
+              <kbd className="pointer-events-none hidden items-center gap-0.5 rounded-full border border-slate-200/80 bg-white px-2.5 py-1 font-mono text-[10px] text-slate-400 lg:inline-flex">
+                <span className="text-[10px]">⌘</span>K
+              </kbd>
+            </button>
 
-      <div className="flex items-center gap-2">
-        {mounted && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setOpen(true)}
-          >
-            <Search className="h-4 w-4" />
-            <span className="sr-only">{t("header.searchPlaceholder")}</span>
-          </Button>
-        )}
-
-        {mounted ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-full">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{session?.user?.name}</p>
-                  <p className="text-xs text-slate-500">{session?.user?.email}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                {t("header.profile")}
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Globe className="mr-2 h-4 w-4" />
-                  {t("header.language")}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuItem onClick={() => handleLanguageSwitch("en")} disabled={switchingLang}>
-                      <Check className={`mr-2 h-4 w-4 ${lang === "en" ? "opacity-100" : "opacity-0"}`} />
-                      {t("header.english")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleLanguageSwitch("ar")} disabled={switchingLang}>
-                      <Check className={`mr-2 h-4 w-4 ${lang === "ar" ? "opacity-100" : "opacity-0"}`} />
-                      {t("header.arabic")}
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-red-600 focus:text-red-600"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+            {mounted && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="xl:hidden"
+                onClick={() => setOpen(true)}
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                {t("header.signOut")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="h-9 w-9 rounded-full bg-slate-200" aria-hidden="true" />
-        )}
+                <Search className="h-4 w-4" />
+                <span className="sr-only">{t("header.searchPlaceholder")}</span>
+              </Button>
+            )}
+
+            {mounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/74 px-2.5 py-2 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-colors hover:bg-white">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-[linear-gradient(135deg,hsl(194_88%_43%),hsl(162_73%_42%))] text-primary-foreground">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden text-left md:block">
+                      <p className="max-w-32 truncate text-sm font-semibold text-slate-900">
+                        {session?.user?.name}
+                      </p>
+                      <p className="text-xs text-slate-500">{session?.user?.email}</p>
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">{session?.user?.name}</p>
+                      <p className="text-xs text-slate-500">{session?.user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    {t("header.profile")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Globe className="mr-2 h-4 w-4" />
+                      {t("header.language")}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem onClick={() => handleLanguageSwitch("en")} disabled={switchingLang}>
+                          <Check className={`mr-2 h-4 w-4 ${lang === "en" ? "opacity-100" : "opacity-0"}`} />
+                          {t("header.english")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleLanguageSwitch("ar")} disabled={switchingLang}>
+                          <Check className={`mr-2 h-4 w-4 ${lang === "ar" ? "opacity-100" : "opacity-0"}`} />
+                          {t("header.arabic")}
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-600 focus:text-red-600"
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {t("header.signOut")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-slate-200" aria-hidden="true" />
+            )}
+          </div>
+        </div>
       </div>
     </header>
   );

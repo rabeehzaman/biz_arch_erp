@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Simple invoicing and customer management",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#000000",
+    background_color: "#f8fcff",
+    theme_color: "#0ea5e9",
     icons: [
       {
         src: "/icon-192x192.png",

@@ -172,7 +172,7 @@ export function Combobox<T>({
             }
           }}
           className={cn(
-            "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            "flex h-10 w-full items-center justify-between rounded-xl border border-white/70 bg-white/72 px-3.5 py-2 text-sm text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_14px_28px_-24px_rgba(15,23,42,0.55)] backdrop-blur-xl ring-offset-white transition-[border-color,box-shadow,background-color] placeholder:text-slate-500 hover:border-primary/25 focus:bg-white/86 focus:outline-none focus:ring-4 focus:ring-sky-200/60 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
         >
@@ -185,7 +185,7 @@ export function Combobox<T>({
           <div className="flex items-center gap-1">
             {value && !disabled && (
               <X
-                className="h-4 w-4 text-slate-400 hover:text-slate-600"
+                className="h-4 w-4 text-slate-400 transition-colors hover:text-slate-600"
                 onClick={handleClear}
               />
             )}
@@ -196,7 +196,7 @@ export function Combobox<T>({
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
           align="start"
-          className="z-50 w-[var(--radix-popover-trigger-width)] rounded-md border border-slate-200 bg-white p-0 shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+          className="z-50 w-[var(--radix-popover-trigger-width)] rounded-[1.5rem] border border-white/65 bg-white/84 p-0 shadow-[0_24px_70px_-28px_rgba(15,23,42,0.48)] outline-none backdrop-blur-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             inputRef.current?.focus();
@@ -205,7 +205,7 @@ export function Combobox<T>({
             e.preventDefault();
           }}
         >
-          <div className="flex items-center border-b border-slate-200 px-3">
+          <div className="flex items-center border-b border-white/60 px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
             <input
               ref={inputRef}
@@ -213,14 +213,14 @@ export function Combobox<T>({
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-slate-500"
+              className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-slate-500"
             />
           </div>
           <div
             id={listboxId}
             ref={listRef}
             role="listbox"
-            className="max-h-60 overflow-y-auto p-1"
+            className="max-h-60 overflow-y-auto p-2"
           >
             {filteredItems.length === 0 ? (
               <div className="py-6 text-center text-sm text-slate-500">
@@ -238,9 +238,9 @@ export function Combobox<T>({
                     role="option"
                     aria-selected={isSelected}
                     className={cn(
-                      "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none",
-                      isHighlighted && "bg-slate-100",
-                      isSelected && "bg-slate-100"
+                      "relative flex cursor-pointer select-none items-center rounded-xl px-3 py-2.5 text-sm outline-none transition-colors",
+                      isHighlighted && "bg-sky-50/90",
+                      isSelected && "bg-sky-50/90"
                     )}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => handleSelect(itemId)}

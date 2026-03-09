@@ -66,11 +66,11 @@ export default function LoginPage() {
     <PageAnimation>
       <div
         dir={lang === "ar" ? "rtl" : "ltr"}
-        className="relative min-h-[100svh] overflow-hidden bg-[#edf4f7] lg:h-[100svh]"
+        className="relative min-h-[100svh] overflow-hidden bg-[#eef8fb] lg:h-[100svh]"
       >
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(135deg,#f7fbff_0%,#eef8fb_36%,#eef9f1_100%)]"
+          className="absolute inset-0 bg-[linear-gradient(135deg,#f8fcff_0%,#eefbff_36%,#eef8f3_100%)]"
         />
         <div
           aria-hidden="true"
@@ -104,16 +104,16 @@ export default function LoginPage() {
         />
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/55 to-transparent" />
         <div className="absolute inset-x-4 top-4 z-20 flex justify-end">
-          <div className="inline-flex overflow-hidden rounded-lg border border-white/40 bg-white/80 shadow-sm backdrop-blur">
+          <div className="inline-flex overflow-hidden rounded-full border border-white/55 bg-white/82 p-1 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl">
             <button
               type="button"
               onClick={() => {
                 setLanguage("en");
                 persistLanguagePreference("en");
               }}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
                 lang === "en"
-                  ? "bg-slate-900 text-white"
+                  ? "bg-[linear-gradient(135deg,hsl(194_88%_43%),hsl(162_73%_42%))] text-white shadow-[0_16px_30px_-18px_rgba(14,165,233,0.55)]"
                   : "text-slate-700 hover:bg-white"
               }`}
             >
@@ -125,9 +125,9 @@ export default function LoginPage() {
                 setLanguage("ar");
                 persistLanguagePreference("ar");
               }}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
                 lang === "ar"
-                  ? "bg-slate-900 text-white"
+                  ? "bg-[linear-gradient(135deg,hsl(194_88%_43%),hsl(162_73%_42%))] text-white shadow-[0_16px_30px_-18px_rgba(14,165,233,0.55)]"
                   : "text-slate-700 hover:bg-white"
               }`}
             >
@@ -226,8 +226,8 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Card className="relative w-full max-w-md overflow-hidden rounded-[2rem] border-white/60 bg-white/78 py-0 shadow-[0_28px_90px_-28px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/72 lg:max-w-[24rem] xl:max-w-md">
-              <div className="h-1.5 w-full bg-gradient-to-r from-[#2b4f95] via-[#49bdd0] to-[#7dce7c]" />
+            <Card className="glass-panel-strong relative w-full max-w-md overflow-hidden rounded-[2rem] py-0 lg:max-w-[24rem] xl:max-w-md">
+              <div className="h-1.5 w-full bg-[linear-gradient(90deg,hsl(213_91%_56%),hsl(194_88%_43%),hsl(162_73%_42%),hsl(39_96%_56%))]" />
               <CardHeader className="space-y-1 pt-6 text-center xl:pt-8">
                 <div className="mb-4 flex justify-center xl:mb-6">
                   <div className="relative flex h-16 w-16 items-center justify-center rounded-[1.1rem] bg-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.45)] xl:h-20 xl:w-20 xl:rounded-[1.25rem]">
@@ -283,7 +283,7 @@ export default function LoginPage() {
                   </div>
                   <Button
                     type="submit"
-                    className="h-10 w-full rounded-xl bg-slate-950 shadow-lg shadow-slate-950/15 hover:bg-slate-800 xl:h-11"
+                    className="h-10 w-full xl:h-11"
                     disabled={isLoading}
                   >
                     {isLoading ? (

@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 export function PageAnimation({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
         <motion.div
-            initial={{ opacity: 0.6, y: 4 }}
+            initial={{ opacity: 0.35, y: 18, scale: 0.985 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className={className}
         >
             {children}
@@ -21,10 +21,10 @@ export function StaggerContainer({ children, className }: { children: React.Reac
             initial="hidden"
             animate="visible"
             variants={{
-                hidden: { opacity: 0.6 },
+                hidden: { opacity: 0.3 },
                 visible: {
                     opacity: 1,
-                    transition: { staggerChildren: 0.03 },
+                    transition: { staggerChildren: 0.05, delayChildren: 0.04 },
                 },
             }}
             className={className}
@@ -38,8 +38,8 @@ export function StaggerItem({ children, className }: { children: React.ReactNode
     return (
         <motion.div
             variants={{
-                hidden: { opacity: 0.6, y: 4 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.15, ease: "easeOut" } },
+                hidden: { opacity: 0.3, y: 16 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } },
             }}
             className={className}
         >

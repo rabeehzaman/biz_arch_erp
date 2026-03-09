@@ -38,7 +38,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.16),transparent_24%),linear-gradient(180deg,rgba(15,23,42,0.2),rgba(15,23,42,0.45))] backdrop-blur-sm",
         className
       )}
       {...props}
@@ -61,24 +61,24 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           // Mobile: bottom sheet
-          "bg-background fixed inset-x-0 bottom-0 z-50 flex flex-col w-full rounded-t-2xl border-t shadow-lg outline-none max-h-[90svh]",
+          "glass-panel-strong fixed inset-x-0 bottom-0 z-50 flex max-h-[90svh] w-full flex-col rounded-t-[2rem] border-t border-white/65 outline-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300",
           // Desktop: centered dialog
-          "sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:border sm:max-w-lg sm:max-h-[90svh]",
+          "sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:max-h-[90svh] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[2rem] sm:border",
           "sm:data-[state=closed]:slide-out-to-bottom-[0%] sm:data-[state=open]:slide-in-from-bottom-[0%] sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0",
           className
         )}
         {...props}
       >
         {/* Drag handle — mobile only */}
-        <div className="mx-auto mt-3 mb-1 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/20 sm:hidden" />
-        <div className="flex flex-col overflow-y-auto overflow-x-hidden flex-1 p-6 pt-3 sm:pt-6 gap-4">
+        <div className="mx-auto mt-3 mb-1 h-1.5 w-14 shrink-0 rounded-full bg-slate-300/70 sm:hidden" />
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden p-6 pt-3 sm:pt-6">
           {children}
         </div>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className="ring-offset-background focus:ring-ring data-[state=open]:bg-white/80 data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-full border border-white/70 bg-white/70 p-2 opacity-80 shadow-[0_14px_28px_-20px_rgba(15,23,42,0.4)] transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
             <span className="sr-only">Close</span>
@@ -93,7 +93,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left sticky top-0 bg-background z-10 pb-2 sm:pb-0 sm:static sm:bg-transparent", className)}
+      className={cn("sticky top-0 z-10 flex flex-col gap-2 bg-white/88 pb-2 text-center backdrop-blur-xl sm:static sm:bg-transparent sm:pb-0 sm:text-left", className)}
       {...props}
     />
   )
@@ -104,7 +104,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sticky bottom-0 bg-background z-10 pt-3 border-t border-border/60 sm:border-0 sm:pt-0 sm:static sm:bg-transparent",
+        "sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t border-white/60 bg-white/88 pt-3 backdrop-blur-xl sm:static sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:pt-0",
         className
       )}
       {...props}
