@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { SessionProvider } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { SWRProvider } from "@/lib/swr-config";
@@ -22,15 +24,21 @@ function DashboardBackdrop() {
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
     const { dir } = useLanguage();
+    const pathname = usePathname();
+    const mainRef = useRef<HTMLElement | null>(null);
+
+    useEffect(() => {
+        mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }, [pathname]);
 
     return (
-        <div className="relative min-h-screen overflow-hidden" dir={dir}>
+        <div className="relative h-screen overflow-hidden" dir={dir}>
             <DashboardBackdrop />
-            <div className="relative flex min-h-screen">
+            <div className="relative flex h-full min-h-0">
                 <Sidebar />
                 <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
                     <Header />
-                    <main className="flex-1 overflow-y-auto px-4 pb-6 md:px-6 md:pb-8">
+                    <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-6 md:px-6 md:pb-8">
                         <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-6">
                             {children}
                         </div>

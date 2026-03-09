@@ -31,8 +31,8 @@ type ExtendedDashboardStats = DashboardStats & {
 
 function StatCardSkeleton() {
   return (
-    <Card className="mesh-card border-white/70">
-      <CardContent className="p-5">
+    <Card className="h-full border-white/75 bg-white/90 shadow-[0_22px_50px_-32px_rgba(15,23,42,0.3)]">
+      <CardContent className="flex h-full min-h-[11.75rem] flex-col justify-between p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3">
             <Skeleton className="h-4 w-28" />
@@ -213,18 +213,20 @@ export function DashboardContent() {
           </>
         ) : (
           statsCards.map((item) => (
-            <StaggerItem key={item.title}>
-              <Card className="mesh-card border-white/70">
-                <CardContent className="p-5">
+            <StaggerItem key={item.title} className="h-full">
+              <Card className="h-full border-white/75 bg-white/90 shadow-[0_22px_50px_-32px_rgba(15,23,42,0.3)]">
+                <CardContent className="flex h-full min-h-[11.75rem] flex-col justify-between p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                         {item.title}
                       </p>
-                      <p className="mt-3 text-3xl font-semibold text-slate-900">{item.value}</p>
-                      <p className="mt-2 text-sm text-slate-500">{item.subtitle}</p>
+                      <p className="mt-3 text-[clamp(2.4rem,3vw,3.4rem)] font-semibold leading-none tracking-tight text-slate-900">
+                        {item.value}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-600">{item.subtitle}</p>
                     </div>
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-[1.25rem] ${item.iconClass}`}>
+                    <div className={`flex h-14 w-14 items-center justify-center rounded-[1.35rem] ${item.iconClass}`}>
                       <item.icon className="h-5 w-5" />
                     </div>
                   </div>
