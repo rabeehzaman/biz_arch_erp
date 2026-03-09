@@ -335,7 +335,12 @@ app.on('web-contents-created', (_event, contents) => {
 });
 
 // ─── App Lifecycle ──────────────────────────────────────────────
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Clear cached web content so updated CSS/JS takes effect immediately
+  const ses = require('electron').session.defaultSession;
+  await ses.clearCache();
+  await ses.clearStorageData({ storages: ['cachestorage'] });
+
   createWindow();
   setupAutoUpdater();
 
