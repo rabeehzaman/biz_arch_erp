@@ -486,8 +486,6 @@ function POSTerminalContent() {
         toast.success(
           `Sale complete! Change: ${fmt(change)}`
         );
-      } else {
-        toast.success(`Sale complete! Invoice: ${result.invoice?.invoiceNumber}`);
       }
 
       // Auto-print receipt (fire-and-forget)
