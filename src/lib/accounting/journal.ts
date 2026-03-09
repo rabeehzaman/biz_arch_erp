@@ -104,6 +104,13 @@ interface JournalLine {
   credit: number;
 }
 
+export class AutoJournalEntryCreationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AutoJournalEntryCreationError";
+  }
+}
+
 export async function createAutoJournalEntry(
   tx: Tx,
   organizationId: string,
@@ -159,6 +166,19 @@ export async function createAutoJournalEntry(
     select: { id: true, journalNumber: true },
   });
 
+  return journalEntry;
+}
+
+export async function createRequiredAutoJournalEntry(
+  tx: Tx,
+  organizationId: string,
+  options: Parameters<typeof createAutoJournalEntry>[2],
+  failureMessage: string
+): Promise<{ id: string; journalNumber: string }> {
+  const journalEntry = await createAutoJournalEntry(tx, organizationId, options);
+  if (!journalEntry) {
+    throw new AutoJournalEntryCreationError(failureMessage);
+  }
   return journalEntry;
 }
 

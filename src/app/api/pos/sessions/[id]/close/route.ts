@@ -3,7 +3,8 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import {
-  createAutoJournalEntry,
+  AutoJournalEntryCreationError,
+  createRequiredAutoJournalEntry,
   getDefaultCashBankAccount,
   getSystemAccount,
   ensureCashShortOverAccount,
@@ -174,65 +175,82 @@ export async function PUT(
             where: { id: effectiveSettleCashAccountId, organizationId, isActive: true },
             select: { id: true, accountId: true },
           });
+          if (!clearingAccount) {
+            throw new AutoJournalEntryCreationError(
+              "POS clearing account is missing. Re-save organization settings to provision POS clearing accounts."
+            );
+          }
+          if (!cashCBA) {
+            throw new AutoJournalEntryCreationError(
+              "The selected cash settlement account is missing or inactive."
+            );
+          }
 
-          if (cashCBA && clearingAccount) {
-            const depositAmount = floatJournaledAtOpen
-              ? Number(closingCash)                              // full deposit (new Store Safe flow)
-              : Number(closingCash) - Number(posSession.openingCash); // net deposit (legacy flow)
-            const clearingCredit = floatJournaledAtOpen
-              ? expectedCash   // float + sales — matches what was debited to clearing at open + sales
-              : depositAmount; // legacy: only sales proceeds credited back
+          const depositAmount = floatJournaledAtOpen
+            ? Number(closingCash)                              // full deposit (new Store Safe flow)
+            : Number(closingCash) - Number(posSession.openingCash); // net deposit (legacy flow)
+          const clearingCredit = floatJournaledAtOpen
+            ? expectedCash   // float + sales — matches what was debited to clearing at open + sales
+            : depositAmount; // legacy: only sales proceeds credited back
 
-            const lines: { accountId: string; description: string; debit: number; credit: number }[] = [];
+          const lines: { accountId: string; description: string; debit: number; credit: number }[] = [];
 
-            if (depositAmount > 0) {
-              lines.push({ accountId: cashCBA.accountId, description: "Store Safe", debit: depositAmount, credit: 0 });
+          if (depositAmount > 0) {
+            lines.push({ accountId: cashCBA.accountId, description: "Store Safe", debit: depositAmount, credit: 0 });
+          }
+
+          // Shortage or overage (only in new flow; legacy flow handled clearing separately)
+          if (floatJournaledAtOpen && cashShortOverAccount) {
+            if (cashDifference < -0.005) {
+              lines.push({ accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: Math.abs(cashDifference), credit: 0 });
+            } else if (cashDifference > 0.005) {
+              lines.push({ accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: 0, credit: cashDifference });
             }
+          }
 
-            // Shortage or overage (only in new flow; legacy flow handled clearing separately)
-            if (floatJournaledAtOpen && cashShortOverAccount) {
-              if (cashDifference < -0.005) {
-                lines.push({ accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: Math.abs(cashDifference), credit: 0 });
-              } else if (cashDifference > 0.005) {
-                lines.push({ accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: 0, credit: cashDifference });
-              }
-            }
+          if (clearingCredit > 0) {
+            lines.push({ accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: clearingCredit });
+          }
 
-            if (clearingCredit > 0) {
-              lines.push({ accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: clearingCredit });
-            }
+          if (lines.length < 2) {
+            throw new AutoJournalEntryCreationError(
+              "Failed to prepare the POS cash settlement journal entry."
+            );
+          }
 
-            if (lines.length >= 2) {
-              await createAutoJournalEntry(tx, organizationId, {
-                date: now,
+          await createRequiredAutoJournalEntry(
+            tx,
+            organizationId,
+            {
+              date: now,
+              description: `POS Session Close - Cash to Store Safe (${posSession.sessionNumber})`,
+              sourceType: "POS_SESSION_CLOSE",
+              sourceId: id,
+              branchId: posSession.branchId,
+              lines,
+            },
+            "Failed to post the POS cash settlement journal entry."
+          );
+
+          if (depositAmount > 0) {
+            await tx.cashBankAccount.update({
+              where: { id: cashCBA.id },
+              data: { balance: { increment: depositAmount } },
+            });
+            const updatedCB = await tx.cashBankAccount.findUnique({ where: { id: cashCBA.id } });
+            await tx.cashBankTransaction.create({
+              data: {
+                cashBankAccountId: cashCBA.id,
+                transactionType: "DEPOSIT",
+                amount: depositAmount,
+                runningBalance: Number(updatedCB?.balance ?? 0),
                 description: `POS Session Close - Cash to Store Safe (${posSession.sessionNumber})`,
-                sourceType: "POS_SESSION_CLOSE",
-                sourceId: id,
-                branchId: posSession.branchId,
-                lines,
-              });
-
-              if (depositAmount > 0) {
-                await tx.cashBankAccount.update({
-                  where: { id: cashCBA.id },
-                  data: { balance: { increment: depositAmount } },
-                });
-                const updatedCB = await tx.cashBankAccount.findUnique({ where: { id: cashCBA.id } });
-                await tx.cashBankTransaction.create({
-                  data: {
-                    cashBankAccountId: cashCBA.id,
-                    transactionType: "DEPOSIT",
-                    amount: depositAmount,
-                    runningBalance: Number(updatedCB?.balance ?? 0),
-                    description: `POS Session Close - Cash to Store Safe (${posSession.sessionNumber})`,
-                    referenceType: "POS_SESSION",
-                    referenceId: id,
-                    transactionDate: now,
-                    organizationId,
-                  },
-                });
-              }
-            }
+                referenceType: "POS_SESSION",
+                referenceId: id,
+                transactionDate: now,
+                organizationId,
+              },
+            });
           }
         }
 
@@ -242,9 +260,20 @@ export async function PUT(
             where: { id: effectiveSettleBankAccountId, organizationId, isActive: true },
             select: { id: true, accountId: true },
           });
-
-          if (bankCBA && clearingAccount) {
-            await createAutoJournalEntry(tx, organizationId, {
+          if (!clearingAccount) {
+            throw new AutoJournalEntryCreationError(
+              "POS clearing account is missing. Re-save organization settings to provision POS clearing accounts."
+            );
+          }
+          if (!bankCBA) {
+            throw new AutoJournalEntryCreationError(
+              "The selected bank settlement account is missing or inactive."
+            );
+          }
+          await createRequiredAutoJournalEntry(
+            tx,
+            organizationId,
+            {
               date: now,
               description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
               sourceType: "POS_SESSION_CLOSE",
@@ -254,37 +283,49 @@ export async function PUT(
                 { accountId: bankCBA.accountId, description: "Bank Account", debit: nonCashTotal, credit: 0 },
                 { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: nonCashTotal },
               ],
-            });
+            },
+            "Failed to post the POS non-cash settlement journal entry."
+          );
 
-            await tx.cashBankAccount.update({
-              where: { id: bankCBA.id },
-              data: { balance: { increment: nonCashTotal } },
-            });
+          await tx.cashBankAccount.update({
+            where: { id: bankCBA.id },
+            data: { balance: { increment: nonCashTotal } },
+          });
 
-            const updatedBank = await tx.cashBankAccount.findUnique({ where: { id: bankCBA.id } });
-            await tx.cashBankTransaction.create({
-              data: {
-                cashBankAccountId: bankCBA.id,
-                transactionType: "DEPOSIT",
-                amount: nonCashTotal,
-                runningBalance: Number(updatedBank?.balance ?? 0),
-                description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
-                referenceType: "POS_SESSION",
-                referenceId: id,
-                transactionDate: now,
-                organizationId,
-              },
-            });
-          }
+          const updatedBank = await tx.cashBankAccount.findUnique({ where: { id: bankCBA.id } });
+          await tx.cashBankTransaction.create({
+            data: {
+              cashBankAccountId: bankCBA.id,
+              transactionType: "DEPOSIT",
+              amount: nonCashTotal,
+              runningBalance: Number(updatedBank?.balance ?? 0),
+              description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
+              referenceType: "POS_SESSION",
+              referenceId: id,
+              transactionDate: now,
+              organizationId,
+            },
+          });
         } else if (nonCashTotal > 0 && effectiveSettleCashAccountId && !effectiveSettleBankAccountId) {
           // Fallback: no separate bank account configured — deposit non-cash to Store Safe
           const fallbackCBA = await tx.cashBankAccount.findFirst({
             where: { id: effectiveSettleCashAccountId, organizationId, isActive: true },
             select: { id: true, accountId: true },
           });
-
-          if (fallbackCBA && clearingAccount) {
-            await createAutoJournalEntry(tx, organizationId, {
+          if (!clearingAccount) {
+            throw new AutoJournalEntryCreationError(
+              "POS clearing account is missing. Re-save organization settings to provision POS clearing accounts."
+            );
+          }
+          if (!fallbackCBA) {
+            throw new AutoJournalEntryCreationError(
+              "The selected cash settlement account is missing or inactive."
+            );
+          }
+          await createRequiredAutoJournalEntry(
+            tx,
+            organizationId,
+            {
               date: now,
               description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
               sourceType: "POS_SESSION_CLOSE",
@@ -294,57 +335,72 @@ export async function PUT(
                 { accountId: fallbackCBA.accountId, description: "Store Safe", debit: nonCashTotal, credit: 0 },
                 { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: nonCashTotal },
               ],
-            });
+            },
+            "Failed to post the POS non-cash settlement journal entry."
+          );
 
-            await tx.cashBankAccount.update({
-              where: { id: fallbackCBA.id },
-              data: { balance: { increment: nonCashTotal } },
-            });
+          await tx.cashBankAccount.update({
+            where: { id: fallbackCBA.id },
+            data: { balance: { increment: nonCashTotal } },
+          });
 
-            const updatedFallback = await tx.cashBankAccount.findUnique({ where: { id: fallbackCBA.id } });
-            await tx.cashBankTransaction.create({
-              data: {
-                cashBankAccountId: fallbackCBA.id,
-                transactionType: "DEPOSIT",
-                amount: nonCashTotal,
-                runningBalance: Number(updatedFallback?.balance ?? 0),
-                description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
-                referenceType: "POS_SESSION",
-                referenceId: id,
-                transactionDate: now,
-                organizationId,
-              },
-            });
-          }
+          const updatedFallback = await tx.cashBankAccount.findUnique({ where: { id: fallbackCBA.id } });
+          await tx.cashBankTransaction.create({
+            data: {
+              cashBankAccountId: fallbackCBA.id,
+              transactionType: "DEPOSIT",
+              amount: nonCashTotal,
+              runningBalance: Number(updatedFallback?.balance ?? 0),
+              description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
+              referenceType: "POS_SESSION",
+              referenceId: id,
+              transactionDate: now,
+              organizationId,
+            },
+          });
         }
 
         // Step C: Cash shortage/overage (legacy flow only — new flow embeds it in Step A)
         if (!floatJournaledAtOpen && Math.abs(cashDifference) >= 0.01 && clearingAccount && cashShortOverAccount) {
           if (cashDifference < 0) {
-            await createAutoJournalEntry(tx, organizationId, {
-              date: now,
-              description: `POS Cash Shortage (${posSession.sessionNumber})`,
-              sourceType: "POS_SESSION_CLOSE",
-              sourceId: id,
-              branchId: posSession.branchId,
-              lines: [
-                { accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: Math.abs(cashDifference), credit: 0 },
-                { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: Math.abs(cashDifference) },
-              ],
-            });
+            await createRequiredAutoJournalEntry(
+              tx,
+              organizationId,
+              {
+                date: now,
+                description: `POS Cash Shortage (${posSession.sessionNumber})`,
+                sourceType: "POS_SESSION_CLOSE",
+                sourceId: id,
+                branchId: posSession.branchId,
+                lines: [
+                  { accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: Math.abs(cashDifference), credit: 0 },
+                  { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: Math.abs(cashDifference) },
+                ],
+              },
+              "Failed to post the POS cash shortage journal entry."
+            );
           } else {
-            await createAutoJournalEntry(tx, organizationId, {
-              date: now,
-              description: `POS Cash Overage (${posSession.sessionNumber})`,
-              sourceType: "POS_SESSION_CLOSE",
-              sourceId: id,
-              branchId: posSession.branchId,
-              lines: [
-                { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: cashDifference, credit: 0 },
-                { accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: 0, credit: cashDifference },
-              ],
-            });
+            await createRequiredAutoJournalEntry(
+              tx,
+              organizationId,
+              {
+                date: now,
+                description: `POS Cash Overage (${posSession.sessionNumber})`,
+                sourceType: "POS_SESSION_CLOSE",
+                sourceId: id,
+                branchId: posSession.branchId,
+                lines: [
+                  { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: cashDifference, credit: 0 },
+                  { accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: 0, credit: cashDifference },
+                ],
+              },
+              "Failed to post the POS cash overage journal entry."
+            );
           }
+        } else if (!floatJournaledAtOpen && Math.abs(cashDifference) >= 0.01) {
+          throw new AutoJournalEntryCreationError(
+            "POS cash difference account setup is incomplete for session close."
+          );
         }
       } else {
         // ── DIRECT mode: only handle cash difference ────────────────────
@@ -357,11 +413,18 @@ export async function PUT(
             posSession.branchId,
             registerConfig?.defaultCashAccountId
           );
+          if (!cashShortOverAccount || !cashBankInfo) {
+            throw new AutoJournalEntryCreationError(
+              "POS cash difference account setup is incomplete for session close."
+            );
+          }
 
-          if (cashShortOverAccount && cashBankInfo) {
-            if (cashDifference < 0) {
-              // Shortage: DR Cash Short & Over, CR Cash
-              await createAutoJournalEntry(tx, organizationId, {
+          if (cashDifference < 0) {
+            // Shortage: DR Cash Short & Over, CR Cash
+            await createRequiredAutoJournalEntry(
+              tx,
+              organizationId,
+              {
                 date: now,
                 description: `POS Cash Shortage (${posSession.sessionNumber})`,
                 sourceType: "POS_SESSION_CLOSE",
@@ -371,10 +434,15 @@ export async function PUT(
                   { accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: Math.abs(cashDifference), credit: 0 },
                   { accountId: cashBankInfo.accountId, description: "Cash", debit: 0, credit: Math.abs(cashDifference) },
                 ],
-              });
-            } else {
-              // Overage: DR Cash, CR Cash Short & Over
-              await createAutoJournalEntry(tx, organizationId, {
+              },
+              "Failed to post the POS cash shortage journal entry."
+            );
+          } else {
+            // Overage: DR Cash, CR Cash Short & Over
+            await createRequiredAutoJournalEntry(
+              tx,
+              organizationId,
+              {
                 date: now,
                 description: `POS Cash Overage (${posSession.sessionNumber})`,
                 sourceType: "POS_SESSION_CLOSE",
@@ -384,31 +452,32 @@ export async function PUT(
                   { accountId: cashBankInfo.accountId, description: "Cash", debit: cashDifference, credit: 0 },
                   { accountId: cashShortOverAccount.id, description: "Cash Short and Over", debit: 0, credit: cashDifference },
                 ],
-              });
-            }
-
-            // Update CashBankAccount balance for the difference
-            await tx.cashBankAccount.update({
-              where: { id: cashBankInfo.cashBankAccountId },
-              data: { balance: { increment: cashDifference } },
-            });
-            const updatedCB = await tx.cashBankAccount.findUnique({
-              where: { id: cashBankInfo.cashBankAccountId },
-            });
-            await tx.cashBankTransaction.create({
-              data: {
-                cashBankAccountId: cashBankInfo.cashBankAccountId,
-                transactionType: "ADJUSTMENT",
-                amount: cashDifference,
-                runningBalance: Number(updatedCB?.balance || 0),
-                description: `POS Cash ${cashDifference < 0 ? "Shortage" : "Overage"} (${posSession.sessionNumber})`,
-                referenceType: "POS_SESSION",
-                referenceId: id,
-                transactionDate: now,
-                organizationId,
               },
-            });
+              "Failed to post the POS cash overage journal entry."
+            );
           }
+
+          // Update CashBankAccount balance for the difference
+          await tx.cashBankAccount.update({
+            where: { id: cashBankInfo.cashBankAccountId },
+            data: { balance: { increment: cashDifference } },
+          });
+          const updatedCB = await tx.cashBankAccount.findUnique({
+            where: { id: cashBankInfo.cashBankAccountId },
+          });
+          await tx.cashBankTransaction.create({
+            data: {
+              cashBankAccountId: cashBankInfo.cashBankAccountId,
+              transactionType: "ADJUSTMENT",
+              amount: cashDifference,
+              runningBalance: Number(updatedCB?.balance || 0),
+              description: `POS Cash ${cashDifference < 0 ? "Shortage" : "Overage"} (${posSession.sessionNumber})`,
+              referenceType: "POS_SESSION",
+              referenceId: id,
+              transactionDate: now,
+              organizationId,
+            },
+          });
         }
       }
 
@@ -437,6 +506,12 @@ export async function PUT(
 
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof AutoJournalEntryCreationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
     console.error("Failed to close POS session:", error);
     return NextResponse.json(
       { error: "Failed to close POS session" },

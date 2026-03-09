@@ -20,11 +20,29 @@ export async function getPOSRegisterConfig(
   defaultCashAccountId: string | null;
   defaultBankAccountId: string | null;
 } | null> {
-  return tx.pOSRegisterConfig.findUnique({
+  const exactConfig = await tx.pOSRegisterConfig.findUnique({
     where: {
       organizationId_locationKey: {
         organizationId,
         locationKey: buildPOSLocationKey(branchId, warehouseId),
+      },
+    },
+    select: {
+      id: true,
+      defaultCashAccountId: true,
+      defaultBankAccountId: true,
+    },
+  });
+
+  if (exactConfig || !warehouseId) {
+    return exactConfig;
+  }
+
+  return tx.pOSRegisterConfig.findUnique({
+    where: {
+      organizationId_locationKey: {
+        organizationId,
+        locationKey: buildPOSLocationKey(branchId, null),
       },
     },
     select: {

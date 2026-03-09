@@ -18,10 +18,10 @@ export async function provisionStoreSafe(
   tx: Tx,
   organizationId: string,
   options: {
-    branchId: string;
+    branchId?: string | null;
     branchCode: string;
     branchName: string;
-    warehouseId?: string;
+    warehouseId?: string | null;
     warehouseCode?: string;
     warehouseName?: string;
   }
@@ -80,7 +80,7 @@ export async function provisionStoreSafe(
         name: accountName,
         accountId,
         accountSubType: "CASH",
-        branchId,
+        branchId: branchId ?? null,
         balance: 0,
         isActive: true,
       },
@@ -89,20 +89,96 @@ export async function provisionStoreSafe(
     cashBankAccountId = cba.id;
   }
 
-  // 3. Upsert POSRegisterConfig to assign the Store Safe as the default cash account
-  await tx.pOSRegisterConfig.upsert({
+  // 3. Create or backfill the POSRegisterConfig without overwriting manual assignments
+  const existingConfig = await tx.pOSRegisterConfig.findUnique({
     where: { organizationId_locationKey: { organizationId, locationKey } },
-    create: {
-      organizationId,
-      locationKey,
-      branchId,
-      warehouseId: warehouseId ?? null,
-      defaultCashAccountId: cashBankAccountId,
-      defaultBankAccountId: null,
-    },
-    update: {
-      // Only set the cash account if not already customised (don't overwrite manual assignments)
-      defaultCashAccountId: cashBankAccountId,
-    },
+    select: { id: true, defaultCashAccountId: true },
   });
+
+  if (!existingConfig) {
+    await tx.pOSRegisterConfig.create({
+      data: {
+        organizationId,
+        locationKey,
+        branchId: branchId ?? null,
+        warehouseId: warehouseId ?? null,
+        defaultCashAccountId: cashBankAccountId,
+        defaultBankAccountId: null,
+      },
+    });
+    return;
+  }
+
+  if (!existingConfig.defaultCashAccountId) {
+    await tx.pOSRegisterConfig.update({
+      where: { id: existingConfig.id },
+      data: { defaultCashAccountId: cashBankAccountId },
+    });
+  }
+}
+
+export async function provisionPOSRegisterSetup(
+  tx: Tx,
+  organizationId: string
+): Promise<void> {
+  const branches = await tx.branch.findMany({
+    where: { organizationId, isActive: true },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      warehouses: {
+        where: { isActive: true },
+        select: { id: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (branches.length === 0) {
+    await provisionStoreSafe(tx, organizationId, {
+      branchId: null,
+      branchCode: "MAIN",
+      branchName: "Main Register",
+    });
+    return;
+  }
+
+  for (const branch of branches) {
+    await provisionStoreSafe(tx, organizationId, {
+      branchId: branch.id,
+      branchCode: branch.code,
+      branchName: branch.name,
+    });
+
+    const branchConfig = await tx.pOSRegisterConfig.findUnique({
+      where: {
+        organizationId_locationKey: {
+          organizationId,
+          locationKey: buildPOSLocationKey(branch.id, null),
+        },
+      },
+      select: { defaultCashAccountId: true, defaultBankAccountId: true },
+    });
+
+    for (const warehouse of branch.warehouses) {
+      await tx.pOSRegisterConfig.upsert({
+        where: {
+          organizationId_locationKey: {
+            organizationId,
+            locationKey: buildPOSLocationKey(branch.id, warehouse.id),
+          },
+        },
+        create: {
+          organizationId,
+          locationKey: buildPOSLocationKey(branch.id, warehouse.id),
+          branchId: branch.id,
+          warehouseId: warehouse.id,
+          defaultCashAccountId: branchConfig?.defaultCashAccountId ?? null,
+          defaultBankAccountId: branchConfig?.defaultBankAccountId ?? null,
+        },
+        update: {},
+      });
+    }
+  }
 }

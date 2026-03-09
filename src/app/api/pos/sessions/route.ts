@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import {
+  AutoJournalEntryCreationError,
+  createRequiredAutoJournalEntry,
+  getSystemAccount,
+} from "@/lib/accounting/journal";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 
  
@@ -171,6 +175,16 @@ export async function POST(request: NextRequest) {
       if (isClearingMode && Number(openingCash) > 0) {
         const clearingAccount = await getSystemAccount(tx, organizationId, "1150");
         const registerConfig = await getPOSRegisterConfig(tx, organizationId, branchId || null, warehouseId || null);
+        if (!registerConfig?.defaultCashAccountId) {
+          throw new AutoJournalEntryCreationError(
+            "Set a default cash account for this POS register before opening with opening cash in clearing mode."
+          );
+        }
+        if (!clearingAccount) {
+          throw new AutoJournalEntryCreationError(
+            "POS clearing account is missing. Re-save organization settings to provision POS clearing accounts."
+          );
+        }
         const storeSafe = registerConfig?.defaultCashAccountId
           ? await tx.cashBankAccount.findFirst({
               where: { id: registerConfig.defaultCashAccountId, organizationId, isActive: true },
@@ -178,9 +192,17 @@ export async function POST(request: NextRequest) {
             })
           : null;
 
-        if (clearingAccount && storeSafe) {
-          const now = new Date();
-          await createAutoJournalEntry(tx, organizationId, {
+        if (!storeSafe) {
+          throw new AutoJournalEntryCreationError(
+            "The configured POS cash account is missing or inactive. Update the register cash account before opening."
+          );
+        }
+
+        const now = new Date();
+        await createRequiredAutoJournalEntry(
+          tx,
+          organizationId,
+          {
             date: now,
             description: `POS Float Issued - ${sessionNumber}`,
             sourceType: "POS_SESSION_OPEN",
@@ -190,27 +212,28 @@ export async function POST(request: NextRequest) {
               { accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: Number(openingCash), credit: 0 },
               { accountId: storeSafe.accountId, description: "Store Safe", debit: 0, credit: Number(openingCash) },
             ],
-          });
+          },
+          "Failed to post the POS opening float journal entry."
+        );
 
-          await tx.cashBankAccount.update({
-            where: { id: storeSafe.id },
-            data: { balance: { decrement: Number(openingCash) } },
-          });
-          const updatedSafe = await tx.cashBankAccount.findUnique({ where: { id: storeSafe.id } });
-          await tx.cashBankTransaction.create({
-            data: {
-              cashBankAccountId: storeSafe.id,
-              transactionType: "WITHDRAWAL",
-              amount: Number(openingCash),
-              runningBalance: Number(updatedSafe?.balance ?? 0),
-              description: `POS Float Issued - ${sessionNumber}`,
-              referenceType: "POS_SESSION",
-              referenceId: newSession.id,
-              transactionDate: now,
-              organizationId,
-            },
-          });
-        }
+        await tx.cashBankAccount.update({
+          where: { id: storeSafe.id },
+          data: { balance: { decrement: Number(openingCash) } },
+        });
+        const updatedSafe = await tx.cashBankAccount.findUnique({ where: { id: storeSafe.id } });
+        await tx.cashBankTransaction.create({
+          data: {
+            cashBankAccountId: storeSafe.id,
+            transactionType: "WITHDRAWAL",
+            amount: Number(openingCash),
+            runningBalance: Number(updatedSafe?.balance ?? 0),
+            description: `POS Float Issued - ${sessionNumber}`,
+            referenceType: "POS_SESSION",
+            referenceId: newSession.id,
+            transactionDate: now,
+            organizationId,
+          },
+        });
       }
 
       return newSession;
@@ -233,6 +256,12 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === "ALREADY_OPEN") {
       return NextResponse.json(
         { error: "There is already an open POS session for this register. Please close it first or continue selling." },
+        { status: 400 }
+      );
+    }
+    if (error instanceof AutoJournalEntryCreationError) {
+      return NextResponse.json(
+        { error: error.message },
         { status: 400 }
       );
     }

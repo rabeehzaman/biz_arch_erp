@@ -5,7 +5,8 @@ import { getOrgId, isSaudiEInvoiceEnabled, isTaxInclusivePrice as isTaxInclusive
 import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { consumeStockFIFO } from "@/lib/inventory/fifo";
 import {
-  createAutoJournalEntry,
+  AutoJournalEntryCreationError,
+  createRequiredAutoJournalEntry,
   ensureRoundOffAccount,
   getSystemAccount,
   getDefaultCashBankAccount,
@@ -498,70 +499,78 @@ export async function POST(request: NextRequest) {
       // ── 8. Revenue + COGS journal entries ────────────────────────────
       const arAccount = await getSystemAccount(tx, organizationId, "1300");
       const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
+      if (!arAccount || !revenueAccount) {
+        throw new AutoJournalEntryCreationError(
+          "POS accounting setup is incomplete. Accounts Receivable or Sales Revenue is missing."
+        );
+      }
 
-      if (arAccount && revenueAccount) {
-        const revenueLines: Array<{
-          accountId: string;
-          description: string;
-          debit: number;
-          credit: number;
-        }> = [
-            {
-              accountId: arAccount.id,
-              description: "Accounts Receivable",
-              debit: total,
-              credit: 0,
-            },
-            {
-              accountId: revenueAccount.id,
-              description: "Sales Revenue",
-              debit: 0,
-              credit: subtotal,
-            },
-          ];
+      const revenueLines: Array<{
+        accountId: string;
+        description: string;
+        debit: number;
+        credit: number;
+      }> = [
+          {
+            accountId: arAccount.id,
+            description: "Accounts Receivable",
+            debit: total,
+            credit: 0,
+          },
+          {
+            accountId: revenueAccount.id,
+            description: "Sales Revenue",
+            debit: 0,
+            credit: subtotal,
+          },
+        ];
 
-        // Tax journal lines
-        if (saudiEnabled && totalVat && totalVat > 0) {
-          // Saudi VAT: use VAT output account (2240)
-          const vatAccount = await getSystemAccount(tx, organizationId, "2240");
-          if (vatAccount) revenueLines.push({ accountId: vatAccount.id, description: "VAT Output", debit: 0, credit: totalVat });
-        } else {
-          // GST journal lines
-          if (gstResult.totalCgst > 0) {
-            const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
-            if (cgstAccount) revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: gstResult.totalCgst });
-          }
-          if (gstResult.totalSgst > 0) {
-            const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
-            if (sgstAccount) revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: gstResult.totalSgst });
-          }
-          if (gstResult.totalIgst > 0) {
-            const igstAccount = await getSystemAccount(tx, organizationId, "2230");
-            if (igstAccount) revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: gstResult.totalIgst });
-          }
+      // Tax journal lines
+      if (saudiEnabled && totalVat && totalVat > 0) {
+        // Saudi VAT: use VAT output account (2240)
+        const vatAccount = await getSystemAccount(tx, organizationId, "2240");
+        if (vatAccount) revenueLines.push({ accountId: vatAccount.id, description: "VAT Output", debit: 0, credit: totalVat });
+      } else {
+        // GST journal lines
+        if (gstResult.totalCgst > 0) {
+          const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
+          if (cgstAccount) revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: gstResult.totalCgst });
         }
-
-        if (Math.abs(roundOffAmount) > 0.0001) {
-          const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
-          if (roundOffAccount) {
-            revenueLines.push({
-              accountId: roundOffAccount.id,
-              description: "Round Off Adjustment",
-              debit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
-              credit: roundOffAmount > 0 ? roundOffAmount : 0,
-            });
-          }
+        if (gstResult.totalSgst > 0) {
+          const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
+          if (sgstAccount) revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: gstResult.totalSgst });
         }
+        if (gstResult.totalIgst > 0) {
+          const igstAccount = await getSystemAccount(tx, organizationId, "2230");
+          if (igstAccount) revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: gstResult.totalIgst });
+        }
+      }
 
-        await createAutoJournalEntry(tx, organizationId, {
+      if (Math.abs(roundOffAmount) > 0.0001) {
+        const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
+        if (roundOffAccount) {
+          revenueLines.push({
+            accountId: roundOffAccount.id,
+            description: "Round Off Adjustment",
+            debit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
+            credit: roundOffAmount > 0 ? roundOffAmount : 0,
+          });
+        }
+      }
+
+      await createRequiredAutoJournalEntry(
+        tx,
+        organizationId,
+        {
           date: now,
           description: `POS Sale ${invoiceNumber}`,
           sourceType: "INVOICE",
           sourceId: invoice.id,
           branchId: posSession.branchId,
           lines: revenueLines,
-        });
-      }
+        },
+        "Failed to post the POS sales journal entry."
+      );
 
       // COGS journal entry
       const finalItems = await tx.invoiceItem.findMany({
@@ -584,8 +593,15 @@ export async function POST(request: NextRequest) {
           organizationId,
           "1400"
         );
-        if (cogsAccount && inventoryAccount) {
-          await createAutoJournalEntry(tx, organizationId, {
+        if (!cogsAccount || !inventoryAccount) {
+          throw new AutoJournalEntryCreationError(
+            "POS accounting setup is incomplete. Cost of Goods Sold or Inventory account is missing."
+          );
+        }
+        await createRequiredAutoJournalEntry(
+          tx,
+          organizationId,
+          {
             date: now,
             description: `COGS - ${invoiceNumber}`,
             sourceType: "INVOICE",
@@ -605,8 +621,9 @@ export async function POST(request: NextRequest) {
                 credit: totalCOGS,
               },
             ],
-          });
-        }
+          },
+          "Failed to post the POS COGS journal entry."
+        );
       }
 
       // ── 9. Process payments ──────────────────────────────────────────
@@ -660,9 +677,15 @@ export async function POST(request: NextRequest) {
             // CLEARING_ACCOUNT mode: DR POS Undeposited Funds, CR AR
             // Cash/Bank updates happen at session close
             const clearingAccount = await getSystemAccount(tx, organizationId, "1150");
-
-            if (arAccount && clearingAccount) {
-              await createAutoJournalEntry(tx, organizationId, {
+            if (!clearingAccount) {
+              throw new AutoJournalEntryCreationError(
+                "POS clearing account is missing. Re-save organization settings to provision POS clearing accounts."
+              );
+            }
+            await createRequiredAutoJournalEntry(
+              tx,
+              organizationId,
+              {
                 date: now,
                 description: `POS Payment ${paymentNumber}`,
                 sourceType: "PAYMENT",
@@ -682,8 +705,9 @@ export async function POST(request: NextRequest) {
                     credit: allocationAmount,
                   },
                 ],
-              });
-            }
+              },
+              `Failed to post the POS payment journal entry for ${payment.method}.`
+            );
             // No CashBankAccount or CashBankTransaction updates in clearing mode
           } else {
             // DIRECT mode (default): DR Cash/Bank, CR AR — update balances immediately
@@ -696,9 +720,16 @@ export async function POST(request: NextRequest) {
                 ? registerConfig?.defaultCashAccountId
                 : registerConfig?.defaultBankAccountId
             );
+            if (!cashBankInfo) {
+              throw new AutoJournalEntryCreationError(
+                `No active ${payment.method === "CASH" ? "cash" : "bank"} account is configured for POS payment method ${payment.method}.`
+              );
+            }
 
-            if (arAccount && cashBankInfo) {
-              await createAutoJournalEntry(tx, organizationId, {
+            await createRequiredAutoJournalEntry(
+              tx,
+              organizationId,
+              {
                 date: now,
                 description: `POS Payment ${paymentNumber}`,
                 sourceType: "PAYMENT",
@@ -718,33 +749,34 @@ export async function POST(request: NextRequest) {
                     credit: allocationAmount,
                   },
                 ],
-              });
+              },
+              `Failed to post the POS payment journal entry for ${payment.method}.`
+            );
 
-              // Update CashBankAccount balance (only the amount actually kept)
-              await tx.cashBankAccount.update({
-                where: { id: cashBankInfo.cashBankAccountId },
-                data: { balance: { increment: allocationAmount } },
-              });
+            // Update CashBankAccount balance (only the amount actually kept)
+            await tx.cashBankAccount.update({
+              where: { id: cashBankInfo.cashBankAccountId },
+              data: { balance: { increment: allocationAmount } },
+            });
 
-              // Create CashBankTransaction record
-              const updatedCB = await tx.cashBankAccount.findUnique({
-                where: { id: cashBankInfo.cashBankAccountId },
-              });
+            // Create CashBankTransaction record
+            const updatedCB = await tx.cashBankAccount.findUnique({
+              where: { id: cashBankInfo.cashBankAccountId },
+            });
 
-              await tx.cashBankTransaction.create({
-                data: {
-                  cashBankAccountId: cashBankInfo.cashBankAccountId,
-                  transactionType: "DEPOSIT",
-                  amount: allocationAmount,
-                  runningBalance: Number(updatedCB?.balance || 0),
-                  description: `POS Payment ${paymentNumber}`,
-                  referenceType: "PAYMENT",
-                  referenceId: newPayment.id,
-                  transactionDate: now,
-                  organizationId,
-                },
-              });
-            }
+            await tx.cashBankTransaction.create({
+              data: {
+                cashBankAccountId: cashBankInfo.cashBankAccountId,
+                transactionType: "DEPOSIT",
+                amount: allocationAmount,
+                runningBalance: Number(updatedCB?.balance || 0),
+                description: `POS Payment ${paymentNumber}`,
+                referenceType: "PAYMENT",
+                referenceId: newPayment.id,
+                transactionDate: now,
+                organizationId,
+              },
+            });
           }
         }
 
@@ -839,6 +871,12 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     // Handle known business errors with appropriate status codes
+    if (error instanceof AutoJournalEntryCreationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
     if (error instanceof Error && error.message === "NO_OPEN_SESSION") {
       return NextResponse.json(
         { error: "No open POS session found. Please open a session first." },

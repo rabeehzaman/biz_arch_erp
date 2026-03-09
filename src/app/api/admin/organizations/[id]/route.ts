@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
 import { validateTRN } from "@/lib/saudi-vat/calculator";
+import { provisionPOSRegisterSetup } from "@/lib/pos/store-safe";
 
 export async function GET(
   request: NextRequest,
@@ -364,6 +365,10 @@ export async function PUT(
               data: { warehouseId: targetWarehouse.id },
             });
           }
+        }
+
+        if (seedPOSAccounts || multiBranchEnabled) {
+          await provisionPOSRegisterSetup(tx as never, id);
         }
 
         return org;
