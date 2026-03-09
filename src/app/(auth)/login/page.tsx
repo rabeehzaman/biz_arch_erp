@@ -66,7 +66,7 @@ export default function LoginPage() {
     <PageAnimation>
       <div
         dir={lang === "ar" ? "rtl" : "ltr"}
-        className="relative min-h-screen overflow-hidden bg-[#edf4f7]"
+        className="relative min-h-[100svh] overflow-hidden bg-[#edf4f7] lg:h-[100svh]"
       >
         <div
           aria-hidden="true"
@@ -135,24 +135,24 @@ export default function LoginPage() {
             </button>
           </div>
         </div>
-        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl items-center px-4 py-10 sm:px-6 lg:px-8">
-          <div className="grid w-full items-center gap-10 lg:grid-cols-[minmax(0,1fr)_28rem]">
-            <div className="hidden lg:block">
+        <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-7xl items-center px-4 py-8 sm:px-6 lg:h-[100svh] lg:px-8 lg:py-5 xl:py-8">
+          <div className="grid w-full items-center gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_26rem] 2xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:gap-10">
+            <div className="hidden lg:flex lg:min-h-0 lg:flex-col lg:justify-center">
               <div className="max-w-xl">
-                <div className="inline-flex items-center gap-3 rounded-full border border-white/70 bg-white/65 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-xl">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-950/5">
+                <div className="inline-flex items-center gap-3 rounded-full border border-white/70 bg-white/65 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-xl xl:px-4 xl:py-2 xl:text-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-950/5 xl:h-9 xl:w-9">
                     <Image
                       src="/bizarch-mark.svg"
                       alt="BizArch Logo"
                       width={28}
                       height={28}
-                      className="h-7 w-7 object-contain"
+                      className="h-6 w-6 object-contain xl:h-7 xl:w-7"
                       priority
                     />
                   </div>
                   <span>{tt("BizArch ERP")}</span>
                 </div>
-                <div className="mt-8 max-w-[26rem]">
+                <div className="mt-5 max-w-[18rem] xl:mt-7 xl:max-w-[22rem] 2xl:max-w-[26rem]">
                   <Image
                     src="/bizarch-logo.svg"
                     alt="BizArch Systems Architecture Innovation"
@@ -162,14 +162,14 @@ export default function LoginPage() {
                     priority
                   />
                 </div>
-                <p className="mt-5 max-w-lg text-lg leading-8 text-slate-700">
+                <p className="mt-3 max-w-lg text-base leading-7 text-slate-700 xl:mt-5 xl:text-lg xl:leading-8">
                   {tt("Simple invoicing and customer management")}
                 </p>
-                <div className="mt-8 flex flex-wrap gap-3">
+                <div className="mt-5 flex flex-wrap gap-2 xl:mt-7 xl:gap-3">
                   {featurePills.map((pill) => (
                     <span
                       key={pill}
-                      className="rounded-full border border-white/70 bg-white/55 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-xl"
+                      className="rounded-full border border-white/70 bg-white/55 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-xl xl:px-4 xl:py-2 xl:text-sm"
                     >
                       {pill}
                     </span>
@@ -177,15 +177,15 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="mt-10 grid max-w-2xl gap-4 xl:grid-cols-2">
-                <div className="rounded-[2rem] border border-white/70 bg-white/55 p-6 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
+              <div className="mt-6 hidden max-w-2xl gap-4 [@media(min-width:1280px)_and_(min-height:860px)]:grid [@media(min-width:1280px)_and_(min-height:860px)]:grid-cols-2">
+                <div className="rounded-[2rem] border border-white/70 bg-white/55 p-5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700">
                       {tt("Reports")}
                     </span>
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                   </div>
-                  <div className="mt-6 flex h-32 items-end gap-3">
+                  <div className="mt-5 flex h-28 items-end gap-3">
                     {chartHeights.map((height, index) => (
                       <div
                         key={height}
@@ -200,7 +200,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[2rem] border border-white/70 bg-white/50 p-6 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl xl:translate-y-8">
+                <div className="rounded-[2rem] border border-white/70 bg-white/50 p-5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700">
                       {tt("Sales Invoices")}
@@ -209,11 +209,11 @@ export default function LoginPage() {
                       {tt("Customers")}
                     </span>
                   </div>
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-4 space-y-2.5">
                     {workflowItems.map((item) => (
                       <div
                         key={item.label}
-                        className="flex items-center justify-between rounded-[1.25rem] border border-white/70 bg-white/75 px-4 py-3 shadow-sm"
+                        className="flex items-center justify-between rounded-[1.25rem] border border-white/70 bg-white/75 px-4 py-2.5 shadow-sm"
                       >
                         <span className="text-sm font-medium text-slate-800">
                           {item.label}
@@ -226,32 +226,32 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Card className="relative w-full max-w-md overflow-hidden rounded-[2rem] border-white/60 bg-white/78 py-0 shadow-[0_28px_90px_-28px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/72">
+            <Card className="relative w-full max-w-md overflow-hidden rounded-[2rem] border-white/60 bg-white/78 py-0 shadow-[0_28px_90px_-28px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/72 lg:max-w-[24rem] xl:max-w-md">
               <div className="h-1.5 w-full bg-gradient-to-r from-[#2b4f95] via-[#49bdd0] to-[#7dce7c]" />
-              <CardHeader className="space-y-1 pt-8 text-center">
-                <div className="mb-6 flex justify-center">
-                  <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.25rem] bg-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.45)]">
+              <CardHeader className="space-y-1 pt-6 text-center xl:pt-8">
+                <div className="mb-4 flex justify-center xl:mb-6">
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-[1.1rem] bg-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.45)] xl:h-20 xl:w-20 xl:rounded-[1.25rem]">
                     <Image
                       src="/bizarch-mark.svg"
                       alt="BizArch Logo"
                       width={80}
                       height={80}
-                      className="object-contain"
+                      className="h-12 w-12 object-contain xl:h-16 xl:w-16"
                       priority
                     />
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-bold">
+                <CardTitle className="text-xl font-bold xl:text-2xl">
                   {tt("BizArch ERP")}
                 </CardTitle>
-                <CardDescription className="text-sm leading-6 text-slate-600">
+                <CardDescription className="text-sm leading-5 text-slate-600 xl:leading-6">
                   {tt("Enter your credentials to access your account")}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pb-8">
-                <form onSubmit={handleSubmit} className="space-y-4">
+              <CardContent className="pb-6 xl:pb-8">
+                <form onSubmit={handleSubmit} className="space-y-3 xl:space-y-4">
                   {error && (
-                    <div className="rounded-xl border border-red-200 bg-red-50/90 p-3 text-sm text-red-600">
+                    <div className="rounded-xl border border-red-200 bg-red-50/90 p-2.5 text-sm text-red-600">
                       {error}
                     </div>
                   )}
@@ -265,7 +265,7 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={isLoading}
-                      className="h-11 rounded-xl border-white/70 bg-white/75 shadow-sm"
+                      className="h-10 rounded-xl border-white/70 bg-white/75 shadow-sm xl:h-11"
                     />
                   </div>
                   <div className="space-y-2">
@@ -278,12 +278,12 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       disabled={isLoading}
-                      className="h-11 rounded-xl border-white/70 bg-white/75 shadow-sm"
+                      className="h-10 rounded-xl border-white/70 bg-white/75 shadow-sm xl:h-11"
                     />
                   </div>
                   <Button
                     type="submit"
-                    className="h-11 w-full rounded-xl bg-slate-950 shadow-lg shadow-slate-950/15 hover:bg-slate-800"
+                    className="h-10 w-full rounded-xl bg-slate-950 shadow-lg shadow-slate-950/15 hover:bg-slate-800 xl:h-11"
                     disabled={isLoading}
                   >
                     {isLoading ? (
