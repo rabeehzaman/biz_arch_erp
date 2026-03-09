@@ -250,13 +250,15 @@ function POSTerminalContent() {
 
   const addToCart = useCallback((product: any, quantity?: number) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.productId === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: quantity != null ? item.quantity + quantity : item.quantity + 1 }
-            : item
-        );
+      const idx = prev.findIndex((item) => item.productId === product.id);
+      if (idx >= 0) {
+        const updated = prev.slice();
+        const existing = updated[idx];
+        updated[idx] = {
+          ...existing,
+          quantity: quantity != null ? quantity : existing.quantity + 1,
+        };
+        return updated;
       }
       return [
         ...prev,
@@ -309,11 +311,10 @@ function POSTerminalContent() {
               if (weightProduct) {
                 addToCart(weightProduct, parsed.weightKg);
                 toast.success(`${weightProduct.name} — ${parsed.weightKg} kg`);
-              } else {
-                toast.error(`Product not found for weigh code: ${parsed.productCode}`);
+                barcodeBuffer = "";
+                return;
               }
-              barcodeBuffer = "";
-              return;
+              // No product found by weighMachineCode — fall through to regular barcode lookup
             }
           }
 
