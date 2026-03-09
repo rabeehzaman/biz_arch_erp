@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Loader2, Printer, RotateCcw } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Printer, RotateCcw } from "lucide-react";
 
 interface TransferItem {
     id: string;
@@ -61,7 +61,6 @@ export default function StockTransferDetailPage({
 }) {
     const { id } = use(params);
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { fmt } = useCurrency();
 
     const [transfer, setTransfer] = useState<StockTransfer | null>(null);
@@ -87,18 +86,6 @@ export default function StockTransferDetailPage({
     useEffect(() => {
         fetchTransfer();
     }, [fetchTransfer]);
-
-    useEffect(() => {
-        if (!transfer || searchParams.get("print") !== "1") {
-            return;
-        }
-
-        const timer = window.setTimeout(() => {
-            window.print();
-        }, 300);
-
-        return () => window.clearTimeout(timer);
-    }, [transfer, searchParams]);
 
     const handleReverse = async () => {
         if (!transfer) {
@@ -180,9 +167,25 @@ export default function StockTransferDetailPage({
                                 Reverse
                             </Button>
                         )}
-                        <Button variant="outline" onClick={() => window.print()} className="w-full sm:w-auto">
-                            <Printer className="mr-2 h-4 w-4" />
-                            Print
+                        <Button variant="outline" asChild className="w-full sm:w-auto">
+                            <Link
+                                href={`/api/stock-transfers/${transfer.id}/pdf`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Download PDF
+                            </Link>
+                        </Button>
+                        <Button variant="outline" asChild className="w-full sm:w-auto">
+                            <Link
+                                href={`/api/stock-transfers/${transfer.id}/pdf?download=0`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <Printer className="mr-2 h-4 w-4" />
+                                Print PDF
+                            </Link>
                         </Button>
                     </div>
                 </div>

@@ -381,7 +381,11 @@ export default function StockTransfersPage() {
                                                                 </Link>
                                                             </Button>
                                                             <Button variant="outline" size="sm" asChild>
-                                                                <Link href={`/inventory/stock-transfers/${transfer.id}?print=1`} target="_blank">
+                                                                <Link
+                                                                    href={`/api/stock-transfers/${transfer.id}/pdf?download=0`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
                                                                     <Printer className="mr-2 h-4 w-4" />
                                                                     Print
                                                                 </Link>
