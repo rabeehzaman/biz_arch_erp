@@ -255,11 +255,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Logo */}
       <div className="mx-3 mt-3 flex h-16 items-center gap-3 rounded-[1.25rem] border border-white/10 bg-white/[0.06] px-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.95)] backdrop-blur-xl">
         <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white p-1 shadow-sm">
-          <Image src="/logo.png" alt="BizArch Logo" fill sizes="36px" className="object-contain" priority />
+          <Image src="/bizarch-mark.svg" alt="BizArch Logo" fill sizes="36px" className="object-contain" priority />
         </div>
         <div className="min-w-0">
-          <span className="block truncate text-lg font-bold text-white">BizArch ERP</span>
-          <span className="block text-[11px] uppercase tracking-[0.22em] text-emerald-200/80">
+          <span className="block truncate bg-gradient-to-r from-white via-sky-100 to-emerald-200 bg-clip-text text-lg font-bold text-transparent">
+            BizArch ERP
+          </span>
+          <span className="block text-[11px] uppercase tracking-[0.22em] text-sky-100/75">
             Workspace
           </span>
         </div>
@@ -382,9 +384,9 @@ function SidebarBackdrop() {
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <div className="absolute inset-0 bg-[linear-gradient(180deg,#020617_0%,#05222a_38%,#031822_64%,#020617_100%)]" />
       <div className="absolute inset-0 opacity-[0.2] [background-image:linear-gradient(rgba(148,163,184,0.24)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:30px_30px]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.3),transparent_30%),radial-gradient(circle_at_88%_16%,rgba(56,189,248,0.22),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.16),transparent_34%)]" />
-      <div className="absolute -left-12 -top-12 h-48 w-48 rounded-full bg-emerald-400/25 blur-3xl" />
-      <div className="absolute bottom-[8%] right-[-4.5rem] h-56 w-56 rounded-full bg-sky-400/18 blur-3xl" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(73,189,208,0.28),transparent_30%),radial-gradient(circle_at_88%_16%,rgba(86,137,220,0.2),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(125,206,124,0.16),transparent_34%)]" />
+      <div className="absolute -left-12 -top-12 h-48 w-48 rounded-full bg-cyan-300/22 blur-3xl" />
+      <div className="absolute bottom-[8%] right-[-4.5rem] h-56 w-56 rounded-full bg-emerald-300/18 blur-3xl" />
       <div
         className="absolute inset-x-4 top-20 h-40 rounded-[2rem] border border-white/10 bg-white/[0.035] shadow-[0_30px_70px_-40px_rgba(15,23,42,0.9)] backdrop-blur-sm"
         style={{ transform: "rotate(-8deg)" }}
@@ -394,8 +396,8 @@ function SidebarBackdrop() {
         style={{ transform: "rotate(-2deg)" }}
       />
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/[0.07] to-transparent" />
-      <div className="absolute left-0 top-24 h-56 w-px bg-gradient-to-b from-transparent via-emerald-300/60 to-transparent" />
-      <div className="absolute right-0 bottom-20 h-56 w-px bg-gradient-to-b from-transparent via-amber-200/45 to-transparent" />
+      <div className="absolute left-0 top-24 h-56 w-px bg-gradient-to-b from-transparent via-cyan-200/60 to-transparent" />
+      <div className="absolute right-0 bottom-20 h-56 w-px bg-gradient-to-b from-transparent via-green-200/45 to-transparent" />
     </div>
   );
 }

@@ -30,10 +30,10 @@ export default function LoginPage() {
     tt("Reports"),
   ];
   const workflowItems = [
-    { label: tt("Customers"), color: "bg-emerald-500" },
-    { label: tt("Suppliers"), color: "bg-sky-500" },
-    { label: tt("Inventory"), color: "bg-amber-400" },
-    { label: tt("Purchase Invoices"), color: "bg-slate-900" },
+    { label: tt("Customers"), color: "bg-sky-400" },
+    { label: tt("Suppliers"), color: "bg-cyan-400" },
+    { label: tt("Inventory"), color: "bg-green-300" },
+    { label: tt("Purchase Invoices"), color: "bg-blue-900" },
   ];
   const chartHeights = [64, 96, 78, 116, 90];
 
@@ -66,11 +66,11 @@ export default function LoginPage() {
     <PageAnimation>
       <div
         dir={lang === "ar" ? "rtl" : "ltr"}
-        className="relative min-h-screen overflow-hidden bg-[#eef3ea]"
+        className="relative min-h-screen overflow-hidden bg-[#edf4f7]"
       >
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(135deg,#f8fafc_0%,#edf7ef_34%,#fff7ed_100%)]"
+          className="absolute inset-0 bg-[linear-gradient(135deg,#f7fbff_0%,#eef8fb_36%,#eef9f1_100%)]"
         />
         <div
           aria-hidden="true"
@@ -78,10 +78,10 @@ export default function LoginPage() {
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),transparent_28%),radial-gradient(circle_at_85%_20%,rgba(59,130,246,0.16),transparent_24%),radial-gradient(circle_at_78%_82%,rgba(245,158,11,0.24),transparent_30%)]"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(73,189,208,0.2),transparent_28%),radial-gradient(circle_at_85%_20%,rgba(59,130,246,0.16),transparent_24%),radial-gradient(circle_at_78%_82%,rgba(125,206,124,0.22),transparent_30%)]"
         />
-        <div aria-hidden="true" className="absolute -left-24 top-0 h-80 w-80 rounded-full bg-emerald-300/45 blur-3xl" />
-        <div aria-hidden="true" className="absolute bottom-[-8rem] right-[-6rem] h-96 w-96 rounded-full bg-amber-200/55 blur-3xl" />
+        <div aria-hidden="true" className="absolute -left-24 top-0 h-80 w-80 rounded-full bg-cyan-200/45 blur-3xl" />
+        <div aria-hidden="true" className="absolute bottom-[-8rem] right-[-6rem] h-96 w-96 rounded-full bg-green-200/55 blur-3xl" />
         <div aria-hidden="true" className="absolute right-[18%] top-[24%] h-64 w-64 rounded-full bg-sky-200/35 blur-3xl" />
         <div
           aria-hidden="true"
@@ -142,7 +142,7 @@ export default function LoginPage() {
                 <div className="inline-flex items-center gap-3 rounded-full border border-white/70 bg-white/65 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-xl">
                   <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-950/5">
                     <Image
-                      src="/logo.png"
+                      src="/bizarch-mark.svg"
                       alt="BizArch Logo"
                       width={28}
                       height={28}
@@ -152,9 +152,16 @@ export default function LoginPage() {
                   </div>
                   <span>{tt("BizArch ERP")}</span>
                 </div>
-                <h1 className="mt-8 font-heading text-5xl font-semibold leading-[1.02] text-slate-950">
-                  {tt("BizArch ERP")}
-                </h1>
+                <div className="mt-8 max-w-[26rem]">
+                  <Image
+                    src="/bizarch-logo.svg"
+                    alt="BizArch Systems Architecture Innovation"
+                    width={440}
+                    height={440}
+                    className="h-auto w-full drop-shadow-[0_24px_40px_rgba(41,78,148,0.12)]"
+                    priority
+                  />
+                </div>
                 <p className="mt-5 max-w-lg text-lg leading-8 text-slate-700">
                   {tt("Simple invoicing and customer management")}
                 </p>
@@ -184,8 +191,8 @@ export default function LoginPage() {
                         key={height}
                         className={`flex-1 rounded-t-[1.25rem] bg-gradient-to-t ${
                           index === chartHeights.length - 1
-                            ? "from-slate-950 via-slate-900 to-emerald-400"
-                            : "from-emerald-500 via-emerald-400 to-emerald-200"
+                            ? "from-blue-950 via-blue-800 to-cyan-400"
+                            : "from-sky-500 via-cyan-400 to-green-300"
                         }`}
                         style={{ height }}
                       />
@@ -220,12 +227,12 @@ export default function LoginPage() {
             </div>
 
             <Card className="relative w-full max-w-md overflow-hidden rounded-[2rem] border-white/60 bg-white/78 py-0 shadow-[0_28px_90px_-28px_rgba(15,23,42,0.45)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/72">
-              <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-sky-400 to-amber-300" />
+              <div className="h-1.5 w-full bg-gradient-to-r from-[#2b4f95] via-[#49bdd0] to-[#7dce7c]" />
               <CardHeader className="space-y-1 pt-8 text-center">
                 <div className="mb-6 flex justify-center">
                   <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.25rem] bg-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.45)]">
                     <Image
-                      src="/logo.png"
+                      src="/bizarch-mark.svg"
                       alt="BizArch Logo"
                       width={80}
                       height={80}

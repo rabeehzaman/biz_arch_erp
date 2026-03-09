@@ -60,8 +60,8 @@ export function POSHeader({
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
-        <div className="relative h-8 w-8 shrink-0 bg-white rounded-md flex items-center justify-center overflow-hidden p-0.5 shadow-sm border border-slate-700 hidden sm:flex">
-          <Image src="/logo.png" alt="BizArch Logo" fill sizes="32px" className="object-contain" priority />
+        <div className="relative hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white p-0.5 shadow-sm sm:flex">
+          <Image src="/bizarch-mark.svg" alt="BizArch Logo" fill sizes="32px" className="object-contain" priority />
         </div>
         <span className="text-base font-bold whitespace-nowrap">{t("pos.title")}</span>
         {session && (
