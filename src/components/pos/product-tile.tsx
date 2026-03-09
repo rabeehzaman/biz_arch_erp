@@ -22,7 +22,6 @@ export function ProductTile({ product, onAdd }: ProductTileProps) {
   const { fmt } = useCurrency();
   const { t } = useLanguage();
   const outOfStock = !product.isService && product.stockQuantity <= 0;
-  const lowStock = !product.isService && product.stockQuantity > 0 && product.stockQuantity <= 5;
 
   return (
     <button
@@ -52,14 +51,6 @@ export function ProductTile({ product, onAdd }: ProductTileProps) {
       <span className="mt-1 text-sm font-bold">
         {fmt(Number(product.price))}
       </span>
-      {outOfStock && (
-        <span className="text-xs text-red-500 font-medium mt-1">{t("products.outOfStock")}</span>
-      )}
-      {lowStock && (
-        <span className="text-xs text-orange-500 font-medium mt-1">
-          {product.stockQuantity} {t("pos.left")}
-        </span>
-      )}
     </button>
   );
 }
