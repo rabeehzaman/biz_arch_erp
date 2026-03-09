@@ -121,7 +121,7 @@ function cartReducer(state: CartItemData[], action: CartAction): CartItemData[] 
         const newState = [...state];
         newState[idx] = {
           ...newState[idx],
-          quantity: quantity != null ? quantity : newState[idx].quantity + 1,
+          quantity: quantity != null ? newState[idx].quantity + quantity : newState[idx].quantity + 1,
         };
         return newState;
       }
