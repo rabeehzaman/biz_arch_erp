@@ -79,7 +79,7 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
     fontSize: "13px",
     lineHeight: "1.5",
     color: "#000",
-    padding: "3mm 0",
+    padding: "0 0 3mm 0",
   };
 
   const centerStyle: React.CSSProperties = { textAlign: "center" };

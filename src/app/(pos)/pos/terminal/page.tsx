@@ -125,7 +125,7 @@ function cartReducer(state: CartItemData[], action: CartAction): CartItemData[] 
         };
         return newState;
       }
-      return [
+      const newState = [
         ...state,
         {
           productId: product.id,
@@ -138,6 +138,7 @@ function cartReducer(state: CartItemData[], action: CartAction): CartItemData[] 
           hsnCode: product.hsnCode || undefined,
         },
       ];
+      return newState;
     }
     case "SET_QTY": {
       if (action.qty <= 0) {
@@ -642,6 +643,9 @@ function POSTerminalContent() {
   // ── Active Session → Full POS Interface ────────────────────────────
 
   const { total } = calculateCartTotal(cart, taxInclusive, roundOffMode);
+  const cartSignature = cart
+    .map((item) => `${item.productId}:${item.quantity}:${item.discount}`)
+    .join("|");
 
   return (
     <PageAnimation className="flex h-screen flex-col">
@@ -721,7 +725,10 @@ function POSTerminalContent() {
               </div>
 
               {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              <div
+                key={`items:${cartSignature || "empty"}`}
+                className="flex-1 overflow-y-auto p-3 space-y-2"
+              >
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <ShoppingCart className="h-12 w-12 mb-3 opacity-30" />
@@ -731,7 +738,7 @@ function POSTerminalContent() {
                 ) : (
                   cart.map((item) => (
                     <CartItem
-                      key={item.productId}
+                      key={`${item.productId}:${item.quantity}:${item.discount}`}
                       item={item}
                       onUpdateQuantity={(qty) =>
                         updateCartQuantity(item.productId, qty)
@@ -747,7 +754,10 @@ function POSTerminalContent() {
 
               {/* Cart Summary & Actions */}
               {cart.length > 0 && (
-                <div className="border-t p-3 space-y-3">
+                <div
+                  key={`summary:${cartSignature || "empty"}`}
+                  className="border-t p-3 space-y-3"
+                >
                   <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
                   <div className="flex gap-2">
                     <Button
