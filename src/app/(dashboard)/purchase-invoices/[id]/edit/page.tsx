@@ -295,7 +295,7 @@ export default function EditPurchaseInvoicePage({
     if (taxInclusive && taxRate > 0) {
       const subtotalLine = Math.round((discountedAmount / (1 + taxRate / 100)) * 100) / 100;
       const taxLine = Math.round((discountedAmount - subtotalLine) * 100) / 100;
-      return { gross: discountedAmount, subtotal: subtotalLine, tax: taxLine, net: discountedAmount };
+      return { gross: subtotalLine, subtotal: subtotalLine, tax: taxLine, net: discountedAmount };
     }
     const taxLine = Math.round((discountedAmount * taxRate / 100) * 100) / 100;
     return { gross: discountedAmount, subtotal: discountedAmount, tax: taxLine, net: discountedAmount + taxLine };
