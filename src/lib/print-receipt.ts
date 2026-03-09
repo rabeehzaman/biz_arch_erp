@@ -20,7 +20,7 @@ export function generateReceiptHtml(data: ReceiptData, options?: ReceiptHtmlOpti
 <meta charset="utf-8">
 <style>
   @page {
-    size: 80mm 2000mm;
+    size: 80mm 297mm;
     margin: 0;
   }
   * {
@@ -90,6 +90,13 @@ export function printReceipt(html: string): void {
     });
 
     Promise.all(imagePromises).then(() => {
+      // Measure actual content height, convert px→mm, add 10mm padding
+      const contentPx = doc.documentElement.scrollHeight;
+      const heightMM = Math.ceil(contentPx * 25.4 / 96) + 10;
+      const dynStyle = doc.createElement('style');
+      dynStyle.textContent = `@page { size: 80mm ${heightMM}mm !important; margin: 0; }`;
+      doc.head.appendChild(dynStyle);
+
       setTimeout(() => {
         try {
           iframe.contentWindow?.print();

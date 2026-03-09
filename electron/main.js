@@ -218,7 +218,7 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
     const printWin = new BrowserWindow({
       show: false,
       width: 302,   // ~80mm at 96dpi
-      height: 1,
+      height: 800,
       webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
 
@@ -226,7 +226,7 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
 
     // Measure actual content height, convert px → microns, add 5mm padding
     const contentHeightPx = await printWin.webContents.executeJavaScript(
-      'document.body.scrollHeight'
+      'document.body.children[0] ? document.body.children[0].offsetHeight : document.body.scrollHeight'
     );
     const heightMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 5000;
 
