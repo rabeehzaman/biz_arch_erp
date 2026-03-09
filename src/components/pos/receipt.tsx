@@ -74,9 +74,9 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
   const bl = (en: string, ar: string) => isZatca ? `${en} / ${ar}` : en;
 
   const containerStyle: React.CSSProperties = {
-    width: "72mm",
+    width: "100%",
     fontFamily: "'Arial', 'Noto Sans Arabic', sans-serif",
-    fontSize: "12px",
+    fontSize: "13px",
     lineHeight: "1.5",
     color: "#000",
     padding: "3mm 0",

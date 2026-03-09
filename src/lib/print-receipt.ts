@@ -4,8 +4,15 @@ import { PosReceipt, type ReceiptData } from "@/components/pos/receipt";
 
 export { smartPrintReceipt } from "@/lib/electron-print";
 
-export function generateReceiptHtml(data: ReceiptData): string {
+export interface ReceiptHtmlOptions {
+  marginLeft?: number;  // mm, default 3
+  marginRight?: number; // mm, default 5
+}
+
+export function generateReceiptHtml(data: ReceiptData, options?: ReceiptHtmlOptions): string {
   const markup = renderToStaticMarkup(createElement(PosReceipt, { data }));
+  const ml = options?.marginLeft ?? 3;
+  const mr = options?.marginRight ?? 5;
 
   return `<!DOCTYPE html>
 <html>
@@ -13,7 +20,7 @@ export function generateReceiptHtml(data: ReceiptData): string {
 <meta charset="utf-8">
 <style>
   @page {
-    size: 80mm 297mm;
+    size: 80mm 150mm;
     margin: 0;
   }
   * {
@@ -23,12 +30,14 @@ export function generateReceiptHtml(data: ReceiptData): string {
   }
   body {
     width: 80mm;
-    padding: 0 4mm;
+    padding: 0 ${mr}mm 0 ${ml}mm;
     font-family: 'Arial', 'Noto Sans Arabic', sans-serif;
-    font-size: 12px;
+    font-size: 13px;
     text-rendering: geometricPrecision;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    overflow: hidden;
+    page-break-after: always;
   }
   img {
     max-width: 100%;

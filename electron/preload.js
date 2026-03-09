@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld('electronPOS', {
   getPrinterConfig: () => ipcRenderer.invoke('get-printer-config'),
   savePrinterConfig: (config) => ipcRenderer.invoke('save-printer-config', config),
 
+  // ─── Cache Management ────────────────────────────
+  clearCache: () => ipcRenderer.invoke('clear-cache'),
+
   // ─── Auto-Update Status ───────────────────────────
   onUpdateStatus: (callback) => {
     ipcRenderer.on('update-status', (_event, message) => callback(message));

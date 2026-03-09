@@ -6,6 +6,8 @@ interface ElectronPrinterConfig {
   usbVendorId: number | null;
   usbProductId: number | null;
   usbSerialNumber: string;
+  receiptMarginLeft: number;
+  receiptMarginRight: number;
 }
 
 interface ElectronPrinter {
@@ -47,6 +49,7 @@ interface ElectronPOS {
   openCashDrawer: (config?: Partial<ElectronPrinterConfig>) => Promise<ElectronPrintResult>;
   getPrinterConfig: () => Promise<{ success: boolean; config: ElectronPrinterConfig }>;
   savePrinterConfig: (config: ElectronPrinterConfig) => Promise<{ success: boolean; config?: ElectronPrinterConfig }>;
+  clearCache: () => Promise<{ success: boolean; error?: string }>;
   onUpdateStatus: (callback: (message: string) => void) => void;
 }
 

@@ -246,6 +246,18 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
   }
 });
 
+// Clear web cache on demand
+ipcMain.handle('clear-cache', async () => {
+  try {
+    const ses = require('electron').session.defaultSession;
+    await ses.clearCache();
+    await ses.clearStorageData({ storages: ['cachestorage'] });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Printer config management
 ipcMain.handle('get-printer-config', async () => {
   return { success: true, config: loadPrinterConfig() };

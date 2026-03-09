@@ -60,6 +60,8 @@ class PrinterService {
       usbVendorId: parseUsbId(config.usbVendorId),
       usbProductId: parseUsbId(config.usbProductId),
       usbSerialNumber: String(config.usbSerialNumber || '').trim(),
+      receiptMarginLeft: Number(config.receiptMarginLeft) || 3,
+      receiptMarginRight: Number(config.receiptMarginRight) || 5,
     };
   }
 

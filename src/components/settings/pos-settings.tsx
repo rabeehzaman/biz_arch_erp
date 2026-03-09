@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2, Monitor, Printer, Usb, Wifi, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Monitor, Printer, RefreshCw, Usb, Wifi, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { isElectronEnvironment } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
@@ -34,6 +34,9 @@ export function POSSettings() {
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [loadingPrinters, setLoadingPrinters] = useState(false);
   const [loadingUsbPrinters, setLoadingUsbPrinters] = useState(false);
+  const [receiptMarginLeft, setReceiptMarginLeft] = useState(3);
+  const [receiptMarginRight, setReceiptMarginRight] = useState(5);
+  const [isClearingCache, setIsClearingCache] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/pos-receipt-printing")
@@ -57,6 +60,8 @@ export function POSSettings() {
           setUsbVendorId(res.config.usbVendorId ?? null);
           setUsbProductId(res.config.usbProductId ?? null);
           setUsbSerialNumber(res.config.usbSerialNumber || "");
+          setReceiptMarginLeft(res.config.receiptMarginLeft ?? 3);
+          setReceiptMarginRight(res.config.receiptMarginRight ?? 5);
         }
       });
     }
@@ -121,6 +126,8 @@ export function POSSettings() {
     usbVendorId,
     usbProductId,
     usbSerialNumber: usbSerialNumber.trim(),
+    receiptMarginLeft,
+    receiptMarginRight,
   });
 
   const validateConfig = (config: ElectronPrinterConfig): string | null => {
@@ -461,6 +468,42 @@ export function POSSettings() {
               </div>
             )}
 
+            {/* Receipt Margins */}
+            <div className="space-y-3">
+              <Label>{t("pos.receiptMargins")}</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="margin-left" className="text-xs text-muted-foreground">
+                    {t("pos.leftMargin")} (mm)
+                  </Label>
+                  <Input
+                    id="margin-left"
+                    type="number"
+                    min={0}
+                    max={15}
+                    value={receiptMarginLeft}
+                    onChange={(e) => setReceiptMarginLeft(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="margin-right" className="text-xs text-muted-foreground">
+                    {t("pos.rightMargin")} (mm)
+                  </Label>
+                  <Input
+                    id="margin-right"
+                    type="number"
+                    min={0}
+                    max={15}
+                    value={receiptMarginRight}
+                    onChange={(e) => setReceiptMarginRight(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("pos.receiptMarginsDesc")}
+              </p>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               <Button onClick={testConnection} disabled={isTesting} variant="outline">
                 {isTesting ? (
@@ -476,6 +519,33 @@ export function POSSettings() {
               <Button onClick={printTestReceipt} variant="outline">
                 <Printer className="mr-2 h-4 w-4" />
                 {t("pos.printTestReceipt")}
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!window.electronPOS?.clearCache) return;
+                  setIsClearingCache(true);
+                  try {
+                    const res = await window.electronPOS.clearCache();
+                    if (res.success) {
+                      toast.success(t("pos.cacheCleared"));
+                    } else {
+                      toast.error(res.error || "Failed to clear cache");
+                    }
+                  } catch {
+                    toast.error("Failed to clear cache");
+                  } finally {
+                    setIsClearingCache(false);
+                  }
+                }}
+                disabled={isClearingCache}
+                variant="outline"
+              >
+                {isClearingCache ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {t("pos.clearCache")}
               </Button>
             </div>
 

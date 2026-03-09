@@ -1,5 +1,5 @@
 import type { ReceiptData } from "@/components/pos/receipt";
-import { generateReceiptHtml, printReceipt as browserPrintReceipt } from "@/lib/print-receipt";
+import { generateReceiptHtml, printReceipt as browserPrintReceipt, type ReceiptHtmlOptions } from "@/lib/print-receipt";
 
 export function isElectronEnvironment(): boolean {
   return typeof window !== "undefined" && !!window.electronPOS?.isElectron;
@@ -69,7 +69,11 @@ export async function electronPrint(data: ReceiptData): Promise<{ success: boole
     const configResult = await window.electronPOS.getPrinterConfig();
     if (configResult.success && configResult.config.connectionType === "windows") {
       // Use styled HTML receipt via Windows printer driver
-      const html = generateReceiptHtml(data);
+      const margins: ReceiptHtmlOptions = {
+        marginLeft: configResult.config.receiptMarginLeft,
+        marginRight: configResult.config.receiptMarginRight,
+      };
+      const html = generateReceiptHtml(data, margins);
       return window.electronPOS.printStyledReceipt(html, configResult.config);
     }
   } catch {
@@ -91,12 +95,10 @@ export function smartPrintReceipt(data: ReceiptData): void {
       if (!result.success) {
         console.error("Electron print failed:", result.error);
         // Fallback to browser print on Electron failure
-        const html = generateReceiptHtml(data);
-        browserPrintReceipt(html);
+        browserPrintReceipt(generateReceiptHtml(data));
       }
     });
   } else {
-    const html = generateReceiptHtml(data);
-    browserPrintReceipt(html);
+    browserPrintReceipt(generateReceiptHtml(data));
   }
 }
