@@ -82,6 +82,7 @@ interface PurchaseInvoice {
   amountPaid: number;
   balanceDue: number;
   notes: string | null;
+  isTaxInclusive: boolean | null;
   items: PurchaseInvoiceItem[];
   branch?: { id: string; name: string; code: string } | null;
   warehouse?: { id: string; name: string; code: string } | null;
@@ -279,6 +280,11 @@ export default function PurchaseInvoiceDetailPage({
               <p className="text-slate-500">
                 Dated {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
               </p>
+              {invoice.isTaxInclusive !== null && (
+                <span className="text-xs text-muted-foreground">
+                  {invoice.isTaxInclusive ? "Tax Inclusive" : "Tax Exclusive"}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">

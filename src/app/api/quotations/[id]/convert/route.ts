@@ -106,6 +106,7 @@ export async function POST(
           isInterState: quotation.isInterState,
           notes: quotation.notes,
           terms: quotation.terms,
+          isTaxInclusive: quotation.isTaxInclusive ?? null,
           items: {
             create: quotation.items.map((item) => ({
               organizationId,

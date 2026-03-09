@@ -110,7 +110,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, notes, terms, items, warehouseId: bodyWarehouseId, paymentType } = body;
+    const { customerId, issueDate, dueDate, notes, terms, items, warehouseId: bodyWarehouseId, paymentType, isTaxInclusive } = body;
 
     const existingInvoice = await prisma.invoice.findUnique({
       where: { id, organizationId },
@@ -166,7 +166,11 @@ export async function PUT(
       });
 
       // Check tax-inclusive pricing
-      const taxInclusive = isTaxInclusivePriceSession(session);
+      const org = await tx.organization.findUnique({
+        where: { id: organizationId },
+        select: { isTaxInclusivePrice: true },
+      });
+      const taxInclusive = isTaxInclusive ?? (isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice);
 
       const saudiEnabled = isSaudiEInvoiceEnabled(session);
 
@@ -239,6 +243,7 @@ export async function PUT(
           isInterState: saudiEnabled ? false : gstResult.isInterState,
           totalVat: saudiEnabled ? totalVat : null,
           paymentType,
+          isTaxInclusive: isTaxInclusive ?? null,
           items: {
             create: items.map((item: {
               productId: string;

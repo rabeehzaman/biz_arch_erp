@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId, paymentType } = body;
+    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId, paymentType, isTaxInclusive } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     const saudiEnabled = isSaudiEInvoiceEnabled(session) || org?.saudiEInvoiceEnabled;
-    const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
+    const taxInclusive = isTaxInclusive ?? (isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice);
 
     if (!saudiEnabled) {
       const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
@@ -263,6 +263,7 @@ export async function POST(request: NextRequest) {
           invoiceHash,
           notes: notes || null,
           terms: terms || null,
+          isTaxInclusive: isTaxInclusive ?? null,
           items: {
             create: items.map((item: {
               productId?: string;

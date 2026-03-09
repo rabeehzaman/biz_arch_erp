@@ -7,7 +7,8 @@ import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCO
 import { Decimal } from "@prisma/client/runtime/client";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
-import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
+import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
+import { calculateLineVAT, LineVATResult } from "@/lib/saudi-vat/calculator";
 import { toMidnightUTC } from "@/lib/date-utils";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { supplierId, invoiceDate, dueDate, supplierInvoiceRef, items, notes, branchId, warehouseId } = body;
+    const { supplierId, invoiceDate, dueDate, supplierInvoiceRef, items, notes, branchId, warehouseId, isTaxInclusive } = body;
 
     if (!supplierId || !items || items.length === 0) {
       return NextResponse.json(
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     const purchaseInvoiceNumber = await generatePurchaseInvoiceNumber(organizationId);
     const purchaseDate = toMidnightUTC(invoiceDate);
-    const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
+    const taxInclusive = isTaxInclusive ?? (isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice);
 
     // Build per-line gross amounts and taxable amounts (for tax-inclusive pricing)
     const lineAmounts = items.map((item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; vatRate?: number }) => {
@@ -140,16 +141,17 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       let gstResult = { totalCgst: 0, totalSgst: 0, totalIgst: 0, totalTax: 0, placeOfSupply: null as string | null, isInterState: false, lineGST: [] as Array<{ hsnCode: string | null; gstRate: number; cgstRate: number; sgstRate: number; igstRate: number; cgstAmount: number; sgstAmount: number; igstAmount: number }> };
       let totalVat: number | null = null;
+      let lineVATResults: LineVATResult[] = [];
 
       if (saudiEnabled) {
-        // Saudi VAT: compute 15% on each line
-        let vatTotal = 0;
-        for (let idx = 0; idx < items.length; idx++) {
+        // Saudi VAT: compute VAT per line using calculateLineVAT
+        lineVATResults = items.map((item: { vatRate?: number; vatCategory?: string }, idx: number) => {
           const taxableAmount = lineAmounts[idx].taxableAmount;
-          const rate = items[idx].vatRate !== undefined ? Number(items[idx].vatRate) : SAUDI_VAT_RATE;
-          vatTotal += Math.round(taxableAmount * rate) / 100;
-        }
-        totalVat = Math.round(vatTotal * 100) / 100;
+          const vatRate = item.vatRate !== undefined ? Number(item.vatRate) : SAUDI_VAT_RATE;
+          return calculateLineVAT({ taxableAmount, vatRate, vatCategory: item.vatCategory as VATCategory | undefined });
+        });
+        totalVat = lineVATResults.reduce((sum, r) => sum + r.vatAmount, 0);
+        totalVat = Math.round(totalVat * 100) / 100;
       } else {
         // GST path
         const orgGST = await getOrgGSTInfo(tx, organizationId);
@@ -193,6 +195,7 @@ export async function POST(request: NextRequest) {
           total,
           balanceDue,
           notes: notes || null,
+          isTaxInclusive: isTaxInclusive ?? null,
           items: {
             create: items.map((item: {
               productId: string;
@@ -222,6 +225,9 @@ export async function POST(request: NextRequest) {
               cgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.cgstAmount || 0),
               sgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.sgstAmount || 0),
               igstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.igstAmount || 0),
+              vatRate: lineVATResults[index]?.vatRate ?? null,
+              vatAmount: lineVATResults[index]?.vatAmount ?? null,
+              vatCategory: lineVATResults[index]?.vatCategory ?? null,
             })),
           },
         },

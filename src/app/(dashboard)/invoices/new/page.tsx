@@ -406,8 +406,11 @@ export default function NewInvoicePage() {
   };
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
-  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
+  useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
   const taxMode = getInvoiceTaxMode(session?.user?.gstEnabled, saudiEnabled);
+  const taxEnabled = taxMode !== "none";
 
   const totals = useMemo(() => {
     return lineItems.reduce(
@@ -457,6 +460,7 @@ export default function NewInvoicePage() {
           branchId: formData.branchId || undefined,
           warehouseId: formData.warehouseId || undefined,
           paymentType: formData.paymentType,
+          isTaxInclusive: taxInclusive,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -611,6 +615,20 @@ export default function NewInvoicePage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {taxEnabled && (
+                    <div className="grid gap-2">
+                      <Label>Pricing</Label>
+                      <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">Tax Inclusive</SelectItem>
+                          <SelectItem value="exclusive">Tax Exclusive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

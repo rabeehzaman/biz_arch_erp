@@ -312,7 +312,9 @@ export default function NewPurchaseInvoicePage() {
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const taxEnabled = session?.user?.gstEnabled || saudiEnabled;
-  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
+  useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
 
   function getPurchaseLineAmounts(item: LineItem) {
     const discountedAmount = item.quantity * item.unitCost * (1 - item.discount / 100);
@@ -363,6 +365,7 @@ export default function NewPurchaseInvoicePage() {
           notes: formData.notes || null,
           branchId: formData.branchId || undefined,
           warehouseId: formData.warehouseId || undefined,
+          isTaxInclusive: taxInclusive,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -477,6 +480,20 @@ export default function NewPurchaseInvoicePage() {
                       required
                     />
                   </div>
+                  {taxEnabled && (
+                    <div className="grid gap-2">
+                      <Label>Pricing</Label>
+                      <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">Tax Inclusive</SelectItem>
+                          <SelectItem value="exclusive">Tax Exclusive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -153,6 +154,9 @@ export default function EditPurchaseInvoicePage({
           branchId: data.branchId || "",
           warehouseId: data.warehouseId || "",
         });
+        if (data.isTaxInclusive !== null && data.isTaxInclusive !== undefined) {
+          setTaxInclusive(data.isTaxInclusive);
+        }
         setLineItems(
           data.items.map((item: { id: string; product: { id: string } | null; quantity: number; unitId: string | null; conversionFactor: number; unitCost: number; discount: number; gstRate?: number; hsnCode?: string; vatRate?: number }) => ({
             id: item.id,
@@ -281,7 +285,9 @@ export default function EditPurchaseInvoicePage({
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const taxEnabled = session?.user?.gstEnabled || saudiEnabled;
-  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
+  const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
+  useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
 
   function getPurchaseLineAmounts(item: LineItem) {
     const discountedAmount = item.quantity * item.unitCost * (1 - item.discount / 100);
@@ -325,6 +331,7 @@ export default function EditPurchaseInvoicePage({
           notes: formData.notes || null,
           branchId: formData.branchId || undefined,
           warehouseId: formData.warehouseId || undefined,
+          isTaxInclusive: taxInclusive,
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -442,6 +449,20 @@ export default function EditPurchaseInvoicePage({
                       required
                     />
                   </div>
+                  {taxEnabled && (
+                    <div className="grid gap-2">
+                      <Label>Pricing</Label>
+                      <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">Tax Inclusive</SelectItem>
+                          <SelectItem value="exclusive">Tax Exclusive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

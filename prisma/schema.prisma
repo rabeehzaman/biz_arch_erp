@@ -385,6 +385,8 @@ model Invoice {
 
   paymentType String   @default("CASH") // "CASH" or "CREDIT"
 
+  isTaxInclusive Boolean? // null = use org default, true/false = per-voucher override
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -478,6 +480,8 @@ model Quotation {
 
   notes String?
   terms String?
+
+  isTaxInclusive Boolean? // null = use org default, true/false = per-voucher override
 
   convertedInvoiceId String?   @unique
   convertedInvoice   Invoice?  @relation(fields: [convertedInvoiceId], references: [id])
@@ -578,6 +582,8 @@ model PurchaseInvoice {
   invoiceHash         String?
 
   notes String?
+
+  isTaxInclusive Boolean? // null = use org default, true/false = per-voucher override
 
   branchId    String?
   branch      Branch?    @relation(fields: [branchId], references: [id])

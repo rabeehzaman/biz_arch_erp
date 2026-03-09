@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -250,7 +251,11 @@ export default function NewQuotationPage() {
     }
   };
 
-  const taxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
+  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
+  const taxEnabled = session?.user?.gstEnabled || saudiEnabled;
+  const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
+  const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
+  useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
 
   const calculateSubtotal = () => {
     return lineItems.reduce((sum, item) => {
@@ -299,6 +304,7 @@ export default function NewQuotationPage() {
           terms: formData.terms || null,
           branchId: formData.branchId || undefined,
           warehouseId: formData.warehouseId || undefined,
+          isTaxInclusive: taxInclusive,
           items: lineItems
             .filter((item) => item.productId)
             .map((item) => {
@@ -402,6 +408,20 @@ export default function NewQuotationPage() {
                       required
                     />
                   </div>
+                  {taxEnabled && (
+                    <div className="grid gap-2">
+                      <Label>Pricing</Label>
+                      <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">Tax Inclusive</SelectItem>
+                          <SelectItem value="exclusive">Tax Exclusive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

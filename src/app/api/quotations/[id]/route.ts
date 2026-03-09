@@ -136,7 +136,11 @@ export async function PUT(
     if (body.items !== undefined) {
       const items = body.items;
       const customerId = body.customerId || existingQuotation.customerId;
-      const taxInclusive = isTaxInclusivePriceSession(session);
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { isTaxInclusivePrice: true },
+      });
+      const taxInclusive = (body.isTaxInclusive !== undefined ? body.isTaxInclusive : null) ?? (isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice);
 
       // Build per-line gross amounts and taxable amounts
       const lineAmounts = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; vatRate?: number }) => {
@@ -189,6 +193,7 @@ export async function PUT(
       updateData.placeOfSupply = saudiEnabled ? null : gstResult.placeOfSupply;
       updateData.isInterState = saudiEnabled ? false : gstResult.isInterState;
       updateData.totalVat = saudiEnabled ? totalVat : null;
+      updateData.isTaxInclusive = body.isTaxInclusive ?? null;
 
       // Delete existing items and create new ones
       updateData.items = {

@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { customerId, issueDate, validUntil, items, notes, terms } = body;
+    const { customerId, issueDate, validUntil, items, notes, terms, isTaxInclusive } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -94,7 +94,11 @@ export async function POST(request: NextRequest) {
     const quotationNumber = await generateQuotationNumber(organizationId);
     const quotationIssueDate = toMidnightUTC(issueDate);
     const quotationValidUntil = validUntil ? toMidnightUTC(validUntil) : toMidnightUTC(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
-    const taxInclusive = isTaxInclusivePriceSession(session);
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { isTaxInclusivePrice: true },
+    });
+    const taxInclusive = isTaxInclusive ?? (isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice);
 
     // Build per-line gross amounts and taxable amounts (for tax-inclusive pricing)
     const lineAmounts = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; vatRate?: number }) => {
@@ -158,6 +162,7 @@ export async function POST(request: NextRequest) {
         totalVat: saudiEnabled ? totalVat : null,
         notes: notes || null,
         terms: terms || null,
+        isTaxInclusive: isTaxInclusive ?? null,
         items: {
           create: items.map((item: {
             productId?: string;

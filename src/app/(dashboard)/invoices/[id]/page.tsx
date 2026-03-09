@@ -90,6 +90,7 @@ interface Invoice {
   qrCodeData?: string | null;
   invoiceUuid?: string | null;
   invoiceCounterValue?: number | null;
+  isTaxInclusive?: boolean | null;
 }
 
 export default function InvoiceDetailPage({
@@ -275,6 +276,11 @@ export default function InvoiceDetailPage({
               <p className="text-slate-500">
                 Created on {format(new Date(invoice.issueDate), "dd MMM yyyy")}
               </p>
+              {invoice.isTaxInclusive !== null && invoice.isTaxInclusive !== undefined && (
+                <span className="text-xs text-muted-foreground">
+                  {invoice.isTaxInclusive ? "Tax Inclusive" : "Tax Exclusive"}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">

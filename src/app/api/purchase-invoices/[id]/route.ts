@@ -6,7 +6,8 @@ import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { recalculateFromDate, getRecalculationStartDate } from "@/lib/inventory/fifo";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
-import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
+import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
+import { calculateLineVAT, LineVATResult } from "@/lib/saudi-vat/calculator";
 import { toMidnightUTC } from "@/lib/date-utils";
 
 export async function GET(
@@ -74,7 +75,7 @@ export async function PUT(
     const saudiEnabled = isSaudiEInvoiceEnabled(session);
     const { id } = await params;
     const body = await request.json();
-    const { status, supplierId, invoiceDate, dueDate, supplierInvoiceRef, notes, items } = body;
+    const { status, supplierId, invoiceDate, dueDate, supplierInvoiceRef, notes, items, isTaxInclusive } = body;
 
     const existingInvoice = await prisma.purchaseInvoice.findUnique({
       where: { id, organizationId },
@@ -105,7 +106,7 @@ export async function PUT(
       where: { id: organizationId },
       select: { isTaxInclusivePrice: true },
     });
-    const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
+    const taxInclusive = isTaxInclusive ?? (isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice);
 
     await prisma.$transaction(async (tx) => {
       // If items are being updated
@@ -150,16 +151,17 @@ export async function PUT(
         const newSupplierId = supplierId || existingInvoice.supplierId;
         let gstResult = { totalCgst: 0, totalSgst: 0, totalIgst: 0, totalTax: 0, placeOfSupply: null as string | null, isInterState: false, lineGST: [] as Array<{ hsnCode: string | null; gstRate: number; cgstRate: number; sgstRate: number; igstRate: number; cgstAmount: number; sgstAmount: number; igstAmount: number }> };
         let totalVat: number | null = null;
+        let lineVATResults: LineVATResult[] = [];
 
         if (saudiEnabled) {
-          // Saudi VAT: compute VAT on each line
-          let vatTotal = 0;
-          for (let idx = 0; idx < items.length; idx++) {
+          // Saudi VAT: compute VAT per line using calculateLineVAT
+          lineVATResults = items.map((item: { vatRate?: number; vatCategory?: string }, idx: number) => {
             const taxableAmount = lineAmounts[idx].taxableAmount;
-            const rate = items[idx].vatRate !== undefined ? Number(items[idx].vatRate) : SAUDI_VAT_RATE;
-            vatTotal += Math.round(taxableAmount * rate) / 100;
-          }
-          totalVat = Math.round(vatTotal * 100) / 100;
+            const vatRate = item.vatRate !== undefined ? Number(item.vatRate) : SAUDI_VAT_RATE;
+            return calculateLineVAT({ taxableAmount, vatRate, vatCategory: item.vatCategory as VATCategory | undefined });
+          });
+          totalVat = lineVATResults.reduce((sum, r) => sum + r.vatAmount, 0);
+          totalVat = Math.round(totalVat * 100) / 100;
         } else {
           // GST path
           const orgGST = await getOrgGSTInfo(tx, organizationId);
@@ -201,6 +203,7 @@ export async function PUT(
             placeOfSupply: saudiEnabled ? null : gstResult.placeOfSupply,
             isInterState: saudiEnabled ? false : gstResult.isInterState,
             totalVat: saudiEnabled ? totalVat : null,
+            isTaxInclusive: isTaxInclusive ?? null,
             balanceDue: newBalanceDue,
             items: {
               create: items.map((item: {
@@ -231,6 +234,9 @@ export async function PUT(
                 cgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.cgstAmount || 0),
                 sgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.sgstAmount || 0),
                 igstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.igstAmount || 0),
+                vatRate: lineVATResults[idx]?.vatRate ?? null,
+                vatAmount: lineVATResults[idx]?.vatAmount ?? null,
+                vatCategory: lineVATResults[idx]?.vatCategory ?? null,
               })),
             },
           },
