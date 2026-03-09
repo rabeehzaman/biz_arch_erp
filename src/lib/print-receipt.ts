@@ -20,7 +20,7 @@ export function generateReceiptHtml(data: ReceiptData, options?: ReceiptHtmlOpti
 <meta charset="utf-8">
 <style>
   @page {
-    size: 80mm;
+    size: 80mm 2000mm;
     margin: 0;
   }
   * {

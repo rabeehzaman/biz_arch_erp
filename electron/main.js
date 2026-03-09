@@ -218,7 +218,7 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
     const printWin = new BrowserWindow({
       show: false,
       width: 302,   // ~80mm at 96dpi
-      height: 800,
+      height: 1,
       webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
 
