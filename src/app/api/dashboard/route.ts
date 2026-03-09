@@ -42,7 +42,11 @@ export async function GET() {
         where: { organizationId },
         take: 5,
         orderBy: { createdAt: "desc" },
-        include: {
+        select: {
+          id: true,
+          invoiceNumber: true,
+          total: true,
+          createdAt: true,
           customer: { select: { name: true } },
         },
       }),
