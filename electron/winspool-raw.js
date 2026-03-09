@@ -1,0 +1,183 @@
+const { execFile } = require('node:child_process');
+
+function assertWindows() {
+  if (process.platform !== 'win32') {
+    throw new Error('Windows raw printer mode is only supported on Windows');
+  }
+}
+
+function psQuote(value) {
+  return String(value ?? '').replace(/'/g, "''");
+}
+
+function buildCommonScriptBody(printerName) {
+  return `
+$printerName = '${psQuote(printerName)}'
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public class RawPrinterHelper {
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public class DOCINFO {
+    [MarshalAs(UnmanagedType.LPWStr)]
+    public string pDocName;
+    [MarshalAs(UnmanagedType.LPWStr)]
+    public string pOutputFile;
+    [MarshalAs(UnmanagedType.LPWStr)]
+    public string pDataType;
+  }
+
+  [DllImport("winspool.Drv", EntryPoint = "OpenPrinterW", SetLastError = true, CharSet = CharSet.Unicode)]
+  public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+
+  [DllImport("winspool.Drv", SetLastError = true)]
+  public static extern bool ClosePrinter(IntPtr hPrinter);
+
+  [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterW", SetLastError = true, CharSet = CharSet.Unicode)]
+  public static extern int StartDocPrinter(IntPtr hPrinter, int level, [In] DOCINFO di);
+
+  [DllImport("winspool.Drv", SetLastError = true)]
+  public static extern bool EndDocPrinter(IntPtr hPrinter);
+
+  [DllImport("winspool.Drv", SetLastError = true)]
+  public static extern bool StartPagePrinter(IntPtr hPrinter);
+
+  [DllImport("winspool.Drv", SetLastError = true)]
+  public static extern bool EndPagePrinter(IntPtr hPrinter);
+
+  [DllImport("winspool.Drv", SetLastError = true)]
+  public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+}
+"@
+
+function ThrowLastWin32([string] $prefix) {
+  $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+  throw "$prefix (Win32: $code)"
+}
+
+$handle = [IntPtr]::Zero
+if (-not [RawPrinterHelper]::OpenPrinter($printerName, [ref] $handle, [IntPtr]::Zero)) {
+  ThrowLastWin32 "Failed to open printer '$printerName'"
+}
+`;
+}
+
+function runPowerShell(script) {
+  assertWindows();
+
+  return new Promise((resolve, reject) => {
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+
+    execFile(
+      'powershell.exe',
+      [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-EncodedCommand',
+        encoded,
+      ],
+      {
+        windowsHide: true,
+        maxBuffer: 4 * 1024 * 1024,
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          const detail = (stderr || stdout || error.message).trim();
+          reject(new Error(detail || 'PowerShell printer command failed'));
+          return;
+        }
+        resolve((stdout || '').trim());
+      }
+    );
+  });
+}
+
+async function testWindowsPrinter(printerName) {
+  if (!printerName) {
+    throw new Error('Select a Windows printer first');
+  }
+
+  const script = `
+${buildCommonScriptBody(printerName)}
+try {
+  Write-Output "OK"
+} finally {
+  if ($handle -ne [IntPtr]::Zero) {
+    [void] [RawPrinterHelper]::ClosePrinter($handle)
+  }
+}
+`;
+
+  await runPowerShell(script);
+  return true;
+}
+
+async function printRawToWindowsPrinter(printerName, buffer, jobName = 'BizArch Receipt') {
+  if (!printerName) {
+    throw new Error('Select a Windows printer first');
+  }
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+    throw new Error('Nothing to print');
+  }
+
+  const dataBase64 = buffer.toString('base64');
+  const script = `
+${buildCommonScriptBody(printerName)}
+$jobName = '${psQuote(jobName)}'
+$bytes = [Convert]::FromBase64String('${dataBase64}')
+$docInfo = New-Object RawPrinterHelper+DOCINFO
+$docInfo.pDocName = $jobName
+$docInfo.pDataType = 'RAW'
+$docId = 0
+$pageStarted = $false
+$mem = [IntPtr]::Zero
+
+try {
+  $docId = [RawPrinterHelper]::StartDocPrinter($handle, 1, $docInfo)
+  if ($docId -le 0) {
+    ThrowLastWin32 "Failed to start print document '$jobName'"
+  }
+
+  if (-not [RawPrinterHelper]::StartPagePrinter($handle)) {
+    ThrowLastWin32 "Failed to start print page"
+  }
+  $pageStarted = $true
+
+  $mem = [Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
+  [Runtime.InteropServices.Marshal]::Copy($bytes, 0, $mem, $bytes.Length)
+  $written = 0
+  if (-not [RawPrinterHelper]::WritePrinter($handle, $mem, $bytes.Length, [ref] $written)) {
+    ThrowLastWin32 "Failed to write raw bytes to printer '$printerName'"
+  }
+  if ($written -ne $bytes.Length) {
+    throw "Incomplete write to printer '$printerName' ($written/$($bytes.Length) bytes)"
+  }
+
+  Write-Output "OK"
+} finally {
+  if ($mem -ne [IntPtr]::Zero) {
+    [Runtime.InteropServices.Marshal]::FreeHGlobal($mem)
+  }
+  if ($pageStarted) {
+    [void] [RawPrinterHelper]::EndPagePrinter($handle)
+  }
+  if ($docId -gt 0) {
+    [void] [RawPrinterHelper]::EndDocPrinter($handle)
+  }
+  if ($handle -ne [IntPtr]::Zero) {
+    [void] [RawPrinterHelper]::ClosePrinter($handle)
+  }
+}
+`;
+
+  await runPowerShell(script);
+}
+
+module.exports = {
+  printRawToWindowsPrinter,
+  testWindowsPrinter,
+};

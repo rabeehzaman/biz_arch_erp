@@ -468,6 +468,7 @@ function POSTerminalContent() {
         logoUrl: receiptMeta?.logoUrl || undefined,
         logoHeight: receiptMeta?.logoHeight || undefined,
         qrCodeDataURL: receiptMeta?.qrCodeDataURL || undefined,
+        qrCodeText: receiptMeta?.qrCodeText || undefined,
         vatNumber: receiptMeta?.vatNumber || companySettings?.companyGstNumber || undefined,
         arabicName: receiptMeta?.arabicName || undefined,
         taxLabel: receiptMeta?.taxLabel || undefined,

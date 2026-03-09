@@ -16,40 +16,35 @@ let mainWindow;
 function loadPrinterConfig() {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+      return PrinterService.normalizeConfig(
+        JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
+      );
     }
   } catch (err) {
     console.error('Failed to load printer config:', err.message);
   }
-  return {
-    connectionType: 'network', // 'network' | 'usb'
-    networkIP: '192.168.1.100',
-    networkPort: 9100,
-    usbPrinterName: '',
-  };
+  return PrinterService.normalizeConfig({});
 }
 
 function savePrinterConfig(config) {
   try {
+    const normalized = PrinterService.normalizeConfig(config);
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
-    return true;
+    fs.writeFileSync(
+      CONFIG_FILE,
+      JSON.stringify(normalized, null, 2),
+      'utf-8'
+    );
+    return { success: true, config: normalized };
   } catch (err) {
     console.error('Failed to save printer config:', err.message);
-    return false;
+    return { success: false };
   }
 }
 
 // ─── Create Printer Service from Config ─────────────────────────
 function createPrinterServiceFromConfig(configOverride) {
-  const config = configOverride || loadPrinterConfig();
-  if (config.connectionType === 'usb' && config.usbPrinterName) {
-    return new PrinterService(null, null, `printer:${config.usbPrinterName}`);
-  }
-  return new PrinterService(
-    config.networkIP || '192.168.1.100',
-    config.networkPort || 9100
-  );
+  return new PrinterService(configOverride || loadPrinterConfig());
 }
 
 // ─── Window Creation ────────────────────────────────────────────
@@ -77,14 +72,14 @@ function createWindow() {
 
 // ─── IPC Handlers ───────────────────────────────────────────────
 
-// Print receipt — routes to network or USB based on saved config
-ipcMain.handle('print-receipt', async (_event, receiptData) => {
+// Print receipt — routes to network, Windows printer, or raw USB based on config
+ipcMain.handle('print-receipt', async (_event, receiptData, config) => {
   try {
     if (!receiptData || typeof receiptData !== 'object') {
       throw new Error('Invalid receipt data');
     }
 
-    const ps = createPrinterServiceFromConfig();
+    const ps = createPrinterServiceFromConfig(config);
     await ps.printReceipt(receiptData);
     return { success: true };
   } catch (error) {
@@ -93,7 +88,7 @@ ipcMain.handle('print-receipt', async (_event, receiptData) => {
   }
 });
 
-// List installed Windows printers
+// List installed system printers as seen by Electron/Windows/macOS
 ipcMain.handle('list-printers', async () => {
   try {
     if (!mainWindow) return { success: false, error: 'No window' };
@@ -112,6 +107,16 @@ ipcMain.handle('list-printers', async () => {
   }
 });
 
+// List candidate raw USB receipt printers
+ipcMain.handle('list-usb-printers', async () => {
+  try {
+    const printers = await PrinterService.listRawUsbPrinters();
+    return { success: true, printers };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Test printer connection
 ipcMain.handle('test-printer', async (_event, config) => {
   try {
@@ -124,9 +129,9 @@ ipcMain.handle('test-printer', async (_event, config) => {
 });
 
 // Open cash drawer
-ipcMain.handle('open-cash-drawer', async () => {
+ipcMain.handle('open-cash-drawer', async (_event, config) => {
   try {
-    const ps = createPrinterServiceFromConfig();
+    const ps = createPrinterServiceFromConfig(config);
     await ps.openCashDrawer();
     return { success: true };
   } catch (error) {
@@ -140,8 +145,7 @@ ipcMain.handle('get-printer-config', async () => {
 });
 
 ipcMain.handle('save-printer-config', async (_event, config) => {
-  const saved = savePrinterConfig(config);
-  return { success: saved };
+  return savePrinterConfig(config);
 });
 
 // ─── Auto Updater ───────────────────────────────────────────────

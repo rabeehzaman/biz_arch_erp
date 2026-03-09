@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { isElectronEnvironment } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
 
+type ConnectionType = "network" | "windows" | "rawUsb";
+
 export function POSSettings() {
   const { t } = useLanguage();
   const [receiptPrinting, setReceiptPrinting] = useState(false);
@@ -19,14 +21,19 @@ export function POSSettings() {
 
   // Electron printer config state
   const [isElectron, setIsElectron] = useState(false);
-  const [connectionType, setConnectionType] = useState<"network" | "usb">("network");
-  const [networkIP, setNetworkIP] = useState("192.168.1.100");
+  const [connectionType, setConnectionType] = useState<ConnectionType>("windows");
+  const [networkIP, setNetworkIP] = useState("");
   const [networkPort, setNetworkPort] = useState("9100");
-  const [usbPrinterName, setUsbPrinterName] = useState("");
+  const [windowsPrinterName, setWindowsPrinterName] = useState("");
+  const [usbVendorId, setUsbVendorId] = useState<number | null>(null);
+  const [usbProductId, setUsbProductId] = useState<number | null>(null);
+  const [usbSerialNumber, setUsbSerialNumber] = useState("");
   const [installedPrinters, setInstalledPrinters] = useState<{ name: string; displayName: string; isDefault: boolean }[]>([]);
+  const [usbPrinters, setUsbPrinters] = useState<ElectronUsbPrinter[]>([]);
   const [isTesting, setIsTesting] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [loadingPrinters, setLoadingPrinters] = useState(false);
+  const [loadingUsbPrinters, setLoadingUsbPrinters] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/pos-receipt-printing")
@@ -36,7 +43,6 @@ export function POSSettings() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // Load Electron printer config on mount
   useEffect(() => {
     const electron = isElectronEnvironment();
     setIsElectron(electron);
@@ -44,10 +50,13 @@ export function POSSettings() {
     if (electron && window.electronPOS) {
       window.electronPOS.getPrinterConfig().then((res) => {
         if (res.success && res.config) {
-          setConnectionType(res.config.connectionType || "network");
-          setNetworkIP(res.config.networkIP || "192.168.1.100");
+          setConnectionType(res.config.connectionType || "windows");
+          setNetworkIP(res.config.networkIP || "");
           setNetworkPort(String(res.config.networkPort || 9100));
-          setUsbPrinterName(res.config.usbPrinterName || "");
+          setWindowsPrinterName(res.config.windowsPrinterName || "");
+          setUsbVendorId(res.config.usbVendorId ?? null);
+          setUsbProductId(res.config.usbProductId ?? null);
+          setUsbSerialNumber(res.config.usbSerialNumber || "");
         }
       });
     }
@@ -60,9 +69,9 @@ export function POSSettings() {
       const res = await window.electronPOS.listPrinters();
       if (res.success && res.printers) {
         setInstalledPrinters(res.printers);
-        if (!usbPrinterName && res.printers.length > 0) {
+        if (!windowsPrinterName && res.printers.length > 0) {
           const defaultPrinter = res.printers.find((p) => p.isDefault);
-          setUsbPrinterName(defaultPrinter?.name || res.printers[0].name);
+          setWindowsPrinterName(defaultPrinter?.name || res.printers[0].name);
         }
       }
     } catch {
@@ -70,14 +79,68 @@ export function POSSettings() {
     } finally {
       setLoadingPrinters(false);
     }
-  }, [usbPrinterName]);
+  }, [windowsPrinterName]);
 
-  // Load printers when switching to USB mode
+  const loadUsbPrinters = useCallback(async () => {
+    if (!window.electronPOS) return;
+    setLoadingUsbPrinters(true);
+    try {
+      const res = await window.electronPOS.listUsbPrinters();
+      if (res.success && res.printers) {
+        setUsbPrinters(res.printers);
+        if ((usbVendorId === null || usbProductId === null) && res.printers.length > 0) {
+          setUsbVendorId(res.printers[0].vendorId);
+          setUsbProductId(res.printers[0].productId);
+          setUsbSerialNumber(res.printers[0].serialNumber || "");
+        }
+      }
+    } catch {
+      toast.error("Failed to list raw USB printers");
+    } finally {
+      setLoadingUsbPrinters(false);
+    }
+  }, [usbProductId, usbVendorId]);
+
   useEffect(() => {
-    if (isElectron && connectionType === "usb") {
+    if (!isElectron) return;
+
+    if (connectionType === "windows") {
       loadPrinters();
     }
-  }, [isElectron, connectionType, loadPrinters]);
+
+    if (connectionType === "rawUsb") {
+      loadUsbPrinters();
+    }
+  }, [isElectron, connectionType, loadPrinters, loadUsbPrinters]);
+
+  const buildConfig = (): ElectronPrinterConfig => ({
+    connectionType,
+    networkIP: networkIP.trim(),
+    networkPort: parseInt(networkPort, 10) || 9100,
+    windowsPrinterName,
+    usbVendorId,
+    usbProductId,
+    usbSerialNumber: usbSerialNumber.trim(),
+  });
+
+  const validateConfig = (config: ElectronPrinterConfig): string | null => {
+    if (config.connectionType === "network" && !config.networkIP) {
+      return t("pos.enterPrinterIp");
+    }
+
+    if (config.connectionType === "windows" && !config.windowsPrinterName) {
+      return t("pos.selectPrinter");
+    }
+
+    if (
+      config.connectionType === "rawUsb" &&
+      (config.usbVendorId === null || config.usbProductId === null)
+    ) {
+      return t("pos.selectRawUsbPrinter");
+    }
+
+    return null;
+  };
 
   const handleToggle = async (checked: boolean) => {
     const prev = receiptPrinting;
@@ -99,14 +162,16 @@ export function POSSettings() {
 
   const savePrinterConfig = async () => {
     if (!window.electronPOS) return;
+
+    const config = buildConfig();
+    const validationError = validateConfig(config);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setIsSavingConfig(true);
     try {
-      const config = {
-        connectionType,
-        networkIP,
-        networkPort: parseInt(networkPort, 10) || 9100,
-        usbPrinterName,
-      };
       const res = await window.electronPOS.savePrinterConfig(config);
       if (res.success) {
         toast.success("Printer configuration saved");
@@ -122,14 +187,16 @@ export function POSSettings() {
 
   const testConnection = async () => {
     if (!window.electronPOS) return;
+
+    const config = buildConfig();
+    const validationError = validateConfig(config);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setIsTesting(true);
     try {
-      const config = {
-        connectionType,
-        networkIP,
-        networkPort: parseInt(networkPort, 10) || 9100,
-        usbPrinterName,
-      };
       const res = await window.electronPOS.testPrinter(config);
       if (res.success && res.connected) {
         toast.success("Printer is connected and reachable");
@@ -145,8 +212,16 @@ export function POSSettings() {
 
   const openCashDrawer = async () => {
     if (!window.electronPOS) return;
+
+    const config = buildConfig();
+    const validationError = validateConfig(config);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     try {
-      const res = await window.electronPOS.openCashDrawer();
+      const res = await window.electronPOS.openCashDrawer(config);
       if (res.success) {
         toast.success("Cash drawer opened");
       } else {
@@ -159,19 +234,27 @@ export function POSSettings() {
 
   const printTestReceipt = async () => {
     if (!window.electronPOS) return;
+
+    const config = buildConfig();
+    const validationError = validateConfig(config);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     try {
       const res = await window.electronPOS.printReceipt({
         header: { storeName: "TEST RECEIPT" },
         invoiceNo: "TEST-001",
         date: new Date().toLocaleString(),
         items: [
-          { name: "Test Item 1", qty: 2, price: 100 },
-          { name: "Test Item 2", qty: 1, price: 250 },
+          { name: "Test Item 1", qty: 2, price: 100, total: 200 },
+          { name: "Test Item 2", qty: 1, price: 250, total: 250 },
         ],
         totals: { subtotal: 450, tax: 67.5, total: 517.5 },
         footer: "This is a test receipt",
         cutPaper: true,
-      });
+      }, config);
       if (res.success) {
         toast.success("Test receipt printed");
       } else {
@@ -180,6 +263,17 @@ export function POSSettings() {
     } catch {
       toast.error("Test print failed");
     }
+  };
+
+  const rawUsbSelectValue = usbVendorId !== null && usbProductId !== null
+    ? `${usbVendorId}|${usbProductId}|${usbSerialNumber}`
+    : "";
+
+  const handleRawUsbSelect = (value: string) => {
+    const [vendorIdRaw, productIdRaw, ...serialParts] = value.split("|");
+    setUsbVendorId(Number(vendorIdRaw));
+    setUsbProductId(Number(productIdRaw));
+    setUsbSerialNumber(serialParts.join("|"));
   };
 
   return (
@@ -226,30 +320,36 @@ export function POSSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Connection Type */}
             <div className="space-y-3">
               <Label>{t("pos.connectionType")}</Label>
-              <div className="flex gap-3">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <Button
                   variant={connectionType === "network" ? "default" : "outline"}
-                  className="flex-1"
+                  className="w-full"
                   onClick={() => setConnectionType("network")}
                 >
-                  <Wifi className="h-4 w-4 mr-2" />
+                  <Wifi className="mr-2 h-4 w-4" />
                   {t("pos.networkTcpIp")}
                 </Button>
                 <Button
-                  variant={connectionType === "usb" ? "default" : "outline"}
-                  className="flex-1"
-                  onClick={() => setConnectionType("usb")}
+                  variant={connectionType === "windows" ? "default" : "outline"}
+                  className="w-full"
+                  onClick={() => setConnectionType("windows")}
                 >
-                  <Usb className="h-4 w-4 mr-2" />
-                  {t("pos.usbPrinter")}
+                  <Printer className="mr-2 h-4 w-4" />
+                  {t("pos.windowsPrinter")}
+                </Button>
+                <Button
+                  variant={connectionType === "rawUsb" ? "default" : "outline"}
+                  className="w-full"
+                  onClick={() => setConnectionType("rawUsb")}
+                >
+                  <Usb className="mr-2 h-4 w-4" />
+                  {t("pos.rawUsb")}
                 </Button>
               </div>
             </div>
 
-            {/* Network Config */}
             {connectionType === "network" && (
               <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
@@ -276,8 +376,7 @@ export function POSSettings() {
               </div>
             )}
 
-            {/* USB Config */}
-            {connectionType === "usb" && (
+            {connectionType === "windows" && (
               <div className="space-y-3">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
@@ -289,21 +388,21 @@ export function POSSettings() {
                       disabled={loadingPrinters}
                     >
                       {loadingPrinters ? (
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                       ) : null}
                       {t("pos.refresh")}
                     </Button>
                   </div>
                   {installedPrinters.length > 0 ? (
-                    <Select value={usbPrinterName} onValueChange={setUsbPrinterName}>
+                    <Select value={windowsPrinterName} onValueChange={setWindowsPrinterName}>
                       <SelectTrigger>
                         <SelectValue placeholder={t("pos.selectPrinter")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {installedPrinters.map((p) => (
-                          <SelectItem key={p.name} value={p.name}>
-                            {p.displayName || p.name}
-                            {p.isDefault ? " (Default)" : ""}
+                        {installedPrinters.map((printer) => (
+                          <SelectItem key={printer.name} value={printer.name}>
+                            {printer.displayName || printer.name}
+                            {printer.isDefault ? " (Default)" : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -317,13 +416,57 @@ export function POSSettings() {
               </div>
             )}
 
-            {/* Actions */}
+            {connectionType === "rawUsb" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label>{t("pos.rawUsbPrinters")}</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={loadUsbPrinters}
+                      disabled={loadingUsbPrinters}
+                    >
+                      {loadingUsbPrinters ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : null}
+                      {t("pos.refresh")}
+                    </Button>
+                  </div>
+                  {usbPrinters.length > 0 ? (
+                    <Select value={rawUsbSelectValue} onValueChange={handleRawUsbSelect}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("pos.selectRawUsbPrinter")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {usbPrinters.map((printer) => (
+                          <SelectItem
+                            key={printer.id}
+                            value={`${printer.vendorId ?? ""}|${printer.productId ?? ""}|${printer.serialNumber || ""}`}
+                          >
+                            {printer.displayName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {loadingUsbPrinters ? t("pos.loadingPrinters") : t("pos.noUsbPrintersFound")}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("pos.rawUsbWarning")}
+                </p>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               <Button onClick={testConnection} disabled={isTesting} variant="outline">
                 {isTesting ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
                 )}
                 {t("pos.testConnection")}
               </Button>
@@ -331,15 +474,14 @@ export function POSSettings() {
                 {t("pos.openCashDrawer")}
               </Button>
               <Button onClick={printTestReceipt} variant="outline">
-                <Printer className="h-4 w-4 mr-2" />
+                <Printer className="mr-2 h-4 w-4" />
                 {t("pos.printTestReceipt")}
               </Button>
             </div>
 
-            {/* Save */}
             <Button onClick={savePrinterConfig} disabled={isSavingConfig} className="w-full">
               {isSavingConfig ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               {t("pos.savePrinterConfig")}
             </Button>
@@ -355,10 +497,17 @@ export function POSSettings() {
           </CardHeader>
           <CardContent>
             <div className="flex items-start gap-3">
-              <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+              <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
               <div className="space-y-1">
-                <p className="text-sm" dangerouslySetInnerHTML={{ __html: t("pos.installDesktopApp").replace("BizArch Desktop App", "<strong>BizArch Desktop App</strong>") }}>
-                </p>
+                <p
+                  className="text-sm"
+                  dangerouslySetInnerHTML={{
+                    __html: t("pos.installDesktopApp").replace(
+                      "BizArch Desktop App",
+                      "<strong>BizArch Desktop App</strong>"
+                    ),
+                  }}
+                />
                 <p className="text-sm text-muted-foreground">
                   {t("pos.desktopAppSupports")}
                 </p>

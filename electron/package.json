@@ -15,9 +15,10 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "@node-escpos/usb-adapter": "^0.3.1",
     "electron-updater": "^6.8.3",
-    "node-thermal-printer": "^4.6.0",
-    "iconv-lite": "^0.6.3"
+    "iconv-lite": "^0.6.3",
+    "node-thermal-printer": "^4.6.0"
   },
   "devDependencies": {
     "electron": "^33.2.1",
@@ -35,6 +36,7 @@
       "main.js",
       "preload.js",
       "printer-service.js",
+      "winspool-raw.js",
       "node_modules/**/*",
       "package.json"
     ],
@@ -43,7 +45,9 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["arm64"]
+          "arch": [
+            "arm64"
+          ]
         }
       ],
       "category": "public.app-category.business"
@@ -52,7 +56,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico"

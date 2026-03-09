@@ -862,6 +862,7 @@ export async function POST(request: NextRequest) {
         brandColor: org?.brandColor || null,
         vatNumber: org?.vatNumber || null,
         arabicName: org?.arabicName || null,
+        qrCodeText: result.invoice?.qrCodeData || null,
         taxLabel: saudiEnabled ? "VAT" : org?.gstEnabled ? "GST" : "Tax",
         qrCodeDataURL: qrCodeDataURL || null,
         currency: org?.currency || "INR",

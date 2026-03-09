@@ -1,8 +1,11 @@
 interface ElectronPrinterConfig {
-  connectionType: 'network' | 'usb';
+  connectionType: 'network' | 'windows' | 'rawUsb';
   networkIP: string;
   networkPort: number;
-  usbPrinterName: string;
+  windowsPrinterName: string;
+  usbVendorId: number | null;
+  usbProductId: number | null;
+  usbSerialNumber: string;
 }
 
 interface ElectronPrinter {
@@ -10,6 +13,16 @@ interface ElectronPrinter {
   displayName: string;
   isDefault: boolean;
   status: number;
+}
+
+interface ElectronUsbPrinter {
+  id: string;
+  vendorId: number | null;
+  productId: number | null;
+  serialNumber: string;
+  manufacturer: string;
+  product: string;
+  displayName: string;
 }
 
 interface ElectronPrintResult {
@@ -20,12 +33,16 @@ interface ElectronPrintResult {
 interface ElectronPOS {
   isElectron: true;
   platform: string;
-  printReceipt: (data: Record<string, unknown>) => Promise<ElectronPrintResult>;
+  printReceipt: (
+    data: Record<string, unknown>,
+    config?: Partial<ElectronPrinterConfig>
+  ) => Promise<ElectronPrintResult>;
   listPrinters: () => Promise<{ success: boolean; printers?: ElectronPrinter[]; error?: string }>;
+  listUsbPrinters: () => Promise<{ success: boolean; printers?: ElectronUsbPrinter[]; error?: string }>;
   testPrinter: (config?: Partial<ElectronPrinterConfig>) => Promise<{ success: boolean; connected?: boolean; error?: string }>;
-  openCashDrawer: () => Promise<ElectronPrintResult>;
+  openCashDrawer: (config?: Partial<ElectronPrinterConfig>) => Promise<ElectronPrintResult>;
   getPrinterConfig: () => Promise<{ success: boolean; config: ElectronPrinterConfig }>;
-  savePrinterConfig: (config: ElectronPrinterConfig) => Promise<{ success: boolean }>;
+  savePrinterConfig: (config: ElectronPrinterConfig) => Promise<{ success: boolean; config?: ElectronPrinterConfig }>;
   onUpdateStatus: (callback: (message: string) => void) => void;
 }
 

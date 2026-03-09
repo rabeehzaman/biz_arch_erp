@@ -12,6 +12,7 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
   return {
     header: {
       storeName: data.storeName,
+      storeNameAr: data.arabicName,
       arabicName: data.arabicName,
       address: [data.storeAddress, data.storeCity, data.storeState]
         .filter(Boolean)
@@ -32,6 +33,7 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
       name: item.name,
       qty: item.quantity,
       price: item.unitPrice,
+      total: item.lineTotal,
     })),
     totals: {
       subtotal: data.subtotal,
@@ -44,6 +46,8 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
     })),
     change: data.change,
     barcode: data.invoiceNumber.replace(/[^A-Za-z0-9]/g, ""),
+    qrcode: data.qrCodeText,
+    qrCodeText: data.qrCodeText,
     footer: "Thank you for your purchase!",
     cutPaper: true,
     openDrawer: false,

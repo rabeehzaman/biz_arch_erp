@@ -37,6 +37,7 @@ export interface ReceiptData {
   logoUrl?: string;
   logoHeight?: number;
   qrCodeDataURL?: string;
+  qrCodeText?: string;
   vatNumber?: string;
   arabicName?: string;
   taxLabel?: string;

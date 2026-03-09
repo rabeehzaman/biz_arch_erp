@@ -7,20 +7,21 @@ contextBridge.exposeInMainWorld('electronPOS', {
   platform: process.platform,
 
   // ─── Receipt Printing ─────────────────────────────
-  printReceipt: (receiptData) => {
+  printReceipt: (receiptData, config) => {
     if (!receiptData || typeof receiptData !== 'object') {
       return Promise.reject(new Error('receiptData must be an object'));
     }
-    return ipcRenderer.invoke('print-receipt', receiptData);
+    return ipcRenderer.invoke('print-receipt', receiptData, config);
   },
 
   // ─── Printer Management ────────────────────────────
   listPrinters: () => ipcRenderer.invoke('list-printers'),
+  listUsbPrinters: () => ipcRenderer.invoke('list-usb-printers'),
 
   testPrinter: (config) => ipcRenderer.invoke('test-printer', config),
 
   // ─── Cash Drawer ──────────────────────────────────
-  openCashDrawer: () => ipcRenderer.invoke('open-cash-drawer'),
+  openCashDrawer: (config) => ipcRenderer.invoke('open-cash-drawer', config),
 
   // ─── Config Persistence ────────────────────────────
   getPrinterConfig: () => ipcRenderer.invoke('get-printer-config'),

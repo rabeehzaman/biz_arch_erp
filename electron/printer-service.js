@@ -1,60 +1,107 @@
-// printer-service.js — Dual-mode ESC/POS printer service (Network TCP + USB via Windows spooler)
+// printer-service.js — ESC/POS printer service (Network TCP + Windows spooler RAW + Raw USB)
+const path = require('node:path');
+const os = require('node:os');
+const net = require('node:net');
 const {
   ThermalPrinter,
   PrinterTypes,
   CharacterSet,
 } = require('node-thermal-printer');
-const net = require('node:net');
 const iconv = require('iconv-lite');
+const { printRawToWindowsPrinter, testWindowsPrinter } = require('./winspool-raw');
+
+function parseUsbId(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  const raw = String(value).trim().toLowerCase();
+  if (!raw) {
+    return null;
+  }
+
+  const normalized = raw.startsWith('0x') ? raw.slice(2) : raw;
+  const radix = /[a-f]/.test(normalized) ? 16 : 10;
+  const parsed = Number.parseInt(normalized, radix);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 class PrinterService {
-  /**
-   * @param {string|null} printerIP - IP for network mode (null for USB)
-   * @param {number|null} printerPort - Port for network mode (null for USB)
-   * @param {string} [interfaceOverride] - Direct interface string, e.g. "printer:Epson TM-T88VI"
-   */
-  constructor(printerIP, printerPort = 9100, interfaceOverride) {
-    this.printerIP = printerIP;
-    this.printerPort = printerPort;
+  constructor(config = {}) {
+    const normalized = PrinterService.normalizeConfig(config);
 
-    if (interfaceOverride) {
-      // USB mode: "printer:PrinterName" uses Windows print spooler
-      this.interface = interfaceOverride;
-      this.mode = 'usb';
-    } else {
-      // Network mode: raw TCP to port 9100
-      this.interface = `tcp://${printerIP}:${printerPort}`;
-      this.mode = 'network';
+    this.mode = normalized.connectionType;
+    this.networkIP = normalized.networkIP;
+    this.networkPort = normalized.networkPort;
+    this.windowsPrinterName = normalized.windowsPrinterName;
+    this.usbVendorId = normalized.usbVendorId;
+    this.usbProductId = normalized.usbProductId;
+    this.usbSerialNumber = normalized.usbSerialNumber;
+  }
+
+  static normalizeConfig(config = {}) {
+    const rawConnectionType = config.connectionType === 'usb'
+      ? 'windows'
+      : config.connectionType;
+
+    return {
+      connectionType: ['network', 'windows', 'rawUsb'].includes(rawConnectionType)
+        ? rawConnectionType
+        : 'windows',
+      networkIP: String(config.networkIP || '').trim(),
+      networkPort: Number.parseInt(String(config.networkPort || ''), 10) || 9100,
+      windowsPrinterName: String(
+        config.windowsPrinterName || config.usbPrinterName || ''
+      ).trim(),
+      usbVendorId: parseUsbId(config.usbVendorId),
+      usbProductId: parseUsbId(config.usbProductId),
+      usbSerialNumber: String(config.usbSerialNumber || '').trim(),
+    };
+  }
+
+  static formatUsbId(value) {
+    if (value === null || value === undefined || !Number.isFinite(value)) {
+      return '0000';
+    }
+    return value.toString(16).toUpperCase().padStart(4, '0');
+  }
+
+  static loadUsbAdapter() {
+    try {
+      return require('@node-escpos/usb-adapter');
+    } catch (error) {
+      throw new Error(
+        `Raw USB support is not available. Install Electron dependencies first. ${error.message}`
+      );
     }
   }
 
-  // ─── Create a fresh printer instance per print job ──────────────
-  _createPrinter() {
+  static getErrorMessage(error) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return String(error || 'Unknown error');
+  }
+
+  static createBufferPrinter() {
     return new ThermalPrinter({
       type: PrinterTypes.EPSON,
-      interface: this.interface,
+      interface: path.join(os.tmpdir(), 'bizarch-escpos-buffer.bin'),
       characterSet: CharacterSet.PC437_USA,
-      width: 48, // 48 chars for 80mm paper
+      width: 48, // 48 chars for 80mm / 3-inch paper
       removeSpecialCharacters: false,
       options: { timeout: 5000 },
     });
   }
 
-  // ─── Test Connection ────────────────────────────────────────────
-  async testConnection() {
-    const printer = this._createPrinter();
-    return await printer.isPrinterConnected();
-  }
+  buildReceiptBuffer(data) {
+    const printer = PrinterService.createBufferPrinter();
 
-  // ─── Print Full Receipt ─────────────────────────────────────────
-  async printReceipt(data) {
-    const printer = this._createPrinter();
-    const isConnected = await printer.isPrinterConnected();
-    if (!isConnected) {
-      throw new Error(`Printer not reachable at ${this.interface}`);
-    }
-
-    // ── Header ──
+    // Header
     printer.alignCenter();
     if (data.header) {
       printer.bold(true);
@@ -63,8 +110,9 @@ class PrinterService {
       printer.setTextNormal();
       printer.bold(false);
 
-      if (data.header.storeNameAr) {
-        this._appendArabicLine(printer, data.header.storeNameAr, 'center');
+      const arabicStoreName = data.header.storeNameAr || data.header.arabicName;
+      if (arabicStoreName) {
+        this._appendArabicLine(printer, arabicStoreName, 'center');
       }
 
       if (data.header.address) printer.println(data.header.address);
@@ -73,7 +121,7 @@ class PrinterService {
     }
     printer.drawLine();
 
-    // ── Invoice Info ──
+    // Invoice info
     if (data.invoiceNo) {
       printer.alignLeft();
       printer.println(`Invoice: ${data.invoiceNo}`);
@@ -89,7 +137,7 @@ class PrinterService {
     }
     printer.drawLine();
 
-    // ── Column Headers ──
+    // Column headers
     printer.bold(true);
     printer.tableCustom([
       { text: 'Item', align: 'LEFT', width: 0.45 },
@@ -100,10 +148,15 @@ class PrinterService {
     printer.bold(false);
     printer.drawLine();
 
-    // ── Line Items ──
+    // Line items
     if (Array.isArray(data.items)) {
       for (const item of data.items) {
-        const lineTotal = ((item.qty || 1) * (item.price || 0)).toFixed(2);
+        const lineTotal = (
+          item.total !== undefined
+            ? item.total
+            : ((item.qty || 1) * (item.price || 0))
+        ).toFixed(2);
+
         printer.tableCustom([
           { text: item.name || '', align: 'LEFT', width: 0.45 },
           { text: String(item.qty || 1), align: 'CENTER', width: 0.15 },
@@ -117,7 +170,7 @@ class PrinterService {
       }
     }
 
-    // ── Totals ──
+    // Totals
     printer.drawLine();
     if (data.totals) {
       if (data.totals.subtotal !== undefined) {
@@ -127,7 +180,8 @@ class PrinterService {
         printer.leftRight('Discount:', `-${data.totals.discount.toFixed(2)}`);
       }
       if (data.totals.tax !== undefined) {
-        printer.leftRight('Tax (VAT):', data.totals.tax.toFixed(2));
+        const taxLabel = data.taxLabel || 'Tax';
+        printer.leftRight(`${taxLabel}:`, data.totals.tax.toFixed(2));
       }
       printer.drawLine();
       printer.bold(true);
@@ -137,7 +191,7 @@ class PrinterService {
       printer.bold(false);
     }
 
-    // ── Payment Info ──
+    // Payment info
     if (data.payment) {
       printer.drawLine();
       if (Array.isArray(data.payment)) {
@@ -157,7 +211,7 @@ class PrinterService {
 
     printer.drawLine();
 
-    // ── Barcode ──
+    // Barcode
     if (data.barcode) {
       printer.alignCenter();
       printer.newLine();
@@ -169,10 +223,17 @@ class PrinterService {
       printer.newLine();
     }
 
-    // ── QR Code ──
-    if (data.qrcode) {
+    // QR Code
+    const qrValue =
+      typeof data.qrcode === 'string' && !data.qrcode.startsWith('data:')
+        ? data.qrcode
+        : typeof data.qrCodeText === 'string'
+          ? data.qrCodeText
+          : null;
+
+    if (qrValue) {
       printer.alignCenter();
-      printer.printQR(data.qrcode, {
+      printer.printQR(qrValue, {
         cellSize: 4,
         correction: 'M',
         model: 2,
@@ -180,7 +241,7 @@ class PrinterService {
       printer.newLine();
     }
 
-    // ── Footer ──
+    // Footer
     printer.alignCenter();
     if (data.footer) {
       printer.println(data.footer);
@@ -191,22 +252,69 @@ class PrinterService {
     printer.newLine();
     printer.newLine();
 
-    // ── Cut Paper ──
     if (data.cutPaper !== false) {
       printer.partialCut();
     }
 
-    // ── Cash Drawer ──
     if (data.openDrawer) {
       printer.openCashDrawer();
     }
 
-    // ── Execute ──
-    await printer.execute();
-    printer.clear();
+    return Buffer.from(printer.getBuffer());
   }
 
-  // ─── Arabic Text via WPC1256 Code Page ──────────────────────────
+  buildCashDrawerBuffer() {
+    const printer = PrinterService.createBufferPrinter();
+    printer.openCashDrawer();
+    return Buffer.from(printer.getBuffer());
+  }
+
+  async testConnection() {
+    switch (this.mode) {
+      case 'network':
+        return PrinterService.testNetworkConnection(this.networkIP, this.networkPort);
+      case 'windows':
+        return testWindowsPrinter(this.windowsPrinterName);
+      case 'rawUsb':
+        return PrinterService.testRawUsbConnection(this);
+      default:
+        throw new Error(`Unsupported printer connection type: ${this.mode}`);
+    }
+  }
+
+  async printReceipt(data) {
+    const buffer = this.buildReceiptBuffer(data);
+    await this.sendBuffer(buffer, 'BizArch Receipt');
+  }
+
+  async openCashDrawer() {
+    const buffer = this.buildCashDrawerBuffer();
+    await this.sendBuffer(buffer, 'BizArch Cash Drawer');
+  }
+
+  async sendBuffer(buffer, jobName) {
+    if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+      throw new Error('Nothing to send to printer');
+    }
+
+    switch (this.mode) {
+      case 'network':
+        if (!this.networkIP) {
+          throw new Error('Enter the network printer IP address first');
+        }
+        await PrinterService.sendRawTCP(this.networkIP, this.networkPort, buffer);
+        return;
+      case 'windows':
+        await printRawToWindowsPrinter(this.windowsPrinterName, buffer, jobName);
+        return;
+      case 'rawUsb':
+        await PrinterService.sendRawUsb(this, buffer);
+        return;
+      default:
+        throw new Error(`Unsupported printer connection type: ${this.mode}`);
+    }
+  }
+
   _appendArabicLine(printer, text, align = 'right') {
     const buffer = printer.getBuffer();
     const ESC = 0x1b;
@@ -229,27 +337,214 @@ class PrinterService {
     printer.setBuffer(Buffer.concat([buffer, combined]));
   }
 
-  // ─── Open Cash Drawer Only ──────────────────────────────────────
-  async openCashDrawer() {
-    if (this.mode === 'usb') {
-      // For USB, send via printer instance
-      const printer = this._createPrinter();
-      printer.openCashDrawer();
-      await printer.execute();
-      printer.clear();
-    } else {
-      // For network, send raw TCP
-      const cmd = Buffer.from([0x1b, 0x70, 0x00, 0x19, 0xff]);
-      await PrinterService.sendRawTCP(
-        this.printerIP,
-        this.printerPort,
-        cmd
-      );
+  static async listRawUsbPrinters() {
+    const USBAdapter = PrinterService.loadUsbAdapter();
+    const devices = USBAdapter.findPrinter();
+
+    return Promise.all(
+      devices.map(async (device) => {
+        const descriptor = device.deviceDescriptor || {};
+        const vendorId = descriptor.idVendor ?? null;
+        const productId = descriptor.idProduct ?? null;
+        const manufacturer = await PrinterService.readUsbStringDescriptor(
+          device,
+          descriptor.iManufacturer
+        );
+        const product = await PrinterService.readUsbStringDescriptor(
+          device,
+          descriptor.iProduct
+        );
+        const serialNumber = await PrinterService.readUsbStringDescriptor(
+          device,
+          descriptor.iSerialNumber
+        );
+
+        const vendorHex = PrinterService.formatUsbId(vendorId);
+        const productHex = PrinterService.formatUsbId(productId);
+
+        return {
+          id: `${vendorHex}:${productHex}:${serialNumber || 'auto'}`,
+          vendorId,
+          productId,
+          serialNumber,
+          manufacturer,
+          product,
+          displayName: [
+            product || manufacturer || 'USB Printer',
+            `${vendorHex}:${productHex}`,
+            serialNumber ? `SN ${serialNumber}` : null,
+          ]
+            .filter(Boolean)
+            .join(' • '),
+        };
+      })
+    );
+  }
+
+  static async readUsbStringDescriptor(device, descriptorIndex) {
+    if (!descriptorIndex || typeof device?.getStringDescriptor !== 'function') {
+      return '';
+    }
+
+    let opened = false;
+
+    try {
+      device.open();
+      opened = true;
+    } catch (_error) {
+      return '';
+    }
+
+    try {
+      return await new Promise((resolve) => {
+        device.getStringDescriptor(descriptorIndex, (error, value) => {
+          resolve(error ? '' : String(value || ''));
+        });
+      });
+    } finally {
+      if (opened) {
+        try {
+          device.close();
+        } catch (_error) {
+          // Ignore close errors from devices already detached or claimed elsewhere.
+        }
+      }
     }
   }
 
-  // ─── Raw TCP Socket Send ────────────────────────────────────────
+  static async resolveRawUsbDevice(config) {
+    const USBAdapter = PrinterService.loadUsbAdapter();
+    const vendorId = parseUsbId(config.usbVendorId);
+    const productId = parseUsbId(config.usbProductId);
+
+    if (vendorId === null || productId === null) {
+      throw new Error('Select a raw USB printer first');
+    }
+
+    const devices = USBAdapter.findPrinter().filter((device) => {
+      const descriptor = device.deviceDescriptor || {};
+      return descriptor.idVendor === vendorId && descriptor.idProduct === productId;
+    });
+
+    if (devices.length === 0) {
+      const vendorHex = PrinterService.formatUsbId(vendorId);
+      const productHex = PrinterService.formatUsbId(productId);
+      throw new Error(`Raw USB printer ${vendorHex}:${productHex} was not found`);
+    }
+
+    if (config.usbSerialNumber) {
+      for (const device of devices) {
+        const serialNumber = await PrinterService.readUsbStringDescriptor(
+          device,
+          device.deviceDescriptor?.iSerialNumber
+        );
+        if (serialNumber === config.usbSerialNumber) {
+          return device;
+        }
+      }
+
+      throw new Error(
+        `Raw USB printer was found by VID/PID but serial ${config.usbSerialNumber} did not match`
+      );
+    }
+
+    return devices[0];
+  }
+
+  static async testRawUsbConnection(config) {
+    const USBAdapter = PrinterService.loadUsbAdapter();
+    const device = await PrinterService.resolveRawUsbDevice(config);
+    const adapter = new USBAdapter(device);
+
+    await PrinterService.openUsbAdapter(adapter);
+    await PrinterService.closeUsbAdapter(adapter);
+    return true;
+  }
+
+  static async sendRawUsb(config, buffer) {
+    const USBAdapter = PrinterService.loadUsbAdapter();
+    const device = await PrinterService.resolveRawUsbDevice(config);
+    const adapter = new USBAdapter(device);
+
+    await PrinterService.openUsbAdapter(adapter);
+    try {
+      await PrinterService.writeUsbAdapter(adapter, buffer);
+    } finally {
+      await PrinterService.closeUsbAdapter(adapter);
+    }
+  }
+
+  static openUsbAdapter(adapter) {
+    return new Promise((resolve, reject) => {
+      adapter.open((error) => {
+        if (error) {
+          reject(
+            new Error(
+              `Failed to open raw USB printer. On Windows this usually means the device is still using the vendor print driver instead of a libusb/WinUSB driver. ${PrinterService.getErrorMessage(error)}`
+            )
+          );
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  static writeUsbAdapter(adapter, buffer) {
+    return new Promise((resolve, reject) => {
+      adapter.write(buffer, (error) => {
+        if (error) {
+          reject(new Error(`Raw USB write failed: ${PrinterService.getErrorMessage(error)}`));
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  static closeUsbAdapter(adapter) {
+    return new Promise((resolve, reject) => {
+      adapter.close((error) => {
+        if (error) {
+          reject(new Error(`Raw USB close failed: ${PrinterService.getErrorMessage(error)}`));
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  static testNetworkConnection(ip, port) {
+    if (!ip) {
+      throw new Error('Enter the network printer IP address first');
+    }
+
+    return new Promise((resolve, reject) => {
+      const client = new net.Socket();
+      client.setTimeout(5000);
+
+      client.connect(port, ip, () => {
+        client.destroy();
+        resolve(true);
+      });
+
+      client.on('timeout', () => {
+        client.destroy();
+        reject(new Error(`TCP timeout connecting to ${ip}:${port}`));
+      });
+
+      client.on('error', (err) => {
+        client.destroy();
+        reject(new Error(`TCP error: ${err.message}`));
+      });
+    });
+  }
+
   static sendRawTCP(ip, port, buffer) {
+    if (!ip) {
+      throw new Error('Enter the network printer IP address first');
+    }
+
     return new Promise((resolve, reject) => {
       const client = new net.Socket();
       client.setTimeout(5000);
