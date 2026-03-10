@@ -490,15 +490,20 @@ ipcMain.handle('save-printer-config', async (_event, config) => {
 function setupAutoUpdater() {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = console;
 
   autoUpdater.on('checking-for-update', () => {
+    console.log('[updater] Checking for updates...');
     sendStatusToWindow('Checking for updates...');
   });
 
   autoUpdater.on('update-available', (info) => {
+    console.log(`[updater] Update available: v${info.version}`);
     sendStatusToWindow(`Update available: v${info.version}`);
+    const win = mainWindow || BrowserWindow.getFocusedWindow();
+    if (!win) return;
     dialog
-      .showMessageBox(mainWindow, {
+      .showMessageBox(win, {
         type: 'info',
         title: 'Update Available',
         message: `Version ${info.version} is available. Download now?`,
@@ -510,36 +515,64 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('update-not-available', () => {
+    console.log('[updater] App is up to date.');
     sendStatusToWindow('App is up to date.');
   });
 
   autoUpdater.on('download-progress', (progress) => {
-    sendStatusToWindow(`Downloading: ${Math.round(progress.percent)}%`);
+    const pct = Math.round(progress.percent);
+    console.log(`[updater] Download progress: ${pct}%`);
+    sendStatusToWindow(`Downloading update: ${pct}%`);
   });
 
-  autoUpdater.on('update-downloaded', () => {
-    sendStatusToWindow('Update downloaded. Restarting...');
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log(`[updater] Update downloaded: v${info.version}`);
+    sendStatusToWindow('Update downloaded. Ready to install.');
+    const win = mainWindow || BrowserWindow.getFocusedWindow();
+    if (!win) {
+      autoUpdater.quitAndInstall();
+      return;
+    }
     dialog
-      .showMessageBox(mainWindow, {
+      .showMessageBox(win, {
         type: 'info',
         title: 'Update Ready',
-        message: 'Update downloaded. The app will restart to apply it.',
-        buttons: ['Restart Now'],
+        message: `Version ${info.version} has been downloaded. Restart now to apply the update.`,
+        buttons: ['Restart Now', 'Later'],
       })
-      .then(() => {
-        autoUpdater.quitAndInstall();
+      .then(({ response }) => {
+        if (response === 0) autoUpdater.quitAndInstall();
       });
   });
 
   autoUpdater.on('error', (err) => {
+    console.error('[updater] Error:', err.message);
     sendStatusToWindow(`Update error: ${err.message}`);
   });
 
-  autoUpdater.checkForUpdates();
+  // Delay initial check to let the app finish loading
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('[updater] Check failed:', err.message);
+    });
+  }, 5000);
 }
 
+// Allow renderer to trigger a manual update check
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { updateAvailable: !!result?.updateInfo };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+// Return current app version to renderer
+ipcMain.handle('get-app-version', () => app.getVersion());
+
 function sendStatusToWindow(message) {
-  if (mainWindow && mainWindow.webContents) {
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
     mainWindow.webContents.send('update-status', message);
   }
 }

@@ -11,6 +11,8 @@
     "build:win": "electron-builder build --win",
     "build:mac": "electron-builder build --mac",
     "build:publish": "electron-builder build --publish always",
+    "build:publish:win": "electron-builder build --win --publish always",
+    "build:publish:mac": "electron-builder build --mac --publish always",
     "pack": "electron-builder --dir",
     "postinstall": "electron-builder install-app-deps"
   },
@@ -77,8 +79,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "your-github-username",
-        "repo": "bizarch-erp-desktop"
+        "owner": "rabeehzaman",
+        "repo": "biz_arch_erp"
       }
     ]
   }
