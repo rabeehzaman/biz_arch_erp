@@ -283,6 +283,52 @@ export default function ChartOfAccountsPage() {
     fetchData();
   }, []);
 
+  // Effect to auto-generate recommended code
+  useEffect(() => {
+    if (!editingAccount && isDialogOpen) {
+      let baseNum = 0;
+
+      if (formData.parentId) {
+        const parent = flatAccounts.find(a => a.id === formData.parentId);
+        const children = flatAccounts.filter(a => a.parentId === formData.parentId);
+        const childNums = children.map(c => parseInt(c.code, 10)).filter(n => !isNaN(n));
+
+        if (childNums.length > 0) {
+          baseNum = Math.max(...childNums) + 1;
+        } else if (parent) {
+          const pNum = parseInt(parent.code, 10);
+          if (!isNaN(pNum)) {
+            baseNum = pNum + 1;
+          }
+        }
+      } else if (formData.accountType) {
+        const typeAccounts = flatAccounts.filter(a => a.accountType === formData.accountType && !a.parentId);
+        const nums = typeAccounts.map(c => parseInt(c.code, 10)).filter(n => !isNaN(n));
+
+        if (nums.length > 0) {
+          baseNum = Math.max(...nums) + 1;
+        } else {
+          const typeBase: Record<string, number> = {
+            ASSET: 1000,
+            LIABILITY: 2000,
+            EQUITY: 3000,
+            REVENUE: 4000,
+            EXPENSE: 5000
+          };
+          baseNum = typeBase[formData.accountType] || 0;
+        }
+      }
+
+      if (baseNum > 0 && !isNaN(baseNum)) {
+        let newCode = baseNum;
+        while (flatAccounts.some(a => a.code === newCode.toString())) {
+          newCode++;
+        }
+        setFormData(prev => ({ ...prev, code: newCode.toString() }));
+      }
+    }
+  }, [formData.parentId, formData.accountType, isDialogOpen, editingAccount, flatAccounts]);
+
   const fetchData = async () => {
     try {
       const [treeRes, flatRes] = await Promise.all([
