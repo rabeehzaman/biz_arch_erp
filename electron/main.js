@@ -4,7 +4,11 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 const PrinterService = require('./printer-service');
-const { printRawToWindowsPrinter } = require('./winspool-raw');
+const {
+  getWindowsPrintJobCount,
+  printRawToWindowsPrinter,
+  waitForWindowsPrintQueueToDrain,
+} = require('./winspool-raw');
 
 // ─── Configuration ──────────────────────────────────────────────
 const ERP_URL = process.env.ERP_URL || 'https://erp.bizarch.in';
@@ -14,6 +18,10 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'printer-config.json');
 let mainWindow;
 let splashWindow;
 let loadTimeout;
+
+const RECEIPT_WINDOW_WIDTH = 302; // ~80mm at 96dpi
+const RECEIPT_RASTER_WIDTH = 576; // Typical 80mm printer width at 203dpi
+const RECEIPT_RASTER_CHUNK_HEIGHT = 256;
 
 // ─── Printer Config Persistence ─────────────────────────────────
 function loadPrinterConfig() {
@@ -48,6 +56,102 @@ function savePrinterConfig(config) {
 // ─── Create Printer Service from Config ─────────────────────────
 function createPrinterServiceFromConfig(configOverride) {
   return new PrinterService(configOverride || loadPrinterConfig());
+}
+
+function createReceiptWindow() {
+  return new BrowserWindow({
+    show: false,
+    width: RECEIPT_WINDOW_WIDTH,
+    height: 800,
+    backgroundColor: '#ffffff',
+    webPreferences: { nodeIntegration: false, contextIsolation: true },
+  });
+}
+
+async function measureReceiptContentHeight(printWin) {
+  return printWin.webContents.executeJavaScript(
+    `new Promise((resolve) => {
+      const waitForImages = Array.from(document.images).map((img) => {
+        if (img.complete) {
+          return Promise.resolve();
+        }
+        return new Promise((done) => {
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        });
+      });
+
+      const waitForFonts = document.fonts?.ready
+        ? document.fonts.ready.catch(() => undefined)
+        : Promise.resolve();
+
+      Promise.all([waitForFonts, ...waitForImages]).finally(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const receipt = document.body.children[0] || document.body;
+            const rectHeight = Math.ceil(receipt.getBoundingClientRect().height || 0);
+            const measuredHeight = Math.max(
+              rectHeight,
+              receipt.scrollHeight || 0,
+              receipt.offsetHeight || 0,
+              document.body.scrollHeight || 0
+            );
+            resolve(measuredHeight);
+          });
+        });
+      });
+    })`
+  );
+}
+
+async function waitForReceiptPaint(printWin) {
+  await printWin.webContents.executeJavaScript(
+    'new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))'
+  );
+}
+
+async function loadReceiptWindow(html) {
+  const printWin = createReceiptWindow();
+  await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  const contentHeightPx = await measureReceiptContentHeight(printWin);
+  return { printWin, contentHeightPx };
+}
+
+async function captureReceiptRasterBuffers(printWin, contentHeightPx) {
+  const totalHeight = Math.max(1, Math.ceil(contentHeightPx));
+  printWin.setContentSize(RECEIPT_WINDOW_WIDTH, totalHeight);
+  await waitForReceiptPaint(printWin);
+
+  const imageBuffers = [];
+  for (let top = 0; top < totalHeight; top += RECEIPT_RASTER_CHUNK_HEIGHT) {
+    const chunkHeight = Math.min(RECEIPT_RASTER_CHUNK_HEIGHT, totalHeight - top);
+    const image = await printWin.webContents.capturePage({
+      x: 0,
+      y: top,
+      width: RECEIPT_WINDOW_WIDTH,
+      height: chunkHeight,
+    });
+    const resized = image.getSize().width === RECEIPT_RASTER_WIDTH
+      ? image
+      : image.resize({ width: RECEIPT_RASTER_WIDTH });
+    imageBuffers.push(resized.toPNG());
+  }
+
+  return imageBuffers;
+}
+
+async function queueHtmlCutIfNeeded(printerName, initialQueueCount) {
+  if (!printerName) {
+    return;
+  }
+
+  try {
+    await waitForWindowsPrintQueueToDrain(printerName, initialQueueCount);
+    const cutBuffer = Buffer.from([0x1D, 0x56, 0x42, 0x00]); // GS V B 0 = partial cut
+    await printRawToWindowsPrinter(printerName, cutBuffer, 'BizArch Cut');
+  } catch (cutError) {
+    console.warn('HTML receipt cut command failed:', cutError.message);
+  }
 }
 
 // ─── Window Creation ────────────────────────────────────────────
@@ -214,20 +318,11 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
   try {
     const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
     const printerName = normalized.windowsPrinterName;
+    const initialQueueCount = printerName
+      ? await getWindowsPrintJobCount(printerName).catch(() => 0)
+      : 0;
 
-    const printWin = new BrowserWindow({
-      show: false,
-      width: 302,   // ~80mm at 96dpi
-      height: 800,
-      webPreferences: { nodeIntegration: false, contextIsolation: true },
-    });
-
-    await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
-
-    // Measure actual content height, convert px → microns, add 5mm padding
-    const contentHeightPx = await printWin.webContents.executeJavaScript(
-      'document.body.children[0] ? document.body.children[0].offsetHeight : document.body.scrollHeight'
-    );
+    const { printWin, contentHeightPx } = await loadReceiptWindow(html);
     const heightMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 5000;
 
     return await new Promise((resolve) => {
@@ -239,13 +334,14 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
           margins: { marginType: 'none' },
           pageSize: { width: 80000, height: heightMicrons },
         },
-        (success, failureReason) => {
+        async (success, failureReason) => {
           printWin.destroy();
-          // Send ESC/POS partial cut command after HTML print succeeds
+
+          // Queue the cut only after the Windows spooler finishes the HTML job.
           if (success && printerName) {
-            const cutBuffer = Buffer.from([0x1D, 0x56, 0x42, 0x00]); // GS V B 0 = partial cut
-            printRawToWindowsPrinter(printerName, cutBuffer, 'BizArch Cut').catch(() => {});
+            await queueHtmlCutIfNeeded(printerName, initialQueueCount);
           }
+
           resolve({
             success,
             error: success ? undefined : failureReason,
@@ -255,6 +351,26 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
     });
   } catch (error) {
     return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('print-rasterized-receipt', async (_event, html, config) => {
+  let printWin;
+
+  try {
+    const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
+    const loaded = await loadReceiptWindow(html);
+    printWin = loaded.printWin;
+    const imageBuffers = await captureReceiptRasterBuffers(printWin, loaded.contentHeightPx);
+    const ps = createPrinterServiceFromConfig(normalized);
+    await ps.printRasterizedReceipt(imageBuffers);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  } finally {
+    if (printWin && !printWin.isDestroyed()) {
+      printWin.destroy();
+    }
   }
 });
 

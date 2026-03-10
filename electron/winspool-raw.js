@@ -96,6 +96,10 @@ function runPowerShell(script) {
   });
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function testWindowsPrinter(printerName) {
   if (!printerName) {
     throw new Error('Select a Windows printer first');
@@ -114,6 +118,63 @@ try {
 
   await runPowerShell(script);
   return true;
+}
+
+async function getWindowsPrintJobCount(printerName) {
+  if (!printerName) {
+    throw new Error('Select a Windows printer first');
+  }
+
+  const script = `
+$printerName = '${psQuote(printerName)}'
+$jobs = @(Get-CimInstance Win32_PrintJob -ErrorAction SilentlyContinue | Where-Object {
+  $_.Name -and (($_.Name -split ',', 2)[0]) -eq $printerName
+})
+Write-Output $jobs.Count
+`;
+
+  const output = await runPowerShell(script);
+  const count = Number.parseInt(String(output || '0').trim(), 10);
+  return Number.isFinite(count) ? count : 0;
+}
+
+async function waitForWindowsPrintQueueToDrain(
+  printerName,
+  baselineCount = 0,
+  {
+    appearanceTimeoutMs = 1500,
+    drainTimeoutMs = 15000,
+    pollIntervalMs = 400,
+  } = {}
+) {
+  if (!printerName) {
+    throw new Error('Select a Windows printer first');
+  }
+
+  const appearanceDeadline = Date.now() + appearanceTimeoutMs;
+  let sawQueuedJob = false;
+
+  while (Date.now() < appearanceDeadline) {
+    const count = await getWindowsPrintJobCount(printerName);
+    if (count > baselineCount) {
+      sawQueuedJob = true;
+      break;
+    }
+    await sleep(pollIntervalMs);
+  }
+
+  if (!sawQueuedJob) {
+    return;
+  }
+
+  const drainDeadline = Date.now() + drainTimeoutMs;
+  while (Date.now() < drainDeadline) {
+    const count = await getWindowsPrintJobCount(printerName);
+    if (count <= baselineCount) {
+      return;
+    }
+    await sleep(pollIntervalMs);
+  }
 }
 
 async function printRawToWindowsPrinter(printerName, buffer, jobName = 'BizArch Receipt') {
@@ -178,6 +239,8 @@ try {
 }
 
 module.exports = {
+  getWindowsPrintJobCount,
   printRawToWindowsPrinter,
   testWindowsPrinter,
+  waitForWindowsPrintQueueToDrain,
 };

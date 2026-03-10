@@ -22,6 +22,13 @@ contextBridge.exposeInMainWorld('electronPOS', {
     return ipcRenderer.invoke('print-styled-receipt', html, config);
   },
 
+  printRasterizedReceipt: (html, config) => {
+    if (typeof html !== 'string') {
+      return Promise.reject(new Error('html must be a string'));
+    }
+    return ipcRenderer.invoke('print-rasterized-receipt', html, config);
+  },
+
   // ─── Printer Management ────────────────────────────
   listPrinters: () => ipcRenderer.invoke('list-printers'),
   listUsbPrinters: () => ipcRenderer.invoke('list-usb-printers'),

@@ -9,10 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Loader2, Monitor, Printer, RefreshCw, Usb, Wifi, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { isElectronEnvironment } from "@/lib/electron-print";
+import type { ReceiptData } from "@/components/pos/receipt";
+import { electronPrintWithConfig, isElectronEnvironment } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
 
 type ConnectionType = "network" | "windows" | "rawUsb";
+type ReceiptRenderMode = ElectronPrinterConfig["receiptRenderMode"];
+type ArabicCodePage = ElectronPrinterConfig["arabicCodePage"];
 
 export function POSSettings() {
   const { t } = useLanguage();
@@ -22,6 +25,8 @@ export function POSSettings() {
   // Electron printer config state
   const [isElectron, setIsElectron] = useState(false);
   const [connectionType, setConnectionType] = useState<ConnectionType>("windows");
+  const [receiptRenderMode, setReceiptRenderMode] = useState<ReceiptRenderMode>("htmlDriver");
+  const [arabicCodePage, setArabicCodePage] = useState<ArabicCodePage>("pc864");
   const [networkIP, setNetworkIP] = useState("");
   const [networkPort, setNetworkPort] = useState("9100");
   const [windowsPrinterName, setWindowsPrinterName] = useState("");
@@ -54,6 +59,8 @@ export function POSSettings() {
       window.electronPOS.getPrinterConfig().then((res) => {
         if (res.success && res.config) {
           setConnectionType(res.config.connectionType || "windows");
+          setReceiptRenderMode(res.config.receiptRenderMode || "htmlDriver");
+          setArabicCodePage(res.config.arabicCodePage || "pc864");
           setNetworkIP(res.config.networkIP || "");
           setNetworkPort(String(res.config.networkPort || 9100));
           setWindowsPrinterName(res.config.windowsPrinterName || "");
@@ -120,6 +127,8 @@ export function POSSettings() {
 
   const buildConfig = (): ElectronPrinterConfig => ({
     connectionType,
+    receiptRenderMode,
+    arabicCodePage,
     networkIP: networkIP.trim(),
     networkPort: parseInt(networkPort, 10) || 9100,
     windowsPrinterName,
@@ -137,6 +146,10 @@ export function POSSettings() {
 
     if (config.connectionType === "windows" && !config.windowsPrinterName) {
       return t("pos.selectPrinter");
+    }
+
+    if (config.receiptRenderMode === "htmlDriver" && config.connectionType !== "windows") {
+      return t("pos.windowsDriverModeRequiresWindows");
     }
 
     if (
@@ -249,19 +262,24 @@ export function POSSettings() {
       return;
     }
 
+    const testReceiptData: ReceiptData = {
+      storeName: "TEST RECEIPT",
+      invoiceNumber: "TEST-001",
+      date: new Date(),
+      items: [
+        { name: "Test Item 1", quantity: 2, unitPrice: 100, discount: 0, lineTotal: 200 },
+        { name: "Test Item 2", quantity: 1, unitPrice: 250, discount: 0, lineTotal: 250 },
+      ],
+      subtotal: 450,
+      taxRate: 15,
+      taxAmount: 67.5,
+      total: 517.5,
+      payments: [{ method: "CASH", amount: 517.5 }],
+      change: 0,
+    };
+
     try {
-      const res = await window.electronPOS.printReceipt({
-        header: { storeName: "TEST RECEIPT" },
-        invoiceNo: "TEST-001",
-        date: new Date().toLocaleString(),
-        items: [
-          { name: "Test Item 1", qty: 2, price: 100, total: 200 },
-          { name: "Test Item 2", qty: 1, price: 250, total: 250 },
-        ],
-        totals: { subtotal: 450, tax: 67.5, total: 517.5 },
-        footer: "This is a test receipt",
-        cutPaper: true,
-      }, config);
+      const res = await electronPrintWithConfig(testReceiptData, config);
       if (res.success) {
         toast.success("Test receipt printed");
       } else {
@@ -355,6 +373,45 @@ export function POSSettings() {
                   {t("pos.rawUsb")}
                 </Button>
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label>{t("pos.receiptMode")}</Label>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Button
+                  variant={receiptRenderMode === "htmlDriver" ? "default" : "outline"}
+                  className="w-full"
+                  onClick={() => setReceiptRenderMode("htmlDriver")}
+                >
+                  {t("pos.htmlDriverSpooler")}
+                </Button>
+                <Button
+                  variant={receiptRenderMode === "htmlRaster" ? "default" : "outline"}
+                  className="w-full"
+                  onClick={() => setReceiptRenderMode("htmlRaster")}
+                >
+                  {t("pos.htmlRasterEscpos")}
+                </Button>
+                <Button
+                  variant={receiptRenderMode === "escposText" ? "default" : "outline"}
+                  className="w-full"
+                  onClick={() => setReceiptRenderMode("escposText")}
+                >
+                  {t("pos.escposTextRaw")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {receiptRenderMode === "htmlDriver"
+                  ? t("pos.htmlDriverSpoolerDesc")
+                  : receiptRenderMode === "htmlRaster"
+                    ? t("pos.htmlRasterEscposDesc")
+                    : t("pos.escposTextRawDesc")}
+              </p>
+              {receiptRenderMode === "htmlDriver" && connectionType !== "windows" ? (
+                <p className="text-xs text-amber-600">
+                  {t("pos.windowsDriverModeRequiresWindows")}
+                </p>
+              ) : null}
             </div>
 
             {connectionType === "network" && (
@@ -464,6 +521,26 @@ export function POSSettings() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {t("pos.rawUsbWarning")}
+                </p>
+              </div>
+            )}
+
+            {receiptRenderMode === "escposText" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{t("pos.arabicCodePage")}</Label>
+                  <Select value={arabicCodePage} onValueChange={(value) => setArabicCodePage(value as ArabicCodePage)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("pos.arabicCodePage")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pc864">{t("pos.pc864Recommended")}</SelectItem>
+                      <SelectItem value="wpc1256">{t("pos.wpc1256Compatibility")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("pos.arabicCodePageDesc")}
                 </p>
               </div>
             )}

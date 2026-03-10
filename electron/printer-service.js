@@ -10,6 +10,18 @@ const {
 const iconv = require('iconv-lite');
 const { printRawToWindowsPrinter, testWindowsPrinter } = require('./winspool-raw');
 
+const RECEIPT_RENDER_MODES = ['htmlDriver', 'htmlRaster', 'escposText'];
+const ARABIC_CODE_PAGES = {
+  pc864: {
+    escposByte: 0x25,
+    iconvEncoding: 'cp864',
+  },
+  wpc1256: {
+    escposByte: 0x32,
+    iconvEncoding: 'win1256',
+  },
+};
+
 function parseUsbId(value) {
   if (value === null || value === undefined || value === '') {
     return null;
@@ -35,6 +47,8 @@ class PrinterService {
     const normalized = PrinterService.normalizeConfig(config);
 
     this.mode = normalized.connectionType;
+    this.receiptRenderMode = normalized.receiptRenderMode;
+    this.arabicCodePage = normalized.arabicCodePage;
     this.networkIP = normalized.networkIP;
     this.networkPort = normalized.networkPort;
     this.windowsPrinterName = normalized.windowsPrinterName;
@@ -47,11 +61,19 @@ class PrinterService {
     const rawConnectionType = config.connectionType === 'usb'
       ? 'windows'
       : config.connectionType;
+    const connectionType = ['network', 'windows', 'rawUsb'].includes(rawConnectionType)
+      ? rawConnectionType
+      : 'windows';
+    const receiptRenderMode = RECEIPT_RENDER_MODES.includes(config.receiptRenderMode)
+      ? config.receiptRenderMode
+      : connectionType === 'windows'
+        ? 'htmlDriver'
+        : 'escposText';
 
     return {
-      connectionType: ['network', 'windows', 'rawUsb'].includes(rawConnectionType)
-        ? rawConnectionType
-        : 'windows',
+      connectionType,
+      receiptRenderMode,
+      arabicCodePage: config.arabicCodePage === 'wpc1256' ? 'wpc1256' : 'pc864',
       networkIP: String(config.networkIP || '').trim(),
       networkPort: Number.parseInt(String(config.networkPort || ''), 10) || 9100,
       windowsPrinterName: String(
@@ -98,6 +120,10 @@ class PrinterService {
       removeSpecialCharacters: false,
       options: { timeout: 5000 },
     });
+  }
+
+  static getArabicCodePageConfig(codePage = 'pc864') {
+    return ARABIC_CODE_PAGES[codePage] || ARABIC_CODE_PAGES.pc864;
   }
 
   buildReceiptBuffer(data) {
@@ -271,6 +297,36 @@ class PrinterService {
     return Buffer.from(printer.getBuffer());
   }
 
+  async buildImageReceiptBuffer(
+    imageBuffers,
+    { cutPaper = true, openDrawer = false } = {}
+  ) {
+    if (!Array.isArray(imageBuffers) || imageBuffers.length === 0) {
+      throw new Error('No raster receipt image was generated');
+    }
+
+    const printer = PrinterService.createBufferPrinter();
+    printer.alignCenter();
+
+    for (const imageBuffer of imageBuffers) {
+      if (!Buffer.isBuffer(imageBuffer) || imageBuffer.length === 0) {
+        continue;
+      }
+      await printer.printImageBuffer(imageBuffer);
+      printer.newLine();
+    }
+
+    if (cutPaper) {
+      printer.partialCut();
+    }
+
+    if (openDrawer) {
+      printer.openCashDrawer();
+    }
+
+    return Buffer.from(printer.getBuffer());
+  }
+
   async testConnection() {
     switch (this.mode) {
       case 'network':
@@ -286,6 +342,11 @@ class PrinterService {
 
   async printReceipt(data) {
     const buffer = this.buildReceiptBuffer(data);
+    await this.sendBuffer(buffer, 'BizArch Receipt');
+  }
+
+  async printRasterizedReceipt(imageBuffers, options = {}) {
+    const buffer = await this.buildImageReceiptBuffer(imageBuffers, options);
     await this.sendBuffer(buffer, 'BizArch Receipt');
   }
 
@@ -320,12 +381,13 @@ class PrinterService {
   _appendArabicLine(printer, text, align = 'right') {
     const buffer = printer.getBuffer();
     const ESC = 0x1b;
+    const arabicCodePage = PrinterService.getArabicCodePageConfig(this.arabicCodePage);
 
     const alignByte =
       align === 'center' ? 0x01 : align === 'right' ? 0x02 : 0x00;
     const alignCmd = Buffer.from([ESC, 0x61, alignByte]);
-    const codepageCmd = Buffer.from([ESC, 0x74, 0x32]); // WPC1256
-    const encoded = iconv.encode(text, 'win1256');
+    const codepageCmd = Buffer.from([ESC, 0x74, arabicCodePage.escposByte]);
+    const encoded = iconv.encode(text, arabicCodePage.iconvEncoding);
     const LF = Buffer.from([0x0a]);
     const resetCmd = Buffer.from([ESC, 0x74, 0x00]); // Reset to PC437
 

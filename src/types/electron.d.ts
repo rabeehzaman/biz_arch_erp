@@ -1,5 +1,7 @@
 interface ElectronPrinterConfig {
   connectionType: 'network' | 'windows' | 'rawUsb';
+  receiptRenderMode: 'htmlDriver' | 'htmlRaster' | 'escposText';
+  arabicCodePage: 'pc864' | 'wpc1256';
   networkIP: string;
   networkPort: number;
   windowsPrinterName: string;
@@ -40,6 +42,10 @@ interface ElectronPOS {
     config?: Partial<ElectronPrinterConfig>
   ) => Promise<ElectronPrintResult>;
   printStyledReceipt: (
+    html: string,
+    config?: Partial<ElectronPrinterConfig>
+  ) => Promise<ElectronPrintResult>;
+  printRasterizedReceipt: (
     html: string,
     config?: Partial<ElectronPrinterConfig>
   ) => Promise<ElectronPrintResult>;

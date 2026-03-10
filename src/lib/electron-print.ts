@@ -5,6 +5,29 @@ export function isElectronEnvironment(): boolean {
   return typeof window !== "undefined" && !!window.electronPOS?.isElectron;
 }
 
+async function resolvePrinterConfig(
+  config?: Partial<ElectronPrinterConfig>
+): Promise<Partial<ElectronPrinterConfig> | undefined> {
+  if (config?.connectionType) {
+    return config;
+  }
+
+  if (!window.electronPOS?.getPrinterConfig) {
+    return config;
+  }
+
+  try {
+    const configResult = await window.electronPOS.getPrinterConfig();
+    if (configResult.success) {
+      return configResult.config;
+    }
+  } catch {
+    // Fall back to the provided override or the raw ESC/POS path below.
+  }
+
+  return config;
+}
+
 /**
  * Maps the web app's ReceiptData shape to the Electron printer-service format.
  */
@@ -60,29 +83,46 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
  * For "rawUsb" / "network", sends ESC/POS commands.
  */
 export async function electronPrint(data: ReceiptData): Promise<{ success: boolean; error?: string }> {
+  return electronPrintWithConfig(data);
+}
+
+export async function electronPrintWithConfig(
+  data: ReceiptData,
+  config?: Partial<ElectronPrinterConfig>
+): Promise<{ success: boolean; error?: string }> {
   if (!window.electronPOS) {
     return { success: false, error: "Electron POS bridge not available" };
   }
 
-  // Check connection type to decide print path
-  try {
-    const configResult = await window.electronPOS.getPrinterConfig();
-    if (configResult.success && configResult.config.connectionType === "windows") {
-      // Use styled HTML receipt via Windows printer driver
-      const margins: ReceiptHtmlOptions = {
-        marginLeft: configResult.config.receiptMarginLeft,
-        marginRight: configResult.config.receiptMarginRight,
-      };
-      const html = generateReceiptHtml(data, margins);
-      return window.electronPOS.printStyledReceipt(html, configResult.config);
+  const resolvedConfig = await resolvePrinterConfig(config);
+  const receiptRenderMode = resolvedConfig?.receiptRenderMode
+    ?? (resolvedConfig?.connectionType === "windows" ? "htmlDriver" : "escposText");
+
+  if (receiptRenderMode === "htmlDriver") {
+    if (resolvedConfig?.connectionType !== "windows") {
+      return { success: false, error: "Windows HTML mode requires Windows Printer connection" };
     }
-  } catch {
-    // Fall through to ESC/POS path
+
+    const margins: ReceiptHtmlOptions = {
+      marginLeft: resolvedConfig.receiptMarginLeft,
+      marginRight: resolvedConfig.receiptMarginRight,
+    };
+    const html = generateReceiptHtml(data, margins);
+    return window.electronPOS.printStyledReceipt(html, resolvedConfig);
+  }
+
+  if (receiptRenderMode === "htmlRaster") {
+    const margins: ReceiptHtmlOptions = {
+      marginLeft: resolvedConfig?.receiptMarginLeft,
+      marginRight: resolvedConfig?.receiptMarginRight,
+    };
+    const html = generateReceiptHtml(data, margins);
+    return window.electronPOS.printRasterizedReceipt(html, resolvedConfig);
   }
 
   // ESC/POS path for rawUsb / network connections
   const mapped = mapReceiptToElectronFormat(data);
-  return window.electronPOS.printReceipt(mapped);
+  return window.electronPOS.printReceipt(mapped, resolvedConfig);
 }
 
 /**
