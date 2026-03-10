@@ -408,11 +408,17 @@ class PrinterService {
   }
 
   async printReceipt(data) {
+    if (this.mode === 'rawUsb') {
+      data.openDrawer = true;
+    }
     const buffer = this.buildReceiptBuffer(data);
     await this.sendBuffer(buffer, 'BizArch Receipt');
   }
 
   async printRasterizedReceipt(imageBuffers, options = {}) {
+    if (this.mode === 'rawUsb') {
+      options.openDrawer = true;
+    }
     const buffer = await this.buildImageReceiptBuffer(imageBuffers, options);
     await this.sendBuffer(buffer, 'BizArch Receipt');
   }
