@@ -331,12 +331,42 @@ class PrinterService {
   }
 
   // Uses ESC * standard generic image printing compatible with 99% of clones (e.g. EZPOS)
+  // Applies Floyd-Steinberg dithering for dramatically better text and image quality
   _buildEscStarImage(pngBuffer) {
     const png = PNG.sync.read(pngBuffer);
     const width = png.width;
     const height = png.height;
     const data = png.data;
 
+    // Step 1: Convert RGBA → grayscale float buffer (transparent = white)
+    const gray = new Float32Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      const idx = i << 2;
+      const a = data[idx + 3];
+      if (a <= 126) {
+        gray[i] = 255; // transparent → white
+      } else {
+        gray[i] = 0.2126 * data[idx] + 0.7152 * data[idx + 1] + 0.0722 * data[idx + 2];
+      }
+    }
+
+    // Step 2: Floyd-Steinberg error-diffusion dithering (in-place)
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const pos = y * width + x;
+        const oldVal = gray[pos];
+        const newVal = oldVal < 128 ? 0 : 255;
+        gray[pos] = newVal;
+        const err = oldVal - newVal;
+
+        if (x + 1 < width)                         gray[pos + 1]         += err * 7 / 16;
+        if (y + 1 < height && x > 0)               gray[pos + width - 1] += err * 3 / 16;
+        if (y + 1 < height)                         gray[pos + width]     += err * 5 / 16;
+        if (y + 1 < height && x + 1 < width)       gray[pos + width + 1] += err * 1 / 16;
+      }
+    }
+
+    // Step 3: Build ESC * column-stripe output from dithered 1-bit result
     let bytes = [];
     bytes.push(0x1B, 0x33, 24); // ESC 3 24 (set line spacing to 24 dots)
 
@@ -351,18 +381,8 @@ class PrinterService {
           let sliceByte = 0;
           for (let b = 0; b < 8; b++) {
             const pixelY = y + k * 8 + b;
-            if (pixelY < height) {
-              const idx = (width * pixelY + x) << 2;
-              const a = data[idx + 3];
-              if (a > 126) {
-                const r = data[idx];
-                const g = data[idx + 1];
-                const c_b = data[idx + 2];
-                const grayscale = parseInt(0.2126 * r + 0.7152 * g + 0.0722 * c_b);
-                if (grayscale < 128) {
-                  sliceByte |= (1 << (7 - b));
-                }
-              }
+            if (pixelY < height && gray[pixelY * width + x] < 128) {
+              sliceByte |= (1 << (7 - b));
             }
           }
           bytes.push(sliceByte);

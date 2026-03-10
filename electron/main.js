@@ -22,7 +22,7 @@ let loadTimeout;
 
 const RECEIPT_WINDOW_WIDTH = 302; // ~80mm at 96dpi
 const RECEIPT_RASTER_WIDTH = 576; // Typical 80mm printer width at 203dpi
-const RECEIPT_RASTER_CHUNK_HEIGHT = 64;
+const RECEIPT_RASTER_CHUNK_HEIGHT = 240; // Must be multiple of 24 (ESC * stripe height) to avoid white gap lines
 const HTML_DRIVER_TOP_TRIM_MM = 1.5;
 const HTML_DRIVER_BOTTOM_SAFE_MM = 10;
 const HTML_DRIVER_MIN_HEIGHT_MICRONS = 150000;
@@ -82,7 +82,7 @@ function createRasterReceiptWindow() {
     width: RECEIPT_WINDOW_WIDTH,
     height: 800,
     backgroundColor: '#ffffff',
-    webPreferences: { nodeIntegration: false, contextIsolation: true, offscreen: true },
+    webPreferences: { nodeIntegration: false, contextIsolation: true, offscreen: true, deviceScaleFactor: 2 },
   });
 }
 
