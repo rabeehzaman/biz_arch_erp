@@ -616,9 +616,12 @@ class PrinterService {
 
       client.connect(port, ip, () => {
         client.write(buffer, () => {
-          client.destroy();
-          resolve();
+          client.end();
         });
+      });
+
+      client.on('end', () => {
+        resolve();
       });
 
       client.on('timeout', () => {

@@ -1,4 +1,7 @@
 const { spawn } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
 
 function assertWindows() {
   if (process.platform !== 'win32') {
@@ -240,11 +243,14 @@ async function printRawToWindowsPrinter(printerName, buffer, jobName = 'BizArch 
     throw new Error('Nothing to print');
   }
 
-  const dataBase64 = buffer.toString('base64');
+  const tmpFile = path.join(os.tmpdir(), `bizarch-raw-print-${Date.now()}-${Math.floor(Math.random() * 10000)}.bin`);
+  fs.writeFileSync(tmpFile, buffer);
+
   const script = `
 ${buildCommonScriptBody(printerName)}
 $jobName = '${psQuote(jobName)}'
-$bytes = [Convert]::FromBase64String('${dataBase64}')
+$tmpFile = '${psQuote(tmpFile)}'
+$bytes = [System.IO.File]::ReadAllBytes($tmpFile)
 $docInfo = New-Object RawPrinterHelper+DOCINFO
 $docInfo.pDocName = $jobName
 $docInfo.pDataType = 'RAW'
@@ -290,7 +296,11 @@ try {
 }
 `;
 
-  await runPowerShell(script);
+  try {
+    await runPowerShell(script);
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+  }
 }
 
 module.exports = {
