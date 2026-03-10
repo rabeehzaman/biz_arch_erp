@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle2, Loader2, Monitor, Printer, RefreshCw, Usb, Wifi, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { ReceiptData } from "@/components/pos/receipt";
+import { capacitorPrintWithConfig, getDefaultMobilePrinterConfig, getMobilePrinterConfig, isCapacitorEnvironment, openMobileCashDrawer, saveMobilePrinterConfig, testMobilePrinterConnection, type MobilePrinterConfig } from "@/lib/capacitor-print";
 import { electronPrintWithConfig, isElectronEnvironment } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
 
@@ -24,6 +25,7 @@ export function POSSettings() {
 
   // Electron printer config state
   const [isElectron, setIsElectron] = useState(false);
+  const [isCapacitor, setIsCapacitor] = useState(false);
   const [connectionType, setConnectionType] = useState<ConnectionType>("windows");
   const [receiptRenderMode, setReceiptRenderMode] = useState<ReceiptRenderMode>("htmlDriver");
   const [arabicCodePage, setArabicCodePage] = useState<ArabicCodePage>("pc864");
@@ -42,6 +44,12 @@ export function POSSettings() {
   const [receiptMarginLeft, setReceiptMarginLeft] = useState(3);
   const [receiptMarginRight, setReceiptMarginRight] = useState(5);
   const [isClearingCache, setIsClearingCache] = useState(false);
+  const [mobileHost, setMobileHost] = useState("");
+  const [mobilePort, setMobilePort] = useState("9100");
+  const [mobilePaperWidth, setMobilePaperWidth] = useState<58 | 80>(80);
+  const [mobileTimeoutSeconds, setMobileTimeoutSeconds] = useState("10");
+  const [mobileCutPaper, setMobileCutPaper] = useState(true);
+  const [mobileOpenCashDrawerOnPrint, setMobileOpenCashDrawerOnPrint] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/pos-receipt-printing")
@@ -53,7 +61,9 @@ export function POSSettings() {
 
   useEffect(() => {
     const electron = isElectronEnvironment();
+    const capacitor = isCapacitorEnvironment();
     setIsElectron(electron);
+    setIsCapacitor(capacitor);
 
     if (electron && window.electronPOS) {
       window.electronPOS.getPrinterConfig().then((res) => {
@@ -71,6 +81,18 @@ export function POSSettings() {
           setReceiptMarginRight(res.config.receiptMarginRight ?? 5);
         }
       });
+    }
+
+    if (capacitor) {
+      const config = getMobilePrinterConfig() ?? getDefaultMobilePrinterConfig();
+      setMobileHost(config.host);
+      setMobilePort(String(config.port));
+      setMobilePaperWidth(config.paperWidth);
+      setMobileTimeoutSeconds(String(config.timeoutSeconds));
+      setMobileCutPaper(config.cutPaper);
+      setMobileOpenCashDrawerOnPrint(config.openCashDrawer);
+      setReceiptMarginLeft(config.receiptMarginLeft);
+      setReceiptMarginRight(config.receiptMarginRight);
     }
   }, []);
 
@@ -139,6 +161,18 @@ export function POSSettings() {
     receiptMarginRight,
   });
 
+  const buildMobileConfig = (): MobilePrinterConfig => ({
+    connectionType: "tcp",
+    host: mobileHost.trim(),
+    port: parseInt(mobilePort, 10) || 9100,
+    paperWidth: mobilePaperWidth,
+    timeoutSeconds: parseInt(mobileTimeoutSeconds, 10) || 10,
+    cutPaper: mobileCutPaper,
+    openCashDrawer: mobileOpenCashDrawerOnPrint,
+    receiptMarginLeft,
+    receiptMarginRight,
+  });
+
   const validateConfig = (config: ElectronPrinterConfig): string | null => {
     if (config.connectionType === "network" && !config.networkIP) {
       return t("pos.enterPrinterIp");
@@ -157,6 +191,14 @@ export function POSSettings() {
       (config.usbVendorId === null || config.usbProductId === null)
     ) {
       return t("pos.selectRawUsbPrinter");
+    }
+
+    return null;
+  };
+
+  const validateMobileConfig = (config: MobilePrinterConfig): string | null => {
+    if (!config.host) {
+      return t("pos.enterPrinterIp");
     }
 
     return null;
@@ -181,6 +223,26 @@ export function POSSettings() {
   };
 
   const savePrinterConfig = async () => {
+    if (isCapacitor) {
+      const config = buildMobileConfig();
+      const validationError = validateMobileConfig(config);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      setIsSavingConfig(true);
+      try {
+        saveMobilePrinterConfig(config);
+        toast.success(t("pos.mobilePrinterConfigSaved"));
+      } catch {
+        toast.error(t("pos.mobilePrinterConfigSaveFailed"));
+      } finally {
+        setIsSavingConfig(false);
+      }
+      return;
+    }
+
     if (!window.electronPOS) return;
 
     const config = buildConfig();
@@ -206,6 +268,30 @@ export function POSSettings() {
   };
 
   const testConnection = async () => {
+    if (isCapacitor) {
+      const config = buildMobileConfig();
+      const validationError = validateMobileConfig(config);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      setIsTesting(true);
+      try {
+        const res = await testMobilePrinterConnection(config);
+        if (res.success && res.connected) {
+          toast.success(t("pos.mobilePrinterReachable"));
+        } else {
+          toast.error(res.error || t("pos.mobilePrinterUnreachable"));
+        }
+      } catch {
+        toast.error(t("pos.mobileConnectionTestFailed"));
+      } finally {
+        setIsTesting(false);
+      }
+      return;
+    }
+
     if (!window.electronPOS) return;
 
     const config = buildConfig();
@@ -231,6 +317,27 @@ export function POSSettings() {
   };
 
   const openCashDrawer = async () => {
+    if (isCapacitor) {
+      const config = buildMobileConfig();
+      const validationError = validateMobileConfig(config);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      try {
+        const res = await openMobileCashDrawer(config);
+        if (res.success) {
+          toast.success("Cash drawer opened");
+        } else {
+          toast.error(res.error || "Failed to open cash drawer");
+        }
+      } catch {
+        toast.error("Failed to open cash drawer");
+      }
+      return;
+    }
+
     if (!window.electronPOS) return;
 
     const config = buildConfig();
@@ -253,10 +360,10 @@ export function POSSettings() {
   };
 
   const printTestReceipt = async () => {
-    if (!window.electronPOS) return;
-
-    const config = buildConfig();
-    const validationError = validateConfig(config);
+    const config = isCapacitor ? buildMobileConfig() : buildConfig();
+    const validationError = isCapacitor
+      ? validateMobileConfig(config as MobilePrinterConfig)
+      : validateConfig(config as ElectronPrinterConfig);
     if (validationError) {
       toast.error(validationError);
       return;
@@ -279,7 +386,9 @@ export function POSSettings() {
     };
 
     try {
-      const res = await electronPrintWithConfig(testReceiptData, config);
+      const res = isCapacitor
+        ? await capacitorPrintWithConfig(testReceiptData, config as MobilePrinterConfig)
+        : await electronPrintWithConfig(testReceiptData, config as ElectronPrinterConfig);
       if (res.success) {
         toast.success("Test receipt printed");
       } else {
@@ -320,6 +429,8 @@ export function POSSettings() {
               <p className="text-sm text-muted-foreground">
                 {isElectron
                   ? t("pos.autoPrintReceiptElectron")
+                  : isCapacitor
+                    ? t("pos.autoPrintReceiptMobile")
                   : t("pos.autoPrintReceiptWeb")}
               </p>
             </div>
@@ -623,6 +734,155 @@ export function POSSettings() {
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
                 {t("pos.clearCache")}
+              </Button>
+            </div>
+
+            <Button onClick={savePrinterConfig} disabled={isSavingConfig} className="w-full">
+              {isSavingConfig ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {t("pos.savePrinterConfig")}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : isCapacitor ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wifi className="h-5 w-5" />
+              {t("pos.mobileThermalPrinterConfig")}
+            </CardTitle>
+            <CardDescription>
+              {t("pos.mobileThermalPrinterConfigDesc")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1">
+                <Label htmlFor="mobile-printer-host">{t("pos.printerIpAddress")}</Label>
+                <Input
+                  id="mobile-printer-host"
+                  placeholder="192.168.1.100"
+                  value={mobileHost}
+                  onChange={(e) => setMobileHost(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="mobile-printer-port">{t("pos.port")}</Label>
+                <Input
+                  id="mobile-printer-port"
+                  type="number"
+                  placeholder="9100"
+                  value={mobilePort}
+                  onChange={(e) => setMobilePort(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>{t("pos.paperWidth")}</Label>
+                <Select
+                  value={String(mobilePaperWidth)}
+                  onValueChange={(value) => setMobilePaperWidth(value === "58" ? 58 : 80)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("pos.paperWidth")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="58">{t("pos.paper58mm")}</SelectItem>
+                    <SelectItem value="80">{t("pos.paper80mm")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="mobile-timeout">{t("pos.connectionTimeout")}</Label>
+                <Input
+                  id="mobile-timeout"
+                  type="number"
+                  min={3}
+                  max={60}
+                  value={mobileTimeoutSeconds}
+                  onChange={(e) => setMobileTimeoutSeconds(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label>{t("pos.receiptMargins")}</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="mobile-margin-left" className="text-xs text-muted-foreground">
+                    {t("pos.leftMargin")} (mm)
+                  </Label>
+                  <Input
+                    id="mobile-margin-left"
+                    type="number"
+                    min={0}
+                    max={15}
+                    value={receiptMarginLeft}
+                    onChange={(e) => setReceiptMarginLeft(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="mobile-margin-right" className="text-xs text-muted-foreground">
+                    {t("pos.rightMargin")} (mm)
+                  </Label>
+                  <Input
+                    id="mobile-margin-right"
+                    type="number"
+                    min={0}
+                    max={15}
+                    value={receiptMarginRight}
+                    onChange={(e) => setReceiptMarginRight(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("pos.receiptMarginsDesc")}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="mobile-cut-paper">{t("pos.cutPaper")}</Label>
+                  <p className="text-xs text-muted-foreground">{t("pos.cutPaperDesc")}</p>
+                </div>
+                <Switch
+                  id="mobile-cut-paper"
+                  checked={mobileCutPaper}
+                  onCheckedChange={setMobileCutPaper}
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="mobile-open-drawer">{t("pos.openDrawerAfterPrint")}</Label>
+                  <p className="text-xs text-muted-foreground">{t("pos.openDrawerAfterPrintDesc")}</p>
+                </div>
+                <Switch
+                  id="mobile-open-drawer"
+                  checked={mobileOpenCashDrawerOnPrint}
+                  onCheckedChange={setMobileOpenCashDrawerOnPrint}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={testConnection} disabled={isTesting} variant="outline">
+                {isTesting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                )}
+                {t("pos.testConnection")}
+              </Button>
+              <Button onClick={openCashDrawer} variant="outline">
+                {t("pos.openCashDrawer")}
+              </Button>
+              <Button onClick={printTestReceipt} variant="outline">
+                <Printer className="mr-2 h-4 w-4" />
+                {t("pos.printTestReceipt")}
               </Button>
             </div>
 

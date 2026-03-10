@@ -1,5 +1,6 @@
 import type { ReceiptData } from "@/components/pos/receipt";
 import { generateReceiptHtml, printReceipt as browserPrintReceipt, type ReceiptHtmlOptions } from "@/lib/print-receipt";
+import { capacitorPrintWithConfig, isCapacitorEnvironment, type MobilePrinterConfig } from "@/lib/capacitor-print";
 
 export function isElectronEnvironment(): boolean {
   return typeof window !== "undefined" && !!window.electronPOS?.isElectron;
@@ -125,6 +126,19 @@ export async function electronPrintWithConfig(
   return window.electronPOS.printReceipt(mapped, resolvedConfig);
 }
 
+export async function capacitorPrint(
+  data: ReceiptData
+): Promise<{ success: boolean; error?: string }> {
+  return capacitorPrintWithConfig(data);
+}
+
+export async function capacitorPrintWithOverride(
+  data: ReceiptData,
+  config?: Partial<MobilePrinterConfig>
+): Promise<{ success: boolean; error?: string }> {
+  return capacitorPrintWithConfig(data, config);
+}
+
 /**
  * Smart print: uses Electron silent printing if available, otherwise falls back
  * to browser iframe print dialog.
@@ -135,6 +149,13 @@ export function smartPrintReceipt(data: ReceiptData): void {
       if (!result.success) {
         console.error("Electron print failed:", result.error);
         // Fallback to browser print on Electron failure
+        browserPrintReceipt(generateReceiptHtml(data));
+      }
+    });
+  } else if (isCapacitorEnvironment()) {
+    capacitorPrint(data).then((result) => {
+      if (!result.success) {
+        console.error("Capacitor print failed:", result.error);
         browserPrintReceipt(generateReceiptHtml(data));
       }
     });
