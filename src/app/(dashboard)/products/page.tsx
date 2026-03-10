@@ -31,6 +31,8 @@ interface Product {
   description: string | null;
   price: number;
   cost: number;
+  categoryId: string | null;
+  category: { id: string; name: string } | null;
   unitId: string | null;
   unit: {
     id: string;

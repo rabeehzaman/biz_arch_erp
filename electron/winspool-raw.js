@@ -1,4 +1,4 @@
-const { execFile } = require('node:child_process');
+const { spawn } = require('node:child_process');
 
 function assertWindows() {
   if (process.platform !== 'win32') {
@@ -67,9 +67,9 @@ function runPowerShell(script) {
   assertWindows();
 
   return new Promise((resolve, reject) => {
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
-
-    execFile(
+    // Use stdin piping instead of -EncodedCommand to avoid OS command-line
+    // length limits (ENAMETOOLONG) when scripts contain large base64 data.
+    const child = spawn(
       'powershell.exe',
       [
         '-NoLogo',
@@ -77,22 +77,35 @@ function runPowerShell(script) {
         '-NonInteractive',
         '-ExecutionPolicy',
         'Bypass',
-        '-EncodedCommand',
-        encoded,
+        '-Command',
+        '-',
       ],
       {
         windowsHide: true,
-        maxBuffer: 4 * 1024 * 1024,
-      },
-      (error, stdout, stderr) => {
-        if (error) {
-          const detail = (stderr || stdout || error.message).trim();
-          reject(new Error(detail || 'PowerShell printer command failed'));
-          return;
-        }
-        resolve((stdout || '').trim());
+        stdio: ['pipe', 'pipe', 'pipe'],
       }
     );
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+
+    child.on('error', reject);
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        const detail = (stderr || stdout).trim();
+        reject(new Error(detail || 'PowerShell printer command failed'));
+        return;
+      }
+      resolve(stdout.trim());
+    });
+
+    // Pipe the entire script through stdin — no size limit
+    child.stdin.write(script, 'utf-8');
+    child.stdin.end();
   });
 }
 
@@ -136,6 +149,48 @@ Write-Output $jobs.Count
   const output = await runPowerShell(script);
   const count = Number.parseInt(String(output || '0').trim(), 10);
   return Number.isFinite(count) ? count : 0;
+}
+
+async function getWindowsPrinterTcpEndpoint(printerName) {
+  if (!printerName) {
+    throw new Error('Select a Windows printer first');
+  }
+
+  const script = `
+$printerName = '${psQuote(printerName)}'
+$printer = Get-CimInstance Win32_Printer -Filter "Name = '$printerName'" -ErrorAction SilentlyContinue
+if (-not $printer -or -not $printer.PortName) {
+  return
+}
+
+$portNameEscaped = $printer.PortName.Replace("'", "''")
+$port = Get-CimInstance Win32_TCPIPPrinterPort -Filter "Name = '$portNameEscaped'" -ErrorAction SilentlyContinue
+if (-not $port -or -not $port.HostAddress) {
+  return
+}
+
+[PSCustomObject]@{
+  host = [string] $port.HostAddress
+  port = if ($port.PortNumber) { [int] $port.PortNumber } else { 9100 }
+} | ConvertTo-Json -Compress
+`;
+
+  const output = String(await runPowerShell(script) || '').trim();
+  if (!output) {
+    return null;
+  }
+
+  const parsed = JSON.parse(output);
+  if (!parsed?.host) {
+    return null;
+  }
+
+  const parsedPort = Number(parsed.port);
+
+  return {
+    host: String(parsed.host),
+    port: Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 9100,
+  };
 }
 
 async function waitForWindowsPrintQueueToDrain(
@@ -240,6 +295,7 @@ try {
 
 module.exports = {
   getWindowsPrintJobCount,
+  getWindowsPrinterTcpEndpoint,
   printRawToWindowsPrinter,
   testWindowsPrinter,
   waitForWindowsPrintQueueToDrain,

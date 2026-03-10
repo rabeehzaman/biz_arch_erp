@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { UnitSelect } from "@/components/units/unit-select";
+import { CategorySelect } from "@/components/products/category-select";
 
 
 interface Product {
@@ -31,6 +32,8 @@ interface Product {
     description: string | null;
     price: number;
     cost: number;
+    categoryId: string | null;
+    category: { id: string; name: string } | null;
     unitId: string | null;
     unit: {
         id: string;
@@ -73,6 +76,7 @@ export function ProductFormDialog({
         price: "",
         cost: "",
         unitId: "",
+        categoryId: "",
         sku: "",
         barcode: "",
         hsnCode: "",
@@ -90,6 +94,7 @@ export function ProductFormDialog({
                 price: productToEdit.price.toString(),
                 cost: productToEdit.cost.toString(),
                 unitId: productToEdit.unitId || productToEdit.unit?.id || "",
+                categoryId: productToEdit.categoryId || productToEdit.category?.id || "",
                 sku: productToEdit.sku || "",
                 barcode: productToEdit.barcode || "",
                 hsnCode: productToEdit.hsnCode || "",
@@ -129,6 +134,7 @@ export function ProductFormDialog({
             price: parseFloat(formData.price),
             cost: parseFloat(formData.cost || "0"),
             unitId: formData.unitId,
+            categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : null,
             sku: formData.sku || null,
             barcode: formData.barcode || null,
             hsnCode: formData.hsnCode || null,
@@ -184,6 +190,7 @@ export function ProductFormDialog({
             price: "",
             cost: "",
             unitId: "",
+            categoryId: "",
             sku: "",
             barcode: "",
             hsnCode: "",
@@ -296,6 +303,14 @@ export function ProductFormDialog({
                                     error={formErrors.unitId}
                                 />
                             </div>
+                            <div>
+                                <CategorySelect
+                                    value={formData.categoryId}
+                                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-sku">SKU</Label>
                                 <Input

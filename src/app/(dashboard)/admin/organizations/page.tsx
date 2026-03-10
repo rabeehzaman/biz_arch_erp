@@ -30,7 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, ChevronRight, Copy, MoreHorizontal, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PageAnimation } from "@/components/ui/page-animation";
 
@@ -68,6 +75,15 @@ export default function OrganizationsPage() {
   const [userOrgId, setUserOrgId] = useState("");
   const [userError, setUserError] = useState("");
   const [userSuccess, setUserSuccess] = useState("");
+
+  // Duplicate org state
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateSourceOrg, setDuplicateSourceOrg] = useState<Organization | null>(null);
+  const [duplicateName, setDuplicateName] = useState("");
+  const [duplicateSlug, setDuplicateSlug] = useState("");
+  const [duplicateIncludeTransactions, setDuplicateIncludeTransactions] = useState(false);
+  const [duplicateError, setDuplicateError] = useState("");
 
 
 
@@ -165,6 +181,56 @@ export default function OrganizationsPage() {
       setUserError("Failed to create user");
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  const openDuplicateDialog = (org: Organization) => {
+    setDuplicateSourceOrg(org);
+    setDuplicateName(`${org.name} (Copy)`);
+    setDuplicateSlug(`${org.slug}-copy`);
+    setDuplicateIncludeTransactions(false);
+    setDuplicateError("");
+    setDuplicateOpen(true);
+  };
+
+  const handleDuplicateNameChange = (value: string) => {
+    setDuplicateName(value);
+    setDuplicateSlug(value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+  };
+
+  const handleDuplicate = async () => {
+    setDuplicateError("");
+    if (!duplicateName || !duplicateSlug || !duplicateSourceOrg) {
+      setDuplicateError("Name and slug are required");
+      return;
+    }
+
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/admin/organizations/${duplicateSourceOrg.id}/duplicate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: duplicateName,
+          slug: duplicateSlug,
+          includeTransactions: duplicateIncludeTransactions
+        }),
+      });
+
+      if (res.ok) {
+        setDuplicateOpen(false);
+        setDuplicateSourceOrg(null);
+        setDuplicateName("");
+        setDuplicateSlug("");
+        fetchOrganizations();
+      } else {
+        const data = await res.json();
+        setDuplicateError(data.error || "Failed to duplicate organization");
+      }
+    } catch {
+      setDuplicateError("Failed to duplicate organization");
+    } finally {
+      setDuplicating(false);
     }
   };
 
@@ -344,6 +410,7 @@ export default function OrganizationsPage() {
                     <TableHead className="text-center">Invoices</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>GST</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -393,6 +460,41 @@ export default function OrganizationsPage() {
                           <Badge variant="outline" className="text-xs text-muted-foreground">No GST</Badge>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/admin/organizations/${org.id}`);
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDuplicateDialog(org);
+                              }}
+                            >
+                              <Copy className="mr-2 h-4 w-4" />
+                              Duplicate Organization
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {organizations.length === 0 && (
@@ -408,6 +510,74 @@ export default function OrganizationsPage() {
           </CardContent>
         </Card>
 
+        {/* Duplicate Organization Dialog */}
+        <Dialog open={duplicateOpen} onOpenChange={(open) => { setDuplicateOpen(open); if (!open) { setDuplicateError(""); setDuplicateSourceOrg(null); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Duplicate Organization</DialogTitle>
+              <DialogDescription>
+                Create a copy of <strong>{duplicateSourceOrg?.name}</strong> with all its configuration
+                (accounts, products, categories, units, settings, branches).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="duplicateName">New Organization Name</Label>
+                <Input
+                  id="duplicateName"
+                  value={duplicateName}
+                  onChange={(e) => handleDuplicateNameChange(e.target.value)}
+                  placeholder="Acme Corp (Copy)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duplicateSlug">Slug</Label>
+                <Input
+                  id="duplicateSlug"
+                  value={duplicateSlug}
+                  onChange={(e) => setDuplicateSlug(e.target.value)}
+                  placeholder="acme-corp-copy"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Lowercase letters, numbers, and hyphens only
+                </p>
+              </div>
+
+              <div className="flex items-start space-x-2 pt-2">
+                <Checkbox
+                  id="includeTransactions"
+                  checked={duplicateIncludeTransactions}
+                  onCheckedChange={(checked) => setDuplicateIncludeTransactions(checked === true)}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label
+                    htmlFor="includeTransactions"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Include Transactional Data
+                  </label>
+                  <p className="text-sm text-muted-foreground">
+                    Copy all customers, suppliers, invoices, payments, journal entries, and stock records.
+                  </p>
+                </div>
+              </div>
+
+              {duplicateError && (
+                <p className="text-sm text-red-500">{duplicateError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDuplicateOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleDuplicate} disabled={duplicating}>
+                {duplicating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Copy className="mr-2 h-4 w-4" />
+                Duplicate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </PageAnimation>

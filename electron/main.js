@@ -6,6 +6,7 @@ const { autoUpdater } = require('electron-updater');
 const PrinterService = require('./printer-service');
 const {
   getWindowsPrintJobCount,
+  getWindowsPrinterTcpEndpoint,
   printRawToWindowsPrinter,
   waitForWindowsPrintQueueToDrain,
 } = require('./winspool-raw');
@@ -22,6 +23,9 @@ let loadTimeout;
 const RECEIPT_WINDOW_WIDTH = 302; // ~80mm at 96dpi
 const RECEIPT_RASTER_WIDTH = 576; // Typical 80mm printer width at 203dpi
 const RECEIPT_RASTER_CHUNK_HEIGHT = 256;
+const HTML_DRIVER_TOP_TRIM_MM = 1.5;
+const HTML_DRIVER_BOTTOM_SAFE_MM = 10;
+const HTML_DRIVER_MIN_HEIGHT_MICRONS = 150000;
 
 // ─── Printer Config Persistence ─────────────────────────────────
 function loadPrinterConfig() {
@@ -112,9 +116,67 @@ async function waitForReceiptPaint(printWin) {
 
 async function loadReceiptWindow(html) {
   const printWin = createReceiptWindow();
-  await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  // Write HTML to a temp file to avoid ENAMETOOLONG when the receipt
+  // contains large base64 images (logos, QR codes, etc.).
+  const tmpDir = app.getPath('temp');
+  const tmpFile = path.join(tmpDir, `bizarch-receipt-${Date.now()}.html`);
+  fs.writeFileSync(tmpFile, html, 'utf-8');
+
+  try {
+    await printWin.loadFile(tmpFile);
+  } catch (err) {
+    // Clean up on load failure
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+    throw err;
+  }
+
+  // Schedule temp file cleanup when the window is destroyed
+  printWin.on('closed', () => {
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+  });
+
   const contentHeightPx = await measureReceiptContentHeight(printWin);
   return { printWin, contentHeightPx };
+}
+
+async function prepareHtmlReceiptWindow(printWin) {
+  const compensationStyle = `
+    html, body {
+      margin: 0 !important;
+      padding-top: 0 !important;
+    }
+    body {
+      padding-top: 0 !important;
+      padding-bottom: ${HTML_DRIVER_BOTTOM_SAFE_MM + HTML_DRIVER_TOP_TRIM_MM}mm !important;
+      overflow: hidden !important;
+    }
+    body > *:first-child {
+      position: relative !important;
+      top: -${HTML_DRIVER_TOP_TRIM_MM}mm !important;
+    }
+  `;
+
+  await printWin.webContents.executeJavaScript(
+    `(function () {
+      const styleId = 'bizarch-html-driver-compensation';
+      let style = document.getElementById(styleId);
+      if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        document.head.appendChild(style);
+      }
+      style.textContent = ${JSON.stringify(compensationStyle)};
+    })()`
+  );
+
+  await waitForReceiptPaint(printWin);
+
+  const contentHeightPx = await measureReceiptContentHeight(printWin);
+  const totalHeight = Math.max(1, Math.ceil(contentHeightPx));
+  printWin.setContentSize(RECEIPT_WINDOW_WIDTH, Math.max(totalHeight, 800));
+  await waitForReceiptPaint(printWin);
+
+  return totalHeight;
 }
 
 async function captureReceiptRasterBuffers(printWin, contentHeightPx) {
@@ -146,8 +208,20 @@ async function queueHtmlCutIfNeeded(printerName, initialQueueCount) {
   }
 
   try {
+    // Wait for the HTML driver job to finish printing before sending the cut
     await waitForWindowsPrintQueueToDrain(printerName, initialQueueCount);
-    const cutBuffer = Buffer.from([0x1D, 0x56, 0x42, 0x00]); // GS V B 0 = partial cut
+
+    const cutBuffer = Buffer.from([
+      0x1B, 0x40,             // ESC @ — Initialize printer (enter ESC/POS mode)
+      0x1D, 0x56, 0x42, 0x03, // GS V B 3 — Partial cut with 3-line feed
+    ]);
+
+    const tcpEndpoint = await getWindowsPrinterTcpEndpoint(printerName).catch(() => null);
+    if (tcpEndpoint?.host) {
+      await PrinterService.sendRawTCP(tcpEndpoint.host, tcpEndpoint.port || 9100, cutBuffer);
+      return;
+    }
+
     await printRawToWindowsPrinter(printerName, cutBuffer, 'BizArch Cut');
   } catch (cutError) {
     console.warn('HTML receipt cut command failed:', cutError.message);
@@ -318,21 +392,25 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
   try {
     const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
     const printerName = normalized.windowsPrinterName;
+
+    // Snapshot queue count before printing so we can wait for the HTML job to drain
     const initialQueueCount = printerName
       ? await getWindowsPrintJobCount(printerName).catch(() => 0)
       : 0;
 
-    const { printWin, contentHeightPx } = await loadReceiptWindow(html);
-    const MIN_HEIGHT_MICRONS = 150000; // 150mm minimum — prevents blank prints when measurement fails
-    const measuredMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 5000;
-    const heightMicrons = Math.max(measuredMicrons, MIN_HEIGHT_MICRONS);
-    const heightMm = (heightMicrons / 1000).toFixed(2);
+    const { printWin } = await loadReceiptWindow(html);
+    const contentHeightPx = await prepareHtmlReceiptWindow(printWin);
+    const measuredMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 1000; // +1mm breathing room
+    // Use measured height for @page CSS (tight fit, no top gap)
+    const pageCssMm = (measuredMicrons / 1000).toFixed(2);
+    // Use a minimum floor only for the Chromium pageSize param (prevents blank prints)
+    const heightMicrons = Math.max(measuredMicrons, HTML_DRIVER_MIN_HEIGHT_MICRONS);
 
-    // Override CSS @page size to match physical paper height — prevents Chromium
-    // from scaling the 80mm×297mm CSS page down to the shorter paper.
+    // Override CSS @page size to match actual content height — keeps receipt
+    // flush to the top with no extra gap.
     await printWin.webContents.executeJavaScript(
       `(function(){var s=document.createElement('style');` +
-      `s.textContent='@page{size:80mm ${heightMm}mm !important;margin:0;}';` +
+      `s.textContent='@page{size:80mm ${pageCssMm}mm !important;margin:0;}';` +
       `document.head.appendChild(s);})()`
     );
     await waitForReceiptPaint(printWin); // let new @page rule settle
@@ -349,7 +427,8 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
         async (success, failureReason) => {
           printWin.destroy();
 
-          // Queue the cut only after the Windows spooler finishes the HTML job.
+          // Send a follow-up cut command as a second job right after the HTML
+          // job is accepted by the Windows print system.
           if (success && printerName) {
             await queueHtmlCutIfNeeded(printerName, initialQueueCount);
           }
