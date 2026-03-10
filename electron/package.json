@@ -1,6 +1,6 @@
 {
   "name": "bizarch-erp-desktop",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "BizArch ERP Desktop App with silent thermal printing",
   "main": "main.js",
   "author": "BizArch <dev@bizarch.com>",
@@ -20,7 +20,9 @@
     "@node-escpos/usb-adapter": "^0.3.1",
     "electron-updater": "^6.8.3",
     "iconv-lite": "^0.6.3",
-    "node-thermal-printer": "^4.6.0"
+    "node-thermal-printer": "^4.6.0",
+    "pngjs": "^7.0.0",
+    "usb": "^2.17.0"
   },
   "devDependencies": {
     "electron": "^33.2.1",
