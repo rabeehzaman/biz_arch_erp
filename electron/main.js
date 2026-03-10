@@ -72,6 +72,20 @@ function createReceiptWindow() {
   });
 }
 
+// Offscreen window for raster capture — uses CPU-based software renderer so
+// capturePage() reliably returns content even though the window is never shown.
+// Regular show:false windows rely on the GPU compositor which may skip hidden
+// windows, causing capturePage() to return a blank 0×0 image.
+function createRasterReceiptWindow() {
+  return new BrowserWindow({
+    show: false,
+    width: RECEIPT_WINDOW_WIDTH,
+    height: 800,
+    backgroundColor: '#ffffff',
+    webPreferences: { nodeIntegration: false, contextIsolation: true, offscreen: true },
+  });
+}
+
 async function measureReceiptContentHeight(printWin) {
   return printWin.webContents.executeJavaScript(
     `new Promise((resolve) => {
@@ -131,6 +145,27 @@ async function loadReceiptWindow(html) {
   }
 
   // Schedule temp file cleanup when the window is destroyed
+  printWin.on('closed', () => {
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+  });
+
+  const contentHeightPx = await measureReceiptContentHeight(printWin);
+  return { printWin, contentHeightPx };
+}
+
+async function loadRasterReceiptWindow(html) {
+  const printWin = createRasterReceiptWindow();
+  const tmpDir = app.getPath('temp');
+  const tmpFile = path.join(tmpDir, `bizarch-receipt-${Date.now()}.html`);
+  fs.writeFileSync(tmpFile, html, 'utf-8');
+
+  try {
+    await printWin.loadFile(tmpFile);
+  } catch (err) {
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+    throw err;
+  }
+
   printWin.on('closed', () => {
     try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
   });
@@ -450,7 +485,7 @@ ipcMain.handle('print-rasterized-receipt', async (_event, html, config) => {
 
   try {
     const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
-    const loaded = await loadReceiptWindow(html);
+    const loaded = await loadRasterReceiptWindow(html);
     printWin = loaded.printWin;
     const imageBuffers = await captureReceiptRasterBuffers(printWin, loaded.contentHeightPx);
     const ps = createPrinterServiceFromConfig(normalized);
