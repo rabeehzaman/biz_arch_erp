@@ -82,7 +82,8 @@
       {
         "provider": "github",
         "owner": "rabeehzaman",
-        "repo": "biz_arch_erp"
+        "repo": "biz_arch_erp",
+        "releaseType": "release"
       }
     ]
   }

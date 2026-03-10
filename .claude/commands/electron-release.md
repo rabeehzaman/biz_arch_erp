@@ -12,7 +12,10 @@ Release a new version of the Electron desktop app.
    - Builds the Windows `.exe` (NSIS installer) on `windows-latest`
    - Builds the macOS `.dmg` on `macos-latest`
    - Creates a GitHub Release and uploads both installers + `latest.yml`
-8. Existing installations auto-detect the update on next app launch
+8. Wait for the workflow to complete, then confirm the release is **published** (not draft):
+   `gh release view v<NEW_VERSION> --json isDraft --jq '.isDraft'` — must return `false`.
+   If it returns `true`, publish it: `gh release edit v<NEW_VERSION> --draft=false`
+9. Existing installations auto-detect the update on next app launch
 
 If the user wants to build locally instead of via CI:
 - Windows: `cd electron && GH_TOKEN=<token> npm run build:publish:win`
