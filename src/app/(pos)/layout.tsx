@@ -15,7 +15,7 @@ export default async function POSLayout({
     <SessionProvider>
       <SWRProvider>
         <LanguageProvider initialLang={initialLang}>
-          <div className="h-screen overflow-hidden bg-[#05070b]">
+          <div className="h-screen overflow-hidden bg-slate-100">
             {children}
           </div>
         </LanguageProvider>

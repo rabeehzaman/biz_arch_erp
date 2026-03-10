@@ -209,11 +209,11 @@ export function Header() {
   }
 
   return (
-    <header className={isDashboardHome ? "px-4 pt-4 md:px-6 md:pt-5" : "px-4 pt-3 md:px-6 md:pt-4"}>
+    <header className={isDashboardHome ? "sticky top-0 z-20 px-4 pt-3 md:px-6 md:pt-4" : "px-4 pt-3 md:px-6 md:pt-4"}>
       <div
         className={
           isDashboardHome
-            ? "glass-panel relative overflow-hidden px-4 py-4 md:px-5"
+            ? "glass-panel relative overflow-hidden px-3 py-2.5 md:px-5 md:py-3"
             : "glass-panel relative overflow-hidden px-3 py-3 md:px-4 md:py-3.5"
         }
       >
@@ -224,11 +224,11 @@ export function Header() {
         <div
           className={
             isDashboardHome
-              ? "relative grid gap-5 xl:grid-cols-[minmax(0,1.16fr)_minmax(22rem,0.84fr)] xl:items-center"
+              ? "relative flex items-center gap-3 justify-between"
               : "relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           }
         >
-          <div className={`flex min-w-0 gap-3 ${isDashboardHome ? "items-start" : "items-center"}`}>
+          <div className={`flex min-w-0 gap-3 ${isDashboardHome ? "items-center" : "items-center"}`}>
             {mounted ? (
               <MobileSidebar />
             ) : (
@@ -236,51 +236,18 @@ export function Header() {
             )}
             <div className="min-w-0">
               {isDashboardHome ? (
-                <>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="section-chip">{today}</span>
-                    <span className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:inline-flex">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      {t("header.controlCenter")}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-base font-semibold text-slate-900 md:text-lg whitespace-nowrap">
+                    <span className="gradient-heading">{t("header.welcome")}, {firstName}</span>
+                  </h1>
+                  <span className="section-chip text-[10px] px-2 py-0.5">{today}</span>
+                  {orgName && (
+                    <span className="hidden sm:inline-flex surface-pill text-[10px] px-2 py-0.5">
+                      <Building2 className="h-3 w-3 shrink-0" />
+                      <span className="truncate max-w-[140px]">{orgName}</span>
                     </span>
-                  </div>
-                  <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem]">
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                        {t("header.workspaceOverview")}
-                      </p>
-                      <h1 className="mt-3 text-3xl font-semibold leading-[1.02] text-slate-900 md:text-[2.7rem]">
-                        <span className="block text-slate-900">{t("header.welcome")},</span>
-                        <span className="block gradient-heading">{firstName}</span>
-                      </h1>
-                      <p className="mt-3 max-w-xl text-sm text-slate-600 md:text-base">
-                        {orgName || t("header.manageOps")}
-                      </p>
-                    </div>
-
-                    <div className="hidden gap-3 md:grid">
-                      <div className="rounded-[1.45rem] border border-slate-200 bg-slate-50 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                          {t("header.workspace")}
-                        </p>
-                        <div className="mt-2 flex items-start gap-2">
-                          <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                          <p className="line-clamp-2 text-sm font-semibold text-slate-800">
-                            {orgName || "BizArch ERP"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="rounded-[1.45rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.07),rgba(16,185,129,0.1))] px-4 py-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                          {t("header.quickAccess")}
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-slate-800">
-                          {t("header.quickAccessHint")}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </>
+                  )}
+                </div>
               ) : (
                 <>
                   <div className="flex flex-wrap items-center gap-2">
@@ -299,7 +266,7 @@ export function Header() {
           <div
             className={
               isDashboardHome
-                ? "flex items-center gap-2 md:gap-3 xl:flex-col xl:items-stretch xl:border-l xl:border-slate-200 xl:pl-6"
+                ? "flex items-center gap-2 md:gap-3 shrink-0"
                 : "flex items-center gap-2 md:gap-3 sm:justify-end lg:min-w-[22rem]"
             }
           >
@@ -307,17 +274,17 @@ export function Header() {
               onClick={() => setOpen(true)}
               className={
                 isDashboardHome
-                  ? "hidden min-w-0 w-full items-center gap-3 rounded-[1.55rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_18px_36px_-30px_rgba(15,23,42,0.18)] transition-all hover:border-slate-300 hover:bg-white xl:flex"
+                  ? "hidden min-w-0 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_12px_24px_-18px_rgba(15,23,42,0.14)] transition-all hover:border-slate-300 hover:bg-white lg:flex"
                   : "hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.2)] transition-all hover:border-slate-300 lg:flex"
               }
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(16,185,129,0.12))] text-sky-700">
-                <Search className="h-4 w-4 shrink-0" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(16,185,129,0.12))] text-sky-700">
+                <Search className="h-3.5 w-3.5 shrink-0" />
               </div>
-              <span className="min-w-0 flex-1 truncate text-left font-medium text-slate-600">
+              <span className="min-w-0 truncate text-left font-medium text-slate-600 text-xs">
                 {t("header.searchPlaceholder")}
               </span>
-              <kbd className="pointer-events-none hidden items-center gap-0.5 rounded-full border border-slate-200/80 bg-white px-2.5 py-1 font-mono text-[10px] text-slate-400 lg:inline-flex">
+              <kbd className="pointer-events-none hidden items-center gap-0.5 rounded-full border border-slate-200/80 bg-white px-2 py-0.5 font-mono text-[10px] text-slate-400 lg:inline-flex">
                 <span className="text-[10px]">⌘</span>K
               </kbd>
             </button>
@@ -326,7 +293,7 @@ export function Header() {
               <Button
                 variant="outline"
                 size="icon"
-                className="xl:hidden"
+                className="lg:hidden"
                 onClick={() => setOpen(true)}
               >
                 <Search className="h-4 w-4" />
@@ -334,9 +301,7 @@ export function Header() {
               </Button>
             )}
 
-            <div className={isDashboardHome ? "xl:self-end" : undefined}>
-              {accountMenu}
-            </div>
+            {accountMenu}
           </div>
         </div>
       </div>

@@ -323,7 +323,19 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
       : 0;
 
     const { printWin, contentHeightPx } = await loadReceiptWindow(html);
-    const heightMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 5000;
+    const MIN_HEIGHT_MICRONS = 150000; // 150mm minimum — prevents blank prints when measurement fails
+    const measuredMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 5000;
+    const heightMicrons = Math.max(measuredMicrons, MIN_HEIGHT_MICRONS);
+    const heightMm = (heightMicrons / 1000).toFixed(2);
+
+    // Override CSS @page size to match physical paper height — prevents Chromium
+    // from scaling the 80mm×297mm CSS page down to the shorter paper.
+    await printWin.webContents.executeJavaScript(
+      `(function(){var s=document.createElement('style');` +
+      `s.textContent='@page{size:80mm ${heightMm}mm !important;margin:0;}';` +
+      `document.head.appendChild(s);})()`
+    );
+    await waitForReceiptPaint(printWin); // let new @page rule settle
 
     return await new Promise((resolve) => {
       printWin.webContents.print(
