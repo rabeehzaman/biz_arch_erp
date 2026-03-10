@@ -391,7 +391,6 @@ class PrinterService {
       bytes.push(0x0A); // LF (print and line feed)
     }
 
-    bytes.push(0x1B, 0x32); // ESC 2 (restore default line spacing)
     return Buffer.from(bytes);
   }
 
