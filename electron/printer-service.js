@@ -7,6 +7,7 @@ const {
   PrinterTypes,
   CharacterSet,
 } = require('node-thermal-printer');
+const { PNG } = require('pngjs');
 const iconv = require('iconv-lite');
 const { printRawToWindowsPrinter, testWindowsPrinter } = require('./winspool-raw');
 
@@ -306,26 +307,72 @@ class PrinterService {
       throw new Error('No raster receipt image was generated');
     }
 
-    const printer = PrinterService.createBufferPrinter();
-    printer.initHardware();
-    printer.alignCenter();
+    const payload = [];
+    payload.push(Buffer.from([0x1B, 0x40])); // ESC @ (Init)
+    payload.push(Buffer.from([0x1B, 0x61, 0x01])); // ESC a 1 (Align Center)
 
     for (const imageBuffer of imageBuffers) {
       if (!Buffer.isBuffer(imageBuffer) || imageBuffer.length === 0) {
         continue;
       }
-      await printer.printImageBuffer(imageBuffer);
+      payload.push(this._buildEscStarImage(imageBuffer));
     }
 
     if (cutPaper) {
-      printer.partialCut();
+      payload.push(Buffer.from([0x1B, 0x64, 0x03])); // ESC d 3 (feed 3 lines)
+      payload.push(Buffer.from([0x1D, 0x56, 0x42, 0x00])); // GS V B 0 (partial cut)
     }
 
     if (openDrawer) {
-      printer.openCashDrawer();
+      payload.push(Buffer.from([0x1B, 0x70, 0x00, 0x19, 0xFA])); // ESC p (pulse drawer)
     }
 
-    return Buffer.from(printer.getBuffer());
+    return Buffer.concat(payload);
+  }
+
+  // Uses ESC * standard generic image printing compatible with 99% of clones (e.g. EZPOS)
+  _buildEscStarImage(pngBuffer) {
+    const png = PNG.sync.read(pngBuffer);
+    const width = png.width;
+    const height = png.height;
+    const data = png.data;
+
+    let bytes = [];
+    bytes.push(0x1B, 0x33, 24); // ESC 3 24 (set line spacing to 24 dots)
+
+    const m = 33; // 24-dot double-density
+    const nL = width & 0xFF;
+    const nH = (width >> 8) & 0xFF;
+
+    for (let y = 0; y < height; y += 24) {
+      bytes.push(0x1B, 0x2A, m, nL, nH); // ESC * m nL nH
+      for (let x = 0; x < width; x++) {
+        for (let k = 0; k < 3; k++) {
+          let sliceByte = 0;
+          for (let b = 0; b < 8; b++) {
+            const pixelY = y + k * 8 + b;
+            if (pixelY < height) {
+              const idx = (width * pixelY + x) << 2;
+              const a = data[idx + 3];
+              if (a > 126) {
+                const r = data[idx];
+                const g = data[idx + 1];
+                const c_b = data[idx + 2];
+                const grayscale = parseInt(0.2126 * r + 0.7152 * g + 0.0722 * c_b);
+                if (grayscale < 128) {
+                  sliceByte |= (1 << (7 - b));
+                }
+              }
+            }
+          }
+          bytes.push(sliceByte);
+        }
+      }
+      bytes.push(0x0A); // LF (print and line feed)
+    }
+
+    bytes.push(0x1B, 0x32); // ESC 2 (restore default line spacing)
+    return Buffer.from(bytes);
   }
 
   async testConnection() {
