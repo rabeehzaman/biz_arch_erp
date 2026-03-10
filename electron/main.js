@@ -21,7 +21,9 @@ let splashWindow;
 let loadTimeout;
 
 const RECEIPT_WINDOW_WIDTH = 302; // ~80mm at 96dpi
+const RECEIPT_RASTER_WINDOW_WIDTH = 288; // 288 × DPR 2 = 576 — matches RECEIPT_RASTER_WIDTH exactly (no resize needed)
 const RECEIPT_RASTER_WIDTH = 576; // Typical 80mm printer width at 203dpi
+const RECEIPT_RASTER_ZOOM = 1.15; // Scale up receipt content (text, QR, etc.) within fixed 576px width
 const HTML_DRIVER_TOP_TRIM_MM = 1.5;
 const HTML_DRIVER_BOTTOM_SAFE_MM = 10;
 const HTML_DRIVER_MIN_HEIGHT_MICRONS = 150000;
@@ -78,7 +80,7 @@ function createReceiptWindow() {
 function createRasterReceiptWindow() {
   return new BrowserWindow({
     show: false,
-    width: RECEIPT_WINDOW_WIDTH,
+    width: RECEIPT_RASTER_WINDOW_WIDTH,
     height: 800,
     backgroundColor: '#ffffff',
     webPreferences: { nodeIntegration: false, contextIsolation: true, offscreen: true, deviceScaleFactor: 2 },
@@ -169,6 +171,14 @@ async function loadRasterReceiptWindow(html) {
     try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
   });
 
+  if (RECEIPT_RASTER_ZOOM !== 1) {
+    await printWin.webContents.executeJavaScript(
+      `document.documentElement.style.zoom = '${RECEIPT_RASTER_ZOOM}';` +
+      `document.body.style.width = '100%';`
+    );
+    await waitForReceiptPaint(printWin);
+  }
+
   const contentHeightPx = await measureReceiptContentHeight(printWin);
   return { printWin, contentHeightPx };
 }
@@ -215,7 +225,7 @@ async function prepareHtmlReceiptWindow(printWin) {
 
 async function captureReceiptRasterBuffers(printWin, contentHeightPx) {
   const totalHeight = Math.max(1, Math.ceil(contentHeightPx));
-  printWin.setContentSize(RECEIPT_WINDOW_WIDTH, totalHeight);
+  printWin.setContentSize(RECEIPT_RASTER_WINDOW_WIDTH, totalHeight);
   await waitForReceiptPaint(printWin);
   // Guarantee offscreen compositor buffer availability
   await new Promise((resolve) => setTimeout(resolve, 150));
@@ -226,7 +236,7 @@ async function captureReceiptRasterBuffers(printWin, contentHeightPx) {
   const image = await printWin.webContents.capturePage({
     x: 0,
     y: 0,
-    width: RECEIPT_WINDOW_WIDTH,
+    width: RECEIPT_RASTER_WINDOW_WIDTH,
     height: totalHeight,
   });
   const resized = image.getSize().width === RECEIPT_RASTER_WIDTH
