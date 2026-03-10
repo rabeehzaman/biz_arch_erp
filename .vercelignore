@@ -1,0 +1,12 @@
+.git
+.next
+node_modules
+mobile-shell/node_modules
+electron/node_modules
+electron/dist
+mobile-shell/android/.gradle
+mobile-shell/android/build
+mobile-shell/android/app/build
+playwright-report
+test-results
+.claude
