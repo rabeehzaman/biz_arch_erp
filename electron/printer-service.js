@@ -128,6 +128,7 @@ class PrinterService {
 
   buildReceiptBuffer(data) {
     const printer = PrinterService.createBufferPrinter();
+    printer.initHardware();
 
     // Header
     printer.alignCenter();
@@ -306,6 +307,7 @@ class PrinterService {
     }
 
     const printer = PrinterService.createBufferPrinter();
+    printer.initHardware();
     printer.alignCenter();
 
     for (const imageBuffer of imageBuffers) {
@@ -313,7 +315,6 @@ class PrinterService {
         continue;
       }
       await printer.printImageBuffer(imageBuffer);
-      printer.newLine();
     }
 
     if (cutPaper) {

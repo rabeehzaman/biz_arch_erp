@@ -22,7 +22,7 @@ let loadTimeout;
 
 const RECEIPT_WINDOW_WIDTH = 302; // ~80mm at 96dpi
 const RECEIPT_RASTER_WIDTH = 576; // Typical 80mm printer width at 203dpi
-const RECEIPT_RASTER_CHUNK_HEIGHT = 256;
+const RECEIPT_RASTER_CHUNK_HEIGHT = 64;
 const HTML_DRIVER_TOP_TRIM_MM = 1.5;
 const HTML_DRIVER_BOTTOM_SAFE_MM = 10;
 const HTML_DRIVER_MIN_HEIGHT_MICRONS = 150000;
@@ -218,6 +218,8 @@ async function captureReceiptRasterBuffers(printWin, contentHeightPx) {
   const totalHeight = Math.max(1, Math.ceil(contentHeightPx));
   printWin.setContentSize(RECEIPT_WINDOW_WIDTH, totalHeight);
   await waitForReceiptPaint(printWin);
+  // Guarantee offscreen compositor buffer availability
+  await new Promise((resolve) => setTimeout(resolve, 150));
 
   const imageBuffers = [];
   for (let top = 0; top < totalHeight; top += RECEIPT_RASTER_CHUNK_HEIGHT) {
