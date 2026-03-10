@@ -37,6 +37,9 @@ import {
   GitBranch,
   Smartphone,
   Search,
+  Info,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -48,7 +51,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import { useLanguage } from "@/lib/i18n";
 
@@ -366,9 +376,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </Link>
           );
         })}
+        <AboutDialog />
         <Button
           variant="ghost"
-          className="mt-2 h-11 w-full justify-start gap-3 rounded-2xl border border-transparent px-3.5 text-slate-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
+          className="mt-1 h-11 w-full justify-start gap-3 rounded-2xl border border-transparent px-3.5 text-slate-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           <LogOut className="h-5 w-5" />
@@ -376,6 +387,96 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Button>
       </div>
     </>
+  );
+}
+
+function AboutDialog() {
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<string>("");
+  const [checking, setChecking] = useState(false);
+  const isElectron = typeof window !== "undefined" && !!window.electronPOS;
+
+  useEffect(() => {
+    if (isElectron) {
+      window.electronPOS!.getAppVersion().then(setAppVersion);
+      window.electronPOS!.onUpdateStatus((msg) => {
+        setUpdateStatus(msg);
+        if (!msg.includes("Checking") && !msg.includes("Downloading")) {
+          setChecking(false);
+        }
+      });
+    }
+  }, [isElectron]);
+
+  const handleCheckUpdate = useCallback(async () => {
+    if (!isElectron) return;
+    setChecking(true);
+    setUpdateStatus("Checking for updates...");
+    await window.electronPOS!.checkForUpdates();
+  }, [isElectron]);
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          className="h-11 w-full justify-start gap-3 rounded-2xl border border-transparent px-3.5 text-slate-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
+        >
+          <Info className="h-5 w-5" />
+          About
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>About BizArch ERP</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Version</span>
+              <span className="text-sm font-medium">{appVersion ?? "Web"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Platform</span>
+              <span className="text-sm font-medium">
+                {isElectron ? (window.electronPOS!.platform === "win32" ? "Windows" : window.electronPOS!.platform === "darwin" ? "macOS" : "Linux") : "Browser"}
+              </span>
+            </div>
+          </div>
+
+          {isElectron && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={handleCheckUpdate}
+                  disabled={checking}
+                >
+                  {checking ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Check for Updates
+                </Button>
+                {updateStatus && (
+                  <p className="text-center text-sm text-muted-foreground">
+                    {updateStatus}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          <Separator />
+          <p className="text-center text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} BizArch. All rights reserved.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

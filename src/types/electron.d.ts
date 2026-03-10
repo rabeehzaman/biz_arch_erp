@@ -57,6 +57,8 @@ interface ElectronPOS {
   savePrinterConfig: (config: ElectronPrinterConfig) => Promise<{ success: boolean; config?: ElectronPrinterConfig }>;
   clearCache: () => Promise<{ success: boolean; error?: string }>;
   onUpdateStatus: (callback: (message: string) => void) => void;
+  checkForUpdates: () => Promise<{ updateAvailable?: boolean; error?: string }>;
+  getAppVersion: () => Promise<string>;
 }
 
 interface Window {

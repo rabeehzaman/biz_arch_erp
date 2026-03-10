@@ -45,8 +45,10 @@ contextBridge.exposeInMainWorld('electronPOS', {
   // ─── Cache Management ────────────────────────────
   clearCache: () => ipcRenderer.invoke('clear-cache'),
 
-  // ─── Auto-Update Status ───────────────────────────
+  // ─── Auto-Update ─────────────────────────────────
   onUpdateStatus: (callback) => {
     ipcRenderer.on('update-status', (_event, message) => callback(message));
   },
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 });
