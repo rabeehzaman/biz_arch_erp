@@ -5,24 +5,25 @@ import { SessionProvider } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { MobileLayout } from "@/components/mobile-layout";
 import { SWRProvider } from "@/lib/swr-config";
 import { CommandPaletteProvider } from "@/components/command-palette/command-palette-provider";
 import { CommandPalette } from "@/components/command-palette/command-palette";
 import { LanguageProvider, useLanguage } from "@/lib/i18n";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 function DashboardBackdrop() {
     return (
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.12),transparent_24%),radial-gradient(circle_at_88%_8%,rgba(59,130,246,0.14),transparent_24%),radial-gradient(circle_at_76%_82%,rgba(251,191,36,0.12),transparent_20%)]" />
-            <div className="absolute inset-x-[12%] top-[-9rem] h-72 rounded-full bg-cyan-200/35 blur-3xl" />
-            <div className="absolute -left-16 top-1/3 h-64 w-64 rounded-full bg-emerald-200/25 blur-3xl" />
-            <div className="absolute bottom-[-8rem] right-[-2rem] h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
-            <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/60 to-transparent" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.1),transparent_18%),linear-gradient(180deg,rgba(2,6,23,0.97),rgba(8,15,28,1))]" />
+            <div className="absolute inset-x-[18%] top-[-8rem] h-64 rounded-full bg-sky-500/12 blur-3xl" />
+            <div className="absolute bottom-[-10rem] right-[-2rem] h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
+            <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/6 to-transparent" />
         </div>
     );
 }
 
-function DashboardInner({ children }: { children: React.ReactNode }) {
+function DesktopLayout({ children }: { children: React.ReactNode }) {
     const { dir } = useLanguage();
     const pathname = usePathname();
     const mainRef = useRef<HTMLElement | null>(null);
@@ -38,7 +39,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 <Sidebar />
                 <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
                     <Header />
-                    <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-6 md:px-6 md:pb-8">
+                    <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-white/96 px-4 pt-5 pb-6 shadow-[0_0_0_1px_rgba(226,232,240,0.6),0_26px_70px_-46px_rgba(2,6,23,0.7)] md:px-6 md:pt-6 md:pb-8">
                         <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-6">
                             {children}
                         </div>
@@ -47,6 +48,21 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             </div>
         </div>
     );
+}
+
+function DashboardInner({ children }: { children: React.ReactNode }) {
+    const isMobile = useIsMobile();
+    const { dir } = useLanguage();
+
+    if (isMobile) {
+        return (
+            <div dir={dir}>
+                <MobileLayout>{children}</MobileLayout>
+            </div>
+        );
+    }
+
+    return <DesktopLayout>{children}</DesktopLayout>;
 }
 
 export default function ClientDashboardLayout({

@@ -38,7 +38,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.16),transparent_24%),linear-gradient(180deg,rgba(15,23,42,0.2),rgba(15,23,42,0.45))] backdrop-blur-sm",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[linear-gradient(180deg,rgba(2,6,23,0.62),rgba(2,6,23,0.82))] backdrop-blur-sm",
         className
       )}
       {...props}
@@ -61,7 +61,7 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           // Mobile: bottom sheet
-          "glass-panel-strong fixed inset-x-0 bottom-0 z-50 flex max-h-[90svh] w-full flex-col rounded-t-[2rem] border-t border-white/65 outline-none",
+          "glass-panel-strong fixed inset-x-0 bottom-0 z-50 flex max-h-[90svh] w-full flex-col rounded-t-[2rem] border-t border-slate-200 outline-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300",
           // Desktop: centered dialog
           "sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:max-h-[90svh] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[2rem] sm:border",
@@ -78,7 +78,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-white/80 data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-full border border-white/70 bg-white/70 p-2 opacity-80 shadow-[0_14px_28px_-20px_rgba(15,23,42,0.4)] transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className="ring-offset-background focus:ring-ring data-[state=open]:bg-white data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-full border border-slate-200 bg-white p-2 opacity-80 shadow-[0_14px_28px_-22px_rgba(15,23,42,0.22)] transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
             <span className="sr-only">Close</span>
@@ -93,7 +93,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("sticky top-0 z-10 flex flex-col gap-2 bg-white/88 pb-2 text-center backdrop-blur-xl sm:static sm:bg-transparent sm:pb-0 sm:text-left", className)}
+      className={cn("sticky top-0 z-10 flex flex-col gap-2 bg-white pb-2 text-center sm:static sm:bg-transparent sm:pb-0 sm:text-left", className)}
       {...props}
     />
   )
@@ -104,7 +104,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t border-white/60 bg-white/88 pt-3 backdrop-blur-xl sm:static sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:pt-0",
+        "sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white pt-3 sm:static sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:pt-0",
         className
       )}
       {...props}

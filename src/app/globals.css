@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "konsta/react/theme.css";
 
 @keyframes scan-line {
   0% {
@@ -71,18 +72,18 @@
   --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 
-  --color-brand-cyan: hsl(var(--brand-cyan));
-  --color-brand-blue: hsl(var(--brand-blue));
-  --color-brand-emerald: hsl(var(--brand-emerald));
-  --color-brand-amber: hsl(var(--brand-amber));
-  --color-brand-rose: hsl(var(--brand-rose));
+  --color-app-cyan: hsl(var(--app-cyan));
+  --color-app-blue: hsl(var(--app-blue));
+  --color-app-emerald: hsl(var(--app-emerald));
+  --color-app-amber: hsl(var(--app-amber));
+  --color-app-rose: hsl(var(--app-rose));
 }
 
 :root {
   --radius: 1rem;
 
-  --background: hsl(190 46% 97%);
-  --foreground: hsl(218 35% 16%);
+  --background: hsl(210 20% 98%);
+  --foreground: hsl(222 39% 11%);
 
   --card: hsl(0 0% 100%);
   --card-foreground: hsl(218 35% 16%);
@@ -93,11 +94,11 @@
   --primary: hsl(194 88% 43%);
   --primary-foreground: hsl(0 0% 100%);
 
-  --secondary: hsl(166 48% 93%);
-  --secondary-foreground: hsl(174 70% 19%);
+  --secondary: hsl(210 18% 96%);
+  --secondary-foreground: hsl(222 39% 14%);
 
-  --muted: hsl(194 29% 93%);
-  --muted-foreground: hsl(215 18% 42%);
+  --muted: hsl(210 18% 95%);
+  --muted-foreground: hsl(215 16% 42%);
 
   --accent: hsl(45 100% 91%);
   --accent-foreground: hsl(221 39% 18%);
@@ -105,8 +106,8 @@
   --destructive: hsl(0 72% 55%);
   --destructive-foreground: hsl(0 0% 100%);
 
-  --border: hsl(191 28% 84%);
-  --input: hsl(191 28% 84%);
+  --border: hsl(214 20% 88%);
+  --input: hsl(214 20% 88%);
   --ring: hsl(194 88% 43%);
 
   --chart-1: hsl(198 92% 53%);
@@ -124,11 +125,11 @@
   --sidebar-border: hsl(200 42% 21%);
   --sidebar-ring: hsl(189 93% 50%);
 
-  --brand-cyan: 189 94% 43%;
-  --brand-blue: 213 91% 56%;
-  --brand-emerald: 162 73% 42%;
-  --brand-amber: 39 96% 56%;
-  --brand-rose: 344 83% 60%;
+  --app-cyan: 189 94% 43%;
+  --app-blue: 213 91% 56%;
+  --app-emerald: 162 73% 42%;
+  --app-amber: 39 96% 56%;
+  --app-rose: 344 83% 60%;
 }
 
 .dark {
@@ -190,10 +191,9 @@
     min-height: 100vh;
     overflow-x: hidden;
     background-image:
-      radial-gradient(circle at top left, rgba(34, 211, 238, 0.14), transparent 28%),
-      radial-gradient(circle at 88% 12%, rgba(59, 130, 246, 0.14), transparent 24%),
-      radial-gradient(circle at 72% 84%, rgba(251, 191, 36, 0.12), transparent 26%),
-      linear-gradient(180deg, #f8fcff 0%, #f3fbff 38%, #eef8f3 100%);
+      radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 18%),
+      radial-gradient(circle at 82% 14%, rgba(30, 41, 59, 0.28), transparent 28%),
+      linear-gradient(180deg, #05070b 0%, #08111d 48%, #0b1220 100%);
     background-attachment: fixed;
   }
 
@@ -203,11 +203,11 @@
     inset: 0;
     pointer-events: none;
     background-image:
-      linear-gradient(rgba(15, 23, 42, 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(15, 23, 42, 0.045) 1px, transparent 1px);
+      linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     background-size: 34px 34px;
-    mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.08));
-    opacity: 0.34;
+    mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.04));
+    opacity: 0.48;
     z-index: -2;
   }
 
@@ -217,15 +217,15 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(circle at 16% 22%, rgba(45, 212, 191, 0.12), transparent 18%),
-      radial-gradient(circle at 84% 74%, rgba(56, 189, 248, 0.12), transparent 20%);
-    filter: blur(24px);
+      radial-gradient(circle at 16% 18%, rgba(14, 165, 233, 0.1), transparent 16%),
+      radial-gradient(circle at 84% 76%, rgba(59, 130, 246, 0.08), transparent 20%);
+    filter: blur(32px);
     z-index: -1;
   }
 
   ::selection {
-    background: rgba(14, 165, 233, 0.18);
-    color: hsl(218 35% 16%);
+    background: rgba(14, 165, 233, 0.22);
+    color: hsl(222 39% 11%);
   }
 
   h1,
@@ -256,19 +256,19 @@
 
 @layer components {
   .glass-panel {
-    @apply rounded-[1.75rem] border border-white/65 bg-white/78 shadow-[0_24px_80px_-32px_rgba(15,23,42,0.38)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/72;
+    @apply rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_70px_-42px_rgba(15,23,42,0.28)];
   }
 
   .glass-panel-strong {
-    @apply rounded-[2rem] border border-white/70 bg-white/86 shadow-[0_28px_90px_-34px_rgba(15,23,42,0.42)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/82;
+    @apply rounded-[2rem] border border-slate-200 bg-white shadow-[0_30px_80px_-42px_rgba(15,23,42,0.3)];
   }
 
   .surface-pill {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl;
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.2)];
   }
 
   .section-chip {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/68 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-600 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl;
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-600 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.2)];
   }
 
   .gradient-heading {
@@ -276,9 +276,34 @@
   }
 
   .mesh-card {
-    background-image:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.62)),
-      radial-gradient(circle at top right, rgba(125, 211, 252, 0.16), transparent 24%),
-      radial-gradient(circle at bottom left, rgba(52, 211, 153, 0.16), transparent 26%);
+    background-color: #ffffff;
+    background-image: none;
+  }
+}
+
+/* Mobile native-feel overrides (Capacitor / phone browsers) */
+@media (max-width: 767px) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Hide scrollbars on mobile for native feel */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    scrollbar-width: none;
+  }
+
+  /* Safe area padding for notched devices */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 }

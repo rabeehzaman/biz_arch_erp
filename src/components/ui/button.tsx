@@ -14,11 +14,11 @@ const buttonVariants = cva(
         destructive:
           "border-transparent bg-[linear-gradient(135deg,hsl(0_72%_55%),hsl(12_80%_54%))] text-white shadow-[0_18px_30px_-18px_rgba(239,68,68,0.65)] hover:brightness-105 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
-          "border-white/65 bg-white/72 text-foreground shadow-[0_16px_32px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl hover:border-primary/30 hover:bg-white dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border-slate-200 bg-white text-foreground shadow-[0_16px_32px_-26px_rgba(15,23,42,0.18)] hover:border-slate-300 hover:bg-white",
         secondary:
-          "border-transparent bg-[linear-gradient(135deg,rgba(255,255,255,0.88),rgba(219,234,254,0.95))] text-slate-700 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.4)] hover:border-sky-200/70 hover:text-slate-900",
+          "border border-slate-200 bg-white text-slate-700 shadow-[0_16px_32px_-26px_rgba(15,23,42,0.18)] hover:border-slate-300 hover:text-slate-900",
         ghost:
-          "border-transparent bg-transparent text-foreground/75 hover:bg-white/65 hover:text-foreground dark:hover:bg-accent/50",
+          "border-transparent bg-transparent text-foreground/75 hover:bg-slate-100 hover:text-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

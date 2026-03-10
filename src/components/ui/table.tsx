@@ -8,7 +8,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto overscroll-x-contain rounded-[1.5rem] border border-white/65 bg-white/68 p-1.5 shadow-[0_24px_70px_-34px_rgba(15,23,42,0.42)] backdrop-blur-2xl"
+      className="relative w-full overflow-x-auto overscroll-x-contain rounded-[1.5rem] border border-slate-200 bg-white p-1.5 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.18)]"
     >
       <table
         data-slot="table"
@@ -23,7 +23,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("sticky top-0 z-10 bg-white/90 backdrop-blur-xl [&_tr]:border-b shadow-sm", className)}
+      className={cn("sticky top-0 z-10 bg-white [&_tr]:border-b shadow-sm", className)}
       {...props}
     />
   )
@@ -44,7 +44,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "bg-muted/55 border-t font-medium [&>tr]:last:border-b-0",
+        "bg-slate-50 border-t font-medium [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -57,7 +57,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "hover:bg-sky-50/70 data-[state=selected]:bg-sky-50 border-b border-slate-200/80 transition-colors",
+        "hover:bg-slate-50 data-[state=selected]:bg-slate-50 border-b border-slate-200/80 transition-colors",
         className
       )}
       {...props}

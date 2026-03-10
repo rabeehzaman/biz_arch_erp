@@ -63,7 +63,7 @@ function CommandInput({
   return (
     <div
       data-slot="command-input-wrapper"
-      className="flex items-center border-b border-white/60 bg-white/50 px-4 backdrop-blur-xl"
+      className="flex items-center border-b border-slate-200 bg-white px-4"
       cmdk-input-wrapper=""
     >
       <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
@@ -144,7 +144,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-3 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-[linear-gradient(135deg,rgba(14,165,233,0.12),rgba(16,185,129,0.12))] data-[selected=true]:text-slate-900 data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-3 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-slate-100 data-[selected=true]:text-slate-900 data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className
       )}
       {...props}

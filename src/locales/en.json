@@ -41,14 +41,20 @@
         "settings": "Settings",
         "fixBalances": "Fix Balances",
         "organizations": "Organizations",
-        "signOut": "Sign Out"
+        "signOut": "Sign Out",
+        "more": "More"
     },
-    "header": {
-        "welcome": "Welcome",
-        "manageOps": "Manage your business operations",
-        "searchPlaceholder": "Search or jump to...",
-        "profile": "Profile",
-        "language": "Language",
+  "header": {
+    "welcome": "Welcome",
+    "manageOps": "Manage your business operations",
+    "controlCenter": "Control Center",
+    "workspaceOverview": "Workspace overview",
+    "workspace": "Workspace",
+    "quickAccess": "Quick access",
+    "quickAccessHint": "Search records and actions instantly with the command palette.",
+    "searchPlaceholder": "Search or jump to...",
+    "profile": "Profile",
+    "language": "Language",
         "english": "English",
         "arabic": "العربية",
         "signOut": "Sign Out"

@@ -41,14 +41,20 @@
         "settings": "الإعدادات",
         "fixBalances": "تصحيح الأرصدة",
         "organizations": "المنشآت",
-        "signOut": "تسجيل الخروج"
+        "signOut": "تسجيل الخروج",
+        "more": "المزيد"
     },
-    "header": {
-        "welcome": "مرحباً",
-        "manageOps": "إدارة العمليات التجارية",
-        "searchPlaceholder": "بحث أو انتقل إلى...",
-        "profile": "الملف الشخصي",
-        "language": "اللغة",
+  "header": {
+    "welcome": "مرحباً",
+    "manageOps": "إدارة العمليات التجارية",
+    "controlCenter": "مركز التحكم",
+    "workspaceOverview": "نظرة عامة على مساحة العمل",
+    "workspace": "مساحة العمل",
+    "quickAccess": "وصول سريع",
+    "quickAccessHint": "ابحث عن السجلات والإجراءات بسرعة عبر لوحة الأوامر.",
+    "searchPlaceholder": "بحث أو انتقل إلى...",
+    "profile": "الملف الشخصي",
+    "language": "اللغة",
         "english": "English",
         "arabic": "العربية",
         "signOut": "تسجيل الخروج"
