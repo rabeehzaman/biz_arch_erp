@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import { Package } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
-import { useLanguage } from "@/lib/i18n";
 
 interface ProductTileProps {
   product: {
@@ -20,7 +19,6 @@ interface ProductTileProps {
 
 export function ProductTile({ product, onAdd }: ProductTileProps) {
   const { fmt } = useCurrency();
-  const { t } = useLanguage();
   const outOfStock = !product.isService && product.stockQuantity <= 0;
 
   return (

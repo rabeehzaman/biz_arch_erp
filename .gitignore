@@ -47,6 +47,6 @@ next-env.d.ts
 /electron/dist
 
 # Playwright
-/e2e/
-/playwright.config.ts
+/e2e/.auth/
+/playwright-report/
 /test-results/

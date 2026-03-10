@@ -38,6 +38,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "src/generated/**",
+    "mobile-shell/android/**",
+    "playwright-report/**",
+    "test-results/**",
+    "e2e/.auth/**",
   ]),
 ]);
 
