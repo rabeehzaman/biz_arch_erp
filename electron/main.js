@@ -132,40 +132,34 @@ async function waitForReceiptPaint(printWin) {
 // Replace data-URL <img> elements with <canvas> in the offscreen window.
 // The offscreen compositor (`offscreen: true`) can skip the image decode
 // pipeline for data:image/png;base64 src attributes, leaving blank pixels
-// even though the element occupies layout space.  Canvas elements are native
-// rendering surfaces that always composite correctly.
+// even though the element occupies layout space.  We fetch the data URL as
+// a blob and use createImageBitmap() to force a full pixel decode through
+// a separate code-path that works in offscreen mode, then draw to canvas.
 async function convertDataUrlImagesToCanvas(printWin) {
   await printWin.webContents.executeJavaScript(
-    `new Promise((resolve) => {
+    `(async () => {
       const imgs = Array.from(document.querySelectorAll('img[src^="data:"]'));
-      if (imgs.length === 0) return resolve();
-
-      const ready = imgs.map((img) =>
-        img.complete
-          ? Promise.resolve()
-          : new Promise((done) => {
-              img.addEventListener('load', done, { once: true });
-              img.addEventListener('error', done, { once: true });
-            })
-      );
-
-      Promise.all(ready).then(() => {
-        for (const img of imgs) {
-          if (!img.naturalWidth || !img.naturalHeight) continue;
+      for (const img of imgs) {
+        try {
+          const resp = await fetch(img.src);
+          const blob = await resp.blob();
+          const bitmap = await createImageBitmap(blob);
           const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
           const ctx = canvas.getContext('2d');
           ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(img, 0, 0);
+          ctx.drawImage(bitmap, 0, 0);
+          bitmap.close();
           canvas.style.cssText = img.style.cssText;
           canvas.style.imageRendering = 'pixelated';
           canvas.style.display = img.style.display || 'inline-block';
           img.replaceWith(canvas);
+        } catch (e) {
+          // leave original img if conversion fails
         }
-        resolve();
-      });
-    })`
+      }
+    })()`
   );
 }
 
