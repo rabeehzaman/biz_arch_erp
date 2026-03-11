@@ -102,14 +102,44 @@ function ProductsPageContent() {
     totalStockValue: 0,
   });
 
+  // Form URL Parameters mapping
+  const actionParam = searchParams.get("action");
+  const barcodeParam = searchParams.get("barcode");
+  const idParam = searchParams.get("id");
+
   // Lazy fetch: load data when tab becomes active
   useEffect(() => {
     if (activeTab === "products" && !productsLoaded) {
-      fetchProducts();
+      fetchProducts().then((loadedProducts) => {
+        if (actionParam === "new") {
+          setIsDialogOpen(true);
+        } else if (actionParam === "edit" && idParam && loadedProducts) {
+          const product = loadedProducts.find((p: Product) => p.id === idParam);
+          if (product) {
+            setEditingProduct(product);
+            setIsDialogOpen(true);
+          }
+        }
+      });
     } else if (activeTab === "inventory" && !inventoryLoaded) {
       fetchInventory();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle URL changes after products are already loaded (e.g. scanning mid-page)
+  useEffect(() => {
+    if (productsLoaded) {
+      if (actionParam === "new") {
+        setIsDialogOpen(true);
+      } else if (actionParam === "edit" && idParam) {
+        const product = products.find((p) => p.id === idParam);
+        if (product) {
+          setEditingProduct(product);
+          setIsDialogOpen(true);
+        }
+      }
+    }
+  }, [actionParam, barcodeParam, idParam, productsLoaded, products]);
 
   const fetchProducts = async () => {
     setIsProductsLoading(true);
@@ -119,6 +149,7 @@ function ProductsPageContent() {
       const data = await response.json();
       setProducts(data);
       setProductsLoaded(true);
+      return data;
     } catch (error) {
       toast.error(t("common.error"));
       console.error("Failed to fetch products:", error);
@@ -284,13 +315,20 @@ function ProductsPageContent() {
                 setIsDialogOpen(open);
                 if (!open) {
                   setEditingProduct(null);
+                  if (actionParam || barcodeParam || idParam) {
+                    router.replace("/products", { scroll: false });
+                  }
                 }
               }}
               productToEdit={editingProduct || undefined}
+              initialBarcode={barcodeParam || undefined}
               onSuccess={() => {
                 fetchProducts();
                 setIsDialogOpen(false);
                 setEditingProduct(null);
+                if (actionParam || barcodeParam || idParam) {
+                  router.replace("/products", { scroll: false });
+                }
               }}
             />
 

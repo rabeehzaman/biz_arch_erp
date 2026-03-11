@@ -78,6 +78,7 @@ interface ProductFormDialogProps {
     onOpenChange: (open: boolean) => void;
     onSuccess?: (product: Product) => void;
     productToEdit?: Product;
+    initialBarcode?: string;
 }
 
 
@@ -85,7 +86,8 @@ export function ProductFormDialog({
     open,
     onOpenChange,
     onSuccess,
-    productToEdit
+    productToEdit,
+    initialBarcode
 }: ProductFormDialogProps) {
     const { data: session } = useSession();
     const sessionUser = session?.user as ({ gstEnabled?: boolean } & { saudiEInvoiceEnabled?: boolean } & { isMobileShopModuleEnabled?: boolean } & { isWeighMachineEnabled?: boolean } & { weighMachineProductCodeLen?: number }) | undefined;
@@ -156,10 +158,15 @@ export function ProductFormDialog({
             }
 
             setFormErrors({});
+        } else if (!productToEdit && open) {
+            resetForm();
+            if (initialBarcode) {
+                setFormData(prev => ({ ...prev, barcode: initialBarcode }));
+            }
         } else if (!open) {
             resetForm();
         }
-    }, [productToEdit, open]);
+    }, [productToEdit, open, initialBarcode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

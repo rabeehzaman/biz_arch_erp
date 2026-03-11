@@ -289,7 +289,7 @@ export function GlobalScanner({ }: GlobalScannerProps) {
                                         className="w-full h-12 text-base font-medium"
                                         onClick={() => {
                                             setShowResultSheet(false);
-                                            router.push(`/products/${lookupResult.data.id}/edit`);
+                                            router.push(`/products?action=edit&id=${lookupResult.data.id}`);
                                         }}
                                     >
                                         <Edit className="h-4 w-4 mr-2" />
@@ -355,7 +355,7 @@ export function GlobalScanner({ }: GlobalScannerProps) {
                                             className="flex-1"
                                             onClick={() => {
                                                 setShowResultSheet(false);
-                                                router.push(`/products/new?barcode=${encodeURIComponent(lookupResult.code)}`);
+                                                router.push(`/products?action=new&barcode=${encodeURIComponent(lookupResult.code)}`);
                                             }}
                                         >
                                             Create New
