@@ -17,6 +17,7 @@ import {
   Package,
   MoreHorizontal,
 } from "lucide-react";
+import { GlobalScanner } from "@/components/scanner/global-scanner";
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -100,6 +101,8 @@ export function MobileLayout({ children }: MobileLayoutProps) {
               />
             ))}
           </Tabbar>
+
+          <GlobalScanner />
         </Page>
       </App>
     </KonstaProvider>
