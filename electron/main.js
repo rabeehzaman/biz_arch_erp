@@ -172,8 +172,14 @@ async function loadRasterReceiptWindow(html) {
   });
 
   if (RECEIPT_RASTER_ZOOM !== 1) {
+    // Use Electron's native page zoom instead of CSS zoom on <html>.
+    // CSS zoom can cause data-URL images (QR codes) to vanish in the
+    // offscreen compositor; setZoomFactor uses Chromium's built-in zoom
+    // which composites all content correctly.
+    printWin.webContents.setZoomFactor(RECEIPT_RASTER_ZOOM);
+    // The zoomed viewport is narrower (288/1.15 ≈ 250 CSS px), so force
+    // the body to fill it instead of overflowing at its fixed 80mm width.
     await printWin.webContents.executeJavaScript(
-      `document.documentElement.style.zoom = '${RECEIPT_RASTER_ZOOM}';` +
       `document.body.style.width = '100%';`
     );
     await waitForReceiptPaint(printWin);
@@ -181,6 +187,9 @@ async function loadRasterReceiptWindow(html) {
 
   let contentHeightPx = await measureReceiptContentHeight(printWin);
   if (RECEIPT_RASTER_ZOOM !== 1) {
+    // JS measurements (scrollHeight etc.) are in CSS pixels which don't
+    // include the zoom factor.  Window/capture APIs work in DIPs, so
+    // scale up to ensure the capture rect is tall enough.
     contentHeightPx = Math.ceil(contentHeightPx * RECEIPT_RASTER_ZOOM);
   }
   return { printWin, contentHeightPx };
