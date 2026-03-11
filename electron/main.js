@@ -21,9 +21,8 @@ let splashWindow;
 let loadTimeout;
 
 const RECEIPT_WINDOW_WIDTH = 302; // ~80mm at 96dpi
-const RECEIPT_RASTER_WINDOW_WIDTH = 288; // 288 × DPR 2 = 576 — matches RECEIPT_RASTER_WIDTH exactly (no resize needed)
+const RECEIPT_RASTER_WINDOW_WIDTH = 262; // 262 × DPR 2 = 524 → resize to 576 ≈ 1.10× upscale; narrower layout ≈ 1.15× bigger print vs 302
 const RECEIPT_RASTER_WIDTH = 576; // Typical 80mm printer width at 203dpi
-const RECEIPT_RASTER_ZOOM = 1.15; // Scale up receipt content (text, QR, etc.) within fixed 576px width
 const HTML_DRIVER_TOP_TRIM_MM = 1.5;
 const HTML_DRIVER_BOTTOM_SAFE_MM = 10;
 const HTML_DRIVER_MIN_HEIGHT_MICRONS = 150000;
@@ -129,40 +128,6 @@ async function waitForReceiptPaint(printWin) {
   );
 }
 
-// Replace data-URL <img> elements with <canvas> in the offscreen window.
-// The offscreen compositor (`offscreen: true`) can skip the image decode
-// pipeline for data:image/png;base64 src attributes, leaving blank pixels
-// even though the element occupies layout space.  We fetch the data URL as
-// a blob and use createImageBitmap() to force a full pixel decode through
-// a separate code-path that works in offscreen mode, then draw to canvas.
-async function convertDataUrlImagesToCanvas(printWin) {
-  await printWin.webContents.executeJavaScript(
-    `(async () => {
-      const imgs = Array.from(document.querySelectorAll('img[src^="data:"]'));
-      for (const img of imgs) {
-        try {
-          const resp = await fetch(img.src);
-          const blob = await resp.blob();
-          const bitmap = await createImageBitmap(blob);
-          const canvas = document.createElement('canvas');
-          canvas.width = bitmap.width;
-          canvas.height = bitmap.height;
-          const ctx = canvas.getContext('2d');
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(bitmap, 0, 0);
-          bitmap.close();
-          canvas.style.cssText = img.style.cssText;
-          canvas.style.imageRendering = 'pixelated';
-          canvas.style.display = img.style.display || 'inline-block';
-          img.replaceWith(canvas);
-        } catch (e) {
-          // leave original img if conversion fails
-        }
-      }
-    })()`
-  );
-}
-
 async function loadReceiptWindow(html) {
   const printWin = createReceiptWindow();
   // Write HTML to a temp file to avoid ENAMETOOLONG when the receipt
@@ -205,27 +170,13 @@ async function loadRasterReceiptWindow(html) {
     try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
   });
 
-  if (RECEIPT_RASTER_ZOOM !== 1) {
-    // Use Electron's native page zoom instead of CSS zoom on <html>.
-    // CSS zoom can cause data-URL images (QR codes) to vanish in the
-    // offscreen compositor; setZoomFactor uses Chromium's built-in zoom
-    // which composites all content correctly.
-    printWin.webContents.setZoomFactor(RECEIPT_RASTER_ZOOM);
-    // The zoomed viewport is narrower (288/1.15 ≈ 250 CSS px), so force
-    // the body to fill it instead of overflowing at its fixed 80mm width.
-    await printWin.webContents.executeJavaScript(
-      `document.body.style.width = '100%';`
-    );
-    await waitForReceiptPaint(printWin);
-  }
+  // Force body to fill the narrow 262px viewport (80mm body would overflow otherwise)
+  await printWin.webContents.executeJavaScript(
+    `document.body.style.width = '100%';`
+  );
+  await waitForReceiptPaint(printWin);
 
-  let contentHeightPx = await measureReceiptContentHeight(printWin);
-  if (RECEIPT_RASTER_ZOOM !== 1) {
-    // JS measurements (scrollHeight etc.) are in CSS pixels which don't
-    // include the zoom factor.  Window/capture APIs work in DIPs, so
-    // scale up to ensure the capture rect is tall enough.
-    contentHeightPx = Math.ceil(contentHeightPx * RECEIPT_RASTER_ZOOM);
-  }
+  const contentHeightPx = await measureReceiptContentHeight(printWin);
   return { printWin, contentHeightPx };
 }
 
@@ -273,10 +224,7 @@ async function captureReceiptRasterBuffers(printWin, contentHeightPx) {
   const totalHeight = Math.max(1, Math.ceil(contentHeightPx));
   printWin.setContentSize(RECEIPT_RASTER_WINDOW_WIDTH, totalHeight);
   await waitForReceiptPaint(printWin);
-  // Convert data-URL images to canvas so offscreen compositor renders them
-  await convertDataUrlImagesToCanvas(printWin);
-  await waitForReceiptPaint(printWin);
-  // Guarantee offscreen compositor buffer availability
+  // Allow offscreen compositor buffer to settle
   await new Promise((resolve) => setTimeout(resolve, 150));
 
   // Capture the entire receipt as a single image — no chunking.
