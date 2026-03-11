@@ -350,6 +350,13 @@ class PrinterService {
       }
     }
 
+    // Step 1b: Contrast boost — push near-black toward 0, near-white toward 255.
+    // This makes text edges more decisive before dithering → crisper printed characters.
+    const gain = 1.3;
+    for (let i = 0; i < gray.length; i++) {
+      gray[i] = Math.max(0, Math.min(255, (gray[i] - 128) * gain + 128));
+    }
+
     // Step 2: Floyd-Steinberg error-diffusion dithering (in-place)
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {

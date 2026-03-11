@@ -19,6 +19,13 @@ export async function GET(
       where: { id, organizationId },
       include: {
         unit: true,
+        bundleItems: {
+          include: {
+            componentProduct: {
+              select: { id: true, name: true, price: true, cost: true, unitId: true, unit: { select: { id: true, code: true, name: true } } },
+            },
+          },
+        },
       },
     });
 
@@ -52,7 +59,7 @@ export async function PUT(
     const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
-    const { name, description, price, cost, unitId, categoryId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode } = body;
+    const { name, description, price, cost, unitId, categoryId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems } = body;
 
     const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
     if (gstRate !== undefined && gstRate !== null && !VALID_GST_RATES.includes(Number(gstRate))) {
@@ -62,27 +69,69 @@ export async function PUT(
       );
     }
 
-    const product = await prisma.product.update({
-      where: { id, organizationId },
-      data: {
-        name,
-        description,
-        price,
-        ...(cost !== undefined && { cost }),
-        unitId,
-        categoryId: categoryId !== undefined ? (categoryId || null) : undefined,
-        sku,
-        barcode,
-        isActive,
-        ...(isService !== undefined && { isService }),
-        ...(isImeiTracked !== undefined && { isImeiTracked }),
-        ...(weighMachineCode !== undefined && { weighMachineCode: weighMachineCode || null }),
-        ...(hsnCode !== undefined && { hsnCode: hsnCode || null }),
-        ...(gstRate !== undefined && { gstRate }),
-      },
-      include: {
-        unit: true,
-      },
+    const product = await prisma.$transaction(async (tx) => {
+      const updated = await tx.product.update({
+        where: { id, organizationId },
+        data: {
+          name,
+          description,
+          price,
+          ...(cost !== undefined && { cost }),
+          unitId,
+          categoryId: categoryId !== undefined ? (categoryId || null) : undefined,
+          sku,
+          barcode,
+          isActive,
+          ...(isService !== undefined && { isService }),
+          ...(isImeiTracked !== undefined && { isImeiTracked }),
+          ...(isBundle !== undefined && { isBundle }),
+          ...(weighMachineCode !== undefined && { weighMachineCode: weighMachineCode || null }),
+          ...(hsnCode !== undefined && { hsnCode: hsnCode || null }),
+          ...(gstRate !== undefined && { gstRate }),
+        },
+        include: {
+          unit: true,
+        },
+      });
+
+      // Update bundle items if isBundle is being set
+      if (isBundle !== undefined && Array.isArray(bundleItems)) {
+        // Delete existing bundle items
+        await tx.productBundleItem.deleteMany({
+          where: { bundleProductId: id },
+        });
+
+        // Create new bundle items
+        if (isBundle && bundleItems.length > 0) {
+          for (const bi of bundleItems) {
+            if (bi.componentProductId && bi.quantity > 0) {
+              await tx.productBundleItem.create({
+                data: {
+                  bundleProductId: id,
+                  componentProductId: bi.componentProductId,
+                  quantity: bi.quantity,
+                  organizationId,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // Re-fetch with all relations
+      return tx.product.findUnique({
+        where: { id },
+        include: {
+          unit: true,
+          bundleItems: {
+            include: {
+              componentProduct: {
+                select: { id: true, name: true, price: true, cost: true, unitId: true, unit: { select: { id: true, code: true, name: true } } },
+              },
+            },
+          },
+        },
+      });
     });
 
     return NextResponse.json(product);
@@ -109,6 +158,10 @@ export async function DELETE(
     const { id } = await params;
 
     await prisma.$transaction(async (tx) => {
+      // Delete bundle items (parent and component references)
+      await tx.productBundleItem.deleteMany({ where: { bundleProductId: id } });
+      await tx.productBundleItem.deleteMany({ where: { componentProductId: id } });
+
       // Delete mobile devices linked to this product
       await tx.mobileDevice.deleteMany({ where: { productId: id, organizationId } });
 

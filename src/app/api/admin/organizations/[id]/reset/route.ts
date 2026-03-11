@@ -108,6 +108,7 @@ export async function POST(
             await prisma.supplier.deleteMany({ where: { organizationId: id } });
 
             await prisma.unitConversion.deleteMany({ where: { organizationId: id } });
+            await prisma.productBundleItem.deleteMany({ where: { organizationId: id } });
             await prisma.product.deleteMany({ where: { organizationId: id } });
             await prisma.productCategory.deleteMany({ where: { organizationId: id } });
             await prisma.unit.deleteMany({ where: { organizationId: id } });

@@ -19,7 +19,7 @@ import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 
- 
+
 type Tx = any;
 
 // Generate invoice number inside a transaction: INV-YYYYMMDD-XXX
@@ -308,17 +308,45 @@ export async function POST(request: NextRequest) {
                 where: { remainingQuantity: { gt: 0 } },
                 select: { remainingQuantity: true },
               },
+              bundleItems: {
+                include: {
+                  componentProduct: {
+                    include: {
+                      stockLots: {
+                        where: { remainingQuantity: { gt: 0 } },
+                        select: { remainingQuantity: true },
+                      },
+                    },
+                  },
+                },
+              },
             },
           });
           if (product) {
-            const availableStock = product.stockLots.reduce(
-              (sum: number, lot: { remainingQuantity: unknown }) => sum + Number(lot.remainingQuantity),
-              0
-            );
-            if (item.quantity > availableStock) {
-              stockWarnings.push(
-                `"${item.name}" has ${availableStock} units available but ${item.quantity} requested.`
+            if (product.isBundle && product.bundleItems.length > 0) {
+              // For bundles, check each component's stock
+              for (const bi of product.bundleItems) {
+                const componentStock = bi.componentProduct.stockLots.reduce(
+                  (sum: number, lot: { remainingQuantity: unknown }) => sum + Number(lot.remainingQuantity),
+                  0
+                );
+                const needed = item.quantity * Number(bi.quantity);
+                if (needed > componentStock) {
+                  stockWarnings.push(
+                    `Bundle "${item.name}" component "${bi.componentProduct.name}" has ${componentStock} units available but ${needed.toFixed(2)} needed.`
+                  );
+                }
+              }
+            } else {
+              const availableStock = product.stockLots.reduce(
+                (sum: number, lot: { remainingQuantity: unknown }) => sum + Number(lot.remainingQuantity),
+                0
               );
+              if (item.quantity > availableStock) {
+                stockWarnings.push(
+                  `"${item.name}" has ${availableStock} units available but ${item.quantity} requested.`
+                );
+              }
             }
           }
         }
@@ -441,23 +469,63 @@ export async function POST(request: NextRequest) {
 
       for (const invoiceItem of invoice.items) {
         if (invoiceItem.productId) {
-          const fifoResult = await consumeStockFIFO(
-            invoiceItem.productId,
-            invoiceItem.quantity,
-            invoiceItem.id,
-            now,
-            tx,
-            organizationId,
-            posSession.warehouseId
-          );
-
-          await tx.invoiceItem.update({
-            where: { id: invoiceItem.id },
-            data: { costOfGoodsSold: fifoResult.totalCOGS },
+          // Check if this is a bundle product
+          const product = await tx.product.findUnique({
+            where: { id: invoiceItem.productId },
+            select: {
+              isBundle: true,
+              bundleItems: {
+                select: {
+                  componentProductId: true,
+                  quantity: true,
+                },
+              },
+            },
           });
 
-          if (fifoResult.warnings.length > 0) {
-            warnings.push(...fifoResult.warnings);
+          if (product?.isBundle && product.bundleItems.length > 0) {
+            // Bundle: consume stock from each component product
+            let bundleTotalCOGS = 0;
+            for (const bi of product.bundleItems) {
+              const componentQty = Number(invoiceItem.quantity) * Number(bi.quantity);
+              const fifoResult = await consumeStockFIFO(
+                bi.componentProductId,
+                componentQty,
+                invoiceItem.id,
+                now,
+                tx,
+                organizationId,
+                posSession.warehouseId
+              );
+              bundleTotalCOGS += Number(fifoResult.totalCOGS);
+              if (fifoResult.warnings.length > 0) {
+                warnings.push(...fifoResult.warnings);
+              }
+            }
+            await tx.invoiceItem.update({
+              where: { id: invoiceItem.id },
+              data: { costOfGoodsSold: bundleTotalCOGS },
+            });
+          } else {
+            // Standard product: consume stock directly
+            const fifoResult = await consumeStockFIFO(
+              invoiceItem.productId,
+              invoiceItem.quantity,
+              invoiceItem.id,
+              now,
+              tx,
+              organizationId,
+              posSession.warehouseId
+            );
+
+            await tx.invoiceItem.update({
+              where: { id: invoiceItem.id },
+              data: { costOfGoodsSold: fifoResult.totalCOGS },
+            });
+
+            if (fifoResult.warnings.length > 0) {
+              warnings.push(...fifoResult.warnings);
+            }
           }
         }
       }

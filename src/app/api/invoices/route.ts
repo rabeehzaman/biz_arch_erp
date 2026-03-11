@@ -344,29 +344,68 @@ export async function POST(request: NextRequest) {
       for (const invoiceItem of invoice.items) {
         if (invoiceItem.productId) {
           if (!backdatedProducts.has(invoiceItem.productId)) {
+            // Check if this is a bundle product
+            const product = await tx.product.findUnique({
+              where: { id: invoiceItem.productId },
+              select: {
+                isBundle: true,
+                bundleItems: {
+                  select: {
+                    componentProductId: true,
+                    quantity: true,
+                  },
+                },
+              },
+            });
+
             // Calculate base quantity to consume based on conversionFactor
             const baseQuantity = Number(invoiceItem.quantity) * Number(invoiceItem.conversionFactor);
 
-            // Normal flow: consume stock and update COGS
-            const fifoResult = await consumeStockFIFO(
-              invoiceItem.productId,
-              baseQuantity,
-              invoiceItem.id,
-              invoiceDate,
-              tx,
-              organizationId,
-              warehouseId || null
-            );
+            if (product?.isBundle && product.bundleItems.length > 0) {
+              // Bundle: consume stock from each component product
+              let bundleTotalCOGS = 0;
+              for (const bi of product.bundleItems) {
+                const componentQty = baseQuantity * Number(bi.quantity);
+                const fifoResult = await consumeStockFIFO(
+                  bi.componentProductId,
+                  componentQty,
+                  invoiceItem.id,
+                  invoiceDate,
+                  tx,
+                  organizationId,
+                  warehouseId || null
+                );
+                bundleTotalCOGS += Number(fifoResult.totalCOGS);
+                if (fifoResult.warnings.length > 0) {
+                  warnings.push(...fifoResult.warnings);
+                }
+              }
+              await tx.invoiceItem.update({
+                where: { id: invoiceItem.id },
+                data: { costOfGoodsSold: bundleTotalCOGS },
+              });
+            } else {
+              // Normal flow: consume stock and update COGS
+              const fifoResult = await consumeStockFIFO(
+                invoiceItem.productId,
+                baseQuantity,
+                invoiceItem.id,
+                invoiceDate,
+                tx,
+                organizationId,
+                warehouseId || null
+              );
 
-            // Update the invoice item with COGS
-            await tx.invoiceItem.update({
-              where: { id: invoiceItem.id },
-              data: { costOfGoodsSold: fifoResult.totalCOGS },
-            });
+              // Update the invoice item with COGS
+              await tx.invoiceItem.update({
+                where: { id: invoiceItem.id },
+                data: { costOfGoodsSold: fifoResult.totalCOGS },
+              });
 
-            // Collect any warnings
-            if (fifoResult.warnings.length > 0) {
-              warnings.push(...fifoResult.warnings);
+              // Collect any warnings
+              if (fifoResult.warnings.length > 0) {
+                warnings.push(...fifoResult.warnings);
+              }
             }
           }
           // If backdated, COGS remains 0 and will be set by recalculation

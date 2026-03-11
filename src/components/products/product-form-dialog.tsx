@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { UnitSelect } from "@/components/units/unit-select";
 import { CategorySelect } from "@/components/products/category-select";
+import { Plus, Trash2, Package } from "lucide-react";
 
 
 interface Product {
@@ -46,11 +47,31 @@ interface Product {
     gstRate: number | null;
     isService: boolean;
     isImeiTracked: boolean;
+    isBundle?: boolean;
     weighMachineCode: string | null;
     isActive: boolean;
     createdAt: string;
+    bundleItems?: Array<{
+        id: string;
+        componentProductId: string;
+        quantity: number;
+        componentProduct: {
+            id: string;
+            name: string;
+            price: number;
+            cost: number;
+            unitId?: string;
+            unit?: { id: string; code: string; name: string } | null;
+        };
+    }>;
 }
 
+interface BundleItemEntry {
+    componentProductId: string;
+    componentName: string;
+    quantity: string;
+    unitName: string;
+}
 
 interface ProductFormDialogProps {
     open: boolean;
@@ -70,6 +91,8 @@ export function ProductFormDialog({
     const sessionUser = session?.user as ({ gstEnabled?: boolean } & { saudiEInvoiceEnabled?: boolean } & { isMobileShopModuleEnabled?: boolean } & { isWeighMachineEnabled?: boolean } & { weighMachineProductCodeLen?: number }) | undefined;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; unit?: { code: string; name: string } | null }>>([]);
+    const [bundleItems, setBundleItems] = useState<BundleItemEntry[]>([]);
     const [formData, setFormData] = useState({
         name: "",
         description: "",
@@ -83,8 +106,23 @@ export function ProductFormDialog({
         gstRate: "0",
         isService: false,
         isImeiTracked: false,
+        isBundle: false,
         weighMachineCode: "",
     });
+
+    // Fetch all products for bundle component selection
+    useEffect(() => {
+        if (formData.isBundle && open) {
+            fetch("/api/products?compact=true")
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        setAllProducts(data.filter((p: Product) => p.id !== productToEdit?.id && !p.isBundle));
+                    }
+                })
+                .catch(() => { /* ignore */ });
+        }
+    }, [formData.isBundle, open, productToEdit?.id]);
 
     useEffect(() => {
         if (productToEdit && open) {
@@ -101,8 +139,22 @@ export function ProductFormDialog({
                 gstRate: productToEdit.gstRate?.toString() || "0",
                 isService: productToEdit.isService || false,
                 isImeiTracked: productToEdit.isImeiTracked || false,
+                isBundle: productToEdit.isBundle || false,
                 weighMachineCode: productToEdit.weighMachineCode || "",
             });
+
+            // Load existing bundle items
+            if (productToEdit.bundleItems && productToEdit.bundleItems.length > 0) {
+                setBundleItems(productToEdit.bundleItems.map(bi => ({
+                    componentProductId: bi.componentProductId,
+                    componentName: bi.componentProduct.name,
+                    quantity: bi.quantity.toString(),
+                    unitName: bi.componentProduct.unit?.name || "",
+                })));
+            } else {
+                setBundleItems([]);
+            }
+
             setFormErrors({});
         } else if (!open) {
             resetForm();
@@ -121,6 +173,23 @@ export function ProductFormDialog({
             errors.cost = "Cost cannot be negative";
         if (!formData.unitId) errors.unitId = "Unit is required";
 
+        // Validate bundle items
+        if (formData.isBundle) {
+            if (bundleItems.length === 0) {
+                errors.bundle = "At least one component is required for a bundle";
+            }
+            for (const bi of bundleItems) {
+                if (!bi.componentProductId) {
+                    errors.bundle = "All components must have a product selected";
+                    break;
+                }
+                if (!bi.quantity || parseFloat(bi.quantity) <= 0) {
+                    errors.bundle = "All components must have a valid quantity";
+                    break;
+                }
+            }
+        }
+
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors);
             return;
@@ -128,7 +197,7 @@ export function ProductFormDialog({
         setFormErrors({});
         setIsSubmitting(true);
 
-        const payload = {
+        const payload: Record<string, unknown> = {
             name: formData.name,
             description: formData.description || null,
             price: parseFloat(formData.price),
@@ -141,8 +210,16 @@ export function ProductFormDialog({
             gstRate: parseFloat(formData.gstRate) || 0,
             isService: formData.isService,
             isImeiTracked: formData.isImeiTracked,
+            isBundle: formData.isBundle,
             weighMachineCode: formData.weighMachineCode || null,
         };
+
+        if (formData.isBundle) {
+            payload.bundleItems = bundleItems.map(bi => ({
+                componentProductId: bi.componentProductId,
+                quantity: parseFloat(bi.quantity),
+            }));
+        }
 
         try {
             const response = productToEdit
@@ -184,6 +261,7 @@ export function ProductFormDialog({
 
     const resetForm = () => {
         setFormErrors({});
+        setBundleItems([]);
         setFormData({
             name: "",
             description: "",
@@ -197,10 +275,42 @@ export function ProductFormDialog({
             gstRate: "0",
             isService: false,
             isImeiTracked: false,
+            isBundle: false,
             weighMachineCode: "",
         });
     };
 
+    const addBundleItem = () => {
+        setBundleItems([...bundleItems, { componentProductId: "", componentName: "", quantity: "1", unitName: "" }]);
+    };
+
+    const removeBundleItem = (index: number) => {
+        setBundleItems(bundleItems.filter((_, i) => i !== index));
+    };
+
+    const updateBundleItem = (index: number, field: keyof BundleItemEntry, value: string) => {
+        const updated = [...bundleItems];
+        updated[index] = { ...updated[index], [field]: value };
+
+        // When selecting a product, also store the name and unit
+        if (field === "componentProductId") {
+            const selectedProduct = allProducts.find(p => p.id === value);
+            if (selectedProduct) {
+                updated[index].componentName = selectedProduct.name;
+                updated[index].unitName = selectedProduct.unit?.name || "";
+            }
+        }
+
+        setBundleItems(updated);
+    };
+
+    // Filter out already-selected components
+    const getAvailableProducts = (currentIndex: number) => {
+        const selectedIds = bundleItems
+            .map((bi, i) => i !== currentIndex ? bi.componentProductId : null)
+            .filter(Boolean);
+        return allProducts.filter(p => !selectedIds.includes(p.id));
+    };
 
 
     return (
@@ -367,14 +477,92 @@ export function ProductFormDialog({
                                 id="prod-isService"
                                 checked={formData.isService}
                                 onChange={(e) =>
-                                    setFormData({ ...formData, isService: e.target.checked, ...(e.target.checked && { isImeiTracked: false }) })
+                                    setFormData({ ...formData, isService: e.target.checked, ...(e.target.checked && { isImeiTracked: false, isBundle: false }) })
                                 }
                                 className="h-4 w-4 rounded border-gray-300"
                             />
                             <Label htmlFor="prod-isService">Service product (no inventory tracking)</Label>
                         </div>
 
-                        {sessionUser?.isMobileShopModuleEnabled && !formData.isService && (
+                        {!formData.isService && (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="prod-isBundle"
+                                    checked={formData.isBundle}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, isBundle: e.target.checked })
+                                    }
+                                    className="h-4 w-4 rounded border-gray-300"
+                                />
+                                <Package className="h-4 w-4 text-muted-foreground" />
+                                <Label htmlFor="prod-isBundle">Bundle / Kit (stock deducted from components)</Label>
+                            </div>
+                        )}
+
+                        {formData.isBundle && !formData.isService && (
+                            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-sm font-semibold flex items-center gap-2">
+                                        <Package className="h-4 w-4" />
+                                        Bundle Components
+                                    </Label>
+                                    <Button type="button" variant="outline" size="sm" onClick={addBundleItem}>
+                                        <Plus className="h-3 w-3 mr-1" /> Add Component
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Define what raw products make up 1 unit of this bundle. When sold, stock is deducted from these components.
+                                </p>
+                                {bundleItems.length === 0 && (
+                                    <p className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded">
+                                        No components added yet. Click &quot;Add Component&quot; to start.
+                                    </p>
+                                )}
+                                {bundleItems.map((bi, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                        <div className="flex-1">
+                                            <Select
+                                                value={bi.componentProductId}
+                                                onValueChange={(value) => updateBundleItem(index, "componentProductId", value)}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select product..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {getAvailableProducts(index).map((p) => (
+                                                        <SelectItem key={p.id} value={p.id}>
+                                                            {p.name} {p.unit ? `(${p.unit.name})` : ""}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="w-28">
+                                            <Input
+                                                type="number"
+                                                min="0.0001"
+                                                step="0.01"
+                                                placeholder="Qty"
+                                                value={bi.quantity}
+                                                onChange={(e) => updateBundleItem(index, "quantity", e.target.value)}
+                                            />
+                                        </div>
+                                        {bi.unitName && (
+                                            <span className="text-xs text-muted-foreground w-10">{bi.unitName}</span>
+                                        )}
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeBundleItem(index)}>
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                {formErrors.bundle && (
+                                    <p className="text-sm text-red-500">{formErrors.bundle}</p>
+                                )}
+                            </div>
+                        )}
+
+                        {sessionUser?.isMobileShopModuleEnabled && !formData.isService && !formData.isBundle && (
                             <div className="flex items-center gap-2">
                                 <input
                                     type="checkbox"

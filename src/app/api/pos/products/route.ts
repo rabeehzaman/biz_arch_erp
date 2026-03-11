@@ -30,6 +30,21 @@ export async function GET() {
           where: { remainingQuantity: { gt: 0 } },
           select: { remainingQuantity: true },
         },
+        bundleItems: {
+          include: {
+            componentProduct: {
+              select: {
+                id: true,
+                name: true,
+                unit: { select: { code: true, name: true } },
+                stockLots: {
+                  where: { remainingQuantity: { gt: 0 } },
+                  select: { remainingQuantity: true },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -45,11 +60,26 @@ export async function GET() {
       category: p.category,
       unit: p.unit,
       isService: p.isService,
+      isBundle: p.isBundle,
       weighMachineCode: p.weighMachineCode || null,
-      stockQuantity: p.stockLots.reduce(
-        (sum, lot) => sum + Number(lot.remainingQuantity),
-        0
-      ),
+      stockQuantity: p.isBundle
+        ? null // Bundles don't have their own stock
+        : p.stockLots.reduce(
+          (sum, lot) => sum + Number(lot.remainingQuantity),
+          0
+        ),
+      bundleItems: p.isBundle
+        ? p.bundleItems.map((bi) => ({
+          componentProductId: bi.componentProductId,
+          componentName: bi.componentProduct.name,
+          componentUnit: bi.componentProduct.unit,
+          quantity: Number(bi.quantity),
+          componentStock: bi.componentProduct.stockLots.reduce(
+            (sum, lot) => sum + Number(lot.remainingQuantity),
+            0
+          ),
+        }))
+        : [],
     }));
 
     return NextResponse.json(result);
@@ -61,3 +91,4 @@ export async function GET() {
     );
   }
 }
+

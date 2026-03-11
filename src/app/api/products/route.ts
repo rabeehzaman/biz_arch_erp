@@ -34,43 +34,58 @@ export async function GET(request: NextRequest) {
 
     const products = compact
       ? await prisma.product.findMany({
-          where: {
-            ...baseWhere,
+        where: {
+          ...baseWhere,
+        },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          cost: true,
+          unitId: true,
+          unit: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            },
           },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            cost: true,
-            unitId: true,
-            unit: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
+          sku: true,
+          barcode: true,
+          isService: true,
+          isImeiTracked: true,
+          gstRate: true,
+          hsnCode: true,
+          weighMachineCode: true,
+          isBundle: true,
+          bundleItems: {
+            include: {
+              componentProduct: {
+                select: { id: true, name: true, price: true, cost: true, unit: { select: { id: true, code: true, name: true } } },
               },
             },
-            sku: true,
-            barcode: true,
-            isService: true,
-            isImeiTracked: true,
-            gstRate: true,
-            hsnCode: true,
-            weighMachineCode: true,
-            stockLots: stockLotsSelect,
           },
-          orderBy: { createdAt: "desc" },
-        })
+          stockLots: stockLotsSelect,
+        },
+        orderBy: { createdAt: "desc" },
+      })
       : await prisma.product.findMany({
-          where: {
-            ...baseWhere,
+        where: {
+          ...baseWhere,
+        },
+        include: {
+          unit: true,
+          stockLots: stockLotsSelect,
+          bundleItems: {
+            include: {
+              componentProduct: {
+                select: { id: true, name: true, price: true, cost: true, unitId: true, unit: { select: { id: true, code: true, name: true } } },
+              },
+            },
           },
-          include: {
-            unit: true,
-            stockLots: stockLotsSelect,
-          },
-          orderBy: { createdAt: "desc" },
-        });
+        },
+        orderBy: { createdAt: "desc" },
+      });
 
     // Calculate available stock for each product
     const productsWithStock = products.map((product) => {
@@ -103,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, description, price, cost, unitId, categoryId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode } = body;
+    const { name, description, price, cost, unitId, categoryId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -141,6 +156,7 @@ export async function POST(request: NextRequest) {
           barcode: barcode || null,
           isService: isService ?? false,
           isImeiTracked: isImeiTracked ?? false,
+          isBundle: isBundle ?? false,
           weighMachineCode: weighMachineCode || null,
           hsnCode: hsnCode || null,
           gstRate: gstRate ?? 0,
@@ -150,7 +166,38 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return newProduct;
+      // Create bundle items if this is a bundle product
+      if (isBundle && Array.isArray(bundleItems) && bundleItems.length > 0) {
+        for (const bi of bundleItems) {
+          if (bi.componentProductId && bi.quantity > 0) {
+            await tx.productBundleItem.create({
+              data: {
+                bundleProductId: newProduct.id,
+                componentProductId: bi.componentProductId,
+                quantity: bi.quantity,
+                organizationId,
+              },
+            });
+          }
+        }
+      }
+
+      // Re-fetch with bundle items included
+      const fullProduct = await tx.product.findUnique({
+        where: { id: newProduct.id },
+        include: {
+          unit: true,
+          bundleItems: {
+            include: {
+              componentProduct: {
+                select: { id: true, name: true, price: true, cost: true, unit: { select: { id: true, code: true, name: true } } },
+              },
+            },
+          },
+        },
+      });
+
+      return fullProduct;
     });
 
     return NextResponse.json(product, { status: 201 });

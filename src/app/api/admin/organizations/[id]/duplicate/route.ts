@@ -316,6 +316,7 @@ export async function POST(
                             gstRate: prod.gstRate,
                             isService: prod.isService,
                             isImeiTracked: prod.isImeiTracked,
+                            isBundle: prod.isBundle,
                             weighMachineCode: prod.weighMachineCode,
                             isActive: prod.isActive,
                             organizationId: N,
@@ -325,6 +326,25 @@ export async function POST(
                         },
                     });
                     productIdMap.set(prod.id, newProd.id);
+                }
+
+                // Duplicate ProductBundleItems
+                const bundleItems = await tx.productBundleItem.findMany({
+                    where: { organizationId: id },
+                });
+                for (const bi of bundleItems) {
+                    const newBundleId = productIdMap.get(bi.bundleProductId);
+                    const newComponentId = productIdMap.get(bi.componentProductId);
+                    if (newBundleId && newComponentId) {
+                        await tx.productBundleItem.create({
+                            data: {
+                                bundleProductId: newBundleId,
+                                componentProductId: newComponentId,
+                                quantity: bi.quantity,
+                                organizationId: N,
+                            },
+                        });
+                    }
                 }
 
                 // ═══════════════════════════════════════════════════════════════

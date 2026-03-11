@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Package } from "lucide-react";
+import { Package, Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
 
 interface ProductTileProps {
@@ -10,8 +10,9 @@ interface ProductTileProps {
     name: string;
     sku: string | null;
     price: number;
-    stockQuantity: number;
+    stockQuantity: number | null;
     isService?: boolean;
+    isBundle?: boolean;
     category: { color: string | null } | null;
   };
   onAdd: () => void;
@@ -19,7 +20,7 @@ interface ProductTileProps {
 
 export function ProductTile({ product, onAdd }: ProductTileProps) {
   const { fmt } = useCurrency();
-  const outOfStock = !product.isService && product.stockQuantity <= 0;
+  const outOfStock = !product.isService && !product.isBundle && (product.stockQuantity ?? 0) <= 0;
 
   return (
     <button
@@ -32,14 +33,26 @@ export function ProductTile({ product, onAdd }: ProductTileProps) {
       )}
     >
       <div
-        className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg"
+        className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg relative"
         style={{ backgroundColor: (product.category?.color || "#6366f1") + "20" }}
       >
-        <Package
-          className="h-5 w-5"
-          style={{ color: product.category?.color || "#6366f1" }}
-        />
+        {product.isBundle ? (
+          <Layers
+            className="h-5 w-5"
+            style={{ color: product.category?.color || "#6366f1" }}
+          />
+        ) : (
+          <Package
+            className="h-5 w-5"
+            style={{ color: product.category?.color || "#6366f1" }}
+          />
+        )}
       </div>
+      {product.isBundle && (
+        <span className="text-[10px] font-semibold text-white bg-indigo-500 rounded px-1.5 py-0.5 mb-0.5">
+          Bundle
+        </span>
+      )}
       <span className="text-sm font-medium line-clamp-2 leading-tight">
         {product.name}
       </span>
