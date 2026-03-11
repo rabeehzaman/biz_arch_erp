@@ -29,17 +29,22 @@ function DesktopLayout({ children }: { children: React.ReactNode }) {
     const mainRef = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
-        mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        if (window.matchMedia("(min-width: 1024px)").matches) {
+            mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+            return;
+        }
+
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }, [pathname]);
 
     return (
-        <div className="relative h-screen overflow-hidden" dir={dir}>
+        <div className="relative min-h-screen overflow-visible lg:h-screen lg:overflow-hidden" dir={dir}>
             <DashboardBackdrop />
-            <div className="relative flex h-full min-h-0">
+            <div className="relative flex min-h-screen lg:h-full lg:min-h-0">
                 <Sidebar />
-                <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+                <div className="relative flex min-w-0 flex-1 flex-col overflow-visible lg:overflow-hidden">
                     <Header />
-                    <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-white/96 px-4 pt-5 pb-6 shadow-[0_0_0_1px_rgba(226,232,240,0.6),0_26px_70px_-46px_rgba(2,6,23,0.7)] md:px-6 md:pt-6 md:pb-8">
+                    <main ref={mainRef} className="flex-1 overflow-visible bg-white/96 px-4 pt-5 pb-6 shadow-[0_0_0_1px_rgba(226,232,240,0.6),0_26px_70px_-46px_rgba(2,6,23,0.7)] overscroll-y-contain md:px-6 md:pt-6 md:pb-8 lg:min-h-0 lg:overflow-y-auto">
                         <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-6">
                             {children}
                         </div>

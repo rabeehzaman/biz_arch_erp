@@ -51,15 +51,19 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   const { t } = useLanguage();
   const activeTab = getActiveTab(pathname);
   const isSuperadmin = session?.user?.role === "superadmin";
+  const baseContentClassName = "min-h-[100dvh] bg-white px-4 pt-4";
+  const contentClassName = `${baseContentClassName} pb-[calc(5rem+env(safe-area-inset-bottom,0px))]`;
 
   // Superadmin only sees organizations, skip tabbar
   if (isSuperadmin) {
     return (
       <KonstaProvider theme="material">
         <App theme="material" safeAreas>
-          <Page className="pb-0">
-            <div className="min-h-screen bg-white">
-              {children}
+          <Page className="!static !h-auto !overflow-visible pb-0">
+            <div className={`${baseContentClassName} pb-6`}>
+              <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-6">
+                {children}
+              </div>
             </div>
           </Page>
         </App>
@@ -71,12 +75,11 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     <KonstaProvider theme="material">
       <App theme="material" safeAreas>
         <Page
-          className="pb-0"
+          className="!static !h-auto !overflow-visible pb-0"
           colors={{ bgMaterial: "bg-white" }}
         >
-          {/* Main content area - scrollable with bottom padding for tabbar */}
-          <div className="min-h-screen overflow-y-auto overscroll-y-contain pb-20 px-4">
-            <div className="mx-auto w-full max-w-[1680px] flex flex-col gap-6 pt-4">
+          <div className={contentClassName}>
+            <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-6">
               {children}
             </div>
           </div>
