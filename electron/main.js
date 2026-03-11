@@ -179,7 +179,10 @@ async function loadRasterReceiptWindow(html) {
     await waitForReceiptPaint(printWin);
   }
 
-  const contentHeightPx = await measureReceiptContentHeight(printWin);
+  let contentHeightPx = await measureReceiptContentHeight(printWin);
+  if (RECEIPT_RASTER_ZOOM !== 1) {
+    contentHeightPx = Math.ceil(contentHeightPx * RECEIPT_RASTER_ZOOM);
+  }
   return { printWin, contentHeightPx };
 }
 
