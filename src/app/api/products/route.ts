@@ -59,7 +59,10 @@ export async function GET(request: NextRequest) {
           weighMachineCode: true,
           isBundle: true,
           bundleItems: {
-            include: {
+            select: {
+              id: true,
+              componentProductId: true,
+              quantity: true,
               componentProduct: {
                 select: { id: true, name: true, price: true, cost: true, unit: { select: { id: true, code: true, name: true } } },
               },
