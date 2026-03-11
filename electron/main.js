@@ -129,6 +129,46 @@ async function waitForReceiptPaint(printWin) {
   );
 }
 
+// Replace data-URL <img> elements with <canvas> in the offscreen window.
+// The offscreen compositor (`offscreen: true`) can skip the image decode
+// pipeline for data:image/png;base64 src attributes, leaving blank pixels
+// even though the element occupies layout space.  Canvas elements are native
+// rendering surfaces that always composite correctly.
+async function convertDataUrlImagesToCanvas(printWin) {
+  await printWin.webContents.executeJavaScript(
+    `new Promise((resolve) => {
+      const imgs = Array.from(document.querySelectorAll('img[src^="data:"]'));
+      if (imgs.length === 0) return resolve();
+
+      const ready = imgs.map((img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise((done) => {
+              img.addEventListener('load', done, { once: true });
+              img.addEventListener('error', done, { once: true });
+            })
+      );
+
+      Promise.all(ready).then(() => {
+        for (const img of imgs) {
+          if (!img.naturalWidth || !img.naturalHeight) continue;
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img, 0, 0);
+          canvas.style.cssText = img.style.cssText;
+          canvas.style.imageRendering = 'pixelated';
+          canvas.style.display = img.style.display || 'inline-block';
+          img.replaceWith(canvas);
+        }
+        resolve();
+      });
+    })`
+  );
+}
+
 async function loadReceiptWindow(html) {
   const printWin = createReceiptWindow();
   // Write HTML to a temp file to avoid ENAMETOOLONG when the receipt
@@ -238,6 +278,9 @@ async function prepareHtmlReceiptWindow(printWin) {
 async function captureReceiptRasterBuffers(printWin, contentHeightPx) {
   const totalHeight = Math.max(1, Math.ceil(contentHeightPx));
   printWin.setContentSize(RECEIPT_RASTER_WINDOW_WIDTH, totalHeight);
+  await waitForReceiptPaint(printWin);
+  // Convert data-URL images to canvas so offscreen compositor renders them
+  await convertDataUrlImagesToCanvas(printWin);
   await waitForReceiptPaint(printWin);
   // Guarantee offscreen compositor buffer availability
   await new Promise((resolve) => setTimeout(resolve, 150));
