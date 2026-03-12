@@ -25,8 +25,10 @@ export const authConfig: NextAuthConfig = {
       if (isOnLogin) {
         // If logged in and on login page, redirect to appropriate dashboard
         if (isLoggedIn) {
-          const isSuperadmin = (auth?.user as { role?: string })?.role === "superadmin";
-          return Response.redirect(new URL(isSuperadmin ? "/admin/organizations" : "/", nextUrl));
+          const role = (auth?.user as { role?: string })?.role;
+          if (role === "superadmin") return Response.redirect(new URL("/admin/organizations", nextUrl));
+          if (role === "pos") return Response.redirect(new URL("/pos", nextUrl));
+          return Response.redirect(new URL("/", nextUrl));
         }
         return true; // Allow access to login page when not logged in
       }
@@ -36,11 +38,17 @@ export const authConfig: NextAuthConfig = {
         return Response.redirect(new URL("/login", nextUrl));
       }
 
-      // Superadmin should only access /admin/* paths (API routes are always allowed)
-      const isSuperadmin = (auth?.user as { role?: string })?.role === "superadmin";
+      const role = (auth?.user as { role?: string })?.role;
       const isApi = nextUrl.pathname.startsWith("/api");
-      if (isSuperadmin && !isApi && !nextUrl.pathname.startsWith("/admin")) {
+
+      // Superadmin should only access /admin/* paths (API routes are always allowed)
+      if (role === "superadmin" && !isApi && !nextUrl.pathname.startsWith("/admin")) {
         return Response.redirect(new URL("/admin/organizations", nextUrl));
+      }
+
+      // POS user should only access /pos paths (API routes are always allowed)
+      if (role === "pos" && !isApi && !nextUrl.pathname.startsWith("/pos")) {
+        return Response.redirect(new URL("/pos", nextUrl));
       }
 
       return true;

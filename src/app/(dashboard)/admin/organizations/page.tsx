@@ -296,6 +296,7 @@ export default function OrganizationsPage() {
                       <SelectContent>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="pos">POS Only</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    const validRoles = ["admin", "user"];
+    const validRoles = ["admin", "user", "pos"];
     if (role && !validRoles.includes(role)) {
       return NextResponse.json(
-        { error: "Role must be admin or user" },
+        { error: "Role must be admin, user, or pos" },
         { status: 400 }
       );
     }

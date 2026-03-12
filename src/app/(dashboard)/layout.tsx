@@ -17,6 +17,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // POS users shouldn't be in the dashboard layout at all
+  if (session.user && (session.user as any).role === "pos") {
+    redirect("/pos");
+  }
+
   // Pre-fetch disabled sidebar items to prevent flicker
   let disabledSidebarItems: string[] = [];
   try {
