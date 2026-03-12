@@ -6,6 +6,9 @@ const BASE_VIEWPORT_CONTENT = "width=device-width, initial-scale=1, viewport-fit
 const STANDALONE_VIEWPORT_CONTENT = `${BASE_VIEWPORT_CONTENT}, maximum-scale=1, user-scalable=no`;
 
 type MediaQueryListener = () => void;
+type LockableScreenOrientation = ScreenOrientation & {
+  lock?: (orientation: "portrait") => Promise<void>;
+};
 
 function ensureViewportMetaTag() {
   let viewportMeta = document.querySelector('meta[name="viewport"]');
@@ -63,12 +66,13 @@ export function StandaloneShellGuard() {
     const applyShellMode = () => {
       const isStandalone = detectStandaloneMode();
       const isLandscape = detectLandscapeMode();
+      const orientation = screen.orientation as LockableScreenOrientation | undefined;
 
       syncShellState(isStandalone, isLandscape);
       setShowLandscapeBlocker(isStandalone && isLandscape);
 
-      if (isStandalone && screen.orientation?.lock) {
-        screen.orientation.lock("portrait").catch(() => {
+      if (isStandalone && orientation?.lock) {
+        orientation.lock("portrait").catch(() => {
           // iOS Safari ignores orientation locking for home-screen web apps, so we keep the overlay fallback.
         });
       }

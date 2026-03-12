@@ -43,6 +43,9 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("company");
   const [loadedTabs, setLoadedTabs] = useState<SettingsTab[]>(["company"]);
 
+  const getForceMountProps = (tab: SettingsTab) =>
+    loadedTabs.includes(tab) ? { forceMount: true as const } : {};
+
   const handleTabChange = (value: string) => {
     const nextTab = value as SettingsTab;
     setActiveTab(nextTab);
@@ -69,19 +72,19 @@ export default function SettingsPage() {
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="users">{t("settings.tabUsers")}</TabsTrigger>
             </TabsList>
           </div>
-          <TabsContent value="company" forceMount={loadedTabs.includes("company")} className="mt-6">
+          <TabsContent value="company" {...getForceMountProps("company")} className="mt-6">
             {loadedTabs.includes("company") ? <CompanySettings /> : null}
           </TabsContent>
-          <TabsContent value="units" forceMount={loadedTabs.includes("units")} className="mt-6">
+          <TabsContent value="units" {...getForceMountProps("units")} className="mt-6">
             {loadedTabs.includes("units") ? <UnitsSettings /> : null}
           </TabsContent>
-          <TabsContent value="accounting" forceMount={loadedTabs.includes("accounting")} className="mt-6">
+          <TabsContent value="accounting" {...getForceMountProps("accounting")} className="mt-6">
             {loadedTabs.includes("accounting") ? <AccountingSettings /> : null}
           </TabsContent>
-          <TabsContent value="pos" forceMount={loadedTabs.includes("pos")} className="mt-6">
+          <TabsContent value="pos" {...getForceMountProps("pos")} className="mt-6">
             {loadedTabs.includes("pos") ? <POSSettings /> : null}
           </TabsContent>
-          <TabsContent value="users" forceMount={loadedTabs.includes("users")} className="mt-6">
+          <TabsContent value="users" {...getForceMountProps("users")} className="mt-6">
             {loadedTabs.includes("users") ? <UserWarehouseSettings /> : null}
           </TabsContent>
         </Tabs>

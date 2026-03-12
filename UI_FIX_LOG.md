@@ -291,6 +291,13 @@ Each completed fix should be added here immediately after the code change lands.
 - Expanded `/e2e/arabic-ui.spec.ts` so the Arabic regression now also covers the stock-transfer detail route, opens the stock-transfer creation dialog, and opens the cash/bank transfer dialog to catch modal-only English copy leaks.
 - Result: the inventory transfer flow now stays in Arabic across list, detail, and creation/reversal flows, and the broader modal sweep also closed the extra Arabic leak that was still present in the cash-bank transfer dialog.
 
+### 38. Vercel production build typing hardening
+
+- Fixed `/src/app/(dashboard)/settings/page.tsx` so the settings tab panels only pass `forceMount` when a panel has actually been loaded. Radix types that prop as a presence-only flag, and the previous `boolean` form passed local dev but failed Vercel production typechecking.
+- Updated `/src/components/pos/product-tile.tsx` and `/src/components/pos/product-grid.tsx` to share a single POS tile product shape, which removes the callback parameter mismatch that surfaced on the next production build pass.
+- Updated `/src/components/pwa/standalone-shell-guard.tsx` to use a lockable orientation helper type before calling `screen.orientation.lock("portrait")`, keeping the runtime behavior while satisfying the stricter build-time DOM typings used during production compilation.
+- Result: `npm run build` now completes successfully again, matching the Vercel production build path that had been failing after the previous push.
+
 ## Next Targets
 
 - Continue route-by-route sweep across dashboard, sales, purchases, reports, POS, settings, and mobile-shop pages.

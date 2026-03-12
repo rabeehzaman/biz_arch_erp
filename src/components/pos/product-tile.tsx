@@ -4,18 +4,21 @@ import { cn } from "@/lib/utils";
 import { Package, Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
 
+export interface ProductTileProduct {
+  id: string;
+  name: string;
+  sku: string | null;
+  price: number;
+  stockQuantity: number | null;
+  categoryId: string | null;
+  isService?: boolean;
+  isBundle?: boolean;
+  category: { color: string | null } | null;
+}
+
 interface ProductTileProps {
-  product: {
-    id: string;
-    name: string;
-    sku: string | null;
-    price: number;
-    stockQuantity: number | null;
-    isService?: boolean;
-    isBundle?: boolean;
-    category: { color: string | null } | null;
-  };
-  onAdd: (product: ProductTileProps["product"]) => void;
+  product: ProductTileProduct;
+  onAdd: (product: ProductTileProduct) => void;
 }
 
 export function ProductTile({ product, onAdd }: ProductTileProps) {

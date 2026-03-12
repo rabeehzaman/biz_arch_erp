@@ -1,27 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import { ProductTile } from "./product-tile";
+import { ProductTile, type ProductTileProduct } from "./product-tile";
 import { PackageX } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
-interface Product {
-  id: string;
-  name: string;
-  sku: string | null;
-  price: number;
-  stockQuantity: number | null;
-  categoryId: string | null;
-  isService?: boolean;
-  isBundle?: boolean;
-  category: { id: string; name: string; slug: string; color: string | null } | null;
-}
-
 interface ProductGridProps {
-  products: Product[];
+  products: ProductTileProduct[];
   searchQuery: string;
   selectedCategory: string | null;
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (product: ProductTileProduct) => void;
 }
 
 export function ProductGrid({
