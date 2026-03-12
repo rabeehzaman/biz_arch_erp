@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { useLanguage } from "@/lib/i18n";
 import { useMobileFixedUi } from "@/hooks/use-mobile-fixed-ui";
@@ -12,6 +12,7 @@ import {
   Monitor,
   Package,
   MoreHorizontal,
+  LogOut,
 } from "lucide-react";
 import { GlobalScanner } from "@/components/scanner/global-scanner";
 import { MobileLanguageSwitcher } from "@/components/mobile-language-switcher";
@@ -64,11 +65,17 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     return (
       <div className={`${baseContentClassName} pb-6`}>
         <div className="mx-auto w-full max-w-[1680px]">
-          {showLanguageSwitcher && (
-            <div className="mb-3 flex justify-end">
-              <MobileLanguageSwitcher />
-            </div>
-          )}
+          <div className="mb-3 flex items-center justify-end gap-2">
+            {showLanguageSwitcher && <MobileLanguageSwitcher />}
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm active:bg-slate-50"
+            >
+              <LogOut className="h-4 w-4 shrink-0 text-slate-500" />
+              <span>{t("nav.signOut")}</span>
+            </button>
+          </div>
           <div className="flex flex-col gap-6">{children}</div>
         </div>
       </div>

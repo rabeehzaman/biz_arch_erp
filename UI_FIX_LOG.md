@@ -298,6 +298,13 @@ Each completed fix should be added here immediately after the code change lands.
 - Updated `/src/components/pwa/standalone-shell-guard.tsx` to use a lockable orientation helper type before calling `screen.orientation.lock("portrait")`, keeping the runtime behavior while satisfying the stricter build-time DOM typings used during production compilation.
 - Result: `npm run build` now completes successfully again, matching the Vercel production build path that had been failing after the previous push.
 
+### 39. Superadmin mobile shell now exposes logout
+
+- Updated `/src/components/mobile-layout.tsx` so the stripped-down superadmin mobile shell now renders a compact top-right `Sign Out` button even though that role skips the normal mobile bottom navigation and `More` tab.
+- Updated `/src/app/(dashboard)/more/page.tsx` so the superadmin version of the `More` page also includes a logout action card, keeping the page itself consistent if it is opened directly.
+- Expanded `/e2e/mobile-ui.spec.ts` with a superadmin mobile regression that opens `/admin/organizations`, verifies the logout button is visible, and confirms it redirects back to `/login`.
+- Result: superadmin users on mobile now have a direct logout path again instead of getting trapped in the stripped mobile shell without any sign-out control.
+
 ## Next Targets
 
 - Continue route-by-route sweep across dashboard, sales, purchases, reports, POS, settings, and mobile-shop pages.

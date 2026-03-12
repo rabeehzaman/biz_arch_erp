@@ -24,7 +24,6 @@ import {
   PieChart,
   DollarSign,
   ArrowRightLeft,
-  Warehouse,
   GitBranch,
   Smartphone,
   Search,
@@ -185,11 +184,27 @@ export default function MorePage() {
       <h1 className="mb-6 text-2xl font-bold text-slate-900">{t("nav.more")}</h1>
 
       {isSuperadmin && (
-        <MenuSection
-          title={t("nav.organizations")}
-          items={superadminSection}
-          disabledItems={[]}
-        />
+        <>
+          <MenuSection
+            title={t("nav.organizations")}
+            items={superadminSection}
+            disabledItems={[]}
+          />
+
+          <div className="mb-6">
+            <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="flex w-full items-center gap-3.5 px-4 py-3.5 text-sm font-medium text-red-600 active:bg-red-50"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50">
+                  <LogOut className="h-[18px] w-[18px] text-red-500" />
+                </div>
+                <span className="flex-1 text-left">{t("nav.signOut")}</span>
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {!isSuperadmin && (

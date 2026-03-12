@@ -507,6 +507,14 @@ test.describe("superadmin mobile UI stability", () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test("superadmin mobile shell exposes sign out", async ({ page }) => {
+    await page.goto("/admin/organizations", { waitUntil: "domcontentloaded" });
+    const signOutButton = page.getByRole("button", { name: /sign out/i });
+    await expect(signOutButton).toBeVisible();
+    await signOutButton.click();
+    await page.waitForURL("**/login");
+  });
+
   test("fix balances stays table-free on mobile after running checks", async ({ page }) => {
     await page.goto("/admin/fix-balances");
     await expect(page.getByRole("heading", { name: /fix customer balances/i })).toBeVisible();
