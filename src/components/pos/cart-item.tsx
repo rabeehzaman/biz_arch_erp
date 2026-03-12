@@ -44,10 +44,12 @@ export function CartItem({
   };
 
   return (
-    <div className="rounded-lg border bg-white p-2">
-      <div className="flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{item.name}</p>
+    <div className="max-w-full rounded-lg border bg-white p-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-2">
+        <div className="min-w-0 overflow-hidden">
+          <p className="text-sm font-medium leading-tight whitespace-normal break-words [overflow-wrap:anywhere]">
+            {item.name}
+          </p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span>
               {fmt(Number(item.price))}
@@ -65,7 +67,7 @@ export function CartItem({
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1 self-center">
           <Button
             variant="outline"
             size="icon"
@@ -86,17 +88,19 @@ export function CartItem({
             <Plus className="h-3 w-3" />
           </Button>
         </div>
-        <span className="w-16 sm:w-20 text-right text-sm font-semibold">
-          {fmt(lineTotal)}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-          onClick={() => onRemove(item.productId)}
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1 self-center">
+          <span className="w-16 text-right text-sm font-semibold sm:w-20">
+            {fmt(lineTotal)}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+            onClick={() => onRemove(item.productId)}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
       {showDiscountInput && (
         <div className="flex items-center gap-2 mt-2 pt-2 border-t">

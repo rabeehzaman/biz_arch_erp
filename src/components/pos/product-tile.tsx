@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { Package, Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
+import { Badge } from "@/components/ui/badge";
 
 export interface ProductTileProduct {
   id: string;
@@ -18,22 +19,47 @@ export interface ProductTileProduct {
 
 interface ProductTileProps {
   product: ProductTileProduct;
+  selectedQuantity?: number;
   onAdd: (product: ProductTileProduct) => void;
 }
 
-export function ProductTile({ product, onAdd }: ProductTileProps) {
+function formatSelectedQuantity(quantity: number) {
+  if (Number.isInteger(quantity)) {
+    return quantity.toString();
+  }
+
+  if (quantity < 1) {
+    return quantity.toFixed(3).replace(/\.?0+$/, "");
+  }
+
+  return quantity.toFixed(2).replace(/\.?0+$/, "");
+}
+
+export function ProductTile({
+  product,
+  selectedQuantity = 0,
+  onAdd,
+}: ProductTileProps) {
   const { fmt } = useCurrency();
   const outOfStock = !product.isService && !product.isBundle && (product.stockQuantity ?? 0) <= 0;
+  const isSelected = selectedQuantity > 0;
 
   return (
     <button
       onClick={() => onAdd(product)}
+      aria-pressed={isSelected}
       className={cn(
-        "flex min-h-[100px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-3 text-center transition-colors sm:min-h-[120px]",
+        "relative flex min-h-[100px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-3 text-center transition-colors sm:min-h-[120px]",
         outOfStock ? "cursor-pointer opacity-60" : "cursor-pointer",
+        isSelected && "border-primary bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]",
         "hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100"
       )}
     >
+      {isSelected && (
+        <Badge className="absolute right-2 top-2 min-w-6 justify-center rounded-full px-2 py-0.5 text-xs font-bold">
+          {formatSelectedQuantity(selectedQuantity)}
+        </Badge>
+      )}
       <div
         className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg relative"
         style={{ backgroundColor: (product.category?.color || "#0f172a") + "20" }}

@@ -13,6 +13,11 @@ import type { ReceiptData } from "@/components/pos/receipt";
 import { capacitorPrintWithConfig, getDefaultMobilePrinterConfig, getMobilePrinterConfig, isCapacitorEnvironment, openMobileCashDrawer, saveMobilePrinterConfig, testMobilePrinterConnection, type MobilePrinterConfig } from "@/lib/capacitor-print";
 import { electronPrintWithConfig, isElectronEnvironment } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
+import {
+  DEFAULT_ENABLED_POS_PAYMENT_METHODS,
+  POS_PAYMENT_METHODS,
+  type POSPaymentMethod,
+} from "@/lib/pos/payment-methods";
 
 type ConnectionType = "network" | "windows" | "rawUsb";
 type ReceiptRenderMode = ElectronPrinterConfig["receiptRenderMode"];
@@ -22,6 +27,14 @@ export function POSSettings() {
   const { t } = useLanguage();
   const [receiptPrinting, setReceiptPrinting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [enabledPaymentMethods, setEnabledPaymentMethods] = useState<POSPaymentMethod[]>(
+    DEFAULT_ENABLED_POS_PAYMENT_METHODS
+  );
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState<POSPaymentMethod[]>(
+    DEFAULT_ENABLED_POS_PAYMENT_METHODS
+  );
+  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(true);
+  const [isSavingPaymentMethods, setIsSavingPaymentMethods] = useState(false);
 
   // Electron printer config state
   const [isElectron, setIsElectron] = useState(false);
@@ -58,6 +71,22 @@ export function POSSettings() {
       .catch(() => { })
       .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetch("/api/settings/pos-payment-methods")
+      .then((r) => r.json())
+      .then((data) => {
+        const methods = Array.isArray(data.methods) && data.methods.length > 0
+          ? data.methods
+          : DEFAULT_ENABLED_POS_PAYMENT_METHODS;
+        setEnabledPaymentMethods(methods);
+        setSavedPaymentMethods(methods);
+      })
+      .catch(() => {
+        toast.error(t("pos.paymentMethodsLoadFailed"));
+      })
+      .finally(() => setIsLoadingPaymentMethods(false));
+  }, [t]);
 
   useEffect(() => {
     const electron = isElectronEnvironment();
@@ -219,6 +248,46 @@ export function POSSettings() {
     } catch {
       setReceiptPrinting(prev);
       toast.error("Failed to update receipt printing setting");
+    }
+  };
+
+  const togglePaymentMethod = (method: POSPaymentMethod, checked: boolean) => {
+    setEnabledPaymentMethods((current) => {
+      if (checked) {
+        return POS_PAYMENT_METHODS.filter(
+          (paymentMethod) => paymentMethod === method || current.includes(paymentMethod)
+        );
+      }
+
+      const nextMethods = current.filter((paymentMethod) => paymentMethod !== method);
+      return nextMethods.length > 0 ? nextMethods : current;
+    });
+  };
+
+  const savePaymentMethods = async () => {
+    if (enabledPaymentMethods.length === 0) {
+      toast.error(t("pos.atLeastOnePaymentMethod"));
+      return;
+    }
+
+    setIsSavingPaymentMethods(true);
+    try {
+      const response = await fetch("/api/settings/pos-payment-methods", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ methods: enabledPaymentMethods }),
+      });
+
+      if (!response.ok) {
+        throw new Error();
+      }
+
+      setSavedPaymentMethods(enabledPaymentMethods);
+      toast.success(t("pos.paymentMethodsSaved"));
+    } catch {
+      toast.error(t("pos.paymentMethodsSaveFailed"));
+    } finally {
+      setIsSavingPaymentMethods(false);
     }
   };
 
@@ -410,6 +479,15 @@ export function POSSettings() {
     setUsbSerialNumber(serialParts.join("|"));
   };
 
+  const paymentMethodsDirty =
+    enabledPaymentMethods.join("|") !== savedPaymentMethods.join("|");
+  const paymentMethodLabels: Record<POSPaymentMethod, string> = {
+    CASH: t("common.cash"),
+    CREDIT_CARD: t("pos.card"),
+    UPI: "UPI",
+    BANK_TRANSFER: t("common.bankTransfer"),
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -440,6 +518,60 @@ export function POSSettings() {
               onCheckedChange={handleToggle}
               disabled={isLoading}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("pos.paymentMethods")}</CardTitle>
+          <CardDescription>{t("pos.paymentMethodsDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {POS_PAYMENT_METHODS.map((method) => {
+            const isEnabled = enabledPaymentMethods.includes(method);
+            const isLastEnabled =
+              isEnabled && enabledPaymentMethods.length === 1;
+
+            return (
+              <div
+                key={method}
+                className="flex items-center justify-between rounded-lg border p-3"
+              >
+                <div className="space-y-0.5">
+                  <Label htmlFor={`payment-method-${method}`}>
+                    {paymentMethodLabels[method]}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {t("pos.availableInCheckout")}
+                  </p>
+                </div>
+                <Switch
+                  id={`payment-method-${method}`}
+                  checked={isEnabled}
+                  disabled={isLoadingPaymentMethods || isSavingPaymentMethods || isLastEnabled}
+                  onCheckedChange={(checked) => togglePaymentMethod(method, checked)}
+                />
+              </div>
+            );
+          })}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {t("pos.atLeastOnePaymentMethod")}
+            </p>
+            <Button
+              onClick={savePaymentMethods}
+              disabled={isLoadingPaymentMethods || isSavingPaymentMethods || !paymentMethodsDirty}
+            >
+              {isSavingPaymentMethods ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("common.saving")}
+                </>
+              ) : (
+                t("common.save")
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -49,6 +49,10 @@ import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
 import { smartPrintReceipt } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
+import {
+  DEFAULT_ENABLED_POS_PAYMENT_METHODS,
+  type POSPaymentMethod,
+} from "@/lib/pos/payment-methods";
 import { normalizeRoundOffMode } from "@/lib/round-off";
 import { parseWeightBarcode, type WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
 
@@ -112,21 +116,68 @@ type CartAction =
   | { type: "CLEAR" }
   | { type: "RESTORE"; items: CartItemData[] };
 
-function cartReducer(state: CartItemData[], action: CartAction): CartItemData[] {
+interface CartState {
+  items: CartItemData[];
+  totalQuantity: number;
+  selectedProductQuantities: Record<string, number>;
+  revision: number;
+}
+
+function normalizeAmountInput(rawValue: string) {
+  const westernDigits = rawValue
+    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632))
+    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 1776))
+    .replace(/٫/g, ".")
+    .replace(/٬/g, ",");
+
+  const cleaned = westernDigits.replace(/,/g, "").replace(/[^\d.]/g, "");
+  if (!cleaned) {
+    return "";
+  }
+
+  const [wholePartRaw, ...fractionParts] = cleaned.split(".");
+  const wholePart = wholePartRaw.replace(/^0+(?=\d)/, "") || "0";
+
+  if (fractionParts.length === 0 && !cleaned.includes(".")) {
+    return wholePart;
+  }
+
+  const fractionPart = fractionParts.join("").slice(0, 2);
+  return `${wholePart}.${fractionPart}`;
+}
+
+function parseAmountInput(rawValue: string) {
+  return parseFloat(normalizeAmountInput(rawValue) || "0") || 0;
+}
+
+function buildCartState(items: CartItemData[], previousRevision = -1): CartState {
+  return {
+    items,
+    totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
+    selectedProductQuantities: items.reduce<Record<string, number>>((acc, item) => {
+      acc[item.productId] = item.quantity;
+      return acc;
+    }, {}),
+    revision: previousRevision + 1,
+  };
+}
+
+function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD": {
       const { product, quantity } = action;
-      const idx = state.findIndex((item) => item.productId === product.id);
+      const idx = state.items.findIndex((item) => item.productId === product.id);
       if (idx >= 0) {
-        const newState = [...state];
-        newState[idx] = {
-          ...newState[idx],
-          quantity: quantity != null ? newState[idx].quantity + quantity : newState[idx].quantity + 1,
+        const newItems = [...state.items];
+        const currentItem = newItems[idx];
+        newItems[idx] = {
+          ...currentItem,
+          quantity: quantity != null ? currentItem.quantity + quantity : currentItem.quantity + 1,
         };
-        return newState;
+        return buildCartState(newItems, state.revision);
       }
-      const newState = [
-        ...state,
+      const newItems = [
+        ...state.items,
         {
           productId: product.id,
           name: product.name,
@@ -138,29 +189,41 @@ function cartReducer(state: CartItemData[], action: CartAction): CartItemData[] 
           hsnCode: product.hsnCode || undefined,
         },
       ];
-      return newState;
+      return buildCartState(newItems, state.revision);
     }
     case "SET_QTY": {
       if (action.qty <= 0) {
-        return state.filter((item) => item.productId !== action.productId);
+        return buildCartState(
+          state.items.filter((item) => item.productId !== action.productId),
+          state.revision
+        );
       }
-      return state.map((item) =>
-        item.productId === action.productId ? { ...item, quantity: action.qty } : item
+      return buildCartState(
+        state.items.map((item) =>
+          item.productId === action.productId ? { ...item, quantity: action.qty } : item
+        ),
+        state.revision
       );
     }
     case "SET_DISCOUNT": {
-      return state.map((item) =>
-        item.productId === action.productId
-          ? { ...item, discount: Math.max(0, Math.min(100, action.discount)) }
-          : item
+      return buildCartState(
+        state.items.map((item) =>
+          item.productId === action.productId
+            ? { ...item, discount: Math.max(0, Math.min(100, action.discount)) }
+            : item
+        ),
+        state.revision
       );
     }
     case "REMOVE":
-      return state.filter((item) => item.productId !== action.productId);
+      return buildCartState(
+        state.items.filter((item) => item.productId !== action.productId),
+        state.revision
+      );
     case "CLEAR":
-      return [];
+      return buildCartState([], state.revision);
     case "RESTORE":
-      return action.items;
+      return buildCartState(action.items, state.revision);
     default:
       return state;
   }
@@ -202,7 +265,11 @@ function POSTerminalContent() {
   }, [sessionLoading, posSession, router]);
 
   // Products & categories
-  const { data: products = [], mutate: mutateProducts } = useSWR<POSProduct[]>(
+  const {
+    data: products = [],
+    mutate: mutateProducts,
+    isLoading: productsLoading,
+  } = useSWR<POSProduct[]>(
     posSession ? "/api/pos/products" : null,
     fetcher
   );
@@ -218,7 +285,7 @@ function POSTerminalContent() {
   );
 
   // Cart state
-  const [cart, dispatchCart] = useReducer(cartReducer, []);
+  const [cartState, dispatchCart] = useReducer(cartReducer, undefined, () => buildCartState([]));
   const [heldOrderId, setHeldOrderId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -236,14 +303,23 @@ function POSTerminalContent() {
   const [settleCashAccountId, setSettleCashAccountId] = useState("");
   const [settleBankAccountId, setSettleBankAccountId] = useState("");
   const autoFilledRef = useRef(false);
+  const cartItemsContainerRef = useRef<HTMLDivElement | null>(null);
+  const previousCartMetricsRef = useRef({ items: 0, quantity: 0 });
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string }>(
     posSession ? "/api/pos/org-settings" : null,
     fetcher
   );
+  const { data: paymentMethodsData } = useSWR<{ methods: POSPaymentMethod[] }>(
+    posSession ? "/api/settings/pos-payment-methods" : null,
+    fetcher
+  );
   const isClearingMode = orgSettings?.posAccountingMode === "CLEARING_ACCOUNT";
   const roundOffMode = normalizeRoundOffMode(orgSettings?.roundOffMode);
+  const enabledPaymentMethods = paymentMethodsData?.methods?.length
+    ? paymentMethodsData.methods
+    : DEFAULT_ENABLED_POS_PAYMENT_METHODS;
 
   // Fetch Cash/Bank accounts for settlement (only in clearing mode)
   interface CashBankAccountOption {
@@ -278,7 +354,8 @@ function POSTerminalContent() {
     (sessionSummary?.paymentBreakdown?.find((p) => p.method === "CASH")?.total || 0)
     : 0;
 
-  const cashDifference = parseFloat(closingCash || "0") - expectedCash;
+  const parsedClosingCash = parseAmountInput(closingCash);
+  const cashDifference = parsedClosingCash - expectedCash;
 
   // Receipt printing
   const { data: receiptSetting } = useSWR<{ value: string }>(
@@ -292,13 +369,12 @@ function POSTerminalContent() {
 
   const receiptPrintingEnabled = receiptSetting?.value === "true";
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
+  const cart = cartState.items;
+  const cartQuantity = cartState.totalQuantity;
+  const selectedProductQuantities = cartState.selectedProductQuantities;
   const cartTotals = useMemo(
-    () => calculateCartTotal(cart, taxInclusive, roundOffMode),
-    [cart, taxInclusive, roundOffMode]
-  );
-  const cartQuantity = useMemo(
-    () => cart.reduce((sum, item) => sum + item.quantity, 0),
-    [cart]
+    () => calculateCartTotal(cartState.items, taxInclusive, roundOffMode),
+    [cartState.items, taxInclusive, roundOffMode]
   );
   const scanCodeIndex = useMemo(() => {
     const index = new Map<string, POSProduct>();
@@ -423,6 +499,45 @@ function POSTerminalContent() {
     dispatchCart({ type: "REMOVE", productId });
   }, []);
 
+  const scrollCartToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const container = cartItemsContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior,
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    const previous = previousCartMetricsRef.current;
+    const hasAddedLine = cart.length > previous.items;
+    const hasAddedQuantity = cartQuantity > previous.quantity;
+
+    previousCartMetricsRef.current = {
+      items: cart.length,
+      quantity: cartQuantity,
+    };
+
+    if (cart.length === 0 || (!hasAddedLine && !hasAddedQuantity) || view !== "cart") {
+      return;
+    }
+
+    scrollCartToBottom(hasAddedLine ? "smooth" : "auto");
+  }, [cart.length, cartQuantity, scrollCartToBottom, view]);
+
+  useEffect(() => {
+    if (cart.length === 0 || view !== "cart" || mobileView !== "cart") {
+      return;
+    }
+
+    scrollCartToBottom("auto");
+  }, [cart.length, mobileView, scrollCartToBottom, view]);
+
   const clearCart = useCallback(() => {
     dispatchCart({ type: "CLEAR" });
     setHeldOrderId(null);
@@ -440,7 +555,7 @@ function POSTerminalContent() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          closingCash: parseFloat(closingCash) || 0,
+          closingCash: parsedClosingCash,
           ...(isClearingMode && {
             settleCashAccountId: settleCashAccountId || null,
             settleBankAccountId:
@@ -693,10 +808,6 @@ function POSTerminalContent() {
 
   // ── Active Session → Full POS Interface ────────────────────────────
 
-  const cartSignature = cart
-    .map((item) => `${item.productId}:${item.quantity}:${item.discount}`)
-    .join("|");
-
   return (
     <PageAnimation className="flex h-screen flex-col">
       {/* Header */}
@@ -725,9 +836,12 @@ function POSTerminalContent() {
             onSelect={setSelectedCategory}
           />
           <ProductGrid
+            key={`product-grid-${cartState.revision}`}
             products={products}
+            isLoading={productsLoading}
             searchQuery={deferredSearchQuery}
             selectedCategory={selectedCategory}
+            selectedQuantities={selectedProductQuantities}
             onAddToCart={addToCart}
           />
         </div>
@@ -735,7 +849,7 @@ function POSTerminalContent() {
         {/* Right Panel — Cart / Payment */}
         <div className={cn(
           "flex flex-col bg-white",
-          "md:w-[400px] md:flex-shrink-0 md:border-l",
+          "md:w-[430px] md:flex-shrink-0 md:border-l lg:w-[460px]",
           mobileView !== "products" ? "flex-1" : "hidden md:flex"
         )}>
           {/* Mobile back header */}
@@ -770,8 +884,8 @@ function POSTerminalContent() {
 
               {/* Cart Items */}
               <div
-                key={`items:${cartSignature || "empty"}`}
-                className="flex-1 overflow-y-auto p-3 space-y-2"
+                ref={cartItemsContainerRef}
+                className="flex-1 overflow-x-hidden overflow-y-auto p-3 space-y-2"
               >
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -795,7 +909,7 @@ function POSTerminalContent() {
               {/* Cart Summary & Actions */}
               {cart.length > 0 && (
                 <div
-                  key={`summary:${cartSignature || "empty"}`}
+                  key={`cart-summary-${cartState.revision}`}
                   className="border-t p-3 space-y-3"
                 >
                   <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
@@ -833,6 +947,7 @@ function POSTerminalContent() {
           ) : (
             <PaymentPanel
               total={cartTotals.total}
+              availableMethods={enabledPaymentMethods}
               onBack={() => {
                 setView("cart");
                 setMobileView("cart");
@@ -921,12 +1036,11 @@ function POSTerminalContent() {
                 )}
               </div>
               <Input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 placeholder="0.00"
                 value={closingCash}
-                onChange={(e) => setClosingCash(e.target.value)}
-                min={0}
-                step="0.01"
+                onChange={(e) => setClosingCash(normalizeAmountInput(e.target.value))}
                 autoFocus
               />
             </div>

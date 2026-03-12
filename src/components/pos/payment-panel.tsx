@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Split, CheckCircle2 } from "lucide-react";
 import { PaymentMethodButton } from "./payment-method-button";
@@ -9,19 +9,24 @@ import { SplitPaymentForm, type PaymentEntry } from "./split-payment-form";
 import { Input } from "@/components/ui/input";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import {
+  DEFAULT_ENABLED_POS_PAYMENT_METHODS,
+  type POSPaymentMethod,
+} from "@/lib/pos/payment-methods";
 
 interface PaymentPanelProps {
   total: number;
+  availableMethods: POSPaymentMethod[];
   onBack: () => void;
   onComplete: (payments: PaymentEntry[], isCreditSale?: boolean) => void;
   isProcessing: boolean;
   hasCustomer: boolean;
 }
 
-const METHODS = ["CASH", "CREDIT_CARD", "UPI", "BANK_TRANSFER"];
-
 export function PaymentPanel({
   total,
+  availableMethods,
   onBack,
   onComplete,
   isProcessing,
@@ -29,19 +34,48 @@ export function PaymentPanel({
 }: PaymentPanelProps) {
   const { fmt: formatCurrency } = useCurrency();
   const { t } = useLanguage();
+  const checkoutMethods = useMemo(
+    () =>
+      availableMethods.length > 0
+        ? availableMethods
+        : DEFAULT_ENABLED_POS_PAYMENT_METHODS,
+    [availableMethods],
+  );
+  const defaultMethod = checkoutMethods[0] ?? "CASH";
   const [mode, setMode] = useState<"single" | "split">("single");
-  const [selectedMethod, setSelectedMethod] = useState("CASH");
+  const [preferredMethod, setPreferredMethod] =
+    useState<POSPaymentMethod>(defaultMethod);
   const [isCreditSale, setIsCreditSale] = useState(false);
   const [cashTendered, setCashTendered] = useState(total.toFixed(2));
   const [reference, setReference] = useState("");
   const [splitPayments, setSplitPayments] = useState<PaymentEntry[]>([
-    { method: "CASH", amount: total.toFixed(2), reference: "" },
+    {
+      method: defaultMethod,
+      amount: total.toFixed(2),
+      reference: "",
+    },
   ]);
+  const selectedMethod = checkoutMethods.includes(preferredMethod)
+    ? preferredMethod
+    : defaultMethod;
+  const normalizedSplitPayments = useMemo(
+    () =>
+      splitPayments.map((payment) =>
+        checkoutMethods.includes(payment.method as POSPaymentMethod)
+          ? payment
+          : {
+              ...payment,
+              method: defaultMethod,
+              reference: defaultMethod === "CASH" ? "" : payment.reference,
+            },
+      ),
+    [checkoutMethods, defaultMethod, splitPayments],
+  );
 
   const handleComplete = () => {
     if (mode === "single") {
       const amount =
-        selectedMethod === "CASH"
+        selectedMethod === "CASH" || isCreditSale
           ? parseFloat(cashTendered) || 0
           : total;
 
@@ -65,17 +99,26 @@ export function PaymentPanel({
 
       onComplete(payments, isCreditSale);
     } else {
-      onComplete(splitPayments, false); // Split assumes full payment for now
+      onComplete(normalizedSplitPayments, false); // Split assumes full payment for now
     }
   };
 
   const getPaidAmount = () => {
     if (mode === "single") {
-      return isCreditSale ? (parseFloat(cashTendered) || 0) : total;
+      if (selectedMethod === "CASH" || isCreditSale) {
+        return parseFloat(cashTendered) || 0;
+      }
+
+      return total;
     }
-    return splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+
+    return normalizedSplitPayments.reduce(
+      (sum, p) => sum + (parseFloat(p.amount) || 0),
+      0,
+    );
   };
 
+  const tenderedAmount = parseFloat(cashTendered) || 0;
   const paidAmount = getPaidAmount();
   const roundedTotal = Math.round(total * 100) / 100;
   const balanceDue = Math.max(0, roundedTotal - paidAmount);
@@ -83,36 +126,50 @@ export function PaymentPanel({
   const canComplete =
     mode === "single"
       ? isCreditSale
-        ? hasCustomer && paidAmount < roundedTotal && paidAmount >= 0 // Must have customer for credit sale
+        ? hasCustomer && tenderedAmount < roundedTotal && tenderedAmount >= 0
         : selectedMethod === "CASH"
-          ? (parseFloat(cashTendered) || 0) >= roundedTotal
+          ? tenderedAmount >= roundedTotal
           : true
       : paidAmount >= roundedTotal;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="hidden md:flex items-center gap-2 border-b p-3">
+    <div className="flex h-full min-h-0 flex-col bg-slate-50/60">
+      <div className="hidden items-center gap-2 border-b border-slate-200 bg-white/90 px-3 py-3 backdrop-blur md:flex">
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-lg font-bold">{t("pos.checkout")}</h2>
-        <div className="ml-auto text-xl font-bold text-primary">
+        <div className="ml-auto text-xl font-bold tracking-tight text-primary">
           {formatCurrency(total)}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="flex gap-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 pb-4 md:overflow-hidden">
+        <div className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
           <Button
-            variant={mode === "single" ? "default" : "outline"}
+            variant={mode === "single" ? "secondary" : "ghost"}
             size="sm"
+            type="button"
+            className={cn(
+              "h-10 rounded-xl border-0 text-sm font-semibold shadow-none",
+              mode === "single"
+                ? "bg-white text-slate-900 shadow-[0_10px_24px_-20px_rgba(15,23,42,0.35)]"
+                : "text-slate-600 hover:bg-white/70 hover:text-slate-900",
+            )}
             onClick={() => setMode("single")}
           >
             {t("pos.singlePayment")}
           </Button>
           <Button
-            variant={mode === "split" ? "default" : "outline"}
+            variant={mode === "split" ? "secondary" : "ghost"}
             size="sm"
+            type="button"
+            className={cn(
+              "h-10 rounded-xl border-0 text-sm font-semibold shadow-none",
+              mode === "split"
+                ? "bg-white text-slate-900 shadow-[0_10px_24px_-20px_rgba(15,23,42,0.35)]"
+                : "text-slate-600 hover:bg-white/70 hover:text-slate-900",
+            )}
             onClick={() => setMode("split")}
           >
             <Split className="h-3 w-3 mr-1" />
@@ -121,98 +178,205 @@ export function PaymentPanel({
         </div>
 
         {mode === "single" ? (
-          <>
-            <div className="grid grid-cols-4 gap-2">
-              {METHODS.map((method) => (
-                <PaymentMethodButton
-                  key={method}
-                  method={method}
-                  isSelected={selectedMethod === method}
-                  onClick={() => {
-                    setSelectedMethod(method);
-                    if (method !== "CASH") {
-                      setCashTendered(total.toFixed(2));
-                    }
-                  }}
-                />
-              ))}
-            </div>
-
-            {selectedMethod === "CASH" ? (
-              <CashTenderedInput
-                total={total}
-                value={cashTendered}
-                onChange={setCashTendered}
-              />
-            ) : (
-              <div className="space-y-3">
-                <div className="rounded-lg bg-slate-50 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">{t("pos.amount")}</p>
-                  <p className="text-3xl font-bold">{formatCurrency(total)}</p>
+          <div className="flex flex-col gap-2 sm:grid sm:items-start sm:gap-2 sm:grid-cols-[minmax(220px,0.92fr)_minmax(0,1.08fr)]">
+            <div className="contents sm:flex sm:flex-col sm:gap-2">
+              <div className="order-1 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {t("payments.paymentMethod")}
+                </p>
+                <div
+                  className={`grid gap-1.5 ${
+                    checkoutMethods.length <= 2
+                      ? "grid-cols-2"
+                      : checkoutMethods.length === 3
+                        ? "grid-cols-3"
+                        : "grid-cols-2 md:grid-cols-4"
+                  }`}
+                >
+                  {checkoutMethods.map((method) => (
+                    <PaymentMethodButton
+                      key={method}
+                      method={method}
+                      isSelected={selectedMethod === method}
+                      compact
+                      onClick={() => {
+                        setPreferredMethod(method);
+                        if (method !== "CASH") {
+                          setCashTendered(total.toFixed(2));
+                        }
+                      }}
+                    />
+                  ))}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    {t("pos.referenceOrTransactionId")}
-                  </label>
-                  <Input
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    placeholder={t("pos.enterReferenceNumber")}
-                    className="mt-1"
+              </div>
+
+              <div className="order-3 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="credit-sale"
+                    checked={isCreditSale}
+                    onChange={(e) => {
+                      setIsCreditSale(e.target.checked);
+                      if (
+                        e.target.checked &&
+                        parseFloat(cashTendered) >= total
+                      ) {
+                        setCashTendered("0.00"); // Reset tendered if switching to credit
+                      } else if (!e.target.checked) {
+                        setCashTendered(total.toFixed(2));
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-primary"
                   />
+                  <label
+                    htmlFor="credit-sale"
+                    className="cursor-pointer text-sm font-medium text-slate-700"
+                  >
+                    {t("pos.markAsCreditSale")}
+                  </label>
                 </div>
-              </div>
-            )}
-
-            <div className="pt-4 border-t mt-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="credit-sale"
-                  checked={isCreditSale}
-                  onChange={(e) => {
-                    setIsCreditSale(e.target.checked);
-                    if (e.target.checked && parseFloat(cashTendered) >= total) {
-                      setCashTendered("0.00"); // Reset tendered if switching to credit
-                    } else if (!e.target.checked) {
-                      setCashTendered(total.toFixed(2));
-                    }
-                  }}
-                  className="h-4 w-4 rounded border-gray-300 text-primary"
-                />
-                <label htmlFor="credit-sale" className="text-sm font-medium cursor-pointer">
-                  {t("pos.markAsCreditSale")}
-                </label>
-              </div>
-            </div>
-
-            {isCreditSale && (
-              <div className="rounded-lg bg-orange-50 p-4 border border-orange-200 mt-2">
-                {!hasCustomer ? (
-                  <p className="text-sm text-red-600 font-medium font-bold text-center">
-                    {t("pos.customerMustBeSelectedForCreditSale")}
-                  </p>
-                ) : (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-orange-800 font-medium">{t("pos.balanceDue")}:</span>
-                    <span className="text-orange-800 font-bold text-lg">{formatCurrency(balanceDue)}</span>
+                {isCreditSale && (
+                  <div className="mt-2.5 rounded-2xl border border-orange-200 bg-orange-50 p-2.5">
+                    {!hasCustomer ? (
+                      <p className="text-center text-sm font-bold text-red-600">
+                        {t("pos.customerMustBeSelectedForCreditSale")}
+                      </p>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium text-orange-800">
+                          {t("pos.balanceDue")}:
+                        </span>
+                        <span className="text-lg font-bold text-orange-800 tabular-nums">
+                          {formatCurrency(balanceDue)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </>
+            </div>
+
+            <div className="order-2">
+              {selectedMethod === "CASH" ? (
+                <CashTenderedInput
+                  total={total}
+                  value={cashTendered}
+                  onChange={setCashTendered}
+                />
+              ) : (
+                <div className="flex flex-1 flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        {t("payments.paymentMethod")}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {selectedMethod === "CREDIT_CARD"
+                          ? t("pos.card")
+                          : t("pos.bankMethod")}
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                      {isCreditSale
+                        ? t("pos.balanceDue")
+                        : t("pos.completeSale")}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-center">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {t("pos.totalDue")}
+                      </p>
+                      <p className="text-xl font-bold tabular-nums">
+                        {formatCurrency(total)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-center text-emerald-700">
+                      <p className="text-[11px] uppercase tracking-wide">
+                        {t("pos.totalPaid")}
+                      </p>
+                      <p className="text-xl font-bold tabular-nums">
+                        {formatCurrency(isCreditSale ? tenderedAmount : total)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {t("pos.referenceOrTransactionId")}
+                    </label>
+                    <Input
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                      placeholder={t("pos.enterReferenceNumber")}
+                      className="h-10 border-slate-200 bg-slate-50 shadow-none"
+                    />
+                  </div>
+                  {isCreditSale && (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        {t("pos.amount")}
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={cashTendered}
+                        onChange={(e) => setCashTendered(e.target.value)}
+                        placeholder="0.00"
+                        className="h-10 border-slate-200 bg-slate-50 text-right shadow-none"
+                      />
+                    </div>
+                  )}
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2.5 text-center">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {t("pos.amount")}
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-500">
+                      {isCreditSale
+                        ? t("pos.balanceDue")
+                        : t("pos.completeSale")}
+                    </p>
+                    <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">
+                      {formatCurrency(isCreditSale ? balanceDue : total)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
-          <SplitPaymentForm
-            payments={splitPayments}
-            total={total}
-            onUpdate={setSplitPayments}
-          />
+          <div className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]">
+            <SplitPaymentForm
+              payments={normalizedSplitPayments}
+              total={total}
+              availableMethods={checkoutMethods}
+              onUpdate={setSplitPayments}
+            />
+          </div>
         )}
       </div>
 
-      <div className="border-t p-4">
+      <div className="border-t border-slate-200 bg-white/95 px-3 py-2.5 backdrop-blur">
+        <div className="mb-2 flex items-center justify-between gap-3 sm:hidden">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {isCreditSale ? t("pos.balanceDue") : t("pos.totalDue")}
+            </p>
+            <p className="text-sm text-slate-500">
+              {mode === "split"
+                ? t("pos.splitPayment")
+                : t("pos.singlePayment")}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-bold tracking-tight text-slate-900 tabular-nums">
+              {formatCurrency(isCreditSale ? balanceDue : total)}
+            </p>
+          </div>
+        </div>
         <Button
-          className="w-full h-14 text-lg font-bold"
+          className="h-11 w-full text-base font-bold shadow-[0_18px_36px_-24px_rgba(14,165,233,0.55)]"
           onClick={handleComplete}
           disabled={!canComplete || isProcessing}
         >

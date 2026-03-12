@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { PaymentMethodButton } from "./payment-method-button";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import type { POSPaymentMethod } from "@/lib/pos/payment-methods";
 
 export interface PaymentEntry {
   method: string;
@@ -16,14 +17,14 @@ export interface PaymentEntry {
 interface SplitPaymentFormProps {
   payments: PaymentEntry[];
   total: number;
+  availableMethods: POSPaymentMethod[];
   onUpdate: (payments: PaymentEntry[]) => void;
 }
-
-const METHODS = ["CASH", "CREDIT_CARD", "UPI", "BANK_TRANSFER"];
 
 export function SplitPaymentForm({
   payments,
   total,
+  availableMethods,
   onUpdate,
 }: SplitPaymentFormProps) {
   const { fmt: formatCurrency } = useCurrency();
@@ -33,11 +34,16 @@ export function SplitPaymentForm({
     0
   );
   const remaining = total - totalPaid;
+  const defaultMethod = availableMethods[0] ?? "CASH";
 
   const addPayment = () => {
     onUpdate([
       ...payments,
-      { method: "CASH", amount: remaining > 0 ? remaining.toFixed(2) : "0", reference: "" },
+      {
+        method: defaultMethod,
+        amount: remaining > 0 ? remaining.toFixed(2) : "0",
+        reference: "",
+      },
     ]);
   };
 
@@ -52,63 +58,69 @@ export function SplitPaymentForm({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex items-center justify-between">
         <h3 className="font-medium">{t("pos.splitPayment")}</h3>
-        <Button variant="outline" size="sm" onClick={addPayment}>
+        <Button variant="outline" size="sm" type="button" onClick={addPayment}>
           <Plus className="h-3 w-3 mr-1" />
           {t("pos.add")}
         </Button>
       </div>
 
-      {payments.map((payment, index) => (
-        <div key={index} className="rounded-lg border p-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">{t("pos.paymentIndex").replace("{index}", String(index + 1))}</span>
-            {payments.length > 1 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-red-500"
-                onClick={() => removePayment(index)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {METHODS.map((method) => (
-              <PaymentMethodButton
-                key={method}
-                method={method}
-                isSelected={payment.method === method}
-                onClick={() => updatePayment(index, "method", method)}
-              />
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              type="number"
-              placeholder={t("pos.amount")}
-              value={payment.amount}
-              onChange={(e) => updatePayment(index, "amount", e.target.value)}
-              className="flex-1"
-              min={0}
-              step="0.01"
-            />
-            {payment.method !== "CASH" && (
+      <div className="space-y-2 overflow-y-auto pr-1">
+        {payments.map((payment, index) => (
+          <div key={index} className="rounded-lg border p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                {t("pos.paymentIndex").replace("{index}", String(index + 1))}
+              </span>
+              {payments.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  className="h-6 w-6 text-red-500"
+                  onClick={() => removePayment(index)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {availableMethods.map((method) => (
+                <PaymentMethodButton
+                  key={method}
+                  method={method}
+                  isSelected={payment.method === method}
+                  compact
+                  onClick={() => updatePayment(index, "method", method)}
+                />
+              ))}
+            </div>
+            <div className="flex gap-2">
               <Input
-                placeholder={t("pos.reference")}
-                value={payment.reference}
-                onChange={(e) =>
-                  updatePayment(index, "reference", e.target.value)
-                }
-                className="flex-1"
+                type="number"
+                placeholder={t("pos.amount")}
+                value={payment.amount}
+                onChange={(e) => updatePayment(index, "amount", e.target.value)}
+                className="h-10 flex-1"
+                min={0}
+                step="0.01"
               />
-            )}
+              {payment.method !== "CASH" && (
+                <Input
+                  placeholder={t("pos.reference")}
+                  value={payment.reference}
+                  onChange={(e) =>
+                    updatePayment(index, "reference", e.target.value)
+                  }
+                  className="h-10 flex-1"
+                />
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       <div className="rounded-lg bg-slate-50 p-3 space-y-1">
         <div className="flex justify-between text-sm">
