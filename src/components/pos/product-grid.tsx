@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef, type UIEvent } from "react";
 import { ProductTile, type ProductTileProduct } from "./product-tile";
 import { PackageX } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
@@ -12,6 +12,7 @@ interface ProductGridProps {
   searchQuery: string;
   selectedCategory: string | null;
   selectedQuantities: Record<string, number>;
+  selectionRevision: number;
   onAddToCart: (product: ProductTileProduct) => void;
 }
 
@@ -21,9 +22,13 @@ export function ProductGrid({
   searchQuery,
   selectedCategory,
   selectedQuantities,
+  selectionRevision,
   onAddToCart,
 }: ProductGridProps) {
   const { t } = useLanguage();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const savedScrollTopRef = useRef(0);
+  const previousSelectionRevisionRef = useRef(selectionRevision);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filtered = useMemo(() => {
     return products.filter((product) => {
@@ -36,9 +41,36 @@ export function ProductGrid({
     });
   }, [products, normalizedSearchQuery, selectedCategory]);
 
+  useLayoutEffect(() => {
+    if (previousSelectionRevisionRef.current === selectionRevision) {
+      return;
+    }
+
+    previousSelectionRevisionRef.current = selectionRevision;
+
+    const container = scrollContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    const nextScrollTop = Math.min(savedScrollTopRef.current, maxScrollTop);
+    container.scrollTop = nextScrollTop;
+    savedScrollTopRef.current = nextScrollTop;
+  }, [selectionRevision]);
+
+  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+    savedScrollTopRef.current = event.currentTarget.scrollTop;
+  };
+
   if (isLoading) {
     return (
-      <div className="grid flex-1 grid-cols-2 gap-3 overflow-y-auto content-start sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div
+        data-testid="pos-product-grid"
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="grid flex-1 grid-cols-2 gap-3 overflow-y-auto content-start sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+      >
         {Array.from({ length: 12 }).map((_, index) => (
           <div
             key={`product-skeleton-${index}`}
@@ -68,7 +100,12 @@ export function ProductGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 overflow-y-auto flex-1 content-start">
+    <div
+      data-testid="pos-product-grid"
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="grid grid-cols-2 gap-3 overflow-y-auto flex-1 content-start sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+    >
       {filtered.map((product) => (
         <ProductTile
           key={product.id}

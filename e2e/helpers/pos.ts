@@ -150,9 +150,104 @@ export async function createPosProductAndStock(
 
   return {
     productId: product.id,
+    name: product.name,
+    sku: product.sku,
     unitId: pcsUnit.id,
     unitPrice: input.unitPrice ?? 60,
   };
+}
+
+export async function createPosProductCatalog(
+  api: APIRequestContext,
+  input: {
+    runId: string;
+    branchId: string;
+    warehouseId: string;
+    count: number;
+    quantity?: number;
+    unitCost?: number;
+    unitPrice?: number;
+  },
+) {
+  const unitsResponse = await api.get("/api/units");
+  const units = await parseJson(unitsResponse);
+  const pcsUnit = units.find((unit: JsonValue) => unit.code === "pcs") ?? units[0];
+  if (!pcsUnit?.id) {
+    throw new Error("No unit available for POS catalog creation");
+  }
+
+  const supplierResponse = await api.post("/api/suppliers", {
+    data: {
+      name: `POS Supplier ${input.runId}`,
+      email: `${input.runId}-pos-catalog@example.com`,
+    },
+  });
+  const supplier = await parseJson(supplierResponse);
+
+  const products: Array<{
+    productId: string;
+    name: string;
+    sku: string | null;
+    unitId: string;
+    unitPrice: number;
+  }> = [];
+  const invoiceItems: Array<{
+    productId: string;
+    description: string;
+    quantity: number;
+    unitCost: number;
+    unitId: string;
+    gstRate: number;
+    discount: number;
+  }> = [];
+
+  for (let index = 0; index < input.count; index += 1) {
+    const productRunId = `${input.runId}-${String(index + 1).padStart(2, "0")}`;
+    const productResponse = await api.post("/api/products", {
+      data: {
+        name: `POS Product ${productRunId}`,
+        description: `POS catalog item ${productRunId}`,
+        price: input.unitPrice ?? 60,
+        cost: input.unitCost ?? 30,
+        unitId: pcsUnit.id,
+        sku: `POS-${productRunId}`,
+        gstRate: 0,
+        isService: false,
+      },
+    });
+    const product = await parseJson(productResponse);
+
+    products.push({
+      productId: product.id,
+      name: product.name,
+      sku: product.sku,
+      unitId: pcsUnit.id,
+      unitPrice: input.unitPrice ?? 60,
+    });
+    invoiceItems.push({
+      productId: product.id,
+      description: `Stock ${productRunId}`,
+      quantity: input.quantity ?? 10,
+      unitCost: input.unitCost ?? 30,
+      unitId: pcsUnit.id,
+      gstRate: 0,
+      discount: 0,
+    });
+  }
+
+  const purchaseResponse = await api.post("/api/purchase-invoices", {
+    data: {
+      supplierId: supplier.id,
+      invoiceDate: new Date().toISOString().slice(0, 10),
+      dueDate: new Date().toISOString().slice(0, 10),
+      branchId: input.branchId,
+      warehouseId: input.warehouseId,
+      items: invoiceItems,
+    },
+  });
+  await parseJson(purchaseResponse);
+
+  return products;
 }
 
 export async function openPosSession(

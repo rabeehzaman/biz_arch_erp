@@ -836,12 +836,12 @@ function POSTerminalContent() {
             onSelect={setSelectedCategory}
           />
           <ProductGrid
-            key={`product-grid-${cartState.revision}`}
             products={products}
             isLoading={productsLoading}
             searchQuery={deferredSearchQuery}
             selectedCategory={selectedCategory}
             selectedQuantities={selectedProductQuantities}
+            selectionRevision={cartState.revision}
             onAddToCart={addToCart}
           />
         </div>
