@@ -25,15 +25,30 @@ function resetMobileDialogViewport() {
   document.body.style.removeProperty("pointer-events")
   document.documentElement.style.setProperty("--mobile-fixed-ui-offset", "0px")
 
-  requestAnimationFrame(() => {
-    window.dispatchEvent(new Event("resize"))
-    window.dispatchEvent(new Event("mobile-dialog-viewport-reset"))
+  // Force Safari to recalculate viewport after keyboard dismissal.
+  // Scrolling to (0,0) nudges iOS into settling window.innerHeight back to
+  // its true value so the bottom nav doesn't get stranded above a gap.
+  window.scrollTo(0, 0);
+  window.scrollTo(0, 1);
+  window.scrollTo(0, 0);
 
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"))
-      window.dispatchEvent(new Event("mobile-dialog-viewport-reset"))
-    })
-  })
+  // Multiple rAF+timeout passes are needed because iOS Safari settles the
+  // visual viewport asynchronously over several frames after blur.
+  const RESET_DELAYS = [0, 50, 150, 300, 500, 800];
+
+  const fireReset = () => {
+    window.scrollTo(0, 0);
+    window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(new Event("mobile-dialog-viewport-reset"));
+  };
+
+  requestAnimationFrame(() => {
+    fireReset();
+
+    RESET_DELAYS.forEach((delay) => {
+      setTimeout(fireReset, delay);
+    });
+  });
 }
 
 function Dialog({
@@ -100,6 +115,41 @@ function DialogContent({
   showCloseButton?: boolean
 }) {
   const contentRef = React.useRef<HTMLDivElement | null>(null)
+  const [keyboardInset, setKeyboardInset] = React.useState(0)
+
+  // On mobile, when the keyboard opens inside this dialog we need to
+  // shrink the dialog's max-height so the close button and top content
+  // remain within the visible part of the viewport.
+  React.useEffect(() => {
+    if (!isMobileDialogViewport()) return
+
+    const viewport = window.visualViewport
+    if (!viewport) return
+
+    const onViewportChange = () => {
+      const heightDiff = window.innerHeight - viewport.height
+      // Only react if the keyboard actually takes significant space (>120px)
+      if (heightDiff > 120) {
+        setKeyboardInset(heightDiff)
+      } else {
+        setKeyboardInset(0)
+      }
+    }
+
+    viewport.addEventListener("resize", onViewportChange)
+    viewport.addEventListener("scroll", onViewportChange)
+
+    return () => {
+      viewport.removeEventListener("resize", onViewportChange)
+      viewport.removeEventListener("scroll", onViewportChange)
+      setKeyboardInset(0)
+    }
+  }, [])
+
+  // Dynamic mobile max-height that accounts for the keyboard
+  const mobileMaxH = keyboardInset > 0
+    ? `calc(100dvh - 2.5rem - ${keyboardInset}px)`
+    : undefined
 
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -116,6 +166,7 @@ function DialogContent({
           "sm:data-[state=closed]:slide-out-to-bottom-[0%] sm:data-[state=open]:slide-in-from-bottom-[0%] sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0",
           className
         )}
+        style={mobileMaxH ? { maxHeight: mobileMaxH } : undefined}
         onOpenAutoFocus={(event) => {
           if (isMobileDialogViewport()) {
             event.preventDefault()

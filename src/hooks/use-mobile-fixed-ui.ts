@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const MOBILE_FIXED_UI_RECOVERY_DELAYS = [0, 120, 260, 420, 720, 960];
+const MOBILE_FIXED_UI_RECOVERY_DELAYS = [0, 80, 180, 320, 500, 720, 960, 1200, 1500];
 
 function isMobileViewport() {
   if (typeof window === "undefined") return false;
@@ -87,6 +87,12 @@ export function useMobileFixedUi() {
 
       recoveryTimeoutsRef.current = MOBILE_FIXED_UI_RECOVERY_DELAYS.map((delay, index) =>
         window.setTimeout(() => {
+          // Nudge iOS Safari into recalculating window.innerHeight by
+          // doing a micro-scroll. Without this, Safari can leave
+          // innerHeight at the keyboard-shrunk value after modal close,
+          // causing the bottom nav to float above a gap.
+          window.scrollTo(0, 0);
+
           const overlayOpen = hasBlockingOverlayOpen();
           const viewportState = measureViewportState();
 
