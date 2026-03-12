@@ -3,18 +3,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Camera, X, Loader2, ScanLine, Edit, Search } from "lucide-react";
+import { X, Loader2, ScanLine, Edit, Search } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-
-interface GlobalScannerProps {
-    // If false, hides the generic scanner button entirely
-    // But usually, since it's going to be a FAB, we just render it.
-}
-
-/** Check if camera is available (mobile or desktop with camera) */
-function isCameraAvailable() {
-    return typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
-}
+import { getCameraAvailability } from "@/lib/camera-support";
 
 async function getBarcodeDetector(formats: string[]) {
     if (typeof window !== "undefined" && "BarcodeDetector" in window) {
@@ -24,10 +15,12 @@ async function getBarcodeDetector(formats: string[]) {
     return new BarcodeDetector({ formats: formats as any });
 }
 
-export function GlobalScanner({ }: GlobalScannerProps) {
+export function GlobalScanner() {
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
     const [cameraAvailable, setCameraAvailable] = useState(false);
+    const [cameraUnavailableReason, setCameraUnavailableReason] = useState<string | null>(null);
+    const [hasBlockingOverlay, setHasBlockingOverlay] = useState(false);
     const [open, setOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [scanning, setScanning] = useState(false);
@@ -78,7 +71,7 @@ export function GlobalScanner({ }: GlobalScannerProps) {
                 const data = await res.json();
                 setLookupResult(data);
             }
-        } catch (err) {
+        } catch (_err) {
             setLookupResult({ type: "error", message: "An error occurred." });
         } finally {
             setIsLookingUp(false);
@@ -118,8 +111,48 @@ export function GlobalScanner({ }: GlobalScannerProps) {
 
     useEffect(() => {
         setIsMounted(true);
-        setCameraAvailable(isCameraAvailable());
+
+        const syncCameraSupport = () => {
+            const availability = getCameraAvailability();
+            setCameraAvailable(availability.available);
+            setCameraUnavailableReason(availability.reason);
+        };
+
+        syncCameraSupport();
+        window.addEventListener("focus", syncCameraSupport);
+        document.addEventListener("visibilitychange", syncCameraSupport);
+
+        return () => {
+            window.removeEventListener("focus", syncCameraSupport);
+            document.removeEventListener("visibilitychange", syncCameraSupport);
+        };
     }, []);
+
+    useEffect(() => {
+        if (!isMounted) return;
+
+        const syncOverlayState = () => {
+            setHasBlockingOverlay(
+                Boolean(
+                    document.querySelector(
+                        '[data-slot="dialog-content"], [data-slot="sheet-content"], [data-slot="alert-dialog-content"]'
+                    )
+                )
+            );
+        };
+
+        syncOverlayState();
+
+        const observer = new MutationObserver(syncOverlayState);
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["data-state", "open"],
+        });
+
+        return () => observer.disconnect();
+    }, [isMounted]);
 
     const startCamera = useCallback(async () => {
         setError(null);
@@ -127,6 +160,15 @@ export function GlobalScanner({ }: GlobalScannerProps) {
         setScanning(false);
 
         try {
+            const availability = getCameraAvailability();
+            setCameraAvailable(availability.available);
+            setCameraUnavailableReason(availability.reason);
+
+            if (!availability.available) {
+                setError(availability.reason || "Camera scanning is unavailable on this device.");
+                return;
+            }
+
             if (!detectorRef.current) {
                 detectorRef.current = await getBarcodeDetector([
                     "code_128", "code_39", "ean_13", "ean_8", "qr_code", "itf",
@@ -171,19 +213,24 @@ export function GlobalScanner({ }: GlobalScannerProps) {
         };
     }, [stopCamera]);
 
-    if (!isMounted || !cameraAvailable) return null;
+    if (!isMounted) return null;
 
     return (
         <>
-            <div className="fixed bottom-24 right-4 z-[60]">
-                <button
-                    onClick={() => setOpen(true)}
-                    className="flex h-14 w-14 items-center justify-center bg-emerald-600 text-white rounded-full shadow-lg border-2 border-white active:scale-95 transition-transform"
-                    aria-label="Scanner"
-                >
-                    <ScanLine className="h-6 w-6" />
-                </button>
-            </div>
+            {!open && !hasBlockingOverlay && (
+                <div className="fixed bottom-24 right-4 z-[60]">
+                    <button
+                        onClick={() => setOpen(true)}
+                        className={`flex h-14 w-14 items-center justify-center rounded-full border-2 border-white text-white shadow-lg transition-transform active:scale-95 ${
+                            cameraAvailable ? "bg-emerald-600" : "bg-slate-700"
+                        }`}
+                        aria-label="Scanner"
+                        title={cameraAvailable ? "Scanner" : "Scanner setup"}
+                    >
+                        <ScanLine className="h-6 w-6" />
+                    </button>
+                </div>
+            )}
 
             {open && (
                 <div className="fixed inset-0 z-[100] flex flex-col bg-black">
@@ -243,8 +290,14 @@ export function GlobalScanner({ }: GlobalScannerProps) {
 
                         {error && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
-                                <div className="rounded-xl bg-white p-6 text-center">
-                                    <p className="text-sm font-medium text-red-600">{error}</p>
+                                <div className="max-w-sm rounded-xl bg-white p-6 text-center">
+                                    <p className="text-sm font-medium text-slate-800">{error}</p>
+                                    {!cameraAvailable && cameraUnavailableReason && (
+                                        <p className="mt-3 text-xs leading-5 text-slate-500">
+                                            Mobile camera scanning works in a secure browser context. If you are testing from
+                                            another phone on your laptop&apos;s IP address, use HTTPS.
+                                        </p>
+                                    )}
                                     <Button className="mt-4" onClick={closeScanner}>Close</Button>
                                 </div>
                             </div>

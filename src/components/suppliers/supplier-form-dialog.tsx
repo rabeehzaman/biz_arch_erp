@@ -166,9 +166,9 @@ export function SupplierFormDialog({
                 if (!isOpen) resetForm();
             }}
         >
-            <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl overflow-y-auto max-h-[90vh]">
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <DialogHeader>
+            <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl">
+                <form onSubmit={handleSubmit} className="contents">
+                    <DialogHeader className="pr-12">
                         <DialogTitle>
                             {supplierToEdit ? "Edit Supplier" : "Add New Supplier"}
                         </DialogTitle>
@@ -178,7 +178,7 @@ export function SupplierFormDialog({
                                 : "Fill in the details to add a new supplier."}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-2 sm:py-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-name">Name *</Label>
@@ -311,7 +311,7 @@ export function SupplierFormDialog({
                             />
                         </div>
                     </div>
-                    <DialogFooter className="mt-auto pt-4 border-t">
+                    <DialogFooter>
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
                             {isSubmitting
                                 ? (supplierToEdit ? "Updating..." : "Adding...")

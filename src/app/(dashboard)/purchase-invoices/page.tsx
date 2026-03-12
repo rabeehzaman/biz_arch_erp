@@ -184,82 +184,158 @@ export default function PurchaseInvoicesPage() {
                 )}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>
-                    <TableHead>{t("suppliers.supplier")}</TableHead>
-                    <TableHead>{lang === "ar" ? "مرجع المورد" : "Supplier Ref"}</TableHead>
-                    <TableHead>{t("common.date")}</TableHead>
-                    <TableHead>{t("sales.dueDate")}</TableHead>
-                    <TableHead>{t("common.status")}</TableHead>
-                    <TableHead className="text-right">{t("common.total")}</TableHead>
-                    <TableHead className="text-right">{t("common.balance")}</TableHead>
-                    <TableHead className="text-right">{t("common.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                <div className="space-y-3 sm:hidden">
                   {filteredInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">
-                        {invoice.purchaseInvoiceNumber}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{invoice.supplier.name}</div>
-                          {invoice.supplier.email && (
-                            <div className="text-sm text-slate-500">
-                              {invoice.supplier.email}
-                            </div>
-                          )}
+                    <div key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                            {t("purchases.purchaseInvoiceNumber")}
+                          </p>
+                          <p className="mt-1 font-semibold text-slate-900">{invoice.purchaseInvoiceNumber}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {invoice.supplierInvoiceRef || "-"}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(invoice.dueDate), "dd MMM yyyy")}
-                      </TableCell>
-                      <TableCell>
                         <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
                           {statusLabels[invoice.status]}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {fmt(Number(invoice.total))}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span
-                          className={
-                            Number(invoice.balanceDue) > 0
-                              ? "text-orange-600 font-medium"
-                              : "text-green-600"
-                          }
-                        >
-                          {fmt(Number(invoice.balanceDue))}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/purchase-invoices/${invoice.id}`}>
-                          <Button variant="ghost" size="icon">
+                      </div>
+
+                      <div className="mt-4 min-w-0">
+                        <p className="font-medium text-slate-900">{invoice.supplier.name}</p>
+                        {invoice.supplier.email && (
+                          <p className="mt-1 break-all text-sm text-slate-500">{invoice.supplier.email}</p>
+                        )}
+                        {invoice.supplierInvoiceRef && (
+                          <p className="mt-2 text-sm text-slate-500">
+                            {lang === "ar" ? "مرجع المورد" : "Supplier Ref"}: {invoice.supplierInvoiceRef}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.date")}</p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("sales.dueDate")}</p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {format(new Date(invoice.dueDate), "dd MMM yyyy")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.total")}</p>
+                          <p className="mt-1 font-semibold text-slate-900">{fmt(Number(invoice.total))}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.balance")}</p>
+                          <p className={`mt-1 font-semibold ${Number(invoice.balanceDue) > 0 ? "text-orange-600" : "text-green-600"}`}>
+                            {fmt(Number(invoice.balanceDue))}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex gap-2">
+                        <Button asChild variant="outline" className="min-h-[44px] flex-1">
+                          <Link href={`/purchase-invoices/${invoice.id}`}>
                             <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                            {t("common.details")}
+                          </Link>
+                        </Button>
                         <Button
                           variant="ghost"
-                          size="icon"
+                          className="min-h-[44px] flex-1 text-red-600 hover:text-red-700"
                           onClick={() => handleDelete(invoice.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <Trash2 className="h-4 w-4" />
+                          {t("common.delete")}
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>
+                        <TableHead>{t("suppliers.supplier")}</TableHead>
+                        <TableHead>{lang === "ar" ? "مرجع المورد" : "Supplier Ref"}</TableHead>
+                        <TableHead>{t("common.date")}</TableHead>
+                        <TableHead>{t("sales.dueDate")}</TableHead>
+                        <TableHead>{t("common.status")}</TableHead>
+                        <TableHead className="text-right">{t("common.total")}</TableHead>
+                        <TableHead className="text-right">{t("common.balance")}</TableHead>
+                        <TableHead className="text-right">{t("common.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredInvoices.map((invoice) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">
+                            {invoice.purchaseInvoiceNumber}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{invoice.supplier.name}</div>
+                              {invoice.supplier.email && (
+                                <div className="text-sm text-slate-500">
+                                  {invoice.supplier.email}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {invoice.supplierInvoiceRef || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(invoice.dueDate), "dd MMM yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
+                              {statusLabels[invoice.status]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {fmt(Number(invoice.total))}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span
+                              className={
+                                Number(invoice.balanceDue) > 0
+                                  ? "text-orange-600 font-medium"
+                                  : "text-green-600"
+                              }
+                            >
+                              {fmt(Number(invoice.balanceDue))}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Link href={`/purchase-invoices/${invoice.id}`}>
+                              <Button variant="ghost" size="icon">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(invoice.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

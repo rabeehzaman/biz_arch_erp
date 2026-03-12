@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "konsta/react/theme.css";
 
 @keyframes scan-line {
   0% {
@@ -81,6 +80,9 @@
 
 :root {
   --radius: 1rem;
+  --app-safe-area-top: env(safe-area-inset-top, 0px);
+  --app-safe-area-bottom: clamp(0px, env(safe-area-inset-bottom, 0px), 40px);
+  --mobile-fixed-ui-offset: 0px;
 
   --background: hsl(210 20% 98%);
   --foreground: hsl(222 39% 11%);
@@ -178,10 +180,6 @@
 }
 
 @layer base {
-  html {
-    scroll-behavior: smooth;
-  }
-
   * {
     @apply border-border outline-ring/50;
   }
@@ -190,37 +188,31 @@
     @apply bg-background text-foreground tracking-tight;
     min-height: 100vh;
     overflow-x: hidden;
-    background-image:
-      radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 18%),
-      radial-gradient(circle at 82% 14%, rgba(30, 41, 59, 0.28), transparent 28%),
-      linear-gradient(180deg, #05070b 0%, #08111d 48%, #0b1220 100%);
-    background-attachment: fixed;
+    background: #f8fafc;
   }
 
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 34px 34px;
-    mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.04));
-    opacity: 0.48;
-    z-index: -2;
+  html[data-app-display-mode="standalone"],
+  html[data-app-display-mode="standalone"] body {
+    min-height: 100dvh;
   }
 
-  body::after {
+  html[data-app-display-mode="standalone"] {
+    background: #ffffff;
+  }
+
+  html[data-app-display-mode="standalone"] body::before {
     content: "";
     position: fixed;
-    inset: 0;
+    inset: 0 0 auto 0;
+    height: var(--app-safe-area-top);
     pointer-events: none;
-    background:
-      radial-gradient(circle at 16% 18%, rgba(14, 165, 233, 0.1), transparent 16%),
-      radial-gradient(circle at 84% 76%, rgba(59, 130, 246, 0.08), transparent 20%);
-    filter: blur(32px);
-    z-index: -1;
+    background: #ffffff;
+    z-index: 60;
+  }
+
+  html[data-app-display-mode="standalone"][data-app-orientation="landscape"],
+  html[data-app-display-mode="standalone"][data-app-orientation="landscape"] body {
+    overflow: hidden;
   }
 
   ::selection {
@@ -238,8 +230,8 @@
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
@@ -249,35 +241,34 @@
   ::-webkit-scrollbar-thumb {
     border: 2px solid transparent;
     border-radius: 999px;
-    background: linear-gradient(180deg, rgba(14, 165, 233, 0.35), rgba(16, 185, 129, 0.28));
+    background: rgba(148, 163, 184, 0.6);
     background-clip: padding-box;
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_28px_70px_-42px_rgba(15,23,42,0.28)];
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
   }
 
   .glass-panel-strong {
-    @apply rounded-[2rem] border border-slate-200 bg-white shadow-[0_30px_80px_-42px_rgba(15,23,42,0.3)];
+    @apply rounded-2xl border border-slate-200 bg-white shadow-md;
   }
 
   .surface-pill {
-    @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.2)];
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600;
   }
 
   .section-chip {
-    @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-600 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.2)];
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600;
   }
 
   .gradient-heading {
-    @apply bg-[linear-gradient(135deg,#0f172a_0%,#155e75_46%,#0f766e_100%)] bg-clip-text text-transparent;
+    @apply text-slate-900;
   }
 
   .mesh-card {
-    background-color: #ffffff;
-    background-image: none;
+    @apply bg-white;
   }
 }
 
@@ -286,7 +277,7 @@
   body {
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
   }
 
   /* Hide scrollbars on mobile for native feel */
@@ -300,10 +291,10 @@
 
   /* Safe area padding for notched devices */
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--app-safe-area-bottom);
   }
 
   .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--app-safe-area-top);
   }
 }

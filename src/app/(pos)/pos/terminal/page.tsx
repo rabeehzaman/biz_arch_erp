@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useEffect, useRef, useMemo, useReducer } from "react";
+import { Suspense, useState, useCallback, useEffect, useRef, useMemo, useReducer, useDeferredValue } from "react";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
@@ -222,6 +222,7 @@ function POSTerminalContent() {
   const [heldOrderId, setHeldOrderId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [view, setView] = useState<"cart" | "payment">("cart");
   const [mobileView, setMobileView] = useState<"products" | "cart" | "payment">("products");
@@ -291,6 +292,39 @@ function POSTerminalContent() {
 
   const receiptPrintingEnabled = receiptSetting?.value === "true";
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
+  const cartTotals = useMemo(
+    () => calculateCartTotal(cart, taxInclusive, roundOffMode),
+    [cart, taxInclusive, roundOffMode]
+  );
+  const cartQuantity = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart]
+  );
+  const scanCodeIndex = useMemo(() => {
+    const index = new Map<string, POSProduct>();
+
+    for (const product of products) {
+      if (product.barcode) {
+        index.set(product.barcode, product);
+      }
+      if (product.sku) {
+        index.set(product.sku, product);
+      }
+    }
+
+    return index;
+  }, [products]);
+  const weighCodeIndex = useMemo(() => {
+    const index = new Map<string, POSProduct>();
+
+    for (const product of products) {
+      if (product.weighMachineCode) {
+        index.set(product.weighMachineCode, product);
+      }
+    }
+
+    return index;
+  }, [products]);
 
   useEffect(() => {
     if (!showCloseDialog || !isClearingMode) {
@@ -345,7 +379,7 @@ function POSTerminalContent() {
           if (weighMachineEnabled) {
             const parsed = parseWeightBarcode(barcodeBuffer, weighMachineConfig);
             if (parsed) {
-              const weightProduct = products.find(p => p.weighMachineCode === parsed.productCode);
+              const weightProduct = weighCodeIndex.get(parsed.productCode);
               if (weightProduct) {
                 addToCart(weightProduct, parsed.weightKg);
                 toast.success(`${weightProduct.name} — ${parsed.weightKg} kg`);
@@ -357,7 +391,7 @@ function POSTerminalContent() {
           }
 
           // Fall back to regular barcode/SKU lookup
-          const product = products.find(p => p.barcode === barcodeBuffer || p.sku === barcodeBuffer);
+          const product = scanCodeIndex.get(barcodeBuffer);
 
           if (product) {
             addToCart(product);
@@ -375,7 +409,7 @@ function POSTerminalContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [posSession, products, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig]);
+  }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex]);
 
   const updateCartQuantity = useCallback((productId: string, qty: number) => {
     dispatchCart({ type: "SET_QTY", productId, qty });
@@ -505,13 +539,13 @@ function POSTerminalContent() {
             lineTotal,
           };
         }),
-        subtotal: Number(result.invoice?.subtotal) || calculateCartTotal(cart, taxInclusive, roundOffMode).subtotal,
+        subtotal: Number(result.invoice?.subtotal) || cartTotals.subtotal,
         taxRate: receiptMeta?.taxLabel === "VAT" ? 15 : 0,
         taxAmount: receiptMeta?.taxLabel === "VAT"
           ? Number(result.invoice?.totalVat || 0)
-          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || calculateCartTotal(cart, taxInclusive, roundOffMode).taxAmount,
-        roundOffAmount: Number(result.invoice?.roundOffAmount || 0) || calculateCartTotal(cart, taxInclusive, roundOffMode).roundOffAmount,
-        total: Number(result.invoice?.total) || calculateCartTotal(cart, taxInclusive, roundOffMode).total,
+          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || cartTotals.taxAmount,
+        roundOffAmount: Number(result.invoice?.roundOffAmount || 0) || cartTotals.roundOffAmount,
+        total: Number(result.invoice?.total) || cartTotals.total,
         payments: payments.map((p) => ({
           method: p.method,
           amount: parseFloat(p.amount),
@@ -562,7 +596,6 @@ function POSTerminalContent() {
   const holdOrder = async () => {
     if (cart.length === 0) return;
     try {
-      const { subtotal } = calculateCartTotal(cart, taxInclusive, roundOffMode);
       const res = await fetch("/api/pos/held-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -570,7 +603,7 @@ function POSTerminalContent() {
           customerId: selectedCustomer?.id || undefined,
           customerName: selectedCustomer?.name || undefined,
           items: cart,
-          subtotal,
+          subtotal: cartTotals.subtotal,
         }),
       });
       if (!res.ok) {
@@ -621,6 +654,24 @@ function POSTerminalContent() {
     }
   };
 
+  const openHeldOrders = useCallback(() => {
+    setShowHeldSheet(true);
+  }, []);
+
+  const backToSessions = useCallback(() => {
+    router.push("/pos");
+  }, [router]);
+
+  const reprintReceipt = useCallback(() => {
+    if (!lastReceiptData) return;
+
+    try {
+      smartPrintReceipt(lastReceiptData);
+    } catch (error) {
+      console.error("Receipt reprint failed:", error);
+    }
+  }, [lastReceiptData]);
+
   // ── Loading State ──────────────────────────────────────────────────
 
   if (sessionLoading) {
@@ -642,7 +693,6 @@ function POSTerminalContent() {
 
   // ── Active Session → Full POS Interface ────────────────────────────
 
-  const { total } = calculateCartTotal(cart, taxInclusive, roundOffMode);
   const cartSignature = cart
     .map((item) => `${item.productId}:${item.quantity}:${item.discount}`)
     .join("|");
@@ -655,16 +705,10 @@ function POSTerminalContent() {
         branchName={posSession.branch?.name}
         warehouseName={posSession.warehouse?.name}
         heldOrdersCount={heldOrders.length}
-        onHeldOrdersClick={() => setShowHeldSheet(true)}
+        onHeldOrdersClick={openHeldOrders}
         onCloseSession={openCloseSessionDialog}
-        onBackToSessions={() => router.push("/pos")}
-        onReprintReceipt={lastReceiptData ? () => {
-          try {
-            smartPrintReceipt(lastReceiptData);
-          } catch (e) {
-            console.error("Receipt reprint failed:", e);
-          }
-        } : undefined}
+        onBackToSessions={backToSessions}
+        onReprintReceipt={lastReceiptData ? reprintReceipt : undefined}
       />
 
       {/* Main Content */}
@@ -682,7 +726,7 @@ function POSTerminalContent() {
           />
           <ProductGrid
             products={products}
-            searchQuery={searchQuery}
+            searchQuery={deferredSearchQuery}
             selectedCategory={selectedCategory}
             onAddToCart={addToCart}
           />
@@ -709,7 +753,7 @@ function POSTerminalContent() {
             </h2>
             {cart.length > 0 && (
               <div className="ml-auto text-sm font-bold text-primary">
-                {fmt(total)}
+                {fmt(cartTotals.total)}
               </div>
             )}
           </div>
@@ -740,13 +784,9 @@ function POSTerminalContent() {
                     <CartItem
                       key={`${item.productId}:${item.quantity}:${item.discount}`}
                       item={item}
-                      onUpdateQuantity={(qty) =>
-                        updateCartQuantity(item.productId, qty)
-                      }
-                      onUpdateDiscount={(discount) =>
-                        updateCartDiscount(item.productId, discount)
-                      }
-                      onRemove={() => removeFromCart(item.productId)}
+                      onUpdateQuantity={updateCartQuantity}
+                      onUpdateDiscount={updateCartDiscount}
+                      onRemove={removeFromCart}
                     />
                   ))
                 )}
@@ -785,14 +825,14 @@ function POSTerminalContent() {
                     }}
                   >
                     {t("pos.payNow")}{" "}
-                    {fmt(total)}
+                    {fmt(cartTotals.total)}
                   </Button>
                 </div>
               )}
             </>
           ) : (
             <PaymentPanel
-              total={total}
+              total={cartTotals.total}
               onBack={() => {
                 setView("cart");
                 setMobileView("cart");
@@ -812,7 +852,7 @@ function POSTerminalContent() {
           >
             <ShoppingCart className="h-6 w-6" />
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
-              {cart.reduce((s, i) => s + i.quantity, 0)}
+              {cartQuantity}
             </span>
           </button>
         )}

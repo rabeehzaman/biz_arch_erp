@@ -202,57 +202,112 @@ export default function SupplierBalancesPage() {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
-                        <TableHead className="text-right">Invoices</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSuppliers.map((supplier) => (
-                        <TableRow key={supplier.id}>
-                          <TableCell className="font-medium">
+                <>
+                  <div className="space-y-3 sm:hidden">
+                    {filteredSuppliers.map((supplier) => (
+                      <div
+                        key={supplier.id}
+                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
                             <Link
                               href={`/suppliers/${supplier.id}/statement`}
-                              className="text-blue-600 hover:underline"
+                              className="font-semibold text-blue-600 hover:underline"
                             >
                               {supplier.name}
                             </Link>
-                          </TableCell>
-                          <TableCell className="text-slate-500">
-                            {supplier.email || "-"}
-                          </TableCell>
-                          <TableCell className="text-slate-500">
-                            {supplier.phone || "-"}
-                          </TableCell>
-                          <TableCell
-                            className={`text-right font-medium ${
-                              supplier.balance > 0 ? "text-red-600" : "text-slate-900"
-                            }`}
-                          >
-                            {formatCurrency(supplier.balance)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {supplier.invoiceCount}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={supplier.isActive ? "default" : "secondary"}
+                            <div className="mt-1 space-y-1 text-sm text-slate-500">
+                              {supplier.email && <p className="break-all">{supplier.email}</p>}
+                              <p>{supplier.phone || "No phone number"}</p>
+                            </div>
+                          </div>
+                          <Badge variant={supplier.isActive ? "default" : "secondary"}>
+                            {supplier.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Balance</p>
+                            <p
+                              className={`mt-1 font-semibold ${
+                                supplier.balance > 0 ? "text-red-600" : "text-slate-900"
+                              }`}
                             >
-                              {supplier.isActive ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                              {formatCurrency(supplier.balance)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoices</p>
+                            <p className="mt-1 font-medium text-slate-900">{supplier.invoiceCount}</p>
+                          </div>
+                        </div>
+
+                        <Link
+                          href={`/suppliers/${supplier.id}/statement`}
+                          className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center rounded-md border border-slate-200 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                        >
+                          View statement
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead className="text-right">Balance</TableHead>
+                            <TableHead className="text-right">Invoices</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredSuppliers.map((supplier) => (
+                            <TableRow key={supplier.id}>
+                              <TableCell className="font-medium">
+                                <Link
+                                  href={`/suppliers/${supplier.id}/statement`}
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  {supplier.name}
+                                </Link>
+                              </TableCell>
+                              <TableCell className="text-slate-500">
+                                {supplier.email || "-"}
+                              </TableCell>
+                              <TableCell className="text-slate-500">
+                                {supplier.phone || "-"}
+                              </TableCell>
+                              <TableCell
+                                className={`text-right font-medium ${
+                                  supplier.balance > 0 ? "text-red-600" : "text-slate-900"
+                                }`}
+                              >
+                                {formatCurrency(supplier.balance)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {supplier.invoiceCount}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={supplier.isActive ? "default" : "secondary"}
+                                >
+                                  {supplier.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

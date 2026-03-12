@@ -265,43 +265,95 @@ function BranchesPageContent() {
                                                 <p className="text-sm text-slate-500">{branchSearch ? "Try a different search term" : "Create your first branch"}</p>
                                             </div>
                                         ) : (
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Name</TableHead>
-                                                        <TableHead>Code</TableHead>
-                                                        <TableHead className="hidden sm:table-cell">City</TableHead>
-                                                        <TableHead className="hidden sm:table-cell">Phone</TableHead>
-                                                        <TableHead>Warehouses</TableHead>
-                                                        <TableHead>Status</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
+                                            <>
+                                                <div className="space-y-3 sm:hidden">
                                                     {filteredBranches.map((branch) => (
-                                                        <TableRow key={branch.id}>
-                                                            <TableCell className="font-medium">{branch.name}</TableCell>
-                                                            <TableCell><Badge variant="outline">{branch.code}</Badge></TableCell>
-                                                            <TableCell className="hidden sm:table-cell">{branch.city || "-"}</TableCell>
-                                                            <TableCell className="hidden sm:table-cell">{branch.phone || "-"}</TableCell>
-                                                            <TableCell>{branch._count.warehouses}</TableCell>
-                                                            <TableCell>
-                                                                <Badge variant={branch.isActive ? "default" : "secondary"}>
-                                                                    {branch.isActive ? "Active" : "Inactive"}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell className="text-right">
-                                                                <Button variant="ghost" size="icon" onClick={() => openBranchDialog(branch)}>
-                                                                    <Pencil className="h-4 w-4" />
+                                                        <div key={branch.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="min-w-0">
+                                                                    <p className="font-semibold text-slate-900">{branch.name}</p>
+                                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                                        <Badge variant="outline">{branch.code}</Badge>
+                                                                        <Badge variant={branch.isActive ? "default" : "secondary"}>
+                                                                            {branch.isActive ? "Active" : "Inactive"}
+                                                                        </Badge>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                                                <div>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">City</p>
+                                                                    <p className="mt-1 text-slate-900">{branch.city || "-"}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Phone</p>
+                                                                    <p className="mt-1 text-slate-900">{branch.phone || "-"}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Warehouses</p>
+                                                                    <p className="mt-1 font-medium text-slate-900">{branch._count.warehouses}</p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="mt-4 grid grid-cols-2 gap-2">
+                                                                <Button variant="outline" className="min-h-[44px]" onClick={() => openBranchDialog(branch)}>
+                                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                                    Edit
                                                                 </Button>
-                                                                <Button variant="ghost" size="icon" onClick={() => deleteBranch(branch.id)}>
-                                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                                <Button
+                                                                    variant="outline"
+                                                                    className="min-h-[44px] border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                                    onClick={() => deleteBranch(branch.id)}
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    Delete
                                                                 </Button>
-                                                            </TableCell>
-                                                        </TableRow>
+                                                            </div>
+                                                        </div>
                                                     ))}
-                                                </TableBody>
-                                            </Table>
+                                                </div>
+
+                                                <div className="hidden sm:block">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Name</TableHead>
+                                                                <TableHead>Code</TableHead>
+                                                                <TableHead className="hidden sm:table-cell">City</TableHead>
+                                                                <TableHead className="hidden sm:table-cell">Phone</TableHead>
+                                                                <TableHead>Warehouses</TableHead>
+                                                                <TableHead>Status</TableHead>
+                                                                <TableHead className="text-right">Actions</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {filteredBranches.map((branch) => (
+                                                                <TableRow key={branch.id}>
+                                                                    <TableCell className="font-medium">{branch.name}</TableCell>
+                                                                    <TableCell><Badge variant="outline">{branch.code}</Badge></TableCell>
+                                                                    <TableCell className="hidden sm:table-cell">{branch.city || "-"}</TableCell>
+                                                                    <TableCell className="hidden sm:table-cell">{branch.phone || "-"}</TableCell>
+                                                                    <TableCell>{branch._count.warehouses}</TableCell>
+                                                                    <TableCell>
+                                                                        <Badge variant={branch.isActive ? "default" : "secondary"}>
+                                                                            {branch.isActive ? "Active" : "Inactive"}
+                                                                        </Badge>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        <Button variant="ghost" size="icon" onClick={() => openBranchDialog(branch)}>
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button variant="ghost" size="icon" onClick={() => deleteBranch(branch.id)}>
+                                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                                        </Button>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </>
                                         )}
                                     </CardContent>
                                 </Card>
@@ -337,56 +389,120 @@ function BranchesPageContent() {
                                                 <p className="text-sm text-slate-500">{warehouseSearch ? "Try a different search term" : "Create your first warehouse"}</p>
                                             </div>
                                         ) : (
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Name</TableHead>
-                                                        <TableHead>Code</TableHead>
-                                                        <TableHead>Branch</TableHead>
-                                                        <TableHead className="hidden sm:table-cell">Stock Lots</TableHead>
-                                                        <TableHead>Status</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
+                                            <>
+                                                <div className="space-y-3 sm:hidden">
                                                     {filteredWarehouses.map((wh) => (
-                                                        <TableRow key={wh.id}>
-                                                            <TableCell className="font-medium">
-                                                                <div className="flex items-center gap-2">
-                                                                    {wh.name}
-                                                                    {wh.isDefault && (
-                                                                        <Badge variant="secondary" className="text-xs">
-                                                                            <Star className="mr-1 h-3 w-3 fill-current" />
-                                                                            Default
+                                                        <div key={wh.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="min-w-0">
+                                                                    <div className="flex flex-wrap items-center gap-2">
+                                                                        <p className="font-semibold text-slate-900">{wh.name}</p>
+                                                                        <Badge variant="outline">{wh.code}</Badge>
+                                                                        {wh.isDefault && (
+                                                                            <Badge variant="secondary" className="text-xs">
+                                                                                <Star className="mr-1 h-3 w-3 fill-current" />
+                                                                                Default
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="mt-2">
+                                                                        <Badge variant={wh.isActive ? "default" : "secondary"}>
+                                                                            {wh.isActive ? "Active" : "Inactive"}
                                                                         </Badge>
-                                                                    )}
+                                                                    </div>
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell><Badge variant="outline">{wh.code}</Badge></TableCell>
-                                                            <TableCell>{wh.branch.name}</TableCell>
-                                                            <TableCell className="hidden sm:table-cell">{wh._count.stockLots}</TableCell>
-                                                            <TableCell>
-                                                                <Badge variant={wh.isActive ? "default" : "secondary"}>
-                                                                    {wh.isActive ? "Active" : "Inactive"}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell className="text-right">
+                                                            </div>
+
+                                                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                                                <div>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Branch</p>
+                                                                    <p className="mt-1 text-slate-900">{wh.branch.name}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Stock lots</p>
+                                                                    <p className="mt-1 font-medium text-slate-900">{wh._count.stockLots}</p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="mt-4 grid gap-2">
                                                                 {!wh.isDefault && (
-                                                                    <Button variant="ghost" size="icon" title="Set as Default" onClick={() => setDefaultWarehouse(wh.id)}>
-                                                                        <Star className="h-4 w-4 text-slate-400" />
+                                                                    <Button variant="outline" className="min-h-[44px]" onClick={() => setDefaultWarehouse(wh.id)}>
+                                                                        <Star className="mr-2 h-4 w-4" />
+                                                                        Set as Default
                                                                     </Button>
                                                                 )}
-                                                                <Button variant="ghost" size="icon" onClick={() => openWarehouseDialog(wh)}>
-                                                                    <Pencil className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button variant="ghost" size="icon" onClick={() => deleteWarehouse(wh.id)}>
-                                                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    <Button variant="outline" className="min-h-[44px]" onClick={() => openWarehouseDialog(wh)}>
+                                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                                        Edit
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="min-h-[44px] border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                                        onClick={() => deleteWarehouse(wh.id)}
+                                                                    >
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        Delete
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     ))}
-                                                </TableBody>
-                                            </Table>
+                                                </div>
+
+                                                <div className="hidden sm:block">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Name</TableHead>
+                                                                <TableHead>Code</TableHead>
+                                                                <TableHead>Branch</TableHead>
+                                                                <TableHead className="hidden sm:table-cell">Stock Lots</TableHead>
+                                                                <TableHead>Status</TableHead>
+                                                                <TableHead className="text-right">Actions</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {filteredWarehouses.map((wh) => (
+                                                                <TableRow key={wh.id}>
+                                                                    <TableCell className="font-medium">
+                                                                        <div className="flex items-center gap-2">
+                                                                            {wh.name}
+                                                                            {wh.isDefault && (
+                                                                                <Badge variant="secondary" className="text-xs">
+                                                                                    <Star className="mr-1 h-3 w-3 fill-current" />
+                                                                                    Default
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell><Badge variant="outline">{wh.code}</Badge></TableCell>
+                                                                    <TableCell>{wh.branch.name}</TableCell>
+                                                                    <TableCell className="hidden sm:table-cell">{wh._count.stockLots}</TableCell>
+                                                                    <TableCell>
+                                                                        <Badge variant={wh.isActive ? "default" : "secondary"}>
+                                                                            {wh.isActive ? "Active" : "Inactive"}
+                                                                        </Badge>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        {!wh.isDefault && (
+                                                                            <Button variant="ghost" size="icon" title="Set as Default" onClick={() => setDefaultWarehouse(wh.id)}>
+                                                                                <Star className="h-4 w-4 text-slate-400" />
+                                                                            </Button>
+                                                                        )}
+                                                                        <Button variant="ghost" size="icon" onClick={() => openWarehouseDialog(wh)}>
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button variant="ghost" size="icon" onClick={() => deleteWarehouse(wh.id)}>
+                                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                                        </Button>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </>
                                         )}
                                     </CardContent>
                                 </Card>

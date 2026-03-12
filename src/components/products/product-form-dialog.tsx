@@ -328,9 +328,9 @@ export function ProductFormDialog({
                 if (!isOpen) resetForm();
             }}
         >
-            <DialogContent className="sm:max-w-lg md:max-w-2xl overflow-y-auto max-h-[90vh]">
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <DialogHeader>
+            <DialogContent className="sm:max-w-lg md:max-w-2xl">
+                <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                    <DialogHeader className="shrink-0 gap-1 pr-12">
                         <DialogTitle>
                             {productToEdit ? "Edit Product" : "Add New Product"}
                         </DialogTitle>
@@ -340,7 +340,8 @@ export function ProductFormDialog({
                                 : "Fill in the details to add a new product."}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div data-testid="product-form-body" className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+                        <div className="grid gap-3 py-2 sm:gap-4 sm:py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="prod-name">Name *</Label>
                             <Input
@@ -478,7 +479,7 @@ export function ProductFormDialog({
                                 </div>
                             </div>
                         )}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">
                             <input
                                 type="checkbox"
                                 id="prod-isService"
@@ -486,13 +487,13 @@ export function ProductFormDialog({
                                 onChange={(e) =>
                                     setFormData({ ...formData, isService: e.target.checked, ...(e.target.checked && { isImeiTracked: false, isBundle: false }) })
                                 }
-                                className="h-4 w-4 rounded border-gray-300"
+                                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
                             />
-                            <Label htmlFor="prod-isService">Service product (no inventory tracking)</Label>
+                            <Label htmlFor="prod-isService" className="leading-5">Service product (no inventory tracking)</Label>
                         </div>
 
                         {!formData.isService && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">
                                 <input
                                     type="checkbox"
                                     id="prod-isBundle"
@@ -500,21 +501,21 @@ export function ProductFormDialog({
                                     onChange={(e) =>
                                         setFormData({ ...formData, isBundle: e.target.checked })
                                     }
-                                    className="h-4 w-4 rounded border-gray-300"
+                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
                                 />
-                                <Package className="h-4 w-4 text-muted-foreground" />
-                                <Label htmlFor="prod-isBundle">Bundle / Kit (stock deducted from components)</Label>
+                                <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                <Label htmlFor="prod-isBundle" className="leading-5">Bundle / Kit (stock deducted from components)</Label>
                             </div>
                         )}
 
                         {formData.isBundle && !formData.isService && (
-                            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-                                <div className="flex items-center justify-between">
-                                    <Label className="text-sm font-semibold flex items-center gap-2">
+                            <div className="space-y-3 rounded-xl border border-slate-200 bg-muted/30 p-3 sm:p-4">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <Label className="flex items-center gap-2 text-sm font-semibold">
                                         <Package className="h-4 w-4" />
                                         Bundle Components
                                     </Label>
-                                    <Button type="button" variant="outline" size="sm" onClick={addBundleItem}>
+                                    <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={addBundleItem}>
                                         <Plus className="h-3 w-3 mr-1" /> Add Component
                                     </Button>
                                 </div>
@@ -527,8 +528,10 @@ export function ProductFormDialog({
                                     </p>
                                 )}
                                 {bundleItems.map((bi, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                        <div className="flex-1">
+                                    <div key={index} className="rounded-xl border border-slate-200 bg-white p-3">
+                                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_110px_auto] sm:items-start">
+                                            <div className="min-w-0">
+                                                <Label className="mb-2 block text-xs text-slate-500 sm:hidden">Component</Label>
                                             <Select
                                                 value={bi.componentProductId}
                                                 onValueChange={(value) => updateBundleItem(index, "componentProductId", value)}
@@ -544,23 +547,27 @@ export function ProductFormDialog({
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label className="text-xs text-slate-500 sm:hidden">Quantity</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="0.0001"
+                                                    step="0.01"
+                                                    placeholder="Qty"
+                                                    value={bi.quantity}
+                                                    onChange={(e) => updateBundleItem(index, "quantity", e.target.value)}
+                                                />
+                                                {bi.unitName && (
+                                                    <span className="text-xs text-muted-foreground">{bi.unitName}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex justify-end sm:pt-0">
+                                                <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => removeBundleItem(index)}>
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <div className="w-28">
-                                            <Input
-                                                type="number"
-                                                min="0.0001"
-                                                step="0.01"
-                                                placeholder="Qty"
-                                                value={bi.quantity}
-                                                onChange={(e) => updateBundleItem(index, "quantity", e.target.value)}
-                                            />
-                                        </div>
-                                        {bi.unitName && (
-                                            <span className="text-xs text-muted-foreground w-10">{bi.unitName}</span>
-                                        )}
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeBundleItem(index)}>
-                                            <Trash2 className="h-4 w-4 text-red-500" />
-                                        </Button>
                                     </div>
                                 ))}
                                 {formErrors.bundle && (
@@ -570,7 +577,7 @@ export function ProductFormDialog({
                         )}
 
                         {sessionUser?.isMobileShopModuleEnabled && !formData.isService && !formData.isBundle && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">
                                 <input
                                     type="checkbox"
                                     id="prod-isImeiTracked"
@@ -578,9 +585,9 @@ export function ProductFormDialog({
                                     onChange={(e) =>
                                         setFormData({ ...formData, isImeiTracked: e.target.checked })
                                     }
-                                    className="h-4 w-4 rounded border-gray-300"
+                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
                                 />
-                                <Label htmlFor="prod-isImeiTracked">Track by IMEI (individual device tracking)</Label>
+                                <Label htmlFor="prod-isImeiTracked" className="leading-5">Track by IMEI (individual device tracking)</Label>
                             </div>
                         )}
 
@@ -602,9 +609,9 @@ export function ProductFormDialog({
                                 </p>
                             </div>
                         )}
-
+                        </div>
                     </div>
-                    <DialogFooter className="mt-auto pt-4 border-t">
+                    <DialogFooter className="mt-2 shrink-0 sm:mt-4">
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
                             {isSubmitting
                                 ? (productToEdit ? "Updating..." : "Adding...")

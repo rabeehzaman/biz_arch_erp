@@ -510,8 +510,8 @@ export default function ChartOfAccountsPage() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
+              <form className="contents" onSubmit={handleSubmit}>
+                <DialogHeader className="pr-12">
                   <DialogTitle>
                     {editingAccount ? t("accounting.editAccount") : t("accounting.addAccount")}
                   </DialogTitle>
@@ -521,7 +521,7 @@ export default function ChartOfAccountsPage() {
                       : t("accounting.createNewAccount")}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-2 sm:py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
                       <Label>{t("accounting.accountCode")} *</Label>

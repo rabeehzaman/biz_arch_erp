@@ -15,7 +15,7 @@ interface ProductTileProps {
     isBundle?: boolean;
     category: { color: string | null } | null;
   };
-  onAdd: () => void;
+  onAdd: (product: ProductTileProps["product"]) => void;
 }
 
 export function ProductTile({ product, onAdd }: ProductTileProps) {
@@ -24,32 +24,31 @@ export function ProductTile({ product, onAdd }: ProductTileProps) {
 
   return (
     <button
-      onClick={onAdd}
+      onClick={() => onAdd(product)}
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border bg-white p-3 text-center transition-all min-h-[100px] sm:min-h-[120px]",
-        outOfStock
-          ? "opacity-60 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-          : "hover:shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+        "flex min-h-[100px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-3 text-center transition-colors sm:min-h-[120px]",
+        outOfStock ? "cursor-pointer opacity-60" : "cursor-pointer",
+        "hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100"
       )}
     >
       <div
         className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg relative"
-        style={{ backgroundColor: (product.category?.color || "#6366f1") + "20" }}
+        style={{ backgroundColor: (product.category?.color || "#0f172a") + "20" }}
       >
         {product.isBundle ? (
           <Layers
             className="h-5 w-5"
-            style={{ color: product.category?.color || "#6366f1" }}
+            style={{ color: product.category?.color || "#0f172a" }}
           />
         ) : (
           <Package
             className="h-5 w-5"
-            style={{ color: product.category?.color || "#6366f1" }}
+            style={{ color: product.category?.color || "#0f172a" }}
           />
         )}
       </div>
       {product.isBundle && (
-        <span className="text-[10px] font-semibold text-white bg-indigo-500 rounded px-1.5 py-0.5 mb-0.5">
+        <span className="mb-0.5 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-white">
           Bundle
         </span>
       )}

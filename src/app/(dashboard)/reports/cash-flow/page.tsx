@@ -105,7 +105,7 @@ export default function CashFlowPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="grid gap-2">
                   <Label>From</Label>
                   <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -153,34 +153,68 @@ export default function CashFlowPage() {
                   <CardTitle>By Category</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Inflow</TableHead>
-                        <TableHead className="text-right">Outflow</TableHead>
-                        <TableHead className="text-right">Net</TableHead>
-                        <TableHead className="text-right">Count</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.summary.map((row) => (
-                        <TableRow key={row.type}>
-                          <TableCell>{typeLabels[row.type] || row.type}</TableCell>
-                          <TableCell className="text-right font-mono text-green-600">
-                            {row.inflow > 0 ? fmt(row.inflow) : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-red-600">
-                            {row.outflow > 0 ? fmt(row.outflow) : "-"}
-                          </TableCell>
-                          <TableCell className={`text-right font-mono ${row.net >= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {fmt(row.net)}
-                          </TableCell>
-                          <TableCell className="text-right">{row.count}</TableCell>
+                  <div className="space-y-3 sm:hidden">
+                    {data.summary.map((row) => (
+                      <div key={row.type} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="font-semibold text-slate-900">{typeLabels[row.type] || row.type}</p>
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Inflow</p>
+                            <p className="mt-1 font-mono font-medium text-green-600">
+                              {row.inflow > 0 ? fmt(row.inflow) : "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Outflow</p>
+                            <p className="mt-1 font-mono font-medium text-red-600">
+                              {row.outflow > 0 ? fmt(row.outflow) : "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Net</p>
+                            <p className={`mt-1 font-mono font-semibold ${row.net >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {fmt(row.net)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Count</p>
+                            <p className="mt-1 font-medium text-slate-900">{row.count}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Category</TableHead>
+                          <TableHead className="text-right">Inflow</TableHead>
+                          <TableHead className="text-right">Outflow</TableHead>
+                          <TableHead className="text-right">Net</TableHead>
+                          <TableHead className="text-right">Count</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {data.summary.map((row) => (
+                          <TableRow key={row.type}>
+                            <TableCell>{typeLabels[row.type] || row.type}</TableCell>
+                            <TableCell className="text-right font-mono text-green-600">
+                              {row.inflow > 0 ? fmt(row.inflow) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-red-600">
+                              {row.outflow > 0 ? fmt(row.outflow) : "-"}
+                            </TableCell>
+                            <TableCell className={`text-right font-mono ${row.net >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {fmt(row.net)}
+                            </TableCell>
+                            <TableCell className="text-right">{row.count}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -189,24 +223,44 @@ export default function CashFlowPage() {
                   <CardTitle>Account Balances</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Account</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.accounts.map((a) => (
-                        <TableRow key={a.name}>
-                          <TableCell>{a.name}</TableCell>
-                          <TableCell>{a.accountSubType === "BANK" ? "Bank" : "Cash"}</TableCell>
-                          <TableCell className="text-right font-mono font-bold">{fmt(a.balance)}</TableCell>
+                  <div className="space-y-3 sm:hidden">
+                    {data.accounts.map((a) => (
+                      <div key={a.name} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="font-semibold text-slate-900">{a.name}</p>
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Type</p>
+                            <p className="mt-1 text-slate-900">{a.accountSubType === "BANK" ? "Bank" : "Cash"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Balance</p>
+                            <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(a.balance)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Account</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {data.accounts.map((a) => (
+                          <TableRow key={a.name}>
+                            <TableCell>{a.name}</TableCell>
+                            <TableCell>{a.accountSubType === "BANK" ? "Bank" : "Cash"}</TableCell>
+                            <TableCell className="text-right font-mono font-bold">{fmt(a.balance)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -216,26 +270,47 @@ export default function CashFlowPage() {
                     <CardTitle className="text-sm">GL Reconciliation (Cash Accounts 1100/1200)</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="text-slate-500">GL Balance (Journal Entries)</TableCell>
-                          <TableCell className="text-right font-mono">{fmt(data.reconciliation.glCashBalance)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="text-slate-500">Sub-ledger Balance (Cash Book)</TableCell>
-                          <TableCell className="text-right font-mono">{fmt(data.reconciliation.subledgerBalance)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className={`font-medium ${data.reconciliation.isReconciled ? "text-green-600" : "text-orange-600"}`}>
-                            {data.reconciliation.isReconciled ? "✓ Reconciled" : "⚠ Difference"}
-                          </TableCell>
-                          <TableCell className={`text-right font-mono font-bold ${data.reconciliation.isReconciled ? "text-green-600" : "text-orange-600"}`}>
-                            {fmt(data.reconciliation.difference)}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                    <div className="space-y-3 sm:hidden">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="text-xs uppercase tracking-[0.16em] text-slate-500">GL Balance</p>
+                        <p className="mt-2 font-mono font-semibold text-slate-900">{fmt(data.reconciliation.glCashBalance)}</p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Sub-ledger Balance</p>
+                        <p className="mt-2 font-mono font-semibold text-slate-900">{fmt(data.reconciliation.subledgerBalance)}</p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className={`text-xs uppercase tracking-[0.16em] ${data.reconciliation.isReconciled ? "text-green-600" : "text-orange-600"}`}>
+                          {data.reconciliation.isReconciled ? "Status" : "Difference"}
+                        </p>
+                        <p className={`mt-2 font-mono text-lg font-bold ${data.reconciliation.isReconciled ? "text-green-600" : "text-orange-600"}`}>
+                          {data.reconciliation.isReconciled ? "Reconciled" : fmt(data.reconciliation.difference)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="hidden sm:block">
+                      <Table>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="text-slate-500">GL Balance (Journal Entries)</TableCell>
+                            <TableCell className="text-right font-mono">{fmt(data.reconciliation.glCashBalance)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-slate-500">Sub-ledger Balance (Cash Book)</TableCell>
+                            <TableCell className="text-right font-mono">{fmt(data.reconciliation.subledgerBalance)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className={`font-medium ${data.reconciliation.isReconciled ? "text-green-600" : "text-orange-600"}`}>
+                              {data.reconciliation.isReconciled ? "✓ Reconciled" : "⚠ Difference"}
+                            </TableCell>
+                            <TableCell className={`text-right font-mono font-bold ${data.reconciliation.isReconciled ? "text-green-600" : "text-orange-600"}`}>
+                              {fmt(data.reconciliation.difference)}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
                     {!data.reconciliation.isReconciled && (
                       <p className="text-xs text-orange-600 mt-2">
                         Discrepancy detected. This may be caused by manual journal entries that posted directly to cash accounts (1100/1200) without a corresponding cash book transaction.

@@ -184,10 +184,10 @@ function NavItemComponent({ item, pathname, onNavigate }: {
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-medium transition-all duration-200",
+        "flex items-center gap-3 rounded-xl border px-3.5 py-3 text-sm font-medium transition-colors",
         isActive
-          ? "border-cyan-200/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),rgba(56,189,248,0.16))] text-white shadow-[0_22px_38px_-26px_rgba(45,212,191,0.75)]"
-          : "border-transparent text-slate-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
+          ? "border-slate-700 bg-slate-800 text-white"
+          : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
       )}
     >
       <item.icon className="h-5 w-5" />
@@ -214,7 +214,7 @@ function CollapsibleSection({ title, icon: Icon, items, pathname, onNavigate, de
     <div>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
+        className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3.5 py-3 text-sm font-medium text-slate-300 transition-colors hover:border-slate-800 hover:bg-slate-900 hover:text-white"
       >
         <Icon className="h-5 w-5" />
         <span className={`flex-1 ${isRTL ? "text-right" : "text-left"}`}>{t(title)}</span>
@@ -263,24 +263,24 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       {/* Logo */}
-      <div className="mx-3 mt-3 flex h-[4.5rem] items-center gap-3 rounded-[1.6rem] border border-white/10 bg-white/[0.07] px-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.95)] backdrop-blur-xl">
-        <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white p-1.5 shadow-sm">
+      <div className="mx-3 mt-3 flex h-[4.5rem] shrink-0 items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 px-4">
+        <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-white p-1.5">
           <Image src="/bizarch-mark.svg" alt="BizArch Logo" fill sizes="36px" className="object-contain" priority />
         </div>
         <div className="min-w-0">
-          <span className="block truncate bg-gradient-to-r from-white via-sky-100 to-emerald-200 bg-clip-text text-lg font-bold text-transparent">
+          <span className="block truncate text-lg font-bold text-white">
             BizArch ERP
           </span>
-          <span className="block text-[11px] uppercase tracking-[0.22em] text-sky-100/75">
+          <span className="block text-[11px] uppercase tracking-[0.18em] text-slate-400">
             Workspace
           </span>
         </div>
       </div>
 
-      <Separator className="mt-4 bg-white/10" />
+      <Separator className="mt-4 shrink-0 bg-white/10" />
 
       {/* Main Navigation */}
-      <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
+      <nav className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-4 overscroll-contain">
         {isSuperadmin ? (
           superadminNavigation.map((item) => (
             <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} />
@@ -355,7 +355,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="px-3 py-4">
+      <div className="shrink-0 px-3 py-4">
         <Separator className="mb-4 bg-white/10" />
         {!isSuperadmin && visibleBottom.map((item) => {
           const isActive = pathname === item.href;
@@ -365,10 +365,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 rounded-xl border px-3.5 py-3 text-sm font-medium transition-colors",
                 isActive
-                  ? "border-cyan-200/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),rgba(56,189,248,0.16))] text-white shadow-[0_22px_38px_-26px_rgba(45,212,191,0.75)]"
-                  : "border-transparent text-slate-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
+                  ? "border-slate-700 bg-slate-800 text-white"
+                  : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -379,7 +379,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <AboutDialog />
         <Button
           variant="ghost"
-          className="mt-1 h-11 w-full justify-start gap-3 rounded-2xl border border-transparent px-3.5 text-slate-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
+          className="mt-1 h-11 w-full justify-start gap-3 rounded-xl border border-transparent px-3.5 text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           <LogOut className="h-5 w-5" />
@@ -420,7 +420,7 @@ function AboutDialog() {
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          className="h-11 w-full justify-start gap-3 rounded-2xl border border-transparent px-3.5 text-slate-300 hover:border-white/10 hover:bg-white/[0.08] hover:text-white"
+          className="h-11 w-full justify-start gap-3 rounded-xl border border-transparent px-3.5 text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
         >
           <Info className="h-5 w-5" />
           About
@@ -480,37 +480,13 @@ function AboutDialog() {
   );
 }
 
-function SidebarBackdrop() {
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,#020617_0%,#05222a_38%,#031822_64%,#020617_100%)]" />
-      <div className="absolute inset-0 opacity-[0.2] [background-image:linear-gradient(rgba(148,163,184,0.24)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:30px_30px]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(73,189,208,0.28),transparent_30%),radial-gradient(circle_at_88%_16%,rgba(86,137,220,0.2),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(125,206,124,0.16),transparent_34%)]" />
-      <div className="absolute -left-12 -top-12 h-48 w-48 rounded-full bg-cyan-300/22 blur-3xl" />
-      <div className="absolute bottom-[8%] right-[-4.5rem] h-56 w-56 rounded-full bg-emerald-300/18 blur-3xl" />
-      <div
-        className="absolute inset-x-4 top-20 h-40 rounded-[2rem] border border-white/10 bg-white/[0.035] shadow-[0_30px_70px_-40px_rgba(15,23,42,0.9)] backdrop-blur-sm"
-        style={{ transform: "rotate(-8deg)" }}
-      />
-      <div
-        className="absolute inset-x-8 top-28 h-32 rounded-[1.75rem] border border-white/8 bg-gradient-to-br from-white/[0.12] via-white/[0.02] to-transparent"
-        style={{ transform: "rotate(-2deg)" }}
-      />
-      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/[0.07] to-transparent" />
-      <div className="absolute left-0 top-24 h-56 w-px bg-gradient-to-b from-transparent via-cyan-200/60 to-transparent" />
-      <div className="absolute right-0 bottom-20 h-56 w-px bg-gradient-to-b from-transparent via-green-200/45 to-transparent" />
-    </div>
-  );
-}
-
 export function Sidebar() {
   const { isRTL } = useLanguage();
   return (
     <div
-      className={`relative hidden h-screen min-h-screen w-72 shrink-0 self-stretch overflow-hidden border-white/10 bg-[#020817] text-white ${isRTL ? "border-l" : "border-r"} md:sticky md:top-0 md:flex`}
+      className={`hidden h-screen min-h-0 w-72 shrink-0 self-stretch overflow-hidden border-slate-800 bg-slate-950 text-white ${isRTL ? "border-l" : "border-r"} md:sticky md:top-0 md:flex`}
     >
-      <SidebarBackdrop />
-      <div className="relative z-10 flex h-full flex-col">
+      <div className="flex h-full min-h-0 flex-col">
         <SidebarContent />
       </div>
     </div>
@@ -531,14 +507,13 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent
         side={isRTL ? "right" : "left"}
-        className="flex h-full w-[min(22rem,88vw)] flex-col overflow-hidden border-white/10 bg-[#020817] p-0 text-white"
+        className="flex h-full min-h-0 w-[min(22rem,88vw)] flex-col overflow-hidden border-slate-800 bg-slate-950 p-0 text-white"
       >
         <SheetTitle className="sr-only">Navigation menu</SheetTitle>
         <SheetDescription className="sr-only">
           Browse the BizArch ERP sections and open a page.
         </SheetDescription>
-        <SidebarBackdrop />
-        <div className="relative z-10 flex h-full flex-col">
+        <div className="flex h-full min-h-0 flex-col">
           <SidebarContent onNavigate={() => setOpen(false)} />
         </div>
       </SheetContent>

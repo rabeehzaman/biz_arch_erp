@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -10,6 +11,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  const cookieStore = await cookies();
 
   if (!session) {
     redirect("/login");
@@ -47,8 +49,12 @@ export default async function DashboardLayout({
     console.error("Failed to pre-fetch disabled sidebar items:", error);
   }
 
-  // Extract language from session to prevent en→ar flash
-  const initialLang = (session.user as { language?: string })?.language || "en";
+  // Prefer the browser-stored language so Arabic loads immediately on refresh.
+  const cookieLanguage = cookieStore.get("preferred-language")?.value;
+  const initialLang =
+    cookieLanguage === "ar" || cookieLanguage === "en"
+      ? cookieLanguage
+      : (session.user as { language?: string })?.language || "en";
 
   return (
     <ClientDashboardLayout

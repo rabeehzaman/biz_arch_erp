@@ -279,14 +279,14 @@ export default function SupplierPaymentsPage() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
+              <form className="contents" onSubmit={handleSubmit}>
+                <DialogHeader className="pr-12">
                   <DialogTitle>Record Supplier Payment</DialogTitle>
                   <DialogDescription>
                     Record a payment to a supplier.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-2 sm:py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="supplier">Supplier *</Label>
                     <Combobox
@@ -489,62 +489,120 @@ export default function SupplierPaymentsPage() {
                   {searchQuery
                     ? t("common.noResultsFound")
                     : t("payments.recordFirstSupplierPayment")}
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Payment #</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead className="hidden sm:table-cell">Purchase Invoice</TableHead>
-                    <TableHead className="hidden sm:table-cell">Date</TableHead>
-                    <TableHead className="hidden sm:table-cell">Method</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="w-[80px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                  </p>
+                </div>
+              ) : (
+              <>
+                <div className="space-y-3 sm:hidden">
                   {filteredPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">
-                        {payment.paymentNumber}
-                      </TableCell>
-                      <TableCell>{payment.supplier.name}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {payment.purchaseInvoice?.purchaseInvoiceNumber || "-"}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {format(new Date(payment.paymentDate), "dd MMM yyyy")}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge variant="outline">
-                          {methodLabels[payment.paymentMethod]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-orange-600">
-                        {symbol}{Number(payment.amount).toLocaleString("en-IN")}
-                      </TableCell>
-                      <TableCell className="text-right text-slate-500">
-                        {Number(payment.discountGiven) > 0
-                          ? `${symbol}${Number(payment.discountGiven).toLocaleString("en-IN")}`
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
+                    <div key={payment.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Payment #</p>
+                          <p className="mt-1 font-semibold text-slate-900">{payment.paymentNumber}</p>
+                        </div>
+                        <p className="text-sm font-semibold text-orange-600">
+                          {symbol}{Number(payment.amount).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 min-w-0">
+                        <p className="font-medium text-slate-900">{payment.supplier.name}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Badge variant="outline">{methodLabels[payment.paymentMethod]}</Badge>
+                          {payment.purchaseInvoice?.purchaseInvoiceNumber && (
+                            <Badge variant="secondary">{payment.purchaseInvoice.purchaseInvoiceNumber}</Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Date</p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {format(new Date(payment.paymentDate), "dd MMM yyyy")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Discount</p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {Number(payment.discountGiven) > 0
+                              ? `${symbol}${Number(payment.discountGiven).toLocaleString("en-IN")}`
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
                         <Button
                           variant="ghost"
-                          size="icon"
+                          className="min-h-[44px] w-full text-red-600 hover:text-red-700 hover:bg-red-50"
                           onClick={() => setDeletePayment(payment)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
+                          {t("common.delete")}
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Payment #</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead className="hidden sm:table-cell">Purchase Invoice</TableHead>
+                        <TableHead className="hidden sm:table-cell">Date</TableHead>
+                        <TableHead className="hidden sm:table-cell">Method</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Discount</TableHead>
+                        <TableHead className="w-[80px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPayments.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell className="font-medium">
+                            {payment.paymentNumber}
+                          </TableCell>
+                          <TableCell>{payment.supplier.name}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {payment.purchaseInvoice?.purchaseInvoiceNumber || "-"}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {format(new Date(payment.paymentDate), "dd MMM yyyy")}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <Badge variant="outline">
+                              {methodLabels[payment.paymentMethod]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-orange-600">
+                            {symbol}{Number(payment.amount).toLocaleString("en-IN")}
+                          </TableCell>
+                          <TableCell className="text-right text-slate-500">
+                            {Number(payment.discountGiven) > 0
+                              ? `${symbol}${Number(payment.discountGiven).toLocaleString("en-IN")}`
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeletePayment(payment)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

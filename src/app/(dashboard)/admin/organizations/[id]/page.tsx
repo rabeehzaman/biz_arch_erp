@@ -413,8 +413,14 @@ export default function OrganizationDetailsPage() {
 
     if (loading) {
         return (
-            <div className="flex h-[50vh] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex min-h-[50vh] items-center justify-center px-4">
+                <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-6 text-center shadow-sm">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-slate-900">Loading organization details...</p>
+                        <p className="text-xs text-muted-foreground">Fetching settings, users, and controls for this workspace.</p>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -437,23 +443,23 @@ export default function OrganizationDetailsPage() {
 
     return (
         <PageAnimation>
-            <div className="space-y-6">
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="space-y-5 sm:space-y-6">
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                     <div className="flex items-start gap-3 sm:items-center sm:gap-4">
-                        <Button variant="ghost" size="icon" asChild className="shrink-0">
+                        <Button variant="ghost" size="icon" asChild className="h-9 w-9 shrink-0 rounded-full">
                             <Link href="/admin/organizations">
                                 <ArrowLeft className="h-5 w-5" />
                                 <span className="sr-only">Back</span>
                             </Link>
                         </Button>
-                        <div>
+                        <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                                <h1 className="text-2xl font-bold tracking-tight">{organization.name}</h1>
-                                <Badge variant="secondary">{organization.slug}</Badge>
+                                <h1 className="break-words text-2xl font-bold tracking-tight">{organization.name}</h1>
+                                <Badge variant="secondary" className="max-w-full break-all">{organization.slug}</Badge>
                                 {organization.gstEnabled && <Badge variant="default">GST Enabled</Badge>}
                                 {organization.saudiEInvoiceEnabled && <Badge variant="default">ZATCA</Badge>}
                             </div>
-                            <p className="text-muted-foreground">Manage settings and configuration for this organization</p>
+                            <p className="break-words text-muted-foreground">Manage settings and configuration for this organization</p>
                         </div>
                     </div>
                     <Button onClick={handleSaveSettings} disabled={saving} className="w-full sm:w-auto">
@@ -465,9 +471,9 @@ export default function OrganizationDetailsPage() {
                     </Button>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid min-w-0 gap-6 md:grid-cols-2">
                     {/* Organization Details */}
-                    <Card>
+                    <Card className="min-w-0">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Building2 className="h-5 w-5" />
@@ -501,7 +507,7 @@ export default function OrganizationDetailsPage() {
                     </Card>
 
                     {/* Sidebar Features */}
-                    <Card>
+                    <Card className="min-w-0">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Shield className="h-5 w-5" />
@@ -511,13 +517,13 @@ export default function OrganizationDetailsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+                                <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
                                     <div className="p-2 bg-primary/10 rounded-full text-primary">
                                         <Settings className="h-5 w-5" />
                                     </div>
-                                    <div>
-                                        <h4 className="font-semibold text-sm">Menu Configuration</h4>
-                                        <p className="text-sm text-muted-foreground">Control which sidebar items are visible</p>
+                                    <div className="min-w-0">
+                                        <h4 className="text-sm font-semibold">Menu Configuration</h4>
+                                        <p className="break-words text-sm text-muted-foreground">Control which sidebar items are visible</p>
                                     </div>
                                 </div>
                                 <Button variant="outline" onClick={() => setSidebarConfigOpen(true)} className="w-full sm:w-auto">Configure</Button>
@@ -526,7 +532,7 @@ export default function OrganizationDetailsPage() {
                     </Card>
 
                     {/* Organization Settings */}
-                    <Card className="md:col-span-2">
+                    <Card className="min-w-0 md:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Receipt className="h-5 w-5" />
@@ -535,9 +541,9 @@ export default function OrganizationDetailsPage() {
                             <CardDescription>Configure features and tax settings for this organization</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Tabs defaultValue="general" className="w-full">
-                                <div className="mb-6 overflow-x-auto border-b">
-                                    <TabsList className="h-auto min-w-full justify-start gap-1 rounded-xl border-b-0 bg-transparent p-1 sm:min-w-0 sm:w-fit">
+                            <Tabs defaultValue="general" className="min-w-0 w-full">
+                                <div className="mb-6 max-w-full overflow-x-auto border-b">
+                                    <TabsList className="h-auto min-w-max w-max justify-start gap-1 rounded-xl border-b-0 bg-transparent p-1 sm:w-fit">
                                         <TabsTrigger
                                             value="general"
                                             className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
@@ -1070,7 +1076,7 @@ export default function OrganizationDetailsPage() {
                     </Card>
 
                     {/* Maintenance Utilities */}
-                    <Card className="md:col-span-2">
+                    <Card className="min-w-0 md:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Wrench className="h-5 w-5" />
@@ -1089,14 +1095,14 @@ export default function OrganizationDetailsPage() {
                                     {recalcError}
                                 </div>
                             )}
-                            <div className="flex items-center justify-between flex-wrap gap-4 pt-2">
-                                <div className="max-w-[70%]">
+                            <div className="flex flex-col gap-4 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="sm:max-w-[70%]">
                                     <h4 className="font-semibold text-sm text-foreground">Recalculate FIFO Inventory</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
                                         Rebuilds the entire Cost of Goods Sold (COGS) logic for all products chronologically. This fixes accounting irregularities caused by deep backdated changes, but may take some time depending on data volume.
                                     </p>
                                 </div>
-                                <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50" onClick={() => setRecalcOpen(true)}>
+                                <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 sm:w-auto" onClick={() => setRecalcOpen(true)}>
                                     Recalculate FIFO
                                 </Button>
                             </div>
@@ -1104,7 +1110,7 @@ export default function OrganizationDetailsPage() {
                     </Card>
 
                     {/* Users */}
-                    <Card className="md:col-span-2">
+                    <Card className="min-w-0 md:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Users className="h-5 w-5" />
@@ -1119,41 +1125,73 @@ export default function OrganizationDetailsPage() {
                                 </div>
                             )}
                             {organization.users && organization.users.length > 0 ? (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Email</TableHead>
-                                            <TableHead>Role</TableHead>
-                                            <TableHead>Created</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
+                                <>
+                                    <div className="space-y-3 sm:hidden">
                                         {organization.users.map((user) => (
-                                            <TableRow key={user.id}>
-                                                <TableCell className="font-medium">{user.name || "—"}</TableCell>
-                                                <TableCell>{user.email}</TableCell>
-                                                <TableCell>
+                                            <div key={user.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                                    <div className="min-w-0 space-y-1">
+                                                        <p className="font-medium text-slate-900">{user.name || "Unnamed user"}</p>
+                                                        <p className="break-all text-sm text-muted-foreground">{user.email}</p>
+                                                    </div>
                                                     <Badge variant={user.role === "admin" ? "default" : "secondary"}>
                                                         {user.role}
                                                     </Badge>
-                                                </TableCell>
-                                                <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                                                <TableCell className="text-right">
+                                                </div>
+                                                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                                                    <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
+                                                        className="h-8 px-3"
                                                         onClick={() => openResetPwDialog(user)}
                                                     >
-                                                        <KeyRound className="h-3.5 w-3.5 mr-1.5" />
-                                                        Reset Password
+                                                        <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                                                        Reset
                                                     </Button>
-                                                </TableCell>
-                                            </TableRow>
+                                                </div>
+                                            </div>
                                         ))}
-                                    </TableBody>
-                                </Table>
+                                    </div>
+
+                                    <div className="hidden sm:block">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Name</TableHead>
+                                                    <TableHead>Email</TableHead>
+                                                    <TableHead>Role</TableHead>
+                                                    <TableHead>Created</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {organization.users.map((user) => (
+                                                    <TableRow key={user.id}>
+                                                        <TableCell className="font-medium">{user.name || "—"}</TableCell>
+                                                        <TableCell>{user.email}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                                                                {user.role}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => openResetPwDialog(user)}
+                                                            >
+                                                                <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                                                                Reset Password
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </>
                             ) : (
                                 <p className="text-sm text-muted-foreground">No users found for this organization.</p>
                             )}
@@ -1161,7 +1199,7 @@ export default function OrganizationDetailsPage() {
                     </Card>
 
                     {/* Danger Zone */}
-                    <Card className="border-red-200 md:col-span-2">
+                    <Card className="min-w-0 border-red-200 md:col-span-2">
                         <CardHeader>
                             <CardTitle className="text-red-600 flex items-center gap-2">
                                 <Trash2 className="h-5 w-5" />
@@ -1175,38 +1213,38 @@ export default function OrganizationDetailsPage() {
                                     {resetSuccess}
                                 </div>
                             )}
-                            <div className="flex items-center justify-between flex-wrap gap-4 pt-2">
-                                <div className="max-w-[70%]">
+                            <div className="flex flex-col gap-4 rounded-lg border border-red-100 p-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="sm:max-w-[70%]">
                                     <h4 className="font-semibold text-sm text-foreground">Reset Transactions Only</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
                                         Permanently remove all transactions (invoices, bills, payments, journals) but keep master data such as products, customers, suppliers, chart of accounts, and settings.
                                     </p>
                                 </div>
-                                <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => setResetTxOpen(true)}>
+                                <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 sm:w-auto" onClick={() => setResetTxOpen(true)}>
                                     Reset Transactions
                                 </Button>
                             </div>
 
-                            <div className="flex items-center justify-between flex-wrap gap-4 pt-4 border-t border-border/50">
-                                <div className="max-w-[70%]">
+                            <div className="flex flex-col gap-4 rounded-lg border border-red-100 p-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="sm:max-w-[70%]">
                                     <h4 className="font-semibold text-sm text-foreground">Complete Reset</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
                                         Permanently remove all data (transactions AND master data) associated with this organization. Administrative users will be kept, but the organization will be essentially new.
                                     </p>
                                 </div>
-                                <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => setResetFullOpen(true)}>
+                                <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 sm:w-auto" onClick={() => setResetFullOpen(true)}>
                                     Complete Reset
                                 </Button>
                             </div>
 
-                            <div className="flex items-center justify-between flex-wrap gap-4 pt-4 border-t border-border/50">
-                                <div className="max-w-[70%]">
+                            <div className="flex flex-col gap-4 rounded-lg border border-red-100 p-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="sm:max-w-[70%]">
                                     <h4 className="font-semibold text-sm text-foreground">Delete Organization</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
                                         Permanently remove this organization and all its data. Only possible if the organization has no existing customers or invoices.
                                     </p>
                                 </div>
-                                <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                                <Button variant="destructive" className="w-full sm:w-auto" onClick={() => setDeleteOpen(true)}>
                                     Yes, Delete Organization
                                 </Button>
                             </div>

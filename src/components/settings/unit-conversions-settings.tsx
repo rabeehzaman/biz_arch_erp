@@ -199,8 +199,8 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <form onSubmit={handleSubmit}>
-                            <DialogHeader>
+                        <form className="contents" onSubmit={handleSubmit}>
+                            <DialogHeader className="pr-12">
                                 <DialogTitle>
                                     {editingConversion ? "Edit Conversion Rule" : "Add New Conversion Rule"}
                                 </DialogTitle>
@@ -210,7 +210,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                                         : "Create a new rule connecting two different units."}
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="grid gap-4 py-4">
+                            <div className="grid gap-4 py-2 sm:py-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="fromUnit">Alternate Unit (From) *</Label>
                                     <Select

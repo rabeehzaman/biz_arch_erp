@@ -73,7 +73,7 @@ export default function TrialBalancePage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="grid gap-2">
                   <Label>As of Date</Label>
                   <Input
@@ -103,47 +103,92 @@ export default function TrialBalancePage() {
                   ) : (
                     <Badge className="mb-4 bg-red-100 text-red-700">Unbalanced</Badge>
                   )}
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Account</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Debit</TableHead>
-                        <TableHead className="text-right">Credit</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.accounts.map((row) => (
-                        <TableRow key={row.account.code}>
-                          <TableCell className="font-mono">
-                            {row.account.code}
-                          </TableCell>
-                          <TableCell>{row.account.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{row.account.accountType}</Badge>
+                  <div className="space-y-3 sm:hidden">
+                    {data.accounts.map((row) => (
+                      <div key={row.account.code} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
+                            <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
+                          </div>
+                          <Badge variant="outline">{row.account.accountType}</Badge>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Debit</p>
+                            <p className="mt-1 font-mono font-medium text-slate-900">
+                              {row.debit > 0 ? fmt(row.debit) : "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Credit</p>
+                            <p className="mt-1 font-mono font-medium text-slate-900">
+                              {row.credit > 0 ? fmt(row.credit) : "-"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-100 p-4">
+                      <p className="font-semibold text-slate-900">Totals</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Debit</p>
+                          <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(data.totalDebit)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Credit</p>
+                          <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(data.totalCredit)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Account</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Debit</TableHead>
+                          <TableHead className="text-right">Credit</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.accounts.map((row) => (
+                          <TableRow key={row.account.code}>
+                            <TableCell className="font-mono">
+                              {row.account.code}
+                            </TableCell>
+                            <TableCell>{row.account.name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{row.account.accountType}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {row.debit > 0 ? fmt(row.debit) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {row.credit > 0 ? fmt(row.credit) : "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="font-bold border-t-2">
+                          <TableCell colSpan={3} className="text-right">
+                            Totals
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {row.debit > 0 ? fmt(row.debit) : "-"}
+                            {fmt(data.totalDebit)}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {row.credit > 0 ? fmt(row.credit) : "-"}
+                            {fmt(data.totalCredit)}
                           </TableCell>
                         </TableRow>
-                      ))}
-                      <TableRow className="font-bold border-t-2">
-                        <TableCell colSpan={3} className="text-right">
-                          Totals
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {fmt(data.totalDebit)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {fmt(data.totalCredit)}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </>
               )}
             </CardContent>

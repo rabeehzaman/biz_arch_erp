@@ -273,11 +273,11 @@ function ProductsPageContent() {
 
         {/* Tab Bar */}
         <div className="border-b border-slate-200">
-          <nav className="-mb-px flex gap-1">
+          <nav className="-mb-px flex gap-1 overflow-x-auto pb-1">
             <button
               onClick={() => switchTab("products")}
               className={cn(
-                "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                "shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 transition-colors",
                 activeTab === "products"
                   ? "border-primary text-primary"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
@@ -288,7 +288,7 @@ function ProductsPageContent() {
             <button
               onClick={() => switchTab("inventory")}
               className={cn(
-                "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                "shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 transition-colors",
                 activeTab === "inventory"
                   ? "border-primary text-primary"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
@@ -363,66 +363,142 @@ function ProductsPageContent() {
                         </p>
                       </div>
                     ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>{t("common.name")}</TableHead>
-                            <TableHead className="hidden sm:table-cell">{t("products.sku")}</TableHead>
-                            <TableHead>{t("common.price")}</TableHead>
-                            <TableHead className="hidden md:table-cell">{t("common.cost")}</TableHead>
-                            <TableHead className="hidden sm:table-cell">{t("common.unit")}</TableHead>
-                            <TableHead>{t("common.status")}</TableHead>
-                            <TableHead className="text-right">{t("common.actions")}</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                      <>
+                        <div className="space-y-3 sm:hidden">
                           {filteredProducts.map((product) => (
-                            <TableRow key={product.id}>
-                              <TableCell>
-                                <div>
-                                  <div className="font-medium">{product.name}</div>
+                            <div
+                              key={product.id}
+                              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 space-y-1">
+                                  <p className="font-semibold text-slate-900">{product.name}</p>
                                   {product.description && (
-                                    <div className="text-sm text-slate-500 truncate max-w-xs">
+                                    <p className="line-clamp-2 text-sm text-slate-500">
                                       {product.description}
-                                    </div>
+                                    </p>
                                   )}
+                                  <p className="text-xs text-slate-500">
+                                    {t("products.sku")}: {product.sku || "-"}
+                                  </p>
                                 </div>
-                              </TableCell>
-                              <TableCell className="hidden sm:table-cell">
-                                {product.sku || "-"}
-                              </TableCell>
-                              <TableCell>{formatAmount(Number(product.price))}</TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {formatAmount(Number(product.cost))}
-                              </TableCell>
-                              <TableCell className="hidden sm:table-cell">
-                                {product.unit?.name || "-"}
-                              </TableCell>
-                              <TableCell>
                                 <Badge variant={product.isActive ? "default" : "secondary"}>
                                   {product.isActive ? t("common.active") : t("common.inactive")}
                                 </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
+                              </div>
+
+                              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                    {t("common.price")}
+                                  </p>
+                                  <p className="mt-1 font-medium text-slate-900">
+                                    {formatAmount(Number(product.price))}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                    {t("common.cost")}
+                                  </p>
+                                  <p className="mt-1 font-medium text-slate-900">
+                                    {formatAmount(Number(product.cost))}
+                                  </p>
+                                </div>
+                                <div className="col-span-2">
+                                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                    {t("common.unit")}
+                                  </p>
+                                  <p className="mt-1 font-medium text-slate-900">
+                                    {product.unit?.name || "-"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 flex gap-2">
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
+                                  variant="outline"
+                                  className="min-h-[44px] flex-1"
                                   onClick={() => handleEdit(product)}
                                 >
                                   <Pencil className="h-4 w-4" />
+                                  {t("common.edit")}
                                 </Button>
                                 <Button
                                   variant="ghost"
-                                  size="icon"
+                                  className="min-h-[44px] flex-1 text-red-600 hover:text-red-700"
                                   onClick={() => handleDelete(product.id)}
                                 >
-                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                  <Trash2 className="h-4 w-4" />
+                                  {t("common.delete")}
                                 </Button>
-                              </TableCell>
-                            </TableRow>
+                              </div>
+                            </div>
                           ))}
-                        </TableBody>
-                      </Table>
+                        </div>
+
+                        <div className="hidden sm:block">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>{t("common.name")}</TableHead>
+                                <TableHead className="hidden sm:table-cell">{t("products.sku")}</TableHead>
+                                <TableHead>{t("common.price")}</TableHead>
+                                <TableHead className="hidden md:table-cell">{t("common.cost")}</TableHead>
+                                <TableHead className="hidden sm:table-cell">{t("common.unit")}</TableHead>
+                                <TableHead>{t("common.status")}</TableHead>
+                                <TableHead className="text-right">{t("common.actions")}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredProducts.map((product) => (
+                                <TableRow key={product.id}>
+                                  <TableCell>
+                                    <div>
+                                      <div className="font-medium">{product.name}</div>
+                                      {product.description && (
+                                        <div className="text-sm text-slate-500 truncate max-w-xs">
+                                          {product.description}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden sm:table-cell">
+                                    {product.sku || "-"}
+                                  </TableCell>
+                                  <TableCell>{formatAmount(Number(product.price))}</TableCell>
+                                  <TableCell className="hidden md:table-cell">
+                                    {formatAmount(Number(product.cost))}
+                                  </TableCell>
+                                  <TableCell className="hidden sm:table-cell">
+                                    {product.unit?.name || "-"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={product.isActive ? "default" : "secondary"}>
+                                      {product.isActive ? t("common.active") : t("common.inactive")}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleEdit(product)}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDelete(product.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-red-500" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -512,18 +588,8 @@ function ProductsPageContent() {
                         </p>
                       </div>
                     ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>{t("products.productName")}</TableHead>
-                            <TableHead>{t("products.sku")}</TableHead>
-                            <TableHead className="text-right">{t("inventory.currentStock")}</TableHead>
-                            <TableHead className="text-right">{t("products.avgCost")}</TableHead>
-                            <TableHead className="text-right">{t("reports.stockValue")}</TableHead>
-                            <TableHead>{t("common.status")}</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                      <>
+                        <div className="space-y-3 sm:hidden">
                           {filteredInventory.map((product) => {
                             const stockQty = getStockQuantity(product);
                             const stockValue = getStockValue(product);
@@ -532,29 +598,17 @@ function ProductsPageContent() {
                             const isOutOfStock = stockQty <= 0;
 
                             return (
-                              <TableRow key={product.id}>
-                                <TableCell className="font-medium">{product.name}</TableCell>
-                                <TableCell className="text-slate-500">{product.sku || "-"}</TableCell>
-                                <TableCell className="text-right">
-                                  <span
-                                    className={
-                                      isOutOfStock
-                                        ? "text-red-600 font-medium"
-                                        : isLowStock
-                                          ? "text-orange-600 font-medium"
-                                          : ""
-                                    }
-                                  >
-                                    {stockQty} {typeof product.unit === "object" ? (product.unit as any)?.code : product.unit}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {formatAmount(avgCost)}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {formatAmount(stockValue)}
-                                </TableCell>
-                                <TableCell>
+                              <div
+                                key={product.id}
+                                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0 space-y-1">
+                                    <p className="font-semibold text-slate-900">{product.name}</p>
+                                    <p className="text-xs text-slate-500">
+                                      {t("products.sku")}: {product.sku || "-"}
+                                    </p>
+                                  </div>
                                   {isOutOfStock ? (
                                     <Badge variant="destructive">
                                       <AlertTriangle className="mr-1 h-3 w-3" />
@@ -576,12 +630,120 @@ function ProductsPageContent() {
                                       {t("products.inStock")}
                                     </Badge>
                                   )}
-                                </TableCell>
-                              </TableRow>
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                  <div>
+                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                      {t("inventory.currentStock")}
+                                    </p>
+                                    <p
+                                      className={`mt-1 font-semibold ${
+                                        isOutOfStock
+                                          ? "text-red-600"
+                                          : isLowStock
+                                            ? "text-orange-600"
+                                            : "text-slate-900"
+                                      }`}
+                                    >
+                                      {stockQty} {typeof product.unit === "object" ? (product.unit as any)?.code : product.unit}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                      {t("products.avgCost")}
+                                    </p>
+                                    <p className="mt-1 font-medium text-slate-900">
+                                      {formatAmount(avgCost)}
+                                    </p>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                      {t("reports.stockValue")}
+                                    </p>
+                                    <p className="mt-1 font-medium text-slate-900">
+                                      {formatAmount(stockValue)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
                             );
                           })}
-                        </TableBody>
-                      </Table>
+                        </div>
+
+                        <div className="hidden sm:block">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>{t("products.productName")}</TableHead>
+                                <TableHead>{t("products.sku")}</TableHead>
+                                <TableHead className="text-right">{t("inventory.currentStock")}</TableHead>
+                                <TableHead className="text-right">{t("products.avgCost")}</TableHead>
+                                <TableHead className="text-right">{t("reports.stockValue")}</TableHead>
+                                <TableHead>{t("common.status")}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredInventory.map((product) => {
+                                const stockQty = getStockQuantity(product);
+                                const stockValue = getStockValue(product);
+                                const avgCost = getAverageCost(product);
+                                const isLowStock = stockQty > 0 && stockQty <= 5;
+                                const isOutOfStock = stockQty <= 0;
+
+                                return (
+                                  <TableRow key={product.id}>
+                                    <TableCell className="font-medium">{product.name}</TableCell>
+                                    <TableCell className="text-slate-500">{product.sku || "-"}</TableCell>
+                                    <TableCell className="text-right">
+                                      <span
+                                        className={
+                                          isOutOfStock
+                                            ? "text-red-600 font-medium"
+                                            : isLowStock
+                                              ? "text-orange-600 font-medium"
+                                              : ""
+                                        }
+                                      >
+                                        {stockQty} {typeof product.unit === "object" ? (product.unit as any)?.code : product.unit}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      {formatAmount(avgCost)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      {formatAmount(stockValue)}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isOutOfStock ? (
+                                        <Badge variant="destructive">
+                                          <AlertTriangle className="mr-1 h-3 w-3" />
+                                          {t("products.outOfStock")}
+                                        </Badge>
+                                      ) : isLowStock ? (
+                                        <Badge
+                                          variant="secondary"
+                                          className="bg-orange-100 text-orange-800"
+                                        >
+                                          <AlertTriangle className="mr-1 h-3 w-3" />
+                                          {t("products.lowStock")}
+                                        </Badge>
+                                      ) : (
+                                        <Badge
+                                          variant="default"
+                                          className="bg-green-100 text-green-800"
+                                        >
+                                          {t("products.inStock")}
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </>
                     )}
                   </CardContent>
                 </Card>

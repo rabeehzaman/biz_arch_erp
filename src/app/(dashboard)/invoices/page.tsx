@@ -148,87 +148,179 @@ export default function InvoicesPage() {
                   )}
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("sales.invoiceNumber")}</TableHead>
-                      <TableHead>{t("sales.customer")}</TableHead>
-                      <TableHead>{t("common.status")}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t("sales.issueDate")}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t("sales.dueDate")}</TableHead>
-                      <TableHead className="hidden sm:table-cell text-right">{t("common.total")}</TableHead>
-                      <TableHead className="text-right">{t("common.balance")}</TableHead>
-                      <TableHead className="text-right">{t("common.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInvoices.map((invoice) => (
-                      <TableRow
-                        key={invoice.id}
-                        onClick={() => router.push(`/invoices/${invoice.id}`)}
-                        className="cursor-pointer hover:bg-muted/50"
-                      >
-                        <TableCell className="font-medium">
-                          {invoice.invoiceNumber}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{invoice.customer.name}</div>
-                            {invoice.customer.email && (
-                              <div className="text-sm text-slate-500">
-                                {invoice.customer.email}
-                              </div>
-                            )}
+                <>
+                  <div className="space-y-3 sm:hidden">
+                    {filteredInvoices.map((invoice) => {
+                      const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
+
+                      return (
+                        <div
+                          key={invoice.id}
+                          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 space-y-1">
+                              <p className="text-sm font-semibold text-slate-900">
+                                {invoice.invoiceNumber}
+                              </p>
+                              <p className="truncate text-sm text-slate-700">
+                                {invoice.customer.name}
+                              </p>
+                              {invoice.customer.email && (
+                                <p className="truncate text-xs text-slate-500">
+                                  {invoice.customer.email}
+                                </p>
+                              )}
+                            </div>
+                            <Badge variant="outline" className={status.className}>
+                              {status.label}
+                            </Badge>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {(() => {
-                            const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
-                            return (
-                              <Badge variant="outline" className={status.className}>
-                                {status.label}
-                              </Badge>
-                            );
-                          })()}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {format(new Date(invoice.issueDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {format(new Date(invoice.dueDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-right">
-                          {fmt(Number(invoice.total))}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span
-                            className={
-                              Number(invoice.balanceDue) > 0
-                                ? "text-red-600 font-medium"
-                                : "text-green-600"
-                            }
-                          >
-                            {fmt(Number(invoice.balanceDue))}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                          <Link href={`/invoices/${invoice.id}`}>
-                            <Button variant="ghost" size="icon">
-                              <Eye className="h-4 w-4" />
+
+                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                {t("sales.issueDate")}
+                              </p>
+                              <p className="mt-1 font-medium text-slate-900">
+                                {format(new Date(invoice.issueDate), "dd MMM yyyy")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                {t("sales.dueDate")}
+                              </p>
+                              <p className="mt-1 font-medium text-slate-900">
+                                {format(new Date(invoice.dueDate), "dd MMM yyyy")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                {t("common.total")}
+                              </p>
+                              <p className="mt-1 font-medium text-slate-900">
+                                {fmt(Number(invoice.total))}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                {t("common.balance")}
+                              </p>
+                              <p
+                                className={`mt-1 font-semibold ${
+                                  Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"
+                                }`}
+                              >
+                                {fmt(Number(invoice.balanceDue))}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex gap-2">
+                            <Button asChild variant="outline" className="min-h-[44px] flex-1">
+                              <Link href={`/invoices/${invoice.id}`}>
+                                <Eye className="h-4 w-4" />
+                                {t("common.details")}
+                              </Link>
                             </Button>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(invoice.id)}
+                            <Button
+                              variant="ghost"
+                              className="min-h-[44px] flex-1 text-red-600 hover:text-red-700"
+                              onClick={() => handleDelete(invoice.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              {t("common.delete")}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t("sales.invoiceNumber")}</TableHead>
+                          <TableHead>{t("sales.customer")}</TableHead>
+                          <TableHead>{t("common.status")}</TableHead>
+                          <TableHead className="hidden sm:table-cell">{t("sales.issueDate")}</TableHead>
+                          <TableHead className="hidden sm:table-cell">{t("sales.dueDate")}</TableHead>
+                          <TableHead className="hidden sm:table-cell text-right">{t("common.total")}</TableHead>
+                          <TableHead className="text-right">{t("common.balance")}</TableHead>
+                          <TableHead className="text-right">{t("common.actions")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredInvoices.map((invoice) => (
+                          <TableRow
+                            key={invoice.id}
+                            onClick={() => router.push(`/invoices/${invoice.id}`)}
+                            className="cursor-pointer hover:bg-muted/50"
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                            <TableCell className="font-medium">
+                              {invoice.invoiceNumber}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{invoice.customer.name}</div>
+                                {invoice.customer.email && (
+                                  <div className="text-sm text-slate-500">
+                                    {invoice.customer.email}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {(() => {
+                                const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
+                                return (
+                                  <Badge variant="outline" className={status.className}>
+                                    {status.label}
+                                  </Badge>
+                                );
+                              })()}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {format(new Date(invoice.issueDate), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {format(new Date(invoice.dueDate), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-right">
+                              {fmt(Number(invoice.total))}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span
+                                className={
+                                  Number(invoice.balanceDue) > 0
+                                    ? "text-red-600 font-medium"
+                                    : "text-green-600"
+                                }
+                              >
+                                {fmt(Number(invoice.balanceDue))}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                              <Link href={`/invoices/${invoice.id}`}>
+                                <Button variant="ghost" size="icon">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(invoice.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

@@ -66,55 +66,32 @@ export default function LoginPage() {
     <PageAnimation>
       <div
         dir={lang === "ar" ? "rtl" : "ltr"}
-        className="relative min-h-[100svh] overflow-hidden bg-[#eef8fb] lg:h-[100svh]"
+        className="relative min-h-[100svh] overflow-hidden bg-slate-100 lg:h-[100svh]"
       >
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(135deg,#f8fcff_0%,#eefbff_36%,#eef8f3_100%)]"
+          className="absolute inset-0 bg-[linear-gradient(180deg,#f8fafc_0%,#eef4f8_100%)]"
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 opacity-45 [background-image:linear-gradient(rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.06)_1px,transparent_1px)] [background-size:72px_72px]"
+          className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.06)_1px,transparent_1px)] [background-size:56px_56px]"
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(73,189,208,0.2),transparent_28%),radial-gradient(circle_at_85%_20%,rgba(59,130,246,0.16),transparent_24%),radial-gradient(circle_at_78%_82%,rgba(125,206,124,0.22),transparent_30%)]"
+          className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(14,165,233,0.12),rgba(248,250,252,0))]"
         />
-        <div aria-hidden="true" className="absolute -left-24 top-0 h-80 w-80 rounded-full bg-cyan-200/45 blur-3xl" />
-        <div aria-hidden="true" className="absolute bottom-[-8rem] right-[-6rem] h-96 w-96 rounded-full bg-green-200/55 blur-3xl" />
-        <div aria-hidden="true" className="absolute right-[18%] top-[24%] h-64 w-64 rounded-full bg-sky-200/35 blur-3xl" />
-        <div
-          aria-hidden="true"
-          className="absolute left-[6%] top-[12%] hidden h-[32rem] w-[32rem] rounded-[3rem] border border-white/60 bg-white/30 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.4)] backdrop-blur-2xl lg:block"
-          style={{ transform: "rotate(-14deg)" }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute left-[20%] top-[18%] hidden h-[28rem] w-[24rem] rounded-[2.75rem] border border-white/40 bg-gradient-to-br from-white/50 via-white/10 to-transparent lg:block"
-          style={{ transform: "rotate(-4deg)" }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute right-[10%] top-[10%] hidden h-[22rem] w-[18rem] rounded-[2.5rem] border border-white/50 bg-white/20 backdrop-blur-xl lg:block"
-          style={{ transform: "rotate(10deg)" }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(115deg,transparent_20%,rgba(255,255,255,0.42)_46%,transparent_70%)]"
-        />
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/55 to-transparent" />
         <div className="absolute inset-x-4 top-4 z-20 flex justify-end">
-          <div className="inline-flex overflow-hidden rounded-full border border-white/55 bg-white/82 p-1 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl">
+          <div className="inline-flex overflow-hidden rounded-full border border-slate-200 bg-white p-1 shadow-sm">
             <button
               type="button"
               onClick={() => {
                 setLanguage("en");
                 persistLanguagePreference("en");
               }}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                 lang === "en"
-                  ? "bg-[linear-gradient(135deg,hsl(194_88%_43%),hsl(162_73%_42%))] text-white shadow-[0_16px_30px_-18px_rgba(14,165,233,0.55)]"
-                  : "text-slate-700 hover:bg-white"
+                  ? "bg-primary text-white"
+                  : "text-slate-700 hover:bg-slate-50"
               }`}
             >
               English
@@ -125,10 +102,10 @@ export default function LoginPage() {
                 setLanguage("ar");
                 persistLanguagePreference("ar");
               }}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                 lang === "ar"
-                  ? "bg-[linear-gradient(135deg,hsl(194_88%_43%),hsl(162_73%_42%))] text-white shadow-[0_16px_30px_-18px_rgba(14,165,233,0.55)]"
-                  : "text-slate-700 hover:bg-white"
+                  ? "bg-primary text-white"
+                  : "text-slate-700 hover:bg-slate-50"
               }`}
             >
               العربية
@@ -139,8 +116,8 @@ export default function LoginPage() {
           <div className="grid w-full items-center gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_26rem] 2xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:gap-10">
             <div className="hidden lg:flex lg:min-h-0 lg:flex-col lg:justify-center">
               <div className="max-w-xl">
-                <div className="inline-flex items-center gap-3 rounded-full border border-white/70 bg-white/65 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-xl xl:px-4 xl:py-2 xl:text-sm">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-950/5 xl:h-9 xl:w-9">
+                <div className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm xl:px-4 xl:py-2 xl:text-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-100 xl:h-9 xl:w-9">
                     <Image
                       src="/bizarch-mark.svg"
                       alt="BizArch Logo"
@@ -158,7 +135,7 @@ export default function LoginPage() {
                     alt="BizArch Systems Architecture Innovation"
                     width={440}
                     height={440}
-                    className="h-auto w-full drop-shadow-[0_24px_40px_rgba(41,78,148,0.12)]"
+                    className="h-auto w-full"
                     priority
                   />
                 </div>
@@ -169,7 +146,7 @@ export default function LoginPage() {
                   {featurePills.map((pill) => (
                     <span
                       key={pill}
-                      className="rounded-full border border-white/70 bg-white/55 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-xl xl:px-4 xl:py-2 xl:text-sm"
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm xl:px-4 xl:py-2 xl:text-sm"
                     >
                       {pill}
                     </span>
@@ -178,7 +155,7 @@ export default function LoginPage() {
               </div>
 
               <div className="mt-6 hidden max-w-2xl gap-4 [@media(min-width:1280px)_and_(min-height:860px)]:grid [@media(min-width:1280px)_and_(min-height:860px)]:grid-cols-2">
-                <div className="rounded-[2rem] border border-white/70 bg-white/55 p-5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
+                <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700">
                       {tt("Reports")}
@@ -189,10 +166,10 @@ export default function LoginPage() {
                     {chartHeights.map((height, index) => (
                       <div
                         key={height}
-                        className={`flex-1 rounded-t-[1.25rem] bg-gradient-to-t ${
+                        className={`flex-1 rounded-t-[1.25rem] ${
                           index === chartHeights.length - 1
-                            ? "from-blue-950 via-blue-800 to-cyan-400"
-                            : "from-sky-500 via-cyan-400 to-green-300"
+                            ? "bg-slate-900"
+                            : "bg-sky-500"
                         }`}
                         style={{ height }}
                       />
@@ -200,7 +177,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[2rem] border border-white/70 bg-white/50 p-5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
+                <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700">
                       {tt("Sales Invoices")}
@@ -213,7 +190,7 @@ export default function LoginPage() {
                     {workflowItems.map((item) => (
                       <div
                         key={item.label}
-                        className="flex items-center justify-between rounded-[1.25rem] border border-white/70 bg-white/75 px-4 py-2.5 shadow-sm"
+                        className="flex items-center justify-between rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-2.5"
                       >
                         <span className="text-sm font-medium text-slate-800">
                           {item.label}
@@ -226,11 +203,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Card className="glass-panel-strong relative w-full max-w-md overflow-hidden rounded-[2rem] py-0 lg:max-w-[24rem] xl:max-w-md">
-              <div className="h-1.5 w-full bg-[linear-gradient(90deg,hsl(213_91%_56%),hsl(194_88%_43%),hsl(162_73%_42%),hsl(39_96%_56%))]" />
+            <Card className="relative w-full max-w-md overflow-hidden rounded-[2rem] py-0 shadow-sm lg:max-w-[24rem] xl:max-w-md">
+              <div className="h-1.5 w-full bg-primary" />
               <CardHeader className="space-y-1 pt-6 text-center xl:pt-8">
                 <div className="mb-4 flex justify-center xl:mb-6">
-                  <div className="relative flex h-16 w-16 items-center justify-center rounded-[1.1rem] bg-white shadow-[0_18px_40px_-22px_rgba(15,23,42,0.45)] xl:h-20 xl:w-20 xl:rounded-[1.25rem]">
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-[1.1rem] border border-slate-200 bg-white xl:h-20 xl:w-20 xl:rounded-[1.25rem]">
                     <Image
                       src="/bizarch-mark.svg"
                       alt="BizArch Logo"
@@ -265,7 +242,7 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={isLoading}
-                      className="h-10 rounded-xl border-white/70 bg-white/75 shadow-sm xl:h-11"
+                      className="h-10 rounded-xl border-slate-200 bg-white xl:h-11"
                     />
                   </div>
                   <div className="space-y-2">
@@ -278,7 +255,7 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       disabled={isLoading}
-                      className="h-10 rounded-xl border-white/70 bg-white/75 shadow-sm xl:h-11"
+                      className="h-10 rounded-xl border-slate-200 bg-white xl:h-11"
                     />
                   </div>
                   <Button

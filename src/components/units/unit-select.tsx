@@ -73,9 +73,9 @@ export function UnitSelect({
           {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Select value={value} onValueChange={onValueChange} disabled={loading}>
-          <SelectTrigger id="unit" className={error ? "border-red-500 flex-1" : "flex-1"}>
+          <SelectTrigger id="unit" className={error ? "w-full min-w-0 flex-1 border-red-500" : "w-full min-w-0 flex-1"}>
             <SelectValue placeholder={loading ? "Loading..." : "Select a unit"} />
           </SelectTrigger>
           <SelectContent>
@@ -98,6 +98,7 @@ export function UnitSelect({
           size="icon"
           onClick={() => setIsUnitDialogOpen(true)}
           title="Add new unit"
+          className="h-10 w-10 shrink-0"
         >
           <Plus className="h-4 w-4" />
         </Button>

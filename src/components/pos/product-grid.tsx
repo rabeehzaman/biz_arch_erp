@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { ProductTile } from "./product-tile";
 import { PackageX } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
@@ -9,8 +10,10 @@ interface Product {
   name: string;
   sku: string | null;
   price: number;
-  stockQuantity: number;
+  stockQuantity: number | null;
   categoryId: string | null;
+  isService?: boolean;
+  isBundle?: boolean;
   category: { id: string; name: string; slug: string; color: string | null } | null;
 }
 
@@ -28,22 +31,26 @@ export function ProductGrid({
   onAddToCart,
 }: ProductGridProps) {
   const { t } = useLanguage();
-  const filtered = products.filter((p) => {
-    const matchesSearch =
-      !searchQuery ||
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory =
-      !selectedCategory || p.categoryId === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch =
+        !normalizedSearchQuery ||
+        product.name.toLowerCase().includes(normalizedSearchQuery) ||
+        (product.sku && product.sku.toLowerCase().includes(normalizedSearchQuery));
+      const matchesCategory = !selectedCategory || product.categoryId === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, normalizedSearchQuery, selectedCategory]);
 
   if (filtered.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center text-muted-foreground py-12">
-        <PackageX className="h-12 w-12 mb-3 opacity-50" />
+      <div className="flex flex-1 flex-col items-center justify-center py-12 text-muted-foreground">
+        <PackageX className="mb-3 h-12 w-12 opacity-50" />
         <p className="text-lg font-medium">{t("pos.noProductsFound")}</p>
-        <p className="text-sm">{t("pos.tryAdjustingSearch")}</p>
+        <p className="text-sm">
+          {normalizedSearchQuery ? t("pos.tryAdjustingSearch") : t("pos.addProducts")}
+        </p>
       </div>
     );
   }
@@ -54,7 +61,7 @@ export function ProductGrid({
         <ProductTile
           key={product.id}
           product={product}
-          onAdd={() => onAddToCart(product)}
+          onAdd={onAddToCart}
         />
       ))}
     </div>

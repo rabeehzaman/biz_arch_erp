@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,15 @@ const statusColors: Record<string, string> = {
     REVERSED: "bg-purple-100 text-purple-800",
 };
 
+const transferStatusLabelKeys: Record<string, string> = {
+    DRAFT: "inventory.draftStatus",
+    APPROVED: "inventory.approvedStatus",
+    IN_TRANSIT: "inventory.inTransitStatus",
+    COMPLETED: "inventory.completedStatus",
+    CANCELLED: "inventory.cancelledStatus",
+    REVERSED: "inventory.reversedStatus",
+};
+
 export default function StockTransferDetailPage({
     params,
 }: {
@@ -62,26 +71,47 @@ export default function StockTransferDetailPage({
     const { id } = use(params);
     const router = useRouter();
     const { fmt } = useCurrency();
+    const { t, tt, lang } = useLanguage();
 
     const [transfer, setTransfer] = useState<StockTransfer | null>(null);
     const [loading, setLoading] = useState(true);
     const [reversing, setReversing] = useState(false);
     const [confirmReverse, setConfirmReverse] = useState(false);
 
+    const formatDate = (value: string) => new Intl.DateTimeFormat(lang === "ar" ? "ar-SA" : "en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    }).format(new Date(value));
+
+    const formatDateTime = (value: string) => new Intl.DateTimeFormat(lang === "ar" ? "ar-SA" : "en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(new Date(value));
+
+    const formatTransferStatus = (status: string) => {
+        const key = transferStatusLabelKeys[status];
+        return key ? t(key) : status.replaceAll("_", " ");
+    };
+
     const fetchTransfer = useCallback(async () => {
         try {
             const response = await fetch(`/api/stock-transfers/${id}`);
             if (!response.ok) {
-                throw new Error("Transfer not found");
+                throw new Error(t("inventory.transferNotFound"));
             }
 
             setTransfer(await response.json());
         } catch {
+            toast.error(t("inventory.transferNotFound"));
             router.push("/inventory/stock-transfers");
         } finally {
             setLoading(false);
         }
-    }, [id, router]);
+    }, [id, router, t]);
 
     useEffect(() => {
         fetchTransfer();
@@ -102,14 +132,18 @@ export default function StockTransferDetailPage({
 
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
-                throw new Error(data.error || "Failed to reverse transfer");
+                throw new Error(
+                    typeof data.error === "string"
+                        ? tt(data.error)
+                        : t("inventory.failedToReverseTransfer")
+                );
             }
 
-            toast.success("Transfer reversed");
+            toast.success(t("inventory.transferReversed"));
             setConfirmReverse(false);
             fetchTransfer();
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Failed to reverse transfer");
+            toast.error(error instanceof Error ? tt(error.message) : t("inventory.failedToReverseTransfer"));
         } finally {
             setReversing(false);
         }
@@ -118,7 +152,7 @@ export default function StockTransferDetailPage({
     if (loading) {
         return (
             <div className="flex items-center justify-center py-8">
-                <div className="text-slate-500">Loading...</div>
+                <div className="text-slate-500">{t("common.loading")}</div>
             </div>
         );
     }
@@ -145,10 +179,10 @@ export default function StockTransferDetailPage({
                         </Button>
                         <div>
                             <h2 className="text-2xl font-bold text-slate-900">
-                                Stock Transfer {transfer.transferNumber}
+                                {t("inventory.stockTransfer")} {transfer.transferNumber}
                             </h2>
                             <p className="text-slate-500">
-                                Recorded on {format(new Date(transfer.transferDate), "dd MMM yyyy")}
+                                {t("inventory.recordedOn")} {formatDate(transfer.transferDate)}
                             </p>
                         </div>
                     </div>
@@ -164,7 +198,7 @@ export default function StockTransferDetailPage({
                                 {reversing
                                     ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     : <RotateCcw className="mr-2 h-4 w-4" />}
-                                Reverse
+                                {t("inventory.reverseTransfer")}
                             </Button>
                         )}
                         <Button variant="outline" asChild className="w-full sm:w-auto">
@@ -174,7 +208,7 @@ export default function StockTransferDetailPage({
                                 rel="noopener noreferrer"
                             >
                                 <Download className="mr-2 h-4 w-4" />
-                                Download PDF
+                                {t("inventory.downloadPdf")}
                             </Link>
                         </Button>
                         <Button variant="outline" asChild className="w-full sm:w-auto">
@@ -184,7 +218,7 @@ export default function StockTransferDetailPage({
                                 rel="noopener noreferrer"
                             >
                                 <Printer className="mr-2 h-4 w-4" />
-                                Print PDF
+                                {t("inventory.printPdf")}
                             </Link>
                         </Button>
                     </div>
@@ -193,27 +227,27 @@ export default function StockTransferDetailPage({
                 <div className="grid gap-4 sm:grid-cols-3">
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-500">Status</CardTitle>
+                            <CardTitle className="text-sm font-medium text-slate-500">{t("common.status")}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <Badge className={statusColors[transfer.status] || ""}>
-                                {transfer.status.replace("_", " ")}
+                                {formatTransferStatus(transfer.status)}
                             </Badge>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-500">Total Quantity</CardTitle>
+                            <CardTitle className="text-sm font-medium text-slate-500">{t("inventory.totalQuantity")}</CardTitle>
                         </CardHeader>
                         <CardContent className="text-2xl font-semibold">
-                            {totalQuantity.toLocaleString()}
+                            {totalQuantity.toLocaleString(lang === "ar" ? "ar-SA" : "en-US")}
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-500">Transfer Value</CardTitle>
+                            <CardTitle className="text-sm font-medium text-slate-500">{t("inventory.transferValue")}</CardTitle>
                         </CardHeader>
                         <CardContent className="text-2xl font-semibold">
                             {fmt(totalValue)}
@@ -225,24 +259,24 @@ export default function StockTransferDetailPage({
                     <CardContent className="space-y-8 p-6 sm:p-8">
                         <div className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                                <h1 className="text-2xl font-bold text-slate-900">Transfer Note</h1>
+                                <h1 className="text-2xl font-bold text-slate-900">{t("inventory.transferNote")}</h1>
                                 <p className="text-sm text-slate-500">{transfer.transferNumber}</p>
                             </div>
                             <div className="text-left sm:text-right">
-                                <div className="text-sm text-slate-500">Transfer Date</div>
-                                <div className="font-semibold">{format(new Date(transfer.transferDate), "dd MMM yyyy")}</div>
+                                <div className="text-sm text-slate-500">{t("inventory.transferDate")}</div>
+                                <div className="font-semibold">{formatDate(transfer.transferDate)}</div>
                             </div>
                         </div>
 
                         <div className="grid gap-6 md:grid-cols-2">
                             <div className="space-y-2 rounded-lg border p-4">
-                                <div className="text-sm font-semibold text-slate-500">From</div>
+                                <div className="text-sm font-semibold text-slate-500">{t("common.from")}</div>
                                 <div className="text-lg font-semibold">{transfer.sourceWarehouse.name}</div>
                                 <div className="text-sm text-slate-500">{transfer.sourceBranch.name}</div>
                             </div>
 
                             <div className="space-y-2 rounded-lg border p-4">
-                                <div className="text-sm font-semibold text-slate-500">To</div>
+                                <div className="text-sm font-semibold text-slate-500">{t("common.to")}</div>
                                 <div className="text-lg font-semibold">{transfer.destinationWarehouse.name}</div>
                                 <div className="text-sm text-slate-500">{transfer.destinationBranch.name}</div>
                             </div>
@@ -250,60 +284,62 @@ export default function StockTransferDetailPage({
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="rounded-lg border p-4">
-                                <div className="text-sm font-semibold text-slate-500">Created</div>
-                                <div className="mt-1 font-medium">{format(new Date(transfer.createdAt), "dd MMM yyyy, hh:mm a")}</div>
+                                <div className="text-sm font-semibold text-slate-500">{t("inventory.created")}</div>
+                                <div className="mt-1 font-medium">{formatDateTime(transfer.createdAt)}</div>
                             </div>
                             {transfer.completedAt && (
                                 <div className="rounded-lg border p-4">
-                                    <div className="text-sm font-semibold text-slate-500">Completed</div>
-                                    <div className="mt-1 font-medium">{format(new Date(transfer.completedAt), "dd MMM yyyy, hh:mm a")}</div>
+                                    <div className="text-sm font-semibold text-slate-500">{t("inventory.completed")}</div>
+                                    <div className="mt-1 font-medium">{formatDateTime(transfer.completedAt)}</div>
                                 </div>
                             )}
                             {transfer.reversedAt && (
                                 <div className="rounded-lg border p-4">
-                                    <div className="text-sm font-semibold text-slate-500">Reversed</div>
-                                    <div className="mt-1 font-medium">{format(new Date(transfer.reversedAt), "dd MMM yyyy, hh:mm a")}</div>
+                                    <div className="text-sm font-semibold text-slate-500">{t("inventory.reversed")}</div>
+                                    <div className="mt-1 font-medium">{formatDateTime(transfer.reversedAt)}</div>
                                 </div>
                             )}
                             {transfer.cancelledAt && (
                                 <div className="rounded-lg border p-4">
-                                    <div className="text-sm font-semibold text-slate-500">Cancelled</div>
-                                    <div className="mt-1 font-medium">{format(new Date(transfer.cancelledAt), "dd MMM yyyy, hh:mm a")}</div>
+                                    <div className="text-sm font-semibold text-slate-500">{t("inventory.cancelled")}</div>
+                                    <div className="mt-1 font-medium">{formatDateTime(transfer.cancelledAt)}</div>
                                 </div>
                             )}
                         </div>
 
                         {transfer.notes && (
                             <div className="rounded-lg border p-4">
-                                <div className="text-sm font-semibold text-slate-500">Notes</div>
+                                <div className="text-sm font-semibold text-slate-500">{t("common.notes")}</div>
                                 <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{transfer.notes}</p>
                             </div>
                         )}
 
                         <div className="space-y-3">
-                            <div className="text-lg font-semibold text-slate-900">Items</div>
+                            <div className="text-lg font-semibold text-slate-900">{t("inventory.itemsLabel")}</div>
                             <div className="space-y-3 sm:hidden">
                                 {transfer.items.map((item) => (
                                     <div key={item.id} className="rounded-lg border p-4 text-sm">
                                         <div className="font-medium text-slate-900">{item.product.name}</div>
                                         {item.product.sku && (
-                                            <div className="mt-1 text-xs text-slate-500">SKU: {item.product.sku}</div>
+                                            <div className="mt-1 text-xs text-slate-500">{t("products.sku")}: {item.product.sku}</div>
                                         )}
                                         {item.notes && (
                                             <div className="mt-2 text-xs text-slate-500">{item.notes}</div>
                                         )}
                                         <div className="mt-3 grid grid-cols-2 gap-3 text-slate-600">
                                             <div>
-                                                <div className="text-xs uppercase tracking-wide text-slate-400">Qty</div>
-                                                <div className="font-medium text-slate-900">{Number(item.quantity).toLocaleString()}</div>
+                                                <div className="text-xs uppercase tracking-wide text-slate-400">{t("common.quantity")}</div>
+                                                <div className="font-medium text-slate-900">
+                                                    {Number(item.quantity).toLocaleString(lang === "ar" ? "ar-SA" : "en-US")}
+                                                </div>
                                             </div>
                                             <div>
-                                                <div className="text-xs uppercase tracking-wide text-slate-400">Unit Cost</div>
+                                                <div className="text-xs uppercase tracking-wide text-slate-400">{t("inventory.unitCost")}</div>
                                                 <div className="font-medium text-slate-900">{fmt(Number(item.unitCost))}</div>
                                             </div>
                                         </div>
                                         <div className="mt-3 flex items-center justify-between border-t pt-3">
-                                            <span className="text-xs uppercase tracking-wide text-slate-400">Line Total</span>
+                                            <span className="text-xs uppercase tracking-wide text-slate-400">{t("inventory.lineTotal")}</span>
                                             <span className="font-semibold text-slate-900">
                                                 {fmt(Number(item.quantity) * Number(item.unitCost))}
                                             </span>
@@ -315,10 +351,10 @@ export default function StockTransferDetailPage({
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Product</TableHead>
-                                            <TableHead className="text-right">Qty</TableHead>
-                                            <TableHead className="text-right">Unit Cost</TableHead>
-                                            <TableHead className="text-right">Line Total</TableHead>
+                                            <TableHead>{t("common.product")}</TableHead>
+                                            <TableHead className="text-right">{t("common.quantity")}</TableHead>
+                                            <TableHead className="text-right">{t("inventory.unitCost")}</TableHead>
+                                            <TableHead className="text-right">{t("inventory.lineTotal")}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -327,14 +363,14 @@ export default function StockTransferDetailPage({
                                                 <TableCell>
                                                     <div className="font-medium">{item.product.name}</div>
                                                     {item.product.sku && (
-                                                        <div className="text-xs text-slate-500">SKU: {item.product.sku}</div>
+                                                        <div className="text-xs text-slate-500">{t("products.sku")}: {item.product.sku}</div>
                                                     )}
                                                     {item.notes && (
                                                         <div className="mt-1 text-xs text-slate-500">{item.notes}</div>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    {Number(item.quantity).toLocaleString()}
+                                                    {Number(item.quantity).toLocaleString(lang === "ar" ? "ar-SA" : "en-US")}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     {fmt(Number(item.unitCost))}
@@ -354,8 +390,8 @@ export default function StockTransferDetailPage({
                 <ConfirmDialog
                     open={confirmReverse}
                     onOpenChange={setConfirmReverse}
-                    title="Reverse Stock Transfer"
-                    description="This will move the stock back to the source warehouse if the transferred quantity has not been consumed."
+                    title={t("inventory.reverseStockTransfer")}
+                    description={t("inventory.reverseStockTransferDescription")}
                     onConfirm={handleReverse}
                 />
             </div>

@@ -55,7 +55,7 @@ export function CategorySelect({
     <div className={`grid gap-2 ${className || ""}`}>
       {label && <Label htmlFor="category">{label}</Label>}
       <Select value={value} onValueChange={onValueChange} disabled={loading}>
-        <SelectTrigger id="category">
+        <SelectTrigger id="category" className="w-full min-w-0">
           <SelectValue placeholder={loading ? "Loading..." : "Select a category"} />
         </SelectTrigger>
         <SelectContent>

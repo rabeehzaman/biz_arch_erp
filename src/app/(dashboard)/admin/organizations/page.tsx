@@ -399,113 +399,189 @@ export default function OrganizationsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]"></TableHead>
-                    <TableHead>Organization</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead className="text-center">Users</TableHead>
-                    <TableHead className="text-center">Customers</TableHead>
-                    <TableHead className="text-center">Invoices</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>GST</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {organizations.map((org) => (
-                    <TableRow
-                      key={org.id}
-                      onClick={() => router.push(`/admin/organizations/${org.id}`)}
-                      className="cursor-pointer transition-colors hover:bg-muted/50"
-                    >
-                      <TableCell>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground mr-2" />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          {org.name}
+              <>
+                <div className="space-y-3 sm:hidden">
+                  {organizations.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-muted-foreground">
+                      No organizations found
+                    </div>
+                  ) : (
+                    organizations.map((org) => (
+                      <div key={org.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <p className="font-semibold text-slate-900">{org.name}</p>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Badge variant="secondary">{org.slug}</Badge>
+                              {org.gstEnabled ? (
+                                <Badge variant="default" className="text-xs">GST</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs text-muted-foreground">No GST</Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/admin/organizations/${org.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openDuplicateDialog(org)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Duplicate Organization
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{org.slug}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Users className="h-3 w-3 text-muted-foreground" />
-                          {org._count.users}
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Users</p>
+                            <p className="mt-1 font-medium text-slate-900">{org._count.users}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Customers</p>
+                            <p className="mt-1 font-medium text-slate-900">{org._count.customers}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoices</p>
+                            <p className="mt-1 font-medium text-slate-900">{org._count.invoices}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Created</p>
+                            <p className="mt-1 text-slate-900">{new Date(org.createdAt).toLocaleDateString()}</p>
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <ShoppingCart className="h-3 w-3 text-muted-foreground" />
-                          {org._count.customers}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <FileText className="h-3 w-3 text-muted-foreground" />
-                          {org._count.invoices}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(org.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {org.gstEnabled ? (
-                          <Badge variant="default" className="text-xs">GST</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs text-muted-foreground">No GST</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/admin/organizations/${org.id}`);
-                              }}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openDuplicateDialog(org);
-                              }}
-                            >
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate Organization
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {organizations.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        No organizations found
-                      </TableCell>
-                    </TableRow>
+
+                        <Button variant="outline" className="mt-4 min-h-[44px] w-full" onClick={() => router.push(`/admin/organizations/${org.id}`)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Open details
+                        </Button>
+                      </div>
+                    ))
                   )}
-                </TableBody>
-              </Table>
+                </div>
+
+                <div className="hidden sm:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead>Organization</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead className="text-center">Users</TableHead>
+                        <TableHead className="text-center">Customers</TableHead>
+                        <TableHead className="text-center">Invoices</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>GST</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {organizations.map((org) => (
+                        <TableRow
+                          key={org.id}
+                          onClick={() => router.push(`/admin/organizations/${org.id}`)}
+                          className="cursor-pointer transition-colors hover:bg-muted/50"
+                        >
+                          <TableCell>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground mr-2" />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                              {org.name}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{org.slug}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Users className="h-3 w-3 text-muted-foreground" />
+                              {org._count.users}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <ShoppingCart className="h-3 w-3 text-muted-foreground" />
+                              {org._count.customers}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <FileText className="h-3 w-3 text-muted-foreground" />
+                              {org._count.invoices}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(org.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {org.gstEnabled ? (
+                              <Badge variant="default" className="text-xs">GST</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">No GST</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Actions</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/admin/organizations/${org.id}`);
+                                  }}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openDuplicateDialog(org);
+                                  }}
+                                >
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Duplicate Organization
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {organizations.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                            No organizations found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

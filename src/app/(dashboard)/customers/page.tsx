@@ -311,14 +311,14 @@ export default function CustomersPage() {
             }
           }}>
             <DialogContent>
-              <form onSubmit={handleOpeningBalanceSubmit}>
-                <DialogHeader>
+              <form className="contents" onSubmit={handleOpeningBalanceSubmit}>
+                <DialogHeader className="pr-12">
                   <DialogTitle>{t("common.openingBalance")}</DialogTitle>
                   <DialogDescription>
                     Set the opening balance for {selectedCustomerForBalance?.name}. This represents the initial receivable amount.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-2 sm:py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="openingAmount">{t("common.openingBalance")} *</Label>
                     <Input
@@ -446,109 +446,210 @@ export default function CustomersPage() {
                   </p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("common.name")}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t("customers.contactInfo")}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t("common.assigned")}</TableHead>
-                      <TableHead>{t("common.balance")}</TableHead>
-                      <TableHead>{t("customers.totalInvoices")}</TableHead>
-                      <TableHead>{t("common.status")}</TableHead>
-                      <TableHead className="text-right">{t("common.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-3 sm:hidden">
                     {filteredCustomers.map((customer) => (
-                      <TableRow key={customer.id}>
-                        <TableCell>
-                          <div className="font-medium">{customer.name}</div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <div className="text-sm">
-                            {customer.email && <div>{customer.email}</div>}
-                            {customer.phone && (
-                              <div className="text-slate-500">{customer.phone}</div>
+                      <div key={customer.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900">{customer.name}</p>
+                            {(customer.email || customer.phone) && (
+                              <div className="mt-1 space-y-1 text-sm text-slate-500">
+                                {customer.email && <p className="break-all">{customer.email}</p>}
+                                {customer.phone && <p>{customer.phone}</p>}
+                              </div>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={customer.isActive ? "default" : "secondary"}>
+                              {customer.isActive ? t("common.active") : t("common.inactive")}
+                            </Badge>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="-mr-2 shrink-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEdit(customer)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  {t("common.edit")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(customer)}>
+                                  <Wallet className="mr-2 h-4 w-4" />
+                                  {t("common.openingBalance")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/customers/${customer.id}/statement`}>
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    {t("customers.viewStatement")}
+                                  </Link>
+                                </DropdownMenuItem>
+                                {isAdmin && (
+                                  <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Assign
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => handleDelete(customer.id)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  {t("common.delete")}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.balance")}</p>
+                            <p className={`mt-1 font-semibold ${Number(customer.balance) > 0 ? "text-green-600" : Number(customer.balance) < 0 ? "text-red-600" : "text-slate-900"}`}>
+                              {formatAmount(Math.abs(Number(customer.balance)))}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("customers.totalInvoices")}</p>
+                            <p className="mt-1 font-medium text-slate-900">{customer._count?.invoices || 0}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.assigned")}</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
                             {customer.assignments && customer.assignments.length > 0 ? (
-                              customer.assignments.map(a => (
-                                <Badge key={a.id} variant="outline" className="text-xs">
-                                  {a.user.name}
+                              customer.assignments.map((assignment) => (
+                                <Badge key={assignment.id} variant="outline" className="text-xs">
+                                  {assignment.user.name}
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-slate-400 text-sm">Unassigned</span>
+                              <span className="text-sm text-slate-400">Unassigned</span>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={
-                              Number(customer.balance) > 0
-                                ? "text-green-600 font-medium"
-                                : Number(customer.balance) < 0
-                                  ? "text-red-600 font-medium"
-                                  : ""
-                            }
-                          >
-                            {formatAmount(Math.abs(Number(customer.balance)))}
-                          </span>
-                        </TableCell>
-                        <TableCell>{customer._count?.invoices || 0}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={customer.isActive ? "default" : "secondary"}
-                          >
-                            {customer.isActive ? t("common.active") : t("common.inactive")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEdit(customer)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                {t("common.edit")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(customer)}>
-                                <Wallet className="mr-2 h-4 w-4" />
-                                {t("common.openingBalance")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/customers/${customer.id}/statement`}>
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  {t("customers.viewStatement")}
-                                </Link>
-                              </DropdownMenuItem>
-                              {isAdmin && (
-                                <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
-                                  <UserPlus className="mr-2 h-4 w-4" />
-                                  Assign
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => handleDelete(customer.id)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {t("common.delete")}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+
+                        <div className="mt-4">
+                          <Button asChild variant="outline" className="min-h-[44px] w-full">
+                            <Link href={`/customers/${customer.id}/statement`}>
+                              <FileText className="h-4 w-4" />
+                              {t("customers.viewStatement")}
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t("common.name")}</TableHead>
+                          <TableHead className="hidden sm:table-cell">{t("customers.contactInfo")}</TableHead>
+                          <TableHead className="hidden sm:table-cell">{t("common.assigned")}</TableHead>
+                          <TableHead>{t("common.balance")}</TableHead>
+                          <TableHead>{t("customers.totalInvoices")}</TableHead>
+                          <TableHead>{t("common.status")}</TableHead>
+                          <TableHead className="text-right">{t("common.actions")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredCustomers.map((customer) => (
+                          <TableRow key={customer.id}>
+                            <TableCell>
+                              <div className="font-medium">{customer.name}</div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <div className="text-sm">
+                                {customer.email && <div>{customer.email}</div>}
+                                {customer.phone && (
+                                  <div className="text-slate-500">{customer.phone}</div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <div className="flex flex-wrap gap-1">
+                                {customer.assignments && customer.assignments.length > 0 ? (
+                                  customer.assignments.map(a => (
+                                    <Badge key={a.id} variant="outline" className="text-xs">
+                                      {a.user.name}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-slate-400 text-sm">Unassigned</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={
+                                  Number(customer.balance) > 0
+                                    ? "text-green-600 font-medium"
+                                    : Number(customer.balance) < 0
+                                      ? "text-red-600 font-medium"
+                                      : ""
+                                }
+                              >
+                                {formatAmount(Math.abs(Number(customer.balance)))}
+                              </span>
+                            </TableCell>
+                            <TableCell>{customer._count?.invoices || 0}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={customer.isActive ? "default" : "secondary"}
+                              >
+                                {customer.isActive ? t("common.active") : t("common.inactive")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEdit(customer)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {t("common.edit")}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(customer)}>
+                                    <Wallet className="mr-2 h-4 w-4" />
+                                    {t("common.openingBalance")}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/customers/${customer.id}/statement`}>
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      {t("customers.viewStatement")}
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  {isAdmin && (
+                                    <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
+                                      <UserPlus className="mr-2 h-4 w-4" />
+                                      Assign
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => handleDelete(customer.id)}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {t("common.delete")}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

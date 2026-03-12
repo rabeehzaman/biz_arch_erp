@@ -182,9 +182,9 @@ export function CustomerFormDialog({
                 if (!isOpen) resetForm();
             }}
         >
-            <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl overflow-y-auto max-h-[90vh]">
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <DialogHeader>
+            <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl">
+                <form onSubmit={handleSubmit} className="contents">
+                    <DialogHeader className="pr-12">
                         <DialogTitle>
                             {customerToEdit ? "Edit Customer" : "Add New Customer"}
                         </DialogTitle>
@@ -194,7 +194,7 @@ export function CustomerFormDialog({
                                 : "Fill in the details to add a new customer."}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-2 sm:py-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="cust-name">Name *</Label>
@@ -367,7 +367,7 @@ export function CustomerFormDialog({
                             />
                         </div>
                     </div>
-                    <DialogFooter className="mt-auto pt-4 border-t">
+                    <DialogFooter>
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
                             {isSubmitting
                                 ? (customerToEdit ? "Updating..." : "Adding...")

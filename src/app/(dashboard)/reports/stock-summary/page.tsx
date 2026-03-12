@@ -151,17 +151,17 @@ export default function StockSummaryPage() {
         <PageAnimation>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 className="text-2xl font-bold text-slate-900">Stock Summary</h2>
                         <p className="text-slate-500">Current inventory levels by product and warehouse</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                        <Button variant="outline" size="sm" onClick={fetchData} className="gap-2 sm:w-auto">
                             <RefreshCw className="h-4 w-4" />
                             Refresh
                         </Button>
-                        <Button variant="outline" size="sm" onClick={exportCSV} className="gap-2">
+                        <Button variant="outline" size="sm" onClick={exportCSV} className="gap-2 sm:w-auto">
                             <Download className="h-4 w-4" />
                             Export CSV
                         </Button>
@@ -232,7 +232,7 @@ export default function StockSummaryPage() {
                             </div>
                             {multiBranchEnabled && branches.length > 0 && (
                                 <Select value={filterBranchId} onValueChange={handleBranchChange}>
-                                    <SelectTrigger className="w-[180px]">
+                                    <SelectTrigger className="w-full sm:w-[180px]">
                                         <SelectValue placeholder="All Branches" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -245,7 +245,7 @@ export default function StockSummaryPage() {
                             )}
                             {multiBranchEnabled && warehouses.length > 0 && (
                                 <Select value={filterWarehouseId} onValueChange={setFilterWarehouseId}>
-                                    <SelectTrigger className="w-[200px]">
+                                    <SelectTrigger className="w-full sm:w-[200px]">
                                         <SelectValue placeholder="All Warehouses" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -296,69 +296,21 @@ export default function StockSummaryPage() {
                                 </p>
                             </div>
                         ) : (
-                            <Table>
-                                <TableHeader className="bg-slate-50">
-                                    <TableRow>
-                                        <TableHead>Product</TableHead>
-                                        {multiBranchEnabled && <TableHead>Warehouse</TableHead>}
-                                        <TableHead className="text-right">Qty in Stock</TableHead>
-                                        <TableHead className="text-right">Avg Cost</TableHead>
-                                        <TableHead className="text-right">Total Value</TableHead>
-                                        <TableHead className="text-center">Lots</TableHead>
-                                        <TableHead className="text-center">Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
+                            <>
+                                <div className="space-y-3 p-4 sm:hidden">
                                     {filteredRows.map((row, i) => {
                                         const isLow = row.reorderPoint !== null && row.totalQuantity <= row.reorderPoint;
+
                                         return (
-                                            <TableRow
+                                            <div
                                                 key={`${row.productId}-${row.warehouseId ?? "null"}-${i}`}
-                                                className={isLow ? "bg-red-50/50 hover:bg-red-50" : "hover:bg-slate-50"}
+                                                className={`rounded-2xl border p-4 shadow-sm ${isLow ? "border-red-200 bg-red-50/40" : "border-slate-200 bg-white"}`}
                                             >
-                                                <TableCell>
-                                                    <p className="font-medium text-slate-900">{row.productName}</p>
-                                                    {row.sku && <p className="text-xs text-slate-500">SKU: {row.sku}</p>}
-                                                </TableCell>
-                                                {multiBranchEnabled && (
-                                                    <TableCell>
-                                                        {row.warehouseName ? (
-                                                            <div>
-                                                                <p className="text-sm text-slate-700">{row.warehouseName}</p>
-                                                                {row.branchName && (
-                                                                    <p className="text-xs text-slate-400">{row.branchName}</p>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-sm text-slate-400">Global</span>
-                                                        )}
-                                                    </TableCell>
-                                                )}
-                                                <TableCell className="text-right tabular-nums">
-                                                    <span className={isLow ? "text-red-600 font-semibold" : ""}>
-                                                        {row.totalQuantity.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
-                                                    </span>
-                                                    {row.unit && (
-                                                        <span className="text-xs text-slate-400 ml-1">{row.unit.code}</span>
-                                                    )}
-                                                    {row.reorderPoint !== null && (
-                                                        <p className="text-xs text-slate-400">
-                                                            Reorder at {row.reorderPoint}
-                                                        </p>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums text-sm">
-                                                    {symbol}{row.avgCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </TableCell>
-                                                <TableCell className="text-right font-medium tabular-nums">
-                                                    {symbol}{row.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {row.lotCount} {row.lotCount === 1 ? "lot" : "lots"}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-center">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <p className="font-semibold text-slate-900">{row.productName}</p>
+                                                        {row.sku && <p className="mt-1 text-xs text-slate-500">SKU: {row.sku}</p>}
+                                                    </div>
                                                     {isLow ? (
                                                         <Badge className="bg-red-100 text-red-700 border-red-200 text-xs gap-1">
                                                             <AlertTriangle className="h-3 w-3" />
@@ -369,12 +321,134 @@ export default function StockSummaryPage() {
                                                             In Stock
                                                         </Badge>
                                                     )}
-                                                </TableCell>
-                                            </TableRow>
+                                                </div>
+
+                                                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                                    {multiBranchEnabled && (
+                                                        <div className="col-span-2">
+                                                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Warehouse</p>
+                                                            <p className="mt-1 text-slate-900">
+                                                                {row.warehouseName || "Global"}
+                                                                {row.branchName && <span className="text-slate-500"> · {row.branchName}</span>}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Qty in Stock</p>
+                                                        <p className={`mt-1 font-semibold ${isLow ? "text-red-600" : "text-slate-900"}`}>
+                                                            {row.totalQuantity.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                                                            {row.unit && <span className="ml-1 text-xs text-slate-400">{row.unit.code}</span>}
+                                                        </p>
+                                                        {row.reorderPoint !== null && (
+                                                            <p className="mt-1 text-xs text-slate-400">Reorder at {row.reorderPoint}</p>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Avg Cost</p>
+                                                        <p className="mt-1 font-medium text-slate-900">
+                                                            {symbol}{row.avgCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Total Value</p>
+                                                        <p className="mt-1 font-semibold text-slate-900">
+                                                            {symbol}{row.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Lots</p>
+                                                        <p className="mt-1 font-medium text-slate-900">
+                                                            {row.lotCount} {row.lotCount === 1 ? "lot" : "lots"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         );
                                     })}
-                                </TableBody>
-                            </Table>
+                                </div>
+
+                                <div className="hidden sm:block">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50">
+                                            <TableRow>
+                                                <TableHead>Product</TableHead>
+                                                {multiBranchEnabled && <TableHead>Warehouse</TableHead>}
+                                                <TableHead className="text-right">Qty in Stock</TableHead>
+                                                <TableHead className="text-right">Avg Cost</TableHead>
+                                                <TableHead className="text-right">Total Value</TableHead>
+                                                <TableHead className="text-center">Lots</TableHead>
+                                                <TableHead className="text-center">Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredRows.map((row, i) => {
+                                                const isLow = row.reorderPoint !== null && row.totalQuantity <= row.reorderPoint;
+                                                return (
+                                                    <TableRow
+                                                        key={`${row.productId}-${row.warehouseId ?? "null"}-${i}`}
+                                                        className={isLow ? "bg-red-50/50 hover:bg-red-50" : "hover:bg-slate-50"}
+                                                    >
+                                                        <TableCell>
+                                                            <p className="font-medium text-slate-900">{row.productName}</p>
+                                                            {row.sku && <p className="text-xs text-slate-500">SKU: {row.sku}</p>}
+                                                        </TableCell>
+                                                        {multiBranchEnabled && (
+                                                            <TableCell>
+                                                                {row.warehouseName ? (
+                                                                    <div>
+                                                                        <p className="text-sm text-slate-700">{row.warehouseName}</p>
+                                                                        {row.branchName && (
+                                                                            <p className="text-xs text-slate-400">{row.branchName}</p>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-sm text-slate-400">Global</span>
+                                                                )}
+                                                            </TableCell>
+                                                        )}
+                                                        <TableCell className="text-right tabular-nums">
+                                                            <span className={isLow ? "text-red-600 font-semibold" : ""}>
+                                                                {row.totalQuantity.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                                                            </span>
+                                                            {row.unit && (
+                                                                <span className="text-xs text-slate-400 ml-1">{row.unit.code}</span>
+                                                            )}
+                                                            {row.reorderPoint !== null && (
+                                                                <p className="text-xs text-slate-400">
+                                                                    Reorder at {row.reorderPoint}
+                                                                </p>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right tabular-nums text-sm">
+                                                            {symbol}{row.avgCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-medium tabular-nums">
+                                                            {symbol}{row.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {row.lotCount} {row.lotCount === 1 ? "lot" : "lots"}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            {isLow ? (
+                                                                <Badge className="bg-red-100 text-red-700 border-red-200 text-xs gap-1">
+                                                                    <AlertTriangle className="h-3 w-3" />
+                                                                    Low Stock
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                                                                    In Stock
+                                                                </Badge>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </>
                         )}
                     </CardContent>
                 </Card>

@@ -23,6 +23,17 @@ interface POSHeaderProps {
   onReprintReceipt?: () => void;
 }
 
+function POSClock() {
+  const [time, setTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return <>{time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</>;
+}
+
 export function POSHeader({
   session,
   branchName,
@@ -36,12 +47,6 @@ export function POSHeader({
   const { data: authSession } = useSession();
   const { t } = useLanguage();
   const router = useRouter();
-  const [time, setTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const locationLabel = [branchName, warehouseName].filter(Boolean).join(" / ");
 
@@ -80,7 +85,7 @@ export function POSHeader({
       <div className="flex items-center gap-1 sm:gap-3 shrink-0">
         <div className="hidden sm:flex items-center gap-2 text-sm text-slate-300">
           <Clock className="h-4 w-4" />
-          {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          <POSClock />
         </div>
 
         {onReprintReceipt && (

@@ -134,30 +134,30 @@ export default function CreditNoteDetailPage() {
 
   return (
     <PageAnimation>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5 sm:items-center sm:gap-4">
             <Link href="/credit-notes">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon-sm" className="shrink-0 sm:size-10">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold text-slate-900 sm:text-2xl">
                 {creditNote.creditNoteNumber}
               </h2>
-              <p className="text-slate-500">Credit Note Details</p>
+              <p className="text-sm text-slate-500">Credit Note Details</p>
             </div>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-            <Link href={`/credit-notes/${creditNote.id}/edit`} className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto">
-                <Edit className="mr-2 h-4 w-4" />
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap">
+            <Link href={`/credit-notes/${creditNote.id}/edit`} className="col-span-1 sm:w-auto">
+              <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
+                <Edit className="h-4 w-4 sm:mr-2" />
                 Edit
               </Button>
             </Link>
-            <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
-              <Trash2 className="mr-2 h-4 w-4" />
+            <Button variant="destructive" size="sm" onClick={handleDelete} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+              <Trash2 className="h-4 w-4 sm:mr-2" />
               Delete
             </Button>
           </div>

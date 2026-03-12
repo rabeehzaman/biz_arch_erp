@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { SessionProvider } from "next-auth/react";
 import { SWRProvider } from "@/lib/swr-config";
 import { LanguageProvider } from "@/lib/i18n";
+import { POSShell } from "@/components/pos-shell";
 
 export default async function POSLayout({
   children,
@@ -15,9 +16,9 @@ export default async function POSLayout({
     <SessionProvider>
       <SWRProvider>
         <LanguageProvider initialLang={initialLang}>
-          <div className="h-screen overflow-hidden bg-slate-100">
+          <POSShell>
             {children}
-          </div>
+          </POSShell>
         </LanguageProvider>
       </SWRProvider>
     </SessionProvider>

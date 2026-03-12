@@ -23,8 +23,12 @@ export function useDashboardStats() {
   const { data, error, isLoading, mutate } = useSWR<DashboardStats>(
     "/api/dashboard",
     {
-      refreshInterval: 5000, // Refresh every 5 seconds
+      refreshInterval: 60000,
+      dedupingInterval: 15000,
       revalidateOnFocus: true,
+      refreshWhenHidden: false,
+      refreshWhenOffline: false,
+      keepPreviousData: true,
     }
   );
 

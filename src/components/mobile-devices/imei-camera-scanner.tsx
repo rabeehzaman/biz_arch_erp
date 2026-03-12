@@ -3,16 +3,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, X, Loader2, ScanLine } from "lucide-react";
+import { getCameraAvailability } from "@/lib/camera-support";
 
 interface ImeiCameraScannerProps {
   onScan: (imei: string) => void;
   /** If false, hides the button entirely */
   show?: boolean;
-}
-
-/** Check if camera is available (mobile or desktop with camera) */
-function isCameraAvailable() {
-  return typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
 }
 
 /**
@@ -34,6 +30,7 @@ async function getBarcodeDetector(
 export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [cameraAvailable, setCameraAvailable] = useState(false);
+  const [cameraUnavailableReason, setCameraUnavailableReason] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -99,7 +96,21 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
 
   useEffect(() => {
     setIsMounted(true);
-    setCameraAvailable(isCameraAvailable());
+
+    const syncCameraSupport = () => {
+      const availability = getCameraAvailability("IMEI scanner");
+      setCameraAvailable(availability.available);
+      setCameraUnavailableReason(availability.reason);
+    };
+
+    syncCameraSupport();
+    window.addEventListener("focus", syncCameraSupport);
+    document.addEventListener("visibilitychange", syncCameraSupport);
+
+    return () => {
+      window.removeEventListener("focus", syncCameraSupport);
+      document.removeEventListener("visibilitychange", syncCameraSupport);
+    };
   }, []);
 
   const startCamera = useCallback(async () => {
@@ -108,6 +119,15 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
     setScanning(false);
 
     try {
+      const availability = getCameraAvailability("IMEI scanner");
+      setCameraAvailable(availability.available);
+      setCameraUnavailableReason(availability.reason);
+
+      if (!availability.available) {
+        setError(availability.reason || "Camera scanning is unavailable on this device.");
+        return;
+      }
+
       // Get BarcodeDetector (native or WASM polyfill)
       if (!detectorRef.current) {
         detectorRef.current = await getBarcodeDetector([
@@ -155,7 +175,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
     };
   }, [stopCamera]);
 
-  if (!show || !isMounted || !cameraAvailable) return null;
+  if (!show || !isMounted) return null;
 
   return (
     <>
@@ -163,9 +183,9 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
         type="button"
         variant="outline"
         size="icon"
-        className="h-12 w-12 shrink-0"
+        className={`h-12 w-12 shrink-0 ${cameraAvailable ? "" : "border-slate-300 text-slate-600"}`}
         onClick={() => setOpen(true)}
-        title="Scan IMEI with camera"
+        title={cameraAvailable ? "Scan IMEI with camera" : "IMEI scanner setup"}
       >
         <Camera className="h-4 w-4" />
       </Button>
@@ -238,8 +258,14 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
             {/* Error state */}
             {error && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
-                <div className="rounded-xl bg-white p-6 text-center">
-                  <p className="text-sm font-medium text-red-600">{error}</p>
+                <div className="max-w-sm rounded-xl bg-white p-6 text-center">
+                  <p className="text-sm font-medium text-slate-800">{error}</p>
+                  {!cameraAvailable && cameraUnavailableReason && (
+                    <p className="mt-3 text-xs leading-5 text-slate-500">
+                      Mobile camera scanning works in a secure browser context. If you are testing from another phone on
+                      your laptop&apos;s IP address, use HTTPS.
+                    </p>
+                  )}
                   <Button className="mt-4" onClick={closeScanner}>Close</Button>
                 </div>
               </div>

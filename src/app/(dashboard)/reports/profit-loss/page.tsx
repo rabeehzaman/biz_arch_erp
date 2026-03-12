@@ -75,7 +75,7 @@ export default function ProfitLossPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="grid gap-2">
                   <Label>From</Label>
                   <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -100,29 +100,48 @@ export default function ProfitLossPage() {
                   <CardTitle className="text-green-700">Revenue</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Account</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.revenue.map((row) => (
-                        <TableRow key={row.account.code}>
-                          <TableCell>
-                            <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
-                            {row.account.name}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-green-600">{fmt(row.amount)}</TableCell>
+                  <div className="space-y-3 sm:hidden">
+                    {data.revenue.map((row) => (
+                      <div key={row.account.code} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
+                        <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
+                        <div className="mt-4">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                          <p className="mt-1 font-mono font-semibold text-green-600">{fmt(row.amount)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+                      <p className="font-semibold text-slate-900">Total Revenue</p>
+                      <p className="mt-2 font-mono text-lg font-bold text-green-700">{fmt(data.totalRevenue)}</p>
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Account</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
-                      ))}
-                      <TableRow className="font-bold border-t-2">
-                        <TableCell>Total Revenue</TableCell>
-                        <TableCell className="text-right font-mono text-green-700">{fmt(data.totalRevenue)}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {data.revenue.map((row) => (
+                          <TableRow key={row.account.code}>
+                            <TableCell>
+                              <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
+                              {row.account.name}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-green-600">{fmt(row.amount)}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="font-bold border-t-2">
+                          <TableCell>Total Revenue</TableCell>
+                          <TableCell className="text-right font-mono text-green-700">{fmt(data.totalRevenue)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -131,29 +150,48 @@ export default function ProfitLossPage() {
                   <CardTitle className="text-red-700">Expenses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Account</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.expenses.map((row) => (
-                        <TableRow key={row.account.code}>
-                          <TableCell>
-                            <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
-                            {row.account.name}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-red-600">{fmt(row.amount)}</TableCell>
+                  <div className="space-y-3 sm:hidden">
+                    {data.expenses.map((row) => (
+                      <div key={row.account.code} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
+                        <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
+                        <div className="mt-4">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                          <p className="mt-1 font-mono font-semibold text-red-600">{fmt(row.amount)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                      <p className="font-semibold text-slate-900">Total Expenses</p>
+                      <p className="mt-2 font-mono text-lg font-bold text-red-700">{fmt(data.totalExpenses)}</p>
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Account</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
-                      ))}
-                      <TableRow className="font-bold border-t-2">
-                        <TableCell>Total Expenses</TableCell>
-                        <TableCell className="text-right font-mono text-red-700">{fmt(data.totalExpenses)}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {data.expenses.map((row) => (
+                          <TableRow key={row.account.code}>
+                            <TableCell>
+                              <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
+                              {row.account.name}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-red-600">{fmt(row.amount)}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="font-bold border-t-2">
+                          <TableCell>Total Expenses</TableCell>
+                          <TableCell className="text-right font-mono text-red-700">{fmt(data.totalExpenses)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
 

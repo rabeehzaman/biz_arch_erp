@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, BookOpen, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, BookOpen, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -158,89 +158,176 @@ export default function JournalEntriesPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Number</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="hidden sm:table-cell">Source</TableHead>
-                      <TableHead className="hidden sm:table-cell">Status</TableHead>
-                      <TableHead className="text-right">Debit</TableHead>
-                      <TableHead className="hidden sm:table-cell text-right">Credit</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEntries.map((entry) => {
-                      const totals = getTotals(entry.lines);
-                      return (
-                        <TableRow key={entry.id}>
-                          <TableCell>
+              <>
+                <div className="space-y-3 sm:hidden">
+                  {filteredEntries.map((entry) => {
+                    const totals = getTotals(entry.lines);
+
+                    return (
+                      <div key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
                             <Link
                               href={`/accounting/journal-entries/${entry.id}`}
-                              className="font-medium text-blue-600 hover:underline"
+                              className="font-semibold text-blue-600 hover:underline"
                             >
                               {entry.journalNumber}
                             </Link>
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(entry.date), "dd MMM yyyy")}
-                          </TableCell>
-                          <TableCell className="max-w-[120px] truncate">
-                            {entry.description}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <Badge variant="outline">
-                              {sourceLabels[entry.sourceType] || entry.sourceType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <Badge className={statusColors[entry.status]}>
-                              {entry.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {totals.debit.toLocaleString("en-IN", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-right font-mono">
-                            {totals.credit.toLocaleString("en-IN", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <Link href={`/accounting/journal-entries/${entry.id}/edit`}>
-                                  <DropdownMenuItem>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                </Link>
-                                <DropdownMenuItem
-                                  className="text-red-600 focus:bg-red-50 focus:text-red-600"
-                                  onClick={() => handleDelete(entry.id)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                            <p className="mt-1 text-sm text-slate-500">
+                              {format(new Date(entry.date), "dd MMM yyyy")}
+                            </p>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-9 w-9 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <Link href={`/accounting/journal-entries/${entry.id}/edit`}>
+                                <DropdownMenuItem>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
                                 </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
+                              </Link>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                                onClick={() => handleDelete(entry.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        <p className="mt-3 text-sm text-slate-600">{entry.description}</p>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Badge variant="outline">
+                            {sourceLabels[entry.sourceType] || entry.sourceType}
+                          </Badge>
+                          <Badge className={statusColors[entry.status]}>
+                            {entry.status}
+                          </Badge>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Debit</p>
+                            <p className="mt-1 font-mono font-semibold text-slate-900">
+                              {totals.debit.toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Credit</p>
+                            <p className="mt-1 font-mono font-semibold text-slate-900">
+                              {totals.credit.toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                              })}
+                            </p>
+                          </div>
+                        </div>
+
+                        <Button asChild variant="outline" className="mt-4 min-h-[44px] w-full">
+                          <Link href={`/accounting/journal-entries/${entry.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Open entry
+                          </Link>
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="hidden sm:block">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Number</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="hidden sm:table-cell">Source</TableHead>
+                          <TableHead className="hidden sm:table-cell">Status</TableHead>
+                          <TableHead className="text-right">Debit</TableHead>
+                          <TableHead className="hidden sm:table-cell text-right">Credit</TableHead>
+                          <TableHead className="w-[80px]"></TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredEntries.map((entry) => {
+                          const totals = getTotals(entry.lines);
+                          return (
+                            <TableRow key={entry.id}>
+                              <TableCell>
+                                <Link
+                                  href={`/accounting/journal-entries/${entry.id}`}
+                                  className="font-medium text-blue-600 hover:underline"
+                                >
+                                  {entry.journalNumber}
+                                </Link>
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(entry.date), "dd MMM yyyy")}
+                              </TableCell>
+                              <TableCell className="max-w-[120px] truncate">
+                                {entry.description}
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                <Badge variant="outline">
+                                  {sourceLabels[entry.sourceType] || entry.sourceType}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                <Badge className={statusColors[entry.status]}>
+                                  {entry.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {totals.debit.toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell text-right font-mono">
+                                {totals.credit.toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <Link href={`/accounting/journal-entries/${entry.id}/edit`}>
+                                      <DropdownMenuItem>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                    </Link>
+                                    <DropdownMenuItem
+                                      className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                                      onClick={() => handleDelete(entry.id)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { UserCircle, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Loader2, UserCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/lib/i18n";
@@ -25,20 +25,37 @@ export function CustomerSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customersLoaded, setCustomersLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetch("/api/customers?compact=true")
-        .then((res) => res.json())
-        .then((data) => setCustomers(data))
-        .catch(() => { });
+  const openSelector = () => {
+    setIsOpen(true);
+
+    if (customersLoaded || isLoading) {
+      return;
     }
-  }, [isOpen]);
 
-  const filtered = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.phone && c.phone.includes(search))
+    setIsLoading(true);
+    fetch("/api/customers?compact=true")
+      .then((res) => res.json())
+      .then((data) => {
+        setCustomers(data);
+        setCustomersLoaded(true);
+      })
+      .catch(() => { })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
+  const filtered = useMemo(
+    () =>
+      customers.filter(
+        (customer) =>
+          customer.name.toLowerCase().includes(search.toLowerCase()) ||
+          (customer.phone && customer.phone.includes(search))
+      ),
+    [customers, search]
   );
 
   if (!isOpen) {
@@ -46,8 +63,8 @@ export function CustomerSelect({
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setIsOpen(true)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setIsOpen(true); }}
+        onClick={openSelector}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") openSelector(); }}
         className="flex w-full items-center gap-2 rounded-lg border bg-white p-2 text-sm hover:bg-slate-50 transition-colors cursor-pointer"
       >
         <UserCircle className="h-4 w-4 text-muted-foreground" />
@@ -72,7 +89,7 @@ export function CustomerSelect({
   }
 
   return (
-    <div className="rounded-lg border bg-white shadow-lg">
+    <div className="rounded-lg border bg-white shadow-sm">
       <div className="p-2">
         <Input
           placeholder={t("pos.searchCustomers")}
@@ -83,6 +100,12 @@ export function CustomerSelect({
         />
       </div>
       <div className="max-h-48 overflow-y-auto">
+        {isLoading ? (
+          <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{t("common.loading")}</span>
+          </div>
+        ) : null}
         <button
           onClick={() => {
             onSelect(null);
@@ -107,6 +130,11 @@ export function CustomerSelect({
             )}
           </button>
         ))}
+        {!isLoading && filtered.length === 0 ? (
+          <div className="px-3 py-3 text-sm text-muted-foreground">
+            {t("common.noResultsFound")}
+          </div>
+        ) : null}
       </div>
       <div className="border-t p-2">
         <Button

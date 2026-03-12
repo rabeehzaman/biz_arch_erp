@@ -413,89 +413,174 @@ export default function OpeningStockPage() {
                 <p className="text-sm">Click &quot;Add Opening Stock&quot; to set initial inventory</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Opening Qty</TableHead>
-                    <TableHead className="hidden sm:table-cell text-right">Remaining</TableHead>
-                    <TableHead className="hidden md:table-cell text-right">Unit Cost</TableHead>
-                    <TableHead className="hidden sm:table-cell text-right">Total Value</TableHead>
-                    {multiBranchEnabled && <TableHead className="hidden sm:table-cell">Warehouse</TableHead>}
-                    <TableHead className="hidden sm:table-cell">Date</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                <div className="space-y-3 p-4 sm:hidden">
                   {filtered.map((stock) => {
                     const remaining = stock.stockLot ? Number(stock.stockLot.remainingQuantity) : 0;
                     const pct = Number(stock.quantity) > 0 ? (remaining / Number(stock.quantity)) * 100 : 0;
+                    const totalValue = Number(stock.quantity) * Number(stock.unitCost);
+
                     return (
-                      <TableRow key={stock.id} className="hover:bg-slate-50">
-                        <TableCell>
-                          <p className="font-medium text-slate-900">{stock.product.name}</p>
-                          {stock.product.sku && (
-                            <p className="text-xs text-slate-500">SKU: {stock.product.sku}</p>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {Number(stock.quantity).toLocaleString("en-IN")}
-                          {stock.product.unit && (
-                            <span className="text-xs text-slate-400 ml-1">{stock.product.unit.code}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-right">
-                          <div className="flex flex-col items-end gap-1">
-                            <span className="tabular-nums text-sm">
-                              {remaining.toLocaleString("en-IN")}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={
-                                pct > 50
-                                  ? "text-xs border-emerald-200 text-emerald-700 bg-emerald-50"
-                                  : pct > 10
-                                    ? "text-xs border-amber-200 text-amber-700 bg-amber-50"
-                                    : "text-xs border-red-200 text-red-700 bg-red-50"
-                              }
-                            >
-                              {pct.toFixed(0)}% left
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-right tabular-nums">
-                          {symbol}{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-right font-medium tabular-nums">
-                          {symbol}{(Number(stock.quantity) * Number(stock.unitCost)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        {multiBranchEnabled && (
-                          <TableCell className="hidden sm:table-cell">
-                            {stock.warehouse ? (
-                              <span className="text-sm text-slate-600">{stock.warehouse.name}</span>
-                            ) : (
-                              <span className="text-sm text-slate-400">Global</span>
+                      <div key={stock.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900">{stock.product.name}</p>
+                            {stock.product.sku && (
+                              <p className="mt-1 text-xs text-slate-500">SKU: {stock.product.sku}</p>
                             )}
-                          </TableCell>
-                        )}
-                        <TableCell className="hidden sm:table-cell text-sm text-slate-600">
-                          {format(new Date(stock.stockDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell>
+                          </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-red-500"
+                            className="h-9 w-9 shrink-0 text-slate-400 hover:text-red-500"
                             onClick={() => setDeleteId(stock.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Opening Qty</p>
+                            <p className="mt-1 font-medium text-slate-900">
+                              {Number(stock.quantity).toLocaleString("en-IN")}
+                              {stock.product.unit && (
+                                <span className="ml-1 text-xs text-slate-400">{stock.product.unit.code}</span>
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Remaining</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-slate-900">{remaining.toLocaleString("en-IN")}</span>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  pct > 50
+                                    ? "text-xs border-emerald-200 text-emerald-700 bg-emerald-50"
+                                    : pct > 10
+                                      ? "text-xs border-amber-200 text-amber-700 bg-amber-50"
+                                      : "text-xs border-red-200 text-red-700 bg-red-50"
+                                }
+                              >
+                                {pct.toFixed(0)}% left
+                              </Badge>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Unit Cost</p>
+                            <p className="mt-1 font-medium text-slate-900">
+                              {symbol}{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Total Value</p>
+                            <p className="mt-1 font-semibold text-slate-900">
+                              {symbol}{totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                          {multiBranchEnabled && (
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Warehouse</p>
+                              <p className="mt-1 text-slate-900">{stock.warehouse?.name || "Global"}</p>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Date</p>
+                            <p className="mt-1 text-slate-900">{format(new Date(stock.stockDate), "dd MMM yyyy")}</p>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </div>
+
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead className="text-right">Opening Qty</TableHead>
+                        <TableHead className="hidden sm:table-cell text-right">Remaining</TableHead>
+                        <TableHead className="hidden md:table-cell text-right">Unit Cost</TableHead>
+                        <TableHead className="hidden sm:table-cell text-right">Total Value</TableHead>
+                        {multiBranchEnabled && <TableHead className="hidden sm:table-cell">Warehouse</TableHead>}
+                        <TableHead className="hidden sm:table-cell">Date</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((stock) => {
+                        const remaining = stock.stockLot ? Number(stock.stockLot.remainingQuantity) : 0;
+                        const pct = Number(stock.quantity) > 0 ? (remaining / Number(stock.quantity)) * 100 : 0;
+                        return (
+                          <TableRow key={stock.id} className="hover:bg-slate-50">
+                            <TableCell>
+                              <p className="font-medium text-slate-900">{stock.product.name}</p>
+                              {stock.product.sku && (
+                                <p className="text-xs text-slate-500">SKU: {stock.product.sku}</p>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {Number(stock.quantity).toLocaleString("en-IN")}
+                              {stock.product.unit && (
+                                <span className="text-xs text-slate-400 ml-1">{stock.product.unit.code}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-right">
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="tabular-nums text-sm">
+                                  {remaining.toLocaleString("en-IN")}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    pct > 50
+                                      ? "text-xs border-emerald-200 text-emerald-700 bg-emerald-50"
+                                      : pct > 10
+                                        ? "text-xs border-amber-200 text-amber-700 bg-amber-50"
+                                        : "text-xs border-red-200 text-red-700 bg-red-50"
+                                  }
+                                >
+                                  {pct.toFixed(0)}% left
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-right tabular-nums">
+                              {symbol}{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-right font-medium tabular-nums">
+                              {symbol}{(Number(stock.quantity) * Number(stock.unitCost)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            {multiBranchEnabled && (
+                              <TableCell className="hidden sm:table-cell">
+                                {stock.warehouse ? (
+                                  <span className="text-sm text-slate-600">{stock.warehouse.name}</span>
+                                ) : (
+                                  <span className="text-sm text-slate-400">Global</span>
+                                )}
+                              </TableCell>
+                            )}
+                            <TableCell className="hidden sm:table-cell text-sm text-slate-600">
+                              {format(new Date(stock.stockDate), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400 hover:text-red-500"
+                                onClick={() => setDeleteId(stock.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

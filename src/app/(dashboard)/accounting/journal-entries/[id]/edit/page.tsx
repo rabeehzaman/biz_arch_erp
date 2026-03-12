@@ -199,12 +199,12 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
 
                                     {lines.map((line, index) => (
                                         <div key={index}>
-                                            <div className="hidden grid-cols-[1fr_1fr_120px_120px_40px] items-center gap-2 sm:grid">
+                                            <div className="hidden min-w-0 grid-cols-[1fr_1fr_120px_120px_40px] items-center gap-2 sm:grid">
                                                 <Select
                                                     value={line.accountId}
                                                     onValueChange={(v) => updateLine(index, "accountId", v)}
                                                 >
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className="w-full min-w-0">
                                                         <SelectValue placeholder="Select account" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -260,7 +260,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                                 </Button>
                                             </div>
 
-                                            <div className="rounded-lg border border-slate-200 p-3 sm:hidden">
+                                            <div className="overflow-hidden rounded-lg border border-slate-200 p-3 sm:hidden">
                                                 <div className="flex items-start justify-between gap-3">
                                                     <Label className="text-sm font-semibold">Line {index + 1}</Label>
                                                     <Button
@@ -276,13 +276,13 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                                 </div>
 
                                                 <div className="mt-3 space-y-3">
-                                                    <div className="grid gap-2">
+                                                    <div className="grid min-w-0 gap-2">
                                                         <Label className="text-xs text-slate-500">Account</Label>
                                                         <Select
                                                             value={line.accountId}
                                                             onValueChange={(v) => updateLine(index, "accountId", v)}
                                                         >
-                                                            <SelectTrigger>
+                                                            <SelectTrigger className="w-full min-w-0">
                                                                 <SelectValue placeholder="Select account" />
                                                             </SelectTrigger>
                                                             <SelectContent>

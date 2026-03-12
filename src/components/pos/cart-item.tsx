@@ -20,9 +20,9 @@ export interface CartItemData {
 
 interface CartItemProps {
   item: CartItemData;
-  onUpdateQuantity: (qty: number) => void;
-  onUpdateDiscount: (discount: number) => void;
-  onRemove: () => void;
+  onUpdateQuantity: (productId: string, qty: number) => void;
+  onUpdateDiscount: (productId: string, discount: number) => void;
+  onRemove: (productId: string) => void;
 }
 
 export function CartItem({
@@ -39,7 +39,7 @@ export function CartItem({
 
   const applyDiscount = () => {
     const val = parseFloat(discountValue) || 0;
-    onUpdateDiscount(val);
+    onUpdateDiscount(item.productId, val);
     setShowDiscountInput(false);
   };
 
@@ -70,7 +70,7 @@ export function CartItem({
             variant="outline"
             size="icon"
             className="h-8 w-8"
-            onClick={() => onUpdateQuantity(item.quantity - 1)}
+            onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
           >
             <Minus className="h-3 w-3" />
           </Button>
@@ -81,7 +81,7 @@ export function CartItem({
             variant="outline"
             size="icon"
             className="h-8 w-8"
-            onClick={() => onUpdateQuantity(item.quantity + 1)}
+            onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
           >
             <Plus className="h-3 w-3" />
           </Button>
@@ -93,7 +93,7 @@ export function CartItem({
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-          onClick={onRemove}
+          onClick={() => onRemove(item.productId)}
         >
           <Trash2 className="h-3 w-3" />
         </Button>
@@ -125,7 +125,7 @@ export function CartItem({
               variant="ghost"
               className="h-7 text-xs text-red-500"
               onClick={() => {
-                onUpdateDiscount(0);
+                onUpdateDiscount(item.productId, 0);
                 setShowDiscountInput(false);
               }}
             >

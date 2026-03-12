@@ -96,14 +96,14 @@ export function UnitFormDialog({
             }}
         >
             <DialogContent>
-                <form onSubmit={handleSubmit}>
-                    <DialogHeader>
+                <form className="contents" onSubmit={handleSubmit}>
+                    <DialogHeader className="pr-12">
                         <DialogTitle>Add New Unit</DialogTitle>
                         <DialogDescription>
                             Add a new unit of measurement.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-2 sm:py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="code">Code *</Label>
                             <Input

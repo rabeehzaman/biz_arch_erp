@@ -83,8 +83,8 @@ export function SidebarConfigDialog({ open, onOpenChange, orgId, orgName }: Side
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader className="pr-12">
                     <DialogTitle>Sidebar Configuration</DialogTitle>
                     <DialogDescription>
                         Enable or disable navigation items for <strong>{orgName}</strong>.
@@ -97,7 +97,7 @@ export function SidebarConfigDialog({ open, onOpenChange, orgId, orgName }: Side
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                 ) : (
-                    <div className="space-y-6 py-4">
+                    <div className="space-y-6 py-2 sm:py-4">
                         {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -130,7 +130,7 @@ export function SidebarConfigDialog({ open, onOpenChange, orgId, orgName }: Side
                     </div>
                 )}
 
-                <DialogFooter className="sticky bottom-0 bg-background pt-2">
+                <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>

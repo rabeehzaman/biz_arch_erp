@@ -110,50 +110,98 @@ export default function ExpensesPage() {
                     {searchQuery
                       ? "Try a different search term"
                       : "Create your first expense to get started"}
-                  </p>
+                    </p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Number</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-3 sm:hidden">
                     {filteredExpenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell>
-                          <Link
-                            href={`/accounting/expenses/${expense.id}`}
-                            className="font-medium text-blue-600 hover:underline"
-                          >
-                            {expense.expenseNumber}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(expense.expenseDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell className="max-w-[200px] truncate">
-                          {expense.description || "-"}
-                        </TableCell>
-                        <TableCell>{expense.supplier?.name || "-"}</TableCell>
-                        <TableCell>
-                          <Badge className={statusColors[expense.status]}>
-                            {expense.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {fmt(Number(expense.total))}
-                        </TableCell>
-                      </TableRow>
+                      <div key={expense.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Number</p>
+                            <Link
+                              href={`/accounting/expenses/${expense.id}`}
+                              className="mt-1 block font-semibold text-blue-600 hover:underline"
+                            >
+                              {expense.expenseNumber}
+                            </Link>
+                          </div>
+                          <Badge className={statusColors[expense.status]}>{expense.status}</Badge>
+                        </div>
+
+                        <div className="mt-4">
+                          <p className="text-sm text-slate-600">{expense.description || "-"}</p>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Date</p>
+                            <p className="mt-1 font-medium text-slate-900">
+                              {format(new Date(expense.expenseDate), "dd MMM yyyy")}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Supplier</p>
+                            <p className="mt-1 font-medium text-slate-900">{expense.supplier?.name || "-"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                            <p className="mt-1 font-semibold text-slate-900">{fmt(Number(expense.total))}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Items</p>
+                            <p className="mt-1 font-medium text-slate-900">{expense._count.items}</p>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Number</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Supplier</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredExpenses.map((expense) => (
+                          <TableRow key={expense.id}>
+                            <TableCell>
+                              <Link
+                                href={`/accounting/expenses/${expense.id}`}
+                                className="font-medium text-blue-600 hover:underline"
+                              >
+                                {expense.expenseNumber}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(expense.expenseDate), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate">
+                              {expense.description || "-"}
+                            </TableCell>
+                            <TableCell>{expense.supplier?.name || "-"}</TableCell>
+                            <TableCell>
+                              <Badge className={statusColors[expense.status]}>
+                                {expense.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {fmt(Number(expense.total))}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

@@ -186,20 +186,20 @@ export default function SupplierStatementPage({
         <PageAnimation>
           <div className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
               <Link href="/suppliers">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               </Link>
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-2xl font-bold text-slate-900">
                   Supplier Statement
                 </h2>
-                <p className="text-slate-500">{statement.supplier.name}</p>
+                <p className="truncate text-slate-500">{statement.supplier.name}</p>
               </div>
             </div>
-            <Button onClick={handleDownloadPDF} disabled={isDownloading}>
+            <Button onClick={handleDownloadPDF} disabled={isDownloading} className="w-full sm:w-auto">
               {isDownloading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -209,7 +209,7 @@ export default function SupplierStatementPage({
             </Button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
@@ -218,7 +218,7 @@ export default function SupplierStatementPage({
               </CardHeader>
               <CardContent>
                 <div
-                  className={`text-2xl font-bold ${statement.openingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
+                  className={`text-lg font-bold sm:text-2xl ${statement.openingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
                   {formatCurrency(statement.openingBalance)}
                 </div>
@@ -231,7 +231,7 @@ export default function SupplierStatementPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-lg font-bold text-red-600 sm:text-2xl">
                   {formatCurrency(statement.totalDebits)}
                 </div>
               </CardContent>
@@ -243,7 +243,7 @@ export default function SupplierStatementPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-lg font-bold text-green-600 sm:text-2xl">
                   {formatCurrency(statement.totalCredits)}
                 </div>
               </CardContent>
@@ -256,7 +256,7 @@ export default function SupplierStatementPage({
               </CardHeader>
               <CardContent>
                 <div
-                  className={`text-2xl font-bold ${statement.closingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
+                  className={`text-lg font-bold sm:text-2xl ${statement.closingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
                   {formatCurrency(statement.closingBalance)}
                   <span className="text-sm ml-1">
@@ -269,10 +269,10 @@ export default function SupplierStatementPage({
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <CardTitle>Transactions</CardTitle>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                  <div className="grid gap-2">
                     <Label htmlFor="fromDate" className="text-sm">
                       From
                     </Label>
@@ -281,10 +281,10 @@ export default function SupplierStatementPage({
                       type="date"
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
-                      className="w-40"
+                      className="w-full sm:w-40"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="grid gap-2">
                     <Label htmlFor="toDate" className="text-sm">
                       To
                     </Label>
@@ -293,10 +293,10 @@ export default function SupplierStatementPage({
                       type="date"
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}
-                      className="w-40"
+                      className="w-full sm:w-40"
                     />
                   </div>
-                  <Button variant="outline" onClick={handleFilter}>
+                  <Button variant="outline" onClick={handleFilter} className="w-full sm:w-auto">
                     Filter
                   </Button>
                 </div>
@@ -316,65 +316,130 @@ export default function SupplierStatementPage({
                   </p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Reference</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Payable</TableHead>
-                      <TableHead className="text-right">Paid</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-3 sm:hidden">
                     {statement.transactions.map((txn) => (
-                      <TableRow key={txn.id}>
-                        <TableCell>
-                          {format(new Date(txn.date), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={typeBadgeVariant[txn.type]}>
-                            {typeLabels[txn.type]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono">{txn.reference}</TableCell>
-                        <TableCell>{txn.description}</TableCell>
-                        <TableCell className="text-right text-red-600">
-                          {txn.debit > 0 ? formatCurrency(txn.debit) : "-"}
-                        </TableCell>
-                        <TableCell className="text-right text-green-600">
-                          {txn.credit > 0 ? formatCurrency(txn.credit) : "-"}
-                        </TableCell>
-                        <TableCell
-                          className={`text-right font-medium ${txn.runningBalance >= 0 ? "text-green-600" : "text-red-600"}`}
-                        >
-                          {formatCurrency(txn.runningBalance)}
-                          <span className="text-xs ml-1">
-                            {txn.runningBalance >= 0 ? "Dr" : "Cr"}
-                          </span>
-                        </TableCell>
-                      </TableRow>
+                      <div key={txn.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-slate-900">
+                              {format(new Date(txn.date), "dd MMM yyyy")}
+                            </p>
+                            <Badge variant={typeBadgeVariant[txn.type]}>
+                              {typeLabels[txn.type]}
+                            </Badge>
+                          </div>
+                          <p
+                            className={`text-right text-sm font-semibold ${txn.runningBalance >= 0 ? "text-green-600" : "text-red-600"}`}
+                          >
+                            {formatCurrency(txn.runningBalance)}
+                            <span className="ml-1 text-xs">
+                              {txn.runningBalance >= 0 ? "Dr" : "Cr"}
+                            </span>
+                          </p>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          <p className="break-all font-mono text-xs text-slate-500">{txn.reference}</p>
+                          <p className="text-sm text-slate-600">{txn.description}</p>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-lg bg-rose-50 px-3 py-2">
+                            <p className="text-xs text-slate-500">Payable</p>
+                            <p className="font-semibold text-red-600">
+                              {txn.debit > 0 ? formatCurrency(txn.debit) : "-"}
+                            </p>
+                          </div>
+                          <div className="rounded-lg bg-emerald-50 px-3 py-2">
+                            <p className="text-xs text-slate-500">Paid</p>
+                            <p className="font-semibold text-green-600">
+                              {txn.credit > 0 ? formatCurrency(txn.credit) : "-"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                    <TableRow className="bg-slate-50 font-medium">
-                      <TableCell colSpan={4} className="text-right">
-                        Totals
-                      </TableCell>
-                      <TableCell className="text-right text-red-600">
-                        {formatCurrency(statement.totalDebits)}
-                      </TableCell>
-                      <TableCell className="text-right text-green-600">
-                        {formatCurrency(statement.totalCredits)}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right ${statement.closingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
-                      >
-                        {formatCurrency(statement.closingBalance)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="grid grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-slate-500">Payable</p>
+                          <p className="font-semibold text-red-600">{formatCurrency(statement.totalDebits)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500">Paid</p>
+                          <p className="font-semibold text-green-600">{formatCurrency(statement.totalCredits)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500">Balance</p>
+                          <p className={`font-semibold ${statement.closingBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {formatCurrency(statement.closingBalance)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Reference</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Payable</TableHead>
+                          <TableHead className="text-right">Paid</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {statement.transactions.map((txn) => (
+                          <TableRow key={txn.id}>
+                            <TableCell>
+                              {format(new Date(txn.date), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={typeBadgeVariant[txn.type]}>
+                                {typeLabels[txn.type]}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono">{txn.reference}</TableCell>
+                            <TableCell>{txn.description}</TableCell>
+                            <TableCell className="text-right text-red-600">
+                              {txn.debit > 0 ? formatCurrency(txn.debit) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right text-green-600">
+                              {txn.credit > 0 ? formatCurrency(txn.credit) : "-"}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-medium ${txn.runningBalance >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {formatCurrency(txn.runningBalance)}
+                              <span className="text-xs ml-1">
+                                {txn.runningBalance >= 0 ? "Dr" : "Cr"}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-slate-50 font-medium">
+                          <TableCell colSpan={4} className="text-right">
+                            Totals
+                          </TableCell>
+                          <TableCell className="text-right text-red-600">
+                            {formatCurrency(statement.totalDebits)}
+                          </TableCell>
+                          <TableCell className="text-right text-green-600">
+                            {formatCurrency(statement.totalCredits)}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right ${statement.closingBalance >= 0 ? "text-green-600" : "text-red-600"}`}
+                          >
+                            {formatCurrency(statement.closingBalance)}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

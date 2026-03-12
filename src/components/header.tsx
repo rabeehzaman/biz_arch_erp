@@ -117,9 +117,9 @@ export function Header() {
   const accountMenu = mounted ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-2.5 py-2 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.22)] transition-colors hover:border-slate-300">
+        <button className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-2.5 py-2 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-[linear-gradient(135deg,hsl(194_88%_43%),hsl(162_73%_42%))] text-primary-foreground">
+            <AvatarFallback className="bg-slate-900 text-primary-foreground">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -213,19 +213,15 @@ export function Header() {
       <div
         className={
           isDashboardHome
-            ? "glass-panel relative overflow-hidden px-3 py-2.5 md:px-5 md:py-3"
-            : "glass-panel relative overflow-hidden px-3 py-3 md:px-4 md:py-3.5"
+            ? "relative rounded-3xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm md:px-5 md:py-3"
+            : "relative rounded-3xl border border-slate-200 bg-white px-3 py-3 shadow-sm md:px-4 md:py-3.5"
         }
       >
         <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,0))]"
-        />
-        <div
           className={
             isDashboardHome
-              ? "relative flex items-center gap-3 justify-between"
-              : "relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              ? "flex items-center justify-between gap-3"
+              : "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           }
         >
           <div className={`flex min-w-0 gap-3 ${isDashboardHome ? "items-center" : "items-center"}`}>
@@ -237,8 +233,8 @@ export function Header() {
             <div className="min-w-0">
               {isDashboardHome ? (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-base font-semibold text-slate-900 md:text-lg whitespace-nowrap">
-                    <span className="gradient-heading">{t("header.welcome")}, {firstName}</span>
+                  <h1 className="whitespace-nowrap text-base font-semibold text-slate-900 md:text-lg">
+                    {t("header.welcome")}, {firstName}
                   </h1>
                   <span className="section-chip text-[10px] px-2 py-0.5">{today}</span>
                   {orgName && (
@@ -274,11 +270,11 @@ export function Header() {
               onClick={() => setOpen(true)}
               className={
                 isDashboardHome
-                  ? "hidden min-w-0 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_12px_24px_-18px_rgba(15,23,42,0.14)] transition-all hover:border-slate-300 hover:bg-white lg:flex"
-                  : "hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.2)] transition-all hover:border-slate-300 lg:flex"
+                  ? "hidden min-w-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 lg:flex"
+                  : "hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 lg:flex"
               }
             >
-              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(16,185,129,0.12))] text-sky-700">
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
                 <Search className="h-3.5 w-3.5 shrink-0" />
               </div>
               <span className="min-w-0 truncate text-left font-medium text-slate-600 text-xs">

@@ -1,15 +1,11 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useEffect } from "react";
 import { useLanguage } from "@/lib/i18n";
-import {
-  KonstaProvider,
-  App,
-  Page,
-  Tabbar,
-  TabbarLink,
-} from "konsta/react";
+import { useMobileFixedUi } from "@/hooks/use-mobile-fixed-ui";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -18,6 +14,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { GlobalScanner } from "@/components/scanner/global-scanner";
+import { MobileLanguageSwitcher } from "@/components/mobile-language-switcher";
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -26,7 +23,7 @@ interface MobileLayoutProps {
 const tabs = [
   { key: "home", href: "/", icon: LayoutDashboard, labelKey: "nav.dashboard" },
   { key: "sales", href: "/invoices", icon: ShoppingCart, labelKey: "nav.sales" },
-  { key: "pos", href: "/pos", icon: Monitor, labelKey: "nav.posTerminal" },
+  { key: "pos", href: "/pos", icon: Monitor, labelKey: "nav.posTerminal", mobileLabelKey: "nav.posShort" },
   { key: "products", href: "/products", icon: Package, labelKey: "nav.products" },
   { key: "more", href: "/more", icon: MoreHorizontal, labelKey: "nav.more" },
 ];
@@ -47,64 +44,90 @@ function getActiveTab(pathname: string): string {
 
 export function MobileLayout({ children }: MobileLayoutProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session } = useSession();
   const { t } = useLanguage();
   const activeTab = getActiveTab(pathname);
   const isSuperadmin = session?.user?.role === "superadmin";
-  const baseContentClassName = "min-h-[100dvh] bg-white px-4 pt-4";
-  const contentClassName = `${baseContentClassName} pb-[calc(5rem+env(safe-area-inset-bottom,0px))]`;
+  const showLanguageSwitcher = pathname === "/";
+  const { bottomOffset, hideFixedUi } = useMobileFixedUi();
+  const baseContentClassName = "min-h-[100dvh] bg-slate-50 px-4 pt-4";
+  const contentClassName = `${baseContentClassName} pb-[calc(4.75rem+var(--app-safe-area-bottom))]`;
+  const bottomNavClassName =
+    "fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white shadow-[0_-10px_24px_-22px_rgba(15,23,42,0.18)]";
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   // Superadmin only sees organizations, skip tabbar
   if (isSuperadmin) {
     return (
-      <KonstaProvider theme="material">
-        <App theme="material" safeAreas>
-          <Page className="!static !h-auto !overflow-visible pb-0">
-            <div className={`${baseContentClassName} pb-6`}>
-              <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-6">
-                {children}
-              </div>
+      <div className={`${baseContentClassName} pb-6`}>
+        <div className="mx-auto w-full max-w-[1680px]">
+          {showLanguageSwitcher && (
+            <div className="mb-3 flex justify-end">
+              <MobileLanguageSwitcher />
             </div>
-          </Page>
-        </App>
-      </KonstaProvider>
+          )}
+          <div className="flex flex-col gap-6">{children}</div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <KonstaProvider theme="material">
-      <App theme="material" safeAreas>
-        <Page
-          className="!static !h-auto !overflow-visible pb-0"
-          colors={{ bgMaterial: "bg-white" }}
-        >
-          <div className={contentClassName}>
-            <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-6">
-              {children}
+    <div className="relative min-h-[100dvh] bg-slate-50">
+      <div className={contentClassName}>
+        <div className="mx-auto w-full max-w-[1680px]">
+          {showLanguageSwitcher && (
+            <div className="mb-3 flex justify-end">
+              <MobileLanguageSwitcher />
             </div>
-          </div>
+          )}
+          <div className="flex flex-col gap-6">{children}</div>
+        </div>
+      </div>
 
-          {/* Bottom tabbar */}
-          <Tabbar
-            labels
-            icons
-            className="fixed! bottom-0 left-0 right-0 z-50"
+      {!hideFixedUi && (
+        <>
+          <div
+            data-testid="mobile-nav-underlay"
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-white"
+            style={{ height: "calc(var(--app-safe-area-bottom) + 2.5rem)" }}
+          />
+          <nav
+            className={bottomNavClassName}
+            style={{
+              transform: bottomOffset > 0 ? `translateY(${bottomOffset}px)` : undefined,
+            }}
           >
-            {tabs.map((tab) => (
-              <TabbarLink
-                key={tab.key}
-                active={activeTab === tab.key}
-                onClick={() => router.push(tab.href)}
-                icon={<tab.icon className="h-6 w-6" />}
-                label={t(tab.labelKey)}
-              />
-            ))}
-          </Tabbar>
+            <div className="grid grid-cols-5 gap-1 px-2 pb-[calc(0.35rem+var(--app-safe-area-bottom))] pt-1">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.key;
 
-          <GlobalScanner />
-        </Page>
-      </App>
-    </KonstaProvider>
+                return (
+                  <Link
+                    key={tab.key}
+                    href={tab.href}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[11px] font-medium transition-colors ${
+                      isActive
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    }`}
+                  >
+                    <tab.icon className="h-5 w-5 shrink-0" />
+                    <span className="min-w-0 truncate">{t(tab.mobileLabelKey ?? tab.labelKey)}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+        </>
+      )}
+
+      <GlobalScanner />
+    </div>
   );
 }

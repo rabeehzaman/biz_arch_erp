@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Wallet, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface CashBankAccount {
   id: string;
@@ -50,6 +51,7 @@ interface Account {
 
 export default function CashBankPage() {
   const { fmt } = useCurrency();
+  const { t, tt } = useLanguage();
   const [accounts, setAccounts] = useState<CashBankAccount[]>([]);
   const [coaAccounts, setCoaAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,11 +73,7 @@ export default function CashBankPage() {
     transactionDate: new Date().toISOString().split("T")[0],
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [cbRes, coaRes] = await Promise.all([
         fetch("/api/cash-bank-accounts"),
@@ -89,11 +87,15 @@ export default function CashBankPage() {
         )
       );
     } catch {
-      toast.error("Failed to load data");
+      toast.error(t("accounting.failedToLoadData"));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,12 +109,12 @@ export default function CashBankPage() {
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success("Account created");
+      toast.success(t("accounting.accountCreated"));
       setIsDialogOpen(false);
       setFormData({ name: "", accountId: "", accountSubType: "BANK", bankName: "", accountNumber: "", openingBalance: "" });
       fetchData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create account");
+      toast.error(error instanceof Error ? tt(error.message) : t("accounting.failedToCreateAccount"));
     }
   };
 
@@ -131,12 +133,12 @@ export default function CashBankPage() {
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success("Transfer completed");
+      toast.success(t("accounting.transferCompleted"));
       setIsTransferOpen(false);
       setTransferData({ fromAccountId: "", toAccountId: "", amount: "", description: "", transactionDate: new Date().toISOString().split("T")[0] });
       fetchData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to transfer");
+      toast.error(error instanceof Error ? tt(error.message) : t("accounting.failedToTransfer"));
     }
   };
 
@@ -150,25 +152,25 @@ export default function CashBankPage() {
               <h2 className="text-2xl font-bold text-slate-900">Cash & Bank</h2>
               <p className="text-slate-500">Manage cash and bank accounts</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="w-full sm:w-auto">
                     <ArrowRightLeft className="mr-2 h-4 w-4" />
                     Transfer
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
-                  <form onSubmit={handleTransfer}>
-                    <DialogHeader>
-                      <DialogTitle>Transfer Between Accounts</DialogTitle>
-                      <DialogDescription>Move funds between cash/bank accounts.</DialogDescription>
+                <DialogContent className="sm:max-w-lg">
+                  <form className="contents" onSubmit={handleTransfer}>
+                    <DialogHeader className="pr-12">
+                      <DialogTitle>{t("accounting.transferBetweenAccounts")}</DialogTitle>
+                      <DialogDescription>{t("accounting.transferBetweenAccountsDesc")}</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-2 sm:py-4">
                       <div className="grid gap-2">
-                        <Label>From Account *</Label>
+                        <Label>{t("accounting.fromAccount")} *</Label>
                         <Select value={transferData.fromAccountId} onValueChange={(v) => setTransferData({ ...transferData, fromAccountId: v })}>
-                          <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={t("accounting.selectSource")} /></SelectTrigger>
                           <SelectContent>
                             {accounts.filter((a) => a.isActive).map((a) => (
                               <SelectItem key={a.id} value={a.id}>{a.name} ({Number(a.balance).toLocaleString("en-IN")})</SelectItem>
@@ -177,9 +179,9 @@ export default function CashBankPage() {
                         </Select>
                       </div>
                       <div className="grid gap-2">
-                        <Label>To Account *</Label>
+                        <Label>{t("accounting.toAccount")} *</Label>
                         <Select value={transferData.toAccountId} onValueChange={(v) => setTransferData({ ...transferData, toAccountId: v })}>
-                          <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={t("accounting.selectDestination")} /></SelectTrigger>
                           <SelectContent>
                             {accounts.filter((a) => a.isActive && a.id !== transferData.fromAccountId).map((a) => (
                               <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
@@ -187,7 +189,7 @@ export default function CashBankPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="grid gap-2">
                           <Label>Amount *</Label>
                           <Input type="number" step="0.01" value={transferData.amount} onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })} required />
@@ -199,11 +201,11 @@ export default function CashBankPage() {
                       </div>
                       <div className="grid gap-2">
                         <Label>Description</Label>
-                        <Input value={transferData.description} onChange={(e) => setTransferData({ ...transferData, description: e.target.value })} placeholder="Transfer description" />
+                        <Input value={transferData.description} onChange={(e) => setTransferData({ ...transferData, description: e.target.value })} placeholder={t("accounting.transferDescriptionPlaceholder")} />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit">Transfer</Button>
+                      <Button type="submit">{t("accounting.transfer")}</Button>
                     </DialogFooter>
                   </form>
                 </DialogContent>
@@ -211,23 +213,23 @@ export default function CashBankPage() {
 
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Account
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
-                  <form onSubmit={handleCreate}>
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-lg">
+                  <form className="contents" onSubmit={handleCreate}>
+                    <DialogHeader className="pr-12">
                       <DialogTitle>Add Cash/Bank Account</DialogTitle>
                       <DialogDescription>Create a new cash or bank account.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-2 sm:py-4">
                       <div className="grid gap-2">
                         <Label>Name *</Label>
                         <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. HDFC Current Account" required />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="grid gap-2">
                           <Label>Type *</Label>
                           <Select value={formData.accountSubType} onValueChange={(v) => setFormData({ ...formData, accountSubType: v })}>
@@ -251,7 +253,7 @@ export default function CashBankPage() {
                         </div>
                       </div>
                       {formData.accountSubType === "BANK" && (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div className="grid gap-2">
                             <Label>Bank Name</Label>
                             <Input value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })} />
@@ -291,7 +293,10 @@ export default function CashBankPage() {
           {/* Account Cards */}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="animate-spin h-8 w-8 rounded-full border-4 border-primary border-t-transparent" />
+                <p className="text-sm text-slate-500">Loading accounts...</p>
+              </div>
             </div>
           ) : accounts.length === 0 ? (
             <Card>
@@ -302,21 +307,21 @@ export default function CashBankPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 items-stretch">
+            <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {accounts.map((account) => (
-                <Link key={account.id} href={`/accounting/cash-bank/${account.id}`} className="flex">
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer w-full">
+                <Link key={account.id} href={`/accounting/cash-bank/${account.id}`} className="flex min-w-0">
+                  <Card className="w-full cursor-pointer transition-shadow hover:shadow-md">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">{account.name}</h3>
+                        <h3 className="min-w-0 break-words font-semibold">{account.name}</h3>
                         <Badge variant="outline">
                           {account.accountSubType === "BANK" ? "Bank" : "Cash"}
                         </Badge>
                       </div>
                       {account.bankName && (
-                        <p className="text-sm text-slate-500">{account.bankName}</p>
+                        <p className="break-words text-sm text-slate-500">{account.bankName}</p>
                       )}
-                      <p className="text-2xl font-bold mt-3">
+                      <p className="mt-3 break-all text-xl font-bold sm:text-2xl">
                         {fmt(Number(account.balance))}
                       </p>
                       <p className="text-xs text-slate-400 mt-1">

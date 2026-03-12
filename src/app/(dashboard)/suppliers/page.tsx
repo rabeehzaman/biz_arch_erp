@@ -214,14 +214,14 @@ export default function SuppliersPage() {
             }
           }}>
             <DialogContent>
-              <form onSubmit={handleOpeningBalanceSubmit}>
-                <DialogHeader>
+              <form className="contents" onSubmit={handleOpeningBalanceSubmit}>
+                <DialogHeader className="pr-12">
                   <DialogTitle>Set Opening Balance</DialogTitle>
                   <DialogDescription>
                     Set the opening balance for {selectedSupplierForBalance?.name}. This represents the initial payable amount.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-2 sm:py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="openingAmount">Opening Balance Amount *</Label>
                     <Input
@@ -289,65 +289,27 @@ export default function SuppliersPage() {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead className="hidden sm:table-cell">Contact</TableHead>
-                        <TableHead className="hidden sm:table-cell">Location</TableHead>
-                        <TableHead>Balance</TableHead>
-                        <TableHead className="hidden sm:table-cell">Invoices</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSuppliers.map((supplier) => (
-                        <TableRow key={supplier.id}>
-                          <TableCell>
-                            <div className="font-medium">{supplier.name}</div>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <div className="text-sm">
-                              {supplier.email && <div>{supplier.email}</div>}
-                              {supplier.phone && (
-                                <div className="text-slate-500">{supplier.phone}</div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <div className="text-sm">
-                              {supplier.city && supplier.state
-                                ? `${supplier.city}, ${supplier.state}`
-                                : supplier.city || supplier.state || "-"}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={
-                                Number(supplier.balance) > 0
-                                  ? "text-red-600 font-medium"
-                                  : Number(supplier.balance) < 0
-                                    ? "text-green-600 font-medium"
-                                    : ""
-                              }
-                            >
-                              {symbol}{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
-                            </span>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">{supplier._count?.purchaseInvoices || 0}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={supplier.isActive ? "default" : "secondary"}
-                            >
+                <>
+                  <div className="space-y-3 sm:hidden">
+                    {filteredSuppliers.map((supplier) => (
+                      <div key={supplier.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900">{supplier.name}</p>
+                            {(supplier.email || supplier.phone) && (
+                              <div className="mt-1 space-y-1 text-sm text-slate-500">
+                                {supplier.email && <p className="break-all">{supplier.email}</p>}
+                                {supplier.phone && <p>{supplier.phone}</p>}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={supplier.isActive ? "default" : "secondary"}>
                               {supplier.isActive ? "Active" : "Inactive"}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
+                                <Button variant="ghost" size="icon" className="-mr-2 shrink-0">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -370,12 +332,124 @@ export default function SuppliersPage() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Balance</p>
+                            <p className={`mt-1 font-semibold ${Number(supplier.balance) > 0 ? "text-red-600" : Number(supplier.balance) < 0 ? "text-green-600" : "text-slate-900"}`}>
+                              {symbol}{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoices</p>
+                            <p className="mt-1 font-medium text-slate-900">{supplier._count?.purchaseInvoices || 0}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Location</p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {supplier.city && supplier.state
+                              ? `${supplier.city}, ${supplier.state}`
+                              : supplier.city || supplier.state || "-"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                            <TableHead className="hidden sm:table-cell">Location</TableHead>
+                            <TableHead>Balance</TableHead>
+                            <TableHead className="hidden sm:table-cell">Invoices</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredSuppliers.map((supplier) => (
+                            <TableRow key={supplier.id}>
+                              <TableCell>
+                                <div className="font-medium">{supplier.name}</div>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                <div className="text-sm">
+                                  {supplier.email && <div>{supplier.email}</div>}
+                                  {supplier.phone && (
+                                    <div className="text-slate-500">{supplier.phone}</div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                <div className="text-sm">
+                                  {supplier.city && supplier.state
+                                    ? `${supplier.city}, ${supplier.state}`
+                                    : supplier.city || supplier.state || "-"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={
+                                    Number(supplier.balance) > 0
+                                      ? "text-red-600 font-medium"
+                                      : Number(supplier.balance) < 0
+                                        ? "text-green-600 font-medium"
+                                        : ""
+                                  }
+                                >
+                                  {symbol}{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
+                                </span>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">{supplier._count?.purchaseInvoices || 0}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={supplier.isActive ? "default" : "secondary"}
+                                >
+                                  {supplier.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(supplier)}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(supplier)}>
+                                      <Wallet className="mr-2 h-4 w-4" />
+                                      Opening Balance
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() => handleDelete(supplier.id)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

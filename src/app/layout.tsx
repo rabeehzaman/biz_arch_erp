@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Inter, Outfit, Noto_Naskh_Arabic } from "next/font/google";
+import Script from "next/script";
+import { StandaloneShellGuard } from "@/components/pwa/standalone-shell-guard";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -22,13 +24,59 @@ const notoNaskhArabic = Noto_Naskh_Arabic({
 });
 
 export const metadata: Metadata = {
+  applicationName: "BizArch ERP",
   title: "BizArch ERP",
   description: "Simple invoicing and customer management",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "BizArch ERP",
+  },
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
 };
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  colorScheme: "light",
+  themeColor: "#ffffff",
+};
+
+const standaloneShellBootstrap = `
+  (function () {
+    var baseViewport = "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content";
+    var standaloneViewport = baseViewport + ", maximum-scale=1, user-scalable=no";
+    var isStandalone = false;
+
+    if (window.matchMedia) {
+      isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.matchMedia("(display-mode: fullscreen)").matches;
+    }
+
+    if (!isStandalone && navigator.standalone === true) {
+      isStandalone = true;
+    }
+
+    var isLandscape = window.matchMedia && window.matchMedia("(orientation: landscape)").matches;
+    var viewportMeta = document.querySelector('meta[name="viewport"]');
+
+    if (!viewportMeta) {
+      viewportMeta = document.createElement("meta");
+      viewportMeta.setAttribute("name", "viewport");
+      document.head.prepend(viewportMeta);
+    }
+
+    viewportMeta.setAttribute("content", isStandalone ? standaloneViewport : baseViewport);
+    document.documentElement.dataset.appDisplayMode = isStandalone ? "standalone" : "browser";
+    document.documentElement.dataset.appOrientation = isLandscape ? "landscape" : "portrait";
+  })();
+`;
 
 export default async function RootLayout({
   children,
@@ -43,7 +91,11 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} ${outfit.variable} ${notoNaskhArabic.variable} min-h-screen antialiased font-sans`}
       >
+        <Script id="standalone-shell-bootstrap" strategy="beforeInteractive">
+          {standaloneShellBootstrap}
+        </Script>
         <ThemeProvider>
+          <StandaloneShellGuard />
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>

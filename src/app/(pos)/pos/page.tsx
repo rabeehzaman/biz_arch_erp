@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
@@ -118,6 +118,7 @@ export default function POSDashboardPage() {
   const { t, lang } = useLanguage();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
   const [openingState, setOpeningState] = useState<OpeningState | null>(null);
   const [sessionsLocationKey, setSessionsLocationKey] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -154,30 +155,29 @@ export default function POSDashboardPage() {
     fetcher
   );
 
-  const locations = data?.locations ?? [];
-  const openSessions = data?.openSessions ?? [];
-  const selectedConfigLocation = locations.find(
-    (loc) => getLocationKey(loc) === configLocationKey
-  ) ?? null;
+  const locations = useMemo(() => data?.locations ?? [], [data?.locations]);
+  const openSessions = useMemo(() => data?.openSessions ?? [], [data?.openSessions]);
+  const selectedConfigLocation = useMemo(
+    () => locations.find((loc) => getLocationKey(loc) === configLocationKey) ?? null,
+    [locations, configLocationKey]
+  );
+  const filtered = useMemo(() => {
+    if (!deferredSearchQuery) {
+      return locations;
+    }
 
-  // Filter locations by search
-  const filtered = searchQuery
-    ? locations.filter((loc) => {
-      const q = searchQuery.toLowerCase();
+    return locations.filter((location) => {
       return (
-        loc.branchName.toLowerCase().includes(q) ||
-        loc.branchCode.toLowerCase().includes(q) ||
-        (loc.warehouseName?.toLowerCase().includes(q) ?? false) ||
-        (loc.warehouseCode?.toLowerCase().includes(q) ?? false)
+        location.branchName.toLowerCase().includes(deferredSearchQuery) ||
+        location.branchCode.toLowerCase().includes(deferredSearchQuery) ||
+        (location.warehouseName?.toLowerCase().includes(deferredSearchQuery) ?? false) ||
+        (location.warehouseCode?.toLowerCase().includes(deferredSearchQuery) ?? false)
       );
-    })
-    : locations;
-
-  // Map sessions to locations
-  const sessionMap = new Map<string, OpenSession>();
-  for (const s of openSessions) {
-    sessionMap.set(getSessionLocationKey(s), s);
-  }
+    });
+  }, [locations, deferredSearchQuery]);
+  const sessionMap = useMemo(() => {
+    return new Map(openSessions.map((session) => [getSessionLocationKey(session), session]));
+  }, [openSessions]);
 
   const openRegister = async (loc: Location) => {
     const key = getLocationKey(loc);
@@ -329,7 +329,7 @@ export default function POSDashboardPage() {
   return (
     <div className="flex h-screen flex-col bg-slate-100">
       {/* Top Bar */}
-      <header className="flex flex-col gap-3 border-b bg-white px-4 py-3 shadow-sm sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:py-0">
+      <header className="flex flex-col gap-3 border-b bg-white px-4 py-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:py-0">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -376,8 +376,8 @@ export default function POSDashboardPage() {
                 <div
                   key={key}
                   className={cn(
-                    "rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md",
-                    session && stale && "border-red-200",
+                    "rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300",
+                    session && stale && "border-red-200 hover:border-red-300",
                     isOpeningThis && !session && "ring-2 ring-primary"
                   )}
                 >
@@ -669,7 +669,7 @@ export default function POSDashboardPage() {
         }}
       >
         <DialogContent showCloseButton={false} className="sm:max-w-3xl">
-          <div className="flex items-start justify-between gap-4 border-b border-white/60 pb-4">
+          <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
             <DialogHeader className="p-0 text-left">
               <DialogTitle className="text-2xl font-semibold text-slate-900">
                 {selectedSessionId ? t("pos.sessionDetail") : t("pos.sessionHistory")}
@@ -700,7 +700,7 @@ export default function POSDashboardPage() {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <button
-                      className="inline-flex items-center gap-1 rounded-full border border-white/65 bg-white/75 px-3 py-1.5 text-sm text-muted-foreground shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] transition-colors hover:text-foreground"
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-slate-300 hover:bg-white hover:text-foreground"
                       onClick={() => setSelectedSessionId(null)}
                     >
                       {lang === "ar" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -737,7 +737,7 @@ export default function POSDashboardPage() {
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="rounded-[1.5rem] border border-white/70 bg-white/82 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)]">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
                       <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
                         {t("pos.session")}
                       </h4>
@@ -775,7 +775,7 @@ export default function POSDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-[1.5rem] border border-white/70 bg-white/82 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)]">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
                       <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
                         {t("pos.paymentBreakdown")}
                       </h4>
@@ -818,7 +818,7 @@ export default function POSDashboardPage() {
                   {sessionSummary.paymentBreakdown?.length > 0 && (
                     <div>
                       <h4 className="mb-2 text-sm font-medium">{t("pos.paymentBreakdown")}</h4>
-                      <div className="overflow-hidden rounded-[1.25rem] border border-white/70 bg-white/82 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)] divide-y">
+                      <div className="divide-y overflow-hidden rounded-2xl border border-slate-200 bg-white">
                         {sessionSummary.paymentBreakdown.map((pb: any) => (
                           <div key={pb.method} className="flex justify-between px-4 py-3 text-sm">
                             <span>{pb.method} ({pb.count})</span>
@@ -832,7 +832,7 @@ export default function POSDashboardPage() {
                   {sessionSummary.topProducts?.length > 0 && (
                     <div>
                       <h4 className="mb-2 text-sm font-medium">{t("pos.topProducts")}</h4>
-                      <div className="overflow-hidden rounded-[1.25rem] border border-white/70 bg-white/82 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)] divide-y text-sm">
+                      <div className="divide-y overflow-hidden rounded-2xl border border-slate-200 bg-white text-sm">
                         <div className="flex bg-muted/45 px-4 py-2 text-xs font-medium text-muted-foreground">
                           <span className="flex-1">{t("common.product")}</span>
                           <span className="w-20 text-center">{t("pos.qtySold")}</span>
@@ -867,10 +867,10 @@ export default function POSDashboardPage() {
                   return (
                     <button
                       key={s.id}
-                      className="group flex w-full items-center gap-4 rounded-[1.5rem] border border-white/70 bg-white/84 px-4 py-4 text-start shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)] transition-all hover:-translate-y-0.5 hover:border-sky-200/80 hover:bg-white"
+                      className="group flex w-full items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-start transition-colors hover:border-slate-300 hover:bg-slate-50"
                       onClick={() => setSelectedSessionId(s.id)}
                     >
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.25rem] bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(16,185,129,0.12))] text-sky-700">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
                         <History className="h-6 w-6" />
                       </div>
 

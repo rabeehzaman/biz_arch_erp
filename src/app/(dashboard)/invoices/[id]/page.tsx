@@ -262,72 +262,81 @@ export default function InvoiceDetailPage({
 
   return (
     <PageAnimation>
-      <div className="space-y-6 print:space-y-4">
+      <div className="space-y-4 print:space-y-4 sm:space-y-6">
         {/* Header - Hidden on print */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+          <div className="flex items-start gap-2.5 sm:items-center sm:gap-4">
             <Link href="/invoices">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon-sm" className="shrink-0 sm:size-10">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold text-slate-900 sm:text-2xl">
                 Invoice {invoice.invoiceNumber}
               </h2>
-              <p className="text-slate-500">
+              <p className="text-sm text-slate-500">
                 Created on {format(new Date(invoice.issueDate), "dd MMM yyyy")}
               </p>
               {invoice.isTaxInclusive !== null && invoice.isTaxInclusive !== undefined && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground">
                   {invoice.isTaxInclusive ? "Tax Inclusive" : "Tax Exclusive"}
                 </span>
               )}
             </div>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <Link href={`/invoices/${id}/edit`} className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto">
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+            <Link href={`/invoices/${id}/edit`} className="col-span-1 sm:w-auto">
+              <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
+                <Pencil className="h-4 w-4 sm:mr-2" />
+                <span className="sm:inline">Edit</span>
               </Button>
             </Link>
             {invoice && Number(invoice.balanceDue) > 0 && (
-              <Button onClick={() => setIsPaymentDialogOpen(true)} className="w-full sm:w-auto">
-                <CreditCard className="mr-2 h-4 w-4" />
-                Record Payment
+              <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+                <CreditCard className="h-4 w-4 sm:mr-2" />
+                <span className="sm:hidden">Pay</span>
+                <span className="hidden sm:inline">Record Payment</span>
               </Button>
             )}
             {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
-              <Button variant="outline" onClick={handleMarkAsSent} disabled={isMarkingSent} className="w-full sm:w-auto">
-                <Send className="mr-2 h-4 w-4" />
-                Mark as Sent
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMarkAsSent}
+                disabled={isMarkingSent}
+                className="col-span-1 h-9 w-full sm:h-10 sm:w-auto"
+              >
+                <Send className="h-4 w-4 sm:mr-2" />
+                <span className="sm:hidden">Sent</span>
+                <span className="hidden sm:inline">Mark as Sent</span>
               </Button>
             )}
             {invoice?.sentAt && (
-              <span className="w-full text-sm text-slate-500 sm:w-auto">
+              <span className="col-span-2 text-xs text-slate-500 sm:w-auto sm:text-sm">
                 Sent {format(new Date(invoice.sentAt), "dd MMM yyyy")}
               </span>
             )}
-            <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading} className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isDownloading
-                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                : <Download className="mr-2 h-4 w-4" />}
-              {isDownloading ? "Downloading..." : "Download PDF"}
+                ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                : <Download className="h-4 w-4 sm:mr-2" />}
+              <span className="sm:hidden">{isDownloading ? "..." : "PDF"}</span>
+              <span className="hidden sm:inline">{isDownloading ? "Downloading..." : "Download PDF"}</span>
             </Button>
-            <Button variant="outline" onClick={handlePrint} disabled={isPrinting} className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isPrinting
-                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                : <Printer className="mr-2 h-4 w-4" />}
-              {isPrinting ? "Printing..." : "Print"}
+                ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                : <Printer className="h-4 w-4 sm:mr-2" />}
+              <span>{isPrinting ? "..." : "Print"}</span>
             </Button>
           </div>
         </div>
 
         <Tabs defaultValue="invoice" className="w-full">
-          <TabsList className="print:hidden h-auto min-w-full justify-start gap-1 rounded-xl p-1 sm:min-w-0 sm:w-fit">
-            <TabsTrigger value="invoice" className="shrink-0">Invoice</TabsTrigger>
-            <TabsTrigger value="journal" className="shrink-0">Journal</TabsTrigger>
+          <TabsList className="print:hidden h-auto min-w-full justify-start gap-1 rounded-xl p-0.5 sm:min-w-0 sm:w-fit sm:p-1">
+            <TabsTrigger value="invoice" className="min-h-[36px] shrink-0 px-3 py-1.5">Invoice</TabsTrigger>
+            <TabsTrigger value="journal" className="min-h-[36px] shrink-0 px-3 py-1.5">Journal</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoice">
@@ -335,25 +344,25 @@ export default function InvoiceDetailPage({
             <Card className="print:shadow-none print:border-none">
               <CardContent className="p-4 sm:p-8">
                 {/* Company & Invoice Info */}
-                <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="mb-5 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-                      <Building2 className="h-7 w-7 text-primary-foreground" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary sm:h-12 sm:w-12">
+                      <Building2 className="h-5 w-5 text-primary-foreground sm:h-7 sm:w-7" />
                     </div>
                     <div>
-                      <h1 className="text-2xl font-bold">BizArch ERP</h1>
+                      <h1 className="text-xl font-bold sm:text-2xl">BizArch ERP</h1>
                       <p className="text-sm text-slate-500">Invoice</p>
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
-                    <h2 className="text-xl font-bold">{invoice.invoiceNumber}</h2>
+                    <h2 className="text-lg font-bold sm:text-xl">{invoice.invoiceNumber}</h2>
                   </div>
                 </div>
 
                 {/* Bill To & Dates */}
-                <div className="mb-8 grid gap-8 sm:grid-cols-2">
+                <div className="mb-5 grid gap-4 sm:mb-8 sm:grid-cols-2 sm:gap-8">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 sm:text-sm sm:normal-case sm:tracking-normal">
                       Bill To
                     </h3>
                     <div>
@@ -375,7 +384,7 @@ export default function InvoiceDetailPage({
                     </div>
                   </div>
                   <div className="sm:text-right">
-                    <div className="space-y-1">
+                    <div className="grid gap-1 text-sm sm:space-y-1">
                       <p className="text-sm">
                         <span className="text-slate-500">Issue Date:</span>{" "}
                         <span className="font-medium">

@@ -286,14 +286,14 @@ export default function PaymentsPage() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
+              <form className="contents" onSubmit={handleSubmit}>
+                <DialogHeader className="pr-12">
                   <DialogTitle>{t("payments.recordPayment")}</DialogTitle>
                   <DialogDescription>
                     {t("dashboard.recordPaymentDesc")}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-2 sm:py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="customer">{t("sales.customer")} *</Label>
                     <Combobox
@@ -505,64 +505,118 @@ export default function PaymentsPage() {
                   {searchQuery
                     ? t("common.noMatchFound")
                     : t("payments.noPaymentsDesc")}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("payments.paymentNo")}</TableHead>
-                      <TableHead>{t("sales.customer")}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t("sales.invoiceNumber")}</TableHead>
-                      <TableHead>{t("common.date")}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t("payments.paymentMethod")}</TableHead>
-                      <TableHead className="text-right">{t("common.amount")}</TableHead>
-                      <TableHead className="hidden sm:table-cell text-right">{t("common.discount")}</TableHead>
-                      <TableHead className="w-[80px]">{t("common.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayments.map((payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell className="font-medium">
-                          {payment.paymentNumber}
-                        </TableCell>
-                        <TableCell>{payment.customer.name}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {payment.invoice?.invoiceNumber || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(payment.paymentDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <Badge variant="outline">
-                            {methodLabels(t)[payment.paymentMethod]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          {fmt(Number(payment.amount))}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-right text-slate-500">
-                          {Number(payment.discountReceived) > 0
-                            ? fmt(Number(payment.discountReceived))
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletePayment(payment)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  </p>
+                </div>
+              ) : (
+              <>
+                <div className="space-y-3 sm:hidden">
+                  {filteredPayments.map((payment) => (
+                    <div key={payment.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("payments.paymentNo")}</p>
+                          <p className="mt-1 font-semibold text-slate-900">{payment.paymentNumber}</p>
+                        </div>
+                        <p className="text-sm font-semibold text-green-600">{fmt(Number(payment.amount))}</p>
+                      </div>
+
+                      <div className="mt-4 min-w-0">
+                        <p className="font-medium text-slate-900">{payment.customer.name}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Badge variant="outline">{methodLabels(t)[payment.paymentMethod]}</Badge>
+                          {payment.invoice?.invoiceNumber && (
+                            <Badge variant="secondary">{payment.invoice.invoiceNumber}</Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.date")}</p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {format(new Date(payment.paymentDate), "dd MMM yyyy")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.discount")}</p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {Number(payment.discountReceived) > 0 ? fmt(Number(payment.discountReceived)) : "-"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <Button
+                          variant="ghost"
+                          className="min-h-[44px] w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => setDeletePayment(payment)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {t("common.delete")}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden sm:block">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t("payments.paymentNo")}</TableHead>
+                          <TableHead>{t("sales.customer")}</TableHead>
+                          <TableHead className="hidden sm:table-cell">{t("sales.invoiceNumber")}</TableHead>
+                          <TableHead>{t("common.date")}</TableHead>
+                          <TableHead className="hidden sm:table-cell">{t("payments.paymentMethod")}</TableHead>
+                          <TableHead className="text-right">{t("common.amount")}</TableHead>
+                          <TableHead className="hidden sm:table-cell text-right">{t("common.discount")}</TableHead>
+                          <TableHead className="w-[80px]">{t("common.actions")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPayments.map((payment) => (
+                          <TableRow key={payment.id}>
+                            <TableCell className="font-medium">
+                              {payment.paymentNumber}
+                            </TableCell>
+                            <TableCell>{payment.customer.name}</TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {payment.invoice?.invoiceNumber || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(payment.paymentDate), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <Badge variant="outline">
+                                {methodLabels(t)[payment.paymentMethod]}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-green-600">
+                              {fmt(Number(payment.amount))}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-right text-slate-500">
+                              {Number(payment.discountReceived) > 0
+                                ? fmt(Number(payment.discountReceived))
+                                : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeletePayment(payment)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

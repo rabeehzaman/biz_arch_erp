@@ -171,67 +171,141 @@ export default function QuotationsPage() {
                   )}
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("quotations.quotationNumber")}</TableHead>
-                      <TableHead>{t("sales.customer")}</TableHead>
-                      <TableHead>{t("sales.issueDate")}</TableHead>
-                      <TableHead>{t("quotations.validUntil")}</TableHead>
-                      <TableHead>{t("common.status")}</TableHead>
-                      <TableHead className="text-right">{t("common.total")}</TableHead>
-                      <TableHead className="text-right">{t("common.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-3 sm:hidden">
                     {filteredQuotations.map((quotation) => (
-                      <TableRow
-                        key={quotation.id}
-                        onClick={() => router.push(`/quotations/${quotation.id}`)}
-                        className="cursor-pointer hover:bg-muted/50"
-                      >
-                        <TableCell className="font-medium">
-                          {quotation.quotationNumber}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{quotation.customer.name}</div>
-                            {quotation.customer.email && (
-                              <div className="text-sm text-slate-500">
-                                {quotation.customer.email}
-                              </div>
-                            )}
+                      <div key={quotation.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                              {t("quotations.quotationNumber")}
+                            </p>
+                            <p className="mt-1 font-semibold text-slate-900">{quotation.quotationNumber}</p>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(quotation.issueDate), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(quotation.validUntil), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(quotation.status)}</TableCell>
-                        <TableCell className="text-right">
-                          {fmt(Number(quotation.total))}
-                        </TableCell>
-                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                          <Link href={`/quotations/${quotation.id}`}>
-                            <Button variant="ghost" size="icon">
+                          {getStatusBadge(quotation.status)}
+                        </div>
+
+                        <div className="mt-4 min-w-0">
+                          <p className="font-medium text-slate-900">{quotation.customer.name}</p>
+                          {quotation.customer.email && (
+                            <p className="mt-1 break-all text-sm text-slate-500">{quotation.customer.email}</p>
+                          )}
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                              {t("sales.issueDate")}
+                            </p>
+                            <p className="mt-1 font-medium text-slate-900">
+                              {format(new Date(quotation.issueDate), "dd MMM yyyy")}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                              {t("quotations.validUntil")}
+                            </p>
+                            <p className="mt-1 font-medium text-slate-900">
+                              {format(new Date(quotation.validUntil), "dd MMM yyyy")}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                              {t("common.total")}
+                            </p>
+                            <p className="mt-1 font-semibold text-slate-900">{fmt(Number(quotation.total))}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Items</p>
+                            <p className="mt-1 font-medium text-slate-900">{quotation._count.items}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex gap-2">
+                          <Button asChild variant="outline" className="min-h-[44px] flex-1">
+                            <Link href={`/quotations/${quotation.id}`}>
                               <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
+                              {t("common.details")}
+                            </Link>
+                          </Button>
                           <Button
                             variant="ghost"
-                            size="icon"
+                            className="min-h-[44px] flex-1 text-red-600 hover:text-red-700"
                             onClick={() => handleDelete(quotation.id)}
                             disabled={quotation.status === "CONVERTED"}
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 className="h-4 w-4" />
+                            {t("common.delete")}
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t("quotations.quotationNumber")}</TableHead>
+                          <TableHead>{t("sales.customer")}</TableHead>
+                          <TableHead>{t("sales.issueDate")}</TableHead>
+                          <TableHead>{t("quotations.validUntil")}</TableHead>
+                          <TableHead>{t("common.status")}</TableHead>
+                          <TableHead className="text-right">{t("common.total")}</TableHead>
+                          <TableHead className="text-right">{t("common.actions")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredQuotations.map((quotation) => (
+                          <TableRow
+                            key={quotation.id}
+                            onClick={() => router.push(`/quotations/${quotation.id}`)}
+                            className="cursor-pointer hover:bg-muted/50"
+                          >
+                            <TableCell className="font-medium">
+                              {quotation.quotationNumber}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{quotation.customer.name}</div>
+                                {quotation.customer.email && (
+                                  <div className="text-sm text-slate-500">
+                                    {quotation.customer.email}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(quotation.issueDate), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(quotation.validUntil), "dd MMM yyyy")}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(quotation.status)}</TableCell>
+                            <TableCell className="text-right">
+                              {fmt(Number(quotation.total))}
+                            </TableCell>
+                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                              <Link href={`/quotations/${quotation.id}`}>
+                                <Button variant="ghost" size="icon">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(quotation.id)}
+                                disabled={quotation.status === "CONVERTED"}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

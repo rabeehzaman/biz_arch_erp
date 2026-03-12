@@ -204,7 +204,7 @@ export default function FixBalancesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button onClick={handleCheck} disabled={isChecking || isFixing}>
                   {isChecking ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -279,32 +279,56 @@ export default function FixBalancesPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer Name</TableHead>
-                      <TableHead className="text-right">Stored Balance</TableHead>
-                      <TableHead className="text-right">Calculated Balance</TableHead>
-                      <TableHead className="text-right">Difference</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {checkResult.issues.map((issue) => (
-                      <TableRow key={issue.id}>
-                        <TableCell className="font-medium">{issue.name}</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(issue.storedBalance || 0)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          {formatCurrency(issue.calculatedBalance || 0)}
-                        </TableCell>
-                        <TableCell className="text-right text-red-600">
-                          {formatCurrency(issue.difference)}
-                        </TableCell>
+                <div className="space-y-3 sm:hidden">
+                  {checkResult.issues.map((issue) => (
+                    <div key={issue.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="font-semibold text-slate-900">{issue.name}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Stored</p>
+                          <p className="mt-1 font-medium text-slate-900">{formatCurrency(issue.storedBalance || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Calculated</p>
+                          <p className="mt-1 font-medium text-green-600">{formatCurrency(issue.calculatedBalance || 0)}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Difference</p>
+                          <p className="mt-1 font-semibold text-red-600">{formatCurrency(issue.difference)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer Name</TableHead>
+                        <TableHead className="text-right">Stored Balance</TableHead>
+                        <TableHead className="text-right">Calculated Balance</TableHead>
+                        <TableHead className="text-right">Difference</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {checkResult.issues.map((issue) => (
+                        <TableRow key={issue.id}>
+                          <TableCell className="font-medium">{issue.name}</TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(issue.storedBalance || 0)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-green-600">
+                            {formatCurrency(issue.calculatedBalance || 0)}
+                          </TableCell>
+                          <TableCell className="text-right text-red-600">
+                            {formatCurrency(issue.difference)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -318,32 +342,56 @@ export default function FixBalancesPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer Name</TableHead>
-                      <TableHead className="text-right">Old Balance</TableHead>
-                      <TableHead className="text-right">New Balance</TableHead>
-                      <TableHead className="text-right">Correction</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fixResult.fixes.map((fix) => (
-                      <TableRow key={fix.id}>
-                        <TableCell className="font-medium">{fix.name}</TableCell>
-                        <TableCell className="text-right text-red-600">
-                          {formatCurrency(fix.oldBalance || 0)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          {formatCurrency(fix.newBalance || 0)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(fix.difference)}
-                        </TableCell>
+                <div className="space-y-3 sm:hidden">
+                  {fixResult.fixes.map((fix) => (
+                    <div key={fix.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="font-semibold text-slate-900">{fix.name}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Old Balance</p>
+                          <p className="mt-1 font-medium text-red-600">{formatCurrency(fix.oldBalance || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">New Balance</p>
+                          <p className="mt-1 font-medium text-green-600">{formatCurrency(fix.newBalance || 0)}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Correction</p>
+                          <p className="mt-1 font-semibold text-slate-900">{formatCurrency(fix.difference)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer Name</TableHead>
+                        <TableHead className="text-right">Old Balance</TableHead>
+                        <TableHead className="text-right">New Balance</TableHead>
+                        <TableHead className="text-right">Correction</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {fixResult.fixes.map((fix) => (
+                        <TableRow key={fix.id}>
+                          <TableCell className="font-medium">{fix.name}</TableCell>
+                          <TableCell className="text-right text-red-600">
+                            {formatCurrency(fix.oldBalance || 0)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-green-600">
+                            {formatCurrency(fix.newBalance || 0)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(fix.difference)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -365,7 +413,7 @@ export default function FixBalancesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button onClick={handleCheckCosts} disabled={isCheckingCosts || isFixingCosts}>
                   {isCheckingCosts ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -436,32 +484,60 @@ export default function FixBalancesPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product Name</TableHead>
-                      <TableHead className="text-right">Current Cost</TableHead>
-                      <TableHead className="text-right">Correct MRP</TableHead>
-                      <TableHead className="text-right">Discount</TableHead>
-                      <TableHead>Latest Invoice</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {costCheckResult.issues.map((issue) => (
-                      <TableRow key={issue.id}>
-                        <TableCell className="font-medium">{issue.name}</TableCell>
-                        <TableCell className="text-right text-red-600">
-                          {formatCurrency(issue.currentCost)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          {formatCurrency(issue.correctCost)}
-                        </TableCell>
-                        <TableCell className="text-right">{issue.discount}%</TableCell>
-                        <TableCell>{issue.latestInvoice}</TableCell>
+                <div className="space-y-3 sm:hidden">
+                  {costCheckResult.issues.map((issue) => (
+                    <div key={issue.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="font-semibold text-slate-900">{issue.name}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Current Cost</p>
+                          <p className="mt-1 font-medium text-red-600">{formatCurrency(issue.currentCost)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Correct MRP</p>
+                          <p className="mt-1 font-medium text-green-600">{formatCurrency(issue.correctCost)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Discount</p>
+                          <p className="mt-1 font-medium text-slate-900">{issue.discount}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Latest Invoice</p>
+                          <p className="mt-1 break-all text-slate-900">{issue.latestInvoice}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product Name</TableHead>
+                        <TableHead className="text-right">Current Cost</TableHead>
+                        <TableHead className="text-right">Correct MRP</TableHead>
+                        <TableHead className="text-right">Discount</TableHead>
+                        <TableHead>Latest Invoice</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {costCheckResult.issues.map((issue) => (
+                        <TableRow key={issue.id}>
+                          <TableCell className="font-medium">{issue.name}</TableCell>
+                          <TableCell className="text-right text-red-600">
+                            {formatCurrency(issue.currentCost)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-green-600">
+                            {formatCurrency(issue.correctCost)}
+                          </TableCell>
+                          <TableCell className="text-right">{issue.discount}%</TableCell>
+                          <TableCell>{issue.latestInvoice}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -475,30 +551,54 @@ export default function FixBalancesPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product Name</TableHead>
-                      <TableHead className="text-right">Old Cost</TableHead>
-                      <TableHead className="text-right">New Cost (MRP)</TableHead>
-                      <TableHead className="text-right">Discount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {costFixResult.fixes.map((fix) => (
-                      <TableRow key={fix.id}>
-                        <TableCell className="font-medium">{fix.name}</TableCell>
-                        <TableCell className="text-right text-red-600">
-                          {formatCurrency(fix.oldCost)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          {formatCurrency(fix.newCost)}
-                        </TableCell>
-                        <TableCell className="text-right">{fix.discount}%</TableCell>
+                <div className="space-y-3 sm:hidden">
+                  {costFixResult.fixes.map((fix) => (
+                    <div key={fix.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="font-semibold text-slate-900">{fix.name}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Old Cost</p>
+                          <p className="mt-1 font-medium text-red-600">{formatCurrency(fix.oldCost)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">New Cost</p>
+                          <p className="mt-1 font-medium text-green-600">{formatCurrency(fix.newCost)}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Discount</p>
+                          <p className="mt-1 font-medium text-slate-900">{fix.discount}%</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product Name</TableHead>
+                        <TableHead className="text-right">Old Cost</TableHead>
+                        <TableHead className="text-right">New Cost (MRP)</TableHead>
+                        <TableHead className="text-right">Discount</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {costFixResult.fixes.map((fix) => (
+                        <TableRow key={fix.id}>
+                          <TableCell className="font-medium">{fix.name}</TableCell>
+                          <TableCell className="text-right text-red-600">
+                            {formatCurrency(fix.oldCost)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-green-600">
+                            {formatCurrency(fix.newCost)}
+                          </TableCell>
+                          <TableCell className="text-right">{fix.discount}%</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}

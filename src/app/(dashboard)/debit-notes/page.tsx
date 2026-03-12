@@ -153,79 +153,146 @@ export default function DebitNotesPage() {
                 )}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("debitNotes.dnNo")}</TableHead>
-                    <TableHead>{t("suppliers.supplier")}</TableHead>
-                    <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>
-                    <TableHead>{t("sales.issueDate")}</TableHead>
-                    <TableHead className="text-right">{t("common.total")}</TableHead>
-                    <TableHead className="text-right">{t("common.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                <div className="space-y-3 sm:hidden">
                   {filteredDebitNotes.map((debitNote) => (
-                    <TableRow
-                      key={debitNote.id}
-                      onClick={() => router.push(`/debit-notes/${debitNote.id}`)}
-                      className="cursor-pointer hover:bg-muted/50"
-                    >
-                      <TableCell className="font-medium">
-                        {debitNote.debitNoteNumber}
-                      </TableCell>
-                      <TableCell>
+                    <div key={debitNote.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                            {t("debitNotes.dnNo")}
+                          </p>
+                          <p className="mt-1 font-semibold text-slate-900">{debitNote.debitNoteNumber}</p>
+                        </div>
+                        <p className="text-sm font-semibold text-orange-600">{fmt(Number(debitNote.total))}</p>
+                      </div>
+
+                      <div className="mt-4 min-w-0">
+                        <p className="font-medium text-slate-900">{debitNote.supplier.name}</p>
+                        {debitNote.supplier.email && (
+                          <p className="mt-1 break-all text-sm text-slate-500">{debitNote.supplier.email}</p>
+                        )}
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <div className="font-medium">
-                            {debitNote.supplier.name}
-                          </div>
-                          {debitNote.supplier.email && (
-                            <div className="text-sm text-slate-500">
-                              {debitNote.supplier.email}
-                            </div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                            {t("sales.issueDate")}
+                          </p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {format(new Date(debitNote.issueDate), "dd MMM yyyy")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                            {t("purchases.purchaseInvoiceNumber")}
+                          </p>
+                          {debitNote.purchaseInvoice ? (
+                            <Link href={`/purchase-invoices/${debitNote.purchaseInvoice.id}`} className="mt-1 block font-medium text-blue-600 hover:underline">
+                              {debitNote.purchaseInvoice.purchaseInvoiceNumber}
+                            </Link>
+                          ) : (
+                            <p className="mt-1 font-medium text-slate-400">-</p>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {debitNote.purchaseInvoice ? (
-                          <Link
-                            href={`/purchase-invoices/${debitNote.purchaseInvoice.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {debitNote.purchaseInvoice.purchaseInvoiceNumber}
-                          </Link>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(debitNote.issueDate), "dd MMM yyyy")}
-                      </TableCell>
-                      <TableCell className="text-right text-orange-600 font-medium">
-                        {fmt(Number(debitNote.total))}
-                      </TableCell>
-                      <TableCell
-                        className="text-right"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Link href={`/debit-notes/${debitNote.id}`}>
-                          <Button variant="ghost" size="icon">
+                      </div>
+
+                      <div className="mt-4 flex gap-2">
+                        <Button asChild variant="outline" className="min-h-[44px] flex-1">
+                          <Link href={`/debit-notes/${debitNote.id}`}>
                             <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                            {t("common.details")}
+                          </Link>
+                        </Button>
                         <Button
                           variant="ghost"
-                          size="icon"
+                          className="min-h-[44px] flex-1 text-red-600 hover:text-red-700"
                           onClick={() => handleDelete(debitNote.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <Trash2 className="h-4 w-4" />
+                          {t("common.delete")}
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("debitNotes.dnNo")}</TableHead>
+                        <TableHead>{t("suppliers.supplier")}</TableHead>
+                        <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>
+                        <TableHead>{t("sales.issueDate")}</TableHead>
+                        <TableHead className="text-right">{t("common.total")}</TableHead>
+                        <TableHead className="text-right">{t("common.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDebitNotes.map((debitNote) => (
+                        <TableRow
+                          key={debitNote.id}
+                          onClick={() => router.push(`/debit-notes/${debitNote.id}`)}
+                          className="cursor-pointer hover:bg-muted/50"
+                        >
+                          <TableCell className="font-medium">
+                            {debitNote.debitNoteNumber}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">
+                                {debitNote.supplier.name}
+                              </div>
+                              {debitNote.supplier.email && (
+                                <div className="text-sm text-slate-500">
+                                  {debitNote.supplier.email}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {debitNote.purchaseInvoice ? (
+                              <Link
+                                href={`/purchase-invoices/${debitNote.purchaseInvoice.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-blue-600 hover:underline"
+                              >
+                                {debitNote.purchaseInvoice.purchaseInvoiceNumber}
+                              </Link>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(debitNote.issueDate), "dd MMM yyyy")}
+                          </TableCell>
+                          <TableCell className="text-right text-orange-600 font-medium">
+                            {fmt(Number(debitNote.total))}
+                          </TableCell>
+                          <TableCell
+                            className="text-right"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Link href={`/debit-notes/${debitNote.id}`}>
+                              <Button variant="ghost" size="icon">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(debitNote.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

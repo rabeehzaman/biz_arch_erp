@@ -174,7 +174,7 @@ export default function DeviceInventoryPage() {
               </div>
             ) : (
               <>
-                <div className="space-y-3 p-4 md:hidden">
+                <div className="space-y-3 p-4 sm:hidden">
                   {devices.map((device) => (
                     <div key={device.id} className="rounded-xl border bg-card p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
@@ -246,7 +246,7 @@ export default function DeviceInventoryPage() {
                   ))}
                 </div>
 
-                <div className="hidden overflow-x-auto md:block">
+                <div className="hidden overflow-x-auto sm:block">
                   <Table>
                     <TableHeader>
                       <TableRow>

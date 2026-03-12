@@ -100,7 +100,7 @@ export default function ExpenseReportPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="grid gap-2">
                   <Label>From</Label>
                   <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -141,27 +141,48 @@ export default function ExpenseReportPage() {
                     <CardTitle>By Category</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Category</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead className="text-right">Items</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {data.byCategory.map((row) => (
-                          <TableRow key={row.account.code}>
-                            <TableCell>
-                              <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
-                              {row.account.name}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">{fmt(row.total)}</TableCell>
-                            <TableCell className="text-right">{row.count}</TableCell>
+                    <div className="space-y-3 sm:hidden">
+                      {data.byCategory.map((row) => (
+                        <div key={row.account.code} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                          <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
+                          <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
+                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                              <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(row.total)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Items</p>
+                              <p className="mt-1 font-medium text-slate-900">{row.count}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="hidden sm:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Category</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="text-right">Items</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {data.byCategory.map((row) => (
+                            <TableRow key={row.account.code}>
+                              <TableCell>
+                                <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
+                                {row.account.name}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">{fmt(row.total)}</TableCell>
+                              <TableCell className="text-right">{row.count}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -170,24 +191,44 @@ export default function ExpenseReportPage() {
                     <CardTitle>By Supplier</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Supplier</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead className="text-right">Count</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {data.bySupplier.map((row) => (
-                          <TableRow key={row.name}>
-                            <TableCell>{row.name}</TableCell>
-                            <TableCell className="text-right font-mono">{fmt(row.total)}</TableCell>
-                            <TableCell className="text-right">{row.count}</TableCell>
+                    <div className="space-y-3 sm:hidden">
+                      {data.bySupplier.map((row) => (
+                        <div key={row.name} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                          <p className="font-semibold text-slate-900">{row.name}</p>
+                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                              <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(row.total)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Count</p>
+                              <p className="mt-1 font-medium text-slate-900">{row.count}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="hidden sm:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Supplier</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="text-right">Count</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {data.bySupplier.map((row) => (
+                            <TableRow key={row.name}>
+                              <TableCell>{row.name}</TableCell>
+                              <TableCell className="text-right font-mono">{fmt(row.total)}</TableCell>
+                              <TableCell className="text-right">{row.count}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -197,32 +238,58 @@ export default function ExpenseReportPage() {
                   <CardTitle>All Expenses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Number</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.expenses.map((exp) => (
-                        <TableRow key={exp.id}>
-                          <TableCell className="font-medium">{exp.expenseNumber}</TableCell>
-                          <TableCell>{format(new Date(exp.expenseDate), "dd MMM yyyy")}</TableCell>
-                          <TableCell className="max-w-[200px] truncate">{exp.description || "-"}</TableCell>
-                          <TableCell>{exp.supplier || "-"}</TableCell>
-                          <TableCell>
-                            <Badge className={statusColors[exp.status] || ""}>{exp.status}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">{fmt(exp.total)}</TableCell>
+                  <div className="space-y-3 sm:hidden">
+                    {data.expenses.map((exp) => (
+                      <div key={exp.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900">{exp.expenseNumber}</p>
+                            <p className="mt-1 text-sm text-slate-500">{format(new Date(exp.expenseDate), "dd MMM yyyy")}</p>
+                          </div>
+                          <Badge className={statusColors[exp.status] || ""}>{exp.status}</Badge>
+                        </div>
+
+                        <div className="mt-3 space-y-1 text-sm text-slate-600">
+                          <p>{exp.description || "-"}</p>
+                          <p>Supplier: {exp.supplier || "-"}</p>
+                        </div>
+
+                        <div className="mt-4">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                          <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(exp.total)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Number</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Supplier</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {data.expenses.map((exp) => (
+                          <TableRow key={exp.id}>
+                            <TableCell className="font-medium">{exp.expenseNumber}</TableCell>
+                            <TableCell>{format(new Date(exp.expenseDate), "dd MMM yyyy")}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{exp.description || "-"}</TableCell>
+                            <TableCell>{exp.supplier || "-"}</TableCell>
+                            <TableCell>
+                              <Badge className={statusColors[exp.status] || ""}>{exp.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono">{fmt(exp.total)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </>
