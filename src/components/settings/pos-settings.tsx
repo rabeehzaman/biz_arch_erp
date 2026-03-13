@@ -440,11 +440,12 @@ export function POSSettings() {
 
     const testReceiptData: ReceiptData = {
       storeName: "TEST RECEIPT",
+      arabicName: "فاتورة تجريبية",
       invoiceNumber: "TEST-001",
       date: new Date(),
       items: [
-        { name: "Test Item 1", quantity: 2, unitPrice: 100, discount: 0, lineTotal: 200 },
-        { name: "Test Item 2", quantity: 1, unitPrice: 250, discount: 0, lineTotal: 250 },
+        { name: "Test Item 1", nameAr: "صنف تجريبي ١", quantity: 2, unitPrice: 100, discount: 0, lineTotal: 200 },
+        { name: "Test Item 2", nameAr: "صنف تجريبي ٢", quantity: 1, unitPrice: 250, discount: 0, lineTotal: 250 },
       ],
       subtotal: 450,
       taxRate: 15,

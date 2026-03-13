@@ -90,6 +90,7 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
     customerName: data.customerName,
     items: data.items.map((item) => ({
       name: item.name,
+      nameAr: item.nameAr,
       qty: item.quantity,
       price: item.unitPrice,
       total: item.lineTotal,
@@ -108,6 +109,7 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
     qrcode: data.qrCodeText,
     qrCodeText: data.qrCodeText,
     footer: "Thank you for your purchase!",
+    footerAr: "شكراً لزيارتكم",
     cutPaper: true,
     openDrawer: false,
   };

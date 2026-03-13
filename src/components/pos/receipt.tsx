@@ -4,6 +4,7 @@ import { format } from "date-fns";
 
 export interface ReceiptItem {
   name: string;
+  nameAr?: string;
   quantity: number;
   unitPrice: number;
   discount: number;
