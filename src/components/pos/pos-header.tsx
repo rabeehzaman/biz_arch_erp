@@ -16,6 +16,7 @@ interface POSHeaderProps {
   } | null;
   branchName?: string;
   warehouseName?: string;
+  employeeName?: string | null;
   heldOrdersCount: number;
   onHeldOrdersClick: () => void;
   onCloseSession: () => void;
@@ -38,6 +39,7 @@ export function POSHeader({
   session,
   branchName,
   warehouseName,
+  employeeName,
   heldOrdersCount,
   onHeldOrdersClick,
   onCloseSession,
@@ -121,7 +123,7 @@ export function POSHeader({
         </Button>
 
         <div className="hidden sm:block text-sm text-slate-300 truncate max-w-[100px]">
-          {authSession?.user?.name}
+          {employeeName || authSession?.user?.name}
         </div>
 
         <Button

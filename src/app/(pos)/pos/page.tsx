@@ -79,6 +79,7 @@ interface OpenSession {
   branchId: string | null;
   warehouseId: string | null;
   user: { id: string; name: string; email: string };
+  employee: { id: string; name: string } | null;
   branch: { id: string; name: string; code: string } | null;
   warehouse: { id: string; name: string; code: string } | null;
 }
@@ -97,6 +98,7 @@ interface CashBankAccountOption {
 type OpeningState = {
   locationKey: string;
   openingCash: string;
+  pinCode: string;
   isOpening: boolean;
 };
 
@@ -182,6 +184,12 @@ export default function POSDashboardPage() {
   const openRegister = async (loc: Location) => {
     const key = getLocationKey(loc);
     const cash = openingState?.locationKey === key ? parseFloat(openingState.openingCash) || 0 : 0;
+    const pin = openingState?.locationKey === key ? openingState.pinCode : "";
+
+    if (!pin) {
+      toast.error("Employee PIN code is required");
+      return;
+    }
 
     setOpeningState((prev) =>
       prev?.locationKey === key ? { ...prev, isOpening: true } : prev
@@ -193,6 +201,7 @@ export default function POSDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           openingCash: cash,
+          pinCode: pin,
           branchId: loc.branchId || undefined,
           warehouseId: loc.warehouseId || undefined,
         }),
@@ -465,9 +474,9 @@ export default function POSDashboardPage() {
                         {/* User indicator */}
                         <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
                           <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold">
-                            {session.user.name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
+                            {(session.employee?.name || session.user.name)?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
                           </div>
-                          <span>{session.user.name || session.user.email}</span>
+                          <span>{session.employee?.name || session.user.name || session.user.email}</span>
                         </div>
                       </>
                     ) : (
@@ -492,6 +501,32 @@ export default function POSDashboardPage() {
                                 step="0.01"
                                 className="mt-1"
                                 autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    openRegister(loc);
+                                  }
+                                  if (e.key === "Escape") {
+                                    setOpeningState(null);
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground mt-2 block">
+                                Employee PIN
+                              </label>
+                              <Input
+                                type="password"
+                                inputMode="numeric"
+                                placeholder="Enter your 4-digit PIN"
+                                value={openingState?.pinCode ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, "");
+                                  setOpeningState((prev) =>
+                                    prev ? { ...prev, pinCode: val } : prev
+                                  );
+                                }}
+                                className="mt-1 font-mono"
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     openRegister(loc);
@@ -530,6 +565,7 @@ export default function POSDashboardPage() {
                               setOpeningState({
                                 locationKey: key,
                                 openingCash: "",
+                                pinCode: "",
                                 isOpening: false,
                               })
                             }

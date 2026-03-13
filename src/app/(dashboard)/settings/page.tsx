@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 
-type SettingsTab = "company" | "units" | "accounting" | "pos" | "users";
+type SettingsTab = "company" | "units" | "accounting" | "pos" | "users" | "employees";
 
 function SettingsPanelFallback() {
   return (
@@ -35,6 +35,10 @@ const POSSettings = dynamic(
 );
 const UserWarehouseSettings = dynamic(
   () => import("@/components/settings/user-warehouse-settings").then((mod) => mod.UserWarehouseSettings),
+  { loading: () => <SettingsPanelFallback /> }
+);
+const EmployeesSettings = dynamic(
+  () => import("@/components/settings/employees-settings").then((mod) => mod.EmployeesSettings),
   { loading: () => <SettingsPanelFallback /> }
 );
 
@@ -70,6 +74,7 @@ export default function SettingsPage() {
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="accounting">{t("settings.tabAccounting")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="pos">{t("settings.tabPOS")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="users">{t("settings.tabUsers")}</TabsTrigger>
+              <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="employees">POS Employees</TabsTrigger>
             </TabsList>
           </div>
           <TabsContent value="company" {...getForceMountProps("company")} className="mt-6">
@@ -86,6 +91,9 @@ export default function SettingsPage() {
           </TabsContent>
           <TabsContent value="users" {...getForceMountProps("users")} className="mt-6">
             {loadedTabs.includes("users") ? <UserWarehouseSettings /> : null}
+          </TabsContent>
+          <TabsContent value="employees" {...getForceMountProps("employees")} className="mt-6">
+            {loadedTabs.includes("employees") ? <EmployeesSettings /> : null}
           </TabsContent>
         </Tabs>
       </div>

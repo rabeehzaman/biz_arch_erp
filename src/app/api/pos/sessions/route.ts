@@ -86,6 +86,9 @@ export async function GET(request: NextRequest) {
         user: {
           select: { id: true, name: true, email: true },
         },
+        employee: {
+          select: { id: true, name: true },
+        },
         branch: {
           select: { id: true, name: true, code: true },
         },
@@ -122,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { openingCash = 0, branchId, warehouseId } = body;
+    const { openingCash = 0, branchId, warehouseId, pinCode } = body;
 
     // Fetch org accounting mode before the transaction
     const org = await prisma.organization.findUnique({
@@ -188,6 +191,18 @@ export async function POST(request: NextRequest) {
         throw new Error("ALREADY_OPEN");
       }
 
+      if (!pinCode) {
+        throw new Error("PIN_REQUIRED");
+      }
+
+      const employee = await tx.employee.findFirst({
+        where: { organizationId, pinCode, isActive: true },
+      });
+
+      if (!employee) {
+        throw new Error("INVALID_PIN");
+      }
+
       const sessionNumber = await generateSessionNumber(organizationId, tx);
 
       const newSession = await tx.pOSSession.create({
@@ -195,6 +210,7 @@ export async function POST(request: NextRequest) {
           organizationId,
           sessionNumber,
           userId,
+          employeeId: employee.id,
           status: "OPEN",
           openingCash,
           branchId: branchId || null,
@@ -301,6 +317,18 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === "ALREADY_OPEN") {
       return NextResponse.json(
         { error: "There is already an open POS session for this register. Please close it first or continue selling." },
+        { status: 400 }
+      );
+    }
+    if (error instanceof Error && error.message === "PIN_REQUIRED") {
+      return NextResponse.json(
+        { error: "POS Employee PIN is required." },
+        { status: 400 }
+      );
+    }
+    if (error instanceof Error && error.message === "INVALID_PIN") {
+      return NextResponse.json(
+        { error: "Invalid Employee PIN code or inactive employee." },
         { status: 400 }
       );
     }

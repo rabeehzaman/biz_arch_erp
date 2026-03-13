@@ -42,7 +42,26 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { closingCash, notes, settleCashAccountId, settleBankAccountId } = body;
+    const { closingCash, notes, settleCashAccountId, settleBankAccountId, pinCode } = body;
+
+    // Validate PIN if the session was opened by an employee
+    if (posSession.employeeId) {
+      if (!pinCode) {
+        return NextResponse.json(
+          { error: "Employee PIN code is required to close this session" },
+          { status: 400 }
+        );
+      }
+      const employee = await prisma.employee.findFirst({
+        where: { id: posSession.employeeId, pinCode },
+      });
+      if (!employee) {
+        return NextResponse.json(
+          { error: "Invalid Employee PIN" },
+          { status: 400 }
+        );
+      }
+    }
 
     if (closingCash === undefined || closingCash === null) {
       return NextResponse.json(

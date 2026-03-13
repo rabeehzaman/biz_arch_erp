@@ -93,6 +93,9 @@ export async function GET() {
         user: {
           select: { id: true, name: true, email: true },
         },
+        employee: {
+          select: { id: true, name: true },
+        },
         branch: {
           select: { id: true, name: true, code: true },
         },

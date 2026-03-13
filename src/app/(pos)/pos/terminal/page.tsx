@@ -63,10 +63,12 @@ const EMPTY_PAYMENT_BREAKDOWN: { method: string; total: number }[] = [];
 interface POSSessionData {
   id: string;
   sessionNumber: string;
+  employeeId?: string | null;
   openingCash: number;
   totalSales: number;
   totalTransactions: number;
   openedAt: string;
+  employee?: { id: string; name: string } | null;
   branch?: { id: string; name: string; code: string } | null;
   warehouse?: { id: string; name: string; code: string } | null;
 }
@@ -299,6 +301,7 @@ function POSTerminalContent() {
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showHeldSheet, setShowHeldSheet] = useState(false);
   const [closingCash, setClosingCash] = useState("");
+  const [closePinCode, setClosePinCode] = useState("");
   const [countedClosingCash, setCountedClosingCash] = useState<number | null>(null);
   const [isClosingSession, setIsClosingSession] = useState(false);
   const [settleCashAccountId, setSettleCashAccountId] = useState("");
@@ -584,6 +587,7 @@ function POSTerminalContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           closingCash: parsedClosingCash,
+          pinCode: closePinCode,
           ...(isClearingMode && {
             settleCashAccountId: settleCashAccountId || null,
             settleBankAccountId:
@@ -599,6 +603,7 @@ function POSTerminalContent() {
       await mutateSession();
       setShowCloseDialog(false);
       setClosingCash("");
+      setClosePinCode("");
       setCountedClosingCash(null);
       toast.success("POS session closed");
       router.replace("/pos");
@@ -611,6 +616,7 @@ function POSTerminalContent() {
 
   const openCloseSessionDialog = () => {
     setClosingCash("");
+    setClosePinCode("");
     setCountedClosingCash(null);
     if (isClearingMode) {
       setSettleCashAccountId(registerConfigData?.config?.defaultCashAccountId || "");
@@ -845,6 +851,7 @@ function POSTerminalContent() {
         session={posSession}
         branchName={posSession.branch?.name}
         warehouseName={posSession.warehouse?.name}
+        employeeName={posSession.employee?.name}
         heldOrdersCount={heldOrders.length}
         onHeldOrdersClick={openHeldOrders}
         onCloseSession={openCloseSessionDialog}
@@ -1008,6 +1015,7 @@ function POSTerminalContent() {
           setShowCloseDialog(open);
           if (!open) {
             setClosingCash("");
+            setClosePinCode("");
             setCountedClosingCash(null);
           }
         }}
@@ -1105,6 +1113,22 @@ function POSTerminalContent() {
                 autoFocus
               />
             </div>
+
+            {posSession.employeeId && (
+              <div className="mt-2">
+                <label className="mb-1 block text-sm font-medium">
+                  Employee PIN
+                </label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  placeholder="Enter your 4-digit PIN"
+                  value={closePinCode}
+                  onChange={(e) => setClosePinCode(e.target.value.replace(/\D/g, ""))}
+                  className="font-mono"
+                />
+              </div>
+            )}
 
             {/* Settlement Account Selectors (only in clearing account mode) */}
             {isClearingMode && (

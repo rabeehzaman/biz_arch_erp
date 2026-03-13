@@ -96,6 +96,7 @@ model Organization {
   journalEntries             JournalEntry[]
   journalEntryLines          JournalEntryLine[]
   productCategories          ProductCategory[]
+  employees                  Employee[]
   posSessions                POSSession[]
   posHeldOrders              POSHeldOrder[]
   posRegisterConfigs         POSRegisterConfig[]
@@ -135,6 +136,25 @@ model User {
   @@index([organizationId])
   @@index([organizationId, name])
   @@map("users")
+}
+
+// ==================== EMPLOYEES ====================
+
+model Employee {
+  id             String       @id @default(cuid())
+  name           String
+  pinCode        String
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  posSessions    POSSession[]
+
+  @@unique([organizationId, pinCode])
+  @@index([organizationId])
+  @@map("employees")
 }
 
 // ==================== UNITS ====================
@@ -1277,6 +1297,8 @@ model POSSession {
   organization      Organization     @relation(fields: [organizationId], references: [id])
   userId            String
   user              User             @relation(fields: [userId], references: [id])
+  employeeId        String?
+  employee          Employee?        @relation(fields: [employeeId], references: [id])
   status            POSSessionStatus @default(OPEN)
   openedAt          DateTime         @default(now())
   closedAt          DateTime?
