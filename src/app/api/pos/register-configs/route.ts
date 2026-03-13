@@ -117,6 +117,8 @@ export async function GET(request: NextRequest) {
       include: {
         defaultCashAccount: { select: { id: true, name: true } },
         defaultBankAccount: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
+        warehouse: { select: { id: true, name: true } },
       },
     });
 

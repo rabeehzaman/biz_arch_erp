@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2, Monitor, Printer, RefreshCw, Usb, Wifi, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Monitor, Printer, RefreshCw, Usb, Wifi, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { ReceiptData } from "@/components/pos/receipt";
 import { capacitorPrintWithConfig, getDefaultMobilePrinterConfig, getMobilePrinterConfig, isCapacitorEnvironment, openMobileCashDrawer, saveMobilePrinterConfig, testMobilePrinterConnection, type MobilePrinterConfig } from "@/lib/capacitor-print";
@@ -1080,6 +1080,8 @@ interface RegisterConfig {
   defaultBankAccountId: string | null;
   defaultCashAccount: { id: string; name: string } | null;
   defaultBankAccount: { id: string; name: string } | null;
+  branch: { id: string; name: string } | null;
+  warehouse: { id: string; name: string } | null;
 }
 
 interface WarehouseOption {
@@ -1169,6 +1171,30 @@ function POSSettlementAccounts() {
       toast.error("Failed to save default settlement accounts.");
     } finally {
       setIsSavingDefaults(false);
+    }
+  };
+
+  const deleteRegisterConfig = async (c: RegisterConfig) => {
+    try {
+      const res = await fetch("/api/pos/register-configs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branchId: c.branchId,
+          warehouseId: c.warehouseId,
+          defaultCashAccountId: null,
+          defaultBankAccountId: null,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Register config removed.");
+        fetchAll();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to remove");
+      }
+    } catch {
+      toast.error("Failed to remove register config.");
     }
   };
 
@@ -1273,13 +1299,23 @@ function POSSettlementAccounts() {
             {registerConfigs.length > 0 && (
               <div className="space-y-2">
                 {registerConfigs.map((c) => {
-                  const wh = warehouses.find((w) => w.id === c.warehouseId);
+                  const label = c.warehouse && c.branch
+                    ? `${c.branch.name} — ${c.warehouse.name}`
+                    : c.warehouse?.name ?? c.branch?.name ?? c.locationKey;
                   return (
                     <div key={c.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                      <span className="font-medium">{wh?.name || c.locationKey}</span>
-                      <span className="text-muted-foreground text-xs">
-                        {c.defaultCashAccount?.name || "—"} / {c.defaultBankAccount?.name || "—"}
-                      </span>
+                      <div>
+                        <span className="font-medium">{label}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground text-xs">
+                          {c.defaultCashAccount?.name || "—"} / {c.defaultBankAccount?.name || "—"}
+                        </span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => deleteRegisterConfig(c)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
