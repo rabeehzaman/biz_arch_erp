@@ -77,11 +77,9 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (session.user.role !== "admin" && session.user.role !== "superadmin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
 
     const organizationId = getOrgId(session);
+    const isAdmin = session.user.role === "admin" || session.user.role === "superadmin";
     const { searchParams } = new URL(request.url);
     const branchId = parseNullableId(searchParams.get("branchId"));
     const warehouseId = parseNullableId(searchParams.get("warehouseId"));
@@ -109,6 +107,11 @@ export async function GET(request: NextRequest) {
           }
           : null,
       });
+    }
+
+    // Listing all configs is admin-only
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const configs = await prisma.pOSRegisterConfig.findMany({
