@@ -48,7 +48,11 @@ model Organization {
   posReceiptLogoHeight  Int?     @default(80)   // Logo height (px) on POS receipt
 
   // POS Accounting
-  posAccountingMode     String   @default("DIRECT")  // "DIRECT" or "CLEARING_ACCOUNT"
+  posAccountingMode          String   @default("DIRECT")  // "DIRECT" or "CLEARING_ACCOUNT"
+  posDefaultCashAccountId    String?
+  posDefaultCashAccount      CashBankAccount? @relation("OrgDefaultCashAccount", fields: [posDefaultCashAccountId], references: [id])
+  posDefaultBankAccountId    String?
+  posDefaultBankAccount      CashBankAccount? @relation("OrgDefaultBankAccount", fields: [posDefaultBankAccountId], references: [id])
 
   // Tax-Inclusive Pricing
   isTaxInclusivePrice   Boolean  @default(false)
@@ -1492,6 +1496,8 @@ model CashBankAccount {
   expenses     Expense[]
   defaultCashRegisterConfigs POSRegisterConfig[] @relation("POSRegisterDefaultCashAccount")
   defaultBankRegisterConfigs POSRegisterConfig[] @relation("POSRegisterDefaultBankAccount")
+  orgDefaultCash             Organization[]      @relation("OrgDefaultCashAccount")
+  orgDefaultBank             Organization[]      @relation("OrgDefaultBankAccount")
 
   @@unique([organizationId, name])
   @@index([organizationId])

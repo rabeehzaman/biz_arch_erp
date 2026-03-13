@@ -73,7 +73,7 @@ export async function PUT(
     // Fetch org settings
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { posAccountingMode: true },
+      select: { posAccountingMode: true, posDefaultCashAccountId: true, posDefaultBankAccountId: true },
     });
     const isClearingMode = org?.posAccountingMode === "CLEARING_ACCOUNT";
     const registerConfig = await getPOSRegisterConfig(
@@ -86,10 +86,10 @@ export async function PUT(
     const hasSettleBankAccountId = Object.prototype.hasOwnProperty.call(body, "settleBankAccountId");
     const effectiveSettleCashAccountId = hasSettleCashAccountId
       ? settleCashAccountId || null
-      : registerConfig?.defaultCashAccountId || null;
+      : registerConfig?.defaultCashAccountId || org?.posDefaultCashAccountId || null;
     const effectiveSettleBankAccountId = hasSettleBankAccountId
       ? settleBankAccountId || null
-      : registerConfig?.defaultBankAccountId || null;
+      : registerConfig?.defaultBankAccountId || org?.posDefaultBankAccountId || null;
 
     // Validate settlement accounts are required in clearing mode
     if (isClearingMode && !effectiveSettleCashAccountId) {

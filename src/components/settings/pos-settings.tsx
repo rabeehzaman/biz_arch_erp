@@ -1056,6 +1056,288 @@ export function POSSettings() {
           </CardContent>
         </Card>
       )}
+
+      {/* POS Settlement Accounts */}
+      <POSSettlementAccounts />
     </div>
+  );
+}
+
+// ── POS Settlement Accounts Card ───────────────────────────────────────────
+
+interface CashBankOption {
+  id: string;
+  name: string;
+  accountSubType: string;
+}
+
+interface RegisterConfig {
+  id: string;
+  locationKey: string;
+  branchId: string | null;
+  warehouseId: string | null;
+  defaultCashAccountId: string | null;
+  defaultBankAccountId: string | null;
+  defaultCashAccount: { id: string; name: string } | null;
+  defaultBankAccount: { id: string; name: string } | null;
+}
+
+interface WarehouseOption {
+  id: string;
+  name: string;
+  code: string;
+  branchId: string;
+  branch?: { id: string; name: string };
+}
+
+function POSSettlementAccounts() {
+  const [orgSettings, setOrgSettings] = useState<{
+    posAccountingMode: string;
+    posDefaultCashAccountId: string | null;
+    posDefaultBankAccountId: string | null;
+  } | null>(null);
+  const [cashBankAccounts, setCashBankAccounts] = useState<CashBankOption[]>([]);
+  const [defaultCashId, setDefaultCashId] = useState("");
+  const [defaultBankId, setDefaultBankId] = useState("");
+  const [isSavingDefaults, setIsSavingDefaults] = useState(false);
+  const [registerConfigs, setRegisterConfigs] = useState<RegisterConfig[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
+  const [isMultiBranch, setIsMultiBranch] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState("");
+  const [regCashId, setRegCashId] = useState("");
+  const [regBankId, setRegBankId] = useState("");
+  const [isSavingRegister, setIsSavingRegister] = useState(false);
+
+  const fetchAll = useCallback(async () => {
+    try {
+      const [orgRes, accountsRes, configsRes, whRes] = await Promise.all([
+        fetch("/api/pos/org-settings"),
+        fetch("/api/cash-bank-accounts?activeOnly=true"),
+        fetch("/api/pos/register-configs"),
+        fetch("/api/warehouses"),
+      ]);
+      if (orgRes.ok) {
+        const data = await orgRes.json();
+        setOrgSettings(data);
+        setDefaultCashId(data.posDefaultCashAccountId || "");
+        setDefaultBankId(data.posDefaultBankAccountId || "");
+      }
+      if (accountsRes.ok) {
+        setCashBankAccounts(await accountsRes.json());
+      }
+      if (configsRes.ok) {
+        setRegisterConfigs(await configsRes.json());
+      }
+      if (whRes.ok) {
+        const whData = await whRes.json();
+        const list = Array.isArray(whData) ? whData : whData.warehouses || [];
+        setWarehouses(list);
+        setIsMultiBranch(list.length > 0);
+      }
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  if (!orgSettings || orgSettings.posAccountingMode !== "CLEARING_ACCOUNT") {
+    return null;
+  }
+
+  const saveOrgDefaults = async () => {
+    setIsSavingDefaults(true);
+    try {
+      const res = await fetch("/api/pos/org-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          posDefaultCashAccountId: defaultCashId || null,
+          posDefaultBankAccountId: defaultBankId || null,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Default settlement accounts saved.");
+        fetchAll();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to save");
+      }
+    } catch {
+      toast.error("Failed to save default settlement accounts.");
+    } finally {
+      setIsSavingDefaults(false);
+    }
+  };
+
+  const saveRegisterConfig = async () => {
+    if (!selectedWarehouse) return;
+    setIsSavingRegister(true);
+    const wh = warehouses.find((w) => w.id === selectedWarehouse);
+    try {
+      const res = await fetch("/api/pos/register-configs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branchId: wh?.branchId || null,
+          warehouseId: selectedWarehouse,
+          defaultCashAccountId: regCashId || null,
+          defaultBankAccountId: regBankId || null,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Register config saved.");
+        setSelectedWarehouse("");
+        setRegCashId("");
+        setRegBankId("");
+        fetchAll();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to save");
+      }
+    } catch {
+      toast.error("Failed to save register config.");
+    } finally {
+      setIsSavingRegister(false);
+    }
+  };
+
+  const handleWarehouseSelect = (whId: string) => {
+    setSelectedWarehouse(whId);
+    const existing = registerConfigs.find((c) => c.warehouseId === whId);
+    setRegCashId(existing?.defaultCashAccountId || "");
+    setRegBankId(existing?.defaultBankAccountId || "");
+  };
+
+  const cashAccounts = cashBankAccounts.filter((a) => a.accountSubType === "CASH");
+  const bankAccounts = cashBankAccounts.filter((a) => a.accountSubType === "BANK");
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Settlement Accounts</CardTitle>
+        <CardDescription>
+          Default accounts used when closing a POS session in Clearing Account mode.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Org-level defaults */}
+        <div className="space-y-4">
+          <p className="text-sm font-medium">Organization Defaults</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-sm">Cash Account</Label>
+              <Select value={defaultCashId} onValueChange={setDefaultCashId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select cash account..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {cashAccounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Bank Account</Label>
+              <Select value={defaultBankId} onValueChange={setDefaultBankId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select bank account..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {bankAccounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button onClick={saveOrgDefaults} disabled={isSavingDefaults} size="sm">
+            {isSavingDefaults && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Defaults
+          </Button>
+        </div>
+
+        {/* Per-register overrides */}
+        {isMultiBranch && (
+          <div className="space-y-4 border-t pt-6">
+            <p className="text-sm font-medium">Per-Register Overrides</p>
+            <p className="text-xs text-muted-foreground">
+              Override the default accounts for a specific warehouse/register.
+            </p>
+
+            {registerConfigs.length > 0 && (
+              <div className="space-y-2">
+                {registerConfigs.map((c) => {
+                  const wh = warehouses.find((w) => w.id === c.warehouseId);
+                  return (
+                    <div key={c.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                      <span className="font-medium">{wh?.name || c.locationKey}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {c.defaultCashAccount?.name || "—"} / {c.defaultBankAccount?.name || "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label className="text-sm">Warehouse</Label>
+                <Select value={selectedWarehouse} onValueChange={handleWarehouseSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select warehouse..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name} ({w.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Cash Account</Label>
+                <Select value={regCashId} onValueChange={setRegCashId} disabled={!selectedWarehouse}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {cashAccounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Bank Account</Label>
+                <Select value={regBankId} onValueChange={setRegBankId} disabled={!selectedWarehouse}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {bankAccounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button onClick={saveRegisterConfig} disabled={isSavingRegister || !selectedWarehouse} size="sm">
+              {isSavingRegister && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Register Config
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

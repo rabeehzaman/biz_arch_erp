@@ -318,7 +318,7 @@ function POSTerminalContent() {
   const previousCartMetricsRef = useRef({ items: 0, quantity: 0 });
 
   // Fetch org settings for POS accounting mode
-  const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string }>(
+  const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null }>(
     posSession ? "/api/pos/org-settings" : null,
     fetcher
   );
@@ -332,16 +332,7 @@ function POSTerminalContent() {
     ? paymentMethodsData.methods
     : DEFAULT_ENABLED_POS_PAYMENT_METHODS;
 
-  // Fetch Cash/Bank accounts for settlement (only in clearing mode)
-  interface CashBankAccountOption {
-    id: string;
-    name: string;
-    accountSubType: string;
-  }
-  const { data: cashBankAccounts = [] } = useSWR<CashBankAccountOption[]>(
-    isClearingMode && showCloseDialog ? "/api/cash-bank-accounts?activeOnly=true" : null,
-    fetcher
-  );
+  // Settlement accounts are auto-filled from register config or org defaults
   const { data: registerConfigData } = useSWR<{
     config: {
       defaultCashAccountId: string | null;
@@ -467,13 +458,15 @@ function POSTerminalContent() {
     }
     if (autoFilledRef.current) return; // already auto-filled for this dialog open
     autoFilledRef.current = true;
-    if (registerConfigData?.config?.defaultCashAccountId) {
-      setSettleCashAccountId(registerConfigData.config.defaultCashAccountId);
+    const cashDefault = registerConfigData?.config?.defaultCashAccountId || orgSettings?.posDefaultCashAccountId || "";
+    const bankDefault = registerConfigData?.config?.defaultBankAccountId || orgSettings?.posDefaultBankAccountId || "";
+    if (cashDefault) {
+      setSettleCashAccountId(cashDefault);
     }
-    if (registerConfigData?.config?.defaultBankAccountId) {
-      setSettleBankAccountId(registerConfigData.config.defaultBankAccountId);
+    if (bankDefault) {
+      setSettleBankAccountId(bankDefault);
     }
-  }, [showCloseDialog, isClearingMode, registerConfigData]);
+  }, [showCloseDialog, isClearingMode, registerConfigData, orgSettings]);
 
   // ── Cart Handlers ──────────────────────────────────────────────────
 
@@ -645,9 +638,9 @@ function POSTerminalContent() {
     setClosePinCode("");
     setCountedClosingCash(null);
     if (isClearingMode) {
-      setSettleCashAccountId(registerConfigData?.config?.defaultCashAccountId || "");
+      setSettleCashAccountId(registerConfigData?.config?.defaultCashAccountId || orgSettings?.posDefaultCashAccountId || "");
       setSettleBankAccountId(
-        registerConfigData?.config?.defaultBankAccountId || USE_CASH_ACCOUNT_VALUE
+        registerConfigData?.config?.defaultBankAccountId || orgSettings?.posDefaultBankAccountId || USE_CASH_ACCOUNT_VALUE
       );
     } else {
       setSettleCashAccountId("");
@@ -1200,46 +1193,7 @@ function POSTerminalContent() {
               </div>
             )}
 
-            {/* Settlement Account Selectors (only in clearing account mode) */}
-            {isClearingMode && (
-              <div className="space-y-3 border-t pt-4">
-                <p className="text-xs text-muted-foreground font-medium">Settlement Accounts</p>
-                <div className="space-y-2">
-                  <Label className="text-sm">{t("pos.depositCashTo")}</Label>
-                  <Select value={settleCashAccountId} onValueChange={setSettleCashAccountId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("pos.selectCashAccount")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cashBankAccounts
-                        .filter((a) => a.accountSubType === "CASH")
-                        .map((a) => (
-                          <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">{t("pos.depositNonCashTo")}</Label>
-                  <Select value={settleBankAccountId} onValueChange={setSettleBankAccountId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("pos.selectBankAccountOptional")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={USE_CASH_ACCOUNT_VALUE}>
-                        {t("pos.useCashAccountFallback")}
-                      </SelectItem>
-                      {cashBankAccounts
-                        .filter((a) => a.accountSubType === "BANK")
-                        .map((a) => (
-                          <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">{t("pos.ifNotSelectedNonCashPaymentsGoToCashAccount")}</p>
-                </div>
-              </div>
-            )}
+            {/* Settlement accounts are auto-filled from register config or org defaults and sent silently */}
           </div>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => setShowCloseDialog(false)} className="w-full sm:w-auto">

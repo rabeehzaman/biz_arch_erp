@@ -102,6 +102,8 @@ export async function PUT(
       posReceiptLogoUrl,
       posReceiptLogoHeight,
       posAccountingMode,
+      posDefaultCashAccountId,
+      posDefaultBankAccountId,
       isTaxInclusivePrice,
     } = body;
 
@@ -211,6 +213,32 @@ export async function PUT(
       seedPOSAccounts = current?.posAccountingMode !== "CLEARING_ACCOUNT";
     }
 
+    // Validate POS default settlement account IDs
+    if (posDefaultCashAccountId) {
+      const cashAcct = await prisma.cashBankAccount.findFirst({
+        where: { id: posDefaultCashAccountId, organizationId: id, isActive: true, accountSubType: "CASH" },
+        select: { id: true },
+      });
+      if (!cashAcct) {
+        return NextResponse.json(
+          { error: "Selected default cash account is invalid, inactive, or not a CASH account" },
+          { status: 400 }
+        );
+      }
+    }
+    if (posDefaultBankAccountId) {
+      const bankAcct = await prisma.cashBankAccount.findFirst({
+        where: { id: posDefaultBankAccountId, organizationId: id, isActive: true, accountSubType: "BANK" },
+        select: { id: true },
+      });
+      if (!bankAcct) {
+        return NextResponse.json(
+          { error: "Selected default bank account is invalid, inactive, or not a BANK account" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Build update data
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
@@ -248,6 +276,8 @@ export async function PUT(
     if (posReceiptLogoUrl !== undefined) updateData.posReceiptLogoUrl = posReceiptLogoUrl || null;
     if (posReceiptLogoHeight !== undefined) updateData.posReceiptLogoHeight = Number(posReceiptLogoHeight) || 80;
     if (posAccountingMode !== undefined) updateData.posAccountingMode = posAccountingMode;
+    if (posDefaultCashAccountId !== undefined) updateData.posDefaultCashAccountId = posDefaultCashAccountId || null;
+    if (posDefaultBankAccountId !== undefined) updateData.posDefaultBankAccountId = posDefaultBankAccountId || null;
     if (isTaxInclusivePrice !== undefined) updateData.isTaxInclusivePrice = isTaxInclusivePrice;
 
     const organization = await prisma.$transaction(

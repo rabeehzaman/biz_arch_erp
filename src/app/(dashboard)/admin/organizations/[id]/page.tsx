@@ -19,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { SidebarConfigDialog } from "../sidebar-config-dialog";
@@ -59,6 +59,8 @@ interface OrganizationDetails {
     language: string;
     currency: string;
     posAccountingMode: string;
+    posDefaultCashAccountId: string | null;
+    posDefaultBankAccountId: string | null;
     isTaxInclusivePrice: boolean;
     createdAt: string;
     users: Array<{
@@ -116,6 +118,8 @@ export default function OrganizationDetailsPage() {
     const [language, setLanguage] = useState("en");
     const [currency, setCurrency] = useState("INR");
     const [posAccountingMode, setPosAccountingMode] = useState("DIRECT");
+    const [posDefaultCashAccountId, setPosDefaultCashAccountId] = useState("");
+    const [posDefaultBankAccountId, setPosDefaultBankAccountId] = useState("");
     const [isTaxInclusivePrice, setIsTaxInclusivePrice] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -147,6 +151,16 @@ export default function OrganizationDetailsPage() {
     const [resetPwError, setResetPwError] = useState("");
     const [resetPwSuccess, setResetPwSuccess] = useState("");
 
+    // Change role state
+    const [changeRoleOpen, setChangeRoleOpen] = useState(false);
+    const [changeRoleUser, setChangeRoleUser] = useState<{ id: string; name: string | null; email: string; role: string } | null>(null);
+    const [selectedRole, setSelectedRole] = useState("");
+    const [isChangingRole, setIsChangingRole] = useState(false);
+    const [changeRoleError, setChangeRoleError] = useState("");
+
+    // Cash/Bank accounts for POS default settlement
+    const [orgCashBankAccounts, setOrgCashBankAccounts] = useState<Array<{ id: string; name: string; accountSubType: string }>>([]);
+
     const populateSettingsState = (data: OrganizationDetails) => {
         setGstEnabled(data.gstEnabled || false);
         setEInvoicingEnabled(data.eInvoicingEnabled || false);
@@ -176,6 +190,8 @@ export default function OrganizationDetailsPage() {
         setLanguage(data.language || "en");
         setCurrency(data.currency || "INR");
         setPosAccountingMode(data.posAccountingMode || "DIRECT");
+        setPosDefaultCashAccountId(data.posDefaultCashAccountId || "");
+        setPosDefaultBankAccountId(data.posDefaultBankAccountId || "");
         setIsTaxInclusivePrice(data.isTaxInclusivePrice || false);
     };
 
@@ -196,9 +212,27 @@ export default function OrganizationDetailsPage() {
         }
     }, [id]);
 
+    const fetchCashBankAccounts = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/admin/organizations/${id}/cash-bank-accounts`);
+            if (res.ok) {
+                const data = await res.json();
+                setOrgCashBankAccounts(data);
+            }
+        } catch {
+            // silently fail — accounts dropdown will just be empty
+        }
+    }, [id]);
+
     useEffect(() => {
         fetchOrganization();
     }, [fetchOrganization]);
+
+    useEffect(() => {
+        if (posAccountingMode === "CLEARING_ACCOUNT") {
+            fetchCashBankAccounts();
+        }
+    }, [posAccountingMode, fetchCashBankAccounts]);
 
     const handleGstinChange = (value: string) => {
         const upper = value.toUpperCase();
@@ -280,6 +314,8 @@ export default function OrganizationDetailsPage() {
                     language,
                     currency,
                     posAccountingMode,
+                    posDefaultCashAccountId: posAccountingMode === "CLEARING_ACCOUNT" ? posDefaultCashAccountId || null : null,
+                    posDefaultBankAccountId: posAccountingMode === "CLEARING_ACCOUNT" ? posDefaultBankAccountId || null : null,
                     isTaxInclusivePrice,
                 }),
             });
@@ -376,6 +412,42 @@ export default function OrganizationDetailsPage() {
         setResetPwError("");
         setResetPwSuccess("");
         setResetPwOpen(true);
+    };
+
+    const openChangeRoleDialog = (user: { id: string; name: string | null; email: string; role: string }) => {
+        setChangeRoleUser(user);
+        setSelectedRole(user.role);
+        setChangeRoleError("");
+        setChangeRoleOpen(true);
+    };
+
+    const handleChangeRole = async () => {
+        setChangeRoleError("");
+        if (!selectedRole || !changeRoleUser) return;
+        if (selectedRole === changeRoleUser.role) {
+            setChangeRoleError("Please select a different role");
+            return;
+        }
+        setIsChangingRole(true);
+        try {
+            const res = await fetch(`/api/admin/users/${changeRoleUser.id}/change-role`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role: selectedRole }),
+            });
+            if (res.ok) {
+                setChangeRoleOpen(false);
+                fetchOrganization();
+                toast.success(`Role updated to "${selectedRole}" for ${changeRoleUser.name || changeRoleUser.email}`);
+            } else {
+                const data = await res.json();
+                setChangeRoleError(data.error || "Failed to change role");
+            }
+        } catch {
+            setChangeRoleError("Failed to change role");
+        } finally {
+            setIsChangingRole(false);
+        }
     };
 
     const handleResetPassword = async () => {
@@ -925,6 +997,53 @@ export default function OrganizationDetailsPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    {posAccountingMode === "CLEARING_ACCOUNT" && (
+                                        <div className="space-y-4 border-l-2 border-muted pl-4 ml-2">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="space-y-0.5">
+                                                    <Label>Default Cash Settlement Account</Label>
+                                                    <p className="text-xs text-muted-foreground max-w-md">
+                                                        Pre-filled when closing a POS session. Can be overridden per session.
+                                                    </p>
+                                                </div>
+                                                <Select value={posDefaultCashAccountId} onValueChange={setPosDefaultCashAccountId}>
+                                                    <SelectTrigger className="w-full sm:w-56">
+                                                        <SelectValue placeholder="Select cash account..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="">None</SelectItem>
+                                                        {orgCashBankAccounts
+                                                            .filter(a => a.accountSubType === "CASH")
+                                                            .map(a => (
+                                                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                                                            ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="space-y-0.5">
+                                                    <Label>Default Bank Settlement Account</Label>
+                                                    <p className="text-xs text-muted-foreground max-w-md">
+                                                        Pre-filled for non-cash payment settlement. Can be overridden per session.
+                                                    </p>
+                                                </div>
+                                                <Select value={posDefaultBankAccountId} onValueChange={setPosDefaultBankAccountId}>
+                                                    <SelectTrigger className="w-full sm:w-56">
+                                                        <SelectValue placeholder="Select bank account..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="">None</SelectItem>
+                                                        {orgCashBankAccounts
+                                                            .filter(a => a.accountSubType === "BANK")
+                                                            .map(a => (
+                                                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                                                            ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                    )}
                                 </TabsContent>
 
                                 {/* INVOICE & PDF TAB */}
@@ -1140,15 +1259,26 @@ export default function OrganizationDetailsPage() {
                                                 </div>
                                                 <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                                                     <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-8 px-3"
-                                                        onClick={() => openResetPwDialog(user)}
-                                                    >
-                                                        <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-                                                        Reset
-                                                    </Button>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-3"
+                                                            onClick={() => openChangeRoleDialog(user)}
+                                                        >
+                                                            <UserCog className="mr-1.5 h-3.5 w-3.5" />
+                                                            Role
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-3"
+                                                            onClick={() => openResetPwDialog(user)}
+                                                        >
+                                                            <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                                                            Reset
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -1177,14 +1307,24 @@ export default function OrganizationDetailsPage() {
                                                         </TableCell>
                                                         <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => openResetPwDialog(user)}
-                                                            >
-                                                                <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-                                                                Reset Password
-                                                            </Button>
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => openChangeRoleDialog(user)}
+                                                                >
+                                                                    <UserCog className="mr-1.5 h-3.5 w-3.5" />
+                                                                    Change Role
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => openResetPwDialog(user)}
+                                                                >
+                                                                    <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                                                                    Reset Password
+                                                                </Button>
+                                                            </div>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -1356,6 +1496,45 @@ export default function OrganizationDetailsPage() {
                             <Button onClick={handleRecalculateFIFO} disabled={isRecalculating}>
                                 {isRecalculating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                                 Start Recalculation
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog open={changeRoleOpen} onOpenChange={(open) => { if (!open && !isChangingRole) { setChangeRoleOpen(false); setChangeRoleError(""); } }}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Change Role</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Update role for <strong className="text-foreground">{changeRoleUser?.name || changeRoleUser?.email}</strong>
+                                {changeRoleUser?.name && <span className="text-muted-foreground"> ({changeRoleUser.email})</span>}
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-4 py-2">
+                            {changeRoleError && (
+                                <div className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                                    {changeRoleError}
+                                </div>
+                            )}
+                            <div className="space-y-2">
+                                <Label>New Role</Label>
+                                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="admin">admin</SelectItem>
+                                        <SelectItem value="user">user</SelectItem>
+                                        <SelectItem value="pos">pos</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <AlertDialogCancel disabled={isChangingRole}>Cancel</AlertDialogCancel>
+                            <Button onClick={handleChangeRole} disabled={isChangingRole || !selectedRole}>
+                                {isChangingRole ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCog className="h-4 w-4 mr-2" />}
+                                Change Role
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
