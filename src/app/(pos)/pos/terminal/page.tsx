@@ -53,11 +53,12 @@ import {
   DEFAULT_ENABLED_POS_PAYMENT_METHODS,
   type POSPaymentMethod,
 } from "@/lib/pos/payment-methods";
-import { normalizeRoundOffMode } from "@/lib/round-off";
+import { normalizeRoundOffMode, roundCurrency } from "@/lib/round-off";
 import { parseWeightBarcode, type WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const USE_CASH_ACCOUNT_VALUE = "__use_cash_account__";
+const EMPTY_PAYMENT_BREAKDOWN: { method: string; total: number }[] = [];
 
 interface POSSessionData {
   id: string;
@@ -110,8 +111,6 @@ interface Customer {
 
 type CartAction =
   | { type: "ADD"; product: any; quantity?: number }
-  | { type: "SET_QTY"; productId: string; qty: number }
-  | { type: "SET_DISCOUNT"; productId: string; discount: number }
   | { type: "REMOVE"; productId: string }
   | { type: "CLEAR" }
   | { type: "RESTORE"; items: CartItemData[] };
@@ -121,6 +120,31 @@ interface CartState {
   totalQuantity: number;
   selectedProductQuantities: Record<string, number>;
   revision: number;
+}
+
+function getPaymentMethodLabel(method: string, t: (key: string) => string) {
+  switch (method) {
+    case "CASH":
+      return t("payments.cash");
+    case "CREDIT_CARD":
+      return t("pos.card");
+    case "BANK_TRANSFER":
+      return t("common.bankTransfer");
+    case "UPI":
+      return "UPI";
+    default:
+      return method.replace(/_/g, " ");
+  }
+}
+
+function formatSignedDifference(amount: number, fmt: (value: number) => string) {
+  if (amount > 0) {
+    return `+${fmt(Math.abs(amount))}`;
+  }
+  if (amount < 0) {
+    return `-${fmt(Math.abs(amount))}`;
+  }
+  return fmt(0);
 }
 
 function normalizeAmountInput(rawValue: string) {
@@ -190,30 +214,6 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         },
       ];
       return buildCartState(newItems, state.revision);
-    }
-    case "SET_QTY": {
-      if (action.qty <= 0) {
-        return buildCartState(
-          state.items.filter((item) => item.productId !== action.productId),
-          state.revision
-        );
-      }
-      return buildCartState(
-        state.items.map((item) =>
-          item.productId === action.productId ? { ...item, quantity: action.qty } : item
-        ),
-        state.revision
-      );
-    }
-    case "SET_DISCOUNT": {
-      return buildCartState(
-        state.items.map((item) =>
-          item.productId === action.productId
-            ? { ...item, discount: Math.max(0, Math.min(100, action.discount)) }
-            : item
-        ),
-        state.revision
-      );
     }
     case "REMOVE":
       return buildCartState(
@@ -299,6 +299,7 @@ function POSTerminalContent() {
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showHeldSheet, setShowHeldSheet] = useState(false);
   const [closingCash, setClosingCash] = useState("");
+  const [countedClosingCash, setCountedClosingCash] = useState<number | null>(null);
   const [isClosingSession, setIsClosingSession] = useState(false);
   const [settleCashAccountId, setSettleCashAccountId] = useState("");
   const [settleBankAccountId, setSettleBankAccountId] = useState("");
@@ -349,13 +350,41 @@ function POSTerminalContent() {
     fetcher
   );
 
+  const paymentBreakdown = sessionSummary?.paymentBreakdown ?? EMPTY_PAYMENT_BREAKDOWN;
+  const paymentTotals = useMemo(
+    () =>
+      paymentBreakdown.reduce<Record<string, number>>((totals, payment) => {
+        totals[payment.method] = roundCurrency((totals[payment.method] || 0) + Number(payment.total || 0));
+        return totals;
+      }, {}),
+    [paymentBreakdown]
+  );
+  const cashSalesTotal = paymentTotals.CASH || 0;
+  const nonCashTotal = roundCurrency(
+    Object.entries(paymentTotals).reduce(
+      (sum, [method, total]) => (method === "CASH" ? sum : sum + total),
+      0
+    )
+  );
   const expectedCash = posSession
-    ? Number(posSession.openingCash) +
-    (sessionSummary?.paymentBreakdown?.find((p) => p.method === "CASH")?.total || 0)
+    ? roundCurrency(Number(posSession.openingCash) + cashSalesTotal)
     : 0;
 
-  const parsedClosingCash = parseAmountInput(closingCash);
-  const cashDifference = parsedClosingCash - expectedCash;
+  const parsedClosingCash = countedClosingCash ?? 0;
+  const cashDifference = countedClosingCash !== null
+    ? roundCurrency(countedClosingCash - expectedCash)
+    : null;
+  const visiblePaymentBreakdown = useMemo(
+    () =>
+      paymentBreakdown
+        .filter((payment) => Number(payment.total) > 0)
+        .sort((a, b) => {
+          if (a.method === "CASH") return -1;
+          if (b.method === "CASH") return 1;
+          return Number(b.total) - Number(a.total);
+        }),
+    [paymentBreakdown]
+  );
 
   // Receipt printing
   const { data: receiptSetting } = useSWR<{ value: string }>(
@@ -419,6 +448,13 @@ function POSTerminalContent() {
 
   // ── Cart Handlers ──────────────────────────────────────────────────
 
+  const syncClosingCashValue = useCallback((rawValue: string) => {
+    const normalizedValue = normalizeAmountInput(rawValue);
+    setClosingCash(normalizedValue);
+    setCountedClosingCash(
+      normalizedValue === "" ? null : roundCurrency(parseAmountInput(normalizedValue))
+    );
+  }, []);
 
   const addToCart = useCallback((product: any, quantity?: number) => {
     dispatchCart({ type: "ADD", product, quantity });
@@ -486,14 +522,6 @@ function POSTerminalContent() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex]);
-
-  const updateCartQuantity = useCallback((productId: string, qty: number) => {
-    dispatchCart({ type: "SET_QTY", productId, qty });
-  }, []);
-
-  const updateCartDiscount = useCallback((productId: string, discount: number) => {
-    dispatchCart({ type: "SET_DISCOUNT", productId, discount });
-  }, []);
 
   const removeFromCart = useCallback((productId: string) => {
     dispatchCart({ type: "REMOVE", productId });
@@ -571,6 +599,7 @@ function POSTerminalContent() {
       await mutateSession();
       setShowCloseDialog(false);
       setClosingCash("");
+      setCountedClosingCash(null);
       toast.success("POS session closed");
       router.replace("/pos");
     } catch (err) {
@@ -582,6 +611,7 @@ function POSTerminalContent() {
 
   const openCloseSessionDialog = () => {
     setClosingCash("");
+    setCountedClosingCash(null);
     if (isClearingMode) {
       setSettleCashAccountId(registerConfigData?.config?.defaultCashAccountId || "");
       setSettleBankAccountId(
@@ -898,8 +928,6 @@ function POSTerminalContent() {
                     <CartItem
                       key={`${item.productId}:${item.quantity}:${item.discount}`}
                       item={item}
-                      onUpdateQuantity={updateCartQuantity}
-                      onUpdateDiscount={updateCartDiscount}
                       onRemove={removeFromCart}
                     />
                   ))
@@ -980,6 +1008,7 @@ function POSTerminalContent() {
           setShowCloseDialog(open);
           if (!open) {
             setClosingCash("");
+            setCountedClosingCash(null);
           }
         }}
       >
@@ -1023,15 +1052,46 @@ function POSTerminalContent() {
                 </p>
               </div>
             </div>
+            {!isLoadingSummary && visiblePaymentBreakdown.length > 0 && (
+              <div className="rounded-lg border bg-slate-50/70 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-medium">{t("pos.paymentBreakdown")}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("pos.transactions")}: {posSession.totalTransactions}
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-sm">
+                  {visiblePaymentBreakdown.map((payment) => (
+                    <div
+                      key={payment.method}
+                      className="flex items-center justify-between gap-4"
+                    >
+                      <span className="text-muted-foreground">
+                        {getPaymentMethodLabel(payment.method, t)}
+                      </span>
+                      <span className="font-medium">{fmt(Number(payment.total))}</span>
+                    </div>
+                  ))}
+                  {nonCashTotal > 0 && (
+                    <div className="mt-2 flex items-center justify-between gap-4 border-t pt-2">
+                      <span className="font-medium text-slate-700">
+                        {t("pos.depositNonCashTo")}
+                      </span>
+                      <span className="font-semibold">{fmt(nonCashTotal)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <div>
               <div className="flex justify-between items-end mb-1">
                 <label className="text-sm font-medium">{t("pos.countedClosingCash")}</label>
-                {closingCash && !isLoadingSummary && (
+                {countedClosingCash !== null && !isLoadingSummary && cashDifference !== null && (
                   <span className={cn(
                     "text-sm font-medium",
                     cashDifference > 0 ? "text-green-600" : (cashDifference < 0 ? "text-red-600" : "text-slate-600")
                   )}>
-                    {t("pos.diff")} {cashDifference > 0 ? "+" : ""}{fmt(cashDifference)}
+                    {t("pos.diff")} {formatSignedDifference(cashDifference, fmt)}
                   </span>
                 )}
               </div>
@@ -1040,7 +1100,8 @@ function POSTerminalContent() {
                 inputMode="decimal"
                 placeholder="0.00"
                 value={closingCash}
-                onChange={(e) => setClosingCash(normalizeAmountInput(e.target.value))}
+                onInput={(e) => syncClosingCashValue((e.target as HTMLInputElement).value)}
+                onChange={(e) => syncClosingCashValue(e.currentTarget.value)}
                 autoFocus
               />
             </div>

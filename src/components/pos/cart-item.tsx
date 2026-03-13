@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useLanguage } from "@/lib/i18n";
-import { Minus, Plus, Trash2, Percent } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 export interface CartItemData {
   productId: string;
@@ -20,28 +17,15 @@ export interface CartItemData {
 
 interface CartItemProps {
   item: CartItemData;
-  onUpdateQuantity: (productId: string, qty: number) => void;
-  onUpdateDiscount: (productId: string, discount: number) => void;
   onRemove: (productId: string) => void;
 }
 
 export function CartItem({
   item,
-  onUpdateQuantity,
-  onUpdateDiscount,
   onRemove,
 }: CartItemProps) {
   const { fmt } = useCurrency();
-  const { t } = useLanguage();
-  const [showDiscountInput, setShowDiscountInput] = useState(false);
-  const [discountValue, setDiscountValue] = useState(item.discount.toString());
   const lineTotal = item.quantity * item.price * (1 - item.discount / 100);
-
-  const applyDiscount = () => {
-    const val = parseFloat(discountValue) || 0;
-    onUpdateDiscount(item.productId, val);
-    setShowDiscountInput(false);
-  };
 
   return (
     <div className="max-w-full rounded-lg border bg-white p-2">
@@ -51,42 +35,11 @@ export function CartItem({
             {item.name}
           </p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span>
-              {fmt(Number(item.price))}
-            </span>
-            <button
-              onClick={() => {
-                setDiscountValue(item.discount.toString());
-                setShowDiscountInput(!showDiscountInput);
-              }}
-              className={`inline-flex items-center gap-0.5 px-1 rounded hover:bg-slate-100 ${item.discount > 0 ? "text-green-600 font-medium" : "text-slate-400"
-                }`}
-            >
-              <Percent className="h-2.5 w-2.5" />
-              {item.discount > 0 ? `${item.discount}%` : t("pos.disc")}
-            </button>
+            <span>{fmt(Number(item.price))}</span>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 self-center">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
-          >
-            <Minus className="h-3 w-3" />
-          </Button>
-          <span className="w-8 text-center text-sm font-medium">
-            {item.quantity}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
+        <div className="flex min-w-[3rem] shrink-0 items-center justify-center self-center">
+          <span className="text-sm font-medium">x{item.quantity}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1 self-center">
           <span className="w-16 text-right text-sm font-semibold sm:w-20">
@@ -102,42 +55,6 @@ export function CartItem({
           </Button>
         </div>
       </div>
-      {showDiscountInput && (
-        <div className="flex items-center gap-2 mt-2 pt-2 border-t">
-          <Input
-            type="number"
-            value={discountValue}
-            onChange={(e) => setDiscountValue(e.target.value)}
-            placeholder="0"
-            min={0}
-            max={100}
-            step="0.5"
-            className="h-7 w-20 text-sm"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyDiscount();
-              if (e.key === "Escape") setShowDiscountInput(false);
-            }}
-          />
-          <span className="text-xs text-muted-foreground">%</span>
-          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={applyDiscount}>
-            {t("pos.apply")}
-          </Button>
-          {item.discount > 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs text-red-500"
-              onClick={() => {
-                onUpdateDiscount(item.productId, 0);
-                setShowDiscountInput(false);
-              }}
-            >
-              {t("pos.clear")}
-            </Button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -12,9 +12,9 @@ import type { Page } from "@playwright/test";
 
 function cartItemLocator(page: Page, productName: string) {
   return page
-    .locator("p.text-sm.font-medium.truncate")
+    .locator('div.rounded-lg.border.bg-white')
     .filter({ hasText: productName })
-    .locator('xpath=ancestor::div[contains(@class, "rounded-lg") and contains(@class, "border") and contains(@class, "bg-white")][1]')
+    .filter({ has: page.locator("svg.lucide-trash2") })
     .first();
 }
 
@@ -25,7 +25,7 @@ function makeSpecRunId(label: string) {
 test.describe("POS cart visibility", () => {
   test.setTimeout(120_000);
 
-  test("shows quantity 2 after clicking the same product twice", async ({ page, baseURL }) => {
+  test("shows quantity 2 after clicking the same product twice and hides inline cart controls", async ({ page, baseURL }) => {
     const api = await createApiContext(baseURL!, "admin");
     const runId = makeSpecRunId("click");
     const branch = await createBranch(api, runId);
@@ -55,7 +55,10 @@ test.describe("POS cart visibility", () => {
 
     const cartItem = cartItemLocator(page, productName);
     await expect(cartItem).toBeVisible();
-    await expect(cartItem.locator("span.w-8.text-center.text-sm.font-medium")).toHaveText("2");
+    await expect(cartItem.getByText("x2", { exact: true })).toBeVisible();
+    await expect(cartItem.locator("svg.lucide-plus")).toHaveCount(0);
+    await expect(cartItem.locator("svg.lucide-minus")).toHaveCount(0);
+    await expect(cartItem.locator("svg.lucide-percent")).toHaveCount(0);
 
     await api.dispose();
   });
@@ -90,11 +93,11 @@ test.describe("POS cart visibility", () => {
     await page.keyboard.press("Enter");
     const cartItem = cartItemLocator(page, productName);
     await expect(cartItem).toBeVisible();
-    await expect(cartItem.locator("span.w-8.text-center.text-sm.font-medium")).toHaveText("1");
+    await expect(cartItem.getByText("x1", { exact: true })).toBeVisible();
     await page.keyboard.type(sku, { delay: 10 });
     await page.keyboard.press("Enter");
 
-    await expect(cartItem.locator("span.w-8.text-center.text-sm.font-medium")).toHaveText("2");
+    await expect(cartItem.getByText("x2", { exact: true })).toBeVisible();
 
     await api.dispose();
   });

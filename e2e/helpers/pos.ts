@@ -31,7 +31,11 @@ async function parseJson(response: Awaited<ReturnType<APIRequestContext["get"]>>
 }
 
 export function makeRunId() {
-  return `pos-${Date.now()}`;
+  return `pos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function makeUniqueCode(prefix: string) {
+  return `${prefix}${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 }
 
 export async function setOrgPosAccountingMode(
@@ -53,7 +57,7 @@ export async function createBranch(api: APIRequestContext, runId: string) {
   const response = await api.post("/api/branches", {
     data: {
       name: `POS Branch ${runId}`,
-      code: `PB${runId.slice(-6).toUpperCase()}`,
+      code: makeUniqueCode("PB"),
       city: "Riyadh",
     },
   });
@@ -65,7 +69,7 @@ export async function createWarehouse(api: APIRequestContext, branchId: string, 
     data: {
       branchId,
       name: `POS Warehouse ${runId}`,
-      code: `PW${runId.slice(-6).toUpperCase()}`,
+      code: makeUniqueCode("PW"),
     },
   });
   return parseJson(response);

@@ -851,18 +851,47 @@ function shouldSkipTextNode(node: Text): boolean {
   return false;
 }
 
+function resolveLocalizedLiteral(
+  currentValue: string,
+  storedOriginal: string | undefined,
+  lang: Language
+): { originalValue: string; nextValue: string } {
+  if (lang === "en") {
+    return { originalValue: currentValue, nextValue: currentValue };
+  }
+
+  if (!storedOriginal) {
+    return {
+      originalValue: currentValue,
+      nextValue: translateLiteral(currentValue, lang),
+    };
+  }
+
+  const localizedStoredValue = translateLiteral(storedOriginal, lang);
+  const hasFreshSourceValue =
+    currentValue !== storedOriginal && currentValue !== localizedStoredValue;
+  const originalValue = hasFreshSourceValue ? currentValue : storedOriginal;
+
+  return {
+    originalValue,
+    nextValue: translateLiteral(originalValue, lang),
+  };
+}
+
 function localizeTextNode(node: Text, lang: Language): void {
   if (shouldSkipTextNode(node)) return;
 
   const currentValue = node.nodeValue ?? "";
-  const originalValue = textNodeOriginals.get(node) ?? currentValue;
+  const storedOriginal = textNodeOriginals.get(node);
+  const { originalValue, nextValue } = resolveLocalizedLiteral(
+    currentValue,
+    storedOriginal,
+    lang
+  );
 
-  if (!textNodeOriginals.has(node)) {
-    textNodeOriginals.set(node, currentValue);
+  if (storedOriginal !== originalValue) {
+    textNodeOriginals.set(node, originalValue);
   }
-
-  const nextValue =
-    lang === "ar" ? translateLiteral(originalValue, lang) : originalValue;
 
   if (nextValue !== currentValue) {
     node.nodeValue = nextValue;
@@ -882,14 +911,16 @@ function localizeElementAttributes(element: Element, lang: Language): void {
     if (!element.hasAttribute(attribute)) continue;
 
     const currentValue = element.getAttribute(attribute) ?? "";
-    const originalValue = originals.get(attribute) ?? currentValue;
+    const storedOriginal = originals.get(attribute);
+    const { originalValue, nextValue } = resolveLocalizedLiteral(
+      currentValue,
+      storedOriginal,
+      lang
+    );
 
-    if (!originals.has(attribute)) {
-      originals.set(attribute, currentValue);
+    if (storedOriginal !== originalValue) {
+      originals.set(attribute, originalValue);
     }
-
-    const nextValue =
-      lang === "ar" ? translateLiteral(originalValue, lang) : originalValue;
 
     if (nextValue !== currentValue) {
       element.setAttribute(attribute, nextValue);

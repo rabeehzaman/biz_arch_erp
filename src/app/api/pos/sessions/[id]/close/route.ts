@@ -10,6 +10,7 @@ import {
   ensureCashShortOverAccount,
 } from "@/lib/accounting/journal";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
+import { roundCurrency } from "@/lib/round-off";
 
 export async function PUT(
   request: NextRequest,
@@ -127,9 +128,9 @@ export async function PUT(
         _sum: { amount: true },
       });
 
-      const cashReceived = Number(cashPayments._sum.amount || 0);
-      const expectedCash = Number(posSession.openingCash) + cashReceived;
-      const cashDifference = Number(closingCash) - expectedCash;
+      const cashReceived = roundCurrency(Number(cashPayments._sum.amount || 0));
+      const expectedCash = roundCurrency(Number(posSession.openingCash) + cashReceived);
+      const cashDifference = roundCurrency(Number(closingCash) - expectedCash);
 
       // Aggregate non-cash payments
       const nonCashPayments = await tx.payment.aggregate({
@@ -140,7 +141,7 @@ export async function PUT(
         },
         _sum: { amount: true },
       });
-      const nonCashTotal = Number(nonCashPayments._sum.amount || 0);
+      const nonCashTotal = roundCurrency(Number(nonCashPayments._sum.amount || 0));
 
       // Aggregate totals from invoices in this session
       const invoiceAggregates = await tx.invoice.aggregate({
@@ -149,7 +150,7 @@ export async function PUT(
         _count: { id: true },
       });
 
-      const totalSales = Number(invoiceAggregates._sum.total || 0);
+      const totalSales = roundCurrency(Number(invoiceAggregates._sum.total || 0));
       const totalTransactions = invoiceAggregates._count.id;
       const now = new Date();
 
@@ -186,12 +187,12 @@ export async function PUT(
             );
           }
 
-          const depositAmount = floatJournaledAtOpen
+          const depositAmount = roundCurrency(floatJournaledAtOpen
             ? Number(closingCash)                              // full deposit (new Store Safe flow)
-            : Number(closingCash) - Number(posSession.openingCash); // net deposit (legacy flow)
-          const clearingCredit = floatJournaledAtOpen
+            : Number(closingCash) - Number(posSession.openingCash)); // net deposit (legacy flow)
+          const clearingCredit = roundCurrency(floatJournaledAtOpen
             ? expectedCash   // float + sales — matches what was debited to clearing at open + sales
-            : depositAmount; // legacy: only sales proceeds credited back
+            : depositAmount); // legacy: only sales proceeds credited back
 
           const lines: { accountId: string; description: string; debit: number; credit: number }[] = [];
 
