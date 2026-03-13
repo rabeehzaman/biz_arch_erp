@@ -243,6 +243,29 @@ export async function capacitorPrintWithOverride(
 }
 
 /**
+ * Open the cash drawer using the saved printer config.
+ * Reads the "pos-open-drawer-on-sale" localStorage flag and opens
+ * the drawer via Electron IPC or Capacitor if enabled.
+ */
+export async function openCashDrawerIfEnabled(): Promise<void> {
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (localStorage.getItem("pos-open-drawer-on-sale") !== "true") return;
+  } catch {
+    return;
+  }
+
+  if (isElectronEnvironment() && window.electronPOS) {
+    const resolvedConfig = await resolvePrinterConfig();
+    window.electronPOS.openCashDrawer(resolvedConfig).catch(() => {});
+  } else if (isCapacitorEnvironment()) {
+    const { openMobileCashDrawer, getMobilePrinterConfig, getDefaultMobilePrinterConfig } = await import("@/lib/capacitor-print");
+    const config = getMobilePrinterConfig() ?? getDefaultMobilePrinterConfig();
+    openMobileCashDrawer(config).catch(() => {});
+  }
+}
+
+/**
  * Smart print: uses Electron silent printing if available, otherwise falls back
  * to browser iframe print dialog.
  */

@@ -42,6 +42,7 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
   const { t } = useLanguage();
   const [receiptPrinting, setReceiptPrinting] = useState(false);
   const [isLoadingReceiptPrinting, setIsLoadingReceiptPrinting] = useState(true);
+  const [openDrawerOnSale, setOpenDrawerOnSale] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
   const [isCapacitor, setIsCapacitor] = useState(false);
   const [connectionType, setConnectionType] = useState<ConnectionType>("windows");
@@ -77,7 +78,21 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
       .then((data) => setReceiptPrinting(data.value === "true"))
       .catch(() => {})
       .finally(() => setIsLoadingReceiptPrinting(false));
+
+    try {
+      setOpenDrawerOnSale(localStorage.getItem("pos-open-drawer-on-sale") === "true");
+    } catch {}
   }, [open]);
+
+  const handleToggleOpenDrawerOnSale = (checked: boolean) => {
+    setOpenDrawerOnSale(checked);
+    try {
+      localStorage.setItem("pos-open-drawer-on-sale", checked ? "true" : "false");
+      toast.success(`Cash drawer on sale ${checked ? "enabled" : "disabled"}`);
+    } catch {
+      toast.error("Failed to save setting");
+    }
+  };
 
   const handleToggleReceiptPrinting = async (checked: boolean) => {
     const prev = receiptPrinting;
@@ -680,23 +695,41 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div className="space-y-0.5">
-            <Label htmlFor="dlg-receipt-printing">{t("pos.autoPrintReceipt")}</Label>
-            <p className="text-xs text-muted-foreground">
-              {isElectron
-                ? t("pos.autoPrintReceiptElectron")
-                : isCapacitor
-                  ? t("pos.autoPrintReceiptMobile")
-                  : t("pos.autoPrintReceiptWeb")}
-            </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="dlg-receipt-printing">{t("pos.autoPrintReceipt")}</Label>
+              <p className="text-xs text-muted-foreground">
+                {isElectron
+                  ? t("pos.autoPrintReceiptElectron")
+                  : isCapacitor
+                    ? t("pos.autoPrintReceiptMobile")
+                    : t("pos.autoPrintReceiptWeb")}
+              </p>
+            </div>
+            <Switch
+              id="dlg-receipt-printing"
+              checked={receiptPrinting}
+              onCheckedChange={handleToggleReceiptPrinting}
+              disabled={isLoadingReceiptPrinting}
+            />
           </div>
-          <Switch
-            id="dlg-receipt-printing"
-            checked={receiptPrinting}
-            onCheckedChange={handleToggleReceiptPrinting}
-            disabled={isLoadingReceiptPrinting}
-          />
+
+          {(isElectron || isCapacitor) && (
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="dlg-open-drawer-on-sale">{t("pos.openDrawerOnSale")}</Label>
+                <p className="text-xs text-muted-foreground">
+                  {t("pos.openDrawerOnSaleDesc")}
+                </p>
+              </div>
+              <Switch
+                id="dlg-open-drawer-on-sale"
+                checked={openDrawerOnSale}
+                onCheckedChange={handleToggleOpenDrawerOnSale}
+              />
+            </div>
+          )}
         </div>
 
         {isElectron ? renderElectronContent() : isCapacitor ? renderCapacitorContent() : renderWebContent()}
