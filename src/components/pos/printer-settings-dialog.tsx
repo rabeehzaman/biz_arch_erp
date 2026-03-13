@@ -40,6 +40,8 @@ interface PrinterSettingsDialogProps {
 
 export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDialogProps) {
   const { t } = useLanguage();
+  const [receiptPrinting, setReceiptPrinting] = useState(false);
+  const [isLoadingReceiptPrinting, setIsLoadingReceiptPrinting] = useState(true);
   const [isElectron, setIsElectron] = useState(false);
   const [isCapacitor, setIsCapacitor] = useState(false);
   const [connectionType, setConnectionType] = useState<ConnectionType>("windows");
@@ -66,6 +68,33 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
   const [mobileTimeoutSeconds, setMobileTimeoutSeconds] = useState("10");
   const [mobileCutPaper, setMobileCutPaper] = useState(true);
   const [mobileOpenCashDrawerOnPrint, setMobileOpenCashDrawerOnPrint] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setIsLoadingReceiptPrinting(true);
+    fetch("/api/settings/pos-receipt-printing")
+      .then((r) => r.json())
+      .then((data) => setReceiptPrinting(data.value === "true"))
+      .catch(() => {})
+      .finally(() => setIsLoadingReceiptPrinting(false));
+  }, [open]);
+
+  const handleToggleReceiptPrinting = async (checked: boolean) => {
+    const prev = receiptPrinting;
+    setReceiptPrinting(checked);
+    try {
+      const res = await fetch("/api/settings/pos-receipt-printing", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: checked ? "true" : "false" }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`Receipt printing ${checked ? "enabled" : "disabled"}`);
+    } catch {
+      setReceiptPrinting(prev);
+      toast.error("Failed to update receipt printing setting");
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -650,6 +679,25 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
                 : t("pos.desktopAppSupports")}
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div className="space-y-0.5">
+            <Label htmlFor="dlg-receipt-printing">{t("pos.autoPrintReceipt")}</Label>
+            <p className="text-xs text-muted-foreground">
+              {isElectron
+                ? t("pos.autoPrintReceiptElectron")
+                : isCapacitor
+                  ? t("pos.autoPrintReceiptMobile")
+                  : t("pos.autoPrintReceiptWeb")}
+            </p>
+          </div>
+          <Switch
+            id="dlg-receipt-printing"
+            checked={receiptPrinting}
+            onCheckedChange={handleToggleReceiptPrinting}
+            disabled={isLoadingReceiptPrinting}
+          />
+        </div>
 
         {isElectron ? renderElectronContent() : isCapacitor ? renderCapacitorContent() : renderWebContent()}
       </DialogContent>
