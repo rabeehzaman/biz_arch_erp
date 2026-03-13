@@ -77,22 +77,22 @@ export default function SettingsPage() {
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="employees">POS Employees</TabsTrigger>
             </TabsList>
           </div>
-          <TabsContent value="company" {...getForceMountProps("company")} className="mt-6">
+          <TabsContent value="company" {...getForceMountProps("company")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("company") ? <CompanySettings /> : null}
           </TabsContent>
-          <TabsContent value="units" {...getForceMountProps("units")} className="mt-6">
+          <TabsContent value="units" {...getForceMountProps("units")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("units") ? <UnitsSettings /> : null}
           </TabsContent>
-          <TabsContent value="accounting" {...getForceMountProps("accounting")} className="mt-6">
+          <TabsContent value="accounting" {...getForceMountProps("accounting")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("accounting") ? <AccountingSettings /> : null}
           </TabsContent>
-          <TabsContent value="pos" {...getForceMountProps("pos")} className="mt-6">
+          <TabsContent value="pos" {...getForceMountProps("pos")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("pos") ? <POSSettings /> : null}
           </TabsContent>
-          <TabsContent value="users" {...getForceMountProps("users")} className="mt-6">
+          <TabsContent value="users" {...getForceMountProps("users")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("users") ? <UserWarehouseSettings /> : null}
           </TabsContent>
-          <TabsContent value="employees" {...getForceMountProps("employees")} className="mt-6">
+          <TabsContent value="employees" {...getForceMountProps("employees")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("employees") ? <EmployeesSettings /> : null}
           </TabsContent>
         </Tabs>
