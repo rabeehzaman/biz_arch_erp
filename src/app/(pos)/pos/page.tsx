@@ -24,6 +24,7 @@ import {
   Settings2,
   X,
   LogOut,
+  Languages,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -119,7 +120,7 @@ function isStale(openedAt: string): boolean {
 
 export default function POSDashboardPage() {
   const { fmt } = useCurrency();
-  const { t, lang } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
   const router = useRouter();
   const { data: session } = useSession();
   const isPosRole = session?.user?.role === "pos";
@@ -368,6 +369,16 @@ export default function POSDashboardPage() {
               className="pl-9 h-9"
             />
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => setLanguage(lang === "en" ? "ar" : "en")}
+            title={lang === "en" ? "العربية" : "English"}
+          >
+            <Languages className="h-4 w-4 mr-1.5" />
+            {lang === "en" ? "العربية" : "English"}
+          </Button>
           {isPosRole && (
             <Button
               variant="outline"
@@ -376,7 +387,7 @@ export default function POSDashboardPage() {
               onClick={() => signOut({ callbackUrl: "/login" })}
             >
               <LogOut className="h-4 w-4 mr-1.5" />
-              Sign Out
+              {t("nav.signOut")}
             </Button>
           )}
         </div>

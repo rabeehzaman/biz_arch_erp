@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, LogOut, MapPin, PauseCircle, Printer } from "lucide-react";
+import { ArrowLeft, Clock, Languages, LogOut, MapPin, PauseCircle, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -47,7 +47,7 @@ export function POSHeader({
   onReprintReceipt,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
-  const { t } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
   const router = useRouter();
 
   const locationLabel = [branchName, warehouseName].filter(Boolean).join(" / ");
@@ -125,6 +125,17 @@ export function POSHeader({
         <div className="hidden sm:block text-sm text-slate-300 truncate max-w-[100px]">
           {employeeName || authSession?.user?.name}
         </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
+          onClick={() => setLanguage(lang === "en" ? "ar" : "en")}
+          title={lang === "en" ? "العربية" : "English"}
+        >
+          <Languages className="h-4 w-4" />
+          <span className="hidden sm:inline ml-1">{lang === "en" ? "ع" : "EN"}</span>
+        </Button>
 
         <Button
           variant="ghost"

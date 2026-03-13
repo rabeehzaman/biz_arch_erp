@@ -1201,7 +1201,7 @@ function POSTerminalContent() {
             </Button>
             <Button
               onClick={closeSession}
-              disabled={isClosingSession || (isClearingMode && !settleCashAccountId)}
+              disabled={isClosingSession || (isClearingMode && !settleCashAccountId && !registerConfigData?.config?.defaultCashAccountId && !orgSettings?.posDefaultCashAccountId)}
               className="w-full sm:w-auto"
             >
               {isClosingSession && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
