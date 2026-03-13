@@ -203,16 +203,6 @@ export async function PUT(
       seedVATAccounts = !current?.saudiEInvoiceEnabled;
     }
 
-    // Check if enabling POS clearing account for the first time
-    let seedPOSAccounts = false;
-    if (posAccountingMode === "CLEARING_ACCOUNT") {
-      const current = await prisma.organization.findUnique({
-        where: { id },
-        select: { posAccountingMode: true },
-      });
-      seedPOSAccounts = current?.posAccountingMode !== "CLEARING_ACCOUNT";
-    }
-
     // Validate POS default settlement account IDs
     if (posDefaultCashAccountId) {
       const cashAcct = await prisma.cashBankAccount.findFirst({
@@ -298,8 +288,8 @@ export async function PUT(
           await seedSaudiStandardAccounts(tx as never, id);
         }
 
-        // Seed POS clearing accounts if enabling clearing account mode for first time
-        if (seedPOSAccounts) {
+        // Keep POS clearing accounts aligned with the Cash subtree whenever clearing mode is active.
+        if (org.posAccountingMode === "CLEARING_ACCOUNT") {
           await seedPOSClearingAccounts(tx as never, id);
         }
 
@@ -397,7 +387,7 @@ export async function PUT(
           }
         }
 
-        if (seedPOSAccounts || multiBranchEnabled) {
+        if (org.posAccountingMode === "CLEARING_ACCOUNT" || org.multiBranchEnabled) {
           await provisionPOSRegisterSetup(tx as never, id);
         }
 

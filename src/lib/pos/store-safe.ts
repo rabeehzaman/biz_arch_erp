@@ -1,13 +1,17 @@
 // Auto-creates a Store Safe account + POS register config for a new branch or warehouse.
 // Called from branch and warehouse creation APIs (clearing-mode-aware setup).
 
+import {
+  findPrimaryCashParentAccount,
+  getNextChildAccountCode,
+} from "@/lib/accounting/account-codes";
 import { buildPOSLocationKey } from "./register-config";
 
 type Tx = any;
 
 /**
  * Creates:
- *  1. An Account (ASSET / CASH) for the Store Safe
+ *  1. An Account (ASSET / CASH) for the Store Safe under Assets > Cash
  *  2. A CashBankAccount linked to it
  *  3. A POSRegisterConfig for this location pointing to the Store Safe
  *
@@ -28,8 +32,8 @@ export async function provisionStoreSafe(
 ): Promise<void> {
   const { branchId, branchCode, branchName, warehouseId, warehouseCode, warehouseName } = options;
 
-  // Build unique identifiers for this location
-  const accountCode = warehouseCode
+  // Legacy SAFE-* codes are still used to detect and repair older auto-created accounts.
+  const legacyAccountCode = warehouseCode
     ? `SAFE-${branchCode}-${warehouseCode}`
     : `SAFE-${branchCode}`;
 
@@ -38,17 +42,120 @@ export async function provisionStoreSafe(
     : `Store Safe - ${branchName}`;
 
   const locationKey = buildPOSLocationKey(branchId, warehouseId ?? null);
+  const cashParentAccount = await findPrimaryCashParentAccount(tx, organizationId);
 
-  // 1. Create the Account (skip if already exists — idempotent)
-  const existing = await tx.account.findFirst({
-    where: { organizationId, code: accountCode },
-    select: { id: true },
+  const existingConfig = await tx.pOSRegisterConfig.findUnique({
+    where: { organizationId_locationKey: { organizationId, locationKey } },
+    select: { id: true, defaultCashAccountId: true },
   });
 
+  let managedStoreSafe:
+    | {
+      id: string;
+      accountId: string;
+      name: string;
+      account: { code: string; parentId: string | null };
+    }
+    | null = null;
+
+  if (existingConfig?.defaultCashAccountId) {
+    const configuredCashAccount = await tx.cashBankAccount.findFirst({
+      where: {
+        id: existingConfig.defaultCashAccountId,
+        organizationId,
+        branchId: branchId ?? null,
+        accountSubType: "CASH",
+      },
+      select: {
+        id: true,
+        accountId: true,
+        name: true,
+        account: {
+          select: {
+            code: true,
+            parentId: true,
+          },
+        },
+      },
+    });
+
+    if (
+      configuredCashAccount &&
+      (configuredCashAccount.name === accountName ||
+        configuredCashAccount.name.startsWith("Store Safe - ") ||
+        configuredCashAccount.account.code === legacyAccountCode)
+    ) {
+      managedStoreSafe = configuredCashAccount;
+    }
+  }
+
+  if (!managedStoreSafe) {
+    managedStoreSafe = await tx.cashBankAccount.findFirst({
+      where: {
+        organizationId,
+        branchId: branchId ?? null,
+        accountSubType: "CASH",
+        OR: [
+          { name: accountName },
+          { account: { code: legacyAccountCode } },
+        ],
+      },
+      select: {
+        id: true,
+        accountId: true,
+        name: true,
+        account: {
+          select: {
+            code: true,
+            parentId: true,
+          },
+        },
+      },
+    });
+  }
+
   let accountId: string;
-  if (existing) {
-    accountId = existing.id;
+  if (managedStoreSafe) {
+    accountId = managedStoreSafe.accountId;
+
+    const keepCurrentCode =
+      managedStoreSafe.account.parentId === cashParentAccount?.id &&
+      /^\d+$/.test(managedStoreSafe.account.code);
+
+    const nextCode =
+      keepCurrentCode || !cashParentAccount
+        ? managedStoreSafe.account.code
+        : await getNextChildAccountCode(tx, organizationId, cashParentAccount.id, {
+          currentAccountId: managedStoreSafe.accountId,
+        });
+
+    await tx.account.update({
+      where: { id: managedStoreSafe.accountId },
+      data: {
+        code: nextCode,
+        name: accountName,
+        accountType: "ASSET",
+        accountSubType: "CASH",
+        parentId: cashParentAccount?.id ?? null,
+        isSystem: false,
+        isActive: true,
+      },
+    });
+
+    await tx.cashBankAccount.update({
+      where: { id: managedStoreSafe.id },
+      data: {
+        name: accountName,
+        branchId: branchId ?? null,
+        accountSubType: "CASH",
+        isActive: true,
+      },
+    });
   } else {
+    const accountCode = cashParentAccount
+      ? await getNextChildAccountCode(tx, organizationId, cashParentAccount.id)
+      : legacyAccountCode;
+
     const account = await tx.account.create({
       data: {
         organizationId,
@@ -56,6 +163,7 @@ export async function provisionStoreSafe(
         name: accountName,
         accountType: "ASSET",
         accountSubType: "CASH",
+        parentId: cashParentAccount?.id ?? null,
         isSystem: false,
         isActive: true,
       },
@@ -90,11 +198,6 @@ export async function provisionStoreSafe(
   }
 
   // 3. Create or backfill the POSRegisterConfig without overwriting manual assignments
-  const existingConfig = await tx.pOSRegisterConfig.findUnique({
-    where: { organizationId_locationKey: { organizationId, locationKey } },
-    select: { id: true, defaultCashAccountId: true },
-  });
-
   if (!existingConfig) {
     await tx.pOSRegisterConfig.create({
       data: {

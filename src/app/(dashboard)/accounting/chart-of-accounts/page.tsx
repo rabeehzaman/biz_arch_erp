@@ -62,6 +62,75 @@ interface FlatAccount {
   parentId: string | null;
 }
 
+function sortAccountsByCode(accounts: FlatAccount[]) {
+  return [...accounts].sort((a, b) => {
+    const aNum = Number.parseInt(a.code, 10);
+    const bNum = Number.parseInt(b.code, 10);
+
+    if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
+      return aNum - bNum;
+    }
+
+    return a.code.localeCompare(b.code);
+  });
+}
+
+function findSuggestedParentAccount(
+  accounts: FlatAccount[],
+  accountType: string,
+  accountSubType: string,
+  parentId: string | null
+): FlatAccount | null {
+  if (!accountType) return null;
+
+  const sortedAccounts = sortAccountsByCode(accounts);
+  const selectedParent = parentId
+    ? sortedAccounts.find((account) => account.id === parentId) ?? null
+    : null;
+
+  const findSubtypeChild = (candidate: FlatAccount | null) => {
+    if (!candidate || !accountSubType) return null;
+
+    return (
+      sortedAccounts.find(
+        (account) =>
+          account.parentId === candidate.id &&
+          account.accountType === accountType &&
+          account.accountSubType === accountSubType
+      ) ?? null
+    );
+  };
+
+  if (selectedParent) {
+    if (selectedParent.accountSubType === accountSubType || selectedParent.parentId) {
+      return selectedParent;
+    }
+
+    return findSubtypeChild(selectedParent) ?? selectedParent;
+  }
+
+  const topLevelAccounts = sortedAccounts.filter(
+    (account) => account.accountType === accountType && !account.parentId
+  );
+
+  for (const topLevelAccount of topLevelAccounts) {
+    const matchingChild = findSubtypeChild(topLevelAccount);
+    if (matchingChild) {
+      return matchingChild;
+    }
+  }
+
+  return (
+    sortedAccounts.find(
+      (account) =>
+        account.accountType === accountType &&
+        account.accountSubType === accountSubType
+    ) ??
+    topLevelAccounts[0] ??
+    null
+  );
+}
+
 const accountTypeLabels = (t: (key: string) => string): Record<string, string> => ({
   ASSET: t("accounting.assets"),
   LIABILITY: t("accounting.liabilities"),
@@ -285,18 +354,59 @@ export default function ChartOfAccountsPage() {
 
   // Effect to auto-generate recommended code
   useEffect(() => {
+    if (editingAccount || !isDialogOpen || !formData.accountType || !formData.accountSubType) {
+      return;
+    }
+
+    const suggestedParent = findSuggestedParentAccount(
+      flatAccounts,
+      formData.accountType,
+      formData.accountSubType,
+      formData.parentId || null
+    );
+
+    if (!suggestedParent || formData.parentId === suggestedParent.id) {
+      return;
+    }
+
+    const selectedParent = formData.parentId
+      ? flatAccounts.find((account) => account.id === formData.parentId) ?? null
+      : null;
+
+    const shouldAutoAssignParent =
+      !selectedParent ||
+      (!selectedParent.parentId && selectedParent.accountSubType !== formData.accountSubType);
+
+    if (shouldAutoAssignParent) {
+      setFormData((prev) => ({ ...prev, parentId: suggestedParent.id }));
+    }
+  }, [
+    formData.accountType,
+    formData.accountSubType,
+    formData.parentId,
+    isDialogOpen,
+    editingAccount,
+    flatAccounts,
+  ]);
+
+  useEffect(() => {
     if (!editingAccount && isDialogOpen) {
       let baseNum = 0;
+      const effectiveParent = findSuggestedParentAccount(
+        flatAccounts,
+        formData.accountType,
+        formData.accountSubType,
+        formData.parentId || null
+      );
 
-      if (formData.parentId) {
-        const parent = flatAccounts.find(a => a.id === formData.parentId);
-        const children = flatAccounts.filter(a => a.parentId === formData.parentId);
+      if (effectiveParent) {
+        const children = flatAccounts.filter((account) => account.parentId === effectiveParent.id);
         const childNums = children.map(c => parseInt(c.code, 10)).filter(n => !isNaN(n));
 
         if (childNums.length > 0) {
           baseNum = Math.max(...childNums) + 1;
-        } else if (parent) {
-          const pNum = parseInt(parent.code, 10);
+        } else {
+          const pNum = parseInt(effectiveParent.code, 10);
           if (!isNaN(pNum)) {
             baseNum = pNum + 1;
           }
@@ -327,7 +437,14 @@ export default function ChartOfAccountsPage() {
         setFormData(prev => ({ ...prev, code: newCode.toString() }));
       }
     }
-  }, [formData.parentId, formData.accountType, isDialogOpen, editingAccount, flatAccounts]);
+  }, [
+    formData.parentId,
+    formData.accountType,
+    formData.accountSubType,
+    isDialogOpen,
+    editingAccount,
+    flatAccounts,
+  ]);
 
   const fetchData = async () => {
     try {
@@ -522,30 +639,16 @@ export default function ChartOfAccountsPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-2 sm:py-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label>{t("accounting.accountCode")} *</Label>
-                      <Input
-                        value={formData.code}
-                        onChange={(e) =>
-                          setFormData({ ...formData, code: e.target.value })
-                        }
-                        disabled={!!editingAccount}
-                        placeholder="e.g. 5210"
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>{t("accounting.accountName")} *</Label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        placeholder="e.g. Rent"
-                        required
-                      />
-                    </div>
+                  <div className="grid gap-2">
+                    <Label>{t("accounting.accountName")} *</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      placeholder="e.g. Rent"
+                      required
+                    />
                   </div>
                   {!editingAccount && (
                     <>
@@ -645,6 +748,18 @@ export default function ChartOfAccountsPage() {
                       <Label htmlFor="isActive">{t("common.active")}</Label>
                     </div>
                   )}
+                  <div className="grid gap-2">
+                    <Label>{t("accounting.accountCode")} *</Label>
+                    <Input
+                      value={formData.code}
+                      onChange={(e) =>
+                        setFormData({ ...formData, code: e.target.value })
+                      }
+                      disabled={!!editingAccount}
+                      placeholder="e.g. 5210"
+                      required
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit">

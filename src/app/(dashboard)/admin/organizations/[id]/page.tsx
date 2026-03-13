@@ -1007,12 +1007,12 @@ export default function OrganizationDetailsPage() {
                                                         Pre-filled when closing a POS session. Can be overridden per session.
                                                     </p>
                                                 </div>
-                                                <Select value={posDefaultCashAccountId} onValueChange={setPosDefaultCashAccountId}>
+                                                <Select value={posDefaultCashAccountId || "__none__"} onValueChange={(v) => setPosDefaultCashAccountId(v === "__none__" ? "" : v)}>
                                                     <SelectTrigger className="w-full sm:w-56">
                                                         <SelectValue placeholder="Select cash account..." />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="">None</SelectItem>
+                                                        <SelectItem value="__none__">None</SelectItem>
                                                         {orgCashBankAccounts
                                                             .filter(a => a.accountSubType === "CASH")
                                                             .map(a => (
@@ -1028,12 +1028,12 @@ export default function OrganizationDetailsPage() {
                                                         Pre-filled for non-cash payment settlement. Can be overridden per session.
                                                     </p>
                                                 </div>
-                                                <Select value={posDefaultBankAccountId} onValueChange={setPosDefaultBankAccountId}>
+                                                <Select value={posDefaultBankAccountId || "__none__"} onValueChange={(v) => setPosDefaultBankAccountId(v === "__none__" ? "" : v)}>
                                                     <SelectTrigger className="w-full sm:w-56">
                                                         <SelectValue placeholder="Select bank account..." />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="">None</SelectItem>
+                                                        <SelectItem value="__none__">None</SelectItem>
                                                         {orgCashBankAccounts
                                                             .filter(a => a.accountSubType === "BANK")
                                                             .map(a => (

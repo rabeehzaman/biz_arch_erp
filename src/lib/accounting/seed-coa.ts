@@ -298,7 +298,7 @@ export async function seedSaudiStandardAccounts(
 // Call this when posAccountingMode is set to CLEARING_ACCOUNT for an org
 
 const POS_CLEARING_ACCOUNTS: AccountDef[] = [
-  { code: "1150", name: "POS Undeposited Funds (أموال نقاط البيع غير المودعة)", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1000", isSystem: true },
+  { code: "1150", name: "POS Undeposited Funds (أموال نقاط البيع غير المودعة)", accountType: "ASSET", accountSubType: "CURRENT_ASSET", parentCode: "1100", isSystem: true },
   { code: "6150", name: "Cash Short and Over (العجز والزيادة في النقدية)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: true },
 ];
 
@@ -317,7 +317,13 @@ export async function seedPOSClearingAccounts(
 
     await tx.account.upsert({
       where: { organizationId_code: { organizationId, code: acct.code } },
-      update: {},
+      update: {
+        name: acct.name,
+        accountType: acct.accountType,
+        accountSubType: acct.accountSubType,
+        parentId,
+        isSystem: acct.isSystem,
+      },
       create: {
         code: acct.code,
         name: acct.name,

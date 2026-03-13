@@ -1229,12 +1229,12 @@ function POSSettlementAccounts() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-sm">Cash Account</Label>
-              <Select value={defaultCashId} onValueChange={setDefaultCashId}>
+              <Select value={defaultCashId || "__none__"} onValueChange={(v) => setDefaultCashId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select cash account..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {cashAccounts.map((a) => (
                     <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                   ))}
@@ -1243,12 +1243,12 @@ function POSSettlementAccounts() {
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Bank Account</Label>
-              <Select value={defaultBankId} onValueChange={setDefaultBankId}>
+              <Select value={defaultBankId || "__none__"} onValueChange={(v) => setDefaultBankId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select bank account..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {bankAccounts.map((a) => (
                     <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                   ))}
@@ -1304,12 +1304,12 @@ function POSSettlementAccounts() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Cash Account</Label>
-                <Select value={regCashId} onValueChange={setRegCashId} disabled={!selectedWarehouse}>
+                <Select value={regCashId || "__none__"} onValueChange={(v) => setRegCashId(v === "__none__" ? "" : v)} disabled={!selectedWarehouse}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
                     {cashAccounts.map((a) => (
                       <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                     ))}
@@ -1318,12 +1318,12 @@ function POSSettlementAccounts() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Bank Account</Label>
-                <Select value={regBankId} onValueChange={setRegBankId} disabled={!selectedWarehouse}>
+                <Select value={regBankId || "__none__"} onValueChange={(v) => setRegBankId(v === "__none__" ? "" : v)} disabled={!selectedWarehouse}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
                     {bankAccounts.map((a) => (
                       <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                     ))}

@@ -23,8 +23,10 @@ import {
   Printer,
   Settings2,
   X,
+  LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +121,8 @@ export default function POSDashboardPage() {
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
   const router = useRouter();
+  const { data: session } = useSession();
+  const isPosRole = session?.user?.role === "pos";
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery.trim().toLowerCase());
   const [openingState, setOpeningState] = useState<OpeningState | null>(null);
@@ -340,26 +344,41 @@ export default function POSDashboardPage() {
       {/* Top Bar */}
       <header className="flex flex-col gap-3 border-b bg-white px-4 py-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:py-0">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => router.push("/")}
-            title={t("common.back")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          {!isPosRole && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => router.push("/")}
+              title={t("common.back")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
           <h1 className="text-lg font-bold">{t("pos.title")}</h1>
         </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("pos.searchRegisters")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("pos.searchRegisters")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+          {isPosRole && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
+              <LogOut className="h-4 w-4 mr-1.5" />
+              Sign Out
+            </Button>
+          )}
         </div>
       </header>
 
