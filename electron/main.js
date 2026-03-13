@@ -4,6 +4,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 const PrinterService = require('./printer-service');
+const ReceiptSpool = require('./receipt-spool');
 const {
   getWindowsPrintJobCount,
   getWindowsPrinterTcpEndpoint,
@@ -61,6 +62,21 @@ function savePrinterConfig(config) {
 // ─── Create Printer Service from Config ─────────────────────────
 function createPrinterServiceFromConfig(configOverride) {
   return new PrinterService(configOverride || loadPrinterConfig());
+}
+
+function getReceiptCacheDir() {
+  return path.join(CONFIG_DIR, 'receipt-cache');
+}
+
+function persistReceiptArtifact(normalized, receiptData, html, buffer, key) {
+  return ReceiptSpool.saveReceiptArtifact(getReceiptCacheDir(), {
+    normalizedConfig: normalized,
+    renderMode: normalized.receiptRenderMode,
+    receiptData,
+    html,
+    buffer,
+    key,
+  });
 }
 
 function createReceiptWindow() {
@@ -295,6 +311,30 @@ async function captureReceiptRasterBuffers(printWin, contentHeightPx) {
   return [resized.toPNG()];
 }
 
+async function printBufferWithConfig(buffer, normalized) {
+  const ps = createPrinterServiceFromConfig(normalized);
+  await ps.sendBuffer(buffer, 'BizArch Receipt');
+  return { success: true };
+}
+
+async function buildRasterReceiptBufferFromHtml(html, normalized) {
+  let printWin;
+
+  try {
+    const loaded = await loadRasterReceiptWindow(html);
+    printWin = loaded.printWin;
+    const imageBuffers = await captureReceiptRasterBuffers(printWin, loaded.contentHeightPx);
+    const ps = createPrinterServiceFromConfig(normalized);
+    const printOptions = ps.mode === 'rawUsb' ? { openDrawer: true } : {};
+    const buffer = await ps.buildImageReceiptBuffer(imageBuffers, printOptions);
+    return { buffer };
+  } finally {
+    if (printWin && !printWin.isDestroyed()) {
+      printWin.destroy();
+    }
+  }
+}
+
 async function queueHtmlCutIfNeeded(printerName, initialQueueCount) {
   if (!printerName) {
     return;
@@ -319,6 +359,127 @@ async function queueHtmlCutIfNeeded(printerName, initialQueueCount) {
   } catch (cutError) {
     console.warn('HTML receipt cut command failed:', cutError.message);
   }
+}
+
+async function printStyledReceiptHtml(html, normalized) {
+  const printerName = normalized.windowsPrinterName;
+
+  const initialQueueCount = printerName
+    ? await getWindowsPrintJobCount(printerName).catch(() => 0)
+    : 0;
+
+  const { printWin } = await loadReceiptWindow(html);
+  const contentHeightPx = await prepareHtmlReceiptWindow(printWin);
+  const measuredMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 1000;
+  const pageCssMm = (measuredMicrons / 1000).toFixed(2);
+  const heightMicrons = Math.max(measuredMicrons, HTML_DRIVER_MIN_HEIGHT_MICRONS);
+
+  await printWin.webContents.executeJavaScript(
+    `(function(){var s=document.createElement('style');` +
+    `s.textContent='@page{size:80mm ${pageCssMm}mm !important;margin:0;}';` +
+    `document.head.appendChild(s);})()`
+  );
+  await waitForReceiptPaint(printWin);
+
+  return await new Promise((resolve) => {
+    printWin.webContents.print(
+      {
+        silent: true,
+        deviceName: printerName || undefined,
+        printBackground: true,
+        margins: { marginType: 'none' },
+        pageSize: { width: 80000, height: heightMicrons },
+      },
+      async (success, failureReason) => {
+        printWin.destroy();
+
+        if (success && printerName) {
+          await queueHtmlCutIfNeeded(printerName, initialQueueCount);
+        }
+
+        resolve({
+          success,
+          error: success ? undefined : failureReason,
+        });
+      }
+    );
+  });
+}
+
+async function cacheRenderedReceiptHtml(html, receiptData, normalized, key) {
+  if (normalized.receiptRenderMode === 'htmlDriver') {
+    const receipt = persistReceiptArtifact(normalized, receiptData, html, null, key);
+    return { success: true, key: receipt.key, cachedAt: receipt.cachedAt };
+  }
+
+  if (normalized.receiptRenderMode === 'htmlRaster') {
+    const { buffer } = await buildRasterReceiptBufferFromHtml(html, normalized);
+    const receipt = persistReceiptArtifact(normalized, receiptData, html, buffer, key);
+    return { success: true, key: receipt.key, cachedAt: receipt.cachedAt };
+  }
+
+  return {
+    success: false,
+    error: 'Receipt caching is only supported for rendered HTML receipt modes',
+  };
+}
+
+async function printAndCacheRenderedReceiptHtml(html, receiptData, normalized, key) {
+  if (normalized.receiptRenderMode === 'htmlDriver') {
+    try {
+      persistReceiptArtifact(normalized, receiptData, html, null, key);
+    } catch (cacheError) {
+      console.warn('Failed to cache HTML driver receipt:', cacheError.message);
+    }
+    return printStyledReceiptHtml(html, normalized);
+  }
+
+  if (normalized.receiptRenderMode === 'htmlRaster') {
+    const { buffer } = await buildRasterReceiptBufferFromHtml(html, normalized);
+    try {
+      persistReceiptArtifact(normalized, receiptData, html, buffer, key);
+    } catch (cacheError) {
+      console.warn('Failed to cache raster receipt:', cacheError.message);
+    }
+    return printBufferWithConfig(buffer, normalized);
+  }
+
+  return {
+    success: false,
+    error: 'Combined print/cache is only supported for rendered HTML receipt modes',
+  };
+}
+
+async function printCachedReceiptArtifact(cacheKey, configOverride) {
+  const normalized = PrinterService.normalizeConfig(configOverride || loadPrinterConfig());
+  const receipt = cacheKey
+    ? ReceiptSpool.loadReceiptArtifact(getReceiptCacheDir(), cacheKey)
+    : ReceiptSpool.loadLatestReceiptArtifact(getReceiptCacheDir());
+
+  if (!receipt) {
+    return { success: false, error: 'No cached receipt found' };
+  }
+
+  const cachedBuffer = ReceiptSpool.readReceiptBuffer(getReceiptCacheDir(), receipt);
+  if (cachedBuffer) {
+    return printBufferWithConfig(cachedBuffer, normalized);
+  }
+
+  const cachedHtml = ReceiptSpool.readReceiptHtml(getReceiptCacheDir(), receipt);
+  if (!cachedHtml) {
+    return { success: false, error: 'Cached receipt artifact is incomplete' };
+  }
+
+  if (normalized.receiptRenderMode === 'htmlDriver' || receipt.renderMode === 'htmlDriver') {
+    return printStyledReceiptHtml(cachedHtml, normalized);
+  }
+
+  return printAndCacheRenderedReceiptHtml(
+    cachedHtml,
+    receipt.receiptData,
+    normalized,
+    receipt.key
+  );
 }
 
 // ─── Window Creation ────────────────────────────────────────────
@@ -484,77 +645,75 @@ ipcMain.handle('open-cash-drawer', async (_event, config) => {
 ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
   try {
     const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
-    const printerName = normalized.windowsPrinterName;
-
-    // Snapshot queue count before printing so we can wait for the HTML job to drain
-    const initialQueueCount = printerName
-      ? await getWindowsPrintJobCount(printerName).catch(() => 0)
-      : 0;
-
-    const { printWin } = await loadReceiptWindow(html);
-    const contentHeightPx = await prepareHtmlReceiptWindow(printWin);
-    const measuredMicrons = Math.ceil(contentHeightPx * 25400 / 96) + 1000; // +1mm breathing room
-    // Use measured height for @page CSS (tight fit, no top gap)
-    const pageCssMm = (measuredMicrons / 1000).toFixed(2);
-    // Use a minimum floor only for the Chromium pageSize param (prevents blank prints)
-    const heightMicrons = Math.max(measuredMicrons, HTML_DRIVER_MIN_HEIGHT_MICRONS);
-
-    // Override CSS @page size to match actual content height — keeps receipt
-    // flush to the top with no extra gap.
-    await printWin.webContents.executeJavaScript(
-      `(function(){var s=document.createElement('style');` +
-      `s.textContent='@page{size:80mm ${pageCssMm}mm !important;margin:0;}';` +
-      `document.head.appendChild(s);})()`
-    );
-    await waitForReceiptPaint(printWin); // let new @page rule settle
-
-    return await new Promise((resolve) => {
-      printWin.webContents.print(
-        {
-          silent: true,
-          deviceName: printerName || undefined,
-          printBackground: true,
-          margins: { marginType: 'none' },
-          pageSize: { width: 80000, height: heightMicrons },
-        },
-        async (success, failureReason) => {
-          printWin.destroy();
-
-          // Send a follow-up cut command as a second job right after the HTML
-          // job is accepted by the Windows print system.
-          if (success && printerName) {
-            await queueHtmlCutIfNeeded(printerName, initialQueueCount);
-          }
-
-          resolve({
-            success,
-            error: success ? undefined : failureReason,
-          });
-        }
-      );
-    });
+    return printStyledReceiptHtml(html, normalized);
   } catch (error) {
     return { success: false, error: error.message };
   }
 });
 
 ipcMain.handle('print-rasterized-receipt', async (_event, html, config) => {
-  let printWin;
-
   try {
     const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
-    const loaded = await loadRasterReceiptWindow(html);
-    printWin = loaded.printWin;
-    const imageBuffers = await captureReceiptRasterBuffers(printWin, loaded.contentHeightPx);
-    const ps = createPrinterServiceFromConfig(normalized);
-    await ps.printRasterizedReceipt(imageBuffers);
-    return { success: true };
+    const { buffer } = await buildRasterReceiptBufferFromHtml(html, normalized);
+    return await printBufferWithConfig(buffer, normalized);
   } catch (error) {
     return { success: false, error: error.message };
-  } finally {
-    if (printWin && !printWin.isDestroyed()) {
-      printWin.destroy();
+  }
+});
+
+ipcMain.handle('cache-rendered-receipt', async (_event, html, receiptData, config) => {
+  try {
+    if (typeof html !== 'string' || !html.trim()) {
+      throw new Error('Invalid receipt HTML');
     }
+
+    const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
+    return await cacheRenderedReceiptHtml(html, receiptData, normalized);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('print-and-cache-rendered-receipt', async (_event, html, receiptData, config) => {
+  try {
+    if (typeof html !== 'string' || !html.trim()) {
+      throw new Error('Invalid receipt HTML');
+    }
+
+    const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
+    return await printAndCacheRenderedReceiptHtml(html, receiptData, normalized);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('print-cached-receipt', async (_event, options, config) => {
+  try {
+    const cacheKey = options?.key || null;
+    return await printCachedReceiptArtifact(cacheKey, config);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-latest-cached-receipt', async () => {
+  try {
+    const receipt = ReceiptSpool.loadLatestReceiptArtifact(getReceiptCacheDir());
+    return {
+      success: true,
+      receipt: receipt
+        ? {
+            key: receipt.key,
+            invoiceNumber: receipt.invoiceNumber,
+            cachedAt: receipt.cachedAt,
+            renderMode: receipt.renderMode,
+            printerProfileHash: receipt.printerProfileHash,
+            receiptData: receipt.receiptData,
+          }
+        : null,
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 });
 

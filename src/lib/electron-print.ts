@@ -2,8 +2,26 @@ import type { ReceiptData } from "@/components/pos/receipt";
 import { generateReceiptHtml, printReceipt as browserPrintReceipt, type ReceiptHtmlOptions } from "@/lib/print-receipt";
 import { capacitorPrintWithConfig, isCapacitorEnvironment, type MobilePrinterConfig } from "@/lib/capacitor-print";
 
+type SerializedReceiptData = Omit<ReceiptData, "date"> & {
+  date: string;
+} & Record<string, unknown>;
+
 export function isElectronEnvironment(): boolean {
   return typeof window !== "undefined" && !!window.electronPOS?.isElectron;
+}
+
+function serializeReceiptData(data: ReceiptData): SerializedReceiptData {
+  return {
+    ...data,
+    date: data.date instanceof Date ? data.date.toISOString() : new Date(data.date).toISOString(),
+  };
+}
+
+function hydrateReceiptData(data: SerializedReceiptData): ReceiptData {
+  return {
+    ...data,
+    date: new Date(data.date),
+  };
 }
 
 async function resolvePrinterConfig(
@@ -27,6 +45,23 @@ async function resolvePrinterConfig(
   }
 
   return config;
+}
+
+function getReceiptRenderMode(config?: Partial<ElectronPrinterConfig>) {
+  return config?.receiptRenderMode
+    ?? (config?.connectionType === "windows" ? "htmlDriver" : "escposText");
+}
+
+function getRenderedReceiptHtml(
+  data: ReceiptData,
+  config?: Partial<ElectronPrinterConfig>
+) {
+  const margins: ReceiptHtmlOptions = {
+    marginLeft: config?.receiptMarginLeft,
+    marginRight: config?.receiptMarginRight,
+  };
+
+  return generateReceiptHtml(data, margins);
 }
 
 /**
@@ -96,34 +131,100 @@ export async function electronPrintWithConfig(
   }
 
   const resolvedConfig = await resolvePrinterConfig(config);
-  const receiptRenderMode = resolvedConfig?.receiptRenderMode
-    ?? (resolvedConfig?.connectionType === "windows" ? "htmlDriver" : "escposText");
+  const receiptRenderMode = getReceiptRenderMode(resolvedConfig);
 
   if (receiptRenderMode === "htmlDriver") {
     if (resolvedConfig?.connectionType !== "windows") {
       return { success: false, error: "Windows HTML mode requires Windows Printer connection" };
     }
 
-    const margins: ReceiptHtmlOptions = {
-      marginLeft: resolvedConfig.receiptMarginLeft,
-      marginRight: resolvedConfig.receiptMarginRight,
-    };
-    const html = generateReceiptHtml(data, margins);
+    const html = getRenderedReceiptHtml(data, resolvedConfig);
     return window.electronPOS.printStyledReceipt(html, resolvedConfig);
   }
 
   if (receiptRenderMode === "htmlRaster") {
-    const margins: ReceiptHtmlOptions = {
-      marginLeft: resolvedConfig?.receiptMarginLeft,
-      marginRight: resolvedConfig?.receiptMarginRight,
-    };
-    const html = generateReceiptHtml(data, margins);
+    const html = getRenderedReceiptHtml(data, resolvedConfig);
     return window.electronPOS.printRasterizedReceipt(html, resolvedConfig);
   }
 
   // ESC/POS path for rawUsb / network connections
   const mapped = mapReceiptToElectronFormat(data);
   return window.electronPOS.printReceipt(mapped, resolvedConfig);
+}
+
+export async function cacheReceiptArtifactWithConfig(
+  data: ReceiptData,
+  config?: Partial<ElectronPrinterConfig>
+): Promise<{ success: boolean; error?: string }> {
+  if (!window.electronPOS?.cacheRenderedReceipt) {
+    return { success: false, error: "Electron receipt cache bridge not available" };
+  }
+
+  const resolvedConfig = await resolvePrinterConfig(config);
+  const receiptRenderMode = getReceiptRenderMode(resolvedConfig);
+  if (receiptRenderMode !== "htmlDriver" && receiptRenderMode !== "htmlRaster") {
+    return {
+      success: false,
+      error: "Receipt caching is only supported for HTML receipt render modes",
+    };
+  }
+
+  const html = getRenderedReceiptHtml(data, resolvedConfig);
+  return window.electronPOS.cacheRenderedReceipt(
+    html,
+    serializeReceiptData(data),
+    resolvedConfig
+  );
+}
+
+export async function printAndCacheReceiptWithConfig(
+  data: ReceiptData,
+  config?: Partial<ElectronPrinterConfig>
+): Promise<{ success: boolean; error?: string }> {
+  if (!window.electronPOS?.printAndCacheRenderedReceipt) {
+    return electronPrintWithConfig(data, config);
+  }
+
+  const resolvedConfig = await resolvePrinterConfig(config);
+  const receiptRenderMode = getReceiptRenderMode(resolvedConfig);
+  if (receiptRenderMode !== "htmlDriver" && receiptRenderMode !== "htmlRaster") {
+    return electronPrintWithConfig(data, resolvedConfig);
+  }
+
+  const html = getRenderedReceiptHtml(data, resolvedConfig);
+  return window.electronPOS.printAndCacheRenderedReceipt(
+    html,
+    serializeReceiptData(data),
+    resolvedConfig
+  );
+}
+
+export async function loadLatestCachedReceipt(): Promise<ReceiptData | null> {
+  if (!window.electronPOS?.getLatestCachedReceipt) {
+    return null;
+  }
+
+  try {
+    const result = await window.electronPOS.getLatestCachedReceipt();
+    if (!result.success || !result.receipt?.receiptData) {
+      return null;
+    }
+
+    return hydrateReceiptData(result.receipt.receiptData as SerializedReceiptData);
+  } catch {
+    return null;
+  }
+}
+
+export async function printLatestCachedReceipt(
+  config?: Partial<ElectronPrinterConfig>
+): Promise<{ success: boolean; error?: string }> {
+  if (!window.electronPOS?.printCachedReceipt) {
+    return { success: false, error: "Electron cached receipt bridge not available" };
+  }
+
+  const resolvedConfig = await resolvePrinterConfig(config);
+  return window.electronPOS.printCachedReceipt(undefined, resolvedConfig);
 }
 
 export async function capacitorPrint(

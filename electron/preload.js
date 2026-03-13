@@ -29,6 +29,23 @@ contextBridge.exposeInMainWorld('electronPOS', {
     return ipcRenderer.invoke('print-rasterized-receipt', html, config);
   },
 
+  cacheRenderedReceipt: (html, receiptData, config) => {
+    if (typeof html !== 'string') {
+      return Promise.reject(new Error('html must be a string'));
+    }
+    return ipcRenderer.invoke('cache-rendered-receipt', html, receiptData, config);
+  },
+
+  printAndCacheRenderedReceipt: (html, receiptData, config) => {
+    if (typeof html !== 'string') {
+      return Promise.reject(new Error('html must be a string'));
+    }
+    return ipcRenderer.invoke('print-and-cache-rendered-receipt', html, receiptData, config);
+  },
+
+  printCachedReceipt: (options, config) => ipcRenderer.invoke('print-cached-receipt', options, config),
+  getLatestCachedReceipt: () => ipcRenderer.invoke('get-latest-cached-receipt'),
+
   // ─── Printer Management ────────────────────────────
   listPrinters: () => ipcRenderer.invoke('list-printers'),
   listUsbPrinters: () => ipcRenderer.invoke('list-usb-printers'),

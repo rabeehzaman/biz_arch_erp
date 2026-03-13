@@ -34,6 +34,21 @@ interface ElectronPrintResult {
   error?: string;
 }
 
+interface ElectronCachedReceiptData {
+  invoiceNumber: string;
+  date: string;
+  [key: string]: unknown;
+}
+
+interface ElectronCachedReceiptRecord {
+  key: string;
+  invoiceNumber?: string | null;
+  cachedAt: string;
+  renderMode: 'htmlDriver' | 'htmlRaster' | 'escposText';
+  printerProfileHash: string;
+  receiptData: ElectronCachedReceiptData;
+}
+
 interface ElectronPOS {
   isElectron: true;
   platform: string;
@@ -49,6 +64,25 @@ interface ElectronPOS {
     html: string,
     config?: Partial<ElectronPrinterConfig>
   ) => Promise<ElectronPrintResult>;
+  cacheRenderedReceipt: (
+    html: string,
+    receiptData: ElectronCachedReceiptData,
+    config?: Partial<ElectronPrinterConfig>
+  ) => Promise<ElectronPrintResult & { key?: string; cachedAt?: string }>;
+  printAndCacheRenderedReceipt: (
+    html: string,
+    receiptData: ElectronCachedReceiptData,
+    config?: Partial<ElectronPrinterConfig>
+  ) => Promise<ElectronPrintResult & { key?: string; cachedAt?: string }>;
+  printCachedReceipt: (
+    options?: { key?: string | null },
+    config?: Partial<ElectronPrinterConfig>
+  ) => Promise<ElectronPrintResult>;
+  getLatestCachedReceipt: () => Promise<{
+    success: boolean;
+    receipt?: ElectronCachedReceiptRecord | null;
+    error?: string;
+  }>;
   listPrinters: () => Promise<{ success: boolean; printers?: ElectronPrinter[]; error?: string }>;
   listUsbPrinters: () => Promise<{ success: boolean; printers?: ElectronUsbPrinter[]; error?: string }>;
   testPrinter: (config?: Partial<ElectronPrinterConfig>) => Promise<{ success: boolean; connected?: boolean; error?: string }>;

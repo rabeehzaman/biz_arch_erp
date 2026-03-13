@@ -40,6 +40,7 @@
       "main.js",
       "preload.js",
       "printer-service.js",
+      "receipt-spool.js",
       "winspool-raw.js",
       "loading.html",
       "node_modules/**/*",

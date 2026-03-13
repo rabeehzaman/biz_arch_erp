@@ -47,7 +47,14 @@ import { CustomerSelect } from "@/components/pos/customer-select";
 import { PaymentPanel } from "@/components/pos/payment-panel";
 import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
-import { smartPrintReceipt } from "@/lib/electron-print";
+import {
+  cacheReceiptArtifactWithConfig,
+  isElectronEnvironment,
+  loadLatestCachedReceipt,
+  printAndCacheReceiptWithConfig,
+  printLatestCachedReceipt,
+  smartPrintReceipt,
+} from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
 import {
   DEFAULT_ENABLED_POS_PAYMENT_METHODS,
@@ -435,6 +442,25 @@ function POSTerminalContent() {
   }, [products]);
 
   useEffect(() => {
+    if (!posSession || !isElectronEnvironment()) {
+      return;
+    }
+
+    let isMounted = true;
+    void loadLatestCachedReceipt().then((cachedReceipt) => {
+      if (!isMounted || !cachedReceipt) {
+        return;
+      }
+
+      setLastReceiptData((current) => current ?? cachedReceipt);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [posSession]);
+
+  useEffect(() => {
     if (!showCloseDialog || !isClearingMode) {
       autoFilledRef.current = false; // reset when dialog closes
       return;
@@ -716,6 +742,27 @@ function POSTerminalContent() {
       };
       setLastReceiptData(receiptData);
 
+      if (isElectronEnvironment()) {
+        if (receiptPrintingEnabled) {
+          void printAndCacheReceiptWithConfig(receiptData).then((result) => {
+            if (!result.success) {
+              console.error("Cached Electron print failed:", result.error);
+              try {
+                smartPrintReceipt(receiptData);
+              } catch (printError) {
+                console.error("Fallback receipt printing failed:", printError);
+              }
+            }
+          });
+        } else {
+          void cacheReceiptArtifactWithConfig(receiptData).then((result) => {
+            if (!result.success) {
+              console.error("Receipt cache preparation failed:", result.error);
+            }
+          });
+        }
+      }
+
       clearCart();
       setView("cart");
       setMobileView("products");
@@ -728,7 +775,7 @@ function POSTerminalContent() {
       }
 
       // Auto-print receipt (fire-and-forget)
-      if (receiptPrintingEnabled) {
+      if (receiptPrintingEnabled && !isElectronEnvironment()) {
         try {
           smartPrintReceipt(receiptData);
         } catch (e) {
@@ -814,7 +861,30 @@ function POSTerminalContent() {
   }, [router]);
 
   const reprintReceipt = useCallback(() => {
-    if (!lastReceiptData) return;
+    if (isElectronEnvironment()) {
+      void printLatestCachedReceipt().then((result) => {
+        if (result.success) {
+          return;
+        }
+
+        if (lastReceiptData) {
+          try {
+            smartPrintReceipt(lastReceiptData);
+            return;
+          } catch (error) {
+            console.error("Receipt reprint fallback failed:", error);
+          }
+        }
+
+        console.error("Receipt reprint failed:", result.error);
+        toast.error(result.error || "No cached receipt available");
+      });
+      return;
+    }
+
+    if (!lastReceiptData) {
+      return;
+    }
 
     try {
       smartPrintReceipt(lastReceiptData);
