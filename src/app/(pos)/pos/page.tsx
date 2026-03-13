@@ -50,6 +50,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
+import { PrinterSettingsDialog } from "@/components/pos/printer-settings-dialog";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const SYSTEM_DEFAULT_VALUE = "__system_default__";
@@ -135,6 +136,7 @@ export default function POSDashboardPage() {
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [isDownloadingReport, setIsDownloadingReport] = useState(false);
   const [isPrintingReport, setIsPrintingReport] = useState(false);
+  const [printerSettingsOpen, setPrinterSettingsOpen] = useState(false);
 
   const { data, isLoading, mutate } = useSWR<DashboardData>(
     "/api/pos/dashboard",
@@ -369,6 +371,16 @@ export default function POSDashboardPage() {
               className="pl-9 h-9"
             />
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => setPrinterSettingsOpen(true)}
+            title={t("pos.thermalPrinterConfig")}
+          >
+            <Printer className="h-4 w-4 mr-1.5" />
+            {t("pos.thermalPrinterConfig")}
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -723,6 +735,8 @@ export default function POSDashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PrinterSettingsDialog open={printerSettingsOpen} onOpenChange={setPrinterSettingsOpen} />
 
       {/* Session History Dialog */}
       <Dialog
