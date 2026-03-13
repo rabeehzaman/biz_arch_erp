@@ -50,6 +50,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
+import { printPOSSessionReport } from "@/lib/print-session-report";
 import { PrinterSettingsDialog } from "@/components/pos/printer-settings-dialog";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -163,6 +164,14 @@ export default function POSDashboardPage() {
     selectedSessionId ? `/api/pos/sessions/${selectedSessionId}/summary` : null,
     fetcher
   );
+  const { data: companySettings } = useSWR(
+    selectedSessionId ? "/api/settings" : null,
+    fetcher
+  );
+  const { data: sessionReportLanguageSetting } = useSWR<{ value: "en" | "ar" }>(
+    selectedSessionId ? "/api/settings/pos-session-report-language" : null,
+    fetcher
+  );
 
   const locations = useMemo(() => data?.locations ?? [], [data?.locations]);
   const openSessions = useMemo(() => data?.openSessions ?? [], [data?.openSessions]);
@@ -269,22 +278,25 @@ export default function POSDashboardPage() {
   };
 
   const handlePrintSessionReport = async () => {
-    if (!selectedSessionId) return;
+    if (!selectedSessionId || !sessionSummary) return;
 
     setIsPrintingReport(true);
     try {
-      const response = await fetch(`/api/pos/sessions/${selectedSessionId}/pdf?download=0`);
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
-      }
+      const result = await printPOSSessionReport({
+        report: sessionSummary,
+        company: {
+          companyName: companySettings?.companyName,
+          companyAddress: companySettings?.companyAddress,
+          companyCity: companySettings?.companyCity,
+          companyState: companySettings?.companyState,
+          companyPhone: companySettings?.companyPhone,
+          companyGstNumber: companySettings?.companyGstNumber,
+        },
+        language: sessionReportLanguageSetting?.value === "ar" ? "ar" : "en",
+      });
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const printWindow = window.open(url, "_blank");
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-        };
+      if (!result.success) {
+        throw new Error(result.error || "Failed to print POS session report");
       }
     } catch (error) {
       console.error("Failed to print POS session report:", error);

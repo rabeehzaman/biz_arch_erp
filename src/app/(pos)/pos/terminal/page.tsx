@@ -26,14 +26,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { PageAnimation } from "@/components/ui/page-animation";
 
 import { cn } from "@/lib/utils";
@@ -57,6 +49,7 @@ import {
   smartPrintReceipt,
 } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
+import { printPOSSessionReport } from "@/lib/print-session-report";
 import {
   DEFAULT_ENABLED_POS_PAYMENT_METHODS,
   type POSPaymentMethod,
@@ -393,6 +386,10 @@ function POSTerminalContent() {
     posSession ? "/api/settings/pos-receipt-printing" : null,
     fetcher
   );
+  const { data: sessionReportLanguageSetting } = useSWR<{ value: "en" | "ar" }>(
+    posSession ? "/api/settings/pos-session-report-language" : null,
+    fetcher
+  );
   const { data: companySettings } = useSWR(
     posSession ? "/api/settings" : null,
     fetcher
@@ -601,6 +598,7 @@ function POSTerminalContent() {
   const closeSession = async () => {
     if (!posSession) return;
     setIsClosingSession(true);
+    const closedSessionId = posSession.id;
     try {
       const res = await fetch(`/api/pos/sessions/${posSession.id}/close`, {
         method: "PUT",
@@ -619,6 +617,38 @@ function POSTerminalContent() {
         const data = await res.json();
         throw new Error(data.error || "Failed to close session");
       }
+
+      let reportPrintError: string | null = null;
+      try {
+        const reportRes = await fetch(`/api/pos/sessions/${closedSessionId}/summary`);
+        if (!reportRes.ok) {
+          const data = await reportRes.json().catch(() => null);
+          throw new Error(data?.error || "Failed to load POS session report");
+        }
+
+        const report = await reportRes.json();
+        const printResult = await printPOSSessionReport({
+          report,
+          company: {
+            companyName: companySettings?.companyName,
+            companyAddress: companySettings?.companyAddress,
+            companyCity: companySettings?.companyCity,
+            companyState: companySettings?.companyState,
+            companyPhone: companySettings?.companyPhone,
+            companyGstNumber: companySettings?.companyGstNumber,
+          },
+          language: sessionReportLanguageSetting?.value === "ar" ? "ar" : "en",
+        });
+
+        if (!printResult.success) {
+          reportPrintError = printResult.error || "Failed to print POS session report";
+        }
+      } catch (error) {
+        reportPrintError = error instanceof Error
+          ? error.message
+          : "Failed to print POS session report";
+      }
+
       clearCart();
       await mutateSession();
       setShowCloseDialog(false);
@@ -626,6 +656,9 @@ function POSTerminalContent() {
       setClosePinCode("");
       setCountedClosingCash(null);
       toast.success("POS session closed");
+      if (reportPrintError) {
+        toast.error(reportPrintError);
+      }
       router.replace("/pos");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to close session");

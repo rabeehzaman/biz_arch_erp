@@ -53,6 +53,7 @@ export const SETTINGS_KEY_MAP: Record<keyof CompanySettingsFormData, string> = {
 };
 
 export const POS_RECEIPT_PRINTING_KEY = "pos_receipt_printing";
+export const POS_SESSION_REPORT_LANGUAGE_KEY = "pos_session_report_language";
 
 export const DEFAULT_SETTINGS: CompanySettingsFormData = {
   companyName: "",

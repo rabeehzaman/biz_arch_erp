@@ -16,6 +16,14 @@ export interface POSSessionReportInvoiceItem {
   } | null;
 }
 
+export interface POSSessionReportInvoicePayment {
+  id: string;
+  method: string;
+  amount: number;
+  reference: string | null;
+  paymentDate: Date;
+}
+
 export interface POSSessionReportInvoice {
   id: string;
   invoiceNumber: string;
@@ -30,6 +38,7 @@ export interface POSSessionReportInvoice {
     name: string;
     arabicName: string | null;
   };
+  payments: POSSessionReportInvoicePayment[];
   items: POSSessionReportInvoiceItem[];
 }
 
@@ -68,6 +77,10 @@ export interface POSSessionReportData {
       name: string | null;
       email: string | null;
     };
+    employee: {
+      id: string;
+      name: string;
+    } | null;
     branch: {
       id: string;
       name: string;
@@ -101,6 +114,9 @@ export async function getPOSSessionReportData(
       user: {
         select: { id: true, name: true, email: true },
       },
+      employee: {
+        select: { id: true, name: true },
+      },
       branch: {
         select: { id: true, name: true, code: true },
       },
@@ -120,6 +136,16 @@ export async function getPOSSessionReportData(
     include: {
       customer: {
         select: { id: true, name: true, arabicName: true },
+      },
+      payments: {
+        select: {
+          id: true,
+          amount: true,
+          paymentMethod: true,
+          reference: true,
+          paymentDate: true,
+        },
+        orderBy: { paymentDate: "asc" },
       },
       items: {
         include: {
@@ -190,6 +216,13 @@ export async function getPOSSessionReportData(
       name: invoice.customer.name,
       arabicName: invoice.customer.arabicName,
     },
+    payments: invoice.payments.map((payment) => ({
+      id: payment.id,
+      method: payment.paymentMethod,
+      amount: Number(payment.amount),
+      reference: payment.reference,
+      paymentDate: payment.paymentDate,
+    })),
     items: invoice.items.map((item) => ({
       id: item.id,
       description: item.description,
@@ -241,6 +274,12 @@ export async function getPOSSessionReportData(
         name: posSession.user.name,
         email: posSession.user.email,
       },
+      employee: posSession.employee
+        ? {
+            id: posSession.employee.id,
+            name: posSession.employee.name,
+          }
+        : null,
       branch: posSession.branch,
       warehouse: posSession.warehouse,
     },

@@ -22,10 +22,12 @@ import {
 type ConnectionType = "network" | "windows" | "rawUsb";
 type ReceiptRenderMode = ElectronPrinterConfig["receiptRenderMode"];
 type ArabicCodePage = ElectronPrinterConfig["arabicCodePage"];
+type SessionReportLanguage = "en" | "ar";
 
 export function POSSettings() {
   const { t } = useLanguage();
   const [receiptPrinting, setReceiptPrinting] = useState(false);
+  const [sessionReportLanguage, setSessionReportLanguage] = useState<SessionReportLanguage>("en");
   const [isLoading, setIsLoading] = useState(true);
   const [enabledPaymentMethods, setEnabledPaymentMethods] = useState<POSPaymentMethod[]>(
     DEFAULT_ENABLED_POS_PAYMENT_METHODS
@@ -65,10 +67,15 @@ export function POSSettings() {
   const [mobileOpenCashDrawerOnPrint, setMobileOpenCashDrawerOnPrint] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings/pos-receipt-printing")
-      .then((r) => r.json())
-      .then((data) => setReceiptPrinting(data.value === "true"))
-      .catch(() => { })
+    Promise.all([
+      fetch("/api/settings/pos-receipt-printing").then((r) => r.json()),
+      fetch("/api/settings/pos-session-report-language").then((r) => r.json()),
+    ])
+      .then(([receiptData, reportLanguageData]) => {
+        setReceiptPrinting(receiptData.value === "true");
+        setSessionReportLanguage(reportLanguageData.value === "ar" ? "ar" : "en");
+      })
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -248,6 +255,26 @@ export function POSSettings() {
     } catch {
       setReceiptPrinting(prev);
       toast.error("Failed to update receipt printing setting");
+    }
+  };
+
+  const handleSessionReportLanguageChange = async (value: SessionReportLanguage) => {
+    const previous = sessionReportLanguage;
+    setSessionReportLanguage(value);
+
+    try {
+      const res = await fetch("/api/settings/pos-session-report-language", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      });
+      if (!res.ok) {
+        throw new Error();
+      }
+      toast.success(t("pos.sessionReportLanguageSaved"));
+    } catch {
+      setSessionReportLanguage(previous);
+      toast.error(t("pos.sessionReportLanguageSaveFailed"));
     }
   };
 
@@ -519,6 +546,29 @@ export function POSSettings() {
               onCheckedChange={handleToggle}
               disabled={isLoading}
             />
+          </div>
+          <div className="mt-5 border-t border-slate-200 pt-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-0.5">
+                <Label>{t("pos.sessionReportLanguage")}</Label>
+                <p className="text-sm text-muted-foreground">
+                  {t("pos.sessionReportLanguageDesc")}
+                </p>
+              </div>
+              <Select
+                value={sessionReportLanguage}
+                onValueChange={(value) => handleSessionReportLanguageChange(value as SessionReportLanguage)}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="w-full sm:w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">{t("header.english")}</SelectItem>
+                  <SelectItem value="ar">{t("header.arabic")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
