@@ -246,11 +246,8 @@ export async function capacitorPrintWithOverride(
  * Open the cash drawer using the saved printer config.
  * Reads the "pos-open-drawer-on-sale" localStorage flag and opens
  * the drawer via Electron IPC or Capacitor if enabled.
- * Only opens if hasCashPayment is true.
  */
-export function openCashDrawerIfEnabled(hasCashPayment: boolean): void {
-  if (!hasCashPayment) return;
-
+export function openCashDrawerIfEnabled(): void {
   try {
     if (typeof localStorage === "undefined") return;
     if (localStorage.getItem("pos-open-drawer-on-sale") !== "true") return;

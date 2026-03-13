@@ -655,9 +655,8 @@ function POSTerminalContent() {
   const handleCheckout = async (payments: PaymentEntry[]) => {
     setIsProcessing(true);
 
-    // Open cash drawer immediately (no delay) if CASH payment is used
-    const hasCash = payments.some((p) => p.method === "CASH" && parseFloat(p.amount) > 0);
-    openCashDrawerIfEnabled(hasCash);
+    // Open cash drawer immediately on checkout (no delay)
+    openCashDrawerIfEnabled();
 
     try {
       const res = await fetch("/api/pos/checkout", {

@@ -907,7 +907,7 @@
         "openDrawerAfterPrint": "Open Drawer After Print",
         "openDrawerAfterPrintDesc": "Kick the cash drawer when the receipt finishes printing.",
         "openDrawerOnSale": "Always Open Cash Drawer on Sale",
-        "openDrawerOnSaleDesc": "Automatically open the cash drawer after every sale, even if auto-print is off.",
+        "openDrawerOnSaleDesc": "Automatically open the cash drawer on every sale, regardless of payment method or auto-print.",
         "mobilePrinterConfigSaved": "Mobile printer configuration saved on this device.",
         "mobilePrinterConfigSaveFailed": "Failed to save the mobile printer configuration.",
         "mobilePrinterReachable": "Mobile printer is reachable on the local network.",

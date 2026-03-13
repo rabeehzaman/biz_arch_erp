@@ -853,7 +853,7 @@
         "openDrawerAfterPrint": "فتح الدرج بعد الطباعة",
         "openDrawerAfterPrintDesc": "تشغيل درج النقود عند انتهاء طباعة الإيصال.",
         "openDrawerOnSale": "فتح درج النقود دائماً عند البيع",
-        "openDrawerOnSaleDesc": "فتح درج النقود تلقائياً بعد كل عملية بيع، حتى لو كانت الطباعة التلقائية معطلة.",
+        "openDrawerOnSaleDesc": "فتح درج النقود تلقائياً عند كل عملية بيع، بغض النظر عن طريقة الدفع أو الطباعة التلقائية.",
         "mobilePrinterConfigSaved": "تم حفظ إعدادات الطابعة على هذا الجهاز.",
         "mobilePrinterConfigSaveFailed": "فشل في حفظ إعدادات طابعة الهاتف.",
         "mobilePrinterReachable": "الطابعة متاحة على الشبكة المحلية.",
