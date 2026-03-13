@@ -654,6 +654,11 @@ function POSTerminalContent() {
 
   const handleCheckout = async (payments: PaymentEntry[]) => {
     setIsProcessing(true);
+
+    // Open cash drawer immediately (no delay) if CASH payment is used
+    const hasCash = payments.some((p) => p.method === "CASH" && parseFloat(p.amount) > 0);
+    openCashDrawerIfEnabled(hasCash);
+
     try {
       const res = await fetch("/api/pos/checkout", {
         method: "POST",
@@ -777,8 +782,6 @@ function POSTerminalContent() {
         }
       }
 
-      // Open cash drawer if enabled (fire-and-forget)
-      void openCashDrawerIfEnabled();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Checkout failed");
     } finally {
