@@ -154,6 +154,7 @@ type Labels = {
   totalSales: string;
   transactions: string;
   invoiceCount: string;
+  totalQuantity: string;
   amountPaid: string;
   balanceDue: string;
   paymentBreakdown: string;
@@ -205,16 +206,17 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     totalSales: "Total Sales",
     transactions: "Transactions",
     invoiceCount: "Invoices",
+    totalQuantity: "Total Qty Sold",
     amountPaid: "Amount Paid",
     balanceDue: "Balance Due",
     paymentBreakdown: "Payment Breakdown",
     method: "Method",
     total: "Total",
-    productsSold: "Products Sold",
+    productsSold: "Products Summary",
     qty: "Qty",
     revenue: "Revenue",
     lines: "Lines",
-    invoiceRegister: "Invoice Register",
+    invoiceRegister: "Invoice Totals",
     customer: "Customer",
     paymentType: "Payment Type",
     invoiceDate: "Invoice Time",
@@ -254,16 +256,17 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     totalSales: "إجمالي المبيعات",
     transactions: "عدد العمليات",
     invoiceCount: "عدد الفواتير",
+    totalQuantity: "إجمالي الكمية المباعة",
     amountPaid: "المبلغ المدفوع",
     balanceDue: "الرصيد المستحق",
     paymentBreakdown: "تفصيل المدفوعات",
     method: "الطريقة",
     total: "الإجمالي",
-    productsSold: "المنتجات المباعة",
+    productsSold: "ملخص المنتجات",
     qty: "الكمية",
     revenue: "الإيراد",
     lines: "السطور",
-    invoiceRegister: "سجل الفواتير",
+    invoiceRegister: "إجماليات الفواتير",
     customer: "العميل",
     paymentType: "نوع الدفع",
     invoiceDate: "وقت الفاتورة",
@@ -382,7 +385,7 @@ const dividerStyle: React.CSSProperties = {
 
 const itemDividerStyle: React.CSSProperties = {
   borderTop: "1px dotted #cbd5e1",
-  margin: "5px 0",
+  margin: "4px 0",
 };
 
 function KeyValueRow({
@@ -552,6 +555,10 @@ export function POSSessionReportReceipt({
           value={String(report.totals.invoiceCount)}
         />
         <KeyValueRow
+          label={labels.totalQuantity}
+          value={String(report.totals.totalQuantity)}
+        />
+        <KeyValueRow
           label={labels.amountPaid}
           value={formatCurrency(report.totals.totalPaid, currency, language)}
         />
@@ -582,20 +589,15 @@ export function POSSessionReportReceipt({
       <div style={{ marginBottom: "7px" }}>
         <div style={sectionTitleStyle}>{labels.productsSold}</div>
         {report.soldProducts.length ? report.soldProducts.map((product) => (
-          <div key={product.key} style={{ marginBottom: "6px" }}>
-            <div style={{ fontWeight: 700 }}>
-              {language === "ar" ? product.arabicName || product.name : product.name}
-            </div>
-            {language === "en" && product.arabicName ? (
-              <div style={{ fontSize: "10px", color: "#64748b" }}>{product.arabicName}</div>
-            ) : null}
-            <KeyValueRow label={labels.qty} value={String(product.quantity)} />
+          <div key={product.key} style={{ marginBottom: "4px" }}>
             <KeyValueRow
-              label={labels.revenue}
+              label={language === "ar" ? product.arabicName || product.name : product.name}
               value={formatCurrency(product.revenue, currency, language)}
             />
-            <KeyValueRow label={labels.lines} value={String(product.lineCount)} />
-            {product.sku ? <KeyValueRow label="SKU" value={product.sku} /> : null}
+            <KeyValueRow
+              label={labels.qty}
+              value={String(product.quantity)}
+            />
             <div style={itemDividerStyle} />
           </div>
         )) : (
@@ -608,90 +610,12 @@ export function POSSessionReportReceipt({
       <div>
         <div style={sectionTitleStyle}>{labels.invoiceRegister}</div>
         {report.invoices.length ? report.invoices.map((invoice) => (
-          <div key={invoice.id} style={{ marginBottom: "8px" }}>
-            <div style={{ fontSize: "13px", fontWeight: 800, marginBottom: "3px" }}>
-              {invoice.invoiceNumber}
-            </div>
+          <div key={invoice.id} style={{ marginBottom: "4px" }}>
             <KeyValueRow
-              label={labels.customer}
-              value={language === "ar"
-                ? invoice.customer.arabicName || invoice.customer.name
-                : invoice.customer.name}
-            />
-            <KeyValueRow
-              label={labels.paymentType}
-              value={formatPaymentMethod(invoice.paymentType, language)}
-            />
-            <KeyValueRow
-              label={labels.total}
+              label={invoice.invoiceNumber}
               value={formatCurrency(invoice.total, currency, language)}
             />
-            <KeyValueRow
-              label={labels.amountPaid}
-              value={formatCurrency(invoice.amountPaid, currency, language)}
-            />
-            <KeyValueRow
-              label={labels.balanceDue}
-              value={formatCurrency(invoice.balanceDue, currency, language)}
-            />
-            <KeyValueRow
-              label={labels.invoiceDate}
-              value={formatDateTime(invoice.createdAt, language, labels.notAvailable)}
-            />
-
-            {invoice.items.length ? (
-              <div style={{ marginTop: "5px" }}>
-                <div style={{ fontWeight: 700, marginBottom: "2px" }}>{labels.items}</div>
-                {invoice.items.map((item) => (
-                  <div key={item.id} style={{ marginBottom: "4px" }}>
-                    <div style={{ fontWeight: 700 }}>
-                      {language === "ar"
-                        ? item.product?.arabicName || item.product?.name || item.description
-                        : item.product?.name || item.description}
-                    </div>
-                    <KeyValueRow label={labels.qty} value={String(item.quantity)} />
-                    <KeyValueRow
-                      label={labels.unitPrice}
-                      value={formatCurrency(item.unitPrice, currency, language)}
-                    />
-                    {item.discount > 0 ? (
-                      <KeyValueRow label={labels.discount} value={`${item.discount}%`} />
-                    ) : null}
-                    <KeyValueRow
-                      label={labels.total}
-                      value={formatCurrency(item.total, currency, language)}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            {invoice.payments.length ? (
-              <div style={{ marginTop: "5px" }}>
-                <div style={{ fontWeight: 700, marginBottom: "2px" }}>{labels.payments}</div>
-                {invoice.payments.map((payment) => (
-                  <div key={payment.id} style={{ marginBottom: "4px" }}>
-                    <KeyValueRow
-                      label={labels.method}
-                      value={formatPaymentMethod(payment.method, language)}
-                    />
-                    <KeyValueRow
-                      label={labels.total}
-                      value={formatCurrency(payment.amount, currency, language)}
-                    />
-                    {payment.reference ? (
-                      <KeyValueRow label={labels.reference} value={payment.reference} />
-                    ) : null}
-                    <KeyValueRow
-                      label={labels.paymentDate}
-                      value={formatDateTime(payment.paymentDate, language, labels.notAvailable)}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            <div style={dividerStyle} />
+            <div style={itemDividerStyle} />
           </div>
         )) : (
           <div style={{ color: "#64748b" }}>{labels.noInvoices}</div>
