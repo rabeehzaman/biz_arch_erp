@@ -657,7 +657,6 @@ function POSTerminalContent() {
       setClosingCash("");
       setClosePinCode("");
       setCountedClosingCash(null);
-      toast.success("POS session closed");
       if (reportPrintError) {
         toast.error(reportPrintError);
       }
