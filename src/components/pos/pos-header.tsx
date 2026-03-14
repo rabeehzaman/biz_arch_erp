@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, Languages, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
+import { ArrowLeft, Clock, Languages, Loader2, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -22,6 +22,7 @@ interface POSHeaderProps {
   onCloseSession: () => void;
   onBackToSessions?: () => void;
   onReprintReceipt?: () => void;
+  isReprintLoading?: boolean;
   onReturn?: () => void;
 }
 
@@ -46,6 +47,7 @@ export function POSHeader({
   onCloseSession,
   onBackToSessions,
   onReprintReceipt,
+  isReprintLoading,
   onReturn,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
@@ -106,16 +108,19 @@ export function POSHeader({
           </Button>
         )}
 
-        {onReprintReceipt && (
+        {(onReprintReceipt || isReprintLoading) && (
           <Button
             variant="ghost"
             size="sm"
             className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
             onClick={onReprintReceipt}
+            disabled={isReprintLoading}
             title={t("pos.reprintReceipt")}
             aria-label={t("pos.reprintReceipt")}
           >
-            <Printer className="h-4 w-4" />
+            {isReprintLoading
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <Printer className="h-4 w-4" />}
             <span className="sr-only">{t("pos.reprintReceipt")}</span>
           </Button>
         )}

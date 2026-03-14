@@ -416,6 +416,7 @@ function POSTerminalContent() {
 
   const receiptPrintingEnabled = receiptSetting?.value === "true";
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
+  const [isPendingReceipt, setIsPendingReceipt] = useState(false);
   const cart = cartState.items;
   const cartQuantity = cartState.totalQuantity;
   const selectedProductQuantities = cartState.selectedProductQuantities;
@@ -784,8 +785,20 @@ function POSTerminalContent() {
     const checkoutStartedAt = performance.now();
     setIsProcessing(true);
 
+    // Snapshot state before clearing — used for receipt building and error recovery
+    const completedCart = cart;
+    const completedHeldOrderId = heldOrderId;
+    const snapshotTotals = cartTotals;
+
     // Open cash drawer immediately on checkout (no delay)
     openCashDrawerIfEnabled();
+
+    // Optimistic UI: clear cart and return to products screen immediately
+    clearCart();
+    setView("cart");
+    setMobileView("products");
+    setIsProcessing(false); // allow next order immediately; server runs in background
+    setIsPendingReceipt(true); // hide reprint until new receipt data is ready
 
     try {
       const requestStartedAt = performance.now();
@@ -795,7 +808,7 @@ function POSTerminalContent() {
         body: JSON.stringify({
           sessionId: posSession?.id,
           customerId: selectedCustomer?.id || undefined,
-          items: cart.map((item) => ({
+          items: completedCart.map((item) => ({
             productId: item.productId,
             name: item.name,
             quantity: item.quantity,
@@ -809,7 +822,7 @@ function POSTerminalContent() {
             amount: parseFloat(p.amount),
             reference: p.reference || undefined,
           })),
-          heldOrderId: heldOrderId || undefined,
+          heldOrderId: completedHeldOrderId || undefined,
           notes: undefined,
         }),
       });
@@ -825,11 +838,9 @@ function POSTerminalContent() {
       const change = result.change || 0;
       const receiptMeta = result.receiptMeta;
       const serverTimings = result.timings as CheckoutTimingPayload | undefined;
-      const completedCart = cart;
-      const completedHeldOrderId = heldOrderId;
-      const completedTotal = Number(result.invoice?.total) || cartTotals.total;
+      const completedTotal = Number(result.invoice?.total) || snapshotTotals.total;
 
-      // Build receipt data before clearing cart
+      // Build receipt data from pre-captured snapshots (cart is already cleared)
       const receiptData: ReceiptData = {
         storeName: companySettings?.companyName || "Store",
         storeAddress: companySettings?.companyAddress,
@@ -840,7 +851,7 @@ function POSTerminalContent() {
         invoiceNumber: result.invoice?.invoiceNumber || "",
         date: new Date(),
         customerName: selectedCustomer?.name,
-        items: cart.map((item) => {
+        items: completedCart.map((item) => {
           const lineTotal = item.quantity * item.price * (1 - (item.discount || 0) / 100);
           return {
             name: item.name,
@@ -850,13 +861,13 @@ function POSTerminalContent() {
             lineTotal,
           };
         }),
-        subtotal: Number(result.invoice?.subtotal) || cartTotals.subtotal,
+        subtotal: Number(result.invoice?.subtotal) || snapshotTotals.subtotal,
         taxRate: receiptMeta?.taxLabel === "VAT" ? 15 : 0,
         taxAmount: receiptMeta?.taxLabel === "VAT"
           ? Number(result.invoice?.totalVat || 0)
-          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || cartTotals.taxAmount,
-        roundOffAmount: Number(result.invoice?.roundOffAmount || 0) || cartTotals.roundOffAmount,
-        total: Number(result.invoice?.total) || cartTotals.total,
+          : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || snapshotTotals.taxAmount,
+        roundOffAmount: Number(result.invoice?.roundOffAmount || 0) || snapshotTotals.roundOffAmount,
+        total: Number(result.invoice?.total) || snapshotTotals.total,
         payments: payments.map((p) => ({
           method: p.method,
           amount: parseFloat(p.amount),
@@ -875,6 +886,7 @@ function POSTerminalContent() {
         isTaxInclusivePrice: receiptMeta?.isTaxInclusivePrice || false,
       };
       setLastReceiptData(receiptData);
+      setIsPendingReceipt(false);
 
       if (isElectronEnvironment()) {
         if (receiptPrintingEnabled) {
@@ -898,9 +910,6 @@ function POSTerminalContent() {
       }
 
       applyOptimisticCheckoutUpdates(completedCart, completedTotal, completedHeldOrderId);
-      clearCart();
-      setView("cart");
-      setMobileView("products");
       revalidateCheckoutDataInBackground();
 
       const syncSuccessWorkMs = roundTimingMs(performance.now() - responseParsedAt);
@@ -935,6 +944,11 @@ function POSTerminalContent() {
 
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Checkout failed");
+      // Restore cart so user can retry
+      dispatchCart({ type: "RESTORE", items: completedCart });
+      if (completedHeldOrderId) setHeldOrderId(completedHeldOrderId);
+      setView("payment");
+      setIsPendingReceipt(false); // restore reprint of previous receipt on failure
     } finally {
       setIsProcessing(false);
     }
@@ -1021,34 +1035,19 @@ function POSTerminalContent() {
 
   const reprintReceipt = useCallback(() => {
     if (isElectronEnvironment()) {
-      void printLatestCachedReceipt().then((result) => {
-        if (result.success) {
+      void printLatestCachedReceipt().then(async (result) => {
+        if (result.success) return;
+        if (lastReceiptData) {
+          await smartPrintReceipt(lastReceiptData);
           return;
         }
-
-        if (lastReceiptData) {
-          try {
-            smartPrintReceipt(lastReceiptData);
-            return;
-          } catch (error) {
-            console.error("Receipt reprint fallback failed:", error);
-          }
-        }
-
         console.error("Receipt reprint failed:", result.error);
         toast.error(result.error || "No cached receipt available");
       });
       return;
     }
-
-    if (!lastReceiptData) {
-      return;
-    }
-
-    try {
-      smartPrintReceipt(lastReceiptData);
-    } catch (error) {
-      console.error("Receipt reprint failed:", error);
+    if (lastReceiptData) {
+      void smartPrintReceipt(lastReceiptData);
     }
   }, [lastReceiptData]);
 
@@ -1085,7 +1084,8 @@ function POSTerminalContent() {
         onHeldOrdersClick={openHeldOrders}
         onCloseSession={openCloseSessionDialog}
         onBackToSessions={backToSessions}
-        onReprintReceipt={lastReceiptData ? reprintReceipt : undefined}
+        onReprintReceipt={lastReceiptData && !isPendingReceipt ? reprintReceipt : undefined}
+        isReprintLoading={isPendingReceipt}
         onReturn={openReturnDialog}
       />
 

@@ -271,23 +271,20 @@ export function openCashDrawerIfEnabled(): void {
  * Smart print: uses Electron silent printing if available, otherwise falls back
  * to browser iframe print dialog.
  */
-export function smartPrintReceipt(data: ReceiptData): void {
+export async function smartPrintReceipt(data: ReceiptData): Promise<void> {
   if (isElectronEnvironment()) {
-    electronPrint(data).then((result) => {
-      if (!result.success) {
-        console.error("Electron print failed:", result.error);
-        // Fallback to browser print on Electron failure
-        browserPrintReceipt(generateReceiptHtml(data));
-      }
-    });
+    const result = await electronPrint(data);
+    if (!result.success) {
+      console.error("Electron print failed:", result.error);
+      await browserPrintReceipt(generateReceiptHtml(data));
+    }
   } else if (isCapacitorEnvironment()) {
-    capacitorPrint(data).then((result) => {
-      if (!result.success) {
-        console.error("Capacitor print failed:", result.error);
-        browserPrintReceipt(generateReceiptHtml(data));
-      }
-    });
+    const result = await capacitorPrint(data);
+    if (!result.success) {
+      console.error("Capacitor print failed:", result.error);
+      await browserPrintReceipt(generateReceiptHtml(data));
+    }
   } else {
-    browserPrintReceipt(generateReceiptHtml(data));
+    await browserPrintReceipt(generateReceiptHtml(data));
   }
 }
