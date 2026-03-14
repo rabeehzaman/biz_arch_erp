@@ -45,6 +45,7 @@ export interface ReceiptData {
   brandColor?: string;
   currency?: string;
   isTaxInclusivePrice?: boolean;
+  isReturn?: boolean;
 }
 
 // Payment method Arabic translations (standard Saudi terms)
@@ -123,8 +124,32 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
         </div>
       )}
 
+      {/* Return / Credit Note Label */}
+      {data.isReturn && (
+        <div style={{
+          ...centerStyle,
+          fontSize: "14px",
+          fontWeight: 800,
+          marginBottom: "4px",
+          color: "#e74c3c",
+          padding: "4px 8px",
+          background: "#fef2f2",
+          borderRadius: "4px",
+          border: "1px solid #fecaca",
+        }}>
+          {isZatca ? (
+            <>
+              <div>إشعار دائن / مرتجع</div>
+              <div style={{ fontSize: "11px", fontWeight: 700 }}>CREDIT NOTE / RETURN</div>
+            </>
+          ) : (
+            <div>CREDIT NOTE / RETURN</div>
+          )}
+        </div>
+      )}
+
       {/* Invoice Type Label (ZATCA) */}
-      {isZatca && (
+      {isZatca && !data.isReturn && (
         <div style={{
           ...centerStyle,
           fontSize: "12px",
@@ -403,7 +428,16 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
         fontSize: "11px",
         color: "#000",
       }}>
-        {isZatca ? (
+        {data.isReturn ? (
+          isZatca ? (
+            <>
+              <div style={{ fontWeight: 600, direction: "rtl" }}>شكراً لكم — تم المرتجع</div>
+              <div style={{ fontSize: "10px" }}>Return processed successfully</div>
+            </>
+          ) : (
+            <div style={{ fontWeight: 600 }}>Return processed successfully</div>
+          )
+        ) : isZatca ? (
           <>
             <div style={{ fontWeight: 600, direction: "rtl" }}>شكراً لزيارتكم</div>
             <div style={{ fontSize: "10px" }}>Thank you for your visit!</div>

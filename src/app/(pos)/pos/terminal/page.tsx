@@ -39,6 +39,7 @@ import { CustomerSelect } from "@/components/pos/customer-select";
 import { PaymentPanel } from "@/components/pos/payment-panel";
 import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
+import { POSReturnDialog } from "@/components/pos/pos-return-dialog";
 import {
   cacheReceiptArtifactWithConfig,
   isElectronEnvironment,
@@ -301,6 +302,7 @@ function POSTerminalContent() {
   // Dialog state
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showHeldSheet, setShowHeldSheet] = useState(false);
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [closingCash, setClosingCash] = useState("");
   const [closePinCode, setClosePinCode] = useState("");
   const [countedClosingCash, setCountedClosingCash] = useState<number | null>(null);
@@ -888,6 +890,14 @@ function POSTerminalContent() {
     setShowHeldSheet(true);
   }, []);
 
+  const openReturnDialog = useCallback(() => {
+    setShowReturnDialog(true);
+  }, []);
+
+  const handleReturnComplete = useCallback(() => {
+    void Promise.all([mutateSession(), mutateProducts()]);
+  }, [mutateSession, mutateProducts]);
+
   const backToSessions = useCallback(() => {
     router.push("/pos");
   }, [router]);
@@ -959,6 +969,7 @@ function POSTerminalContent() {
         onCloseSession={openCloseSessionDialog}
         onBackToSessions={backToSessions}
         onReprintReceipt={lastReceiptData ? reprintReceipt : undefined}
+        onReturn={openReturnDialog}
       />
 
       {/* Main Content */}
@@ -1109,6 +1120,19 @@ function POSTerminalContent() {
           </button>
         )}
       </div>
+
+      {/* POS Return Dialog */}
+      <POSReturnDialog
+        open={showReturnDialog}
+        onOpenChange={setShowReturnDialog}
+        sessionId={posSession.id}
+        branchId={posSession.branch?.id}
+        warehouseId={posSession.warehouse?.id}
+        products={products}
+        onComplete={handleReturnComplete}
+        companySettings={companySettings}
+        receiptPrintingEnabled={receiptPrintingEnabled}
+      />
 
       {/* Close Session Dialog */}
       <Dialog

@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
       appliedToBalance = true,
       branchId,
       warehouseId,
+      posSessionId,
     } = body;
 
     if (!customerId || !items || items.length === 0) {
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest) {
           creditNoteNumber,
           branchId: branchId || null,
           warehouseId: warehouseId || null,
+          posSessionId: posSessionId || null,
           customerId,
           createdById: session.user.id,
           invoiceId: invoiceId || null,
@@ -246,6 +248,17 @@ export async function POST(request: NextRequest) {
           items: true,
         },
       });
+
+      // Increment POS session return counters
+      if (posSessionId) {
+        await tx.pOSSession.update({
+          where: { id: posSessionId },
+          data: {
+            totalReturns: { increment: total },
+            totalReturnTransactions: { increment: 1 },
+          },
+        });
+      }
 
       // Create stock lots for each item with a productId
       const productsToRecalculate = new Set<string>();

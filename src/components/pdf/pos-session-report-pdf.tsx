@@ -411,12 +411,19 @@ export function POSSessionReportPDF({
 
         <View style={styles.heroStats}>
           <View style={styles.heroCard}>
-            <Text style={styles.heroLabel}>{bilingual("Total Sales", "إجمالي المبيعات")}</Text>
+            <Text style={styles.heroLabel}>
+              {report.session.totalReturns > 0
+                ? bilingual("Net Sales", "صافي المبيعات")
+                : bilingual("Total Sales", "إجمالي المبيعات")}
+            </Text>
             <Text style={styles.heroValue}>
-              {formatAmount(report.session.totalSales, currency)}
+              {report.session.totalReturns > 0
+                ? formatAmount(report.session.totalSales - report.session.totalReturns, currency)
+                : formatAmount(report.session.totalSales, currency)}
             </Text>
             <Text style={styles.heroSub}>
               {report.totals.invoiceCount} {bilingual("invoices", "فاتورة")}
+              {report.session.totalReturnTransactions > 0 && ` · ${report.session.totalReturnTransactions} ${bilingual("returns", "مرتجعات")}`}
             </Text>
           </View>
 
@@ -579,12 +586,34 @@ export function POSSessionReportPDF({
                 {formatAmount(report.totals.totalBalanceDue, currency)}
               </Text>
             </View>
-            <View style={styles.statRowLast}>
+            <View style={report.session.totalReturns > 0 ? styles.statRow : styles.statRowLast}>
               <Text style={styles.statLabel}>{bilingual("Total Sales", "إجمالي المبيعات")}</Text>
               <Text style={styles.statValue}>
                 {formatAmount(report.session.totalSales, currency)}
               </Text>
             </View>
+            {report.session.totalReturns > 0 && (
+              <>
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>{bilingual("Total Returns", "إجمالي المرتجعات")}</Text>
+                  <Text style={[styles.statValue, { color: "#dc2626" }]}>
+                    {formatAmount(report.session.totalReturns, currency)}
+                  </Text>
+                </View>
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>{bilingual("Return Transactions", "عمليات الإرجاع")}</Text>
+                  <Text style={styles.statValue}>
+                    {report.session.totalReturnTransactions}
+                  </Text>
+                </View>
+                <View style={styles.statRowLast}>
+                  <Text style={styles.statLabel}>{bilingual("Net Sales", "صافي المبيعات")}</Text>
+                  <Text style={[styles.statValue, { fontWeight: 700 }]}>
+                    {formatAmount(report.session.totalSales - report.session.totalReturns, currency)}
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
         </View>
 

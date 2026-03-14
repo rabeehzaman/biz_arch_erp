@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, Languages, LogOut, MapPin, PauseCircle, Printer } from "lucide-react";
+import { ArrowLeft, Clock, Languages, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -22,6 +22,7 @@ interface POSHeaderProps {
   onCloseSession: () => void;
   onBackToSessions?: () => void;
   onReprintReceipt?: () => void;
+  onReturn?: () => void;
 }
 
 function POSClock() {
@@ -45,6 +46,7 @@ export function POSHeader({
   onCloseSession,
   onBackToSessions,
   onReprintReceipt,
+  onReturn,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
@@ -89,6 +91,20 @@ export function POSHeader({
           <Clock className="h-4 w-4" />
           <POSClock />
         </div>
+
+        {onReturn && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
+            onClick={onReturn}
+            title={t("pos.salesReturn")}
+            aria-label={t("pos.salesReturn")}
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">{t("pos.salesReturn").split(" ")[0]}</span>
+          </Button>
+        )}
 
         {onReprintReceipt && (
           <Button

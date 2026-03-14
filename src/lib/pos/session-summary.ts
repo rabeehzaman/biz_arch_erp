@@ -71,6 +71,8 @@ export interface POSSessionReportData {
     cashDifference: number | null;
     totalSales: number;
     totalTransactions: number;
+    totalReturns: number;
+    totalReturnTransactions: number;
     notes: string | null;
     user: {
       id: string;
@@ -268,6 +270,8 @@ export async function getPOSSessionReportData(
       cashDifference: posSession.cashDifference == null ? null : Number(posSession.cashDifference),
       totalSales: Number(posSession.totalSales),
       totalTransactions: posSession.totalTransactions,
+      totalReturns: Number(posSession.totalReturns),
+      totalReturnTransactions: posSession.totalReturnTransactions,
       notes: posSession.notes,
       user: {
         id: posSession.user.id,

@@ -90,6 +90,8 @@ export interface SessionReportData {
     cashDifference: number | null;
     totalSales: number;
     totalTransactions: number;
+    totalReturns: number;
+    totalReturnTransactions: number;
     notes: string | null;
     user: {
       id: string;
@@ -179,6 +181,9 @@ type Labels = {
   noProducts: string;
   noInvoices: string;
   notAvailable: string;
+  totalReturns: string;
+  returnTransactions: string;
+  netSales: string;
 };
 
 const LABELS: Record<SessionReportLanguage, Labels> = {
@@ -231,6 +236,9 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     noProducts: "No products sold in this session.",
     noInvoices: "No invoices linked to this session.",
     notAvailable: "N/A",
+    totalReturns: "Total Returns",
+    returnTransactions: "Return Transactions",
+    netSales: "Net Sales",
   },
   ar: {
     title: "تقرير جلسة نقطة البيع",
@@ -281,6 +289,9 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     noProducts: "لم يتم بيع أي منتجات في هذه الجلسة.",
     noInvoices: "لا توجد فواتير مرتبطة بهذه الجلسة.",
     notAvailable: "غير متوفر",
+    totalReturns: "إجمالي المرتجعات",
+    returnTransactions: "عمليات الإرجاع",
+    netSales: "صافي المبيعات",
   },
 };
 
@@ -550,6 +561,22 @@ export function POSSessionReportReceipt({
           label={labels.transactions}
           value={String(report.session.totalTransactions)}
         />
+        {report.session.totalReturns > 0 && (
+          <>
+            <KeyValueRow
+              label={labels.totalReturns}
+              value={formatCurrency(report.session.totalReturns, currency, language)}
+            />
+            <KeyValueRow
+              label={labels.returnTransactions}
+              value={String(report.session.totalReturnTransactions)}
+            />
+            <KeyValueRow
+              label={labels.netSales}
+              value={formatCurrency(report.session.totalSales - report.session.totalReturns, currency, language)}
+            />
+          </>
+        )}
         <KeyValueRow
           label={labels.invoiceCount}
           value={String(report.totals.invoiceCount)}
