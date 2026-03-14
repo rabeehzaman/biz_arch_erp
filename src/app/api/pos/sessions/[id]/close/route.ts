@@ -82,14 +82,11 @@ export async function PUT(
       posSession.branchId,
       posSession.warehouseId
     );
-    const hasSettleCashAccountId = Object.prototype.hasOwnProperty.call(body, "settleCashAccountId");
-    const hasSettleBankAccountId = Object.prototype.hasOwnProperty.call(body, "settleBankAccountId");
-    const effectiveSettleCashAccountId = hasSettleCashAccountId
-      ? settleCashAccountId || null
-      : registerConfig?.defaultCashAccountId || org?.posDefaultCashAccountId || null;
-    const effectiveSettleBankAccountId = hasSettleBankAccountId
-      ? settleBankAccountId || null
-      : registerConfig?.defaultBankAccountId || org?.posDefaultBankAccountId || null;
+    // Always fall back to register config / org defaults when the provided value is null/empty
+    const effectiveSettleCashAccountId =
+      settleCashAccountId || registerConfig?.defaultCashAccountId || org?.posDefaultCashAccountId || null;
+    const effectiveSettleBankAccountId =
+      settleBankAccountId || registerConfig?.defaultBankAccountId || org?.posDefaultBankAccountId || null;
 
     // Validate settlement accounts are required in clearing mode
     if (isClearingMode && !effectiveSettleCashAccountId) {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts } from "@/lib/accounting/seed-coa";
+import { seedDefaultCOA, seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
 
 export async function POST() {
   try {
@@ -21,10 +21,10 @@ export async function POST() {
 
     await seedDefaultCOA(prisma as never, organizationId);
 
-    // Seed tax-system-specific accounts based on org settings
+    // Seed feature-specific accounts based on org settings
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { gstEnabled: true, saudiEInvoiceEnabled: true },
+      select: { gstEnabled: true, saudiEInvoiceEnabled: true, posAccountingMode: true },
     });
     if (org?.gstEnabled && !org?.saudiEInvoiceEnabled) {
       await seedGSTAccounts(prisma as never, organizationId);
@@ -32,6 +32,9 @@ export async function POST() {
     if (org?.saudiEInvoiceEnabled) {
       await seedSaudiVATAccounts(prisma as never, organizationId);
       await seedSaudiStandardAccounts(prisma as never, organizationId);
+    }
+    if (org?.posAccountingMode === "CLEARING_ACCOUNT") {
+      await seedPOSClearingAccounts(prisma as never, organizationId);
     }
 
     const newCount = await prisma.account.count({
