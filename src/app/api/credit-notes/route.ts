@@ -11,9 +11,10 @@ import {
 } from "@/lib/inventory/returns";
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
-import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { createAutoJournalEntry, ensureRoundOffAccount, getSystemAccount } from "@/lib/accounting/journal";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
+import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 
 // Generate credit note number: CN-YYYYMMDD-XXX
 async function generateCreditNoteNumber(organizationId: string) {
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
       branchId,
       warehouseId,
       posSessionId,
+      applyRoundOff,
     } = body;
 
     if (!items || items.length === 0) {
@@ -142,7 +144,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const creditNoteNumber = await generateCreditNoteNumber(organizationId);
+    const [creditNoteNumber, roundOffMode] = await Promise.all([
+      generateCreditNoteNumber(organizationId),
+      getOrganizationRoundOffMode(prisma, organizationId),
+    ]);
     const creditNoteDate = toMidnightUTC(issueDate);
     const taxInclusive = isTaxInclusivePriceSession(session);
     const saudiEnabled = isSaudiEInvoiceEnabled(session);
@@ -191,7 +196,9 @@ export async function POST(request: NextRequest) {
         gstResult = computeDocumentGST(orgGST, lineItems, customer?.gstin, customer?.gstStateCode);
         totalTax = gstResult.totalCgst + gstResult.totalSgst + gstResult.totalIgst;
       }
-      const total = subtotal + totalTax;
+      const shouldApplyRoundOff = applyRoundOff === true && roundOffMode !== "NONE";
+      const { roundOffAmount, roundedTotal } = calculateRoundOff(subtotal + totalTax, roundOffMode, shouldApplyRoundOff);
+      const total = roundedTotal;
 
       // Create the credit note
       const creditNote = await tx.creditNote.create({
@@ -207,6 +214,8 @@ export async function POST(request: NextRequest) {
           issueDate: creditNoteDate,
           subtotal,
           total,
+          roundOffAmount,
+          applyRoundOff: shouldApplyRoundOff,
           totalCgst: saudiEnabled ? 0 : gstResult.totalCgst,
           totalSgst: saudiEnabled ? 0 : gstResult.totalSgst,
           totalIgst: saudiEnabled ? 0 : gstResult.totalIgst,
@@ -355,14 +364,18 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create auto journal entry: DR Sales Revenue [+ DR VAT/GST Output], CR Accounts Receivable
+      // Create auto journal entry: DR Sales Revenue [+ DR VAT/GST Output], CR Accounts Receivable (or Cash for POS)
       if (appliedToBalance) {
         const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
-        const arAccount = await getSystemAccount(tx, organizationId, "1300");
-        if (revenueAccount && arAccount) {
+        // POS returns are cash refunds — credit Cash instead of AR
+        const creditAccount = posSessionId
+          ? await getSystemAccount(tx, organizationId, "1100")
+          : await getSystemAccount(tx, organizationId, "1300");
+        const creditDescription = posSessionId ? "Cash (POS Refund)" : "Accounts Receivable";
+        if (revenueAccount && creditAccount) {
           const returnLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
             { accountId: revenueAccount.id, description: "Sales Revenue (Return)", debit: subtotal, credit: 0 },
-            { accountId: arAccount.id, description: "Accounts Receivable", debit: 0, credit: total },
+            { accountId: creditAccount.id, description: creditDescription, debit: 0, credit: total },
           ];
           // Reverse tax output
           if (totalVat && totalVat > 0) {
@@ -382,6 +395,17 @@ export async function POST(request: NextRequest) {
             if (gstResult.totalIgst > 0) {
               const igstAccount = await getSystemAccount(tx, organizationId, "2230");
               if (igstAccount) returnLines.push({ accountId: igstAccount.id, description: "IGST Output (Return)", debit: gstResult.totalIgst, credit: 0 });
+            }
+          }
+          if (Math.abs(roundOffAmount) > 0.0001) {
+            const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
+            if (roundOffAccount) {
+              returnLines.push({
+                accountId: roundOffAccount.id,
+                description: "Round Off Adjustment",
+                debit: roundOffAmount > 0 ? roundOffAmount : 0,
+                credit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
+              });
             }
           }
           await createAutoJournalEntry(tx, organizationId, {

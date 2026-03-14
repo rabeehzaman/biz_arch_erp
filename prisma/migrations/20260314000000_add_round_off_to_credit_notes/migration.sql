@@ -1,0 +1,3 @@
+ALTER TABLE "credit_notes"
+ADD COLUMN "roundOffAmount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN "applyRoundOff" BOOLEAN NOT NULL DEFAULT false;

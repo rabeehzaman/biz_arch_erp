@@ -148,7 +148,15 @@ export async function PUT(
       });
 
       const cashReceived = roundCurrency(Number(cashPayments._sum.amount || 0));
-      const expectedCash = roundCurrency(Number(posSession.openingCash) + cashReceived);
+
+      // Subtract cash refunds given for POS returns
+      const returnAggregates = await tx.creditNote.aggregate({
+        where: { organizationId, posSessionId: id },
+        _sum: { total: true },
+      });
+      const cashRefundsGiven = roundCurrency(Number(returnAggregates._sum.total || 0));
+
+      const expectedCash = roundCurrency(Number(posSession.openingCash) + cashReceived - cashRefundsGiven);
       const cashDifference = roundCurrency(Number(closingCash) - expectedCash);
 
       // Aggregate non-cash payments

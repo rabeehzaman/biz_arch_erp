@@ -183,6 +183,25 @@ export async function getPOSSessionReportData(
     paymentMap.set(method, existing);
   }
 
+  // Fetch credit notes (returns) for this session to show refunds in the breakdown
+  const sessionCreditNotes = await prisma.creditNote.findMany({
+    where: { posSessionId: id, organizationId },
+    include: {
+      items: {
+        include: {
+          product: {
+            select: { id: true, name: true, sku: true, arabicName: true },
+          },
+        },
+      },
+    },
+  });
+
+  const totalRefunds = sessionCreditNotes.reduce((sum, cn) => sum + Number(cn.total), 0);
+  if (totalRefunds > 0) {
+    paymentMap.set("CASH_REFUND", { total: -totalRefunds, count: sessionCreditNotes.length });
+  }
+
   const soldProductMap = new Map<string, POSSessionSoldProduct>();
   for (const invoice of invoices) {
     for (const item of invoice.items) {
@@ -201,6 +220,22 @@ export async function getPOSSessionReportData(
       existing.revenue += Number(item.total);
       existing.lineCount += 1;
       soldProductMap.set(key, existing);
+    }
+  }
+
+  // Net out returned items from sold products
+  for (const cn of sessionCreditNotes) {
+    for (const item of cn.items) {
+      const key = item.productId || item.description;
+      const existing = soldProductMap.get(key);
+      if (existing) {
+        existing.quantity -= Number(item.quantity);
+        existing.revenue -= Number(item.total);
+        // Remove entry if fully returned (qty hits 0 or below)
+        if (existing.quantity <= 0) {
+          soldProductMap.delete(key);
+        }
+      }
     }
   }
 

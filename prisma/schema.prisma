@@ -729,8 +729,10 @@ model CreditNote {
 
   issueDate DateTime @default(now())
 
-  subtotal Decimal @db.Decimal(12, 2)
-  total    Decimal @db.Decimal(12, 2)
+  subtotal       Decimal @db.Decimal(12, 2)
+  total          Decimal @db.Decimal(12, 2)
+  roundOffAmount Decimal @default(0) @db.Decimal(12, 2)
+  applyRoundOff  Boolean @default(false)
 
   totalCgst     Decimal @default(0) @db.Decimal(12, 2)
   totalSgst     Decimal @default(0) @db.Decimal(12, 2)
