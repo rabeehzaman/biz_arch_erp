@@ -63,6 +63,7 @@ interface POSReturnDialogProps {
   onComplete: () => void;
   companySettings?: Record<string, string | undefined>;
   receiptPrintingEnabled?: boolean;
+  isSaudiOrg?: boolean;
 }
 
 type Step = "items" | "confirm" | "success";
@@ -77,6 +78,7 @@ export function POSReturnDialog({
   onComplete,
   companySettings,
   receiptPrintingEnabled,
+  isSaudiOrg,
 }: POSReturnDialogProps) {
   const { fmt } = useCurrency();
   const { t } = useLanguage();
@@ -194,8 +196,9 @@ export function POSReturnDialog({
             description: item.name,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            gstRate: item.gstRate,
-            hsnCode: item.hsnCode,
+            ...(isSaudiOrg
+              ? { vatRate: item.gstRate }
+              : { gstRate: item.gstRate, hsnCode: item.hsnCode }),
           })),
         }),
       });

@@ -238,6 +238,7 @@ function POSTerminalContent() {
   const { t } = useLanguage();
   const { data: authSession } = useSession();
   const taxInclusive = !!(authSession?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
+  const isSaudiOrg = !!(authSession?.user as { saudiEInvoiceEnabled?: boolean } | undefined)?.saudiEInvoiceEnabled;
 
   // Weigh machine config from session
   const weighMachineEnabled = !!(authSession?.user as { isWeighMachineEnabled?: boolean })?.isWeighMachineEnabled;
@@ -1126,6 +1127,7 @@ function POSTerminalContent() {
         onComplete={handleReturnComplete}
         companySettings={companySettings}
         receiptPrintingEnabled={receiptPrintingEnabled}
+        isSaudiOrg={isSaudiOrg}
       />
 
       {/* Close Session Dialog */}
