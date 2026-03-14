@@ -179,24 +179,11 @@ export function POSReturnDialog({
     setIsProcessing(true);
 
     try {
-      // Resolve walk-in customer if none selected
-      let customerId = selectedCustomer?.id;
-      if (!customerId) {
-        const cusRes = await fetch("/api/customers?compact=true");
-        const customers = await cusRes.json();
-        const walkIn = customers.find((c: { name: string }) => c.name === "Walk-in Customer");
-        if (walkIn) {
-          customerId = walkIn.id;
-        } else {
-          throw new Error("Walk-in Customer not found. Please select a customer.");
-        }
-      }
-
       const res = await fetch("/api/credit-notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerId,
+          customerId: selectedCustomer?.id || undefined,
           posSessionId: sessionId,
           branchId: branchId || undefined,
           warehouseId: warehouseId || undefined,

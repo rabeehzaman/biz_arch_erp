@@ -96,8 +96,10 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const {
+    let {
       customerId,
+    } = body;
+    const {
       invoiceId,
       issueDate,
       items,
@@ -109,11 +111,25 @@ export async function POST(request: NextRequest) {
       posSessionId,
     } = body;
 
-    if (!customerId || !items || items.length === 0) {
+    if (!items || items.length === 0) {
       return NextResponse.json(
-        { error: "Customer and items are required" },
+        { error: "Items are required" },
         { status: 400 }
       );
+    }
+
+    // Resolve walk-in customer for POS returns when no customer specified
+    if (!customerId) {
+      let walkIn = await prisma.customer.findFirst({
+        where: { organizationId, name: "Walk-in Customer" },
+        orderBy: { createdAt: "asc" },
+      });
+      if (!walkIn) {
+        walkIn = await prisma.customer.create({
+          data: { organizationId, name: "Walk-in Customer", isActive: true },
+        });
+      }
+      customerId = walkIn.id;
     }
 
     const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
