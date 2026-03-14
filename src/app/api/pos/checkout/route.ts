@@ -97,10 +97,14 @@ function roundTimingMs(value: number) {
 }
 
 export async function POST(request: NextRequest) {
-  const requestStartedAt = performance.now();
+  const includeDebugTimings = process.env.POS_CHECKOUT_TIMINGS === "true";
+  const requestStartedAt = includeDebugTimings ? performance.now() : 0;
   const requestStages: Record<string, number> = {};
   let currentRequestStageStartedAt = requestStartedAt;
   const markRequestStage = (stage: string) => {
+    if (!includeDebugTimings) {
+      return;
+    }
     requestStages[stage] = roundTimingMs(performance.now() - currentRequestStageStartedAt);
     currentRequestStageStartedAt = performance.now();
   };
@@ -172,11 +176,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const transactionStartedAt = performance.now();
+    const transactionStartedAt = includeDebugTimings ? performance.now() : 0;
     const result = await prisma.$transaction(async (tx) => {
       const transactionStages: Record<string, number> = {};
-      let currentTransactionStageStartedAt = performance.now();
+      let currentTransactionStageStartedAt = includeDebugTimings ? performance.now() : 0;
       const markTransactionStage = (stage: string) => {
+        if (!includeDebugTimings) {
+          return;
+        }
         transactionStages[stage] = roundTimingMs(
           performance.now() - currentTransactionStageStartedAt
         );
@@ -948,10 +955,14 @@ export async function POST(request: NextRequest) {
         transactionStages,
       };
     }, { timeout: 30000 });
-    requestStages.transactionTotalMs = roundTimingMs(performance.now() - transactionStartedAt);
+    if (includeDebugTimings) {
+      requestStages.transactionTotalMs = roundTimingMs(
+        performance.now() - transactionStartedAt
+      );
+    }
 
     // Generate QR code data URL for receipt (outside transaction)
-    const receiptPreparationStartedAt = performance.now();
+    const receiptPreparationStartedAt = includeDebugTimings ? performance.now() : 0;
     let qrCodeDataURL: string | undefined;
     if (result.invoice?.qrCodeData) {
       try {
@@ -960,11 +971,13 @@ export async function POST(request: NextRequest) {
         console.error("QR code generation failed:", e);
       }
     }
-    requestStages.receiptPreparation = roundTimingMs(
-      performance.now() - receiptPreparationStartedAt
-    );
+    if (includeDebugTimings) {
+      requestStages.receiptPreparation = roundTimingMs(
+        performance.now() - receiptPreparationStartedAt
+      );
+    }
 
-    const responseBuildStartedAt = performance.now();
+    const responseBuildStartedAt = includeDebugTimings ? performance.now() : 0;
     const { transactionStages, ...responseResult } = result;
     const responsePayload = {
       ...responseResult,
@@ -982,21 +995,30 @@ export async function POST(request: NextRequest) {
         roundOffMode,
       },
     };
-    requestStages.responseBuild = roundTimingMs(performance.now() - responseBuildStartedAt);
-    const timings = {
-      requestTotalMs: roundTimingMs(performance.now() - requestStartedAt),
-      requestStages,
-      transactionStages,
-    };
+    const timings = includeDebugTimings
+      ? {
+          requestTotalMs: roundTimingMs(performance.now() - requestStartedAt),
+          requestStages: {
+            ...requestStages,
+            responseBuild: roundTimingMs(performance.now() - responseBuildStartedAt),
+          },
+          transactionStages,
+        }
+      : undefined;
 
-    console.info("[pos-checkout] completed", {
-      invoiceNumber: responseResult.invoice?.invoiceNumber,
-      itemCount: items.length,
-      paymentCount: payments.length,
-      timings,
-    });
+    if (timings) {
+      console.info("[pos-checkout] completed", {
+        invoiceNumber: responseResult.invoice?.invoiceNumber,
+        itemCount: items.length,
+        paymentCount: payments.length,
+        timings,
+      });
+    }
 
-    return NextResponse.json({ ...responsePayload, timings }, { status: 201 });
+    return NextResponse.json(
+      timings ? { ...responsePayload, timings } : responsePayload,
+      { status: 201 }
+    );
   } catch (error) {
     // Handle known business errors with appropriate status codes
     if (error instanceof AutoJournalEntryCreationError) {
@@ -1012,13 +1034,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error("POS checkout failed:", {
-      error,
-      timings: {
-        requestTotalMs: roundTimingMs(performance.now() - requestStartedAt),
-        requestStages,
-      },
-    });
+    if (includeDebugTimings) {
+      console.error("POS checkout failed:", {
+        error,
+        timings: {
+          requestTotalMs: roundTimingMs(performance.now() - requestStartedAt),
+          requestStages,
+        },
+      });
+    } else {
+      console.error("POS checkout failed:", error);
+    }
     return NextResponse.json(
       { error: "POS checkout failed" },
       { status: 500 }
