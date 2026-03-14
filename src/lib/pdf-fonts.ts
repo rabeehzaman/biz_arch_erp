@@ -1,14 +1,16 @@
 import { Font } from "@react-pdf/renderer";
+import path from "path";
 
-// Register Cairo font for Arabic text in PDFs
-const CAIRO_BASE = "https://cdn.jsdelivr.net/npm/@fontsource/cairo@5/files";
+// Register local Arial font for PDF rendering (supports Arabic text)
+const regularFontPath = path.join(process.cwd(), "public/fonts/Arial.ttf");
+const boldFontPath = path.join(process.cwd(), "public/fonts/Arial Bold.ttf");
 
 Font.register({
-  family: "Cairo",
+  family: "Arial",
   fonts: [
-    { src: `${CAIRO_BASE}/cairo-arabic-400-normal.woff`, fontWeight: 400 },
-    { src: `${CAIRO_BASE}/cairo-arabic-700-normal.woff`, fontWeight: 700 },
+    { src: regularFontPath, fontWeight: 400 },
+    { src: boldFontPath, fontWeight: 700 },
   ],
 });
 
-export const ARABIC_FONT_FAMILY = "Cairo";
+export const ARABIC_FONT_FAMILY = "Arial";
