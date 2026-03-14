@@ -85,7 +85,7 @@ export default function EditStockTransferPage({
                 if (!transferRes.ok) throw new Error("Transfer not found");
                 const transfer = await transferRes.json();
 
-                if (!["DRAFT", "APPROVED"].includes(transfer.status)) {
+                if (!["DRAFT", "APPROVED", "COMPLETED"].includes(transfer.status)) {
                     toast.error(t("inventory.cannotEditTransferStatus"));
                     router.push(`/inventory/stock-transfers/${id}`);
                     return;
@@ -239,7 +239,11 @@ export default function EditStockTransferPage({
                         <h1 className="text-2xl font-bold text-slate-900">
                             {t("inventory.editTransfer")} {transferNumber}
                         </h1>
-                        <p className="text-sm text-slate-500">{t("inventory.editTransferDescription")}</p>
+                        <p className="text-sm text-slate-500">
+                    {transferStatus === "COMPLETED"
+                        ? t("inventory.editCompletedTransferDescription")
+                        : t("inventory.editTransferDescription")}
+                </p>
                     </div>
                 </div>
 
@@ -440,9 +444,9 @@ export default function EditStockTransferPage({
                                         </p>
                                     </div>
                                 )}
-                                {transferStatus && (
+                                {transferStatus === "COMPLETED" && (
                                     <div className="border-t pt-3 text-xs text-amber-600 bg-amber-50 rounded p-2">
-                                        {t("inventory.editTransferWarning")}
+                                        {t("inventory.editCompletedTransferWarning")}
                                     </div>
                                 )}
                             </CardContent>

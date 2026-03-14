@@ -39,7 +39,7 @@ export async function GET(
     }
 }
 
-// PUT — edit a DRAFT or APPROVED transfer (no stock has moved yet)
+// PUT — edit a transfer (DRAFT/APPROVED: simple replace; COMPLETED: undo + redo FIFO)
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -57,15 +57,16 @@ export async function PUT(
 
         const transfer = await prisma.stockTransfer.findFirst({
             where: { id, organizationId },
+            include: { items: { include: { product: { select: { name: true } } } } },
         });
 
         if (!transfer) {
             return NextResponse.json({ error: "Stock transfer not found" }, { status: 404 });
         }
 
-        if (!["DRAFT", "APPROVED"].includes(transfer.status)) {
+        if (!["DRAFT", "APPROVED", "COMPLETED"].includes(transfer.status)) {
             return NextResponse.json(
-                { error: "Only DRAFT or APPROVED transfers can be edited" },
+                { error: "Only DRAFT, APPROVED, or COMPLETED transfers can be edited" },
                 { status: 400 }
             );
         }
@@ -95,6 +96,115 @@ export async function PUT(
             return NextResponse.json({ error: "Invalid warehouse selection" }, { status: 400 });
         }
 
+        const parsedDate = transferDate ? new Date(transferDate) : transfer.transferDate;
+
+        if (transfer.status === "COMPLETED") {
+            // For COMPLETED transfers: undo the original FIFO + dest lots, then re-apply with new values
+
+            // Guard: check destination lots haven't been partially consumed
+            for (const item of transfer.items) {
+                const destLots = await prisma.stockLot.findMany({
+                    where: {
+                        stockTransferId: id,
+                        warehouseId: transfer.destinationWarehouseId,
+                        productId: item.productId,
+                        sourceType: "STOCK_TRANSFER",
+                    },
+                });
+                const totalRemaining = destLots.reduce(
+                    (sum, lot) => sum.add(lot.remainingQuantity), new Decimal(0)
+                );
+                if (totalRemaining.lt(new Decimal(item.quantity))) {
+                    return NextResponse.json(
+                        { error: `Cannot edit: stock for "${item.product.name}" in the destination warehouse has already been consumed` },
+                        { status: 400 }
+                    );
+                }
+            }
+
+            const updated = await prisma.$transaction(async (tx) => {
+                // 1. Undo destination lots from original transfer
+                await tx.stockLot.updateMany({
+                    where: { stockTransferId: id, warehouseId: transfer.destinationWarehouseId, sourceType: "STOCK_TRANSFER" },
+                    data: { remainingQuantity: 0, initialQuantity: 0 },
+                });
+
+                // 2. Restore source warehouse stock from original FIFO consumptions
+                for (const item of transfer.items) {
+                    await restoreStockFromConsumptions(item.id, tx, "STOCK_TRANSFER");
+                }
+
+                // 3. Delete old items
+                await tx.stockTransferItem.deleteMany({ where: { stockTransferId: id } });
+
+                // 4. Update transfer header
+                await tx.stockTransfer.update({
+                    where: { id },
+                    data: {
+                        sourceWarehouseId,
+                        destinationWarehouseId,
+                        sourceBranchId: srcWarehouse.branchId,
+                        destinationBranchId: dstWarehouse.branchId,
+                        transferDate: parsedDate,
+                        notes: notes || null,
+                    },
+                });
+
+                // 5. Create new items with fresh FIFO consumption
+                for (const item of validItems) {
+                    const newItem = await tx.stockTransferItem.create({
+                        data: {
+                            productId: item.productId,
+                            quantity: new Decimal(item.quantity),
+                            unitCost: new Decimal(0),
+                            organizationId,
+                            stockTransferId: id,
+                            notes: item.notes || null,
+                        },
+                    });
+
+                    const fifoResult = await consumeStockFIFO(
+                        item.productId,
+                        new Decimal(item.quantity),
+                        newItem.id,
+                        parsedDate,
+                        tx,
+                        organizationId,
+                        sourceWarehouseId,
+                        "STOCK_TRANSFER"
+                    );
+
+                    const qty = new Decimal(item.quantity);
+                    const unitCost = qty.gt(0) ? fifoResult.totalCOGS.div(qty) : new Decimal(0);
+
+                    await tx.stockTransferItem.update({
+                        where: { id: newItem.id },
+                        data: { unitCost },
+                    });
+
+                    // 6. Create destination lot
+                    await tx.stockLot.create({
+                        data: {
+                            productId: item.productId,
+                            organizationId,
+                            sourceType: "STOCK_TRANSFER",
+                            stockTransferId: id,
+                            warehouseId: destinationWarehouseId,
+                            lotDate: parsedDate,
+                            unitCost,
+                            initialQuantity: qty,
+                            remainingQuantity: qty,
+                        },
+                    });
+                }
+
+                return tx.stockTransfer.findUniqueOrThrow({ where: { id } });
+            }, { timeout: 30000 });
+
+            return NextResponse.json(updated);
+        }
+
+        // DRAFT / APPROVED — no stock has moved, simple replace
         const updated = await prisma.$transaction(async (tx) => {
             await tx.stockTransferItem.deleteMany({ where: { stockTransferId: id } });
 
@@ -105,7 +215,7 @@ export async function PUT(
                     destinationWarehouseId,
                     sourceBranchId: srcWarehouse.branchId,
                     destinationBranchId: dstWarehouse.branchId,
-                    transferDate: transferDate ? new Date(transferDate) : transfer.transferDate,
+                    transferDate: parsedDate,
                     notes: notes || null,
                     items: {
                         create: validItems.map((item) => ({

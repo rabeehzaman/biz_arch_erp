@@ -188,7 +188,7 @@ export default function StockTransferDetailPage({
                     </div>
 
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-                        {["DRAFT", "APPROVED"].includes(transfer.status) && (
+                        {["DRAFT", "APPROVED", "COMPLETED"].includes(transfer.status) && (
                             <Button variant="outline" asChild className="w-full sm:w-auto">
                                 <Link href={`/inventory/stock-transfers/${transfer.id}/edit`}>
                                     <Pencil className="mr-2 h-4 w-4" />
