@@ -801,11 +801,6 @@ function POSTerminalContent() {
       setMobileView("products");
       await Promise.all([mutateSession(), mutateHeldOrders(), mutateProducts()]);
 
-      if (change > 0) {
-        toast.success(
-          `Sale complete! Change: ${fmt(change)}`
-        );
-      }
 
       // Auto-print receipt (fire-and-forget)
       if (receiptPrintingEnabled && !isElectronEnvironment()) {
