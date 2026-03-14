@@ -57,7 +57,7 @@ const STATUS_LABELS_AR: Record<string, string> = {
 };
 
 const CURRENCY_CONFIG: Record<string, { symbol: string; locale: string }> = {
-  INR: { symbol: "₹", locale: "en-IN" },
+  INR: { symbol: "Rs ", locale: "en-IN" },
   SAR: { symbol: "SAR ", locale: "en-US" },
 };
 
@@ -87,13 +87,31 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 20,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#cbd5e1",
+  },
+  documentBlock: {
+    width: "42%",
+  },
+  documentLabel: {
+    fontSize: 9,
+    color: "#64748b",
+    marginBottom: 4,
+  },
+  documentNumber: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#0f172a",
+    marginBottom: 4,
+  },
+  documentMeta: {
+    fontSize: 10,
+    color: "#475569",
   },
   organizationBlock: {
     width: "48%",
@@ -111,30 +129,8 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     color: "#475569",
     textAlign: "right",
   },
-  documentBlock: {
-    width: "42%",
-    alignItems: "flex-start",
-  },
-  documentLabel: {
-    fontSize: 9,
-    color: "#64748b",
-    marginBottom: 4,
-    textAlign: "left",
-  },
-  documentNumber: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0f172a",
-    marginBottom: 4,
-    textAlign: "left",
-  },
-  documentMeta: {
-    fontSize: 10,
-    color: "#475569",
-    textAlign: "left",
-  },
   cardGrid: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 18,
   },
@@ -173,7 +169,6 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     color: "#ffffff",
     fontSize: 9,
     fontWeight: "bold",
-    textAlign: "right",
   },
   milestoneSection: {
     marginBottom: 18,
@@ -186,7 +181,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     textAlign: "right",
   },
   milestoneRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     flexWrap: "wrap",
     marginHorizontal: -4,
   },
@@ -219,7 +214,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     marginBottom: 18,
   },
   tableHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     backgroundColor: brandColor,
     paddingVertical: 8,
     paddingHorizontal: 8,
@@ -231,7 +226,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     textAlign: "right",
   },
   tableRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 8,
     borderTopWidth: 1,
@@ -239,48 +234,42 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   tableRowAlt: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 8,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
     backgroundColor: "#f8fafc",
   },
-  colIndex: {
-    width: "7%",
-    textAlign: "right",
-  },
-  colProduct: {
-    width: "39%",
-    paddingLeft: 8,
-    alignItems: "flex-end",
-  },
-  colSku: {
-    width: "16%",
-    paddingLeft: 8,
-    textAlign: "right",
-  },
-  colQty: {
-    width: "10%",
-    textAlign: "left",
+  // Arabic table: columns ordered right-to-left visually
+  // In LTR flex-row the order below is what appears left → right on page
+  colLineTotal: {
+    width: "14%",
   },
   colUnitCost: {
     width: "14%",
-    textAlign: "left",
+    paddingRight: 4,
   },
-  colLineTotal: {
-    width: "14%",
-    textAlign: "left",
+  colQty: {
+    width: "10%",
+    paddingRight: 4,
+  },
+  colSku: {
+    width: "16%",
+    paddingRight: 8,
+  },
+  colProduct: {
+    width: "39%",
+    paddingRight: 8,
+  },
+  colIndex: {
+    width: "7%",
+    textAlign: "right",
   },
   cellText: {
     fontSize: 9,
     color: "#0f172a",
     textAlign: "right",
-  },
-  cellTextLeft: {
-    fontSize: 9,
-    color: "#0f172a",
-    textAlign: "left",
   },
   productName: {
     fontSize: 9,
@@ -301,31 +290,9 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     textAlign: "center",
   },
   footerGrid: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "stretch",
-  },
-  notesBox: {
-    width: "58%",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 6,
-    padding: 10,
-    minHeight: 96,
-    alignItems: "flex-end",
-  },
-  notesLabel: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: brandColor,
-    marginBottom: 6,
-    textAlign: "right",
-  },
-  notesText: {
-    fontSize: 9,
-    color: "#475569",
-    lineHeight: 1.45,
-    textAlign: "right",
   },
   summaryBox: {
     width: "38%",
@@ -343,7 +310,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     textAlign: "right",
   },
   summaryRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 6,
   },
@@ -356,12 +323,32 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     fontSize: 9,
     color: "#0f172a",
     fontWeight: "bold",
-    textAlign: "left",
   },
   summaryDivider: {
     marginVertical: 4,
     borderTopWidth: 1,
     borderTopColor: "#cbd5e1",
+  },
+  notesBox: {
+    width: "58%",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    padding: 10,
+    minHeight: 96,
+  },
+  notesLabel: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: brandColor,
+    marginBottom: 6,
+    textAlign: "right",
+  },
+  notesText: {
+    fontSize: 9,
+    color: "#475569",
+    lineHeight: 1.45,
+    textAlign: "right",
   },
   footer: {
     marginTop: 18,
@@ -381,7 +368,7 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
 
   const totalQuantity = transfer.items.reduce((sum, item) => sum + item.quantity, 0);
   const totalValue = transfer.items.reduce(
-    (sum, item) => sum + (item.quantity * item.unitCost),
+    (sum, item) => sum + item.quantity * item.unitCost,
     0
   );
 
@@ -392,7 +379,7 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
     { label: "تاريخ الاكتمال", value: transfer.completedAt ?? null },
     { label: "تاريخ الإلغاء", value: transfer.cancelledAt ?? null },
     { label: "تاريخ العكس", value: transfer.reversedAt ?? null },
-  ].filter((m) => m.value);
+  ].filter((m) => m.value != null);
 
   const displayOrgName = organization.arabicName || organization.name;
   const displayOrgSubName = organization.arabicName ? organization.name : null;
@@ -400,15 +387,8 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
+        {/* Header: doc block on left, org block on right */}
         <View style={styles.header}>
-          <View style={styles.organizationBlock}>
-            <Text style={styles.organizationName}>{displayOrgName}</Text>
-            {displayOrgSubName && (
-              <Text style={styles.organizationSubName}>{displayOrgSubName}</Text>
-            )}
-          </View>
-
           <View style={styles.documentBlock}>
             <Text style={styles.documentLabel}>أمر تحويل</Text>
             <Text style={styles.documentNumber}>{transfer.transferNumber}</Text>
@@ -416,9 +396,15 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
               {format(new Date(transfer.transferDate), "dd MMM yyyy")}
             </Text>
           </View>
+          <View style={styles.organizationBlock}>
+            <Text style={styles.organizationName}>{displayOrgName}</Text>
+            {displayOrgSubName && (
+              <Text style={styles.organizationSubName}>{displayOrgSubName}</Text>
+            )}
+          </View>
         </View>
 
-        {/* Status / From / To cards */}
+        {/* Status / To / From cards — RTL order: status on left, to in middle, from on right */}
         <View style={styles.cardGrid}>
           <View style={styles.card}>
             <Text style={styles.cardLabel}>الحالة</Text>
@@ -426,17 +412,15 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
               {STATUS_LABELS_AR[transfer.status] || transfer.status.replace(/_/g, " ")}
             </Text>
           </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>من</Text>
-            <Text style={styles.cardValue}>{transfer.sourceWarehouse.name}</Text>
-            <Text style={styles.cardSubValue}>{transfer.sourceBranch.name}</Text>
-          </View>
-
           <View style={styles.card}>
             <Text style={styles.cardLabel}>إلى</Text>
             <Text style={styles.cardValue}>{transfer.destinationWarehouse.name}</Text>
             <Text style={styles.cardSubValue}>{transfer.destinationBranch.name}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>من</Text>
+            <Text style={styles.cardValue}>{transfer.sourceWarehouse.name}</Text>
+            <Text style={styles.cardSubValue}>{transfer.sourceBranch.name}</Text>
           </View>
         </View>
 
@@ -457,16 +441,16 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
           </View>
         )}
 
-        {/* Items table */}
+        {/* Items table — columns rendered right-to-left: index(right) … line total(left) */}
         <Text style={styles.sectionTitle}>البنود</Text>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.colIndex]}>#</Text>
-            <Text style={[styles.tableHeaderText, styles.colProduct]}>المنتج</Text>
-            <Text style={[styles.tableHeaderText, styles.colSku]}>رمز المنتج</Text>
-            <Text style={[styles.tableHeaderText, styles.colQty]}>الكمية</Text>
-            <Text style={[styles.tableHeaderText, styles.colUnitCost]}>تكلفة الوحدة</Text>
             <Text style={[styles.tableHeaderText, styles.colLineTotal]}>الإجمالي</Text>
+            <Text style={[styles.tableHeaderText, styles.colUnitCost]}>تكلفة الوحدة</Text>
+            <Text style={[styles.tableHeaderText, styles.colQty]}>الكمية</Text>
+            <Text style={[styles.tableHeaderText, styles.colSku]}>رمز المنتج</Text>
+            <Text style={[styles.tableHeaderText, styles.colProduct]}>المنتج</Text>
+            <Text style={[styles.tableHeaderText, styles.colIndex]}>#</Text>
           </View>
 
           {transfer.items.length === 0 ? (
@@ -478,9 +462,22 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
                 style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}
                 wrap={false}
               >
-                <Text style={[styles.cellText, styles.colIndex]}>{index + 1}</Text>
+                <Text style={[styles.cellText, styles.colLineTotal]}>
+                  {formatAmount(item.quantity * item.unitCost, currency)}
+                </Text>
+                <Text style={[styles.cellText, styles.colUnitCost]}>
+                  {formatAmount(item.unitCost, currency)}
+                </Text>
+                <Text style={[styles.cellText, styles.colQty]}>
+                  {item.quantity.toLocaleString("en-IN", {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })}
+                </Text>
+                <Text style={[styles.cellText, styles.colSku]}>
+                  {item.product.sku || "-"}
+                </Text>
                 <View style={styles.colProduct}>
-                  {/* Arabic name primary, English as subtext */}
                   <Text style={styles.productName}>
                     {item.product.arabicName && item.product.arabicName !== item.product.name
                       ? item.product.arabicName
@@ -493,58 +490,45 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
                     <Text style={styles.productSubtext}>{item.notes}</Text>
                   )}
                 </View>
-                <Text style={[styles.cellText, styles.colSku]}>{item.product.sku || "-"}</Text>
-                <Text style={[styles.cellTextLeft, styles.colQty]}>
-                  {item.quantity.toLocaleString("en-IN", {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2,
-                  })}
-                </Text>
-                <Text style={[styles.cellTextLeft, styles.colUnitCost]}>
-                  {formatAmount(item.unitCost, currency)}
-                </Text>
-                <Text style={[styles.cellTextLeft, styles.colLineTotal]}>
-                  {formatAmount(item.quantity * item.unitCost, currency)}
-                </Text>
+                <Text style={[styles.cellText, styles.colIndex]}>{index + 1}</Text>
               </View>
             ))
           )}
         </View>
 
-        {/* Footer: Notes + Summary */}
+        {/* Footer: summary on left, notes on right */}
         <View style={styles.footerGrid}>
-          <View style={styles.notesBox}>
-            <Text style={styles.notesLabel}>ملاحظات</Text>
-            <Text style={styles.notesText}>
-              {transfer.notes?.trim() || "لا توجد ملاحظات إضافية لهذا التحويل."}
-            </Text>
-          </View>
-
           <View style={styles.summaryBox}>
             <Text style={styles.summaryTitle}>الملخص</Text>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>البنود</Text>
               <Text style={styles.summaryValue}>{transfer.items.length}</Text>
+              <Text style={styles.summaryLabel}>البنود</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>إجمالي الكمية</Text>
               <Text style={styles.summaryValue}>
                 {totalQuantity.toLocaleString("en-IN", {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 2,
                 })}
               </Text>
+              <Text style={styles.summaryLabel}>إجمالي الكمية</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>قيمة التحويل</Text>
               <Text style={styles.summaryValue}>{formatAmount(totalValue, currency)}</Text>
+              <Text style={styles.summaryLabel}>قيمة التحويل</Text>
             </View>
+          </View>
+          <View style={styles.notesBox}>
+            <Text style={styles.notesLabel}>ملاحظات</Text>
+            <Text style={styles.notesText}>
+              {transfer.notes?.trim() || "لا توجد ملاحظات إضافية لهذا التحويل."}
+            </Text>
           </View>
         </View>
 
         <Text style={styles.footer}>
-          صدر بتاريخ {format(new Date(), "dd MMM yyyy, hh:mm a")}
+          {"صدر بتاريخ "}{format(new Date(), "dd MMM yyyy, hh:mm a")}
         </Text>
       </Page>
     </Document>

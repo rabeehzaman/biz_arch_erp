@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Download, Loader2, Printer, RotateCcw } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Pencil, Printer, RotateCcw } from "lucide-react";
 
 interface TransferItem {
     id: string;
@@ -188,6 +188,14 @@ export default function StockTransferDetailPage({
                     </div>
 
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+                        {["DRAFT", "APPROVED"].includes(transfer.status) && (
+                            <Button variant="outline" asChild className="w-full sm:w-auto">
+                                <Link href={`/inventory/stock-transfers/${transfer.id}/edit`}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {t("common.edit")}
+                                </Link>
+                            </Button>
+                        )}
                         {transfer.status === "COMPLETED" && (
                             <Button
                                 variant="outline"

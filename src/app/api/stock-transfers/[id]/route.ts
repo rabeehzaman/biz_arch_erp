@@ -39,6 +39,94 @@ export async function GET(
     }
 }
 
+// PUT — edit a DRAFT or APPROVED transfer (no stock has moved yet)
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const session = await auth();
+        if (!session?.user?.organizationId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { id } = await params;
+        const organizationId = session.user.organizationId;
+        const body = await request.json();
+        const { sourceWarehouseId, destinationWarehouseId, transferDate, notes, items } = body;
+
+        const transfer = await prisma.stockTransfer.findFirst({
+            where: { id, organizationId },
+        });
+
+        if (!transfer) {
+            return NextResponse.json({ error: "Stock transfer not found" }, { status: 404 });
+        }
+
+        if (!["DRAFT", "APPROVED"].includes(transfer.status)) {
+            return NextResponse.json(
+                { error: "Only DRAFT or APPROVED transfers can be edited" },
+                { status: 400 }
+            );
+        }
+
+        if (!sourceWarehouseId || !destinationWarehouseId) {
+            return NextResponse.json({ error: "Source and destination warehouses are required" }, { status: 400 });
+        }
+
+        if (sourceWarehouseId === destinationWarehouseId) {
+            return NextResponse.json({ error: "Source and destination warehouses must be different" }, { status: 400 });
+        }
+
+        const validItems: Array<{ productId: string; quantity: number; notes?: string }> =
+            Array.isArray(items) ? items.filter((i: any) => i.productId && Number(i.quantity) > 0) : [];
+
+        if (validItems.length === 0) {
+            return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
+        }
+
+        // Look up branch IDs from warehouses
+        const [srcWarehouse, dstWarehouse] = await Promise.all([
+            prisma.warehouse.findUnique({ where: { id: sourceWarehouseId }, select: { branchId: true } }),
+            prisma.warehouse.findUnique({ where: { id: destinationWarehouseId }, select: { branchId: true } }),
+        ]);
+
+        if (!srcWarehouse || !dstWarehouse) {
+            return NextResponse.json({ error: "Invalid warehouse selection" }, { status: 400 });
+        }
+
+        const updated = await prisma.$transaction(async (tx) => {
+            await tx.stockTransferItem.deleteMany({ where: { stockTransferId: id } });
+
+            return tx.stockTransfer.update({
+                where: { id },
+                data: {
+                    sourceWarehouseId,
+                    destinationWarehouseId,
+                    sourceBranchId: srcWarehouse.branchId,
+                    destinationBranchId: dstWarehouse.branchId,
+                    transferDate: transferDate ? new Date(transferDate) : transfer.transferDate,
+                    notes: notes || null,
+                    items: {
+                        create: validItems.map((item) => ({
+                            productId: item.productId,
+                            quantity: new Decimal(item.quantity),
+                            unitCost: new Decimal(0),
+                            organizationId,
+                            notes: item.notes || null,
+                        })),
+                    },
+                },
+            });
+        });
+
+        return NextResponse.json(updated);
+    } catch (error) {
+        console.error("Failed to update stock transfer:", error);
+        return NextResponse.json({ error: "Failed to update stock transfer" }, { status: 500 });
+    }
+}
+
 // PATCH — status transitions: approve, ship, complete, cancel, reverse
 export async function PATCH(
     request: NextRequest,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -37,13 +37,18 @@ interface FormItem {
     quantity: number;
 }
 
-export default function NewStockTransferPage() {
+export default function EditStockTransferPage({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = use(params);
     const router = useRouter();
     const { t, tt } = useLanguage();
 
     const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
-    const [loadingWarehouses, setLoadingWarehouses] = useState(true);
+    const [loadingPage, setLoadingPage] = useState(true);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -52,20 +57,8 @@ export default function NewStockTransferPage() {
     const [transferDate, setTransferDate] = useState(new Date().toISOString().slice(0, 10));
     const [notes, setNotes] = useState("");
     const [items, setItems] = useState<FormItem[]>([{ productId: "", quantity: 1 }]);
-
-    const fetchWarehouses = useCallback(async () => {
-        setLoadingWarehouses(true);
-        try {
-            const res = await fetch("/api/warehouses");
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-            setWarehouses(data.filter((w: Warehouse) => w.isActive));
-        } catch {
-            toast.error(t("inventory.failedToLoadWarehouses"));
-        } finally {
-            setLoadingWarehouses(false);
-        }
-    }, [t]);
+    const [transferStatus, setTransferStatus] = useState("");
+    const [transferNumber, setTransferNumber] = useState("");
 
     const fetchProducts = useCallback(async (warehouseId: string) => {
         setLoadingProducts(true);
@@ -82,16 +75,60 @@ export default function NewStockTransferPage() {
     }, [t]);
 
     useEffect(() => {
-        fetchWarehouses();
-    }, [fetchWarehouses]);
+        const load = async () => {
+            try {
+                const [transferRes, warehousesRes] = await Promise.all([
+                    fetch(`/api/stock-transfers/${id}`),
+                    fetch("/api/warehouses"),
+                ]);
+
+                if (!transferRes.ok) throw new Error("Transfer not found");
+                const transfer = await transferRes.json();
+
+                if (!["DRAFT", "APPROVED"].includes(transfer.status)) {
+                    toast.error(t("inventory.cannotEditTransferStatus"));
+                    router.push(`/inventory/stock-transfers/${id}`);
+                    return;
+                }
+
+                const warehouseData = await warehousesRes.json();
+                setWarehouses(warehouseData.filter((w: Warehouse) => w.isActive));
+
+                setTransferStatus(transfer.status);
+                setTransferNumber(transfer.transferNumber);
+                setSourceWarehouseId(transfer.sourceWarehouse.id);
+                setDestinationWarehouseId(transfer.destinationWarehouse.id);
+                setTransferDate(transfer.transferDate.slice(0, 10));
+                setNotes(transfer.notes || "");
+                setItems(
+                    transfer.items.length > 0
+                        ? [
+                            ...transfer.items.map((item: any) => ({
+                                productId: item.product.id,
+                                quantity: Number(item.quantity),
+                            })),
+                            { productId: "", quantity: 1 }, // trailing empty row
+                          ]
+                        : [{ productId: "", quantity: 1 }]
+                );
+
+                // Load products for source warehouse
+                await fetchProducts(transfer.sourceWarehouse.id);
+            } catch {
+                toast.error(t("inventory.failedToLoadStockTransfers"));
+                router.push("/inventory/stock-transfers");
+            } finally {
+                setLoadingPage(false);
+            }
+        };
+        load();
+    }, [id, router, t, fetchProducts]);
 
     useEffect(() => {
-        if (sourceWarehouseId) {
+        if (sourceWarehouseId && !loadingPage) {
             fetchProducts(sourceWarehouseId);
-        } else {
-            setProducts([]);
         }
-    }, [sourceWarehouseId, fetchProducts]);
+    }, [sourceWarehouseId, loadingPage, fetchProducts]);
 
     const handleSourceWarehouseChange = (value: string) => {
         setSourceWarehouseId(value);
@@ -104,6 +141,7 @@ export default function NewStockTransferPage() {
     };
 
     const removeItem = (index: number) => {
+        if (items.length <= 1) return;
         setItems((prev) => prev.filter((_, i) => i !== index));
     };
 
@@ -150,8 +188,8 @@ export default function NewStockTransferPage() {
 
         setSaving(true);
         try {
-            const res = await fetch("/api/stock-transfers", {
-                method: "POST",
+            const res = await fetch(`/api/stock-transfers/${id}`, {
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     sourceWarehouseId,
@@ -167,9 +205,8 @@ export default function NewStockTransferPage() {
                 throw new Error(typeof data.error === "string" ? tt(data.error) : t("inventory.failedToCompleteTransfer"));
             }
 
-            const created = await res.json();
-            toast.success(t("inventory.stockTransferCompleted"));
-            router.push(`/inventory/stock-transfers/${created.id}`);
+            toast.success(t("inventory.transferUpdated"));
+            router.push(`/inventory/stock-transfers/${id}`);
         } catch (error) {
             toast.error(error instanceof Error ? error.message : t("inventory.failedToCompleteTransfer"));
         } finally {
@@ -180,86 +217,88 @@ export default function NewStockTransferPage() {
     const totalItems = items.filter((i) => i.productId && i.quantity > 0).length;
     const totalQuantity = items.reduce((sum, i) => (i.productId ? sum + (Number(i.quantity) || 0) : sum), 0);
 
+    if (loadingPage) {
+        return (
+            <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+            </div>
+        );
+    }
+
     return (
         <PageAnimation>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild className="h-9 w-9 shrink-0 rounded-full">
-                        <Link href="/inventory/stock-transfers">
+                        <Link href={`/inventory/stock-transfers/${id}`}>
                             <ArrowLeft className="h-5 w-5" />
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">{t("inventory.newStockTransfer")}</h1>
-                        <p className="text-sm text-slate-500">{t("inventory.newStockTransferDescription")}</p>
+                        <h1 className="text-2xl font-bold text-slate-900">
+                            {t("inventory.editTransfer")} {transferNumber}
+                        </h1>
+                        <p className="text-sm text-slate-500">{t("inventory.editTransferDescription")}</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Main form */}
                     <div className="space-y-6 lg:col-span-2">
-                        {/* Warehouses + Date */}
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-base">{t("inventory.transferDetails")}</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {loadingWarehouses ? (
-                                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        {t("inventory.loadingWarehouses")}
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>{t("inventory.sourceWarehouseLabel")} *</Label>
+                                        <Select value={sourceWarehouseId} onValueChange={handleSourceWarehouseChange}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={t("inventory.selectSourceWarehouse")} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {warehouses.map((w) => (
+                                                    <SelectItem key={w.id} value={w.id}>
+                                                        {w.branch.name} {"→"} {w.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label>{t("inventory.sourceWarehouseLabel")} *</Label>
-                                            <Select value={sourceWarehouseId} onValueChange={handleSourceWarehouseChange}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder={t("inventory.selectSourceWarehouse")} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {warehouses.map((w) => (
+
+                                    <div className="space-y-2">
+                                        <Label>{t("inventory.destinationWarehouseLabel")} *</Label>
+                                        <Select
+                                            value={destinationWarehouseId}
+                                            onValueChange={setDestinationWarehouseId}
+                                            disabled={!sourceWarehouseId}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={t("inventory.selectDestinationWarehouse")} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {warehouses
+                                                    .filter((w) => w.id !== sourceWarehouseId)
+                                                    .map((w) => (
                                                         <SelectItem key={w.id} value={w.id}>
                                                             {w.branch.name} {"→"} {w.name}
                                                         </SelectItem>
                                                     ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>{t("inventory.destinationWarehouseLabel")} *</Label>
-                                            <Select
-                                                value={destinationWarehouseId}
-                                                onValueChange={setDestinationWarehouseId}
-                                                disabled={!sourceWarehouseId}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder={t("inventory.selectDestinationWarehouse")} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {warehouses
-                                                        .filter((w) => w.id !== sourceWarehouseId)
-                                                        .map((w) => (
-                                                            <SelectItem key={w.id} value={w.id}>
-                                                                {w.branch.name} {"→"} {w.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>{t("common.date")}</Label>
-                                            <Input
-                                                type="date"
-                                                value={transferDate}
-                                                onChange={(e) => setTransferDate(e.target.value)}
-                                            />
-                                        </div>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                )}
+
+                                    <div className="space-y-2">
+                                        <Label>{t("common.date")}</Label>
+                                        <Input
+                                            type="date"
+                                            value={transferDate}
+                                            onChange={(e) => setTransferDate(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
 
                                 <div className="space-y-2">
                                     <Label>{t("common.notes")}</Label>
@@ -273,7 +312,6 @@ export default function NewStockTransferPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Items */}
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle className="text-base">{t("inventory.itemsLabel")} *</CardTitle>
@@ -365,7 +403,7 @@ export default function NewStockTransferPage() {
                         </Card>
                     </div>
 
-                    {/* Sidebar summary */}
+                    {/* Sidebar */}
                     <div className="space-y-4">
                         <Card>
                             <CardHeader>
@@ -402,16 +440,21 @@ export default function NewStockTransferPage() {
                                         </p>
                                     </div>
                                 )}
+                                {transferStatus && (
+                                    <div className="border-t pt-3 text-xs text-amber-600 bg-amber-50 rounded p-2">
+                                        {t("inventory.editTransferWarning")}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 
                         <div className="flex flex-col gap-2">
                             <Button onClick={handleSubmit} disabled={saving} className="w-full">
                                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {t("inventory.completeTransfer")}
+                                {t("inventory.saveTransfer")}
                             </Button>
                             <Button variant="outline" asChild className="w-full">
-                                <Link href="/inventory/stock-transfers">
+                                <Link href={`/inventory/stock-transfers/${id}`}>
                                     {t("common.cancel")}
                                 </Link>
                             </Button>
