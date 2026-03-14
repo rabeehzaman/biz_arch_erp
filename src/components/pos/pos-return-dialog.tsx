@@ -44,7 +44,7 @@ interface POSProduct {
   price: number;
   gstRate: number;
   hsnCode: string | null;
-  stockQuantity: number;
+  stockQuantity: number | null;
 }
 
 interface Customer {
@@ -64,6 +64,7 @@ interface POSReturnDialogProps {
   companySettings?: Record<string, string | undefined>;
   receiptPrintingEnabled?: boolean;
   isSaudiOrg?: boolean;
+  isTaxInclusive?: boolean;
 }
 
 type Step = "items" | "confirm" | "success";
@@ -79,6 +80,7 @@ export function POSReturnDialog({
   companySettings,
   receiptPrintingEnabled,
   isSaudiOrg,
+  isTaxInclusive,
 }: POSReturnDialogProps) {
   const { fmt } = useCurrency();
   const { t } = useLanguage();
@@ -165,6 +167,21 @@ export function POSReturnDialog({
   }, []);
 
   const totals = useMemo(() => {
+    if (isTaxInclusive) {
+      // Prices already include tax — back-calculate
+      const subtotal = returnItems.reduce((sum, i) => {
+        const gross = i.quantity * i.unitPrice;
+        const rate = i.gstRate || 0;
+        return sum + (rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross);
+      }, 0);
+      const taxAmount = returnItems.reduce((sum, i) => {
+        const gross = i.quantity * i.unitPrice;
+        const rate = i.gstRate || 0;
+        const base = rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross;
+        return sum + (base * rate) / 100;
+      }, 0);
+      return { subtotal, taxAmount, total: subtotal + taxAmount };
+    }
     const subtotal = returnItems.reduce(
       (sum, i) => sum + i.quantity * i.unitPrice,
       0
@@ -174,7 +191,7 @@ export function POSReturnDialog({
       0
     );
     return { subtotal, taxAmount, total: subtotal + taxAmount };
-  }, [returnItems]);
+  }, [returnItems, isTaxInclusive]);
 
   const processReturn = async () => {
     if (returnItems.length === 0) return;
@@ -241,6 +258,7 @@ export function POSReturnDialog({
         isReturn: true,
         brandColor: companySettings?.brandColor,
         currency: companySettings?.currency,
+        isTaxInclusivePrice: isTaxInclusive,
       };
       setLastReturnReceiptData(receiptData);
 

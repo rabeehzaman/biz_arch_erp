@@ -75,6 +75,10 @@ interface POSSessionData {
   warehouse?: { id: string; name: string; code: string } | null;
 }
 
+interface CurrentSessionResponse {
+  session: POSSessionData | null;
+}
+
 interface POSProduct {
   id: string;
   name: string;
@@ -83,10 +87,12 @@ interface POSProduct {
   price: number;
   gstRate: number;
   hsnCode: string | null;
-  stockQuantity: number;
+  stockQuantity: number | null;
   categoryId: string | null;
   category: { id: string; name: string; slug: string; color: string | null } | null;
   weighMachineCode: string | null;
+  isService?: boolean;
+  isBundle?: boolean;
 }
 
 interface Category {
@@ -111,6 +117,12 @@ interface Customer {
   id: string;
   name: string;
   phone: string | null;
+}
+
+interface CheckoutTimingPayload {
+  requestTotalMs: number;
+  requestStages: Record<string, number>;
+  transactionStages: Record<string, number>;
 }
 
 type CartAction =
@@ -178,6 +190,10 @@ function parseAmountInput(rawValue: string) {
   return parseFloat(normalizeAmountInput(rawValue) || "0") || 0;
 }
 
+function roundTimingMs(value: number) {
+  return Number(value.toFixed(2));
+}
+
 function buildCartState(items: CartItemData[], previousRevision = -1): CartState {
   return {
     items,
@@ -212,7 +228,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           price: Number(product.price),
           quantity: quantity ?? 1,
           discount: 0,
-          stockQuantity: product.stockQuantity,
+          stockQuantity: product.stockQuantity ?? 0,
           gstRate: Number(product.gstRate) || 0,
           hsnCode: product.hsnCode || undefined,
         },
@@ -256,7 +272,7 @@ function POSTerminalContent() {
   const sessionUrl = sessionId
     ? `/api/pos/sessions/current?sessionId=${sessionId}`
     : "/api/pos/sessions/current";
-  const { data: sessionData, mutate: mutateSession, isLoading: sessionLoading } = useSWR(
+  const { data: sessionData, mutate: mutateSession, isLoading: sessionLoading } = useSWR<CurrentSessionResponse>(
     sessionUrl,
     fetcher
   );
@@ -596,6 +612,83 @@ function POSTerminalContent() {
     setMobileView("products");
   }, []);
 
+  const applyOptimisticCheckoutUpdates = useCallback(
+    (completedCart: CartItemData[], completedTotal: number, completedHeldOrderId: string | null) => {
+      void mutateSession(
+        (current?: CurrentSessionResponse) => {
+          if (!current?.session) {
+            return current;
+          }
+
+          return {
+            ...current,
+            session: {
+              ...current.session,
+              totalSales: roundCurrency(Number(current.session.totalSales || 0) + completedTotal),
+              totalTransactions: Number(current.session.totalTransactions || 0) + 1,
+            },
+          };
+        },
+        { revalidate: false }
+      );
+
+      if (completedHeldOrderId) {
+        void mutateHeldOrders(
+          (current: HeldOrder[] | undefined) =>
+            current?.filter((order) => order.id !== completedHeldOrderId),
+          { revalidate: false }
+        );
+      }
+
+      void mutateProducts(
+        (currentProducts: POSProduct[] | undefined) => {
+          if (!currentProducts || completedCart.length === 0) {
+            return currentProducts;
+          }
+
+          const soldQuantities = completedCart.reduce<Record<string, number>>((acc, item) => {
+            acc[item.productId] = (acc[item.productId] || 0) + Number(item.quantity);
+            return acc;
+          }, {});
+
+          return currentProducts.map((product) => {
+            const soldQuantity = soldQuantities[product.id];
+            if (
+              !soldQuantity ||
+              product.stockQuantity == null ||
+              product.isBundle ||
+              product.isService
+            ) {
+              return product;
+            }
+
+            return {
+              ...product,
+              stockQuantity: Math.max(0, Number(product.stockQuantity) - soldQuantity),
+            };
+          });
+        },
+        { revalidate: false }
+      );
+    },
+    [mutateHeldOrders, mutateProducts, mutateSession]
+  );
+
+  const revalidateCheckoutDataInBackground = useCallback(() => {
+    void Promise.allSettled([mutateSession(), mutateHeldOrders(), mutateProducts()]).then((results) => {
+      const rejected = results.filter(
+        (result): result is PromiseRejectedResult => result.status === "rejected"
+      );
+
+      if (rejected.length > 0) {
+        console.error(
+          "[pos-checkout] Background revalidation failed",
+          rejected.map((result) => result.reason)
+        );
+      }
+    });
+  }, [mutateHeldOrders, mutateProducts, mutateSession]);
+
   // ── Session Handlers ───────────────────────────────────────────────
 
   const closeSession = async () => {
@@ -688,12 +781,14 @@ function POSTerminalContent() {
   // ── Checkout ───────────────────────────────────────────────────────
 
   const handleCheckout = async (payments: PaymentEntry[]) => {
+    const checkoutStartedAt = performance.now();
     setIsProcessing(true);
 
     // Open cash drawer immediately on checkout (no delay)
     openCashDrawerIfEnabled();
 
     try {
+      const requestStartedAt = performance.now();
       const res = await fetch("/api/pos/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -718,6 +813,7 @@ function POSTerminalContent() {
           notes: undefined,
         }),
       });
+      const responseReceivedAt = performance.now();
 
       if (!res.ok) {
         const data = await res.json();
@@ -725,8 +821,13 @@ function POSTerminalContent() {
       }
 
       const result = await res.json();
+      const responseParsedAt = performance.now();
       const change = result.change || 0;
       const receiptMeta = result.receiptMeta;
+      const serverTimings = result.timings as CheckoutTimingPayload | undefined;
+      const completedCart = cart;
+      const completedHeldOrderId = heldOrderId;
+      const completedTotal = Number(result.invoice?.total) || cartTotals.total;
 
       // Build receipt data before clearing cart
       const receiptData: ReceiptData = {
@@ -796,11 +897,32 @@ function POSTerminalContent() {
         }
       }
 
+      applyOptimisticCheckoutUpdates(completedCart, completedTotal, completedHeldOrderId);
       clearCart();
       setView("cart");
       setMobileView("products");
-      await Promise.all([mutateSession(), mutateHeldOrders(), mutateProducts()]);
+      revalidateCheckoutDataInBackground();
 
+      const syncSuccessWorkMs = roundTimingMs(performance.now() - responseParsedAt);
+      const clientTimings = {
+        apiRoundTripMs: roundTimingMs(responseReceivedAt - requestStartedAt),
+        responseParseMs: roundTimingMs(responseParsedAt - responseReceivedAt),
+        syncSuccessWorkMs,
+        itemCount: completedCart.length,
+        paymentCount: payments.length,
+        serverRequestTotalMs: serverTimings?.requestTotalMs ?? null,
+      };
+
+      if (serverTimings) {
+        console.info("[pos-checkout] server timings", serverTimings);
+      }
+
+      requestAnimationFrame(() => {
+        console.info("[pos-checkout] client timings", {
+          ...clientTimings,
+          nextPaintMs: roundTimingMs(performance.now() - checkoutStartedAt),
+        });
+      });
 
       // Auto-print receipt (fire-and-forget)
       if (receiptPrintingEnabled && !isElectronEnvironment()) {
@@ -1128,6 +1250,7 @@ function POSTerminalContent() {
         companySettings={companySettings}
         receiptPrintingEnabled={receiptPrintingEnabled}
         isSaudiOrg={isSaudiOrg}
+        isTaxInclusive={taxInclusive}
       />
 
       {/* Close Session Dialog */}
