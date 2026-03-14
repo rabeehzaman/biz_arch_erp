@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, Languages, Loader2, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
+import { ArrowLeft, Clock, History, Languages, Loader2, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -24,6 +24,7 @@ interface POSHeaderProps {
   onReprintReceipt?: () => void;
   isReprintLoading?: boolean;
   onReturn?: () => void;
+  onPreviousOrders?: () => void;
 }
 
 function POSClock() {
@@ -49,6 +50,7 @@ export function POSHeader({
   onReprintReceipt,
   isReprintLoading,
   onReturn,
+  onPreviousOrders,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
@@ -105,6 +107,20 @@ export function POSHeader({
           >
             <RotateCcw className="h-4 w-4" />
             <span className="hidden sm:inline ml-1">{t("pos.salesReturn").split(" ")[0]}</span>
+          </Button>
+        )}
+
+        {onPreviousOrders && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
+            onClick={onPreviousOrders}
+            title="Previous Orders"
+            aria-label="Previous Orders"
+          >
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Orders</span>
           </Button>
         )}
 

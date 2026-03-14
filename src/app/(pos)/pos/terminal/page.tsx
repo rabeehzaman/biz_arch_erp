@@ -40,6 +40,7 @@ import { PaymentPanel } from "@/components/pos/payment-panel";
 import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
 import { POSReturnDialog } from "@/components/pos/pos-return-dialog";
+import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
 import {
   cacheReceiptArtifactWithConfig,
   isElectronEnvironment,
@@ -148,6 +149,8 @@ function getPaymentMethodLabel(method: string, t: (key: string) => string) {
       return t("common.bankTransfer");
     case "UPI":
       return "UPI";
+    case "CASH_REFUND":
+      return "Cash Refund";
     default:
       return method.replace(/_/g, " ");
   }
@@ -320,6 +323,7 @@ function POSTerminalContent() {
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showHeldSheet, setShowHeldSheet] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [showPreviousOrdersSheet, setShowPreviousOrdersSheet] = useState(false);
   const [closingCash, setClosingCash] = useState("");
   const [closePinCode, setClosePinCode] = useState("");
   const [countedClosingCash, setCountedClosingCash] = useState<number | null>(null);
@@ -374,14 +378,15 @@ function POSTerminalContent() {
     [paymentBreakdown]
   );
   const cashSalesTotal = paymentTotals.CASH || 0;
+  const cashRefundsTotal = Math.abs(paymentTotals.CASH_REFUND || 0);
   const nonCashTotal = roundCurrency(
     Object.entries(paymentTotals).reduce(
-      (sum, [method, total]) => (method === "CASH" ? sum : sum + total),
+      (sum, [method, total]) => (method === "CASH" || method === "CASH_REFUND" ? sum : sum + total),
       0
     )
   );
   const expectedCash = posSession
-    ? roundCurrency(Number(posSession.openingCash) + cashSalesTotal)
+    ? roundCurrency(Number(posSession.openingCash) + cashSalesTotal - cashRefundsTotal)
     : 0;
 
   const parsedClosingCash = countedClosingCash ?? 0;
@@ -391,10 +396,12 @@ function POSTerminalContent() {
   const visiblePaymentBreakdown = useMemo(
     () =>
       paymentBreakdown
-        .filter((payment) => Number(payment.total) > 0)
+        .filter((payment) => Number(payment.total) !== 0)
         .sort((a, b) => {
           if (a.method === "CASH") return -1;
           if (b.method === "CASH") return 1;
+          if (a.method === "CASH_REFUND") return 1;
+          if (b.method === "CASH_REFUND") return -1;
           return Number(b.total) - Number(a.total);
         }),
     [paymentBreakdown]
@@ -508,14 +515,6 @@ function POSTerminalContent() {
     let lastKeyTime = Date.now();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement
-      ) {
-        return;
-      }
-
       const currentTime = Date.now();
 
       if (currentTime - lastKeyTime > 50) {
@@ -534,6 +533,7 @@ function POSTerminalContent() {
               const weightProduct = weighCodeIndex.get(parsed.productCode);
               if (weightProduct) {
                 addToCart(weightProduct, parsed.weightKg);
+                setSearchQuery("");
                 toast.success(`${weightProduct.name} — ${parsed.weightKg} kg`);
                 barcodeBuffer = "";
                 return;
@@ -547,6 +547,7 @@ function POSTerminalContent() {
 
           if (product) {
             addToCart(product);
+            setSearchQuery("");
             toast.success(`Added ${product.name}`);
           } else {
             toast.error(`Product not found for barcode: ${barcodeBuffer}`);
@@ -561,7 +562,7 @@ function POSTerminalContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex]);
+  }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex, setSearchQuery]);
 
   const removeFromCart = useCallback((productId: string) => {
     dispatchCart({ type: "REMOVE", productId });
@@ -1025,6 +1026,10 @@ function POSTerminalContent() {
     setShowReturnDialog(true);
   }, []);
 
+  const openPreviousOrders = useCallback(() => {
+    setShowPreviousOrdersSheet(true);
+  }, []);
+
   const handleReturnComplete = useCallback(() => {
     void Promise.all([mutateSession(), mutateProducts()]);
   }, [mutateSession, mutateProducts]);
@@ -1087,6 +1092,7 @@ function POSTerminalContent() {
         onReprintReceipt={lastReceiptData && !isPendingReceipt ? reprintReceipt : undefined}
         isReprintLoading={isPendingReceipt}
         onReturn={openReturnDialog}
+        onPreviousOrders={openPreviousOrders}
       />
 
       {/* Main Content */}
@@ -1319,10 +1325,12 @@ function POSTerminalContent() {
                       key={payment.method}
                       className="flex items-center justify-between gap-4"
                     >
-                      <span className="text-muted-foreground">
+                      <span className={payment.method === "CASH_REFUND" ? "text-red-500" : "text-muted-foreground"}>
                         {getPaymentMethodLabel(payment.method, t)}
                       </span>
-                      <span className="font-medium">{fmt(Number(payment.total))}</span>
+                      <span className={cn("font-medium", payment.method === "CASH_REFUND" && "text-red-500")}>
+                        {payment.method === "CASH_REFUND" ? `-${fmt(Math.abs(Number(payment.total)))}` : fmt(Number(payment.total))}
+                      </span>
                     </div>
                   ))}
                   {nonCashTotal > 0 && (
@@ -1457,6 +1465,13 @@ function POSTerminalContent() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <PreviousOrdersSheet
+        open={showPreviousOrdersSheet}
+        onClose={() => setShowPreviousOrdersSheet(false)}
+        sessionId={posSession?.id ?? null}
+        companySettings={companySettings}
+      />
     </PageAnimation>
   );
 }
