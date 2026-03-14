@@ -7,38 +7,16 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
-    ArrowRightLeft, Eye, Loader2, Plus, Printer, RotateCcw, Search, Trash2,
+    ArrowRightLeft, Eye, Plus, Printer, RotateCcw, Search,
 } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useLanguage } from "@/lib/i18n";
 import { toast } from "sonner";
-
-interface Warehouse {
-    id: string;
-    name: string;
-    code: string;
-    branchId: string;
-    isActive: boolean;
-    branch: { id: string; name: string; code: string };
-}
-
-interface FormItem {
-    productId: string;
-    quantity: number;
-    notes?: string;
-}
 
 interface TransferItem {
     id?: string;
@@ -64,20 +42,6 @@ interface StockTransfer {
     createdAt: string;
 }
 
-interface Product {
-    id: string;
-    name: string;
-    sku: string | null;
-    availableStock: number;
-}
-
-const getEmptyForm = () => ({
-    sourceWarehouseId: "",
-    destinationWarehouseId: "",
-    notes: "",
-    items: [{ productId: "", quantity: 1 }] as FormItem[],
-});
-
 const statusColors: Record<string, string> = {
     DRAFT: "bg-slate-100 text-slate-800",
     APPROVED: "bg-blue-100 text-blue-800",
@@ -101,13 +65,6 @@ export default function StockTransfersPage() {
     const [transfers, setTransfers] = useState<StockTransfer[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
-
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [loadingProducts, setLoadingProducts] = useState(false);
-    const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-    const [products, setProducts] = useState<Product[]>([]);
-    const [form, setForm] = useState(getEmptyForm);
 
     const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
@@ -135,161 +92,9 @@ export default function StockTransfersPage() {
         }
     }, [t]);
 
-    const fetchWarehouses = useCallback(async () => {
-        const response = await fetch("/api/warehouses");
-        if (!response.ok) {
-            throw new Error(t("inventory.failedToLoadWarehouses"));
-        }
-
-        const data = await response.json();
-        setWarehouses(data.filter((warehouse: Warehouse) => warehouse.isActive));
-    }, [t]);
-
-    const fetchProducts = useCallback(async (warehouseId: string) => {
-        setLoadingProducts(true);
-        try {
-            const params = new URLSearchParams({
-                compact: "true",
-                excludeServices: "true",
-                warehouseId,
-            });
-            const response = await fetch(`/api/products?${params.toString()}`);
-            if (!response.ok) {
-                throw new Error(t("inventory.failedToLoadProducts"));
-            }
-
-            setProducts(await response.json());
-        } catch (error) {
-            toast.error(error instanceof Error ? tt(error.message) : t("inventory.failedToLoadSourceWarehouseStock"));
-        } finally {
-            setLoadingProducts(false);
-        }
-    }, [t, tt]);
-
     useEffect(() => {
         fetchTransfers();
     }, [fetchTransfers]);
-
-    useEffect(() => {
-        if (!dialogOpen) {
-            return;
-        }
-
-        if (!form.sourceWarehouseId) {
-            setProducts([]);
-            return;
-        }
-
-        fetchProducts(form.sourceWarehouseId);
-    }, [dialogOpen, form.sourceWarehouseId, fetchProducts]);
-
-    const openCreateDialog = async () => {
-        try {
-            await fetchWarehouses();
-            setForm(getEmptyForm());
-            setProducts([]);
-            setDialogOpen(true);
-        } catch (error) {
-            toast.error(error instanceof Error ? tt(error.message) : t("inventory.failedToLoadTransferSetup"));
-        }
-    };
-
-    const addItem = () => {
-        setForm((current) => ({
-            ...current,
-            items: [...current.items, { productId: "", quantity: 1 }],
-        }));
-    };
-
-    const removeItem = (index: number) => {
-        setForm((current) => ({
-            ...current,
-            items: current.items.filter((_, itemIndex) => itemIndex !== index),
-        }));
-    };
-
-    const updateItem = (index: number, field: keyof FormItem, value: string | number) => {
-        setForm((current) => {
-            const items = [...current.items];
-            items[index] = {
-                ...items[index],
-                [field]: value,
-            };
-            return { ...current, items };
-        });
-    };
-
-    const handleSourceWarehouseChange = (value: string) => {
-        setForm((current) => ({
-            ...current,
-            sourceWarehouseId: value,
-            destinationWarehouseId: current.destinationWarehouseId === value ? "" : current.destinationWarehouseId,
-            items: [{ productId: "", quantity: 1 }],
-        }));
-    };
-
-    const saveTransfer = async () => {
-        if (!form.sourceWarehouseId || !form.destinationWarehouseId) {
-            toast.error(t("inventory.selectSourceAndDestinationWarehouses"));
-            return;
-        }
-
-        if (form.sourceWarehouseId === form.destinationWarehouseId) {
-            toast.error(t("inventory.sourceAndDestinationMustBeDifferent"));
-            return;
-        }
-
-        const validItems = form.items.filter((item) => item.productId && item.quantity > 0);
-        if (validItems.length === 0) {
-            toast.error(t("inventory.addAtLeastOneItem"));
-            return;
-        }
-
-        const unavailableItem = validItems.find((item) => {
-            const product = products.find((productItem) => productItem.id === item.productId);
-            return product && item.quantity > Number(product.availableStock || 0);
-        });
-
-        if (unavailableItem) {
-            const product = products.find((productItem) => productItem.id === unavailableItem.productId);
-            toast.error(
-                `${t("inventory.requestedQuantityExceedsAvailableStock")} ${product?.name || t("inventory.selectedProduct")}`
-            );
-            return;
-        }
-
-        setSaving(true);
-        try {
-            const response = await fetch("/api/stock-transfers", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    sourceWarehouseId: form.sourceWarehouseId,
-                    destinationWarehouseId: form.destinationWarehouseId,
-                    notes: form.notes || null,
-                    items: validItems,
-                }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                throw new Error(
-                    typeof data.error === "string"
-                        ? tt(data.error)
-                        : t("inventory.failedToCompleteTransfer")
-                );
-            }
-
-            toast.success(t("inventory.stockTransferCompleted"));
-            setDialogOpen(false);
-            setForm(getEmptyForm());
-            fetchTransfers();
-        } catch (error) {
-            toast.error(error instanceof Error ? tt(error.message) : t("inventory.failedToCompleteTransfer"));
-        } finally {
-            setSaving(false);
-        }
-    };
 
     const reverseTransfer = (transfer: StockTransfer) => {
         setConfirmDialog({
@@ -350,9 +155,11 @@ export default function StockTransfersPage() {
                             className="pl-10"
                         />
                     </div>
-                    <Button onClick={openCreateDialog}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {t("inventory.newTransfer")}
+                    <Button asChild>
+                        <Link href="/inventory/stock-transfers/new">
+                            <Plus className="mr-2 h-4 w-4" />
+                            {t("inventory.newTransfer")}
+                        </Link>
                     </Button>
                 </div>
 
@@ -517,162 +324,6 @@ export default function StockTransfersPage() {
                         </Card>
                     </StaggerItem>
                 </StaggerContainer>
-
-                <Dialog
-                    open={dialogOpen}
-                    onOpenChange={(open) => {
-                        setDialogOpen(open);
-                        if (!open) {
-                            setForm(getEmptyForm());
-                            setProducts([]);
-                        }
-                    }}
-                >
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader className="pr-12">
-                            <DialogTitle>{t("inventory.newStockTransfer")}</DialogTitle>
-                            <DialogDescription>
-                                {t("inventory.newStockTransferDescription")}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-6 py-2 sm:py-4">
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label>{t("inventory.sourceWarehouseLabel")} *</Label>
-                                    <Select value={form.sourceWarehouseId} onValueChange={handleSourceWarehouseChange}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={t("inventory.selectSourceWarehouse")} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {warehouses.map((warehouse) => (
-                                                <SelectItem key={warehouse.id} value={warehouse.id}>
-                                                    {warehouse.branch.name} {"→"} {warehouse.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>{t("inventory.destinationWarehouseLabel")} *</Label>
-                                    <Select
-                                        value={form.destinationWarehouseId}
-                                        onValueChange={(value) => setForm((current) => ({ ...current, destinationWarehouseId: value }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={t("inventory.selectDestinationWarehouse")} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {warehouses
-                                                .filter((warehouse) => warehouse.id !== form.sourceWarehouseId)
-                                                .map((warehouse) => (
-                                                    <SelectItem key={warehouse.id} value={warehouse.id}>
-                                                        {warehouse.branch.name} {"→"} {warehouse.name}
-                                                    </SelectItem>
-                                                ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>{t("common.notes")}</Label>
-                                <Input
-                                    value={form.notes}
-                                    onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                                    placeholder={t("inventory.optionalTransferNotes")}
-                                />
-                            </div>
-
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <Label>{t("inventory.itemsLabel")} *</Label>
-                                    <Button variant="outline" size="sm" onClick={addItem}>
-                                        <Plus className="mr-1 h-3 w-3" />
-                                        {t("inventory.addItem")}
-                                    </Button>
-                                </div>
-
-                                {form.items.map((item, index) => {
-                                    const selectedProduct = products.find((product) => product.id === item.productId);
-                                    return (
-                                        <div key={index} className="space-y-3 rounded-lg border p-3">
-                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                                                <div className="flex-1 space-y-1">
-                                                    <Label className="text-xs">{t("common.product")}</Label>
-                                                    <Select
-                                                        value={item.productId}
-                                                        onValueChange={(value) => updateItem(index, "productId", value)}
-                                                        disabled={!form.sourceWarehouseId || loadingProducts}
-                                                    >
-                                                        <SelectTrigger>
-                                                            <SelectValue
-                                                                placeholder={form.sourceWarehouseId
-                                                                    ? t("inventory.selectProduct")
-                                                                    : t("inventory.selectSourceWarehouseFirst")}
-                                                            />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {products.map((product) => (
-                                                                <SelectItem
-                                                                    key={product.id}
-                                                                    value={product.id}
-                                                                    disabled={Number(product.availableStock || 0) <= 0}
-                                                                >
-                                                                    {product.name}
-                                                                    {product.sku ? ` (${product.sku})` : ""}
-                                                                    {` - ${t("inventory.availableStock")}: ${Number(product.availableStock || 0)}`}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                <div className="w-full space-y-1 sm:w-28">
-                                                    <Label className="text-xs">{t("common.quantity")}</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min={1}
-                                                        value={item.quantity}
-                                                        onChange={(event) => updateItem(index, "quantity", Number(event.target.value))}
-                                                    />
-                                                </div>
-
-                                                {form.items.length > 1 && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => removeItem(index)}
-                                                        className="shrink-0"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                    </Button>
-                                                )}
-                                            </div>
-
-                                            {selectedProduct && (
-                                                <p className="text-xs text-slate-500">
-                                                    {t("inventory.availableInSourceWarehouse")}: {Number(selectedProduct.availableStock || 0)}
-                                                </p>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                                {t("common.cancel")}
-                            </Button>
-                            <Button onClick={saveTransfer} disabled={saving}>
-                                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {t("inventory.completeTransfer")}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
 
                 {confirmDialog && (
                     <ConfirmDialog

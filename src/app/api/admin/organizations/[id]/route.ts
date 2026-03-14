@@ -38,13 +38,15 @@ export async function GET(
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    const pdfFormatSetting = await prisma.setting.findFirst({
-      where: { organizationId: id, key: "invoice_pdf_format" },
-    });
+    const [pdfFormatSetting, transferPdfFormatSetting] = await Promise.all([
+      prisma.setting.findFirst({ where: { organizationId: id, key: "invoice_pdf_format" } }),
+      prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_format" } }),
+    ]);
 
     return NextResponse.json({
       ...organization,
       invoicePdfFormat: pdfFormatSetting?.value || "A5_LANDSCAPE",
+      transferPdfFormat: transferPdfFormatSetting?.value || "DEFAULT",
     });
   } catch (error) {
     console.error("Failed to fetch organization:", error);
@@ -93,6 +95,7 @@ export async function PUT(
       arabicAddress,
       arabicCity,
       invoicePdfFormat,
+      transferPdfFormat,
       language,
       currency,
       pdfHeaderImageUrl,
@@ -299,6 +302,15 @@ export async function PUT(
             where: { organizationId_key: { organizationId: id, key: "invoice_pdf_format" } },
             update: { value: invoicePdfFormat },
             create: { organizationId: id, key: "invoice_pdf_format", value: invoicePdfFormat },
+          });
+        }
+
+        // Upsert transfer PDF format setting
+        if (transferPdfFormat !== undefined) {
+          await tx.setting.upsert({
+            where: { organizationId_key: { organizationId: id, key: "transfer_pdf_format" } },
+            update: { value: transferPdfFormat },
+            create: { organizationId: id, key: "transfer_pdf_format", value: transferPdfFormat },
           });
         }
 

@@ -50,6 +50,7 @@ interface OrganizationDetails {
     arabicAddress: string | null;
     arabicCity: string | null;
     invoicePdfFormat: string;
+    transferPdfFormat: string;
     pdfHeaderImageUrl: string | null;
     pdfFooterImageUrl: string | null;
     brandColor: string | null;
@@ -109,6 +110,7 @@ export default function OrganizationDetailsPage() {
     const [arabicAddress, setArabicAddress] = useState("");
     const [arabicCity, setArabicCity] = useState("");
     const [invoicePdfFormat, setInvoicePdfFormat] = useState("A5_LANDSCAPE");
+    const [transferPdfFormat, setTransferPdfFormat] = useState("DEFAULT");
     const [pdfHeaderImageUrl, setPdfHeaderImageUrl] = useState("");
     const [pdfFooterImageUrl, setPdfFooterImageUrl] = useState("");
     const [brandColor, setBrandColor] = useState("");
@@ -181,6 +183,7 @@ export default function OrganizationDetailsPage() {
         setArabicAddress(data.arabicAddress || "");
         setArabicCity(data.arabicCity || "");
         setInvoicePdfFormat(data.invoicePdfFormat || "A5_LANDSCAPE");
+        setTransferPdfFormat(data.transferPdfFormat || "DEFAULT");
         setPdfHeaderImageUrl(data.pdfHeaderImageUrl || "");
         setPdfFooterImageUrl(data.pdfFooterImageUrl || "");
         setBrandColor(data.brandColor || "");
@@ -305,6 +308,7 @@ export default function OrganizationDetailsPage() {
                     arabicAddress: saudiEInvoiceEnabled ? arabicAddress || null : null,
                     arabicCity: saudiEInvoiceEnabled ? arabicCity || null : null,
                     invoicePdfFormat,
+                    transferPdfFormat,
                     pdfHeaderImageUrl,
                     pdfFooterImageUrl,
                     brandColor: brandColor || null,
@@ -1067,6 +1071,25 @@ export default function OrganizationDetailsPage() {
                                                 <SelectItem value="A4_MODERN_GST">A4 Modern Portfolio</SelectItem>
                                                 <SelectItem value="A4_VAT">A4 Portrait (VAT - Arabic)</SelectItem>
                                                 <SelectItem value="A4_BILINGUAL">A4 Bilingual (Arabic-English)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Transfer PDF Format */}
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label>Transfer PDF Format</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Language and layout for generated stock transfer PDFs
+                                            </p>
+                                        </div>
+                                        <Select value={transferPdfFormat} onValueChange={setTransferPdfFormat}>
+                                            <SelectTrigger className="w-full sm:w-52">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="DEFAULT">Default (English)</SelectItem>
+                                                <SelectItem value="ARABIC">All Arabic (عربي)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
