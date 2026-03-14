@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { performance } from "node:perf_hooks";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isSaudiEInvoiceEnabled, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
@@ -91,9 +92,22 @@ interface CheckoutBody {
   sessionId?: string;
 }
 
+function roundTimingMs(value: number) {
+  return Number(value.toFixed(2));
+}
+
 export async function POST(request: NextRequest) {
+  const requestStartedAt = performance.now();
+  const requestStages: Record<string, number> = {};
+  let currentRequestStageStartedAt = requestStartedAt;
+  const markRequestStage = (stage: string) => {
+    requestStages[stage] = roundTimingMs(performance.now() - currentRequestStageStartedAt);
+    currentRequestStageStartedAt = performance.now();
+  };
+
   try {
     const session = await auth();
+    markRequestStage("auth");
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -102,6 +116,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     const body: CheckoutBody = await request.json();
+    markRequestStage("request_body");
     const { customerId, items, payments, heldOrderId, notes, sessionId } = body;
 
     // Validate required fields
@@ -140,6 +155,7 @@ export async function POST(request: NextRequest) {
       }),
       getOrganizationRoundOffMode(prisma, organizationId),
     ]);
+    markRequestStage("org_settings");
 
     const saudiEnabled = isSaudiEInvoiceEnabled(session) || org?.saudiEInvoiceEnabled;
     const taxInclusive = isTaxInclusivePriceSession(session) || org?.isTaxInclusivePrice;
@@ -156,7 +172,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const transactionStartedAt = performance.now();
     const result = await prisma.$transaction(async (tx) => {
+      const transactionStages: Record<string, number> = {};
+      let currentTransactionStageStartedAt = performance.now();
+      const markTransactionStage = (stage: string) => {
+        transactionStages[stage] = roundTimingMs(
+          performance.now() - currentTransactionStageStartedAt
+        );
+        currentTransactionStageStartedAt = performance.now();
+      };
+
       // ── 1. Validate POS session ──────────────────────────────────────
       const posSession = sessionId
         ? await tx.pOSSession.findFirst({
@@ -176,6 +202,7 @@ export async function POST(request: NextRequest) {
         posSession.branchId,
         posSession.warehouseId
       );
+      markTransactionStage("session_and_register");
 
       // ── 2. Resolve customer ──────────────────────────────────────────
       let resolvedCustomerId = customerId;
@@ -193,6 +220,7 @@ export async function POST(request: NextRequest) {
         }
         resolvedCustomerId = walkInCustomer.id;
       }
+      markTransactionStage("customer_resolve");
 
       // ── 3. Calculate totals ──────────────────────────────────────────
       const now = new Date();
@@ -296,6 +324,7 @@ export async function POST(request: NextRequest) {
       const total = roundedTotal;
       const totalPayment = payments.reduce((sum, p) => sum + p.amount, 0);
       const change = Math.max(0, totalPayment - total);
+      markTransactionStage("totals");
 
       // ── 3b. Validate stock availability ─────────────────────────────
       const stockWarnings: string[] = [];
@@ -351,6 +380,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      markTransactionStage("stock_validation");
 
       // ── 4. Generate invoice number ───────────────────────────────────
       const invoiceNumber = await generateInvoiceNumber(organizationId, tx);
@@ -463,6 +493,7 @@ export async function POST(request: NextRequest) {
           customer: true,
         },
       });
+      markTransactionStage("invoice_create");
 
       // ── 6. FIFO stock consumption ────────────────────────────────────
       const warnings: string[] = [...stockWarnings];
@@ -529,6 +560,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      markTransactionStage("fifo");
 
       // ── 7. Customer balance ──────────────────────────────────────────
       const balanceImpact = total - Math.min(totalPayment, total);
@@ -563,6 +595,7 @@ export async function POST(request: NextRequest) {
           runningBalance: invoiceRunningBalance,
         },
       });
+      markTransactionStage("customer_balance");
 
       // ── 8. Revenue + COGS journal entries ────────────────────────────
       const arAccount = await getSystemAccount(tx, organizationId, "1300");
@@ -693,6 +726,7 @@ export async function POST(request: NextRequest) {
           "Failed to post the POS COGS journal entry."
         );
       }
+      markTransactionStage("accounting");
 
       // ── 9. Process payments ──────────────────────────────────────────
       const createdPayments = [];
@@ -868,6 +902,7 @@ export async function POST(request: NextRequest) {
 
         createdPayments.push(newPayment);
       }
+      markTransactionStage("payments");
 
       // Update invoice amountPaid and balanceDue after all payments
       const totalPaidToInvoice = Math.min(totalPayment, total);
@@ -903,16 +938,20 @@ export async function POST(request: NextRequest) {
           customer: true,
         },
       });
+      markTransactionStage("finalize");
 
       return {
         invoice: finalInvoice,
         payments: createdPayments,
         change,
         warnings,
+        transactionStages,
       };
     }, { timeout: 30000 });
+    requestStages.transactionTotalMs = roundTimingMs(performance.now() - transactionStartedAt);
 
     // Generate QR code data URL for receipt (outside transaction)
+    const receiptPreparationStartedAt = performance.now();
     let qrCodeDataURL: string | undefined;
     if (result.invoice?.qrCodeData) {
       try {
@@ -921,9 +960,14 @@ export async function POST(request: NextRequest) {
         console.error("QR code generation failed:", e);
       }
     }
+    requestStages.receiptPreparation = roundTimingMs(
+      performance.now() - receiptPreparationStartedAt
+    );
 
-    return NextResponse.json({
-      ...result,
+    const responseBuildStartedAt = performance.now();
+    const { transactionStages, ...responseResult } = result;
+    const responsePayload = {
+      ...responseResult,
       receiptMeta: {
         logoUrl: org?.posReceiptLogoUrl || org?.pdfHeaderImageUrl || null,
         logoHeight: org?.posReceiptLogoHeight ?? 80,
@@ -937,7 +981,22 @@ export async function POST(request: NextRequest) {
         isTaxInclusivePrice: taxInclusive || false,
         roundOffMode,
       },
-    }, { status: 201 });
+    };
+    requestStages.responseBuild = roundTimingMs(performance.now() - responseBuildStartedAt);
+    const timings = {
+      requestTotalMs: roundTimingMs(performance.now() - requestStartedAt),
+      requestStages,
+      transactionStages,
+    };
+
+    console.info("[pos-checkout] completed", {
+      invoiceNumber: responseResult.invoice?.invoiceNumber,
+      itemCount: items.length,
+      paymentCount: payments.length,
+      timings,
+    });
+
+    return NextResponse.json({ ...responsePayload, timings }, { status: 201 });
   } catch (error) {
     // Handle known business errors with appropriate status codes
     if (error instanceof AutoJournalEntryCreationError) {
@@ -953,7 +1012,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error("POS checkout failed:", error);
+    console.error("POS checkout failed:", {
+      error,
+      timings: {
+        requestTotalMs: roundTimingMs(performance.now() - requestStartedAt),
+        requestStages,
+      },
+    });
     return NextResponse.json(
       { error: "POS checkout failed" },
       { status: 500 }

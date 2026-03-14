@@ -256,10 +256,33 @@ export async function createPosProductCatalog(
 
 export async function openPosSession(
   api: APIRequestContext,
-  input: { branchId: string; warehouseId: string; openingCash: number },
+  input: {
+    branchId: string;
+    warehouseId: string;
+    openingCash: number;
+    pinCode?: string;
+  },
 ) {
+  const pinCode =
+    input.pinCode ??
+    String(Date.now()).slice(-6) + Math.floor(Math.random() * 10).toString();
+
+  if (!input.pinCode) {
+    const employeeResponse = await api.post("/api/employees", {
+      data: {
+        name: `POS Cashier ${pinCode}`,
+        pinCode,
+        isActive: true,
+      },
+    });
+    await parseJson(employeeResponse);
+  }
+
   const response = await api.post("/api/pos/sessions", {
-    data: input,
+    data: {
+      ...input,
+      pinCode,
+    },
   });
   return parseJson(response);
 }

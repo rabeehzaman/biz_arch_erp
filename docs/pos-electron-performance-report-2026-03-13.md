@@ -1,6 +1,7 @@
 # POS Electron Performance Report
 
 Date: 2026-03-13
+Latest update: 2026-03-14
 Scope: Windows Electron POS, Next.js POS terminal, checkout transaction, thermal printing, reprint behavior
 
 ## Executive Summary
@@ -21,12 +22,15 @@ If only one thing is implemented first, it should be receipt persistence plus lo
 
 - [x] Receipt spool/cache added for rendered Electron receipts on 2026-03-13
 - [x] Reprint now targets latest cached receipt artifact before React-state fallback on 2026-03-13
-- [ ] Stop blocking checkout on full product refetch
-- [ ] Add optimistic session and stock updates after checkout
+- [x] Add checkout client/server timing instrumentation on 2026-03-14
+- [x] Stop blocking checkout on full product refetch on 2026-03-14
+- [x] Add optimistic session and stock updates after checkout on 2026-03-14
 - [ ] Split and lighten `/api/pos/products` payload
 - [ ] Add virtualized product grid
 - [ ] Batch checkout-side DB lookups and sequence generation
 - [ ] Reuse hidden print windows and skip regeneration when cached artifacts exist
+- [ ] Auto-route POS-only users with an already-open session directly to `/pos/terminal`
+- [ ] Trim POS-only dashboard/data work before terminal entry
 
 ## What Was Reviewed
 
