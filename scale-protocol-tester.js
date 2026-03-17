@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const net = require('net');
 
 const PORTS_TO_TEST = [5001, 5002, 4000, 5000, 7778];

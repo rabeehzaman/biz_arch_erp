@@ -55,7 +55,7 @@ export function EmployeesSettings() {
       if (!res.ok) throw new Error("Failed to fetch employees");
       const data = await res.json();
       setEmployees(data);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to load POS employees");
     } finally {
       setIsLoading(false);
