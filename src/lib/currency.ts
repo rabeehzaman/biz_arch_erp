@@ -2,7 +2,7 @@
 
 export const CURRENCY_CONFIG: Record<string, { symbol: string; locale: string; code: string }> = {
   INR: { symbol: "\u20B9", locale: "en-IN", code: "INR" },
-  SAR: { symbol: "SAR ", locale: "en-US", code: "SAR" },
+  SAR: { symbol: "\u20C1 ", locale: "en-US", code: "SAR" },
 };
 
 export function formatCurrency(amount: number, currencyCode: string = "INR"): string {

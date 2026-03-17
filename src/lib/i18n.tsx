@@ -618,7 +618,7 @@ export function getCurrencySymbol(
   lang: Language,
   currency = "INR"
 ): string {
-  if (currency === "SAR") return lang === "ar" ? "ر.س" : "SAR";
+  if (currency === "SAR") return "\u20C1";
   return "₹";
 }
 

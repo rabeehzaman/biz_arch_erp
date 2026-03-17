@@ -36,7 +36,7 @@ export const EDITIONS: Record<EditionId, EditionConfig> = {
     flag: "\u{1F1F8}\u{1F1E6}",
     taxSystem: "VAT",
     currency: "SAR",
-    currencySymbol: "SAR",
+    currencySymbol: "\u20C1",
     languages: ["en", "ar"],
     isLanguageSwitchable: true,
     defaultLanguage: "en",
