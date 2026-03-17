@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
             orderBy: { createdAt: "asc" },
         });
 
-        return NextResponse.json(warehouses);
+        return NextResponse.json(warehouses, {
+            headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
+        });
     } catch (error) {
         console.error("Failed to fetch warehouses:", error);
         return NextResponse.json({ error: "Failed to fetch warehouses" }, { status: 500 });

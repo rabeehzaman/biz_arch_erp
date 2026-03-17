@@ -26,7 +26,9 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(accounts);
+    return NextResponse.json(accounts, {
+      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
+    });
   } catch (error) {
     console.error("Failed to fetch accounts:", error);
     return NextResponse.json(

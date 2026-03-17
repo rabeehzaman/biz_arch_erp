@@ -22,7 +22,9 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(categories);
+    return NextResponse.json(categories, {
+      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
+    });
   } catch (error) {
     console.error("Failed to fetch product categories:", error);
     return NextResponse.json(

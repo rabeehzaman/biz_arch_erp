@@ -33,7 +33,9 @@ export async function GET() {
             }
         }
 
-        return NextResponse.json(disabledSidebarItems);
+        return NextResponse.json(disabledSidebarItems, {
+            headers: { "Cache-Control": "private, max-age=600, stale-while-revalidate=60" },
+        });
     } catch (error) {
         console.error("Failed to fetch sidebar settings:", error);
         // Return empty array rather than error to avoid breaking the UI hook

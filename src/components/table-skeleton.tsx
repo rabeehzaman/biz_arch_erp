@@ -67,6 +67,28 @@ export function CardSkeleton() {
   );
 }
 
+export function ListPageSkeleton({ columns = 7, rows = 5 }: { columns?: number; rows?: number } = {}) {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-36 rounded bg-slate-200 animate-pulse" />
+          <div className="h-4 w-56 rounded bg-slate-100 animate-pulse" />
+        </div>
+        <div className="h-10 w-36 rounded bg-slate-200 animate-pulse" />
+      </div>
+      <div className="rounded-lg border bg-card">
+        <div className="p-4 border-b">
+          <div className="h-10 w-64 rounded bg-slate-100 animate-pulse" />
+        </div>
+        <div className="p-6">
+          <TableSkeleton columns={columns} rows={rows} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardSkeleton() {
   return (
     <div className="space-y-6">
