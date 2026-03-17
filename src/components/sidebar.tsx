@@ -41,6 +41,8 @@ import {
   RefreshCw,
   Loader2,
   Sparkles,
+  Clock,
+  Percent,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -62,6 +64,7 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import useSWR from "swr";
 import { useLanguage } from "@/lib/i18n";
+import { useEdition } from "@/hooks/use-edition";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -106,6 +109,10 @@ const reportsNavigation = [
   { nameKey: "nav.bankBook", href: "/reports/bank-book", icon: Landmark },
   { nameKey: "nav.cashBankSummary", href: "/reports/cash-bank-summary", icon: ArrowRightLeft },
   { nameKey: "nav.cashFlow", href: "/reports/cash-flow", icon: ArrowRightLeft },
+  { nameKey: "nav.arAging", href: "/reports/ar-aging", icon: Clock },
+  { nameKey: "nav.apAging", href: "/reports/ap-aging", icon: Clock },
+  { nameKey: "nav.vatSummary", href: "/reports/vat-summary", icon: Percent, edition: "SAUDI" as const },
+  { nameKey: "nav.gstSummary", href: "/reports/gst-summary", icon: Percent, edition: "INDIA" as const },
   { nameKey: "nav.expenseReport", href: "/reports/expense-report", icon: DollarSign },
   { nameKey: "nav.stockSummary", href: "/reports/stock-summary", icon: Package },
   { nameKey: "nav.branchPL", href: "/reports/branch-pl", icon: GitBranch },
@@ -168,6 +175,10 @@ const NAME_TO_KEY: Record<string, string> = {
   "Cash Book": "nav.cashBook",
   "Bank Book": "nav.bankBook",
   "Cash & Bank Summary": "nav.cashBankSummary",
+  "AR Aging": "nav.arAging",
+  "AP Aging": "nav.apAging",
+  "VAT Summary": "nav.vatSummary",
+  "GST Summary": "nav.gstSummary",
   "Settings": "nav.settings",
   "Organizations": "nav.organizations",
 };
@@ -177,7 +188,7 @@ const KEY_TO_NAME: Record<string, string> = Object.fromEntries(
   Object.entries(NAME_TO_KEY).map(([k, v]) => [v, k])
 );
 
-type NavItem = { nameKey: string; href: string; icon: React.ElementType };
+type NavItem = { nameKey: string; href: string; icon: React.ElementType; edition?: "INDIA" | "SAUDI" };
 
 function NavItemComponent({ item, pathname, onNavigate }: {
   item: NavItem;
@@ -243,6 +254,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { t } = useLanguage();
+  const { edition } = useEdition();
   const isSuperadmin = session?.user?.role === "superadmin";
 
   const { data: disabledItems = [] } = useSWR<string[]>(
@@ -250,9 +262,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     fetcher
   );
 
-  // disabledItems come from API as English names; filter by matching English name
+  // disabledItems come from API as English names; filter by matching English name + edition
   const filterItems = (items: NavItem[]) =>
     items.filter((item) => {
+      if (item.edition && item.edition !== edition) return false;
       const englishName = KEY_TO_NAME[item.nameKey];
       return !disabledItems.includes(englishName || "");
     });

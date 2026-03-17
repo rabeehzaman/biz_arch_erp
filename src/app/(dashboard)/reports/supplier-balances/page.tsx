@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,11 +14,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Truck, Search, AlertTriangle, CheckCircle } from "lucide-react";
-import Link from "next/link";
-import { TableSkeleton } from "@/components/table-skeleton";
-import { PageAnimation } from "@/components/ui/page-animation";
+import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { downloadCsv } from "@/lib/csv-export";
+import { ReportPageLayout } from "@/components/reports/report-page-layout";
+import { ReportExportButton } from "@/components/reports/report-export-button";
 
 interface Supplier {
   id: string;
@@ -50,29 +52,30 @@ interface ReportData {
 }
 
 export default function SupplierBalancesPage() {
-  const { t } = useLanguage();
+  const { fmt } = useCurrency();
+  const { t, lang } = useLanguage();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const { fmt: formatCurrency } = useCurrency();
 
-  useEffect(() => {
-    fetchReport();
-  }, []);
-
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/reports/supplier-balances");
       if (!response.ok) throw new Error("Failed to fetch report");
-      const data = await response.json();
-      setReportData(data);
-    } catch (error) {
-      console.error("Failed to fetch report:", error);
+      setReportData(await response.json());
+    } catch {
+      toast.error(t("reports.noDataForPeriod"));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    fetchReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredSuppliers = reportData?.suppliers.filter(
     (supplier) =>
@@ -81,116 +84,147 @@ export default function SupplierBalancesPage() {
       supplier.phone?.includes(searchTerm)
   );
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">{t("reports.supplierBalances")}</h2>
-          <p className="text-slate-500">{t("reports.supplierBalancesDesc")}</p>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <TableSkeleton columns={6} rows={5} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const handleExportCsv = () => {
+    if (!reportData) return;
+    const header = [t("common.name"), t("common.email"), t("common.phone"), t("reports.balance"), t("reports.invoiceNumber"), t("common.status")];
+    const rows = reportData.suppliers.map((s) => [
+      s.name,
+      s.email || "",
+      s.phone || "",
+      s.balance.toFixed(2),
+      String(s.invoiceCount),
+      s.isActive ? t("common.active") : t("common.inactive"),
+    ]);
+    downloadCsv([header, ...rows], `supplier-balances.csv`);
+  };
+
+  const handlePrint = () => window.print();
+
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const params = new URLSearchParams({ lang });
+      const response = await fetch(`/api/reports/supplier-balances/pdf?${params}`);
+      if (!response.ok) throw new Error("Failed to generate PDF");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `supplier-balances.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("reports.pdfDownloadError"));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">{t("reports.supplierBalances")}</h2>
-            <p className="text-slate-500">{t("reports.supplierBalancesDesc")}</p>
+    <ReportPageLayout
+      titleKey="reports.supplierBalances"
+      descriptionKey="reports.supplierBalancesDesc"
+      isLoading={isLoading}
+      actions={
+        <ReportExportButton
+          onExportCsv={handleExportCsv}
+          onPrint={handlePrint}
+          onDownloadPdf={handleDownloadPdf}
+          isDownloading={isDownloading}
+          disabled={!reportData || reportData.suppliers.length === 0}
+        />
+      }
+      filterBar={
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            placeholder={t("reports.searchSuppliers")}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      }
+    >
+      {reportData && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                  {t("reports.totalSuppliers")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {reportData.summary.totalSuppliers}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                  {t("reports.activeSuppliers")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {reportData.summary.activeSuppliers}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                  {t("reports.totalPayable")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {fmt(reportData.summary.totalPayable)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                  {t("reports.withBalance")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  {reportData.summary.suppliersWithBalance}
+                </div>
+                <p className="text-xs text-slate-500">{t("reports.suppliersOwedMoney")}</p>
+              </CardContent>
+            </Card>
+            {reportData.reconciliation && (
+              <Card className={reportData.reconciliation.isReconciled ? "border-green-200" : "border-orange-300"}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500 flex items-center gap-1">
+                    {reportData.reconciliation.isReconciled
+                      ? <CheckCircle className="h-4 w-4 text-green-500" />
+                      : <AlertTriangle className="h-4 w-4 text-orange-500" />}
+                    {t("reports.apReconciliation")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-sm font-bold ${reportData.reconciliation.isReconciled ? 'text-green-600' : 'text-orange-600'}`}>
+                    {reportData.reconciliation.isReconciled ? t("reports.reconciled") : `${t("reports.offBy")} ${fmt(Math.abs(reportData.reconciliation.difference))}`}
+                  </div>
+                  <p className="text-xs text-slate-500">GL: {fmt(reportData.reconciliation.glBalance)}</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {reportData && (
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-500">
-                    {t("reports.totalSuppliers")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {reportData.summary.totalSuppliers}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-500">
-                    {t("reports.activeSuppliers")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    {reportData.summary.activeSuppliers}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-500">
-                    {t("reports.totalPayable")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(reportData.summary.totalPayable)}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-500">
-                    {t("reports.withBalance")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {reportData.summary.suppliersWithBalance}
-                  </div>
-                  <p className="text-xs text-slate-500">{t("reports.suppliersOwedMoney")}</p>
-                </CardContent>
-              </Card>
-              {reportData.reconciliation && (
-                <Card className={reportData.reconciliation.isReconciled ? "border-green-200" : "border-orange-300"}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500 flex items-center gap-1">
-                      {reportData.reconciliation.isReconciled
-                        ? <CheckCircle className="h-4 w-4 text-green-500" />
-                        : <AlertTriangle className="h-4 w-4 text-orange-500" />}
-                      {t("reports.apReconciliation")}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-sm font-bold ${reportData.reconciliation.isReconciled ? 'text-green-600' : 'text-orange-600'}`}>
-                      {reportData.reconciliation.isReconciled ? t("reports.reconciled") : `${t("reports.offBy")} ${formatCurrency(Math.abs(reportData.reconciliation.difference))}`}
-                    </div>
-                    <p className="text-xs text-slate-500">GL: {formatCurrency(reportData.reconciliation.glBalance)}</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-
+          {/* Balance Details */}
           <Card>
             <CardHeader>
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <CardTitle>{t("reports.balanceDetails")}</CardTitle>
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    placeholder={t("reports.searchSuppliers")}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
+              <CardTitle>{t("reports.balanceDetails")}</CardTitle>
             </CardHeader>
             <CardContent>
               {!filteredSuppliers || filteredSuppliers.length === 0 ? (
@@ -205,6 +239,7 @@ export default function SupplierBalancesPage() {
                 </div>
               ) : (
                 <>
+                  {/* Mobile cards */}
                   <div className="space-y-3 sm:hidden">
                     {filteredSuppliers.map((supplier) => (
                       <div
@@ -237,7 +272,7 @@ export default function SupplierBalancesPage() {
                                 supplier.balance > 0 ? "text-red-600" : "text-slate-900"
                               }`}
                             >
-                              {formatCurrency(supplier.balance)}
+                              {fmt(supplier.balance)}
                             </p>
                           </div>
                           <div>
@@ -256,6 +291,7 @@ export default function SupplierBalancesPage() {
                     ))}
                   </div>
 
+                  {/* Desktop table */}
                   <div className="hidden sm:block">
                     <div className="overflow-x-auto">
                       <Table>
@@ -291,7 +327,7 @@ export default function SupplierBalancesPage() {
                                   supplier.balance > 0 ? "text-red-600" : "text-slate-900"
                                 }`}
                               >
-                                {formatCurrency(supplier.balance)}
+                                {fmt(supplier.balance)}
                               </TableCell>
                               <TableCell className="text-right">
                                 {supplier.invoiceCount}
@@ -313,7 +349,8 @@ export default function SupplierBalancesPage() {
               )}
             </CardContent>
           </Card>
-        </div>
-        </PageAnimation>
-      );
+        </>
+      )}
+    </ReportPageLayout>
+  );
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { getCashFlowData } from "@/lib/reports/cash-flow";
+import { getVATSummaryData } from "@/lib/reports/vat-summary";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const toDate =
       searchParams.get("toDate") || new Date().toISOString().split("T")[0];
 
-    const data = await getCashFlowData(organizationId, fromDate, toDate);
+    const data = await getVATSummaryData(organizationId, fromDate, toDate);
 
     return NextResponse.json({
       fromDate,
@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
       ...data,
     });
   } catch (error) {
-    console.error("Failed to generate cash flow:", error);
+    console.error("Failed to generate VAT summary:", error);
     return NextResponse.json(
-      { error: "Failed to generate cash flow report" },
+      { error: "Failed to generate VAT summary" },
       { status: 500 }
     );
   }

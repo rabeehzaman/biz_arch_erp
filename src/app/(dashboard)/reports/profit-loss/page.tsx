@@ -1,9 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -13,9 +10,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TrendingUp, TrendingDown, DollarSign, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { PageAnimation } from "@/components/ui/page-animation";
+import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { downloadCsv } from "@/lib/csv-export";
+import { ReportPageLayout } from "@/components/reports/report-page-layout";
+import { DateRangePresetSelector } from "@/components/reports/date-range-preset-selector";
+import { ReportExportButton } from "@/components/reports/report-export-button";
 
 interface AccountRow {
   account: { code: string; name: string };
@@ -32,11 +34,9 @@ interface ProfitLoss {
   netIncome: number;
 }
 
-const fmt = (n: number) =>
-  n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
-
 export default function ProfitLossPage() {
-  const { t } = useLanguage();
+  const { fmt } = useCurrency();
+  const { t, lang } = useLanguage();
   const [data, setData] = useState<ProfitLoss | null>(null);
   const [fromDate, setFromDate] = useState(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]
@@ -45,13 +45,13 @@ export default function ProfitLossPage() {
     new Date().toISOString().split("T")[0]
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/reports/profit-loss?fromDate=${fromDate}&toDate=${toDate}`
-      );
+      const params = new URLSearchParams({ fromDate, toDate });
+      const response = await fetch(`/api/reports/profit-loss?${params}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
     } catch {
@@ -59,43 +59,128 @@ export default function ProfitLossPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fromDate, toDate, t]);
 
   useEffect(() => {
     fetchReport();
-    // Initial report load only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleExportCsv = () => {
+    if (!data) return;
+    const header = [t("common.code"), t("reports.account"), t("reports.type"), t("common.amount")];
+    const rows = [
+      ...data.revenue.map((r) => [r.account.code, r.account.name, t("reports.totalRevenue"), r.amount.toFixed(2)]),
+      ...data.expenses.map((r) => [r.account.code, r.account.name, t("reports.expenses"), r.amount.toFixed(2)]),
+    ];
+    downloadCsv([header, ...rows], `profit-loss-${fromDate}-to-${toDate}.csv`);
+  };
+
+  const handlePrint = () => window.print();
+
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const params = new URLSearchParams({ fromDate, toDate, lang });
+      const response = await fetch(`/api/reports/profit-loss/pdf?${params}`);
+      if (!response.ok) throw new Error("Failed to generate PDF");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `profit-loss-${fromDate}-to-${toDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("reports.pdfDownloadError"));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
-        <PageAnimation>
-          <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">{t("reports.profitLoss")}</h2>
-            <p className="text-slate-500">{t("reports.profitLossDesc")}</p>
+    <ReportPageLayout
+      titleKey="reports.profitLoss"
+      descriptionKey="reports.profitLossDesc"
+      isLoading={isLoading}
+      actions={
+        <ReportExportButton
+          onExportCsv={handleExportCsv}
+          onPrint={handlePrint}
+          onDownloadPdf={handleDownloadPdf}
+          isDownloading={isDownloading}
+          disabled={!data || (data.revenue.length === 0 && data.expenses.length === 0)}
+        />
+      }
+      filterBar={
+        <DateRangePresetSelector
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromDateChange={setFromDate}
+          onToDateChange={setToDate}
+          onGenerate={fetchReport}
+          isLoading={isLoading}
+        />
+      }
+    >
+      {data && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-green-50 p-2">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">{t("reports.totalRevenue")}</p>
+                    <p className="text-xl font-bold font-mono text-green-600">{fmt(data.totalRevenue)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-red-50 p-2">
+                    <TrendingDown className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">{t("reports.totalExpenses")}</p>
+                    <p className="text-xl font-bold font-mono text-red-600">{fmt(data.totalExpenses)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-lg p-2 ${data.netIncome >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                    <DollarSign className={`h-5 w-5 ${data.netIncome >= 0 ? "text-green-600" : "text-red-600"}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">{t("reports.netIncome")}</p>
+                    <p className={`text-xl font-bold font-mono ${data.netIncome >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      {fmt(data.netIncome)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <div className="grid gap-2">
-                  <Label>{t("common.from")}</Label>
-                  <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>{t("common.to")}</Label>
-                  <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-                </div>
-                <Button onClick={fetchReport} className="mt-6">{t("reports.generate")}</Button>
-              </div>
-            </CardHeader>
-          </Card>
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : data ? (
+          {data.revenue.length === 0 && data.expenses.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <FileText className="h-12 w-12 text-slate-300" />
+                <h3 className="mt-4 text-lg font-semibold">{t("reports.noTransactions")}</h3>
+                <p className="text-sm text-slate-500">{t("reports.noTransactionsDesc")}</p>
+              </CardContent>
+            </Card>
+          ) : (
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
                 <CardHeader>
@@ -208,10 +293,9 @@ export default function ProfitLossPage() {
                 </CardContent>
               </Card>
             </div>
-          ) : (
-            <p className="text-center py-8 text-slate-500">{t("reports.noDataAvailable")}</p>
           )}
-        </div>
-        </PageAnimation>
-      );
+        </>
+      )}
+    </ReportPageLayout>
+  );
 }

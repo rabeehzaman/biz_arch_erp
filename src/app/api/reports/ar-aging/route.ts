@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { getCashFlowData } from "@/lib/reports/cash-flow";
+import { getARAgingData } from "@/lib/reports/ar-aging";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,23 +12,20 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const { searchParams } = new URL(request.url);
-    const fromDate =
-      searchParams.get("fromDate") ||
-      new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0];
-    const toDate =
-      searchParams.get("toDate") || new Date().toISOString().split("T")[0];
+    const asOfDate =
+      searchParams.get("asOfDate") || new Date().toISOString().split("T")[0];
 
-    const data = await getCashFlowData(organizationId, fromDate, toDate);
+    const data = await getARAgingData(organizationId, asOfDate);
 
     return NextResponse.json({
-      fromDate,
-      toDate,
-      ...data,
+      asOfDate,
+      customers: data.customers,
+      totals: data.totals,
     });
   } catch (error) {
-    console.error("Failed to generate cash flow:", error);
+    console.error("Failed to generate AR aging report:", error);
     return NextResponse.json(
-      { error: "Failed to generate cash flow report" },
+      { error: "Failed to generate AR aging report" },
       { status: 500 }
     );
   }

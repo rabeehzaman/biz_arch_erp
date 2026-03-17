@@ -27,6 +27,8 @@ import {
   Building2,
   ShoppingCart,
   Warehouse,
+  Clock,
+  Percent,
 } from "lucide-react";
 import type { CommandItem } from "../types";
 
@@ -37,6 +39,7 @@ export type NavDef = {
   keywords?: string[];
   requiresFeature?: CommandItem["requiresFeature"];
   requiresRole?: CommandItem["requiresRole"];
+  edition?: "INDIA" | "SAUDI";
 };
 
 // Core navigation — always visible (non-superadmin)
@@ -94,6 +97,10 @@ export const reportsNav: NavDef[] = [
   { name: "Profit & Loss", href: "/reports/profit-loss", icon: TrendingUp, keywords: ["P&L", "income statement", "profit"] },
   { name: "Balance Sheet", href: "/reports/balance-sheet", icon: PieChart, keywords: ["BS", "financial position", "assets"] },
   { name: "Cash Flow", href: "/reports/cash-flow", icon: ArrowRightLeft, keywords: ["cash flow statement"] },
+  { name: "AR Aging", href: "/reports/ar-aging", icon: Clock, keywords: ["accounts receivable aging", "overdue invoices"] },
+  { name: "AP Aging", href: "/reports/ap-aging", icon: Clock, keywords: ["accounts payable aging", "overdue bills"] },
+  { name: "VAT Summary", href: "/reports/vat-summary", icon: Percent, keywords: ["value added tax", "tax report", "VAT"], edition: "SAUDI" },
+  { name: "GST Summary", href: "/reports/gst-summary", icon: Percent, keywords: ["goods services tax", "tax report", "GST"], edition: "INDIA" },
   { name: "Expense Report", href: "/reports/expense-report", icon: DollarSign, keywords: ["expense analysis", "costs"] },
   { name: "Stock Summary", href: "/reports/stock-summary", icon: Package, keywords: ["inventory report", "stock levels"] },
   { name: "Branch P&L", href: "/reports/branch-pl", icon: GitBranch, keywords: ["branch profitability"], requiresFeature: ["multiBranchEnabled"] },

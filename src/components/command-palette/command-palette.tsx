@@ -51,6 +51,9 @@ type SessionUser = {
   role?: string;
   multiBranchEnabled?: boolean;
   isMobileShopModuleEnabled?: boolean;
+  edition?: string;
+  saudiEInvoiceEnabled?: boolean;
+  currency?: string;
 };
 
 function useVisibleNav(session: { user?: SessionUser } | null) {
@@ -58,9 +61,11 @@ function useVisibleNav(session: { user?: SessionUser } | null) {
   const isSuperadmin = user?.role === "superadmin";
   const multiBranch = !!user?.multiBranchEnabled;
   const mobileShop = !!user?.isMobileShopModuleEnabled;
+  const edition = user?.edition || (user?.saudiEInvoiceEnabled || user?.currency === "SAR" ? "SAUDI" : "INDIA");
 
   const filter = (items: NavDef[]) =>
     items.filter((item) => {
+      if (item.edition && item.edition !== edition) return false;
       if (item.requiresRole && !item.requiresRole.includes(user?.role as "superadmin" | "admin" | "user")) return false;
       if (item.requiresFeature) {
         return item.requiresFeature.every((f) => {
