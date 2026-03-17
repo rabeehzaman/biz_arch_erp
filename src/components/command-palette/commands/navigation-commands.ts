@@ -90,6 +90,10 @@ export const mobileShopNav: NavDef[] = [
 // Reports
 export const reportsNav: NavDef[] = [
   { name: "Profit by Items", href: "/reports/profit-by-items", icon: BarChart3, keywords: ["item profitability", "margin"] },
+  { name: "Sales by Customer", href: "/reports/sales-by-customer", icon: BarChart3, keywords: ["customer sales", "revenue by customer"] },
+  { name: "Sales by Item", href: "/reports/sales-by-item", icon: BarChart3, keywords: ["product sales", "item revenue", "quantity sold"] },
+  { name: "Sales by Salesperson", href: "/reports/sales-by-salesperson", icon: BarChart3, keywords: ["salesperson performance", "sales team"] },
+  { name: "Sales Register", href: "/reports/sales-register", icon: FileText, keywords: ["invoice list", "sales list", "all invoices"] },
   { name: "Customer Balances", href: "/reports/customer-balances", icon: Users, keywords: ["receivables", "AR", "customer report"] },
   { name: "Supplier Balances", href: "/reports/supplier-balances", icon: Truck, keywords: ["payables", "AP", "supplier report"] },
   { name: "Unified Ledger", href: "/reports/ledger", icon: BookOpen, keywords: ["account ledger", "transactions", "ledger"] },

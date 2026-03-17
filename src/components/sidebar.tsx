@@ -99,6 +99,10 @@ const accountingNavigation = [
 
 const reportsNavigation = [
   { nameKey: "nav.profitByItems", href: "/reports/profit-by-items", icon: BarChart3 },
+  { nameKey: "nav.salesByCustomer", href: "/reports/sales-by-customer", icon: BarChart3 },
+  { nameKey: "nav.salesByItem", href: "/reports/sales-by-item", icon: BarChart3 },
+  { nameKey: "nav.salesBySalesperson", href: "/reports/sales-by-salesperson", icon: BarChart3 },
+  { nameKey: "nav.salesRegister", href: "/reports/sales-register", icon: FileText },
   { nameKey: "nav.customerBalances", href: "/reports/customer-balances", icon: Users },
   { nameKey: "nav.supplierBalances", href: "/reports/supplier-balances", icon: Truck },
   { nameKey: "nav.unifiedLedger", href: "/reports/ledger", icon: BookOpen },
@@ -164,6 +168,10 @@ const NAME_TO_KEY: Record<string, string> = {
   "IMEI Lookup": "nav.imeiLookup",
   "Device Inventory": "nav.deviceInventory",
   "Profit by Items": "nav.profitByItems",
+  "Sales by Customer": "nav.salesByCustomer",
+  "Sales by Item": "nav.salesByItem",
+  "Sales by Salesperson": "nav.salesBySalesperson",
+  "Sales Register": "nav.salesRegister",
   "Customer Balances": "nav.customerBalances",
   "Supplier Balances": "nav.supplierBalances",
   "Unified Ledger": "nav.unifiedLedger",
