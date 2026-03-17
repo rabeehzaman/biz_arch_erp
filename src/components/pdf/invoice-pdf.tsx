@@ -8,7 +8,7 @@ import {
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { numberToWordsLocalized } from "@/lib/number-to-words";
-import { translate, type Language } from "@/lib/i18n";
+import { translate, type Language } from "@/lib/i18n-translate";
 
 const styles = StyleSheet.create({
   page: {

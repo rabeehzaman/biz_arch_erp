@@ -10,13 +10,17 @@ import React, {
 import { useSession } from "next-auth/react";
 import en from "@/locales/en.json";
 import ar from "@/locales/ar.json";
+import { translate as _translate, type Language as _Language } from "@/lib/i18n-translate";
+// Re-export server-safe translate + Language so existing client imports keep working
+export { translate, type Language } from "@/lib/i18n-translate";
 
 type TranslationDict = typeof en;
 type Section = keyof TranslationDict;
+// Local aliases for use within this file
+type Language = _Language;
+const translate = _translate;
 
 const translations: Record<string, TranslationDict> = { en, ar };
-
-export type Language = "en" | "ar";
 
 const LOCALIZED_ATTRIBUTES = [
   "placeholder",
@@ -801,30 +805,6 @@ export function translateLiteral(
   if (!translated) return text;
 
   return `${leadingWhitespace}${translated}${trailingWhitespace}`;
-}
-
-export function translate(key: string, lang: Language = "en"): string {
-  const dict = translations[lang] || translations.en;
-  const parts = key.split(".");
-
-  let result: unknown = dict;
-  for (const part of parts) {
-    result = (result as Record<string, unknown> | undefined)?.[part];
-    if (result === undefined) break;
-  }
-
-  if (typeof result === "string") return result;
-
-  if (lang !== "en") {
-    let fallback: unknown = translations.en;
-    for (const part of parts) {
-      fallback = (fallback as Record<string, unknown> | undefined)?.[part];
-      if (fallback === undefined) break;
-    }
-    if (typeof fallback === "string") return fallback;
-  }
-
-  return key;
 }
 
 export function getSection<S extends Section>(
