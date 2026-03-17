@@ -42,7 +42,7 @@ interface JournalEntryTabProps {
 }
 
 export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) {
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const { tt } = useLanguage();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -135,12 +135,12 @@ export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) 
                         </TableCell>
                         <TableCell className="text-right">
                           {Number(line.debit) > 0
-                            ? `${symbol}${Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                            ? `${symbol}${Number(line.debit).toLocaleString(locale, { minimumFractionDigits: 2 })}`
                             : ""}
                         </TableCell>
                         <TableCell className="text-right">
                           {Number(line.credit) > 0
-                            ? `${symbol}${Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                            ? `${symbol}${Number(line.credit).toLocaleString(locale, { minimumFractionDigits: 2 })}`
                             : ""}
                         </TableCell>
                       </TableRow>
@@ -148,10 +148,10 @@ export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) 
                     <TableRow className="font-bold border-t-2">
                       <TableCell>{tt("Total")}</TableCell>
                       <TableCell className="text-right">
-                        {symbol}{entryDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {symbol}{entryDebit.toLocaleString(locale, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right">
-                        {symbol}{entryCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {symbol}{entryCredit.toLocaleString(locale, { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -169,20 +169,20 @@ export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) 
                     <div className="flex justify-between text-sm">
                       {Number(line.debit) > 0 && (
                         <span className="text-emerald-600">
-                          {tt("Debit")} {symbol}{Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          {tt("Debit")} {symbol}{Number(line.debit).toLocaleString(locale, { minimumFractionDigits: 2 })}
                         </span>
                       )}
                       {Number(line.credit) > 0 && (
                         <span className="text-blue-600 ml-auto">
-                          {tt("Credit")} {symbol}{Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          {tt("Credit")} {symbol}{Number(line.credit).toLocaleString(locale, { minimumFractionDigits: 2 })}
                         </span>
                       )}
                     </div>
                   </div>
                 ))}
                 <div className="p-3 font-bold flex justify-between text-sm bg-slate-50">
-                  <span>{tt("Debit")} {symbol}{entryDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                  <span>{tt("Credit")} {symbol}{entryCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                  <span>{tt("Debit")} {symbol}{entryDebit.toLocaleString(locale, { minimumFractionDigits: 2 })}</span>
+                  <span>{tt("Credit")} {symbol}{entryCredit.toLocaleString(locale, { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </CardContent>
@@ -193,8 +193,8 @@ export function JournalEntryTab({ sourceType, sourceId }: JournalEntryTabProps) 
       {entries.length > 1 && (
         <div className="flex justify-end px-4">
           <div className="text-sm font-semibold text-slate-600 space-x-4">
-            <span>{tt("Grand Total — Debit:")} {symbol}{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-            <span>{tt("Credit")}: {symbol}{totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+            <span>{tt("Grand Total — Debit:")} {symbol}{totalDebit.toLocaleString(locale, { minimumFractionDigits: 2 })}</span>
+            <span>{tt("Credit")}: {symbol}{totalCredit.toLocaleString(locale, { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
       )}

@@ -101,7 +101,7 @@ const emptyForm = {
 
 export default function OpeningStockPage() {
   const { data: session } = useSession();
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const { t } = useLanguage();
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
@@ -342,7 +342,7 @@ export default function OpeningStockPage() {
                     <div>
                       <p className="text-sm text-slate-500">{t("inventory.totalValue")}</p>
                       <p className="text-2xl font-bold">
-                        {symbol}{totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                        {symbol}{totalValue.toLocaleString(locale, { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </div>
@@ -445,7 +445,7 @@ export default function OpeningStockPage() {
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.openingQty")}</p>
                             <p className="mt-1 font-medium text-slate-900">
-                              {Number(stock.quantity).toLocaleString("en-IN")}
+                              {Number(stock.quantity).toLocaleString(locale)}
                               {stock.product.unit && (
                                 <span className="ml-1 text-xs text-slate-400">{stock.product.unit.code}</span>
                               )}
@@ -454,7 +454,7 @@ export default function OpeningStockPage() {
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.remaining")}</p>
                             <div className="mt-1 flex flex-wrap items-center gap-2">
-                              <span className="font-medium text-slate-900">{remaining.toLocaleString("en-IN")}</span>
+                              <span className="font-medium text-slate-900">{remaining.toLocaleString(locale)}</span>
                               <Badge
                                 variant="outline"
                                 className={
@@ -472,13 +472,13 @@ export default function OpeningStockPage() {
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.unitCost")}</p>
                             <p className="mt-1 font-medium text-slate-900">
-                              {symbol}{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              {symbol}{Number(stock.unitCost).toLocaleString(locale, { minimumFractionDigits: 2 })}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.totalValue")}</p>
                             <p className="mt-1 font-semibold text-slate-900">
-                              {symbol}{totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              {symbol}{totalValue.toLocaleString(locale, { minimumFractionDigits: 2 })}
                             </p>
                           </div>
                           {multiBranchEnabled && (
@@ -524,7 +524,7 @@ export default function OpeningStockPage() {
                               )}
                             </TableCell>
                             <TableCell className="text-right tabular-nums">
-                              {Number(stock.quantity).toLocaleString("en-IN")}
+                              {Number(stock.quantity).toLocaleString(locale)}
                               {stock.product.unit && (
                                 <span className="text-xs text-slate-400 ml-1">{stock.product.unit.code}</span>
                               )}
@@ -532,7 +532,7 @@ export default function OpeningStockPage() {
                             <TableCell className="hidden sm:table-cell text-right">
                               <div className="flex flex-col items-end gap-1">
                                 <span className="tabular-nums text-sm">
-                                  {remaining.toLocaleString("en-IN")}
+                                  {remaining.toLocaleString(locale)}
                                 </span>
                                 <Badge
                                   variant="outline"
@@ -549,10 +549,10 @@ export default function OpeningStockPage() {
                               </div>
                             </TableCell>
                             <TableCell className="hidden md:table-cell text-right tabular-nums">
-                              {symbol}{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              {symbol}{Number(stock.unitCost).toLocaleString(locale, { minimumFractionDigits: 2 })}
                             </TableCell>
                             <TableCell className="hidden sm:table-cell text-right font-medium tabular-nums">
-                              {symbol}{(Number(stock.quantity) * Number(stock.unitCost)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              {symbol}{(Number(stock.quantity) * Number(stock.unitCost)).toLocaleString(locale, { minimumFractionDigits: 2 })}
                             </TableCell>
                             {multiBranchEnabled && (
                               <TableCell className="hidden sm:table-cell">
@@ -712,7 +712,7 @@ export default function OpeningStockPage() {
             {formData.quantity && formData.unitCost && parseFloat(formData.quantity) > 0 && (
               <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
                 <span className="font-medium">{t("inventory.totalValue")}: </span>
-                {symbol}{(parseFloat(formData.quantity || "0") * parseFloat(formData.unitCost || "0")).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                {symbol}{(parseFloat(formData.quantity || "0") * parseFloat(formData.unitCost || "0")).toLocaleString(locale, { minimumFractionDigits: 2 })}
               </div>
             )}
 

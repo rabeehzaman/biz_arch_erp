@@ -8,6 +8,7 @@ import {
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { numberToWordsLocalized } from "@/lib/number-to-words";
+import { getLocaleForCurrency } from "@/lib/currency";
 
 type TaxMode = "GST" | "VAT" | "NONE";
 
@@ -313,6 +314,7 @@ interface InvoiceModernGSTProps {
     };
     taxMode: TaxMode;
     currencySymbol: string;
+    currency?: string;
     brandColor?: string;
     type: "SALES" | "PURCHASE";
     headerImageUrl?: string;
@@ -322,11 +324,12 @@ export function InvoiceModernGSTPDF({
     invoice,
     taxMode,
     currencySymbol,
+    currency,
     brandColor: brandColorProp,
     headerImageUrl,
 }: InvoiceModernGSTProps) {
     const color = brandColorProp || DEFAULT_BRAND_COLOR;
-    const locale = taxMode === "VAT" ? "en-US" : "en-IN";
+    const locale = getLocaleForCurrency(currency || (taxMode === "VAT" ? "SAR" : "INR"));
     const fmt = (amount: number) => formatCurrencyValue(amount, locale);
 
     const getAddressLines = (addressStr?: string | null) => {

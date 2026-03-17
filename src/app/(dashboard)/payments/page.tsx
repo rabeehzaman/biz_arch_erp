@@ -120,7 +120,7 @@ export default function PaymentsPage() {
   const [deletePayment, setDeletePayment] = useState<Payment | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { t, lang } = useLanguage();
-  const { symbol, fmt } = useCurrency();
+  const { symbol, locale, fmt } = useCurrency();
   const [formData, setFormData] = useState({
     customerId: "",
     invoiceId: "",
@@ -301,7 +301,7 @@ export default function PaymentsPage() {
                         <div className="flex justify-between w-full">
                           <span>{customer.name}</span>
                           <span className="text-slate-500 text-xs">
-                            Balance: {symbol}{Number(customer.balance).toLocaleString("en-IN")}
+                            Balance: {symbol}{Number(customer.balance).toLocaleString(locale)}
                           </span>
                         </div>
                       )}
@@ -330,7 +330,7 @@ export default function PaymentsPage() {
                         <SelectContent>
                           {customerInvoices.map((invoice) => (
                             <SelectItem key={invoice.id} value={invoice.id}>
-                              {invoice.invoiceNumber} (Due: {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")})
+                              {invoice.invoiceNumber} (Due: {symbol}{Number(invoice.balanceDue).toLocaleString(locale)})
                             </SelectItem>
                           ))}
                         </SelectContent>

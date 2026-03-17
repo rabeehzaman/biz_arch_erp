@@ -95,7 +95,7 @@ import { useLanguage } from "@/lib/i18n";
 
 export default function SupplierPaymentsPage() {
   const { t, lang } = useLanguage();
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
 
   const methodLabels: Record<string, string> = {
     CASH: t("common.cash"),
@@ -297,7 +297,7 @@ export default function SupplierPaymentsPage() {
                         <div className="flex justify-between w-full">
                           <span>{supplier.name}</span>
                           <span className="text-slate-500 text-xs">
-                            {t("statement.payable")}: {symbol}{Number(supplier.balance).toLocaleString("en-IN")}
+                            {t("statement.payable")}: {symbol}{Number(supplier.balance).toLocaleString(locale)}
                           </span>
                         </div>
                       )}
@@ -321,7 +321,7 @@ export default function SupplierPaymentsPage() {
                         <SelectContent>
                           {supplierInvoices.map((invoice) => (
                             <SelectItem key={invoice.id} value={invoice.id}>
-                              {invoice.purchaseInvoiceNumber} ({t("common.due")}: {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")})
+                              {invoice.purchaseInvoiceNumber} ({t("common.due")}: {symbol}{Number(invoice.balanceDue).toLocaleString(locale)})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -495,7 +495,7 @@ export default function SupplierPaymentsPage() {
                           <p className="mt-1 font-semibold text-slate-900">{payment.paymentNumber}</p>
                         </div>
                         <p className="text-sm font-semibold text-orange-600">
-                          {symbol}{Number(payment.amount).toLocaleString("en-IN")}
+                          {symbol}{Number(payment.amount).toLocaleString(locale)}
                         </p>
                       </div>
 
@@ -520,7 +520,7 @@ export default function SupplierPaymentsPage() {
                           <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.discount")}</p>
                           <p className="mt-1 font-medium text-slate-900">
                             {Number(payment.discountGiven) > 0
-                              ? `${symbol}${Number(payment.discountGiven).toLocaleString("en-IN")}`
+                              ? `${symbol}${Number(payment.discountGiven).toLocaleString(locale)}`
                               : "-"}
                           </p>
                         </div>
@@ -573,11 +573,11 @@ export default function SupplierPaymentsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-medium text-orange-600">
-                            {symbol}{Number(payment.amount).toLocaleString("en-IN")}
+                            {symbol}{Number(payment.amount).toLocaleString(locale)}
                           </TableCell>
                           <TableCell className="text-right text-slate-500">
                             {Number(payment.discountGiven) > 0
-                              ? `${symbol}${Number(payment.discountGiven).toLocaleString("en-IN")}`
+                              ? `${symbol}${Number(payment.discountGiven).toLocaleString(locale)}`
                               : "-"}
                           </TableCell>
                           <TableCell>

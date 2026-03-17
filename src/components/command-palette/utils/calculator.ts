@@ -3,7 +3,7 @@
  * Only allows digits, whitespace, +, -, *, /, (, ), ., %, comma.
  * Returns a formatted result string or null if not a valid expression.
  */
-export function tryEvaluate(input: string): string | null {
+export function tryEvaluate(input: string, locale: string = "en-IN"): string | null {
   const trimmed = input.trim();
 
   // Must contain at least one operator to be treated as expression
@@ -20,7 +20,7 @@ export function tryEvaluate(input: string): string | null {
     const result = new Function(`"use strict"; return (${trimmed})`)();
     if (typeof result === "number" && isFinite(result)) {
       // Format with Indian locale, up to 4 decimal places
-      return result.toLocaleString("en-IN", {
+      return result.toLocaleString(locale, {
         maximumFractionDigits: 4,
         minimumFractionDigits: 0,
       });

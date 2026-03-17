@@ -8,9 +8,10 @@ import {
 } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { numberToWordsLocalized } from "@/lib/number-to-words";
+import { getLocaleForCurrency } from "@/lib/currency";
 
-const formatCurrency = (amount: number): string => {
-  return amount.toLocaleString("en-IN", {
+const formatCurrencyWithLocale = (amount: number, locale: string): string => {
+  return amount.toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -266,6 +267,9 @@ export function InvoiceA4PDF({
   headerImageUrl,
   footerImageUrl,
 }: InvoiceA4PDFProps) {
+  const locale = getLocaleForCurrency("INR");
+  const formatCurrency = (amount: number) => formatCurrencyWithLocale(amount, locale);
+
   // Compute taxable value per item
   const itemsComputed = invoice.items.map((item) => {
     const gross = item.quantity * item.unitPrice;

@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import "@/lib/pdf-fonts";
 import { ARABIC_FONT_FAMILY } from "@/lib/pdf-fonts";
 import type { POSSessionReportData } from "@/lib/pos/session-summary";
+import { getLocaleForCurrency } from "@/lib/currency";
 
 interface POSSessionReportPDFProps {
   organization: {
@@ -31,7 +32,7 @@ const safeBrandColor = (brandColor?: string | null): string => {
 
 const formatAmount = (amount: number, currency: string = "INR"): string => {
   try {
-    return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {
+    return new Intl.NumberFormat(getLocaleForCurrency(currency), {
       style: "currency",
       currency,
       minimumFractionDigits: 2,

@@ -64,7 +64,7 @@ import { useLanguage } from "@/lib/i18n";
 
 export default function SuppliersPage() {
   const { t, lang } = useLanguage();
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const {
     items: suppliers,
     isLoading,
@@ -323,7 +323,7 @@ export default function SuppliersPage() {
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.balance")}</p>
                             <p className={`mt-1 font-semibold ${Number(supplier.balance) > 0 ? "text-red-600" : Number(supplier.balance) < 0 ? "text-green-600" : "text-slate-900"}`}>
-                              {symbol}{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
+                              {symbol}{Math.abs(Number(supplier.balance)).toLocaleString(locale)}
                             </p>
                           </div>
                           <div>
@@ -389,7 +389,7 @@ export default function SuppliersPage() {
                                         : ""
                                   }
                                 >
-                                  {symbol}{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
+                                  {symbol}{Math.abs(Number(supplier.balance)).toLocaleString(locale)}
                                 </span>
                               </TableCell>
                               <TableCell className="hidden sm:table-cell">{supplier._count?.purchaseInvoices || 0}</TableCell>

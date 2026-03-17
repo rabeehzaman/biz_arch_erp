@@ -66,7 +66,7 @@ export default function CreditNoteDetailPage() {
   const [creditNote, setCreditNote] = useState<CreditNote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -265,11 +265,11 @@ export default function CreditNoteDetailPage() {
                       </TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
                       <TableCell className="text-right">
-                        {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}
+                        {symbol}{Number(item.unitPrice).toLocaleString(locale)}
                       </TableCell>
                       <TableCell className="text-right">{item.discount}%</TableCell>
                       <TableCell className="text-right font-medium">
-                        {symbol}{Number(item.total).toLocaleString("en-IN")}
+                        {symbol}{Number(item.total).toLocaleString(locale)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -286,13 +286,13 @@ export default function CreditNoteDetailPage() {
                   )}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>{t("common.qty")}: {item.quantity}</span>
-                    <span>{t("common.price")}: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                    <span>{t("common.price")}: {symbol}{Number(item.unitPrice).toLocaleString(locale)}</span>
                     {Number(item.discount) > 0 && (
                       <span className="text-green-600">{t("common.discount")}: {item.discount}%</span>
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
-                    {symbol}{Number(item.total).toLocaleString("en-IN")}
+                    {symbol}{Number(item.total).toLocaleString(locale)}
                   </div>
                 </div>
               ))}
@@ -302,7 +302,7 @@ export default function CreditNoteDetailPage() {
               <div className="flex justify-between text-lg font-bold">
                 <span>{t("common.total")}:</span>
                 <span className="text-green-600">
-                  {symbol}{Number(creditNote.total).toLocaleString("en-IN")}
+                  {symbol}{Number(creditNote.total).toLocaleString(locale)}
                 </span>
               </div>
             </div>

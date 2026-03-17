@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,7 @@ interface ExpenseLine {
 
 export default function NewExpensePage() {
   const router = useRouter();
+  const { locale } = useCurrency();
   const { containerRef: formRef } = useEnterToTab();
   const { t } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -332,7 +334,7 @@ export default function NewExpensePage() {
                     <div className="flex justify-between font-bold text-base">
                       <span>{t("common.total")}:</span>
                       <span className="font-mono">
-                        {subtotal.toLocaleString("en-IN", {
+                        {subtotal.toLocaleString(locale, {
                           minimumFractionDigits: 2,
                         })}
                       </span>

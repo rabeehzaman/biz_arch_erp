@@ -108,7 +108,7 @@ export default function PurchaseInvoiceDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const { t } = useLanguage();
 
   const statusLabels: Record<string, string> = {
@@ -443,7 +443,7 @@ export default function PurchaseInvoiceDetailPage({
                       <TableCell>{item.description}</TableCell>
                       <TableCell className="text-right">{Number(item.quantity)}</TableCell>
                       <TableCell className="text-right">
-                        {symbol}{Number(item.unitCost).toLocaleString("en-IN")}
+                        {symbol}{Number(item.unitCost).toLocaleString(locale)}
                       </TableCell>
                       <TableCell className="text-right">
                         {Number(item.discount) > 0 ? (
@@ -453,7 +453,7 @@ export default function PurchaseInvoiceDetailPage({
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {symbol}{Number(item.total).toLocaleString("en-IN")}
+                        {symbol}{Number(item.total).toLocaleString(locale)}
                       </TableCell>
                       <TableCell className="text-right print:hidden">
                         {item.stockLot && (
@@ -478,7 +478,7 @@ export default function PurchaseInvoiceDetailPage({
                   <div className="font-medium text-sm">{item.description}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>{t("common.qty")}: {Number(item.quantity)}</span>
-                    <span>{t("common.cost")}: {symbol}{Number(item.unitCost).toLocaleString("en-IN")}</span>
+                    <span>{t("common.cost")}: {symbol}{Number(item.unitCost).toLocaleString(locale)}</span>
                     {Number(item.discount) > 0 && (
                       <span className="text-green-600">{t("common.discount")}: {Number(item.discount)}%</span>
                     )}
@@ -489,7 +489,7 @@ export default function PurchaseInvoiceDetailPage({
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
-                    {symbol}{Number(item.total).toLocaleString("en-IN")}
+                    {symbol}{Number(item.total).toLocaleString(locale)}
                   </div>
                 </div>
               ))}
@@ -500,7 +500,7 @@ export default function PurchaseInvoiceDetailPage({
               <div className="w-full sm:w-64 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>{t("common.subtotal")}</span>
-                  <span>{symbol}{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
+                  <span>{symbol}{Number(invoice.subtotal).toLocaleString(locale)}</span>
                 </div>
                 {Number(invoice.totalVat) > 0 ? (
                   <div className="flex justify-between text-sm text-slate-500">
@@ -512,25 +512,25 @@ export default function PurchaseInvoiceDetailPage({
                     {Number(invoice.totalCgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>{t("common.cgst")}</span>
-                        <span>{symbol}{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
+                        <span>{symbol}{Number(invoice.totalCgst).toLocaleString(locale)}</span>
                       </div>
                     )}
                     {Number(invoice.totalSgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>{t("common.sgst")}</span>
-                        <span>{symbol}{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
+                        <span>{symbol}{Number(invoice.totalSgst).toLocaleString(locale)}</span>
                       </div>
                     )}
                     {Number(invoice.totalIgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>{t("common.igst")}</span>
-                        <span>{symbol}{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
+                        <span>{symbol}{Number(invoice.totalIgst).toLocaleString(locale)}</span>
                       </div>
                     )}
                     {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>{t("common.tax")}</span>
-                        <span>{symbol}{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
+                        <span>{symbol}{Number(invoice.taxAmount).toLocaleString(locale)}</span>
                       </div>
                     )}
                   </>
@@ -546,18 +546,18 @@ export default function PurchaseInvoiceDetailPage({
                 )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>{t("common.total")}</span>
-                  <span>{symbol}{Number(invoice.total).toLocaleString("en-IN")}</span>
+                  <span>{symbol}{Number(invoice.total).toLocaleString(locale)}</span>
                 </div>
                 {Number(invoice.amountPaid) > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>{t("sales.amountPaid")}</span>
-                    <span>{symbol}{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
+                    <span>{symbol}{Number(invoice.amountPaid).toLocaleString(locale)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>{t("common.balanceDue")}</span>
                   <span className={Number(invoice.balanceDue) > 0 ? "text-orange-600" : "text-green-600"}>
-                    {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")}
+                    {symbol}{Number(invoice.balanceDue).toLocaleString(locale)}
                   </span>
                 </div>
               </div>

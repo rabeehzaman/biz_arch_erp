@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React from "react";
 import { format } from "date-fns";
+import { getLocaleForCurrency, getCurrencySymbol } from "@/lib/currency";
 
 export interface ReceiptItem {
   name: string;
@@ -59,10 +60,8 @@ const PAYMENT_AR: Record<string, string> = {
 };
 
 const formatCurrency = (amount: number, currency?: string) => {
-  if (currency === "SAR") {
-    return amount.toLocaleString("en-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  return amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const locale = getLocaleForCurrency(currency || "INR");
+  return amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 export function PosReceipt({ data }: { data: ReceiptData }) {
@@ -332,7 +331,7 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
           borderRadius: "4px",
         }}>
           <span>{bl("TOTAL", "الإجمالي")}</span>
-          <span>{cur === "SAR" ? "SAR " : cur === "INR" ? "\u20B9" : ""}{formatCurrency(data.total, cur)}</span>
+          <span>{getCurrencySymbol(cur || "INR")}{formatCurrency(data.total, cur)}</span>
         </div>
       </div>
 

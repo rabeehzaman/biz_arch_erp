@@ -390,6 +390,7 @@ export async function GET(
           type: "SALES",
           taxMode,
           currencySymbol,
+          currency: org?.currency || "INR",
           brandColor: org?.brandColor ?? undefined,
           headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
         }) as any

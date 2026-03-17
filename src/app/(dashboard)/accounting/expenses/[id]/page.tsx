@@ -93,7 +93,7 @@ export default function ExpenseDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { fmt } = useCurrency();
+  const { fmt, locale } = useCurrency();
   const { t } = useLanguage();
   const [expense, setExpense] = useState<Expense | null>(null);
   const [cashBankAccounts, setCashBankAccounts] = useState<CashBankAccount[]>([]);
@@ -334,7 +334,7 @@ export default function ExpenseDetailPage({
                       </TableCell>
                       <TableCell>{item.description}</TableCell>
                       <TableCell className="text-right font-mono">
-                        {Number(item.amount).toLocaleString("en-IN", {
+                        {Number(item.amount).toLocaleString(locale, {
                           minimumFractionDigits: 2,
                         })}
                       </TableCell>
@@ -345,7 +345,7 @@ export default function ExpenseDetailPage({
                       {t("common.subtotal")}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {Number(expense.subtotal).toLocaleString("en-IN", {
+                      {Number(expense.subtotal).toLocaleString(locale, {
                         minimumFractionDigits: 2,
                       })}
                     </TableCell>
@@ -354,7 +354,7 @@ export default function ExpenseDetailPage({
                     <TableRow>
                       <TableCell colSpan={2} className="text-right text-slate-500">CGST</TableCell>
                       <TableCell className="text-right font-mono text-slate-500">
-                        {Number(expense.totalCgst).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {Number(expense.totalCgst).toLocaleString(locale, { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   )}
@@ -362,7 +362,7 @@ export default function ExpenseDetailPage({
                     <TableRow>
                       <TableCell colSpan={2} className="text-right text-slate-500">SGST</TableCell>
                       <TableCell className="text-right font-mono text-slate-500">
-                        {Number(expense.totalSgst).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {Number(expense.totalSgst).toLocaleString(locale, { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   )}
@@ -370,7 +370,7 @@ export default function ExpenseDetailPage({
                     <TableRow>
                       <TableCell colSpan={2} className="text-right text-slate-500">IGST</TableCell>
                       <TableCell className="text-right font-mono text-slate-500">
-                        {Number(expense.totalIgst).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {Number(expense.totalIgst).toLocaleString(locale, { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   )}
@@ -378,7 +378,7 @@ export default function ExpenseDetailPage({
                     <TableRow>
                       <TableCell colSpan={2} className="text-right text-slate-500">{t("common.tax")}</TableCell>
                       <TableCell className="text-right font-mono text-slate-500">
-                        {Number(expense.taxAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {Number(expense.taxAmount).toLocaleString(locale, { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   )}
@@ -387,7 +387,7 @@ export default function ExpenseDetailPage({
                       {t("common.total")}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {Number(expense.total).toLocaleString("en-IN", {
+                      {Number(expense.total).toLocaleString(locale, {
                         minimumFractionDigits: 2,
                       })}
                     </TableCell>

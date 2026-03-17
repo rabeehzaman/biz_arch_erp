@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ interface Line {
 export default function EditJournalEntryPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const { id } = use(params);
+    const { locale } = useCurrency();
     const { containerRef: formRef } = useEnterToTab();
     const { t } = useLanguage();
     const [accounts, setAccounts] = useState<Account[]>([]);
@@ -341,12 +343,12 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                         <span />
                                         <span className="text-right">{t("common.totals")}:</span>
                                         <span className="text-right font-mono">
-                                            {totalDebit.toLocaleString("en-IN", {
+                                            {totalDebit.toLocaleString(locale, {
                                                 minimumFractionDigits: 2,
                                             })}
                                         </span>
                                         <span className="text-right font-mono">
-                                            {totalCredit.toLocaleString("en-IN", {
+                                            {totalCredit.toLocaleString(locale, {
                                                 minimumFractionDigits: 2,
                                             })}
                                         </span>
@@ -357,7 +359,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                         <div className="flex items-center justify-between text-sm font-semibold">
                                             <span>{t("accounting.totalDebit")}</span>
                                             <span className="font-mono">
-                                                {totalDebit.toLocaleString("en-IN", {
+                                                {totalDebit.toLocaleString(locale, {
                                                     minimumFractionDigits: 2,
                                                 })}
                                             </span>
@@ -365,7 +367,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                         <div className="mt-2 flex items-center justify-between text-sm font-semibold">
                                             <span>{t("accounting.totalCredit")}</span>
                                             <span className="font-mono">
-                                                {totalCredit.toLocaleString("en-IN", {
+                                                {totalCredit.toLocaleString(locale, {
                                                     minimumFractionDigits: 2,
                                                 })}
                                             </span>
@@ -374,7 +376,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
 
                                     {!isBalanced && totalDebit + totalCredit > 0 && (
                                         <p className="text-sm text-red-600">
-                                            {t("accounting.difference")}: {Math.abs(totalDebit - totalCredit).toLocaleString("en-IN", { minimumFractionDigits: 2 })} — {t("accounting.debitsEqualCredits")}
+                                            {t("accounting.difference")}: {Math.abs(totalDebit - totalCredit).toLocaleString(locale, { minimumFractionDigits: 2 })} — {t("accounting.debitsEqualCredits")}
                                         </p>
                                     )}
                                 </div>

@@ -50,7 +50,7 @@ interface Account {
 }
 
 export default function CashBankPage() {
-  const { fmt } = useCurrency();
+  const { fmt, locale } = useCurrency();
   const { t, tt } = useLanguage();
   const [accounts, setAccounts] = useState<CashBankAccount[]>([]);
   const [coaAccounts, setCoaAccounts] = useState<Account[]>([]);
@@ -179,7 +179,7 @@ export default function CashBankPage() {
                           <SelectTrigger><SelectValue placeholder={t("accounting.selectSource")} /></SelectTrigger>
                           <SelectContent>
                             {accounts.filter((a) => a.isActive).map((a) => (
-                              <SelectItem key={a.id} value={a.id}>{a.name} ({Number(a.balance).toLocaleString("en-IN")})</SelectItem>
+                              <SelectItem key={a.id} value={a.id}>{a.name} ({Number(a.balance).toLocaleString(locale)})</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>

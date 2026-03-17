@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import {
   Table,
@@ -65,6 +66,7 @@ const sourceLabels = (t: (key: string) => string): Record<string, string> => ({
 });
 
 export default function JournalEntriesPage() {
+  const { locale } = useCurrency();
   const { t } = useLanguage();
   const srcLabels = sourceLabels(t);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -219,7 +221,7 @@ export default function JournalEntriesPage() {
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("accounting.debit")}</p>
                             <p className="mt-1 font-mono font-semibold text-slate-900">
-                              {totals.debit.toLocaleString("en-IN", {
+                              {totals.debit.toLocaleString(locale, {
                                 minimumFractionDigits: 2,
                               })}
                             </p>
@@ -227,7 +229,7 @@ export default function JournalEntriesPage() {
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("accounting.credit")}</p>
                             <p className="mt-1 font-mono font-semibold text-slate-900">
-                              {totals.credit.toLocaleString("en-IN", {
+                              {totals.credit.toLocaleString(locale, {
                                 minimumFractionDigits: 2,
                               })}
                             </p>
@@ -290,12 +292,12 @@ export default function JournalEntriesPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right font-mono">
-                                {totals.debit.toLocaleString("en-IN", {
+                                {totals.debit.toLocaleString(locale, {
                                   minimumFractionDigits: 2,
                                 })}
                               </TableCell>
                               <TableCell className="hidden sm:table-cell text-right font-mono">
-                                {totals.credit.toLocaleString("en-IN", {
+                                {totals.credit.toLocaleString(locale, {
                                   minimumFractionDigits: 2,
                                 })}
                               </TableCell>

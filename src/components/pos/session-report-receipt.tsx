@@ -1,4 +1,5 @@
 import React from "react";
+import { getLocaleForCurrency } from "@/lib/currency";
 
 export type SessionReportLanguage = "en" | "ar";
 
@@ -319,7 +320,7 @@ const formatCurrency = (
   currency: string,
   language: SessionReportLanguage
 ) => {
-  const locale = language === "ar" ? "ar-SA" : currency === "INR" ? "en-IN" : "en-US";
+  const locale = language === "ar" ? "ar-SA" : getLocaleForCurrency(currency);
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",

@@ -70,7 +70,7 @@ export default function StockSummaryPage() {
     const BackArrow = isRTL ? ArrowRight : ArrowLeft;
     const { data: session } = useSession();
     const multiBranchEnabled = session?.user?.multiBranchEnabled;
-    const { symbol } = useCurrency();
+    const { symbol, locale } = useCurrency();
 
     const [rows, setRows] = useState<StockRow[]>([]);
     const [summary, setSummary] = useState<Summary | null>(null);
@@ -202,7 +202,7 @@ export default function StockSummaryPage() {
                                         <div>
                                             <p className="text-sm text-slate-500">{t("reports.totalStockValue")}</p>
                                             <p className="text-2xl font-bold">
-                                                {symbol}{summary.totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                                                {symbol}{summary.totalValue.toLocaleString(locale, { maximumFractionDigits: 0 })}
                                             </p>
                                         </div>
                                     </CardContent>
@@ -344,7 +344,7 @@ export default function StockSummaryPage() {
                                                     <div>
                                                         <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.qtyInStock")}</p>
                                                         <p className={`mt-1 font-semibold ${isLow ? "text-red-600" : "text-slate-900"}`}>
-                                                            {row.totalQuantity.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                                                            {row.totalQuantity.toLocaleString(locale, { maximumFractionDigits: 2 })}
                                                             {row.unit && <span className="ml-1 text-xs text-slate-400">{row.unit.code}</span>}
                                                         </p>
                                                         {row.reorderPoint !== null && (
@@ -354,13 +354,13 @@ export default function StockSummaryPage() {
                                                     <div>
                                                         <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.avgCost")}</p>
                                                         <p className="mt-1 font-medium text-slate-900">
-                                                            {symbol}{row.avgCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {symbol}{row.avgCost.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </p>
                                                     </div>
                                                     <div>
                                                         <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.totalStockValue")}</p>
                                                         <p className="mt-1 font-semibold text-slate-900">
-                                                            {symbol}{row.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {symbol}{row.totalValue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </p>
                                                     </div>
                                                     <div>
@@ -416,7 +416,7 @@ export default function StockSummaryPage() {
                                                         )}
                                                         <TableCell className="text-right tabular-nums">
                                                             <span className={isLow ? "text-red-600 font-semibold" : ""}>
-                                                                {row.totalQuantity.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                                                                {row.totalQuantity.toLocaleString(locale, { maximumFractionDigits: 2 })}
                                                             </span>
                                                             {row.unit && (
                                                                 <span className="text-xs text-slate-400 ml-1">{row.unit.code}</span>
@@ -428,10 +428,10 @@ export default function StockSummaryPage() {
                                                             )}
                                                         </TableCell>
                                                         <TableCell className="text-right tabular-nums text-sm">
-                                                            {symbol}{row.avgCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {symbol}{row.avgCost.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </TableCell>
                                                         <TableCell className="text-right font-medium tabular-nums">
-                                                            {symbol}{row.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {symbol}{row.totalValue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </TableCell>
                                                         <TableCell className="text-center">
                                                             <Badge variant="outline" className="text-xs">

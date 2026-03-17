@@ -65,7 +65,7 @@ export default function CashBankDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { fmt } = useCurrency();
+  const { fmt, locale } = useCurrency();
   const { t } = useLanguage();
   const txLabels = txTypeLabels(t);
   const [account, setAccount] = useState<CashBankAccount | null>(null);
@@ -247,12 +247,12 @@ export default function CashBankDetailPage({
                               }`}
                             >
                               {Number(tx.amount) >= 0 ? "+" : ""}
-                              {Number(tx.amount).toLocaleString("en-IN", {
+                              {Number(tx.amount).toLocaleString(locale, {
                                 minimumFractionDigits: 2,
                               })}
                             </TableCell>
                             <TableCell className="text-right font-mono">
-                              {Number(tx.runningBalance).toLocaleString("en-IN", {
+                              {Number(tx.runningBalance).toLocaleString(locale, {
                                 minimumFractionDigits: 2,
                               })}
                             </TableCell>

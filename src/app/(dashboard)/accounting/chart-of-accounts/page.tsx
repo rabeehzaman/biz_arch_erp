@@ -204,7 +204,7 @@ function AccountTreeItem({
   onDelete: (node: TreeNode) => void;
   searchQuery: string;
 }) {
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const { t } = useLanguage();
   const typeLabels = accountTypeLabels(t);
   const isExpanded = expanded.has(node.id);
@@ -288,7 +288,7 @@ function AccountTreeItem({
         <div className="flex flex-col items-end shrink-0 gap-1.5 sm:gap-0 sm:flex-row sm:items-center">
           <span className={`text-xs sm:text-sm font-mono sm:w-28 text-right ${node.balance < 0 ? "text-red-600" : node.balance > 0 ? "text-slate-800" : "text-slate-400"}`}>
             {node.balance !== 0
-              ? `${symbol}${Math.abs(node.balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${node.balance < 0 ? " Cr" : " Dr"}`
+              ? `${symbol}${Math.abs(node.balance).toLocaleString(locale, { minimumFractionDigits: 2 })}${node.balance < 0 ? " Cr" : " Dr"}`
               : "—"}
           </span>
 

@@ -16,3 +16,7 @@ export function formatCurrency(amount: number, currencyCode: string = "INR"): st
 export function getCurrencySymbol(currencyCode: string): string {
   return CURRENCY_CONFIG[currencyCode]?.symbol || CURRENCY_CONFIG.INR.symbol;
 }
+
+export function getLocaleForCurrency(currencyCode: string): string {
+  return CURRENCY_CONFIG[currencyCode]?.locale || CURRENCY_CONFIG.INR.locale;
+}

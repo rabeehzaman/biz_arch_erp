@@ -89,7 +89,7 @@ export default function ProfitByItemsPage() {
     new Set()
   );
   const [displayCount, setDisplayCount] = useState(20);
-  const { fmt: formatCurrency } = useCurrency();
+  const { locale, fmt: formatCurrency } = useCurrency();
 
   const toggleInvoice = (invoiceId: string) => {
     setExpandedInvoices((prev) => {
@@ -213,7 +213,7 @@ export default function ProfitByItemsPage() {
                   </div>
                   <p className="text-xs text-slate-500">
                     {reportData.summary.totalItems} items,{" "}
-                    {reportData.summary.totalQuantity.toLocaleString("en-IN")} {t("reports.units")}
+                    {reportData.summary.totalQuantity.toLocaleString(locale)} {t("reports.units")}
                   </p>
                 </CardContent>
               </Card>

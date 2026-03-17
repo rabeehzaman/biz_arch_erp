@@ -74,7 +74,7 @@ export default function EditInvoicePage({
   const router = useRouter();
   const { t } = useLanguage();
   const { data: session } = useSession();
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -762,7 +762,7 @@ export default function EditInvoicePage({
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                   <span key={`${lineAmountKey}:gross`}>
-                                    {symbol}{lineGross.toLocaleString("en-IN")}
+                                    {symbol}{lineGross.toLocaleString(locale)}
                                   </span>
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
@@ -777,7 +777,7 @@ export default function EditInvoicePage({
                             ) : (
                               <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                 <span key={`${lineAmountKey}:single`}>
-                                  {symbol}{lineGross.toLocaleString("en-IN")}
+                                  {symbol}{lineGross.toLocaleString(locale)}
                                 </span>
                                 {item.discount > 0 && (
                                   <div className="text-xs text-green-600">(-{item.discount}%)</div>
@@ -950,7 +950,7 @@ export default function EditInvoicePage({
                           <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">
                             {(session?.user?.gstEnabled || saudiEnabled)
                               ? `${symbol}${lineNet.toFixed(2)}`
-                              : `${symbol}${lineGross.toLocaleString("en-IN")}`}
+                              : `${symbol}${lineGross.toLocaleString(locale)}`}
                           </span>
                         </div>
                       </div>
@@ -1016,7 +1016,7 @@ export default function EditInvoicePage({
                   )}
                   <div className="flex justify-between text-sm">
                     <span>{t("common.subtotal")}</span>
-                    <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
+                    <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString(locale)}</span>
                   </div>
                   {tax > 0 && (
                     <div className="flex justify-between text-sm text-slate-500">
@@ -1035,7 +1035,7 @@ export default function EditInvoicePage({
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>{t("common.total")}</span>
-                    <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toLocaleString("en-IN")}</span>
+                    <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toLocaleString(locale)}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

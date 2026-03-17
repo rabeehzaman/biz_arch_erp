@@ -40,7 +40,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function DeviceInventoryPage() {
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const { t } = useLanguage();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,13 +217,13 @@ export default function DeviceInventoryPage() {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("mobileShop.cost")}</p>
-                          <p>{symbol}{Number(device.costPrice).toLocaleString("en-IN")}</p>
+                          <p>{symbol}{Number(device.costPrice).toLocaleString(locale)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("mobileShop.selling")}</p>
                           <p>
                             {Number(device.sellingPrice) > 0
-                              ? `${symbol}${Number(device.sellingPrice).toLocaleString("en-IN")}`
+                              ? `${symbol}${Number(device.sellingPrice).toLocaleString(locale)}`
                               : "-"}
                           </p>
                         </div>
@@ -297,11 +297,11 @@ export default function DeviceInventoryPage() {
                             {conditionLabels[device.conditionGrade] || device.conditionGrade}
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-right text-sm">
-                            {symbol}{Number(device.costPrice).toLocaleString("en-IN")}
+                            {symbol}{Number(device.costPrice).toLocaleString(locale)}
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-right text-sm">
                             {Number(device.sellingPrice) > 0
-                              ? `${symbol}${Number(device.sellingPrice).toLocaleString("en-IN")}`
+                              ? `${symbol}${Number(device.sellingPrice).toLocaleString(locale)}`
                               : "-"}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell text-sm">

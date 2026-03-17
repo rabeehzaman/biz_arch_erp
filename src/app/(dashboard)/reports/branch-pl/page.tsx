@@ -93,8 +93,8 @@ export default function BranchPLPage() {
     const BackArrow = isRTL ? ArrowRight : ArrowLeft;
     const { data: session } = useSession();
     const multiBranchEnabled = (session?.user as any)?.multiBranchEnabled;
-    const { symbol } = useCurrency();
-    const fmt = (n: number) => `${symbol}${n.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    const { symbol, locale } = useCurrency();
+    const fmt = (n: number) => `${symbol}${n.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
     const today = new Date();
     const firstOfYear = new Date(today.getFullYear(), 0, 1);

@@ -9,6 +9,7 @@ import {
 import { format } from "date-fns";
 import { numberToWordsLocalized } from "@/lib/number-to-words";
 import { translate, type Language } from "@/lib/i18n-translate";
+import { getLocaleForCurrency } from "@/lib/currency";
 
 const styles = StyleSheet.create({
   page: {
@@ -265,8 +266,8 @@ interface InvoicePDFProps {
   lang?: string;
 }
 
-const formatCurrency = (amount: number): string => {
-  return amount.toLocaleString("en-IN", {
+const formatCurrencyWithLocale = (amount: number, locale: string): string => {
+  return amount.toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -274,6 +275,8 @@ const formatCurrency = (amount: number): string => {
 
 export function InvoicePDF({ invoice, type: _type, title = "ESTIMATE", balanceInfo, lang = "en" }: InvoicePDFProps) {
   const isSaudi = !!invoice.saudiInvoiceType;
+  const locale = getLocaleForCurrency(isSaudi ? "SAR" : "INR");
+  const formatCurrency = (amount: number) => formatCurrencyWithLocale(amount, locale);
   const l = lang as Language;
   const t = (key: string) => translate(key, l);
   const formatAmt = (n: number) => {

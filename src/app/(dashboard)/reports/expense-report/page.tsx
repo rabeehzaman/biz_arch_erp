@@ -20,6 +20,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface CategoryRow {
   account: { code: string; name: string };
@@ -53,8 +54,7 @@ interface ExpenseReport {
   expenses: ExpenseRow[];
 }
 
-const fmt = (n: number) =>
-  n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+// fmt is defined inside the component using the dynamic locale from useCurrency
 
 const statusColors: Record<string, string> = {
   DRAFT: "bg-yellow-100 text-yellow-700",
@@ -64,6 +64,9 @@ const statusColors: Record<string, string> = {
 
 export default function ExpenseReportPage() {
   const { t, isRTL } = useLanguage();
+  const { locale } = useCurrency();
+  const fmt = (n: number) =>
+    n.toLocaleString(locale, { minimumFractionDigits: 2 });
   const BackArrow = isRTL ? ArrowRight : ArrowLeft;
   const [data, setData] = useState<ExpenseReport | null>(null);
   const [fromDate, setFromDate] = useState(

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Product {
   id: string;
@@ -39,6 +40,7 @@ export function ProductCombobox({
   onProductCreated,
 }: ProductComboboxProps) {
   const { t } = useLanguage();
+  const { symbol, locale } = useCurrency();
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [localProduct, setLocalProduct] = useState<Product | null>(null);
 
@@ -96,7 +98,7 @@ export function ProductCombobox({
                 </div>
                 <div className="text-sm text-slate-500">
                   {product.sku && <span>{t("products.skuPrefix")} {product.sku} | </span>}
-                  ₹{Number(product.price).toLocaleString("en-IN")}
+                  {symbol}{Number(product.price).toLocaleString(locale)}
                   {product.isService ? (
                     <span className="ml-2 text-blue-600">{t("products.service")}</span>
                   ) : (

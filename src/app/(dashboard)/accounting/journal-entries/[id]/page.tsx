@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,7 @@ export default function JournalEntryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { locale } = useCurrency();
   const { t } = useLanguage();
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -185,7 +187,7 @@ export default function JournalEntryDetailPage({
                 <div>
                   <span className="text-slate-500">{t("accounting.totalDebit")}</span>
                   <p className="font-medium font-mono">
-                    {totalDebit.toLocaleString("en-IN", {
+                    {totalDebit.toLocaleString(locale, {
                       minimumFractionDigits: 2,
                     })}
                   </p>
@@ -193,7 +195,7 @@ export default function JournalEntryDetailPage({
                 <div>
                   <span className="text-slate-500">{t("accounting.totalCredit")}</span>
                   <p className="font-medium font-mono">
-                    {totalCredit.toLocaleString("en-IN", {
+                    {totalCredit.toLocaleString(locale, {
                       minimumFractionDigits: 2,
                     })}
                   </p>
@@ -220,7 +222,7 @@ export default function JournalEntryDetailPage({
                         <div className="text-xs uppercase tracking-wide text-slate-400">{t("accounting.debit")}</div>
                         <div className="font-medium text-slate-900">
                           {Number(line.debit) > 0
-                            ? Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })
+                            ? Number(line.debit).toLocaleString(locale, { minimumFractionDigits: 2 })
                             : "-"}
                         </div>
                       </div>
@@ -228,7 +230,7 @@ export default function JournalEntryDetailPage({
                         <div className="text-xs uppercase tracking-wide text-slate-400">{t("accounting.credit")}</div>
                         <div className="font-medium text-slate-900">
                           {Number(line.credit) > 0
-                            ? Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })
+                            ? Number(line.credit).toLocaleString(locale, { minimumFractionDigits: 2 })
                             : "-"}
                         </div>
                       </div>
@@ -239,13 +241,13 @@ export default function JournalEntryDetailPage({
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">{t("accounting.totalDebit")}</span>
                     <span className="font-semibold">
-                      {totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      {totalDebit.toLocaleString(locale, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-slate-500">{t("accounting.totalCredit")}</span>
                     <span className="font-semibold">
-                      {totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      {totalCredit.toLocaleString(locale, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
@@ -274,14 +276,14 @@ export default function JournalEntryDetailPage({
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {Number(line.debit) > 0
-                          ? Number(line.debit).toLocaleString("en-IN", {
+                          ? Number(line.debit).toLocaleString(locale, {
                               minimumFractionDigits: 2,
                             })
                           : "-"}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {Number(line.credit) > 0
-                          ? Number(line.credit).toLocaleString("en-IN", {
+                          ? Number(line.credit).toLocaleString(locale, {
                               minimumFractionDigits: 2,
                             })
                           : "-"}
@@ -293,12 +295,12 @@ export default function JournalEntryDetailPage({
                       {t("common.totals")}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {totalDebit.toLocaleString("en-IN", {
+                      {totalDebit.toLocaleString(locale, {
                         minimumFractionDigits: 2,
                       })}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {totalCredit.toLocaleString("en-IN", {
+                      {totalCredit.toLocaleString(locale, {
                         minimumFractionDigits: 2,
                       })}
                     </TableCell>

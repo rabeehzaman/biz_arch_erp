@@ -103,7 +103,7 @@ export function CommandPalette() {
   const { tt } = useLanguage();
   const { recents, addRecent, clearRecents } = useRecentCommands();
 
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const isMobileShopEnabled = !!session?.user?.isMobileShopModuleEnabled;
   const nav = useVisibleNav(session);
 
@@ -113,7 +113,7 @@ export function CommandPalette() {
     isMobileShopEnabled
   );
 
-  const calcResult = search.trim().length > 2 ? tryEvaluate(search) : null;
+  const calcResult = search.trim().length > 2 ? tryEvaluate(search, locale) : null;
   const imei = extractIMEI(search);
   const partialImei = !imei && isPartialIMEI(search);
   const hasEntityResults = !!(
@@ -327,7 +327,7 @@ export function CommandPalette() {
                 </div>
                 {p.sellingPrice != null && (
                   <span className="ml-auto text-xs text-slate-400 shrink-0">
-                    {symbol}{p.sellingPrice.toLocaleString("en-IN")}
+                    {symbol}{p.sellingPrice.toLocaleString(locale)}
                   </span>
                 )}
               </CommandItem>
@@ -391,7 +391,7 @@ export function CommandPalette() {
                 </div>
                 {inv.total != null && (
                   <span className="ml-auto text-xs text-slate-400 shrink-0">
-                    {symbol}{inv.total.toLocaleString("en-IN")}
+                    {symbol}{inv.total.toLocaleString(locale)}
                   </span>
                 )}
               </CommandItem>

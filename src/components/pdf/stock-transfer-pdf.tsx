@@ -10,7 +10,7 @@ import "@/lib/pdf-fonts";
 import { ARABIC_FONT_FAMILY } from "@/lib/pdf-fonts";
 import { translate } from "@/lib/i18n-translate";
 import type { Language } from "@/lib/i18n-translate";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency, getLocaleForCurrency } from "@/lib/currency";
 
 interface TransferItemPDF {
   id: string;
@@ -367,6 +367,7 @@ const buildStyles = (brandColor: string, isRTL: boolean) => StyleSheet.create({
 
 export function StockTransferPDF({ organization, transfer, hideCost, lang = "en", showSignatures }: StockTransferPDFProps) {
   const currency = organization.currency || "INR";
+  const locale = getLocaleForCurrency(currency);
   const isRTL = lang === "ar";
   const brandColor = safeBrandColor(organization.brandColor);
   const styles = buildStyles(brandColor, isRTL);
@@ -528,7 +529,7 @@ export function StockTransferPDF({ organization, transfer, hideCost, lang = "en"
           </Text>
         )}
         <Text style={[styles.cellText, hideCost ? { width: "15%" } : styles.colQty]}>
-          {item.quantity.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+          {item.quantity.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
         </Text>
         <Text style={[styles.cellText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>
           {item.product.sku || "-"}
@@ -550,7 +551,7 @@ export function StockTransferPDF({ organization, transfer, hideCost, lang = "en"
         </View>
         <Text style={[styles.cellText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>{item.product.sku || "-"}</Text>
         <Text style={[styles.cellTextRight, hideCost ? { width: "15%", textAlign: "right" as const } : styles.colQty]}>
-          {item.quantity.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+          {item.quantity.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
         </Text>
         {!hideCost && (
           <Text style={[styles.cellTextRight, styles.colUnitCost]}>
@@ -587,7 +588,7 @@ export function StockTransferPDF({ organization, transfer, hideCost, lang = "en"
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryValue}>
-            {totalQuantity.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            {totalQuantity.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
           </Text>
           <Text style={styles.summaryLabel}>{t("pdf.totalQuantity")}</Text>
         </View>
@@ -625,7 +626,7 @@ export function StockTransferPDF({ organization, transfer, hideCost, lang = "en"
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>{t("pdf.totalQuantity")}</Text>
           <Text style={styles.summaryValue}>
-            {totalQuantity.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            {totalQuantity.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
           </Text>
         </View>
         {!hideCost && (

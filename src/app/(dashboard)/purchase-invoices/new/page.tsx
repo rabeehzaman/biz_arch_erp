@@ -100,7 +100,7 @@ export default function NewPurchaseInvoicePage() {
   ]);
 
   const { data: session } = useSession();
-  const { symbol } = useCurrency();
+  const { symbol, locale } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const { t } = useLanguage();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
@@ -719,7 +719,7 @@ export default function NewPurchaseInvoicePage() {
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                   <span key={`${lineAmountKey}:gross`}>
-                                    {symbol}{lineGross.toLocaleString("en-IN")}
+                                    {symbol}{lineGross.toLocaleString(locale)}
                                   </span>
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
@@ -727,14 +727,14 @@ export default function NewPurchaseInvoicePage() {
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
                                   <span key={`${lineAmountKey}:net`}>
-                                    {symbol}{lineNet.toLocaleString("en-IN")}
+                                    {symbol}{lineNet.toLocaleString(locale)}
                                   </span>
                                 </TableCell>
                               </>
                             ) : (
                               <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                 <span key={`${lineAmountKey}:single`}>
-                                  {symbol}{lineGross.toLocaleString("en-IN")}
+                                  {symbol}{lineGross.toLocaleString(locale)}
                                 </span>
                                 {item.discount > 0 && (
                                   <div className="text-xs text-green-600">(-{item.discount}%)</div>
@@ -997,8 +997,8 @@ export default function NewPurchaseInvoicePage() {
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">
                             {taxEnabled
-                              ? `${symbol}${lineNet.toLocaleString("en-IN")}`
-                              : `${symbol}${lineGross.toLocaleString("en-IN")}`}
+                              ? `${symbol}${lineNet.toLocaleString(locale)}`
+                              : `${symbol}${lineGross.toLocaleString(locale)}`}
                           </span>
                         </div>
 
@@ -1144,12 +1144,12 @@ export default function NewPurchaseInvoicePage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>{t("common.subtotal")}</span>
-                    <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
+                    <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString(locale)}</span>
                   </div>
                   {tax > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>{saudiEnabled ? t("purchases.vatLabel") : t("common.gst")}</span>
-                      <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toLocaleString("en-IN")}</span>
+                      <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toLocaleString(locale)}</span>
                     </div>
                   )}
                   {applyRoundOff && roundOffAmount !== 0 && (
@@ -1163,7 +1163,7 @@ export default function NewPurchaseInvoicePage() {
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>{t("common.total")}</span>
-                    <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toLocaleString("en-IN")}</span>
+                    <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toLocaleString(locale)}</span>
                   </div>
                 </div>
                 <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

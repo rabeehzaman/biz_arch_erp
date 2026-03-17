@@ -11,6 +11,7 @@ import { Loader2, AlertTriangle, Search, Smartphone, Download, Images } from "lu
 import Link from "next/link";
 import { ImeiCameraScanner } from "@/components/mobile-devices/imei-camera-scanner";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface DeviceResult {
   id: string;
@@ -62,6 +63,7 @@ function isWarrantyActive(date: string | null) {
 export default function ImeiLookupPage() {
   const searchParams = useSearchParams();
   const { t } = useLanguage();
+  const { symbol, locale } = useCurrency();
   const [query, setQuery] = useState(() => searchParams.get("imei") ?? "");
   const [loading, setLoading] = useState(false);
   const [device, setDevice] = useState<DeviceResult | null>(null);
@@ -317,24 +319,24 @@ export default function ImeiLookupPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t("mobileShop.costPrice")}</span>
-                    <span>&#8377;{Number(device.costPrice).toLocaleString("en-IN")}</span>
+                    <span>{symbol}{Number(device.costPrice).toLocaleString(locale)}</span>
                   </div>
                   {Number(device.landedCost) > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("mobileShop.landedCost")}</span>
-                      <span>&#8377;{Number(device.landedCost).toLocaleString("en-IN")}</span>
+                      <span>{symbol}{Number(device.landedCost).toLocaleString(locale)}</span>
                     </div>
                   )}
                   {Number(device.sellingPrice) > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("mobileShop.sellingPrice")}</span>
-                      <span>&#8377;{Number(device.sellingPrice).toLocaleString("en-IN")}</span>
+                      <span>{symbol}{Number(device.sellingPrice).toLocaleString(locale)}</span>
                     </div>
                   )}
                   {device.mrp !== null && Number(device.mrp) > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("mobileShop.mrp")}</span>
-                      <span>&#8377;{Number(device.mrp).toLocaleString("en-IN")}</span>
+                      <span>{symbol}{Number(device.mrp).toLocaleString(locale)}</span>
                     </div>
                   )}
                 </CardContent>
@@ -375,7 +377,7 @@ export default function ImeiLookupPage() {
                       {device.soldPrice !== null && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t("mobileShop.soldPrice")}</span>
-                          <span>&#8377;{Number(device.soldPrice).toLocaleString("en-IN")}</span>
+                          <span>{symbol}{Number(device.soldPrice).toLocaleString(locale)}</span>
                         </div>
                       )}
                       {device.salesperson && (
