@@ -22,7 +22,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, ChevronRight, ChevronDown, BookOpen, Search } from "lucide-react";
+import { Plus, ChevronRight, ChevronDown, BookOpen, Search, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { useCurrency } from "@/hooks/use-currency";
 import {
   AlertDialog,
@@ -292,6 +293,12 @@ function AccountTreeItem({
           </span>
 
           <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+            <Link href={`/reports/ledger?accountId=${node.id}`}>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                <ExternalLink className="mr-1 h-3 w-3" />
+                {t("reports.viewLedger")}
+              </Button>
+            </Link>
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => onEdit(node)}>
               {t("common.edit")}
             </Button>

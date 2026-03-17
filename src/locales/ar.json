@@ -817,7 +817,22 @@
         "bank": "بنك",
         "totals": "الإجمالي",
         "opening": "افتتاحي",
-        "closing": "ختامي"
+        "closing": "ختامي",
+        "reference": "المرجع",
+        "debit": "مدين",
+        "credit": "دائن",
+        "balance": "الرصيد",
+        "ledgerDesc": "عرض الحركات التفصيلية لأي حساب أو عميل أو مورد",
+        "ledgerType": "نوع الدفتر",
+        "selectType": "اختر النوع",
+        "generalAccount": "حساب عام",
+        "customerLedger": "دفتر العميل",
+        "supplierLedger": "دفتر المورد",
+        "entity": "الجهة / الحساب",
+        "selectEntity": "اختر الجهة",
+        "selectLedger": "اختر دفتر أستاذ",
+        "selectLedgerDesc": "اختر نوع الدفتر والجهة أعلاه لعرض الحركات",
+        "viewLedger": "الأستاذ"
     },
     "pos": {
         "title": "نقطة البيع",

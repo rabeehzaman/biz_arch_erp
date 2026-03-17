@@ -871,7 +871,22 @@
         "bank": "Bank",
         "totals": "Totals",
         "opening": "Opening",
-        "closing": "Closing"
+        "closing": "Closing",
+        "reference": "Reference",
+        "debit": "Debit",
+        "credit": "Credit",
+        "balance": "Balance",
+        "ledgerDesc": "View detailed transactions for any account, customer, or supplier",
+        "ledgerType": "Ledger Type",
+        "selectType": "Select type",
+        "generalAccount": "General Account",
+        "customerLedger": "Customer Ledger",
+        "supplierLedger": "Supplier Ledger",
+        "entity": "Entity / Account",
+        "selectEntity": "Select entity",
+        "selectLedger": "Select a Ledger",
+        "selectLedgerDesc": "Choose a ledger type and entity above to view transactions",
+        "viewLedger": "Ledger"
     },
     "pos": {
         "title": "POS Terminal",
