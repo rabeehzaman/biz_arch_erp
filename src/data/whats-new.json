@@ -2,6 +2,37 @@
   {
     "version": "2026-03-17",
     "date": "2026-03-17",
+    "lastCommit": "4b2c39c",
+    "entries": [
+      {
+        "type": "feature",
+        "scope": "lists",
+        "title": "Infinite scroll on all list pages",
+        "description": "Invoices, customers, suppliers, products, and all other list pages now load data incrementally as you scroll — faster initial load and smoother browsing."
+      },
+      {
+        "type": "feature",
+        "scope": "reports",
+        "title": "Sales by Customer, Sales by Item, Sales by Salesperson & Sales Register reports",
+        "description": "Four new sales reports to analyze revenue by customer, product, salesperson, or view a complete sales register."
+      },
+      {
+        "type": "feature",
+        "scope": "reports",
+        "title": "VAT Detail and GST Detail reports",
+        "description": "New invoice-level tax detail reports for VAT and GST compliance."
+      },
+      {
+        "type": "improvement",
+        "scope": "reports",
+        "title": "Upgraded core reports and added AR/AP Aging",
+        "description": "Profit & Loss, Balance Sheet, Trial Balance, Cash Flow, Journal Report, and General Ledger upgraded to gold standard. New Accounts Receivable and Accounts Payable Aging reports added."
+      }
+    ]
+  },
+  {
+    "version": "2026-03-17",
+    "date": "2026-03-17",
     "lastCommit": "33dd78b",
     "entries": [
       {
