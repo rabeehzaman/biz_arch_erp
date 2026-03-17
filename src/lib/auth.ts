@@ -29,6 +29,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           include: {
             organization: {
               select: {
+                edition: true,
                 gstEnabled: true,
                 eInvoicingEnabled: true,
                 multiUnitEnabled: true,
@@ -68,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role,
           organizationId: user.organizationId,
+          edition: user.organization?.edition ?? "INDIA",
           gstEnabled: user.organization?.gstEnabled ?? false,
           eInvoicingEnabled: user.organization?.eInvoicingEnabled ?? false,
           multiUnitEnabled: user.organization?.multiUnitEnabled ?? false,

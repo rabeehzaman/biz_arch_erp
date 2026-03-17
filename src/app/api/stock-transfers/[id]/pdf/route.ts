@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { StockTransferPDF } from "@/components/pdf/stock-transfer-pdf";
-import { StockTransferArabicPDF } from "@/components/pdf/stock-transfer-pdf-arabic";
+import type { Language } from "@/lib/i18n-translate";
 
 const sanitizeFilenamePart = (value: string): string =>
   value
@@ -37,6 +37,7 @@ export async function GET(
           arabicName: true,
           brandColor: true,
           currency: true,
+          language: true,
         },
       }),
       prisma.setting.findFirst({
@@ -81,9 +82,11 @@ export async function GET(
       );
     }
 
-    const useArabic = pdfFormatSetting?.value === "ARABIC";
     const hideCost = hideCostSetting?.value === "true";
-    const PDFComponent = useArabic ? StockTransferArabicPDF : StockTransferPDF;
+    // Determine language: if format is "ARABIC", use "ar"; otherwise use user's language preference
+    const isArabicFormat = pdfFormatSetting?.value === "ARABIC";
+    const userLang = (session.user as { language?: string }).language || organization?.language || "en";
+    const lang: Language = isArabicFormat ? "ar" : (userLang as Language);
 
     const pdfProps = {
       organization: {
@@ -93,6 +96,8 @@ export async function GET(
         currency: organization?.currency || "INR",
       },
       hideCost,
+      lang,
+      showSignatures: isArabicFormat,
       transfer: {
         transferNumber: transfer.transferNumber,
         status: transfer.status,
@@ -123,7 +128,7 @@ export async function GET(
     };
 
     const pdfBuffer = await renderToBuffer(
-      createElement(PDFComponent, pdfProps) as any
+      createElement(StockTransferPDF, pdfProps) as any
     );
 
     const filename = `stock-transfer-${sanitizeFilenamePart(transfer.transferNumber)}-${format(

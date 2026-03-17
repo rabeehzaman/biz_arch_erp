@@ -8,6 +8,9 @@ import {
 import { format } from "date-fns";
 import "@/lib/pdf-fonts";
 import { ARABIC_FONT_FAMILY } from "@/lib/pdf-fonts";
+import { translate } from "@/lib/i18n-translate";
+import type { Language } from "@/lib/i18n-translate";
+import { formatCurrency } from "@/lib/currency";
 
 interface TransferItemPDF {
   id: string;
@@ -21,7 +24,7 @@ interface TransferItemPDF {
   };
 }
 
-interface StockTransferPDFProps {
+export interface StockTransferPDFProps {
   organization: {
     name: string;
     arabicName?: string | null;
@@ -46,39 +49,28 @@ interface StockTransferPDFProps {
     items: TransferItemPDF[];
   };
   hideCost?: boolean;
+  lang?: Language;
+  showSignatures?: boolean;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Draft",
-  APPROVED: "Approved",
-  IN_TRANSIT: "In Transit",
-  COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
-  REVERSED: "Reversed",
+const STATUS_LABELS: Record<string, Record<string, string>> = {
+  en: { DRAFT: "Draft", APPROVED: "Approved", IN_TRANSIT: "In Transit", COMPLETED: "Completed", CANCELLED: "Cancelled", REVERSED: "Reversed" },
+  ar: { DRAFT: "مسودة", APPROVED: "معتمد", IN_TRANSIT: "قيد النقل", COMPLETED: "مكتمل", CANCELLED: "ملغي", REVERSED: "معكوس" },
 };
 
-const CURRENCY_CONFIG: Record<string, { symbol: string; locale: string }> = {
-  INR: { symbol: "₹", locale: "en-IN" },
-  SAR: { symbol: "SAR ", locale: "en-US" },
-};
-
-const formatAmount = (amount: number, currency: string = "INR"): string => {
-  const config = CURRENCY_CONFIG[currency] || CURRENCY_CONFIG.INR;
-  return `${config.symbol}${amount.toLocaleString(config.locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+const MILESTONE_LABELS: Record<string, Record<string, string>> = {
+  en: { created: "Created", approved: "Approved", shipped: "Shipped", completed: "Completed", cancelled: "Cancelled", reversed: "Reversed" },
+  ar: { created: "تاريخ الإنشاء", approved: "تاريخ الموافقة", shipped: "تاريخ الشحن", completed: "تاريخ الاكتمال", cancelled: "تاريخ الإلغاء", reversed: "تاريخ العكس" },
 };
 
 const safeBrandColor = (brandColor?: string | null): string => {
   if (brandColor && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(brandColor)) {
     return brandColor;
   }
-
   return "#0f172a";
 };
 
-const buildStyles = (brandColor: string) => StyleSheet.create({
+const buildStyles = (brandColor: string, isRTL: boolean) => StyleSheet.create({
   page: {
     paddingTop: 36,
     paddingBottom: 32,
@@ -99,20 +91,23 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
   },
   organizationBlock: {
     width: "48%",
+    ...(isRTL ? { alignItems: "flex-end" as const } : {}),
   },
   organizationName: {
     fontSize: 18,
     fontWeight: "bold",
     color: brandColor,
     marginBottom: 4,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
-  organizationArabicName: {
+  organizationSubName: {
     fontSize: 11,
     color: "#475569",
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   documentBlock: {
     width: "42%",
-    alignItems: "flex-end",
+    alignItems: isRTL ? "flex-start" as const : "flex-end" as const,
   },
   documentLabel: {
     fontSize: 9,
@@ -141,23 +136,27 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     borderRadius: 6,
     padding: 10,
     backgroundColor: "#f8fafc",
+    ...(isRTL ? { alignItems: "flex-end" as const } : {}),
   },
   cardLabel: {
     fontSize: 8,
     color: "#64748b",
     marginBottom: 6,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   cardValue: {
     fontSize: 11,
     fontWeight: "bold",
     marginBottom: 3,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   cardSubValue: {
     fontSize: 9,
     color: "#475569",
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   statusPill: {
-    alignSelf: "flex-start",
+    alignSelf: isRTL ? "flex-end" as const : "flex-start" as const,
     backgroundColor: brandColor,
     borderRadius: 999,
     paddingVertical: 4,
@@ -174,6 +173,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     fontWeight: "bold",
     color: brandColor,
     marginBottom: 8,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   milestoneRow: {
     flexDirection: "row",
@@ -188,15 +188,18 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     borderColor: "#e2e8f0",
     borderRadius: 6,
     padding: 8,
+    ...(isRTL ? { alignItems: "flex-end" as const } : {}),
   },
   milestoneLabel: {
     fontSize: 8,
     color: "#64748b",
     marginBottom: 4,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   milestoneValue: {
     fontSize: 9,
     color: "#0f172a",
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   table: {
     borderWidth: 1,
@@ -215,6 +218,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     color: "#ffffff",
     fontSize: 8,
     fontWeight: "bold",
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   tableRow: {
     flexDirection: "row",
@@ -232,47 +236,33 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     borderTopColor: "#e2e8f0",
     backgroundColor: "#f8fafc",
   },
-  colIndex: {
-    width: "7%",
-  },
-  colProduct: {
-    width: "39%",
-    paddingRight: 8,
-  },
-  colSku: {
-    width: "16%",
-    paddingRight: 8,
-  },
-  colQty: {
-    width: "10%",
-    textAlign: "right",
-  },
-  colUnitCost: {
-    width: "14%",
-    textAlign: "right",
-  },
-  colLineTotal: {
-    width: "14%",
-    textAlign: "right",
-  },
+  colIndex: { width: "7%", ...(isRTL ? { textAlign: "right" as const } : {}) },
+  colProduct: { width: "39%", paddingRight: 8 },
+  colSku: { width: "16%", paddingRight: 8 },
+  colQty: { width: "10%", textAlign: "right" as const },
+  colUnitCost: { width: "14%", textAlign: "right" as const, ...(isRTL ? { paddingRight: 4 } : {}) },
+  colLineTotal: { width: "14%", textAlign: "right" as const },
   cellText: {
     fontSize: 9,
     color: "#0f172a",
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   cellTextRight: {
     fontSize: 9,
     color: "#0f172a",
-    textAlign: "right",
+    textAlign: "right" as const,
   },
   productName: {
     fontSize: 9,
     fontWeight: "bold",
     marginBottom: 2,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   productSubtext: {
     fontSize: 8,
     color: "#64748b",
     marginBottom: 1,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   emptyState: {
     padding: 14,
@@ -298,11 +288,13 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     fontWeight: "bold",
     color: brandColor,
     marginBottom: 6,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   notesText: {
     fontSize: 9,
     color: "#475569",
     lineHeight: 1.45,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   summaryBox: {
     width: "38%",
@@ -317,6 +309,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     fontWeight: "bold",
     color: brandColor,
     marginBottom: 8,
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   summaryRow: {
     flexDirection: "row",
@@ -326,6 +319,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
   summaryLabel: {
     fontSize: 9,
     color: "#475569",
+    ...(isRTL ? { textAlign: "right" as const } : {}),
   },
   summaryValue: {
     fontSize: 9,
@@ -336,6 +330,29 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     marginVertical: 4,
     borderTopWidth: 1,
     borderTopColor: "#cbd5e1",
+  },
+  signatureSection: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 32,
+    paddingHorizontal: 8,
+  },
+  signatureBlock: {
+    width: "28%",
+    alignItems: "center",
+  },
+  signatureLine: {
+    width: "100%",
+    borderBottomWidth: 1,
+    borderBottomColor: "#475569",
+    marginBottom: 6,
+    height: 40,
+  },
+  signatureLabel: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#0f172a",
+    textAlign: "center",
   },
   footer: {
     marginTop: 18,
@@ -348,10 +365,12 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
   },
 });
 
-export function StockTransferPDF({ organization, transfer, hideCost }: StockTransferPDFProps) {
+export function StockTransferPDF({ organization, transfer, hideCost, lang = "en", showSignatures }: StockTransferPDFProps) {
   const currency = organization.currency || "INR";
+  const isRTL = lang === "ar";
   const brandColor = safeBrandColor(organization.brandColor);
-  const styles = buildStyles(brandColor);
+  const styles = buildStyles(brandColor, isRTL);
+  const t = (key: string) => translate(key, lang);
 
   const totalQuantity = transfer.items.reduce((sum, item) => sum + item.quantity, 0);
   const totalValue = transfer.items.reduce(
@@ -359,59 +378,284 @@ export function StockTransferPDF({ organization, transfer, hideCost }: StockTran
     0
   );
 
+  const statusLabels = STATUS_LABELS[lang] || STATUS_LABELS.en;
+  const milestoneLabels = MILESTONE_LABELS[lang] || MILESTONE_LABELS.en;
+
   const milestones = [
-    { label: "Created", value: transfer.createdAt },
-    { label: "Approved", value: transfer.approvedAt ?? null },
-    { label: "Shipped", value: transfer.shippedAt ?? null },
-    { label: "Completed", value: transfer.completedAt ?? null },
-    { label: "Cancelled", value: transfer.cancelledAt ?? null },
-    { label: "Reversed", value: transfer.reversedAt ?? null },
-  ].filter((milestone) => milestone.value);
+    { label: milestoneLabels.created, value: transfer.createdAt },
+    { label: milestoneLabels.approved, value: transfer.approvedAt ?? null },
+    { label: milestoneLabels.shipped, value: transfer.shippedAt ?? null },
+    { label: milestoneLabels.completed, value: transfer.completedAt ?? null },
+    { label: milestoneLabels.cancelled, value: transfer.cancelledAt ?? null },
+    { label: milestoneLabels.reversed, value: transfer.reversedAt ?? null },
+  ].filter((m) => m.value != null);
+
+  const displayOrgName = isRTL
+    ? (organization.arabicName || organization.name)
+    : organization.name;
+  const displayOrgSubName = isRTL
+    ? (organization.arabicName ? organization.name : null)
+    : (organization.arabicName && organization.arabicName !== organization.name ? organization.arabicName : null);
+
+  // For Arabic, show primary product name as arabicName if available
+  const getProductName = (item: TransferItemPDF) => {
+    if (isRTL && item.product.arabicName && item.product.arabicName !== item.product.name) {
+      return item.product.arabicName;
+    }
+    return item.product.name;
+  };
+  const getProductSubtext = (item: TransferItemPDF) => {
+    if (isRTL && item.product.arabicName && item.product.arabicName !== item.product.name) {
+      return item.product.name;
+    }
+    if (!isRTL && item.product.arabicName && item.product.arabicName !== item.product.name) {
+      return item.product.arabicName;
+    }
+    return null;
+  };
+
+  // RTL: header order is doc block left, org block right
+  const headerLeft = isRTL ? (
+    <View style={styles.documentBlock}>
+      <Text style={styles.documentLabel}>{t("pdf.transferOrder")}</Text>
+      <Text style={styles.documentNumber}>{transfer.transferNumber}</Text>
+      <Text style={styles.documentMeta}>
+        {format(new Date(transfer.transferDate), "dd MMM yyyy")}
+      </Text>
+    </View>
+  ) : (
+    <View style={styles.organizationBlock}>
+      <Text style={styles.organizationName}>{displayOrgName}</Text>
+      {displayOrgSubName && (
+        <Text style={styles.organizationSubName}>{displayOrgSubName}</Text>
+      )}
+    </View>
+  );
+
+  const headerRight = isRTL ? (
+    <View style={styles.organizationBlock}>
+      <Text style={styles.organizationName}>{displayOrgName}</Text>
+      {displayOrgSubName && (
+        <Text style={styles.organizationSubName}>{displayOrgSubName}</Text>
+      )}
+    </View>
+  ) : (
+    <View style={styles.documentBlock}>
+      <Text style={styles.documentLabel}>{t("pdf.transferOrder")}</Text>
+      <Text style={styles.documentNumber}>{transfer.transferNumber}</Text>
+      <Text style={styles.documentMeta}>
+        {format(new Date(transfer.transferDate), "dd MMM yyyy")}
+      </Text>
+    </View>
+  );
+
+  // RTL card order: status, to, from (visual right-to-left)
+  const cards = isRTL ? (
+    <>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>{t("pdf.status")}</Text>
+        <Text style={styles.statusPill}>
+          {statusLabels[transfer.status] || transfer.status.replace(/_/g, " ")}
+        </Text>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>{t("pdf.to")}</Text>
+        <Text style={styles.cardValue}>{transfer.destinationWarehouse.name}</Text>
+        <Text style={styles.cardSubValue}>{transfer.destinationBranch.name}</Text>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>{t("pdf.from")}</Text>
+        <Text style={styles.cardValue}>{transfer.sourceWarehouse.name}</Text>
+        <Text style={styles.cardSubValue}>{transfer.sourceBranch.name}</Text>
+      </View>
+    </>
+  ) : (
+    <>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>{t("pdf.status")}</Text>
+        <Text style={styles.statusPill}>
+          {statusLabels[transfer.status] || transfer.status.replace(/_/g, " ")}
+        </Text>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>{t("pdf.from")}</Text>
+        <Text style={styles.cardValue}>{transfer.sourceWarehouse.name}</Text>
+        <Text style={styles.cardSubValue}>{transfer.sourceBranch.name}</Text>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>{t("pdf.to")}</Text>
+        <Text style={styles.cardValue}>{transfer.destinationWarehouse.name}</Text>
+        <Text style={styles.cardSubValue}>{transfer.destinationBranch.name}</Text>
+      </View>
+    </>
+  );
+
+  // RTL table: columns ordered right-to-left visually (lineTotal...product...index)
+  const tableHeaderCells = isRTL ? (
+    <>
+      {!hideCost && <Text style={[styles.tableHeaderText, styles.colLineTotal]}>{t("pdf.lineTotal")}</Text>}
+      {!hideCost && <Text style={[styles.tableHeaderText, styles.colUnitCost]}>{t("pdf.unitCost")}</Text>}
+      <Text style={[styles.tableHeaderText, hideCost ? { width: "15%" } : styles.colQty]}>{t("pdf.qty")}</Text>
+      <Text style={[styles.tableHeaderText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>{t("pdf.sku")}</Text>
+      <Text style={[styles.tableHeaderText, hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct]}>{t("pdf.product")}</Text>
+      <Text style={[styles.tableHeaderText, hideCost ? { width: "10%", textAlign: "right" as const } : styles.colIndex]}>#</Text>
+    </>
+  ) : (
+    <>
+      <Text style={[styles.tableHeaderText, hideCost ? { width: "10%" } : styles.colIndex]}>#</Text>
+      <Text style={[styles.tableHeaderText, hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct]}>{t("pdf.product")}</Text>
+      <Text style={[styles.tableHeaderText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>{t("pdf.sku")}</Text>
+      <Text style={[styles.tableHeaderText, hideCost ? { width: "15%", textAlign: "right" as const } : styles.colQty]}>{t("pdf.qty")}</Text>
+      {!hideCost && <Text style={[styles.tableHeaderText, styles.colUnitCost]}>{t("pdf.unitCost")}</Text>}
+      {!hideCost && <Text style={[styles.tableHeaderText, styles.colLineTotal]}>{t("pdf.lineTotal")}</Text>}
+    </>
+  );
+
+  const renderRow = (item: TransferItemPDF, index: number) => {
+    const productName = getProductName(item);
+    const productSub = getProductSubtext(item);
+
+    const cells = isRTL ? (
+      <>
+        {!hideCost && (
+          <Text style={[styles.cellText, styles.colLineTotal]}>
+            {formatCurrency(item.quantity * item.unitCost, currency)}
+          </Text>
+        )}
+        {!hideCost && (
+          <Text style={[styles.cellText, styles.colUnitCost]}>
+            {formatCurrency(item.unitCost, currency)}
+          </Text>
+        )}
+        <Text style={[styles.cellText, hideCost ? { width: "15%" } : styles.colQty]}>
+          {item.quantity.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+        </Text>
+        <Text style={[styles.cellText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>
+          {item.product.sku || "-"}
+        </Text>
+        <View style={hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct}>
+          <Text style={styles.productName}>{productName}</Text>
+          {productSub && <Text style={styles.productSubtext}>{productSub}</Text>}
+          {item.notes && <Text style={styles.productSubtext}>{item.notes}</Text>}
+        </View>
+        <Text style={[styles.cellText, hideCost ? { width: "10%", textAlign: "right" as const } : styles.colIndex]}>{index + 1}</Text>
+      </>
+    ) : (
+      <>
+        <Text style={[styles.cellText, hideCost ? { width: "10%" } : styles.colIndex]}>{index + 1}</Text>
+        <View style={hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct}>
+          <Text style={styles.productName}>{productName}</Text>
+          {productSub && <Text style={styles.productSubtext}>{productSub}</Text>}
+          {item.notes && <Text style={styles.productSubtext}>{item.notes}</Text>}
+        </View>
+        <Text style={[styles.cellText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>{item.product.sku || "-"}</Text>
+        <Text style={[styles.cellTextRight, hideCost ? { width: "15%", textAlign: "right" as const } : styles.colQty]}>
+          {item.quantity.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+        </Text>
+        {!hideCost && (
+          <Text style={[styles.cellTextRight, styles.colUnitCost]}>
+            {formatCurrency(item.unitCost, currency)}
+          </Text>
+        )}
+        {!hideCost && (
+          <Text style={[styles.cellTextRight, styles.colLineTotal]}>
+            {formatCurrency(item.quantity * item.unitCost, currency)}
+          </Text>
+        )}
+      </>
+    );
+
+    return (
+      <View
+        key={item.id}
+        style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}
+        wrap={false}
+      >
+        {cells}
+      </View>
+    );
+  };
+
+  // RTL footer: summary on left, notes on right
+  const footerGridContent = isRTL ? (
+    <>
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryTitle}>{t("pdf.summary")}</Text>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryValue}>{transfer.items.length}</Text>
+          <Text style={styles.summaryLabel}>{t("pdf.items")}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryValue}>
+            {totalQuantity.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+          </Text>
+          <Text style={styles.summaryLabel}>{t("pdf.totalQuantity")}</Text>
+        </View>
+        {!hideCost && (
+          <>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryValue}>{formatCurrency(totalValue, currency)}</Text>
+              <Text style={styles.summaryLabel}>{t("pdf.transferValue")}</Text>
+            </View>
+          </>
+        )}
+      </View>
+      <View style={styles.notesBox}>
+        <Text style={styles.notesLabel}>{t("pdf.notes")}</Text>
+        <Text style={styles.notesText}>
+          {transfer.notes?.trim() || t("pdf.noNotes")}
+        </Text>
+      </View>
+    </>
+  ) : (
+    <>
+      <View style={styles.notesBox}>
+        <Text style={styles.notesLabel}>{t("pdf.notes")}</Text>
+        <Text style={styles.notesText}>
+          {transfer.notes?.trim() || t("pdf.noNotes")}
+        </Text>
+      </View>
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryTitle}>{t("pdf.summary")}</Text>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>{t("pdf.items")}</Text>
+          <Text style={styles.summaryValue}>{transfer.items.length}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>{t("pdf.totalQuantity")}</Text>
+          <Text style={styles.summaryValue}>
+            {totalQuantity.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+          </Text>
+        </View>
+        {!hideCost && (
+          <>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>{t("pdf.transferValue")}</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(totalValue, currency)}</Text>
+            </View>
+          </>
+        )}
+      </View>
+    </>
+  );
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <View style={styles.organizationBlock}>
-            <Text style={styles.organizationName}>{organization.name}</Text>
-            {organization.arabicName && organization.arabicName !== organization.name && (
-              <Text style={styles.organizationArabicName}>{organization.arabicName}</Text>
-            )}
-          </View>
-
-          <View style={styles.documentBlock}>
-            <Text style={styles.documentLabel}>TRANSFER ORDER</Text>
-            <Text style={styles.documentNumber}>{transfer.transferNumber}</Text>
-            <Text style={styles.documentMeta}>
-              {format(new Date(transfer.transferDate), "dd MMM yyyy")}
-            </Text>
-          </View>
+          {headerLeft}
+          {headerRight}
         </View>
 
         <View style={styles.cardGrid}>
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Status</Text>
-            <Text style={styles.statusPill}>
-              {STATUS_LABELS[transfer.status] || transfer.status.replace(/_/g, " ")}
-            </Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>From</Text>
-            <Text style={styles.cardValue}>{transfer.sourceWarehouse.name}</Text>
-            <Text style={styles.cardSubValue}>{transfer.sourceBranch.name}</Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>To</Text>
-            <Text style={styles.cardValue}>{transfer.destinationWarehouse.name}</Text>
-            <Text style={styles.cardSubValue}>{transfer.destinationBranch.name}</Text>
-          </View>
+          {cards}
         </View>
 
         {milestones.length > 0 && (
           <View style={styles.milestoneSection}>
-            <Text style={styles.sectionTitle}>Transfer Timeline</Text>
+            <Text style={styles.sectionTitle}>{t("pdf.transferTimeline")}</Text>
             <View style={styles.milestoneRow}>
               {milestones.map((milestone) => (
                 <View key={milestone.label} style={styles.milestoneCard}>
@@ -425,95 +669,61 @@ export function StockTransferPDF({ organization, transfer, hideCost }: StockTran
           </View>
         )}
 
-        <Text style={styles.sectionTitle}>Items</Text>
+        <Text style={styles.sectionTitle}>{t("pdf.items")}</Text>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, hideCost ? { width: "10%" } : styles.colIndex]}>#</Text>
-            <Text style={[styles.tableHeaderText, hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct]}>Product</Text>
-            <Text style={[styles.tableHeaderText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>SKU</Text>
-            <Text style={[styles.tableHeaderText, hideCost ? { width: "15%", textAlign: "right" as const } : styles.colQty]}>Qty</Text>
-            {!hideCost && <Text style={[styles.tableHeaderText, styles.colUnitCost]}>Unit Cost</Text>}
-            {!hideCost && <Text style={[styles.tableHeaderText, styles.colLineTotal]}>Line Total</Text>}
+            {tableHeaderCells}
           </View>
 
           {transfer.items.length === 0 ? (
-            <Text style={styles.emptyState}>No items in this transfer.</Text>
+            <Text style={styles.emptyState}>{t("pdf.noItems")}</Text>
           ) : (
-            transfer.items.map((item, index) => (
-              <View
-                key={item.id}
-                style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}
-                wrap={false}
-              >
-                <Text style={[styles.cellText, hideCost ? { width: "10%" } : styles.colIndex]}>{index + 1}</Text>
-                <View style={hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct}>
-                  <Text style={styles.productName}>{item.product.name}</Text>
-                  {item.product.arabicName && item.product.arabicName !== item.product.name && (
-                    <Text style={styles.productSubtext}>{item.product.arabicName}</Text>
-                  )}
-                  {item.notes && (
-                    <Text style={styles.productSubtext}>{item.notes}</Text>
-                  )}
-                </View>
-                <Text style={[styles.cellText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>{item.product.sku || "-"}</Text>
-                <Text style={[styles.cellTextRight, hideCost ? { width: "15%", textAlign: "right" as const } : styles.colQty]}>
-                  {item.quantity.toLocaleString("en-IN", {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2,
-                  })}
-                </Text>
-                {!hideCost && (
-                  <Text style={[styles.cellTextRight, styles.colUnitCost]}>
-                    {formatAmount(item.unitCost, currency)}
-                  </Text>
-                )}
-                {!hideCost && (
-                  <Text style={[styles.cellTextRight, styles.colLineTotal]}>
-                    {formatAmount(item.quantity * item.unitCost, currency)}
-                  </Text>
-                )}
-              </View>
-            ))
+            transfer.items.map((item, index) => renderRow(item, index))
           )}
         </View>
 
         <View style={styles.footerGrid}>
-          <View style={styles.notesBox}>
-            <Text style={styles.notesLabel}>Notes</Text>
-            <Text style={styles.notesText}>
-              {transfer.notes?.trim() || "No additional notes for this transfer."}
-            </Text>
-          </View>
+          {footerGridContent}
+        </View>
 
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryTitle}>Summary</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Items</Text>
-              <Text style={styles.summaryValue}>{transfer.items.length}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total Quantity</Text>
-              <Text style={styles.summaryValue}>
-                {totalQuantity.toLocaleString("en-IN", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 2,
-                })}
-              </Text>
-            </View>
-            {!hideCost && (
+        {(showSignatures || isRTL) && (
+          <View style={styles.signatureSection}>
+            {isRTL ? (
               <>
-                <View style={styles.summaryDivider} />
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Transfer Value</Text>
-                  <Text style={styles.summaryValue}>{formatAmount(totalValue, currency)}</Text>
+                <View style={styles.signatureBlock}>
+                  <View style={styles.signatureLine} />
+                  <Text style={styles.signatureLabel}>{t("pdf.receiver")}</Text>
+                </View>
+                <View style={styles.signatureBlock}>
+                  <View style={styles.signatureLine} />
+                  <Text style={styles.signatureLabel}>{t("pdf.driver")}</Text>
+                </View>
+                <View style={styles.signatureBlock}>
+                  <View style={styles.signatureLine} />
+                  <Text style={styles.signatureLabel}>{t("pdf.sender")}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.signatureBlock}>
+                  <View style={styles.signatureLine} />
+                  <Text style={styles.signatureLabel}>{t("pdf.sender")}</Text>
+                </View>
+                <View style={styles.signatureBlock}>
+                  <View style={styles.signatureLine} />
+                  <Text style={styles.signatureLabel}>{t("pdf.driver")}</Text>
+                </View>
+                <View style={styles.signatureBlock}>
+                  <View style={styles.signatureLine} />
+                  <Text style={styles.signatureLabel}>{t("pdf.receiver")}</Text>
                 </View>
               </>
             )}
           </View>
-        </View>
+        )}
 
         <Text style={styles.footer}>
-          Generated on {format(new Date(), "dd MMM yyyy, hh:mm a")}
+          {t("pdf.generatedOn")} {format(new Date(), "dd MMM yyyy, hh:mm a")}
         </Text>
       </Page>
     </Document>

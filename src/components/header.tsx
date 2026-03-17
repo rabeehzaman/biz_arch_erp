@@ -27,6 +27,7 @@ import {
   useLanguage,
   type Language,
 } from "@/lib/i18n";
+import { useEdition } from "@/hooks/use-edition";
 
 const VOUCHER_ROUTE_PREFIXES = [
   "/invoices",
@@ -50,6 +51,7 @@ export function Header() {
   const pathname = usePathname();
   const { setOpen } = useCommandPalette();
   const { t, lang, setLanguage } = useLanguage();
+  const { config: editionConfig } = useEdition();
   const [orgName, setOrgName] = useState<string>("");
   const [switchingLang, setSwitchingLang] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -143,6 +145,7 @@ export function Header() {
           <User className="mr-2 h-4 w-4" />
           {t("header.profile")}
         </DropdownMenuItem>
+        {editionConfig.isLanguageSwitchable && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Globe className="mr-2 h-4 w-4" />
@@ -161,6 +164,7 @@ export function Header() {
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-red-600 focus:text-red-600"

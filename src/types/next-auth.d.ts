@@ -6,6 +6,7 @@ declare module "next-auth" {
       id: string;
       role: string;
       organizationId?: string | null;
+      edition?: string;
       gstEnabled?: boolean;
       eInvoicingEnabled?: boolean;
       multiUnitEnabled?: boolean;
@@ -21,6 +22,7 @@ declare module "next-auth" {
   interface User {
     role?: string;
     organizationId?: string | null;
+    edition?: string;
     gstEnabled?: boolean;
     eInvoicingEnabled?: boolean;
     multiUnitEnabled?: boolean;
@@ -38,6 +40,7 @@ declare module "next-auth/jwt" {
     id?: string;
     role?: string;
     organizationId?: string | null;
+    edition?: string;
     gstEnabled?: boolean;
     eInvoicingEnabled?: boolean;
     multiUnitEnabled?: boolean;

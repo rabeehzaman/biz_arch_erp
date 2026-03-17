@@ -45,11 +45,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug } = body;
+    const { name, slug, edition } = body;
 
     if (!name || !slug) {
       return NextResponse.json(
         { error: "Name and slug are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate edition if provided
+    if (edition && !["INDIA", "SAUDI"].includes(edition)) {
+      return NextResponse.json(
+        { error: "Edition must be 'INDIA' or 'SAUDI'" },
         { status: 400 }
       );
     }
@@ -74,8 +82,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Set defaults based on edition
+    const editionValue = edition || "INDIA";
+    const orgData: Record<string, unknown> = { name, slug, edition: editionValue };
+    if (editionValue === "SAUDI") {
+      orgData.currency = "SAR";
+      orgData.language = "en";
+      orgData.saudiEInvoiceEnabled = true;
+    } else {
+      orgData.currency = "INR";
+      orgData.language = "en";
+      orgData.gstEnabled = true;
+    }
+
     const organization = await prisma.organization.create({
-      data: { name, slug },
+      data: orgData as never,
     });
 
     // Seed default chart of accounts for the new organization.

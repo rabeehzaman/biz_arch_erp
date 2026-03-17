@@ -26,6 +26,7 @@ model Organization {
   weighMachineProductCodeLen   Int?     @default(5)
   weighMachineWeightDigits     Int?     @default(5)
   weighMachineDecimalPlaces    Int?     @default(3)
+  edition            String   @default("INDIA")  // "INDIA" or "SAUDI"
   gstin              String?
   gstStateCode       String?
 

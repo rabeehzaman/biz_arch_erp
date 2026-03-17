@@ -78,6 +78,7 @@ export async function PUT(
     const {
       name,
       slug,
+      edition,
       gstEnabled,
       eInvoicingEnabled,
       multiUnitEnabled,
@@ -112,6 +113,28 @@ export async function PUT(
       posDefaultBankAccountId,
       isTaxInclusivePrice,
     } = body;
+
+    // Validate edition
+    if (edition !== undefined && !["INDIA", "SAUDI"].includes(edition)) {
+      return NextResponse.json(
+        { error: "Edition must be 'INDIA' or 'SAUDI'" },
+        { status: 400 }
+      );
+    }
+
+    // Edition-based flag validation
+    if (edition === "INDIA" && saudiEInvoiceEnabled === true) {
+      return NextResponse.json(
+        { error: "Cannot enable Saudi E-Invoice for India edition" },
+        { status: 400 }
+      );
+    }
+    if (edition === "SAUDI" && gstEnabled === true) {
+      return NextResponse.json(
+        { error: "Cannot enable GST for Saudi edition" },
+        { status: 400 }
+      );
+    }
 
     // Basic field update validation
     if (slug && !/^[a-z0-9-]+$/.test(slug)) {
@@ -239,6 +262,7 @@ export async function PUT(
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (slug !== undefined) updateData.slug = slug;
+    if (edition !== undefined) updateData.edition = edition;
     if (gstEnabled !== undefined) updateData.gstEnabled = gstEnabled;
     if (eInvoicingEnabled !== undefined) updateData.eInvoicingEnabled = gstEnabled ? eInvoicingEnabled : false;
     if (multiUnitEnabled !== undefined) updateData.multiUnitEnabled = multiUnitEnabled;

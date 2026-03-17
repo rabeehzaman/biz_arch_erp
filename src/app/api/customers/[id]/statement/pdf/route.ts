@@ -171,10 +171,18 @@ export async function GET(
       generatedAt: new Date().toISOString(),
     };
 
+    // Get org language and currency for the PDF
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { language: true, currency: true },
+    });
+    const userLang = (session.user as { language?: string }).language || org?.language || "en";
+    const orgCurrency = org?.currency || "INR";
+
     // Generate PDF
-     
+
     const pdfBuffer = await renderToBuffer(
-      createElement(CustomerStatementPDF, { statement }) as any
+      createElement(CustomerStatementPDF, { statement, lang: userLang as "en" | "ar", currency: orgCurrency }) as any
     );
 
     // Return PDF as response

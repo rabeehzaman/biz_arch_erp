@@ -46,6 +46,7 @@ interface Organization {
   id: string;
   name: string;
   slug: string;
+  edition: string;
   gstEnabled: boolean;
   gstin: string | null;
   createdAt: string;
@@ -65,6 +66,7 @@ export default function OrganizationsPage() {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  const [edition, setEdition] = useState("INDIA");
   const [error, setError] = useState("");
 
   // User creation state
@@ -125,7 +127,7 @@ export default function OrganizationsPage() {
       const res = await fetch("/api/admin/organizations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug }),
+        body: JSON.stringify({ name, slug, edition }),
       });
 
       if (res.ok) {
@@ -369,6 +371,21 @@ export default function OrganizationsPage() {
                       {t("admin.slugHelp")}
                     </p>
                   </div>
+                  <div className="space-y-2">
+                    <Label>{t("edition.edition")}</Label>
+                    <Select value={edition} onValueChange={setEdition}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INDIA">{"\u{1F1EE}\u{1F1F3}"} {t("edition.india")}</SelectItem>
+                        <SelectItem value="SAUDI">{"\u{1F1F8}\u{1F1E6}"} {t("edition.saudi")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {t("edition.editionDesc")}
+                    </p>
+                  </div>
                   {error && (
                     <p className="text-sm text-red-500">{error}</p>
                   )}
@@ -414,14 +431,11 @@ export default function OrganizationsPage() {
                             <div className="flex items-center gap-2">
                               <Building2 className="h-4 w-4 text-muted-foreground" />
                               <p className="font-semibold text-slate-900">{org.name}</p>
+                              <span className="text-xs">{org.edition === "SAUDI" ? "\u{1F1F8}\u{1F1E6}" : "\u{1F1EE}\u{1F1F3}"}</span>
                             </div>
                             <div className="mt-2 flex flex-wrap gap-2">
                               <Badge variant="secondary">{org.slug}</Badge>
-                              {org.gstEnabled ? (
-                                <Badge variant="default" className="text-xs">{t("admin.gst")}</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs text-muted-foreground">{t("admin.noGst")}</Badge>
-                              )}
+                              <Badge variant="outline" className="text-xs">{org.edition === "SAUDI" ? t("edition.saudi") : t("edition.india")}</Badge>
                             </div>
                           </div>
 
@@ -484,7 +498,7 @@ export default function OrganizationsPage() {
                         <TableHead className="text-center">{t("admin.customers")}</TableHead>
                         <TableHead className="text-center">{t("admin.invoices")}</TableHead>
                         <TableHead>{t("admin.created")}</TableHead>
-                        <TableHead>{t("admin.gst")}</TableHead>
+                        <TableHead>{t("edition.edition")}</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -502,6 +516,7 @@ export default function OrganizationsPage() {
                             <div className="flex items-center gap-2">
                               <Building2 className="h-4 w-4 text-muted-foreground" />
                               {org.name}
+                              <span className="text-xs">{org.edition === "SAUDI" ? "\u{1F1F8}\u{1F1E6}" : "\u{1F1EE}\u{1F1F3}"}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -529,11 +544,9 @@ export default function OrganizationsPage() {
                             {new Date(org.createdAt).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
-                            {org.gstEnabled ? (
-                              <Badge variant="default" className="text-xs">{t("admin.gst")}</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs text-muted-foreground">{t("admin.noGst")}</Badge>
-                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {org.edition === "SAUDI" ? t("edition.saudi") : t("edition.india")}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>

@@ -32,6 +32,7 @@ interface OrganizationDetails {
     id: string;
     name: string;
     slug: string;
+    edition: string;
     gstEnabled: boolean;
     eInvoicingEnabled: boolean;
     multiUnitEnabled: boolean;
@@ -94,6 +95,7 @@ export default function OrganizationDetailsPage() {
     const [sidebarConfigOpen, setSidebarConfigOpen] = useState(false);
 
     // Inline settings state
+    const [edition, setEditionState] = useState("INDIA");
     const [gstEnabled, setGstEnabled] = useState(false);
     const [eInvoicingEnabled, setEInvoicingEnabled] = useState(false);
     const [multiUnitEnabled, setMultiUnitEnabled] = useState(false);
@@ -168,6 +170,7 @@ export default function OrganizationDetailsPage() {
     const [orgCashBankAccounts, setOrgCashBankAccounts] = useState<Array<{ id: string; name: string; accountSubType: string }>>([]);
 
     const populateSettingsState = (data: OrganizationDetails) => {
+        setEditionState(data.edition || "INDIA");
         setGstEnabled(data.gstEnabled || false);
         setEInvoicingEnabled(data.eInvoicingEnabled || false);
         setMultiUnitEnabled(data.multiUnitEnabled || false);
@@ -294,6 +297,7 @@ export default function OrganizationDetailsPage() {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    edition,
                     gstEnabled,
                     eInvoicingEnabled: gstEnabled ? eInvoicingEnabled : false,
                     multiUnitEnabled,
@@ -655,8 +659,49 @@ export default function OrganizationDetailsPage() {
 
                                 {/* GENERAL TAB */}
                                 <TabsContent value="general" className="space-y-6 mt-0">
-                                    {/* Language */}
+                                    {/* Edition */}
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label className="flex items-center gap-2">
+                                                <Globe className="h-4 w-4" />
+                                                {t("edition.edition")}
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("edition.editionDesc")}
+                                            </p>
+                                        </div>
+                                        <Select value={edition} onValueChange={(val) => {
+                                            if (val !== edition) {
+                                                if (confirm(t("edition.switchWarning"))) {
+                                                    setEditionState(val);
+                                                    if (val === "INDIA") {
+                                                        setCurrency("INR");
+                                                        setLanguage("en");
+                                                        setGstEnabled(true);
+                                                        setSaudiEInvoiceEnabled(false);
+                                                    } else {
+                                                        setCurrency("SAR");
+                                                        setLanguage("en");
+                                                        setSaudiEInvoiceEnabled(true);
+                                                        setGstEnabled(false);
+                                                        setEInvoicingEnabled(false);
+                                                    }
+                                                }
+                                            }
+                                        }}>
+                                            <SelectTrigger className="w-full sm:w-52">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="INDIA">{"\u{1F1EE}\u{1F1F3}"} {t("edition.india")}</SelectItem>
+                                                <SelectItem value="SAUDI">{"\u{1F1F8}\u{1F1E6}"} {t("edition.saudi")}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Language — only for Saudi */}
+                                    {edition === "SAUDI" && (
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label className="flex items-center gap-2">
                                                 <Globe className="h-4 w-4" />
@@ -676,8 +721,9 @@ export default function OrganizationDetailsPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    )}
 
-                                    {/* Currency */}
+                                    {/* Currency — read-only, auto-set by edition */}
                                     <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label className="flex items-center gap-2">
@@ -688,7 +734,7 @@ export default function OrganizationDetailsPage() {
                                                 {t("admin.setCurrencyFullDesc")}
                                             </p>
                                         </div>
-                                        <Select value={currency} onValueChange={setCurrency}>
+                                        <Select value={currency} onValueChange={setCurrency} disabled>
                                             <SelectTrigger className="w-full sm:w-44">
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -702,7 +748,9 @@ export default function OrganizationDetailsPage() {
 
                                 {/* TAXATION TAB */}
                                 <TabsContent value="taxation" className="space-y-6 mt-0">
-                                    {/* GST */}
+                                    {/* GST — India edition only */}
+                                    {edition === "INDIA" && (
+                                    <>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label htmlFor="gstEnabled">{t("admin.enableGst")}</Label>
@@ -716,7 +764,6 @@ export default function OrganizationDetailsPage() {
                                             onCheckedChange={(checked) => {
                                                 setGstEnabled(checked);
                                                 if (!checked) setEInvoicingEnabled(false);
-                                                if (checked) setSaudiEInvoiceEnabled(false);
                                             }}
                                         />
                                     </div>
@@ -758,9 +805,13 @@ export default function OrganizationDetailsPage() {
                                             </div>
                                         </div>
                                     )}
+                                    </>
+                                    )}
 
-                                    {/* Saudi E-Invoice */}
-                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                    {/* Saudi E-Invoice — Saudi edition only */}
+                                    {edition === "SAUDI" && (
+                                    <>
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
                                             <Label htmlFor="saudiEInvoiceEnabled">{t("admin.enableSaudiEInvoice")}</Label>
                                             <p className="text-xs text-muted-foreground">
@@ -770,32 +821,9 @@ export default function OrganizationDetailsPage() {
                                         <Switch
                                             id="saudiEInvoiceEnabled"
                                             checked={saudiEInvoiceEnabled}
-                                            onCheckedChange={(checked) => {
-                                                setSaudiEInvoiceEnabled(checked);
-                                                if (checked) {
-                                                    setGstEnabled(false);
-                                                    setEInvoicingEnabled(false);
-                                                }
-                                            }}
+                                            onCheckedChange={setSaudiEInvoiceEnabled}
                                         />
                                     </div>
-
-                                    {/* Tax-Inclusive Pricing */}
-                                    {(gstEnabled || saudiEInvoiceEnabled) && (
-                                        <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-                                            <div className="space-y-0.5">
-                                                <Label htmlFor="isTaxInclusivePrice">{t("admin.taxInclusivePricing")}</Label>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {t("admin.taxInclusiveFullDesc")}
-                                                </p>
-                                            </div>
-                                            <Switch
-                                                id="isTaxInclusivePrice"
-                                                checked={isTaxInclusivePrice}
-                                                onCheckedChange={setIsTaxInclusivePrice}
-                                            />
-                                        </div>
-                                    )}
 
                                     {saudiEInvoiceEnabled && (
                                         <div className="space-y-4 pl-4 border-l-2 border-muted mt-4 max-w-md">
@@ -852,6 +880,25 @@ export default function OrganizationDetailsPage() {
                                                     dir="rtl"
                                                 />
                                             </div>
+                                        </div>
+                                    )}
+                                    </>
+                                    )}
+
+                                    {/* Tax-Inclusive Pricing */}
+                                    {(gstEnabled || saudiEInvoiceEnabled) && (
+                                        <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="space-y-0.5">
+                                                <Label htmlFor="isTaxInclusivePrice">{t("admin.taxInclusivePricing")}</Label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {t("admin.taxInclusiveFullDesc")}
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                id="isTaxInclusivePrice"
+                                                checked={isTaxInclusivePrice}
+                                                onCheckedChange={setIsTaxInclusivePrice}
+                                            />
                                         </div>
                                     )}
                                 </TabsContent>
@@ -1071,12 +1118,21 @@ export default function OrganizationDetailsPage() {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="A5_LANDSCAPE">{t("admin.a5Landscape")}</SelectItem>
-                                                <SelectItem value="A4_PORTRAIT">{t("admin.a4PortraitGst")}</SelectItem>
-                                                <SelectItem value="A4_GST2">{t("admin.a4PortraitGst2")}</SelectItem>
-                                                <SelectItem value="A4_MODERN_GST">{t("admin.a4ModernPortfolio")}</SelectItem>
-                                                <SelectItem value="A4_VAT">{t("admin.a4PortraitVat")}</SelectItem>
-                                                <SelectItem value="A4_BILINGUAL">{t("admin.a4Bilingual")}</SelectItem>
+                                                {edition === "INDIA" && (
+                                                    <>
+                                                    <SelectItem value="A5_LANDSCAPE">{t("admin.a5Landscape")}</SelectItem>
+                                                    <SelectItem value="A4_PORTRAIT">{t("admin.a4PortraitGst")}</SelectItem>
+                                                    <SelectItem value="A4_GST2">{t("admin.a4PortraitGst2")}</SelectItem>
+                                                    <SelectItem value="A4_MODERN_GST">{t("admin.a4ModernPortfolio")}</SelectItem>
+                                                    </>
+                                                )}
+                                                {edition === "SAUDI" && (
+                                                    <>
+                                                    <SelectItem value="A4_VAT">{t("admin.a4PortraitVat")}</SelectItem>
+                                                    <SelectItem value="A4_BILINGUAL">{t("admin.a4Bilingual")}</SelectItem>
+                                                    <SelectItem value="A4_MODERN_GST">{t("admin.a4ModernPortfolio")}</SelectItem>
+                                                    </>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -1095,7 +1151,9 @@ export default function OrganizationDetailsPage() {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="DEFAULT">{t("admin.defaultEnglish")}</SelectItem>
-                                                <SelectItem value="ARABIC">{t("admin.allArabic")} (عربي)</SelectItem>
+                                                {edition === "SAUDI" && (
+                                                    <SelectItem value="ARABIC">{t("admin.allArabic")} (عربي)</SelectItem>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                     </div>

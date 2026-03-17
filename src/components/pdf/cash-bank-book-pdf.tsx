@@ -87,7 +87,7 @@ const safeBrandColor = (brandColor?: string | null): string => {
   return "#0f172a";
 };
 
-const formatAmount = (amount: number, currency: string = "SAR"): string => {
+const formatAmount = (amount: number, currency: string = "INR"): string => {
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -295,7 +295,7 @@ export function CashBankBookPDF({
   const l = labels[lang];
   const brandColor = safeBrandColor(organization.brandColor);
   const styles = buildStyles(brandColor, isRTL);
-  const currency = organization.currency || "SAR";
+  const currency = organization.currency || "INR";
   const title = bookType === "cash" ? l.cashBook : l.bankBook;
   const hasMultipleAccounts = data.accounts.length > 1;
 

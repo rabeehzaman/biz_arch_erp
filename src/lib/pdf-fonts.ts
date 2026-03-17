@@ -14,3 +14,4 @@ Font.register({
 });
 
 export const ARABIC_FONT_FAMILY = "Arial";
+export const PDF_FONT_FAMILY = "Arial";

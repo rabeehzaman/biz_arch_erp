@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useEdition } from "@/hooks/use-edition";
 
 interface POSHeaderProps {
   session: {
@@ -57,6 +58,7 @@ export function POSHeader({
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
+  const { config: editionConfig } = useEdition();
   const router = useRouter();
 
   const locationLabel = [branchName, warehouseName].filter(Boolean).join(" / ");
@@ -173,6 +175,7 @@ export function POSHeader({
           {employeeName || authSession?.user?.name}
         </div>
 
+        {editionConfig.isLanguageSwitchable && (
         <Button
           variant="ghost"
           size="sm"
@@ -183,6 +186,7 @@ export function POSHeader({
           <Languages className="h-4 w-4" />
           <span className="hidden sm:inline ml-1">{lang === "en" ? "ع" : "EN"}</span>
         </Button>
+        )}
 
         <Button
           variant="ghost"

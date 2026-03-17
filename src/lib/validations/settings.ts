@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { DEFAULT_ROUND_OFF_MODE, ROUND_OFF_MODES } from "@/lib/round-off";
 
-export const companySettingsSchema = z.object({
+// Base schema without edition-specific validation
+const baseFields = {
   companyName: z.string().min(1, "Company name is required"),
   companyAddress: z.string().optional(),
   companyCity: z.string().optional(),
@@ -14,6 +15,17 @@ export const companySettingsSchema = z.object({
     .email("Invalid email address")
     .optional()
     .or(z.literal("")),
+  companyGstNumber: z.string().optional().or(z.literal("")),
+  bankName: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
+  bankIfscCode: z.string().optional().or(z.literal("")),
+  bankBranch: z.string().optional(),
+  roundOffMode: z.enum(ROUND_OFF_MODES).default(DEFAULT_ROUND_OFF_MODE),
+};
+
+// India edition: strict GST and IFSC validation
+export const companySettingsSchemaIndia = z.object({
+  ...baseFields,
   companyGstNumber: z
     .string()
     .regex(
@@ -22,16 +34,25 @@ export const companySettingsSchema = z.object({
     )
     .optional()
     .or(z.literal("")),
-  bankName: z.string().optional(),
-  bankAccountNumber: z.string().optional(),
   bankIfscCode: z
     .string()
     .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format")
     .optional()
     .or(z.literal("")),
-  bankBranch: z.string().optional(),
-  roundOffMode: z.enum(ROUND_OFF_MODES).default(DEFAULT_ROUND_OFF_MODE),
 });
+
+// Saudi edition: no GST/IFSC validation
+export const companySettingsSchemaSaudi = z.object({
+  ...baseFields,
+});
+
+// Default schema (backward compatible — uses India validation)
+export const companySettingsSchema = companySettingsSchemaIndia;
+
+export function getCompanySettingsSchema(edition?: string) {
+  if (edition === "SAUDI") return companySettingsSchemaSaudi;
+  return companySettingsSchemaIndia;
+}
 
 export type CompanySettingsFormData = z.infer<typeof companySettingsSchema>;
 

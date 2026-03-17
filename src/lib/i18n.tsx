@@ -982,6 +982,10 @@ export function LanguageProvider({
   useEffect(() => {
     persistLanguagePreference(lang);
     applyDocumentLanguage(lang);
+
+    // Skip DOM localization and MutationObserver for English — no-ops wastefully
+    if (lang === "en") return;
+
     localizeNode(document.body, lang);
 
     const observer = new MutationObserver((mutations) => {

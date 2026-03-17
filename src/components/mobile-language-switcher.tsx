@@ -15,8 +15,14 @@ import {
   useLanguage,
   type Language,
 } from "@/lib/i18n";
+import { useEdition } from "@/hooks/use-edition";
 
 export function MobileLanguageSwitcher() {
+  const { config: editionConfig } = useEdition();
+
+  if (!editionConfig.isLanguageSwitchable) {
+    return null;
+  }
   const { update } = useSession();
   const { t, lang, setLanguage } = useLanguage();
   const [switchingLang, setSwitchingLang] = useState(false);
