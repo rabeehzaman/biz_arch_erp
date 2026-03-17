@@ -38,15 +38,17 @@ export async function GET(
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    const [pdfFormatSetting, transferPdfFormatSetting] = await Promise.all([
+    const [pdfFormatSetting, transferPdfFormatSetting, transferHideCostSetting] = await Promise.all([
       prisma.setting.findFirst({ where: { organizationId: id, key: "invoice_pdf_format" } }),
       prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_format" } }),
+      prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_hide_cost" } }),
     ]);
 
     return NextResponse.json({
       ...organization,
       invoicePdfFormat: pdfFormatSetting?.value || "A5_LANDSCAPE",
       transferPdfFormat: transferPdfFormatSetting?.value || "DEFAULT",
+      transferPdfHideCost: transferHideCostSetting?.value === "true",
     });
   } catch (error) {
     console.error("Failed to fetch organization:", error);
@@ -96,6 +98,7 @@ export async function PUT(
       arabicCity,
       invoicePdfFormat,
       transferPdfFormat,
+      transferPdfHideCost,
       language,
       currency,
       pdfHeaderImageUrl,
@@ -314,6 +317,15 @@ export async function PUT(
           });
         }
 
+        // Upsert transfer PDF hide cost setting
+        if (transferPdfHideCost !== undefined) {
+          await tx.setting.upsert({
+            where: { organizationId_key: { organizationId: id, key: "transfer_pdf_hide_cost" } },
+            update: { value: String(transferPdfHideCost) },
+            create: { organizationId: id, key: "transfer_pdf_hide_cost", value: String(transferPdfHideCost) },
+          });
+        }
+
         // Seed default branch + warehouse when enabling multi-branch
         if (multiBranchEnabled) {
           const existingBranch = await tx.branch.findFirst({
@@ -437,31 +449,88 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Check if org has any data
     const org = await prisma.organization.findUnique({
       where: { id },
-      include: {
-        _count: {
-          select: { users: true, invoices: true, customers: true },
-        },
-      },
     });
 
     if (!org) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    if (org._count.invoices > 0 || org._count.customers > 0) {
-      return NextResponse.json(
-        { error: "Cannot delete organization with existing data. Remove all customers and invoices first." },
-        { status: 400 }
-      );
-    }
+    // Cascade-delete all associated data in dependency order
 
-    // Delete users first, then org
-    await prisma.user.deleteMany({ where: { organizationId: id } });
-    await prisma.setting.deleteMany({ where: { organizationId: id } });
+    // 0. Dependent auxiliary models
+    await prisma.mobileDevice.deleteMany({ where: { organizationId: id } });
+    await prisma.pOSRegisterConfig.deleteMany({ where: { organizationId: id } });
+
+    // 1. Delete dependent transactional records (allocations and consumptions)
+    await prisma.paymentAllocation.deleteMany({ where: { organizationId: id } });
+    await prisma.supplierPaymentAllocation.deleteMany({ where: { organizationId: id } });
+    await prisma.stockLotConsumption.deleteMany({ where: { organizationId: id } });
+    await prisma.debitNoteLotConsumption.deleteMany({ where: { organizationId: id } });
+    await prisma.costAuditLog.deleteMany({ where: { organizationId: id } });
+
+    // 2. Stock lots and opening stocks
+    await prisma.stockLot.deleteMany({ where: { organizationId: id } });
+    await prisma.openingStock.deleteMany({ where: { organizationId: id } });
+
+    // 3. Delete document line items
+    await prisma.invoiceItem.deleteMany({ where: { organizationId: id } });
+    await prisma.purchaseInvoiceItem.deleteMany({ where: { organizationId: id } });
+    await prisma.quotationItem.deleteMany({ where: { organizationId: id } });
+    await prisma.creditNoteItem.deleteMany({ where: { organizationId: id } });
+    await prisma.debitNoteItem.deleteMany({ where: { organizationId: id } });
+    await prisma.stockTransferItem.deleteMany({ where: { organizationId: id } });
+    await prisma.expenseItem.deleteMany({ where: { organizationId: id } });
+    await prisma.journalEntryLine.deleteMany({ where: { organizationId: id } });
+    await prisma.pOSHeldOrder.deleteMany({ where: { organizationId: id } });
+
+    // 4. Payments
+    await prisma.payment.deleteMany({ where: { organizationId: id } });
+    await prisma.supplierPayment.deleteMany({ where: { organizationId: id } });
+
+    // Break Quotation-Invoice foreign key loop
+    await prisma.quotation.updateMany({
+      where: { organizationId: id },
+      data: { convertedInvoiceId: null },
+    });
+
+    // 5. Core transactional documents
+    await prisma.creditNote.deleteMany({ where: { organizationId: id } });
+    await prisma.debitNote.deleteMany({ where: { organizationId: id } });
+    await prisma.invoice.deleteMany({ where: { organizationId: id } });
+    await prisma.purchaseInvoice.deleteMany({ where: { organizationId: id } });
+    await prisma.quotation.deleteMany({ where: { organizationId: id } });
+    await prisma.stockTransfer.deleteMany({ where: { organizationId: id } });
+    await prisma.expense.deleteMany({ where: { organizationId: id } });
+    await prisma.journalEntry.deleteMany({ where: { organizationId: id } });
+    await prisma.pOSSession.deleteMany({ where: { organizationId: id } });
+
+    // 6. Statement transactions
+    await prisma.cashBankTransaction.deleteMany({ where: { organizationId: id } });
+    await prisma.customerTransaction.deleteMany({ where: { organizationId: id } });
+    await prisma.supplierTransaction.deleteMany({ where: { organizationId: id } });
+
+    // 7. Master data
+    await prisma.customerAssignment.deleteMany({ where: { organizationId: id } });
+    await prisma.customer.deleteMany({ where: { organizationId: id } });
+    await prisma.supplier.deleteMany({ where: { organizationId: id } });
+    await prisma.unitConversion.deleteMany({ where: { organizationId: id } });
+    await prisma.productBundleItem.deleteMany({ where: { organizationId: id } });
+    await prisma.product.deleteMany({ where: { organizationId: id } });
+    await prisma.productCategory.deleteMany({ where: { organizationId: id } });
     await prisma.unit.deleteMany({ where: { organizationId: id } });
+
+    // 8. Infrastructure
+    await prisma.userWarehouseAccess.deleteMany({ where: { organizationId: id } });
+    await prisma.warehouse.deleteMany({ where: { organizationId: id } });
+    await prisma.branch.deleteMany({ where: { organizationId: id } });
+    await prisma.cashBankAccount.deleteMany({ where: { organizationId: id } });
+    await prisma.account.deleteMany({ where: { organizationId: id } });
+
+    // 9. Users, settings, and the organization itself
+    await prisma.setting.deleteMany({ where: { organizationId: id } });
+    await prisma.user.deleteMany({ where: { organizationId: id } });
     await prisma.organization.delete({ where: { id } });
 
     return NextResponse.json({ message: "Organization deleted" });

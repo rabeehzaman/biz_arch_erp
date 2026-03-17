@@ -51,6 +51,7 @@ interface OrganizationDetails {
     arabicCity: string | null;
     invoicePdfFormat: string;
     transferPdfFormat: string;
+    transferPdfHideCost: boolean;
     pdfHeaderImageUrl: string | null;
     pdfFooterImageUrl: string | null;
     brandColor: string | null;
@@ -111,6 +112,7 @@ export default function OrganizationDetailsPage() {
     const [arabicCity, setArabicCity] = useState("");
     const [invoicePdfFormat, setInvoicePdfFormat] = useState("A5_LANDSCAPE");
     const [transferPdfFormat, setTransferPdfFormat] = useState("DEFAULT");
+    const [transferPdfHideCost, setTransferPdfHideCost] = useState(false);
     const [pdfHeaderImageUrl, setPdfHeaderImageUrl] = useState("");
     const [pdfFooterImageUrl, setPdfFooterImageUrl] = useState("");
     const [brandColor, setBrandColor] = useState("");
@@ -184,6 +186,7 @@ export default function OrganizationDetailsPage() {
         setArabicCity(data.arabicCity || "");
         setInvoicePdfFormat(data.invoicePdfFormat || "A5_LANDSCAPE");
         setTransferPdfFormat(data.transferPdfFormat || "DEFAULT");
+        setTransferPdfHideCost(data.transferPdfHideCost || false);
         setPdfHeaderImageUrl(data.pdfHeaderImageUrl || "");
         setPdfFooterImageUrl(data.pdfFooterImageUrl || "");
         setBrandColor(data.brandColor || "");
@@ -309,6 +312,7 @@ export default function OrganizationDetailsPage() {
                     arabicCity: saudiEInvoiceEnabled ? arabicCity || null : null,
                     invoicePdfFormat,
                     transferPdfFormat,
+                    transferPdfHideCost,
                     pdfHeaderImageUrl,
                     pdfFooterImageUrl,
                     brandColor: brandColor || null,
@@ -1094,6 +1098,17 @@ export default function OrganizationDetailsPage() {
                                         </Select>
                                     </div>
 
+                                    {/* Transfer PDF Hide Cost */}
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label>Hide Cost in Transfer PDF</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Hide unit cost, line total, and transfer value from the PDF — only quantity is shown
+                                            </p>
+                                        </div>
+                                        <Switch checked={transferPdfHideCost} onCheckedChange={setTransferPdfHideCost} />
+                                    </div>
+
                                     {/* PDF Header/Footer Images */}
                                     {(invoicePdfFormat === "A4_PORTRAIT" || invoicePdfFormat === "A4_GST2" || invoicePdfFormat === "A4_VAT" || invoicePdfFormat === "A4_BILINGUAL") && (
                                         <div className="space-y-4 pt-6 border-t border-border mt-4">
@@ -1404,7 +1419,7 @@ export default function OrganizationDetailsPage() {
                                 <div className="sm:max-w-[70%]">
                                     <h4 className="font-semibold text-sm text-foreground">Delete Organization</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Permanently remove this organization and all its data. Only possible if the organization has no existing customers or invoices.
+                                        Permanently remove this organization and all its data. This will cascade-delete all customers, invoices, products, and other associated records.
                                     </p>
                                 </div>
                                 <Button variant="destructive" className="w-full sm:w-auto" onClick={() => setDeleteOpen(true)}>
@@ -1429,8 +1444,8 @@ export default function OrganizationDetailsPage() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This will permanently delete the organization <strong className="text-foreground">{organization.name}</strong>.
-                                This action cannot be undone. You can only delete organizations that have no associated data (customers, invoices, products, etc).
+                                This will permanently delete the organization <strong className="text-foreground">{organization.name}</strong> and all its associated data (customers, invoices, products, etc).
+                                This action cannot be undone.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         {deleteError && (
