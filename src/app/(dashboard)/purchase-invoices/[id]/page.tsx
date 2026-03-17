@@ -85,6 +85,8 @@ interface PurchaseInvoice {
   balanceDue: number;
   notes: string | null;
   isTaxInclusive: boolean | null;
+  // Saudi VAT fields
+  totalVat?: number | null;
   items: PurchaseInvoiceItem[];
   branch?: { id: string; name: string; code: string } | null;
   warehouse?: { id: string; name: string; code: string } | null;
@@ -497,29 +499,38 @@ export default function PurchaseInvoiceDetailPage({
                   <span>Subtotal</span>
                   <span>{symbol}{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
                 </div>
-                {Number(invoice.totalCgst) > 0 && (
+                {Number(invoice.totalVat) > 0 ? (
                   <div className="flex justify-between text-sm text-slate-500">
-                    <span>CGST</span>
-                    <span>{symbol}{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
+                    <span>VAT (15%) — ضريبة القيمة المضافة</span>
+                    <span>{symbol}{Number(invoice.totalVat).toFixed(2)}</span>
                   </div>
-                )}
-                {Number(invoice.totalSgst) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>SGST</span>
-                    <span>{symbol}{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(invoice.totalIgst) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>IGST</span>
-                    <span>{symbol}{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>Tax</span>
-                    <span>{symbol}{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
-                  </div>
+                ) : (
+                  <>
+                    {Number(invoice.totalCgst) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>CGST</span>
+                        <span>{symbol}{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    {Number(invoice.totalSgst) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>SGST</span>
+                        <span>{symbol}{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    {Number(invoice.totalIgst) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>IGST</span>
+                        <span>{symbol}{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                    {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>Tax</span>
+                        <span>{symbol}{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
+                      </div>
+                    )}
+                  </>
                 )}
                 {invoice.applyRoundOff && Number(invoice.roundOffAmount) !== 0 && (
                   <div className="flex justify-between text-sm text-slate-500">

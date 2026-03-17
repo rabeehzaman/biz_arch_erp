@@ -7,7 +7,6 @@ import { InvoicePDF } from "@/components/pdf/invoice-pdf";
 import { InvoiceA4VATPDF } from "@/components/pdf/invoice-pdf-a4-vat";
 import { createElement } from "react";
 import { format } from "date-fns";
-import { generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
 
 export async function GET(
   request: NextRequest,
@@ -26,7 +25,7 @@ export async function GET(
     const [org, pdfFormatSetting] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: organizationId },
-        select: { name: true, arabicName: true, arabicAddress: true, vatNumber: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true },
+        select: { name: true, arabicName: true, arabicAddress: true, vatNumber: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true },
       }),
       prisma.setting.findFirst({
         where: { organizationId, key: "invoice_pdf_format" },
@@ -61,6 +60,11 @@ export async function GET(
                 arabicName: true,
               },
             },
+            unit: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -92,7 +96,11 @@ export async function GET(
       discount: Number(item.discount),
       total: Number(item.total),
       product: item.product,
+      unit: item.unit,
     }));
+
+    // Determine if this is a Saudi VAT org
+    const isSaudiVat = !!org?.saudiEInvoiceEnabled;
 
     // Prepare invoice data for PDF
     const pdfInvoice = {
@@ -111,17 +119,10 @@ export async function GET(
       totalIgst: Number(invoice.totalIgst),
       roundOffAmount: Number(invoice.roundOffAmount),
       total: Number(invoice.total),
+      // Saudi VAT fields
+      saudiInvoiceType: isSaudiVat ? "STANDARD" : undefined,
+      totalVat: invoice.totalVat ? Number(invoice.totalVat) : undefined,
     };
-
-    // Generate QR code image for Saudi invoices
-    let qrCodeDataURL: string | undefined;
-    if ((invoice as any).qrCodeData) {
-      try {
-        qrCodeDataURL = await generateQRCodeDataURL((invoice as any).qrCodeData);
-      } catch {
-        // QR code generation failure is non-fatal
-      }
-    }
 
     // Generate PDF
     let pdfBuffer: Buffer;
@@ -134,10 +135,10 @@ export async function GET(
         unitPrice: Number(item.unitCost),
         discount: Number(item.discount),
         total: Number(item.total),
-        vatRate: Number((item as any).vatRate ?? 0),
-        vatAmount: Number((item as any).vatAmount ?? 0),
+        vatRate: Number(item.vatRate ?? 0),
+        vatAmount: Number(item.vatAmount ?? 0),
         product: item.product,
-        unit: null as any,
+        unit: item.unit,
       }));
 
       const vatInvoice = {
@@ -159,16 +160,15 @@ export async function GET(
         },
         items: vatItems,
         subtotal: Number(invoice.subtotal),
-        totalVat: Number((invoice as any).totalVat ?? 0),
+        totalVat: Number(invoice.totalVat ?? 0),
         roundOffAmount: Number(invoice.roundOffAmount),
         total: Number(invoice.total),
-        amountPaid: 0,
-        balanceDue: Number(invoice.total),
-        notes: null,
+        amountPaid: Number(invoice.amountPaid),
+        balanceDue: Number(invoice.balanceDue),
+        notes: invoice.notes,
         terms: null,
         createdByName: null,
-        qrCodeDataURL,
-        saudiInvoiceType: undefined as string | undefined,
+        saudiInvoiceType: isSaudiVat ? "STANDARD" : undefined,
       };
 
        
