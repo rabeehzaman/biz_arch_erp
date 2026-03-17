@@ -11,6 +11,7 @@ import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { calculateLineVAT, LineVATResult } from "@/lib/saudi-vat/calculator";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
 async function generatePurchaseInvoiceNumber(organizationId: string) {
@@ -42,25 +43,42 @@ export async function GET(request: NextRequest) {
     const organizationId = getOrgId(session);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const { limit, offset, search } = parsePagination(request);
 
-    const where = status && status !== "all"
+    const baseWhere = status && status !== "all"
       ? { status: status as never, organizationId }
       : { organizationId };
 
-    const invoices = await prisma.purchaseInvoice.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        supplier: {
-          select: { id: true, name: true, email: true },
-        },
-        _count: {
-          select: { items: true },
-        },
-      },
-    });
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { purchaseInvoiceNumber: { contains: search, mode: "insensitive" as const } },
+            { supplier: { name: { contains: search, mode: "insensitive" as const } } },
+            { supplierInvoiceRef: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : baseWhere;
 
-    return NextResponse.json(invoices);
+    const [invoices, total] = await Promise.all([
+      prisma.purchaseInvoice.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          supplier: {
+            select: { id: true, name: true, email: true },
+          },
+          _count: {
+            select: { items: true },
+          },
+        },
+      }),
+      prisma.purchaseInvoice.count({ where }),
+    ]);
+
+    return paginatedResponse(invoices, total, offset + invoices.length < total);
   } catch (error) {
     console.error("Failed to fetch purchase invoices:", error);
     return NextResponse.json(

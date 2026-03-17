@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import {
   Table,
@@ -36,6 +36,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Search, Truck, MoreHorizontal, Wallet } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import { toast } from "sonner";
 
 interface Supplier {
@@ -63,9 +65,16 @@ import { useLanguage } from "@/lib/i18n";
 export default function SuppliersPage() {
   const { t, lang } = useLanguage();
   const { symbol } = useCurrency();
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    items: suppliers,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<Supplier>({ url: "/api/suppliers" });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isOpeningBalanceDialogOpen, setIsOpeningBalanceDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -75,24 +84,6 @@ export default function SuppliersPage() {
     amount: "",
     transactionDate: new Date().toISOString().split("T")[0],
   });
-
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
-
-  const fetchSuppliers = async () => {
-    try {
-      const response = await fetch("/api/suppliers");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setSuppliers(data);
-    } catch (error) {
-      toast.error(t("suppliers.failedToLoad"));
-      console.error("Failed to fetch suppliers:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleEdit = (supplier: Supplier) => {
     setEditingSupplier(supplier);
@@ -110,7 +101,7 @@ export default function SuppliersPage() {
             const data = await response.json();
             throw new Error(data.error || "Failed to delete");
           }
-          fetchSuppliers();
+          refresh();
           toast.success(t("suppliers.supplierDeleted"));
         } catch (error) {
           toast.error(error instanceof Error ? error.message : t("common.error"));
@@ -142,7 +133,7 @@ export default function SuppliersPage() {
         amount: "",
         transactionDate: new Date().toISOString().split("T")[0],
       });
-      fetchSuppliers();
+      refresh();
       toast.success(t("suppliers.supplierUpdated"));
     } catch (error) {
       toast.error(t("common.error"));
@@ -172,13 +163,6 @@ export default function SuppliersPage() {
     setIsOpeningBalanceDialogOpen(true);
   };
 
-  const filteredSuppliers = suppliers.filter(
-    (supplier) =>
-      supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supplier.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supplier.phone?.includes(searchQuery)
-  );
-
   return (
     <PageAnimation>
       <StaggerContainer className="space-y-6">
@@ -197,7 +181,7 @@ export default function SuppliersPage() {
           <SupplierFormDialog
             open={isDialogOpen}
             onOpenChange={setIsDialogOpen}
-            onSuccess={fetchSuppliers}
+            onSuccess={refresh}
             supplierToEdit={editingSupplier}
           />
         </StaggerItem>
@@ -278,7 +262,7 @@ export default function SuppliersPage() {
             <CardContent>
               {isLoading ? (
                 <TableSkeleton columns={7} rows={5} />
-              ) : filteredSuppliers.length === 0 ? (
+              ) : suppliers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Truck className="h-12 w-12 text-slate-300" />
                   <h3 className="mt-4 text-lg font-semibold">{t("suppliers.noSuppliers")}</h3>
@@ -291,7 +275,7 @@ export default function SuppliersPage() {
               ) : (
                 <>
                   <div className="space-y-3 sm:hidden">
-                    {filteredSuppliers.map((supplier) => (
+                    {suppliers.map((supplier) => (
                       <div key={supplier.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -375,7 +359,7 @@ export default function SuppliersPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredSuppliers.map((supplier) => (
+                          {suppliers.map((supplier) => (
                             <TableRow key={supplier.id}>
                               <TableCell>
                                 <div className="font-medium">{supplier.name}</div>
@@ -449,6 +433,7 @@ export default function SuppliersPage() {
                       </Table>
                     </div>
                   </div>
+                  <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
                 </>
               )}
             </CardContent>

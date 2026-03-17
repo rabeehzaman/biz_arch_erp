@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,17 +17,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const compact = searchParams.get("compact") === "true";
 
-    const where = isAdmin
+    const baseWhere = isAdmin
       ? { organizationId }
       : {
           organizationId,
           assignments: { some: { userId } },
         };
-    let customers;
 
     if (compact) {
       const customers = await prisma.customer.findMany({
-        where,
+        where: baseWhere,
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -40,45 +40,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(customers);
     }
 
-    if (isAdmin) {
-      // Admin sees all customers in their org
-      customers = await prisma.customer.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        include: {
-          _count: {
-            select: { invoices: true },
-          },
-          assignments: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true },
-              },
-            },
-          },
-        },
-      });
-    } else {
-      // Regular user sees only customers assigned to them
-      customers = await prisma.customer.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        include: {
-          _count: {
-            select: { invoices: true },
-          },
-          assignments: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true },
-              },
-            },
-          },
-        },
-      });
-    }
+    const { limit, offset, search } = parsePagination(request);
 
-    return NextResponse.json(customers);
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { name: { contains: search, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" as const } },
+            { phone: { contains: search } },
+          ],
+        }
+      : baseWhere;
+
+    const [customers, total] = await Promise.all([
+      prisma.customer.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          _count: {
+            select: { invoices: true },
+          },
+          assignments: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.customer.count({ where }),
+    ]);
+
+    return paginatedResponse(customers, total, offset + customers.length < total);
   } catch (error) {
     console.error("Failed to fetch customers:", error);
     return NextResponse.json(

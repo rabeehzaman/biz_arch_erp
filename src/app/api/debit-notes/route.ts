@@ -15,6 +15,7 @@ import { createAutoJournalEntry, ensureRoundOffAccount, getSystemAccount } from 
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate debit note number: DN-YYYYMMDD-XXX
 async function generateDebitNoteNumber(organizationId: string) {
@@ -36,7 +37,7 @@ async function generateDebitNoteNumber(organizationId: string) {
   return `${prefix}-${sequence.toString().padStart(3, "0")}`;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -44,24 +45,42 @@ export async function GET(_request: NextRequest) {
     }
 
     const organizationId = getOrgId(session);
+    const { limit, offset, search } = parsePagination(request);
 
-    const debitNotes = await prisma.debitNote.findMany({
-      where: { organizationId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        supplier: {
-          select: { id: true, name: true, email: true },
-        },
-        purchaseInvoice: {
-          select: { id: true, purchaseInvoiceNumber: true },
-        },
-        _count: {
-          select: { items: true },
-        },
-      },
-    });
+    const baseWhere = { organizationId };
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { debitNoteNumber: { contains: search, mode: "insensitive" as const } },
+            { supplier: { name: { contains: search, mode: "insensitive" as const } } },
+            { purchaseInvoice: { purchaseInvoiceNumber: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : baseWhere;
 
-    return NextResponse.json(debitNotes);
+    const [debitNotes, total] = await Promise.all([
+      prisma.debitNote.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          supplier: {
+            select: { id: true, name: true, email: true },
+          },
+          purchaseInvoice: {
+            select: { id: true, purchaseInvoiceNumber: true },
+          },
+          _count: {
+            select: { items: true },
+          },
+        },
+      }),
+      prisma.debitNote.count({ where }),
+    ]);
+
+    return paginatedResponse(debitNotes, total, offset + debitNotes.length < total);
   } catch (error) {
     console.error("Failed to fetch debit notes:", error);
     return NextResponse.json(

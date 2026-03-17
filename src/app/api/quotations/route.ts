@@ -6,6 +6,7 @@ import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate quotation number: QUO-YYYYMMDD-XXX
 async function generateQuotationNumber(organizationId: string) {
@@ -27,7 +28,7 @@ async function generateQuotationNumber(organizationId: string) {
   return `${prefix}-${sequence.toString().padStart(3, "0")}`;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -35,21 +36,38 @@ export async function GET(_request: NextRequest) {
     }
 
     const organizationId = getOrgId(session);
+    const { limit, offset, search } = parsePagination(request);
 
-    const quotations = await prisma.quotation.findMany({
-      where: { organizationId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        customer: {
-          select: { id: true, name: true, email: true },
-        },
-        _count: {
-          select: { items: true },
-        },
-      },
-    });
+    const baseWhere = { organizationId };
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { quotationNumber: { contains: search, mode: "insensitive" as const } },
+            { customer: { name: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : baseWhere;
 
-    return NextResponse.json(quotations);
+    const [quotations, total] = await Promise.all([
+      prisma.quotation.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          customer: {
+            select: { id: true, name: true, email: true },
+          },
+          _count: {
+            select: { items: true },
+          },
+        },
+      }),
+      prisma.quotation.count({ where }),
+    ]);
+
+    return paginatedResponse(quotations, total, offset + quotations.length < total);
   } catch (error) {
     console.error("Failed to fetch quotations:", error);
     return NextResponse.json(

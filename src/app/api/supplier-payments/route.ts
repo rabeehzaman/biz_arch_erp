@@ -4,6 +4,7 @@ import { PaymentMethod } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate supplier payment number: SPAY-YYYYMMDD-XXX
 async function generateSupplierPaymentNumber(organizationId: string) {
@@ -25,7 +26,7 @@ async function generateSupplierPaymentNumber(organizationId: string) {
   return `${prefix}-${sequence.toString().padStart(3, "0")}`;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -33,20 +34,38 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const { limit, offset, search } = parsePagination(request);
 
-    const payments = await prisma.supplierPayment.findMany({
-      where: { organizationId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        supplier: {
-          select: { id: true, name: true },
+    const baseWhere = { organizationId };
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { paymentNumber: { contains: search, mode: "insensitive" as const } },
+            { supplier: { name: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : baseWhere;
+
+    const [payments, total] = await Promise.all([
+      prisma.supplierPayment.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          supplier: {
+            select: { id: true, name: true },
+          },
+          purchaseInvoice: {
+            select: { id: true, purchaseInvoiceNumber: true },
+          },
         },
-        purchaseInvoice: {
-          select: { id: true, purchaseInvoiceNumber: true },
-        },
-      },
-    });
-    return NextResponse.json(payments);
+      }),
+      prisma.supplierPayment.count({ where }),
+    ]);
+
+    return paginatedResponse(payments, total, offset + payments.length < total);
   } catch (error) {
     console.error("Failed to fetch supplier payments:", error);
     return NextResponse.json(

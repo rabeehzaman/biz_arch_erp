@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 
 export async function GET(request: NextRequest) {
@@ -32,11 +33,9 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    const products = compact
-      ? await prisma.product.findMany({
-        where: {
-          ...baseWhere,
-        },
+    if (compact) {
+      const products = await prisma.product.findMany({
+        where: baseWhere,
         select: {
           id: true,
           name: true,
@@ -71,11 +70,35 @@ export async function GET(request: NextRequest) {
           stockLots: stockLotsSelect,
         },
         orderBy: { createdAt: "desc" },
-      })
-      : await prisma.product.findMany({
-        where: {
+      });
+
+      const productsWithStock = products.map((product) => ({
+        ...product,
+        availableStock: product.stockLots.reduce(
+          (sum, lot) => sum + Number(lot.remainingQuantity),
+          0
+        ),
+      }));
+
+      return NextResponse.json(productsWithStock);
+    }
+
+    const { limit, offset, search } = parsePagination(request);
+
+    const where = search
+      ? {
           ...baseWhere,
-        },
+          OR: [
+            { name: { contains: search, mode: "insensitive" as const } },
+            { sku: { contains: search, mode: "insensitive" as const } },
+            { barcode: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : baseWhere;
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
         include: {
           unit: true,
           stockLots: stockLotsSelect,
@@ -88,7 +111,11 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: { createdAt: "desc" },
-      });
+        take: limit,
+        skip: offset,
+      }),
+      prisma.product.count({ where }),
+    ]);
 
     // Calculate available stock for each product
     const productsWithStock = products.map((product) => {
@@ -102,7 +129,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(productsWithStock);
+    return paginatedResponse(productsWithStock, total, offset + products.length < total);
   } catch (error) {
     console.error("Failed to fetch products:", error);
     return NextResponse.json(

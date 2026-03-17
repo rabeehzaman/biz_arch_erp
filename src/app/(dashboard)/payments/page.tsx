@@ -49,6 +49,8 @@ import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 
 interface Payment {
   id: string;
@@ -99,13 +101,21 @@ const methodLabels = (t: (key: string) => string): Record<string, string> => ({
 });
 
 export default function PaymentsPage() {
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const {
+    items: payments,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<Payment>({ url: "/api/payments" });
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletePayment, setDeletePayment] = useState<Payment | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -124,27 +134,12 @@ export default function PaymentsPage() {
   });
 
   useEffect(() => {
-    fetchPayments();
     fetchCustomers();
     fetchInvoices();
     fetchAccounts();
     // Initial load only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchPayments = async () => {
-    try {
-      const response = await fetch("/api/payments");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setPayments(data);
-    } catch (error) {
-      toast.error(t("common.error"));
-      console.error("Failed to fetch payments:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchCustomers = async () => {
     const response = await fetch("/api/customers?compact=true");
@@ -213,7 +208,7 @@ export default function PaymentsPage() {
 
       setIsDialogOpen(false);
       resetForm();
-      fetchPayments();
+      refresh();
       fetchCustomers();
       fetchInvoices();
       toast.success(t("payments.paymentRecorded"));
@@ -251,7 +246,7 @@ export default function PaymentsPage() {
       if (!response.ok) throw new Error("Failed to delete");
 
       setDeletePayment(null);
-      fetchPayments();
+      refresh();
       fetchCustomers();
       fetchInvoices();
       toast.success(t("payments.paymentDeleted"));
@@ -260,12 +255,6 @@ export default function PaymentsPage() {
       console.error("Failed to delete payment:", error);
     }
   };
-
-  const filteredPayments = payments.filter(
-    (payment) =>
-      payment.paymentNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.customer.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <PageAnimation>
@@ -497,7 +486,7 @@ export default function PaymentsPage() {
           <CardContent>
             {isLoading ? (
               <TableSkeleton columns={6} rows={5} />
-            ) : filteredPayments.length === 0 ? (
+            ) : payments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <CreditCard className="h-12 w-12 text-slate-300" />
                 <h3 className="mt-4 text-lg font-semibold">{t("payments.noPayments")}</h3>
@@ -510,7 +499,7 @@ export default function PaymentsPage() {
               ) : (
               <>
                 <div className="space-y-3 sm:hidden">
-                  {filteredPayments.map((payment) => (
+                  {payments.map((payment) => (
                     <div key={payment.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -575,7 +564,7 @@ export default function PaymentsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredPayments.map((payment) => (
+                        {payments.map((payment) => (
                           <TableRow key={payment.id}>
                             <TableCell className="font-medium">
                               {payment.paymentNumber}
@@ -618,6 +607,7 @@ export default function PaymentsPage() {
                 </div>
               </>
             )}
+            <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
           </CardContent>
         </Card>
 

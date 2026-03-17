@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,6 +23,8 @@ import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/pa
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 
 interface Invoice {
   id: string;
@@ -49,32 +51,19 @@ function getInvoiceStatus(balanceDue: number, dueDate: string, t: (key: string) 
 
 export default function InvoicesPage() {
   const router = useRouter();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    items: invoices,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<Invoice>({ url: "/api/invoices" });
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
-
-  useEffect(() => {
-    fetchInvoices();
-    // Initial load only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchInvoices = async () => {
-    try {
-      const response = await fetch("/api/invoices");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setInvoices(data);
-    } catch (error) {
-      toast.error(t("common.error"));
-      console.error("Failed to fetch invoices:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
@@ -84,7 +73,7 @@ export default function InvoicesPage() {
         try {
           const response = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
-          fetchInvoices();
+          refresh();
           toast.success(t("sales.invoiceDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
@@ -93,12 +82,6 @@ export default function InvoicesPage() {
       },
     });
   };
-
-  const filteredInvoices = invoices.filter(
-    (invoice) =>
-      invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.customer.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <PageAnimation>
@@ -132,7 +115,7 @@ export default function InvoicesPage() {
             <CardContent>
               {isLoading ? (
                 <TableSkeleton columns={7} rows={5} />
-              ) : filteredInvoices.length === 0 ? (
+              ) : invoices.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <FileText className="h-12 w-12 text-slate-300" />
                   <h3 className="mt-4 text-lg font-semibold">{t("sales.noInvoices")}</h3>
@@ -150,7 +133,7 @@ export default function InvoicesPage() {
               ) : (
                 <>
                   <div className="space-y-3 sm:hidden">
-                    {filteredInvoices.map((invoice) => {
+                    {invoices.map((invoice) => {
                       const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
 
                       return (
@@ -252,7 +235,7 @@ export default function InvoicesPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredInvoices.map((invoice) => (
+                        {invoices.map((invoice) => (
                           <TableRow
                             key={invoice.id}
                             onClick={() => router.push(`/invoices/${invoice.id}`)}
@@ -320,6 +303,7 @@ export default function InvoicesPage() {
                       </TableBody>
                     </Table>
                   </div>
+                  <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
                 </>
               )}
             </CardContent>

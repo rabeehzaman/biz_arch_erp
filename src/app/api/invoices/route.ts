@@ -12,6 +12,7 @@ import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber(organizationId: string) {
@@ -33,7 +34,7 @@ async function generateInvoiceNumber(organizationId: string) {
   return `${prefix}-${sequence.toString().padStart(3, "0")}`;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -44,30 +45,49 @@ export async function GET(_request: NextRequest) {
     const userId = session.user.id;
     const isAdmin = session.user.role === "admin";
 
-    const invoices = await prisma.invoice.findMany({
-      where: isAdmin ? { organizationId } : {
-        organizationId,
-        customer: {
-          assignments: {
-            some: { userId }
-          }
-        }
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        customer: {
-          select: { id: true, name: true, email: true },
-        },
-        createdBy: {
-          select: { id: true, name: true },
-        },
-        _count: {
-          select: { items: true },
-        },
-      },
-    });
+    const { limit, offset, search } = parsePagination(request);
 
-    return NextResponse.json(invoices);
+    const baseWhere = isAdmin ? { organizationId } : {
+      organizationId,
+      customer: {
+        assignments: {
+          some: { userId }
+        }
+      }
+    };
+
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { invoiceNumber: { contains: search, mode: "insensitive" as const } },
+            { customer: { name: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : baseWhere;
+
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          customer: {
+            select: { id: true, name: true, email: true },
+          },
+          createdBy: {
+            select: { id: true, name: true },
+          },
+          _count: {
+            select: { items: true },
+          },
+        },
+      }),
+      prisma.invoice.count({ where }),
+    ]);
+
+    return paginatedResponse(invoices, total, offset + invoices.length < total);
   } catch (error) {
     console.error("Failed to fetch invoices:", error);
     return NextResponse.json(

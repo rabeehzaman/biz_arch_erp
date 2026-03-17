@@ -3,6 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import Link from "next/link";
 import {
   Table,
@@ -82,10 +84,16 @@ function ProductsPageContent() {
   const formatAmount = (amount: number) => fmt(amount);
 
   // — Products tab state —
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productsLoaded, setProductsLoaded] = useState(false);
-  const [isProductsLoading, setIsProductsLoading] = useState(false);
-  const [productSearch, setProductSearch] = useState("");
+  const {
+    items: products,
+    isLoading: isProductsLoading,
+    isLoadingMore: isProductsLoadingMore,
+    hasMore: hasMoreProducts,
+    searchQuery: productSearch,
+    setSearchQuery: setProductSearch,
+    loadMore: loadMoreProducts,
+    refresh: refreshProducts,
+  } = useInfiniteList<Product>({ url: "/api/products" });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
@@ -107,28 +115,16 @@ function ProductsPageContent() {
   const barcodeParam = searchParams.get("barcode");
   const idParam = searchParams.get("id");
 
-  // Lazy fetch: load data when tab becomes active
+  // Lazy fetch: load inventory data when tab becomes active
   useEffect(() => {
-    if (activeTab === "products" && !productsLoaded) {
-      fetchProducts().then((loadedProducts) => {
-        if (actionParam === "new") {
-          setIsDialogOpen(true);
-        } else if (actionParam === "edit" && idParam && loadedProducts) {
-          const product = loadedProducts.find((p: Product) => p.id === idParam);
-          if (product) {
-            setEditingProduct(product);
-            setIsDialogOpen(true);
-          }
-        }
-      });
-    } else if (activeTab === "inventory" && !inventoryLoaded) {
+    if (activeTab === "inventory" && !inventoryLoaded) {
       fetchInventory();
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle URL changes after products are already loaded (e.g. scanning mid-page)
+  // Handle URL params for dialog opening (products loaded via useInfiniteList)
   useEffect(() => {
-    if (productsLoaded) {
+    if (!isProductsLoading && products.length >= 0) {
       if (actionParam === "new") {
         setIsDialogOpen(true);
       } else if (actionParam === "edit" && idParam) {
@@ -139,24 +135,7 @@ function ProductsPageContent() {
         }
       }
     }
-  }, [actionParam, barcodeParam, idParam, productsLoaded, products]);
-
-  const fetchProducts = async () => {
-    setIsProductsLoading(true);
-    try {
-      const response = await fetch("/api/products");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setProducts(data);
-      setProductsLoaded(true);
-      return data;
-    } catch (error) {
-      toast.error(t("common.error"));
-      console.error("Failed to fetch products:", error);
-    } finally {
-      setIsProductsLoading(false);
-    }
-  };
+  }, [actionParam, barcodeParam, idParam, isProductsLoading, products]);
 
   const fetchInventory = async () => {
     setIsInventoryLoading(true);
@@ -219,7 +198,7 @@ function ProductsPageContent() {
         try {
           const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
-          fetchProducts();
+          refreshProducts();
           toast.success(t("products.productDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
@@ -245,12 +224,6 @@ function ProductsPageContent() {
     const totalValue = getStockValue(product);
     return totalQty > 0 ? totalValue / totalQty : Number(product.cost);
   };
-
-  const filteredProducts = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.sku?.toLowerCase().includes(productSearch.toLowerCase())
-  );
 
   const filteredInventory = inventory.filter(
     (p) =>
@@ -323,7 +296,7 @@ function ProductsPageContent() {
               productToEdit={editingProduct || undefined}
               initialBarcode={barcodeParam || undefined}
               onSuccess={() => {
-                fetchProducts();
+                refreshProducts();
                 setIsDialogOpen(false);
                 setEditingProduct(null);
                 if (actionParam || barcodeParam || idParam) {
@@ -352,7 +325,7 @@ function ProductsPageContent() {
                   <CardContent>
                     {isProductsLoading ? (
                       <TableSkeleton columns={7} rows={5} />
-                    ) : filteredProducts.length === 0 ? (
+                    ) : products.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Package className="h-12 w-12 text-slate-300" />
                         <h3 className="mt-4 text-lg font-semibold">{t("products.noProducts")}</h3>
@@ -365,7 +338,7 @@ function ProductsPageContent() {
                     ) : (
                       <>
                         <div className="space-y-3 sm:hidden">
-                          {filteredProducts.map((product) => (
+                          {products.map((product) => (
                             <div
                               key={product.id}
                               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
@@ -450,7 +423,7 @@ function ProductsPageContent() {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {filteredProducts.map((product) => (
+                              {products.map((product) => (
                                 <TableRow key={product.id}>
                                   <TableCell>
                                     <div>
@@ -504,6 +477,7 @@ function ProductsPageContent() {
                 </Card>
               </StaggerItem>
             </StaggerContainer>
+            <LoadMoreTrigger hasMore={hasMoreProducts} isLoadingMore={isProductsLoadingMore} onLoadMore={loadMoreProducts} />
           </div>
         )}
 

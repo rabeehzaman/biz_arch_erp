@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -22,6 +22,8 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 
 interface DebitNote {
   id: string;
@@ -45,32 +47,19 @@ interface DebitNote {
 
 export default function DebitNotesPage() {
   const router = useRouter();
-  const [debitNotes, setDebitNotes] = useState<DebitNote[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    items: debitNotes,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<DebitNote>({ url: "/api/debit-notes" });
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
-
-  useEffect(() => {
-    fetchDebitNotes();
-    // Initial load only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchDebitNotes = async () => {
-    try {
-      const response = await fetch("/api/debit-notes");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setDebitNotes(data);
-    } catch (error) {
-      toast.error(t("common.error"));
-      console.error("Failed to fetch debit notes:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
@@ -82,7 +71,7 @@ export default function DebitNotesPage() {
             method: "DELETE",
           });
           if (!response.ok) throw new Error("Failed to delete");
-          fetchDebitNotes();
+          refresh();
           toast.success(t("accounting.debitNoteDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
@@ -91,16 +80,6 @@ export default function DebitNotesPage() {
       },
     });
   };
-
-  const filteredDebitNotes = debitNotes.filter(
-    (dn) =>
-      dn.debitNoteNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dn.supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (dn.purchaseInvoice?.purchaseInvoiceNumber &&
-        dn.purchaseInvoice.purchaseInvoiceNumber
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()))
-  );
 
   return (
     <PageAnimation>
@@ -135,7 +114,7 @@ export default function DebitNotesPage() {
           <CardContent>
             {isLoading ? (
               <TableSkeleton columns={6} rows={5} />
-            ) : filteredDebitNotes.length === 0 ? (
+            ) : debitNotes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <FileText className="h-12 w-12 text-slate-300" />
                 <h3 className="mt-4 text-lg font-semibold">
@@ -155,7 +134,7 @@ export default function DebitNotesPage() {
             ) : (
               <>
                 <div className="space-y-3 sm:hidden">
-                  {filteredDebitNotes.map((debitNote) => (
+                  {debitNotes.map((debitNote) => (
                     <div key={debitNote.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -230,7 +209,7 @@ export default function DebitNotesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredDebitNotes.map((debitNote) => (
+                      {debitNotes.map((debitNote) => (
                         <TableRow
                           key={debitNote.id}
                           onClick={() => router.push(`/debit-notes/${debitNote.id}`)}
@@ -296,6 +275,7 @@ export default function DebitNotesPage() {
             )}
           </CardContent>
         </Card>
+        <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
         {confirmDialog && (
           <ConfirmDialog
             open={!!confirmDialog}

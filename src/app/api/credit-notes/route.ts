@@ -15,6 +15,7 @@ import { createAutoJournalEntry, ensureRoundOffAccount, getSystemAccount } from 
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate credit note number: CN-YYYYMMDD-XXX
 async function generateCreditNoteNumber(organizationId: string) {
@@ -38,7 +39,7 @@ async function generateCreditNoteNumber(organizationId: string) {
   return `${prefix}-${sequence.toString().padStart(3, "0")}`;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -48,37 +49,55 @@ export async function GET(_request: NextRequest) {
     const organizationId = getOrgId(session);
     const userId = session.user.id;
     const isAdmin = session.user.role === "admin";
+    const { limit, offset, search } = parsePagination(request);
 
-    // Apply same access control as invoices - user can only see credit notes for assigned customers
-    const creditNotes = await prisma.creditNote.findMany({
-      where: isAdmin
-        ? { organizationId }
-        : {
+    const baseWhere = isAdmin
+      ? { organizationId }
+      : {
           organizationId,
           customer: {
             assignments: {
               some: { userId },
             },
           },
-        },
-      orderBy: { createdAt: "desc" },
-      include: {
-        customer: {
-          select: { id: true, name: true, email: true },
-        },
-        invoice: {
-          select: { id: true, invoiceNumber: true },
-        },
-        createdBy: {
-          select: { id: true, name: true },
-        },
-        _count: {
-          select: { items: true },
-        },
-      },
-    });
+        };
 
-    return NextResponse.json(creditNotes);
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { creditNoteNumber: { contains: search, mode: "insensitive" as const } },
+            { customer: { name: { contains: search, mode: "insensitive" as const } } },
+            { invoice: { invoiceNumber: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : baseWhere;
+
+    const [creditNotes, total] = await Promise.all([
+      prisma.creditNote.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          customer: {
+            select: { id: true, name: true, email: true },
+          },
+          invoice: {
+            select: { id: true, invoiceNumber: true },
+          },
+          createdBy: {
+            select: { id: true, name: true },
+          },
+          _count: {
+            select: { items: true },
+          },
+        },
+      }),
+      prisma.creditNote.count({ where }),
+    ]);
+
+    return paginatedResponse(creditNotes, total, offset + creditNotes.length < total);
   } catch (error) {
     console.error("Failed to fetch credit notes:", error);
     return NextResponse.json(

@@ -4,6 +4,7 @@ import { PaymentMethod } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate payment number: PAY-YYYYMMDD-XXX
 async function generatePaymentNumber(organizationId: string) {
@@ -25,7 +26,7 @@ async function generatePaymentNumber(organizationId: string) {
   return `${prefix}-${sequence.toString().padStart(3, "0")}`;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -33,20 +34,38 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const { limit, offset, search } = parsePagination(request);
 
-    const payments = await prisma.payment.findMany({
-      where: { organizationId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        customer: {
-          select: { id: true, name: true },
+    const baseWhere = { organizationId };
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { paymentNumber: { contains: search, mode: "insensitive" as const } },
+            { customer: { name: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : baseWhere;
+
+    const [payments, total] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          customer: {
+            select: { id: true, name: true },
+          },
+          invoice: {
+            select: { id: true, invoiceNumber: true },
+          },
         },
-        invoice: {
-          select: { id: true, invoiceNumber: true },
-        },
-      },
-    });
-    return NextResponse.json(payments);
+      }),
+      prisma.payment.count({ where }),
+    ]);
+
+    return paginatedResponse(payments, total, offset + payments.length < total);
   } catch (error) {
     console.error("Failed to fetch payments:", error);
     return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,16 +30,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(suppliers);
     }
 
-    const suppliers = await prisma.supplier.findMany({
-      where: { organizationId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: {
-          select: { purchaseInvoices: true },
+    const { limit, offset, search } = parsePagination(request);
+    const baseWhere = { organizationId };
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { name: { contains: search, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" as const } },
+            { phone: { contains: search } },
+          ],
+        }
+      : baseWhere;
+
+    const [suppliers, total] = await Promise.all([
+      prisma.supplier.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          _count: {
+            select: { purchaseInvoices: true },
+          },
         },
-      },
-    });
-    return NextResponse.json(suppliers);
+      }),
+      prisma.supplier.count({ where }),
+    ]);
+
+    return paginatedResponse(suppliers, total, offset + suppliers.length < total);
   } catch (error) {
     console.error("Failed to fetch suppliers:", error);
     return NextResponse.json(

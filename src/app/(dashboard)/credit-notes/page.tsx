@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -18,6 +18,8 @@ import { Plus, Search, FileText, Eye, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
@@ -45,32 +47,19 @@ interface CreditNote {
 
 export default function CreditNotesPage() {
   const router = useRouter();
-  const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    items: creditNotes,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<CreditNote>({ url: "/api/credit-notes" });
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
-
-  useEffect(() => {
-    fetchCreditNotes();
-    // Initial load only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchCreditNotes = async () => {
-    try {
-      const response = await fetch("/api/credit-notes");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setCreditNotes(data);
-    } catch (error) {
-      toast.error(t("common.error"));
-      console.error("Failed to fetch credit notes:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
@@ -82,7 +71,7 @@ export default function CreditNotesPage() {
             method: "DELETE",
           });
           if (!response.ok) throw new Error("Failed to delete");
-          fetchCreditNotes();
+          refresh();
           toast.success(t("accounting.creditNoteDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
@@ -91,16 +80,6 @@ export default function CreditNotesPage() {
       },
     });
   };
-
-  const filteredCreditNotes = creditNotes.filter(
-    (cn) =>
-      cn.creditNoteNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cn.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (cn.invoice?.invoiceNumber &&
-        cn.invoice.invoiceNumber
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()))
-  );
 
   return (
     <PageAnimation>
@@ -135,7 +114,7 @@ export default function CreditNotesPage() {
           <CardContent>
             {isLoading ? (
               <TableSkeleton columns={6} rows={5} />
-            ) : filteredCreditNotes.length === 0 ? (
+            ) : creditNotes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <FileText className="h-12 w-12 text-slate-300" />
                 <h3 className="mt-4 text-lg font-semibold">
@@ -155,7 +134,7 @@ export default function CreditNotesPage() {
             ) : (
               <>
                 <div className="space-y-3 sm:hidden">
-                  {filteredCreditNotes.map((creditNote) => (
+                  {creditNotes.map((creditNote) => (
                     <div key={creditNote.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -236,7 +215,7 @@ export default function CreditNotesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredCreditNotes.map((creditNote) => (
+                      {creditNotes.map((creditNote) => (
                         <TableRow
                           key={creditNote.id}
                           onClick={() => router.push(`/credit-notes/${creditNote.id}`)}
@@ -308,6 +287,7 @@ export default function CreditNotesPage() {
             )}
           </CardContent>
         </Card>
+        <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
         {confirmDialog && (
           <ConfirmDialog
             open={!!confirmDialog}

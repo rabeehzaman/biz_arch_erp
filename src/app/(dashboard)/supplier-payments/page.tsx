@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import {
   Table,
   TableBody,
@@ -105,12 +107,20 @@ export default function SupplierPaymentsPage() {
     ADJUSTMENT: t("common.adjustment"),
   };
 
-  const [payments, setPayments] = useState<SupplierPayment[]>([]);
+  const {
+    items: payments,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<SupplierPayment>({ url: "/api/supplier-payments" });
+
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletePayment, setDeletePayment] = useState<SupplierPayment | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -127,25 +137,10 @@ export default function SupplierPaymentsPage() {
   });
 
   useEffect(() => {
-    fetchPayments();
     fetchSuppliers();
     fetchInvoices();
     fetchAccounts();
   }, []);
-
-  const fetchPayments = async () => {
-    try {
-      const response = await fetch("/api/supplier-payments");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setPayments(data);
-    } catch (error) {
-      toast.error(t("payments.failedToLoad"));
-      console.error("Failed to fetch payments:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchSuppliers = async () => {
     const response = await fetch("/api/suppliers?compact=true");
@@ -212,7 +207,7 @@ export default function SupplierPaymentsPage() {
 
       setIsDialogOpen(false);
       resetForm();
-      fetchPayments();
+      refresh();
       fetchSuppliers();
       fetchInvoices();
       toast.success(t("payments.paymentRecorded"));
@@ -248,7 +243,7 @@ export default function SupplierPaymentsPage() {
       if (!response.ok) throw new Error("Failed to delete");
 
       setDeletePayment(null);
-      fetchPayments();
+      refresh();
       fetchSuppliers();
       fetchInvoices();
       toast.success(t("payments.paymentDeleted"));
@@ -257,12 +252,6 @@ export default function SupplierPaymentsPage() {
       console.error("Failed to delete payment:", error);
     }
   };
-
-  const filteredPayments = payments.filter(
-    (payment) =>
-      payment.paymentNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.supplier.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <PageAnimation>
@@ -485,7 +474,7 @@ export default function SupplierPaymentsPage() {
           <CardContent>
             {isLoading ? (
               <TableSkeleton columns={6} rows={5} />
-            ) : filteredPayments.length === 0 ? (
+            ) : payments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Wallet className="h-12 w-12 text-slate-300" />
                 <h3 className="mt-4 text-lg font-semibold">{t("payments.noPaymentsFound")}</h3>
@@ -498,7 +487,7 @@ export default function SupplierPaymentsPage() {
               ) : (
               <>
                 <div className="space-y-3 sm:hidden">
-                  {filteredPayments.map((payment) => (
+                  {payments.map((payment) => (
                     <div key={payment.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -566,7 +555,7 @@ export default function SupplierPaymentsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredPayments.map((payment) => (
+                      {payments.map((payment) => (
                         <TableRow key={payment.id}>
                           <TableCell className="font-medium">
                             {payment.paymentNumber}
@@ -610,6 +599,8 @@ export default function SupplierPaymentsPage() {
             )}
           </CardContent>
         </Card>
+
+        <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
 
         <AlertDialog open={!!deletePayment} onOpenChange={() => setDeletePayment(null)}>
           <AlertDialogContent>

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import {
   Table,
   TableBody,
@@ -43,32 +45,19 @@ interface Quotation {
 
 export default function QuotationsPage() {
   const router = useRouter();
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    items: quotations,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<Quotation>({ url: "/api/quotations" });
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
-
-  useEffect(() => {
-    fetchQuotations();
-    // Initial load only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchQuotations = async () => {
-    try {
-      const response = await fetch("/api/quotations");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setQuotations(data);
-    } catch (error) {
-      toast.error(t("common.error"));
-      console.error("Failed to fetch quotations:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
@@ -81,7 +70,7 @@ export default function QuotationsPage() {
             const error = await response.json();
             throw new Error(error.error || "Failed to delete");
           }
-          fetchQuotations();
+          refresh();
           toast.success(t("quotations.quotationDeleted"));
         } catch (error: any) {
           toast.error(error.message || t("common.error"));
@@ -90,12 +79,6 @@ export default function QuotationsPage() {
       },
     });
   };
-
-  const filteredQuotations = quotations.filter(
-    (quotation) =>
-      quotation.quotationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      quotation.customer.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
@@ -158,7 +141,7 @@ export default function QuotationsPage() {
             <CardContent>
               {isLoading ? (
                 <TableSkeleton columns={7} rows={5} />
-              ) : filteredQuotations.length === 0 ? (
+              ) : quotations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <FileText className="h-12 w-12 text-slate-300" />
                   <h3 className="mt-4 text-lg font-semibold">{t("quotations.noQuotations")}</h3>
@@ -176,7 +159,7 @@ export default function QuotationsPage() {
               ) : (
                 <>
                   <div className="space-y-3 sm:hidden">
-                    {filteredQuotations.map((quotation) => (
+                    {quotations.map((quotation) => (
                       <div key={quotation.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -259,7 +242,7 @@ export default function QuotationsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredQuotations.map((quotation) => (
+                        {quotations.map((quotation) => (
                           <TableRow
                             key={quotation.id}
                             onClick={() => router.push(`/quotations/${quotation.id}`)}
@@ -308,6 +291,7 @@ export default function QuotationsPage() {
                       </TableBody>
                     </Table>
                   </div>
+                  <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
                 </>
               )}
             </CardContent>

@@ -108,6 +108,7 @@ const mobileShopSection: NavItem[] = [
 
 const reportsSection: NavItem[] = [
   { nameKey: "nav.profitByItems", href: "/reports/profit-by-items", icon: BarChart3 },
+  { nameKey: "nav.salesByCustomer", href: "/reports/sales-by-customer", icon: BarChart3 },
   { nameKey: "nav.customerBalances", href: "/reports/customer-balances", icon: Users },
   { nameKey: "nav.supplierBalances", href: "/reports/supplier-balances", icon: Truck },
   { nameKey: "nav.unifiedLedger", href: "/reports/ledger", icon: BookOpen },

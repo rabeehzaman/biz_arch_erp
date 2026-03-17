@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useCurrency } from "@/hooks/use-currency";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import Link from "next/link";
 import {
   Table,
@@ -82,9 +84,17 @@ export default function CustomersPage() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    items: customers,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<Customer>({ url: "/api/customers" });
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isOpeningBalanceDialogOpen, setIsOpeningBalanceDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
@@ -105,25 +115,10 @@ export default function CustomersPage() {
   });
 
   useEffect(() => {
-    fetchCustomers();
     fetchUsers();
     // Initial load only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchCustomers = async () => {
-    try {
-      const response = await fetch("/api/customers");
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setCustomers(data);
-    } catch (error) {
-      toast.error(t("common.error"));
-      console.error("Failed to fetch customers:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchUsers = async () => {
     try {
@@ -175,7 +170,7 @@ export default function CustomersPage() {
       setIsAssignDialogOpen(false);
       setSelectedCustomerForAssign(null);
       setSelectedUserIds([]);
-      fetchCustomers();
+      refresh();
       toast.success(t("customers.customerUpdated"));
     } catch (error) {
       toast.error(t("common.error"));
@@ -207,7 +202,7 @@ export default function CustomersPage() {
         amount: "",
         transactionDate: new Date().toISOString().split("T")[0],
       });
-      fetchCustomers();
+      refresh();
       toast.success(t("customers.customerUpdated"));
     } catch (error) {
       toast.error(t("common.error"));
@@ -250,7 +245,7 @@ export default function CustomersPage() {
         try {
           const response = await fetch(`/api/customers/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
-          fetchCustomers();
+          refresh();
           toast.success(t("customers.customerDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
@@ -261,13 +256,6 @@ export default function CustomersPage() {
   };
 
 
-
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone?.includes(searchQuery)
-  );
 
   return (
     <PageAnimation>
@@ -292,7 +280,7 @@ export default function CustomersPage() {
             }}
             customerToEdit={editingCustomer || undefined}
             onSuccess={() => {
-              fetchCustomers();
+              refresh();
               setIsDialogOpen(false);
               setEditingCustomer(null);
             }}
@@ -435,7 +423,7 @@ export default function CustomersPage() {
             <CardContent>
               {isLoading ? (
                 <TableSkeleton columns={7} rows={5} />
-              ) : filteredCustomers.length === 0 ? (
+              ) : customers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Users className="h-12 w-12 text-slate-300" />
                   <h3 className="mt-4 text-lg font-semibold">{t("customers.noCustomers")}</h3>
@@ -448,7 +436,7 @@ export default function CustomersPage() {
               ) : (
                 <>
                   <div className="space-y-3 sm:hidden">
-                    {filteredCustomers.map((customer) => (
+                    {customers.map((customer) => (
                       <div key={customer.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -558,7 +546,7 @@ export default function CustomersPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredCustomers.map((customer) => (
+                        {customers.map((customer) => (
                           <TableRow key={customer.id}>
                             <TableCell>
                               <div className="font-medium">{customer.name}</div>
@@ -649,6 +637,7 @@ export default function CustomersPage() {
                       </TableBody>
                     </Table>
                   </div>
+                  <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
                 </>
               )}
             </CardContent>

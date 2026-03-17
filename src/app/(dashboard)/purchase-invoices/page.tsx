@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Table,
@@ -24,6 +24,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Search, Receipt, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
+import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -58,13 +60,26 @@ const statusColors: Record<string, string> = {
 };
 
 export default function PurchaseInvoicesPage() {
-  const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
+
+  const paginationParams = useMemo(
+    (): Record<string, string> => (statusFilter !== "all" ? { status: statusFilter } : {}),
+    [statusFilter]
+  );
+
+  const {
+    items: invoices,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    refresh,
+  } = useInfiniteList<PurchaseInvoice>({ url: "/api/purchase-invoices", params: paginationParams });
 
   const statusLabels: Record<string, string> = {
     DRAFT: t("purchases.statusDraft"),
@@ -72,29 +87,6 @@ export default function PurchaseInvoicesPage() {
     PAID: t("purchases.statusPaid"),
     PARTIALLY_PAID: t("purchases.statusPartial"),
     CANCELLED: t("purchases.statusCancelled"),
-  };
-
-  useEffect(() => {
-    fetchInvoices();
-    // Refresh when the status filter changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
-
-  const fetchInvoices = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (statusFilter !== "all") params.set("status", statusFilter);
-
-      const response = await fetch(`/api/purchase-invoices?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setInvoices(data);
-    } catch (error) {
-      toast.error(t("common.error"));
-      console.error("Failed to fetch purchase invoices:", error);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -105,7 +97,7 @@ export default function PurchaseInvoicesPage() {
         try {
           const response = await fetch(`/api/purchase-invoices/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
-          fetchInvoices();
+          refresh();
           toast.success(t("purchases.purchaseInvoiceDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
@@ -114,13 +106,6 @@ export default function PurchaseInvoicesPage() {
       },
     });
   };
-
-  const filteredInvoices = invoices.filter(
-    (invoice) =>
-      invoice.purchaseInvoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.supplierInvoiceRef?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <PageAnimation>
@@ -168,7 +153,7 @@ export default function PurchaseInvoicesPage() {
           <CardContent>
             {isLoading ? (
               <TableSkeleton columns={8} rows={5} />
-            ) : filteredInvoices.length === 0 ? (
+            ) : invoices.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Receipt className="h-12 w-12 text-slate-300" />
                 <h3 className="mt-4 text-lg font-semibold">{t("purchases.noPurchaseInvoices")}</h3>
@@ -186,7 +171,7 @@ export default function PurchaseInvoicesPage() {
             ) : (
               <>
                 <div className="space-y-3 sm:hidden">
-                  {filteredInvoices.map((invoice) => (
+                  {invoices.map((invoice) => (
                     <div key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -273,7 +258,7 @@ export default function PurchaseInvoicesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredInvoices.map((invoice) => (
+                      {invoices.map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium">
                             {invoice.purchaseInvoiceNumber}
@@ -337,6 +322,7 @@ export default function PurchaseInvoicesPage() {
                 </div>
               </>
             )}
+            <LoadMoreTrigger hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
           </CardContent>
         </Card>
         {confirmDialog && (
