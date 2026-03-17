@@ -72,23 +72,24 @@ export async function POST(
         });
 
         // Recalculate running balances for all subsequent transactions
-        const transactions = await tx.customerTransaction.findMany({
-          where: {
-            customerId: id,
-            transactionDate: { gt: date },
-            organizationId,
-          },
-          orderBy: { transactionDate: "asc" },
-        });
-
-        let runningBalance = parsedAmount;
-        for (const txn of transactions) {
-          runningBalance = runningBalance + Number(txn.amount);
-          await tx.customerTransaction.update({
-            where: { id: txn.id, organizationId },
-            data: { runningBalance },
-          });
-        }
+        // Uses a single raw SQL UPDATE with a window function instead of N+1 queries
+        await tx.$executeRaw`
+          WITH cumulative AS (
+            SELECT id,
+                   ${parsedAmount}::numeric + SUM(amount) OVER (
+                     ORDER BY "transactionDate" ASC, "createdAt" ASC
+                     ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                   ) AS new_balance
+            FROM customer_transactions
+            WHERE "customerId" = ${id}
+              AND "organizationId" = ${organizationId}
+              AND "transactionDate" > ${date}
+          )
+          UPDATE customer_transactions ct
+          SET "runningBalance" = c.new_balance
+          FROM cumulative c
+          WHERE ct.id = c.id
+        `;
       } else {
         // Create new opening balance transaction
         await tx.customerTransaction.create({

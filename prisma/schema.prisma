@@ -497,6 +497,8 @@ model InvoiceItem {
   costAuditLogs   CostAuditLog[]
 
   @@index([organizationId])
+  @@index([invoiceId])
+  @@index([productId])
   @@map("invoice_items")
 }
 
@@ -550,6 +552,7 @@ model Quotation {
   @@index([organizationId])
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
+  @@index([customerId])
   @@map("quotations")
 }
 
@@ -593,6 +596,8 @@ model QuotationItem {
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
+  @@index([quotationId])
+  @@index([productId])
   @@map("quotation_items")
 }
 
@@ -708,6 +713,8 @@ model PurchaseInvoiceItem {
   stockLot StockLot?
 
   @@index([organizationId])
+  @@index([purchaseInvoiceId])
+  @@index([productId])
   @@map("purchase_invoice_items")
 }
 
@@ -769,6 +776,8 @@ model CreditNote {
 
   @@unique([organizationId, creditNoteNumber])
   @@index([organizationId])
+  @@index([organizationId, customerId])
+  @@index([invoiceId])
   @@map("credit_notes")
 }
 
@@ -817,6 +826,8 @@ model CreditNoteItem {
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
+  @@index([creditNoteId])
+  @@index([productId])
   @@map("credit_note_items")
 }
 
@@ -871,6 +882,8 @@ model DebitNote {
 
   @@unique([organizationId, debitNoteNumber])
   @@index([organizationId])
+  @@index([organizationId, supplierId])
+  @@index([purchaseInvoiceId])
   @@map("debit_notes")
 }
 
@@ -916,6 +929,8 @@ model DebitNoteItem {
   lotConsumptions DebitNoteLotConsumption[]
 
   @@index([organizationId])
+  @@index([debitNoteId])
+  @@index([productId])
   @@map("debit_note_items")
 }
 
@@ -977,6 +992,7 @@ model Payment {
   @@index([organizationId])
   @@index([organizationId, paymentDate(sort: Desc)])
   @@index([organizationId, createdAt(sort: Desc)])
+  @@index([customerId])
   @@map("payments")
 }
 
@@ -1033,6 +1049,7 @@ model SupplierPayment {
   @@index([organizationId])
   @@index([organizationId, paymentDate(sort: Desc)])
   @@index([organizationId, createdAt(sort: Desc)])
+  @@index([supplierId])
   @@map("supplier_payments")
 }
 
@@ -1112,7 +1129,9 @@ model StockLot {
   @@index([productId, remainingQuantity])
   @@index([organizationId])
   @@index([organizationId, lotDate(sort: Desc)])
+  @@index([organizationId, productId])
   @@index([warehouseId])
+  @@index([purchaseInvoiceId])
   @@map("stock_lots")
 }
 
@@ -1173,6 +1192,8 @@ model OpeningStock {
   mobileDevices MobileDevice[]
 
   @@index([organizationId])
+  @@index([productId])
+  @@index([warehouseId])
   @@map("opening_stocks")
 }
 
@@ -1577,6 +1598,8 @@ model Expense {
   @@index([organizationId])
   @@index([organizationId, expenseDate(sort: Desc)])
   @@index([organizationId, status])
+  @@index([supplierId])
+  @@index([cashBankAccountId])
   @@map("expenses")
 }
 
@@ -1600,6 +1623,7 @@ model ExpenseItem {
   updatedAt      DateTime     @updatedAt
 
   @@index([expenseId])
+  @@index([accountId])
   @@index([organizationId])
   @@map("expense_items")
 }
@@ -1819,6 +1843,7 @@ model StockTransferItem {
   lotConsumptions StockLotConsumption[]
 
   @@index([stockTransferId])
+  @@index([productId])
   @@index([organizationId])
   @@map("stock_transfer_items")
 }
@@ -1840,6 +1865,7 @@ model UserWarehouseAccess {
 
   @@unique([userId, warehouseId])
   @@index([userId])
+  @@index([branchId])
   @@index([organizationId])
   @@map("user_warehouse_access")
 }
@@ -1932,5 +1958,8 @@ model MobileDevice {
   @@index([organizationId, currentStatus])
   @@index([organizationId, supplierId])
   @@index([organizationId, salesInvoiceId])
+  @@index([productId])
+  @@index([customerId])
+  @@index([purchaseInvoiceId])
   @@map("mobile_devices")
 }

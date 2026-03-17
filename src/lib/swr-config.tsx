@@ -18,9 +18,9 @@ export function SWRProvider({ children, fallback }: { children: ReactNode, fallb
       value={{
         fetcher,
         fallback,
-        revalidateOnFocus: true,
+        revalidateOnFocus: false,
         revalidateOnReconnect: true,
-        dedupingInterval: 2000,
+        dedupingInterval: 5000,
         errorRetryCount: 3,
       }}
     >

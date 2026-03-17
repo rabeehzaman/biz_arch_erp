@@ -176,11 +176,13 @@ export async function POST(request: NextRequest) {
         totalVat = Math.round(totalVat * 100) / 100;
       } else {
         // GST path
-        const orgGST = await getOrgGSTInfo(tx, organizationId);
-        const supplier = await tx.supplier.findUnique({
-          where: { id: supplierId },
-          select: { gstin: true, gstStateCode: true },
-        });
+        const [orgGST, supplier] = await Promise.all([
+          getOrgGSTInfo(tx, organizationId),
+          tx.supplier.findUnique({
+            where: { id: supplierId },
+            select: { gstin: true, gstStateCode: true },
+          }),
+        ]);
         const lineItemsForGST = items.map(
           (item: { quantity: number; unitCost: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
             taxableAmount: lineAmounts[idx].taxableAmount,

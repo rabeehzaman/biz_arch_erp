@@ -25,25 +25,19 @@ export async function GET() {
       },
     });
 
-    // Calculate balance for each account
-    const balanceResults = await Promise.all(
-      accounts.map(async (account) => {
-        const [debits, credits] = await Promise.all([
-          prisma.journalEntryLine.aggregate({
-            where: { accountId: account.id, organizationId },
-            _sum: { debit: true },
-          }),
-          prisma.journalEntryLine.aggregate({
-            where: { accountId: account.id, organizationId },
-            _sum: { credit: true },
-          }),
-        ]);
-        const balance = Number(debits._sum.debit ?? 0) - Number(credits._sum.credit ?? 0);
-        return { accountId: account.id, balance };
-      })
-    );
+    // Calculate balances for ALL accounts in a single query (instead of N+1)
+    const balances = await prisma.journalEntryLine.groupBy({
+      by: ["accountId"],
+      where: { organizationId },
+      _sum: { debit: true, credit: true },
+    });
 
-    const balanceMap = new Map(balanceResults.map((r) => [r.accountId, r.balance]));
+    const balanceMap = new Map(
+      balances.map((b) => [
+        b.accountId,
+        Number(b._sum.debit ?? 0) - Number(b._sum.credit ?? 0),
+      ])
+    );
 
     // Build tree structure
     interface TreeNode {

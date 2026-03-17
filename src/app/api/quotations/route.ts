@@ -144,11 +144,13 @@ export async function POST(request: NextRequest) {
       totalVat = Math.round(vatTotal * 100) / 100;
     } else {
       // GST path
-      const orgGST = await getOrgGSTInfo(prisma, organizationId);
-      const customer = await prisma.customer.findUnique({
-        where: { id: customerId },
-        select: { gstin: true, gstStateCode: true },
-      });
+      const [orgGST, customer] = await Promise.all([
+        getOrgGSTInfo(prisma, organizationId),
+        prisma.customer.findUnique({
+          where: { id: customerId },
+          select: { gstin: true, gstStateCode: true },
+        }),
+      ]);
       // NOTE: We do not multiply discount amount by conversionFactor here because unitPrice should conceptually be for the selected unit.
       const lineItemsForGST = items.map((item: { quantity: number; unitPrice: number; discount?: number; gstRate?: number; hsnCode?: string; conversionFactor?: number }, idx: number) => ({
         taxableAmount: lineAmounts[idx].taxableAmount,
