@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { ReactNode } from "react";
 
 interface ReportPageLayoutProps {
@@ -22,13 +24,21 @@ export function ReportPageLayout({
   children,
   isLoading,
 }: ReportPageLayoutProps) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
+  const BackArrow = isRTL ? ArrowRight : ArrowLeft;
 
   return (
     <PageAnimation>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
+            <Link
+              href="/reports"
+              className="mb-1 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <BackArrow className="h-4 w-4" />
+              {t("nav.reports")}
+            </Link>
             <h2 className="text-2xl font-bold text-slate-900">{t(titleKey)}</h2>
             <p className="text-slate-500">{t(descriptionKey)}</p>
           </div>

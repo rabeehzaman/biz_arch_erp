@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, X, ChevronRight, ChevronDown } from "lucide-react";
+import { FileText, X, ChevronRight, ChevronDown, ArrowLeft, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
@@ -78,7 +78,7 @@ interface ReportData {
 }
 
 export default function ProfitByItemsPage() {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -160,10 +160,16 @@ export default function ProfitByItemsPage() {
 
   const hasFilters = selectedProductId || fromDate || toDate;
 
+  const BackArrow = isRTL ? ArrowRight : ArrowLeft;
+
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div>
+          <Link href="/reports" className="mb-1 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+            <BackArrow className="h-4 w-4" />
+            {t("nav.reports")}
+          </Link>
           <h2 className="text-2xl font-bold text-slate-900">{t("reports.profitByInvoice")}</h2>
           <p className="text-slate-500">
             {t("reports.profitByInvoiceDesc")}
@@ -182,6 +188,10 @@ export default function ProfitByItemsPage() {
         <PageAnimation>
           <div className="space-y-6">
           <div>
+            <Link href="/reports" className="mb-1 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+              <BackArrow className="h-4 w-4" />
+              {t("nav.reports")}
+            </Link>
             <h2 className="text-2xl font-bold text-slate-900">{t("reports.profitByInvoice")}</h2>
             <p className="text-slate-500">
               {t("reports.profitByInvoiceDesc")}

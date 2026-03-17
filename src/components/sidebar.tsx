@@ -28,9 +28,6 @@ import {
   ChevronDown,
   ChevronRight,
   Scale,
-  TrendingUp,
-  PieChart,
-  DollarSign,
   ArrowRightLeft,
   ShoppingCart,
   Warehouse,
@@ -41,8 +38,6 @@ import {
   RefreshCw,
   Loader2,
   Sparkles,
-  Clock,
-  Percent,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -95,36 +90,6 @@ const accountingNavigation = [
   { nameKey: "nav.cashBank", href: "/accounting/cash-bank", icon: Landmark },
   { nameKey: "nav.journalEntries", href: "/accounting/journal-entries", icon: BookOpen },
   { nameKey: "nav.chartOfAccounts", href: "/accounting/chart-of-accounts", icon: Scale },
-];
-
-const reportsNavigation = [
-  { nameKey: "nav.profitByItems", href: "/reports/profit-by-items", icon: BarChart3 },
-  { nameKey: "nav.salesByCustomer", href: "/reports/sales-by-customer", icon: BarChart3 },
-  { nameKey: "nav.salesByItem", href: "/reports/sales-by-item", icon: BarChart3 },
-  { nameKey: "nav.salesBySalesperson", href: "/reports/sales-by-salesperson", icon: BarChart3 },
-  { nameKey: "nav.salesRegister", href: "/reports/sales-register", icon: FileText },
-  { nameKey: "nav.purchaseRegister", href: "/reports/purchase-register", icon: FileText },
-  { nameKey: "nav.purchasesBySupplier", href: "/reports/purchases-by-supplier", icon: BarChart3 },
-  { nameKey: "nav.purchasesByItem", href: "/reports/purchases-by-item", icon: BarChart3 },
-  { nameKey: "nav.customerBalances", href: "/reports/customer-balances", icon: Users },
-  { nameKey: "nav.supplierBalances", href: "/reports/supplier-balances", icon: Truck },
-  { nameKey: "nav.unifiedLedger", href: "/reports/ledger", icon: BookOpen },
-  { nameKey: "nav.trialBalance", href: "/reports/trial-balance", icon: Scale },
-  { nameKey: "nav.profitLoss", href: "/reports/profit-loss", icon: TrendingUp },
-  { nameKey: "nav.balanceSheet", href: "/reports/balance-sheet", icon: PieChart },
-  { nameKey: "nav.cashBook", href: "/reports/cash-book", icon: Wallet },
-  { nameKey: "nav.bankBook", href: "/reports/bank-book", icon: Landmark },
-  { nameKey: "nav.cashBankSummary", href: "/reports/cash-bank-summary", icon: ArrowRightLeft },
-  { nameKey: "nav.cashFlow", href: "/reports/cash-flow", icon: ArrowRightLeft },
-  { nameKey: "nav.arAging", href: "/reports/ar-aging", icon: Clock },
-  { nameKey: "nav.apAging", href: "/reports/ap-aging", icon: Clock },
-  { nameKey: "nav.vatSummary", href: "/reports/vat-summary", icon: Percent, edition: "SAUDI" as const },
-  { nameKey: "nav.vatDetail", href: "/reports/vat-detail", icon: Percent, edition: "SAUDI" as const },
-  { nameKey: "nav.gstSummary", href: "/reports/gst-summary", icon: Percent, edition: "INDIA" as const },
-  { nameKey: "nav.gstDetail", href: "/reports/gst-detail", icon: Percent, edition: "INDIA" as const },
-  { nameKey: "nav.expenseReport", href: "/reports/expense-report", icon: DollarSign },
-  { nameKey: "nav.stockSummary", href: "/reports/stock-summary", icon: Package },
-  { nameKey: "nav.branchPL", href: "/reports/branch-pl", icon: GitBranch },
 ];
 
 const bottomNavigation = [
@@ -292,7 +257,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const visibleSales = filterItems(salesNavigation);
   const visiblePurchases = filterItems(purchasesNavigation);
   const visibleAccounting = filterItems(accountingNavigation);
-  const visibleReports = filterItems(reportsNavigation);
   const visibleBottom = filterItems(bottomNavigation);
   const visibleInventory = filterItems(inventoryNavigation);
   const visibleMobileShop = filterItems(mobileShopNavigation);
@@ -380,15 +344,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               />
             )}
 
-            {visibleReports.length > 0 && (
-              <CollapsibleSection
-                title="nav.reports"
-                icon={BarChart3}
-                items={visibleReports}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            )}
+            <NavItemComponent
+              item={{ nameKey: "nav.reports", href: "/reports", icon: BarChart3 }}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
           </>
         )}
       </nav>

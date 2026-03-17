@@ -17,6 +17,8 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { useLanguage } from "@/lib/i18n";
 
 interface CategoryRow {
@@ -61,7 +63,8 @@ const statusColors: Record<string, string> = {
 };
 
 export default function ExpenseReportPage() {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
+  const BackArrow = isRTL ? ArrowRight : ArrowLeft;
   const [data, setData] = useState<ExpenseReport | null>(null);
   const [fromDate, setFromDate] = useState(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]
@@ -96,6 +99,10 @@ export default function ExpenseReportPage() {
         <PageAnimation>
           <div className="space-y-6">
           <div>
+            <Link href="/reports" className="mb-1 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+              <BackArrow className="h-4 w-4" />
+              {t("nav.reports")}
+            </Link>
             <h2 className="text-2xl font-bold text-slate-900">{t("reports.expenseReport")}</h2>
             <p className="text-slate-500">{t("reports.expenseReportDesc")}</p>
           </div>

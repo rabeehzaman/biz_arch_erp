@@ -21,7 +21,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Package, Search, AlertTriangle, Warehouse, RefreshCw, Download } from "lucide-react";
+import { Package, Search, AlertTriangle, Warehouse, RefreshCw, Download, ArrowLeft, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -65,7 +66,8 @@ interface BranchOption {
 }
 
 export default function StockSummaryPage() {
-    const { t } = useLanguage();
+    const { t, isRTL } = useLanguage();
+    const BackArrow = isRTL ? ArrowRight : ArrowLeft;
     const { data: session } = useSession();
     const multiBranchEnabled = session?.user?.multiBranchEnabled;
     const { symbol } = useCurrency();
@@ -155,6 +157,10 @@ export default function StockSummaryPage() {
                 {/* Header */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
+                        <Link href="/reports" className="mb-1 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                            <BackArrow className="h-4 w-4" />
+                            {t("nav.reports")}
+                        </Link>
                         <h2 className="text-2xl font-bold text-slate-900">{t("reports.stockSummary")}</h2>
                         <p className="text-slate-500">{t("reports.stockSummaryDesc")}</p>
                     </div>
