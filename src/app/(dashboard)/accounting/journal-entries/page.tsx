@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface JournalLine {
   id: string;
@@ -50,20 +51,22 @@ const statusColors: Record<string, string> = {
   VOID: "bg-red-100 text-red-700",
 };
 
-const sourceLabels: Record<string, string> = {
-  MANUAL: "Manual",
-  INVOICE: "Invoice",
-  PURCHASE_INVOICE: "Purchase",
-  PAYMENT: "Payment",
-  SUPPLIER_PAYMENT: "Supplier Pay",
-  EXPENSE: "Expense",
-  CREDIT_NOTE: "Credit Note",
-  DEBIT_NOTE: "Debit Note",
-  TRANSFER: "Transfer",
-  OPENING_BALANCE: "Opening",
-};
+const sourceLabels = (t: (key: string) => string): Record<string, string> => ({
+  MANUAL: t("accounting.sourceManual"),
+  INVOICE: t("accounting.sourceInvoice"),
+  PURCHASE_INVOICE: t("accounting.sourcePurchase"),
+  PAYMENT: t("accounting.sourcePayment"),
+  SUPPLIER_PAYMENT: t("accounting.sourceSupplierPay"),
+  EXPENSE: t("accounting.sourceExpense"),
+  CREDIT_NOTE: t("accounting.sourceCreditNote"),
+  DEBIT_NOTE: t("accounting.sourceDebitNote"),
+  TRANSFER: t("accounting.sourceTransfer"),
+  OPENING_BALANCE: t("accounting.sourceOpening"),
+});
 
 export default function JournalEntriesPage() {
+  const { t } = useLanguage();
+  const srcLabels = sourceLabels(t);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,7 +82,7 @@ export default function JournalEntriesPage() {
       const data = await response.json();
       setEntries(data);
     } catch {
-      toast.error("Failed to load journal entries");
+      toast.error(t("accounting.failedToLoadJournalEntries"));
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +101,7 @@ export default function JournalEntriesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this journal entry?")) return;
+    if (!confirm(t("accounting.confirmDeleteJournalEntry"))) return;
     try {
       const response = await fetch(`/api/journal-entries/${id}`, {
         method: "DELETE",
@@ -107,10 +110,10 @@ export default function JournalEntriesPage() {
         const err = await response.json();
         throw new Error(err.error || "Failed to delete");
       }
-      toast.success("Journal entry deleted");
+      toast.success(t("accounting.journalEntryDeleted"));
       fetchEntries();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete");
+      toast.error(error instanceof Error ? error.message : t("common.error"));
     }
   };
 
@@ -119,13 +122,13 @@ export default function JournalEntriesPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Journal Entries</h2>
-            <p className="text-slate-500">Double-entry accounting records</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("accounting.journalEntries")}</h2>
+            <p className="text-slate-500">{t("accounting.doubleEntryDesc")}</p>
           </div>
           <Link href="/accounting/journal-entries/new" className="w-full sm:w-auto">
             <Button className="w-full">
               <Plus className="mr-2 h-4 w-4" />
-              New Journal Entry
+              {t("accounting.newJournalEntry")}
             </Button>
           </Link>
         </div>
@@ -136,7 +139,7 @@ export default function JournalEntriesPage() {
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Search journal entries..."
+                  placeholder={t("accounting.searchJournalEntries")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -150,11 +153,11 @@ export default function JournalEntriesPage() {
             ) : filteredEntries.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <BookOpen className="h-12 w-12 text-slate-300" />
-                <h3 className="mt-4 text-lg font-semibold">No journal entries found</h3>
+                <h3 className="mt-4 text-lg font-semibold">{t("accounting.noJournalEntries")}</h3>
                 <p className="text-sm text-slate-500">
                   {searchQuery
-                    ? "Try a different search term"
-                    : "Create your first journal entry to get started"}
+                    ? t("common.tryDifferentSearch")
+                    : t("accounting.createFirstJournalEntry")}
                 </p>
               </div>
             ) : (
@@ -187,7 +190,7 @@ export default function JournalEntriesPage() {
                               <Link href={`/accounting/journal-entries/${entry.id}/edit`}>
                                 <DropdownMenuItem>
                                   <Edit className="mr-2 h-4 w-4" />
-                                  Edit
+                                  {t("common.edit")}
                                 </DropdownMenuItem>
                               </Link>
                               <DropdownMenuItem
@@ -195,7 +198,7 @@ export default function JournalEntriesPage() {
                                 onClick={() => handleDelete(entry.id)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
+                                {t("common.delete")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -205,7 +208,7 @@ export default function JournalEntriesPage() {
 
                         <div className="mt-4 flex flex-wrap gap-2">
                           <Badge variant="outline">
-                            {sourceLabels[entry.sourceType] || entry.sourceType}
+                            {srcLabels[entry.sourceType] || entry.sourceType}
                           </Badge>
                           <Badge className={statusColors[entry.status]}>
                             {entry.status}
@@ -214,7 +217,7 @@ export default function JournalEntriesPage() {
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Debit</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("accounting.debit")}</p>
                             <p className="mt-1 font-mono font-semibold text-slate-900">
                               {totals.debit.toLocaleString("en-IN", {
                                 minimumFractionDigits: 2,
@@ -222,7 +225,7 @@ export default function JournalEntriesPage() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Credit</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("accounting.credit")}</p>
                             <p className="mt-1 font-mono font-semibold text-slate-900">
                               {totals.credit.toLocaleString("en-IN", {
                                 minimumFractionDigits: 2,
@@ -234,7 +237,7 @@ export default function JournalEntriesPage() {
                         <Button asChild variant="outline" className="mt-4 min-h-[44px] w-full">
                           <Link href={`/accounting/journal-entries/${entry.id}`}>
                             <Eye className="mr-2 h-4 w-4" />
-                            Open entry
+                            {t("accounting.openEntry")}
                           </Link>
                         </Button>
                       </div>
@@ -247,13 +250,13 @@ export default function JournalEntriesPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Number</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="hidden sm:table-cell">Source</TableHead>
-                          <TableHead className="hidden sm:table-cell">Status</TableHead>
-                          <TableHead className="text-right">Debit</TableHead>
-                          <TableHead className="hidden sm:table-cell text-right">Credit</TableHead>
+                          <TableHead>{t("common.number")}</TableHead>
+                          <TableHead>{t("common.date")}</TableHead>
+                          <TableHead>{t("common.description")}</TableHead>
+                          <TableHead className="hidden sm:table-cell">{t("common.source")}</TableHead>
+                          <TableHead className="hidden sm:table-cell">{t("common.status")}</TableHead>
+                          <TableHead className="text-right">{t("accounting.debit")}</TableHead>
+                          <TableHead className="hidden sm:table-cell text-right">{t("accounting.credit")}</TableHead>
                           <TableHead className="w-[80px]"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -278,7 +281,7 @@ export default function JournalEntriesPage() {
                               </TableCell>
                               <TableCell className="hidden sm:table-cell">
                                 <Badge variant="outline">
-                                  {sourceLabels[entry.sourceType] || entry.sourceType}
+                                  {srcLabels[entry.sourceType] || entry.sourceType}
                                 </Badge>
                               </TableCell>
                               <TableCell className="hidden sm:table-cell">
@@ -307,7 +310,7 @@ export default function JournalEntriesPage() {
                                     <Link href={`/accounting/journal-entries/${entry.id}/edit`}>
                                       <DropdownMenuItem>
                                         <Edit className="mr-2 h-4 w-4" />
-                                        Edit
+                                        {t("common.edit")}
                                       </DropdownMenuItem>
                                     </Link>
                                     <DropdownMenuItem
@@ -315,7 +318,7 @@ export default function JournalEntriesPage() {
                                       onClick={() => handleDelete(entry.id)}
                                     >
                                       <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
+                                      {t("common.delete")}
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>

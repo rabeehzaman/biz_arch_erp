@@ -38,6 +38,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface PurchaseInvoiceItem {
   id: string;
@@ -100,14 +101,6 @@ const statusColors: Record<string, string> = {
   CANCELLED: "secondary",
 };
 
-const statusLabels: Record<string, string> = {
-  DRAFT: "Draft",
-  RECEIVED: "Received",
-  PAID: "Paid",
-  PARTIALLY_PAID: "Partial",
-  CANCELLED: "Cancelled",
-};
-
 export default function PurchaseInvoiceDetailPage({
   params,
 }: {
@@ -116,6 +109,16 @@ export default function PurchaseInvoiceDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const { symbol } = useCurrency();
+  const { t } = useLanguage();
+
+  const statusLabels: Record<string, string> = {
+    DRAFT: t("purchases.statusDraft"),
+    RECEIVED: t("purchases.statusReceived"),
+    PAID: t("purchases.statusPaid"),
+    PARTIALLY_PAID: t("purchases.statusPartial"),
+    CANCELLED: t("purchases.statusCancelled"),
+  };
+
   const [invoice, setInvoice] = useState<PurchaseInvoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -179,11 +182,11 @@ export default function PurchaseInvoiceDetailPage({
         const err = await response.json();
         throw new Error(err.error || "Failed to record payment");
       }
-      toast.success("Payment recorded successfully");
+      toast.success(t("payments.paymentRecorded"));
       setIsPaymentDialogOpen(false);
       fetchInvoice();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to record payment");
+      toast.error(error instanceof Error ? error.message : t("payments.failedToRecordPayment"));
     } finally {
       setIsRecordingPayment(false);
     }
@@ -198,9 +201,9 @@ export default function PurchaseInvoiceDetailPage({
       });
       if (!response.ok) throw new Error("Failed to update");
       fetchInvoice();
-      toast.success("Status updated");
+      toast.success(t("purchases.statusUpdated"));
     } catch (error) {
-      toast.error("Failed to update status");
+      toast.error(t("purchases.failedToUpdateStatus"));
       console.error("Failed to update status:", error);
     }
   };
@@ -223,9 +226,9 @@ export default function PurchaseInvoiceDetailPage({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success("PDF downloaded successfully");
+      toast.success(t("common.pdfDownloaded"));
     } catch (error) {
-      toast.error("Failed to download PDF");
+      toast.error(t("common.pdfDownloadFailed"));
       console.error(error);
     } finally {
       setIsDownloading(false);
@@ -247,7 +250,7 @@ export default function PurchaseInvoiceDetailPage({
         };
       }
     } catch (error) {
-      toast.error("Failed to print invoice");
+      toast.error(t("common.printFailed"));
       console.error(error);
     } finally {
       setIsPrinting(false);
@@ -257,7 +260,7 @@ export default function PurchaseInvoiceDetailPage({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-slate-500">Loading...</div>
+        <div className="text-slate-500">{t("common.loading")}</div>
       </div>
     );
   }
@@ -279,14 +282,14 @@ export default function PurchaseInvoiceDetailPage({
             </Link>
             <div className="min-w-0">
               <h2 className="truncate text-lg font-bold text-slate-900 sm:text-2xl">
-                Purchase Invoice {invoice.purchaseInvoiceNumber}
+                {t("purchases.purchaseInvoiceTitle")} {invoice.purchaseInvoiceNumber}
               </h2>
               <p className="text-sm text-slate-500">
-                Dated {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
+                {t("purchases.dated")} {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
               </p>
               {invoice.isTaxInclusive !== null && (
                 <span className="text-[11px] text-muted-foreground">
-                  {invoice.isTaxInclusive ? "Tax Inclusive" : "Tax Exclusive"}
+                  {invoice.isTaxInclusive ? t("common.taxInclusive") : t("common.taxExclusive")}
                 </span>
               )}
             </div>
@@ -297,24 +300,24 @@ export default function PurchaseInvoiceDetailPage({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="DRAFT">Draft</SelectItem>
-                <SelectItem value="RECEIVED">Received</SelectItem>
-                <SelectItem value="PAID">Paid</SelectItem>
-                <SelectItem value="PARTIALLY_PAID">Partially Paid</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                <SelectItem value="DRAFT">{t("purchases.statusDraft")}</SelectItem>
+                <SelectItem value="RECEIVED">{t("purchases.statusReceived")}</SelectItem>
+                <SelectItem value="PAID">{t("purchases.statusPaid")}</SelectItem>
+                <SelectItem value="PARTIALLY_PAID">{t("purchases.statusPartial")}</SelectItem>
+                <SelectItem value="CANCELLED">{t("purchases.statusCancelled")}</SelectItem>
               </SelectContent>
             </Select>
             {Number(invoice.balanceDue) > 0 && (
               <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
                 <CreditCard className="h-4 w-4 sm:mr-2" />
-                <span className="sm:hidden">Pay</span>
-                <span className="hidden sm:inline">Record Payment</span>
+                <span className="sm:hidden">{t("common.pay")}</span>
+                <span className="hidden sm:inline">{t("payments.recordPayment")}</span>
               </Button>
             )}
             <Link href={`/purchase-invoices/${id}/edit`} className="col-span-1 sm:w-auto">
               <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
                 <Pencil className="h-4 w-4 sm:mr-2" />
-                Edit
+                {t("common.edit")}
               </Button>
             </Link>
             <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
@@ -322,21 +325,21 @@ export default function PurchaseInvoiceDetailPage({
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
                 : <Download className="h-4 w-4 sm:mr-2" />}
               <span className="sm:hidden">{isDownloading ? "..." : "PDF"}</span>
-              <span className="hidden sm:inline">{isDownloading ? "Downloading..." : "Download PDF"}</span>
+              <span className="hidden sm:inline">{isDownloading ? t("common.downloading") : t("common.downloadPDF")}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isPrinting
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
                 : <Printer className="h-4 w-4 sm:mr-2" />}
-              <span>{isPrinting ? "..." : "Print"}</span>
+              <span>{isPrinting ? "..." : t("common.print")}</span>
             </Button>
           </div>
         </div>
 
         <Tabs defaultValue="invoice" className="w-full">
           <TabsList className="print:hidden h-auto min-w-full justify-start gap-1 rounded-xl p-0.5 sm:min-w-0 sm:w-fit sm:p-1">
-            <TabsTrigger value="invoice" className="min-h-[36px] shrink-0 px-3 py-1.5">Invoice</TabsTrigger>
-            <TabsTrigger value="journal" className="min-h-[36px] shrink-0 px-3 py-1.5">Journal</TabsTrigger>
+            <TabsTrigger value="invoice" className="min-h-[36px] shrink-0 px-3 py-1.5">{t("sales.invoice")}</TabsTrigger>
+            <TabsTrigger value="journal" className="min-h-[36px] shrink-0 px-3 py-1.5">{t("accounting.journalEntries")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoice">
@@ -351,7 +354,7 @@ export default function PurchaseInvoiceDetailPage({
                 </div>
                 <div>
                   <h1 className="text-xl font-bold sm:text-2xl">BizArch ERP</h1>
-                  <p className="text-sm text-slate-500">Purchase Invoice</p>
+                  <p className="text-sm text-slate-500">{t("purchases.purchaseInvoiceTitle")}</p>
                 </div>
               </div>
               <div className="text-left sm:text-right">
@@ -361,7 +364,7 @@ export default function PurchaseInvoiceDetailPage({
                 </Badge>
                 {invoice.supplierInvoiceRef && (
                   <p className="text-sm text-slate-500 mt-1">
-                    Ref: {invoice.supplierInvoiceRef}
+                    {t("purchases.ref")}: {invoice.supplierInvoiceRef}
                   </p>
                 )}
               </div>
@@ -371,7 +374,7 @@ export default function PurchaseInvoiceDetailPage({
             <div className="mb-5 grid gap-4 sm:mb-8 sm:grid-cols-2 sm:gap-8">
               <div>
                 <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                  Supplier
+                  {t("common.supplier")}
                 </h3>
                 <div>
                   <p className="font-semibold">{invoice.supplier.name}</p>
@@ -394,26 +397,26 @@ export default function PurchaseInvoiceDetailPage({
               <div className="sm:text-right">
                 <div className="space-y-1">
                   <p className="text-sm">
-                    <span className="text-slate-500">Purchase Date:</span>{" "}
+                    <span className="text-slate-500">{t("purchases.purchaseDate")}:</span>{" "}
                     <span className="font-medium">
                       {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
                     </span>
                   </p>
                   <p className="text-sm">
-                    <span className="text-slate-500">Due Date:</span>{" "}
+                    <span className="text-slate-500">{t("sales.dueDate")}:</span>{" "}
                     <span className="font-medium">
                       {format(new Date(invoice.dueDate), "dd MMM yyyy")}
                     </span>
                   </p>
                   {invoice.branch && (
                     <p className="text-sm">
-                      <span className="text-slate-500">Branch:</span>{" "}
+                      <span className="text-slate-500">{t("common.branch")}:</span>{" "}
                       <span className="font-medium">{invoice.branch.name}</span>
                     </p>
                   )}
                   {invoice.warehouse && (
                     <p className="text-sm">
-                      <span className="text-slate-500">Warehouse:</span>{" "}
+                      <span className="text-slate-500">{t("common.warehouse")}:</span>{" "}
                       <span className="font-medium">{invoice.warehouse.name}</span>
                     </p>
                   )}
@@ -426,12 +429,12 @@ export default function PurchaseInvoiceDetailPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[35%]">Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Cost</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right print:hidden">Stock</TableHead>
+                    <TableHead className="w-[35%]">{t("common.description")}</TableHead>
+                    <TableHead className="text-right">{t("common.qty")}</TableHead>
+                    <TableHead className="text-right">{t("common.unitCost")}</TableHead>
+                    <TableHead className="text-right">{t("common.discount")}</TableHead>
+                    <TableHead className="text-right">{t("common.total")}</TableHead>
+                    <TableHead className="text-right print:hidden">{t("common.stock")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -457,7 +460,7 @@ export default function PurchaseInvoiceDetailPage({
                           <div className="flex items-center justify-end gap-1">
                             <Package className="h-4 w-4 text-green-600" />
                             <span className="text-green-600">
-                              {Number(item.stockLot.remainingQuantity)} remaining
+                              {Number(item.stockLot.remainingQuantity)} {t("purchases.remaining")}
                             </span>
                           </div>
                         )}
@@ -474,14 +477,14 @@ export default function PurchaseInvoiceDetailPage({
                 <div key={item.id} className="p-3 space-y-1">
                   <div className="font-medium text-sm">{item.description}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
-                    <span>Qty: {Number(item.quantity)}</span>
-                    <span>Cost: {symbol}{Number(item.unitCost).toLocaleString("en-IN")}</span>
+                    <span>{t("common.qty")}: {Number(item.quantity)}</span>
+                    <span>{t("common.cost")}: {symbol}{Number(item.unitCost).toLocaleString("en-IN")}</span>
                     {Number(item.discount) > 0 && (
-                      <span className="text-green-600">Discount: {Number(item.discount)}%</span>
+                      <span className="text-green-600">{t("common.discount")}: {Number(item.discount)}%</span>
                     )}
                     {item.stockLot && (
                       <span className="text-green-600">
-                        Stock: {Number(item.stockLot.remainingQuantity)} left
+                        {t("common.stock")}: {Number(item.stockLot.remainingQuantity)} {t("purchases.left")}
                       </span>
                     )}
                   </div>
@@ -496,37 +499,37 @@ export default function PurchaseInvoiceDetailPage({
             <div className="flex justify-end mt-6">
               <div className="w-full sm:w-64 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Subtotal</span>
+                  <span>{t("common.subtotal")}</span>
                   <span>{symbol}{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
                 </div>
                 {Number(invoice.totalVat) > 0 ? (
                   <div className="flex justify-between text-sm text-slate-500">
-                    <span>VAT (15%) — ضريبة القيمة المضافة</span>
+                    <span>{t("purchases.vatLabel")}</span>
                     <span>{symbol}{Number(invoice.totalVat).toFixed(2)}</span>
                   </div>
                 ) : (
                   <>
                     {Number(invoice.totalCgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
-                        <span>CGST</span>
+                        <span>{t("common.cgst")}</span>
                         <span>{symbol}{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
                       </div>
                     )}
                     {Number(invoice.totalSgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
-                        <span>SGST</span>
+                        <span>{t("common.sgst")}</span>
                         <span>{symbol}{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
                       </div>
                     )}
                     {Number(invoice.totalIgst) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
-                        <span>IGST</span>
+                        <span>{t("common.igst")}</span>
                         <span>{symbol}{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
                       </div>
                     )}
                     {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
-                        <span>Tax</span>
+                        <span>{t("common.tax")}</span>
                         <span>{symbol}{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
                       </div>
                     )}
@@ -534,7 +537,7 @@ export default function PurchaseInvoiceDetailPage({
                 )}
                 {invoice.applyRoundOff && Number(invoice.roundOffAmount) !== 0 && (
                   <div className="flex justify-between text-sm text-slate-500">
-                    <span>Round Off</span>
+                    <span>{t("common.roundOff")}</span>
                     <span>
                       {Number(invoice.roundOffAmount) >= 0 ? "+" : ""}
                       {symbol}{Number(invoice.roundOffAmount).toFixed(2)}
@@ -542,17 +545,17 @@ export default function PurchaseInvoiceDetailPage({
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>Total</span>
+                  <span>{t("common.total")}</span>
                   <span>{symbol}{Number(invoice.total).toLocaleString("en-IN")}</span>
                 </div>
                 {Number(invoice.amountPaid) > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
-                    <span>Amount Paid</span>
+                    <span>{t("sales.amountPaid")}</span>
                     <span>{symbol}{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>Balance Due</span>
+                  <span>{t("common.balanceDue")}</span>
                   <span className={Number(invoice.balanceDue) > 0 ? "text-orange-600" : "text-green-600"}>
                     {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")}
                   </span>
@@ -564,7 +567,7 @@ export default function PurchaseInvoiceDetailPage({
             {invoice.notes && (
               <div className="mt-8 pt-8 border-t">
                 <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                  Notes
+                  {t("common.notes")}
                 </h3>
                 <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
               </div>
@@ -583,18 +586,18 @@ export default function PurchaseInvoiceDetailPage({
           <DialogContent className="sm:max-w-md">
             <form onSubmit={handleRecordPayment}>
               <DialogHeader>
-                <DialogTitle>Record Payment</DialogTitle>
+                <DialogTitle>{t("payments.recordPayment")}</DialogTitle>
                 <DialogDescription>
-                  Record a payment for purchase invoice {invoice.purchaseInvoiceNumber}.
+                  {t("purchases.recordPaymentForInvoice")} {invoice.purchaseInvoiceNumber}.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label>Supplier</Label>
+                  <Label>{t("common.supplier")}</Label>
                   <p className="text-sm font-medium">{invoice.supplier.name}</p>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="pay-amount">Amount *</Label>
+                  <Label htmlFor="pay-amount">{t("common.amount")} *</Label>
                   <Input
                     id="pay-amount"
                     type="number"
@@ -606,7 +609,7 @@ export default function PurchaseInvoiceDetailPage({
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="pay-date">Payment Date *</Label>
+                    <Label htmlFor="pay-date">{t("payments.paymentDate")} *</Label>
                     <Input
                       id="pay-date"
                       type="date"
@@ -616,7 +619,7 @@ export default function PurchaseInvoiceDetailPage({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Payment Method</Label>
+                    <Label>{t("payments.paymentMethod")}</Label>
                     <Select
                       value={paymentForm.paymentMethod}
                       onValueChange={(v) => setPaymentForm({ ...paymentForm, paymentMethod: v })}
@@ -625,30 +628,30 @@ export default function PurchaseInvoiceDetailPage({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="CASH">Cash</SelectItem>
-                        <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                        <SelectItem value="CHECK">Check</SelectItem>
-                        <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="OTHER">Other</SelectItem>
+                        <SelectItem value="CASH">{t("common.cash")}</SelectItem>
+                        <SelectItem value="BANK_TRANSFER">{t("common.bankTransfer")}</SelectItem>
+                        <SelectItem value="CHECK">{t("common.check")}</SelectItem>
+                        <SelectItem value="CREDIT_CARD">{t("common.creditCard")}</SelectItem>
+                        <SelectItem value="UPI">{t("common.upi")}</SelectItem>
+                        <SelectItem value="OTHER">{t("common.other")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="pay-ref">Reference</Label>
+                  <Label htmlFor="pay-ref">{t("common.reference")}</Label>
                   <Input
                     id="pay-ref"
                     value={paymentForm.reference}
                     onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                    placeholder="Transaction ID, check #..."
+                    placeholder={t("payments.referencePlaceholder")}
                   />
                 </div>
               </div>
               <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="submit" disabled={isRecordingPayment} className="w-full sm:w-auto">
                   {isRecordingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isRecordingPayment ? "Recording..." : "Record Payment"}
+                  {isRecordingPayment ? t("common.recording") : t("payments.recordPayment")}
                 </Button>
               </DialogFooter>
             </form>

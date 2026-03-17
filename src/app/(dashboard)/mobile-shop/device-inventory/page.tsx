@@ -12,6 +12,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import { Plus, Smartphone, Loader2, Trash2, Pencil, AlertTriangle } from "lucide-react";
 import { DeviceFormDialog } from "@/components/mobile-devices/device-form-dialog";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 interface Device {
   id: string;
@@ -38,17 +39,9 @@ const statusColors: Record<string, string> = {
   RMA: "bg-red-100 text-red-800",
 };
 
-const conditionLabels: Record<string, string> = {
-  NEW: "New",
-  OPEN_BOX: "Open Box",
-  GRADE_A: "Grade A",
-  GRADE_B: "Grade B",
-  GRADE_C: "Grade C",
-  REFURBISHED: "Refurbished",
-};
-
 export default function DeviceInventoryPage() {
   const { symbol } = useCurrency();
+  const { t } = useLanguage();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -56,6 +49,23 @@ export default function DeviceInventoryPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<Device | null>(null);
+
+  const conditionLabels: Record<string, string> = {
+    NEW: t("mobileShop.conditionNew"),
+    OPEN_BOX: t("mobileShop.conditionOpenBox"),
+    GRADE_A: t("mobileShop.conditionGradeA"),
+    GRADE_B: t("mobileShop.conditionGradeB"),
+    GRADE_C: t("mobileShop.conditionGradeC"),
+    REFURBISHED: t("mobileShop.conditionRefurbished"),
+  };
+
+  const statusLabels: Record<string, string> = {
+    IN_STOCK: t("mobileShop.inStock"),
+    RESERVED: t("mobileShop.reserved"),
+    SOLD: t("mobileShop.sold"),
+    IN_REPAIR: t("mobileShop.inRepair"),
+    RMA: t("mobileShop.rma"),
+  };
 
   const fetchDevices = async () => {
     setLoading(true);
@@ -71,11 +81,11 @@ export default function DeviceInventoryPage() {
       } else {
         const payload = await res.json().catch(() => ({}));
         setDevices([]);
-        setErrorMessage(payload.error || "You do not have permission to view mobile devices.");
+        setErrorMessage(payload.error || t("mobileShop.noPermission"));
       }
     } catch {
       setDevices([]);
-      setErrorMessage("Failed to load devices");
+      setErrorMessage(t("mobileShop.failedToLoadDevices"));
     } finally {
       setLoading(false);
     }
@@ -95,18 +105,18 @@ export default function DeviceInventoryPage() {
   }, [search]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this device?")) return;
+    if (!confirm(t("mobileShop.confirmDeleteDevice"))) return;
     try {
       const res = await fetch(`/api/mobile-devices/${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Device deleted");
+        toast.success(t("mobileShop.deviceDeleted"));
         fetchDevices();
       } else {
         const data = await res.json();
-        toast.error(data.error || "Failed to delete device");
+        toast.error(data.error || t("mobileShop.failedToDeleteDevice"));
       }
     } catch {
-      toast.error("Failed to delete device");
+      toast.error(t("mobileShop.failedToDeleteDevice"));
     }
   };
 
@@ -117,39 +127,39 @@ export default function DeviceInventoryPage() {
           <div>
             <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Smartphone className="h-6 w-6" />
-              Device Inventory
+              {t("mobileShop.deviceInventory")}
             </h2>
-            <p className="text-slate-500">Manage individual mobile devices</p>
+            <p className="text-slate-500">{t("mobileShop.manageDevicesDesc")}</p>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Devices</CardTitle>
+            <CardTitle>{t("mobileShop.devices")}</CardTitle>
             <CardAction>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Input
-                  placeholder="Search IMEI, brand, model..."
+                  placeholder={t("mobileShop.searchDevicesPlaceholder")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full sm:w-64"
                 />
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-full sm:w-[160px]">
-                    <SelectValue placeholder="All Statuses" />
+                    <SelectValue placeholder={t("mobileShop.allStatuses")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">All Statuses</SelectItem>
-                    <SelectItem value="IN_STOCK">In Stock</SelectItem>
-                    <SelectItem value="RESERVED">Reserved</SelectItem>
-                    <SelectItem value="SOLD">Sold</SelectItem>
-                    <SelectItem value="IN_REPAIR">In Repair</SelectItem>
-                    <SelectItem value="RMA">RMA</SelectItem>
+                    <SelectItem value="ALL">{t("mobileShop.allStatuses")}</SelectItem>
+                    <SelectItem value="IN_STOCK">{t("mobileShop.inStock")}</SelectItem>
+                    <SelectItem value="RESERVED">{t("mobileShop.reserved")}</SelectItem>
+                    <SelectItem value="SOLD">{t("mobileShop.sold")}</SelectItem>
+                    <SelectItem value="IN_REPAIR">{t("mobileShop.inRepair")}</SelectItem>
+                    <SelectItem value="RMA">{t("mobileShop.rma")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button size="sm" className="w-full sm:w-auto" onClick={() => { setEditDevice(null); setDialogOpen(true); }}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Device
+                  {t("mobileShop.addDevice")}
                 </Button>
               </div>
             </CardAction>
@@ -163,14 +173,14 @@ export default function DeviceInventoryPage() {
               <div className="flex flex-col items-center gap-3 px-6 py-12 text-center text-muted-foreground">
                 <AlertTriangle className="h-12 w-12 text-amber-500" />
                 <div className="space-y-1">
-                  <p className="font-medium text-slate-900">Unable to load devices</p>
+                  <p className="font-medium text-slate-900">{t("mobileShop.unableToLoadDevices")}</p>
                   <p className="text-sm">{errorMessage}</p>
                 </div>
               </div>
             ) : devices.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Smartphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No devices found</p>
+                <p>{t("mobileShop.noDevicesFound")}</p>
               </div>
             ) : (
               <>
@@ -185,32 +195,32 @@ export default function DeviceInventoryPage() {
                           )}
                         </div>
                         <Badge className={statusColors[device.currentStatus] || ""}>
-                          {device.currentStatus.replace("_", " ")}
+                          {statusLabels[device.currentStatus] || device.currentStatus.replace("_", " ")}
                         </Badge>
                       </div>
 
                       <div className="mt-3 space-y-1">
                         <p className="font-medium text-slate-900">{device.brand} {device.model}</p>
                         <p className="text-sm text-muted-foreground">
-                          {[device.color, device.storageCapacity].filter(Boolean).join(" · ") || conditionLabels[device.conditionGrade] || device.conditionGrade}
+                          {[device.color, device.storageCapacity].filter(Boolean).join(" \u00B7 ") || conditionLabels[device.conditionGrade] || device.conditionGrade}
                         </p>
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-xs text-muted-foreground">Condition</p>
+                          <p className="text-xs text-muted-foreground">{t("mobileShop.condition")}</p>
                           <p>{conditionLabels[device.conditionGrade] || device.conditionGrade}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Supplier</p>
+                          <p className="text-xs text-muted-foreground">{t("mobileShop.supplier")}</p>
                           <p className="truncate">{device.supplier?.name || "-"}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Cost</p>
+                          <p className="text-xs text-muted-foreground">{t("mobileShop.cost")}</p>
                           <p>{symbol}{Number(device.costPrice).toLocaleString("en-IN")}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Selling</p>
+                          <p className="text-xs text-muted-foreground">{t("mobileShop.selling")}</p>
                           <p>
                             {Number(device.sellingPrice) > 0
                               ? `${symbol}${Number(device.sellingPrice).toLocaleString("en-IN")}`
@@ -250,13 +260,13 @@ export default function DeviceInventoryPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="max-w-[120px]">IMEI</TableHead>
-                        <TableHead>Brand / Model</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="hidden sm:table-cell">Condition</TableHead>
-                        <TableHead className="hidden md:table-cell text-right">Cost</TableHead>
-                        <TableHead className="hidden md:table-cell text-right">Selling</TableHead>
-                        <TableHead className="hidden sm:table-cell">Supplier</TableHead>
+                        <TableHead className="max-w-[120px]">{t("mobileShop.imei")}</TableHead>
+                        <TableHead>{t("mobileShop.brandModel")}</TableHead>
+                        <TableHead>{t("common.status")}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t("mobileShop.condition")}</TableHead>
+                        <TableHead className="hidden md:table-cell text-right">{t("mobileShop.cost")}</TableHead>
+                        <TableHead className="hidden md:table-cell text-right">{t("mobileShop.selling")}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t("mobileShop.supplier")}</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -274,13 +284,13 @@ export default function DeviceInventoryPage() {
                             {device.color && (
                               <div className="text-xs text-muted-foreground">
                                 {device.color}
-                                {device.storageCapacity && ` · ${device.storageCapacity}`}
+                                {device.storageCapacity && ` \u00B7 ${device.storageCapacity}`}
                               </div>
                             )}
                           </TableCell>
                           <TableCell>
                             <Badge className={statusColors[device.currentStatus] || ""}>
-                              {device.currentStatus.replace("_", " ")}
+                              {statusLabels[device.currentStatus] || device.currentStatus.replace("_", " ")}
                             </Badge>
                           </TableCell>
                           <TableCell className="hidden sm:table-cell text-sm">

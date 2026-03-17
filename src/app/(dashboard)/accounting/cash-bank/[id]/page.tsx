@@ -28,6 +28,7 @@ import { ArrowLeft, Plus, Minus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface Transaction {
   id: string;
@@ -50,13 +51,13 @@ interface CashBankAccount {
   transactions: Transaction[];
 }
 
-const txTypeLabels: Record<string, string> = {
-  DEPOSIT: "Deposit",
-  WITHDRAWAL: "Withdrawal",
-  TRANSFER_IN: "Transfer In",
-  TRANSFER_OUT: "Transfer Out",
-  OPENING_BALANCE: "Opening Balance",
-};
+const txTypeLabels = (t: (key: string) => string): Record<string, string> => ({
+  DEPOSIT: t("accounting.txTypeDeposit"),
+  WITHDRAWAL: t("accounting.txTypeWithdrawal"),
+  TRANSFER_IN: t("accounting.txTypeTransferIn"),
+  TRANSFER_OUT: t("accounting.txTypeTransferOut"),
+  OPENING_BALANCE: t("accounting.txTypeOpeningBalance"),
+});
 
 export default function CashBankDetailPage({
   params,
@@ -65,6 +66,8 @@ export default function CashBankDetailPage({
 }) {
   const { id } = use(params);
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
+  const txLabels = txTypeLabels(t);
   const [account, setAccount] = useState<CashBankAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogType, setDialogType] = useState<"deposit" | "withdrawal" | null>(null);
@@ -86,7 +89,7 @@ export default function CashBankDetailPage({
       if (!response.ok) throw new Error("Failed to fetch");
       setAccount(await response.json());
     } catch {
-      toast.error("Failed to load account");
+      toast.error(t("accounting.failedToLoadAccount"));
     } finally {
       setIsLoading(false);
     }
@@ -110,12 +113,12 @@ export default function CashBankDetailPage({
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success(`${dialogType === "deposit" ? "Deposit" : "Withdrawal"} recorded`);
+      toast.success(dialogType === "deposit" ? t("accounting.depositRecorded") : t("accounting.withdrawalRecorded"));
       setDialogType(null);
       setFormData({ amount: "", description: "", transactionDate: new Date().toISOString().split("T")[0] });
       fetchAccount();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to record transaction");
+      toast.error(error instanceof Error ? error.message : t("accounting.failedToRecordTransaction"));
     }
   };
 
@@ -128,7 +131,7 @@ export default function CashBankDetailPage({
   }
 
   if (!account) {
-    return <p className="text-center py-8 text-slate-500">Account not found</p>;
+    return <p className="text-center py-8 text-slate-500">{t("accounting.accountNotFound")}</p>;
   }
 
   return (
@@ -152,18 +155,18 @@ export default function CashBankDetailPage({
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <Button variant="outline" onClick={() => setDialogType("withdrawal")} className="w-full sm:w-auto">
                 <Minus className="mr-2 h-4 w-4" />
-                Withdrawal
+                {t("accounting.withdrawal")}
               </Button>
               <Button onClick={() => setDialogType("deposit")} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                Deposit
+                {t("accounting.deposit")}
               </Button>
             </div>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Current Balance</CardTitle>
+              <CardTitle>{t("accounting.currentBalance")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">
@@ -171,21 +174,21 @@ export default function CashBankDetailPage({
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Badge variant="outline">
-                  {account.accountSubType === "BANK" ? "Bank" : "Cash"}
+                  {account.accountSubType === "BANK" ? t("accounting.bank") : t("accounting.cash")}
                 </Badge>
-                {account.isDefault && <Badge variant="secondary">Default</Badge>}
-                <Badge variant="outline">COA: {account.account.code}</Badge>
+                {account.isDefault && <Badge variant="secondary">{t("common.default")}</Badge>}
+                <Badge variant="outline">{t("accounting.coaLabel")} {account.account.code}</Badge>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Transaction History</CardTitle>
+              <CardTitle>{t("accounting.transactionHistory")}</CardTitle>
             </CardHeader>
             <CardContent>
               {account.transactions.length === 0 ? (
-                <p className="text-center py-4 text-slate-500">No transactions yet</p>
+                <p className="text-center py-4 text-slate-500">{t("accounting.noTransactionsYet")}</p>
               ) : (
                 <>
                   <div className="space-y-3 sm:hidden">
@@ -198,7 +201,7 @@ export default function CashBankDetailPage({
                             </div>
                             <div className="mt-2">
                               <Badge variant="outline">
-                                {txTypeLabels[tx.transactionType] || tx.transactionType}
+                                {txLabels[tx.transactionType] || tx.transactionType}
                               </Badge>
                             </div>
                           </div>
@@ -209,7 +212,7 @@ export default function CashBankDetailPage({
                         </div>
                         <div className="mt-3 text-slate-600">{tx.description}</div>
                         <div className="mt-3 flex items-center justify-between border-t pt-3">
-                          <span className="text-xs uppercase tracking-wide text-slate-400">Running Balance</span>
+                          <span className="text-xs uppercase tracking-wide text-slate-400">{t("accounting.runningBalance")}</span>
                           <span className="font-medium text-slate-900">{fmt(Number(tx.runningBalance))}</span>
                         </div>
                       </div>
@@ -219,11 +222,11 @@ export default function CashBankDetailPage({
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead className="text-right">Balance</TableHead>
+                          <TableHead>{t("common.date")}</TableHead>
+                          <TableHead>{t("common.type")}</TableHead>
+                          <TableHead>{t("common.description")}</TableHead>
+                          <TableHead className="text-right">{t("common.amount")}</TableHead>
+                          <TableHead className="text-right">{t("common.balance")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -234,7 +237,7 @@ export default function CashBankDetailPage({
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                {txTypeLabels[tx.transactionType] || tx.transactionType}
+                                {txLabels[tx.transactionType] || tx.transactionType}
                               </Badge>
                             </TableCell>
                             <TableCell>{tx.description}</TableCell>
@@ -268,17 +271,17 @@ export default function CashBankDetailPage({
               <form onSubmit={handleTransaction}>
                 <DialogHeader>
                   <DialogTitle>
-                    {dialogType === "deposit" ? "Record Deposit" : "Record Withdrawal"}
+                    {dialogType === "deposit" ? t("accounting.recordDeposit") : t("accounting.recordWithdrawal")}
                   </DialogTitle>
                   <DialogDescription>
                     {dialogType === "deposit"
-                      ? "Add funds to this account."
-                      : "Remove funds from this account."}
+                      ? t("accounting.addFundsDesc")
+                      : t("accounting.removeFundsDesc")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label>Amount *</Label>
+                    <Label>{t("common.amount")} *</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -288,7 +291,7 @@ export default function CashBankDetailPage({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Date</Label>
+                    <Label>{t("common.date")}</Label>
                     <Input
                       type="date"
                       value={formData.transactionDate}
@@ -296,17 +299,17 @@ export default function CashBankDetailPage({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Description</Label>
+                    <Label>{t("common.description")}</Label>
                     <Input
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder={dialogType === "deposit" ? "Deposit description" : "Withdrawal description"}
+                      placeholder={dialogType === "deposit" ? t("accounting.depositDescPlaceholder") : t("accounting.withdrawalDescPlaceholder")}
                     />
                   </div>
                 </div>
                 <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <Button type="submit" className="w-full sm:w-auto">
-                    {dialogType === "deposit" ? "Record Deposit" : "Record Withdrawal"}
+                    {dialogType === "deposit" ? t("accounting.recordDeposit") : t("accounting.recordWithdrawal")}
                   </Button>
                 </DialogFooter>
               </form>

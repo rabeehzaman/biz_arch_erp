@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
 import { createClientId } from "@/lib/client-id";
+import { useLanguage } from "@/lib/i18n";
 
 interface Customer {
   id: string;
@@ -122,6 +123,7 @@ function getLineAmountKey(itemId: string, subtotal: number, total: number) {
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -171,7 +173,7 @@ export default function NewInvoicePage() {
 
     const product = products.find((p) => p.weighMachineCode === parsed.productCode);
     if (!product) {
-      toast.error(`Product not found for weigh machine code: ${parsed.productCode}`);
+      toast.error(`${t("sales.productNotFoundForCode")}: ${parsed.productCode}`);
       return;
     }
 
@@ -455,12 +457,12 @@ export default function NewInvoicePage() {
 
     // Validate that at least one item has a product selected
     if (validItems.length === 0) {
-      toast.error("Please add at least one product to the invoice");
+      toast.error(t("sales.addAtLeastOneProduct"));
       return;
     }
 
     if (session?.user?.multiBranchEnabled && !formData.warehouseId) {
-      toast.error("Please select a branch and warehouse");
+      toast.error(t("sales.selectBranchAndWarehouse"));
       return;
     }
 
@@ -514,20 +516,20 @@ export default function NewInvoicePage() {
 
         if (saveAndNew.current) {
           saveAndNew.current = false;
-          toast.success("Invoice created — starting new");
+          toast.success(t("sales.invoiceCreatedStartingNew"));
           router.push("/invoices/new");
         } else {
-          toast.success("Invoice created", {
-            action: { label: "New Invoice", onClick: () => router.push("/invoices/new") },
+          toast.success(t("sales.invoiceCreated"), {
+            action: { label: t("sales.newInvoice"), onClick: () => router.push("/invoices/new") },
           });
           router.push(`/invoices/${invoice.id}`);
         }
       } else {
-        toast.error("Failed to create invoice");
+        toast.error(t("sales.failedToCreateInvoice"));
       }
     } catch (error) {
       console.error("Failed to create invoice:", error);
-      toast.error("Failed to create invoice");
+      toast.error(t("sales.failedToCreateInvoice"));
     } finally {
       setIsSubmitting(false);
     }
@@ -537,7 +539,7 @@ export default function NewInvoicePage() {
     return (
       <PageAnimation>
         <div className="flex items-center justify-center py-8">
-          <div className="text-slate-500">Loading...</div>
+          <div className="text-slate-500">{t("common.loading")}</div>
         </div>
       </PageAnimation>
     );
@@ -553,8 +555,8 @@ export default function NewInvoicePage() {
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">New Invoice</h2>
-            <p className="text-slate-500">Create a new invoice for a customer</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("sales.newInvoice")}</h2>
+            <p className="text-slate-500">{t("sales.newInvoiceDesc")}</p>
           </div>
         </div>
 
@@ -563,7 +565,7 @@ export default function NewInvoicePage() {
             {/* Customer & Date */}
             <Card>
               <CardHeader>
-                <CardTitle>Invoice Details</CardTitle>
+                <CardTitle>{t("sales.invoiceDetails")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <BranchWarehouseSelector
@@ -574,7 +576,7 @@ export default function NewInvoicePage() {
                 />
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="customer">Customer *</Label>
+                    <Label htmlFor="customer">{t("common.customer")} *</Label>
                     <CustomerCombobox
                       customers={customers}
                       value={formData.customerId}
@@ -588,7 +590,7 @@ export default function NewInvoicePage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="date">Issue Date *</Label>
+                    <Label htmlFor="date">{t("sales.issueDate")} *</Label>
                     <Input
                       id="date"
                       type="date"
@@ -601,7 +603,7 @@ export default function NewInvoicePage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="dueDate">Due Date *</Label>
+                    <Label htmlFor="dueDate">{t("sales.dueDate")} *</Label>
                     <Input
                       id="dueDate"
                       type="date"
@@ -614,7 +616,7 @@ export default function NewInvoicePage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="paymentType">Payment Type *</Label>
+                    <Label htmlFor="paymentType">{t("sales.paymentType")} *</Label>
                     <Select
                       value={formData.paymentType}
                       onValueChange={(value) => {
@@ -623,28 +625,28 @@ export default function NewInvoicePage() {
                       }}
                     >
                       <SelectTrigger id="paymentType" ref={paymentTypeRef}>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder={t("common.selectType")} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="CASH">
-                          Cash {session?.user?.saudiEInvoiceEnabled ? "/ نقدي" : ""}
+                          {t("common.cashPaymentType")} {session?.user?.saudiEInvoiceEnabled ? "/ نقدي" : ""}
                         </SelectItem>
                         <SelectItem value="CREDIT">
-                          Credit {session?.user?.saudiEInvoiceEnabled ? "/ آجل" : ""}
+                          {t("common.creditPaymentType")} {session?.user?.saudiEInvoiceEnabled ? "/ آجل" : ""}
                         </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   {taxEnabled && (
                     <div className="grid gap-2">
-                      <Label>Pricing</Label>
+                      <Label>{t("common.pricing")}</Label>
                       <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="inclusive">Tax Inclusive</SelectItem>
-                          <SelectItem value="exclusive">Tax Exclusive</SelectItem>
+                          <SelectItem value="inclusive">{t("common.taxInclusive")}</SelectItem>
+                          <SelectItem value="exclusive">{t("common.taxExclusive")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -656,18 +658,18 @@ export default function NewInvoicePage() {
             {/* Line Items */}
             <Card>
               <CardHeader>
-                <CardTitle>Line Items</CardTitle>
+                <CardTitle>{t("common.lineItems")}</CardTitle>
                 <CardAction>
                   <Button type="button" variant="outline" size="sm" onClick={() => addLineItem(true)}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Item
+                    {t("common.addItem")}
                   </Button>
                 </CardAction>
               </CardHeader>
               {weighMachineEnabled && (
                 <div className="mx-6 mb-3 flex items-center gap-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
                   <Scale className="h-4 w-4 shrink-0" />
-                  Weigh Machine Active — scan barcode to add item
+                  {t("sales.weighMachineActive")}
                 </div>
               )}
               <CardContent className="p-0 border-t border-slate-200">
@@ -676,22 +678,22 @@ export default function NewInvoicePage() {
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow>
-                        <TableHead className="font-semibold" style={{ width: '30%' }}>Product *</TableHead>
-                        <TableHead className="font-semibold">Quantity *</TableHead>
+                        <TableHead className="font-semibold" style={{ width: '30%' }}>{t("common.product")} *</TableHead>
+                        <TableHead className="font-semibold">{t("common.quantity")} *</TableHead>
                         {session?.user?.multiUnitEnabled && (
-                          <TableHead className="font-semibold">Unit</TableHead>
+                          <TableHead className="font-semibold">{t("common.unit")}</TableHead>
                         )}
-                        <TableHead className="font-semibold">Unit Price *</TableHead>
-                        <TableHead className="font-semibold">Disc %</TableHead>
-                        {taxMode === "gst" && <TableHead className="font-semibold">GST %</TableHead>}
-                        {taxMode === "vat" && <TableHead className="font-semibold">VAT %</TableHead>}
+                        <TableHead className="font-semibold">{t("common.unitPrice")} *</TableHead>
+                        <TableHead className="font-semibold">{t("common.discountPercent")}</TableHead>
+                        {taxMode === "gst" && <TableHead className="font-semibold">{t("common.gstPercent")}</TableHead>}
+                        {taxMode === "vat" && <TableHead className="font-semibold">{t("common.vatPercent")}</TableHead>}
                         {taxMode !== "none" ? (
                           <>
-                            <TableHead className="text-right font-semibold">Gross Amount</TableHead>
-                            <TableHead className="text-right font-semibold">Net Amount</TableHead>
+                            <TableHead className="text-right font-semibold">{t("common.grossAmount")}</TableHead>
+                            <TableHead className="text-right font-semibold">{t("common.netAmount")}</TableHead>
                           </>
                         ) : (
-                          <TableHead className="text-right font-semibold">Line Total</TableHead>
+                          <TableHead className="text-right font-semibold">{t("common.lineTotal")}</TableHead>
                         )}
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
@@ -757,8 +759,8 @@ export default function NewInvoicePage() {
                                 {hasStockShortfall && (
                                   <p className="text-[10px] text-yellow-600 mt-1 absolute bottom-[-5px] left-2">
                                     {availableStock === 0
-                                      ? "⚠ No stock"
-                                      : `⚠ Only ${availableStock} in stock`}
+                                      ? `⚠ ${t("sales.noStock")}`
+                                      : `⚠ ${t("sales.onlyNInStock").replace("{n}", String(availableStock))}`}
                                   </p>
                                 )}
                               </TableCell>
@@ -770,7 +772,7 @@ export default function NewInvoicePage() {
                                     options={(() => {
                                       const product = products.find((p) => p.id === item.productId);
                                       if (!product) return [];
-                                      const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
+                                      const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || t("common.baseUnit"), conversionFactor: 1 };
                                       const alternateOptions = unitConversions
                                         .filter(uc => uc.toUnitId === product.unitId)
                                         .map(uc => ({
@@ -916,7 +918,7 @@ export default function NewInvoicePage() {
                               <TableRow className="bg-green-50/50">
                                 <TableCell colSpan={99} className="p-3">
                                   <p className="text-xs font-medium text-green-700 mb-2">
-                                    Select IMEIs to sell ({item.selectedImeis.length} selected, {devices.length} available)
+                                    {t("sales.selectImeisToSell").replace("{selected}", String(item.selectedImeis.length)).replace("{available}", String(devices.length))}
                                   </p>
                                   <div className="flex flex-wrap gap-2">
                                     {devices.map((device) => {
@@ -944,7 +946,7 @@ export default function NewInvoicePage() {
                             {isImeiTracked && devices.length === 0 && item.productId && (
                               <TableRow className="bg-yellow-50/50">
                                 <TableCell colSpan={99} className="p-2">
-                                  <p className="text-xs text-yellow-700">No devices in stock for this product</p>
+                                  <p className="text-xs text-yellow-700">{t("sales.noDevicesInStock")}</p>
                                 </TableCell>
                               </TableRow>
                             )}
@@ -976,7 +978,7 @@ export default function NewInvoicePage() {
                               productComboRefs.current.delete(item.id);
                             }
                           }}>
-                            <Label className="text-xs text-slate-500 mb-1 block">Product *</Label>
+                            <Label className="text-xs text-slate-500 mb-1 block">{t("common.product")} *</Label>
                             <ProductCombobox
                               products={products}
                               value={item.productId}
@@ -1002,7 +1004,7 @@ export default function NewInvoicePage() {
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label className="text-xs text-slate-500">Quantity *</Label>
+                            <Label className="text-xs text-slate-500">{t("common.quantity")} *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -1017,12 +1019,12 @@ export default function NewInvoicePage() {
                             />
                             {hasStockShortfall && (
                               <p className="text-[10px] text-yellow-600 mt-0.5">
-                                {availableStock === 0 ? "⚠ No stock" : `⚠ Only ${availableStock} in stock`}
+                                {availableStock === 0 ? `⚠ ${t("sales.noStock")}` : `⚠ ${t("sales.onlyNInStock").replace("{n}", String(availableStock))}`}
                               </p>
                             )}
                           </div>
                           <div>
-                            <Label className="text-xs text-slate-500">Unit Price *</Label>
+                            <Label className="text-xs text-slate-500">{t("common.unitPrice")} *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -1036,7 +1038,7 @@ export default function NewInvoicePage() {
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-slate-500">Discount %</Label>
+                            <Label className="text-xs text-slate-500">{t("common.discountPercent")}</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -1052,7 +1054,7 @@ export default function NewInvoicePage() {
                           </div>
                           {taxMode === "gst" && (
                             <div>
-                              <Label className="text-xs text-slate-500">GST %</Label>
+                              <Label className="text-xs text-slate-500">{t("common.gstPercent")}</Label>
                               <Input
                                 type="number"
                                 onFocus={(e) => e.target.select()}
@@ -1069,7 +1071,7 @@ export default function NewInvoicePage() {
                           )}
                           {taxMode === "vat" && (
                             <div>
-                              <Label className="text-xs text-slate-500">VAT %</Label>
+                              <Label className="text-xs text-slate-500">{t("common.vatPercent")}</Label>
                               <Input
                                 type="number"
                                 onFocus={(e) => e.target.select()}
@@ -1086,14 +1088,14 @@ export default function NewInvoicePage() {
                           )}
                           {session?.user?.multiUnitEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">Unit</Label>
+                              <Label className="text-xs text-slate-500">{t("common.unit")}</Label>
                               <ItemUnitSelect
                                 value={item.unitId}
                                 onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
                                 options={(() => {
                                   const p = products.find((p) => p.id === item.productId);
                                   if (!p) return [];
-                                  const baseOption = { id: p.unitId!, name: p.unit?.name || p.unit?.code || "Base Unit", conversionFactor: 1 };
+                                  const baseOption = { id: p.unitId!, name: p.unit?.name || p.unit?.code || t("common.baseUnit"), conversionFactor: 1 };
                                   const alternateOptions = unitConversions
                                     .filter(uc => uc.toUnitId === p.unitId)
                                     .map(uc => ({ id: uc.fromUnitId, name: uc.fromUnit.name, conversionFactor: Number(uc.conversionFactor) }));
@@ -1118,7 +1120,7 @@ export default function NewInvoicePage() {
                         {isImeiTracked && devices.length > 0 && (
                           <div className="bg-green-50 rounded p-2">
                             <p className="text-xs font-medium text-green-700 mb-2">
-                              Select IMEIs ({item.selectedImeis.length}/{devices.length})
+                              {t("sales.selectImeis").replace("{selected}", String(item.selectedImeis.length)).replace("{available}", String(devices.length))}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {devices.map((device) => {
@@ -1134,7 +1136,7 @@ export default function NewInvoicePage() {
                           </div>
                         )}
                         {isImeiTracked && devices.length === 0 && item.productId && (
-                          <p className="text-xs text-yellow-700 bg-yellow-50 rounded p-2">No devices in stock</p>
+                          <p className="text-xs text-yellow-700 bg-yellow-50 rounded p-2">{t("sales.noDevicesInStockShort")}</p>
                         )}
                       </div>
                     );
@@ -1146,29 +1148,29 @@ export default function NewInvoicePage() {
             {/* Notes */}
             <Card>
               <CardHeader>
-                <CardTitle>Additional Information</CardTitle>
+                <CardTitle>{t("common.additionalInformation")}</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">{t("common.notes")}</Label>
                   <Textarea
                     id="notes"
                     value={formData.notes}
                     onChange={(e) =>
                       setFormData(prev => ({ ...prev, notes: e.target.value }))
                     }
-                    placeholder="Notes to the customer..."
+                    placeholder={t("sales.notesPlaceholder")}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="terms">Terms & Conditions</Label>
+                  <Label htmlFor="terms">{t("common.termsAndConditions")}</Label>
                   <Textarea
                     id="terms"
                     value={formData.terms}
                     onChange={(e) =>
                       setFormData(prev => ({ ...prev, terms: e.target.value }))
                     }
-                    placeholder="Payment terms..."
+                    placeholder={t("sales.termsPlaceholder")}
                   />
                 </div>
               </CardContent>
@@ -1177,17 +1179,17 @@ export default function NewInvoicePage() {
             {/* Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Summary</CardTitle>
+                <CardTitle>{t("common.summary")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
                   <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
                     <div>
-                      <p className="text-sm font-medium">Apply Round Off</p>
+                      <p className="text-sm font-medium">{t("common.applyRoundOff")}</p>
                       <p className="text-xs text-slate-500">
                         {roundOffEnabled
-                          ? "Use organization round off rule on the final total."
-                          : "Enable a round off mode in Settings > Company."}
+                          ? t("sales.roundOffEnabledHint")
+                          : t("sales.roundOffDisabledHint")}
                       </p>
                     </div>
                     <Switch
@@ -1197,24 +1199,24 @@ export default function NewInvoicePage() {
                     />
                   </div>
                   {taxMode === "vat" && (
-                    <div className="mb-2 text-left text-xs font-medium text-slate-500 sm:text-right">VAT Invoice (ZATCA Phase 1)</div>
+                    <div className="mb-2 text-left text-xs font-medium text-slate-500 sm:text-right">{t("sales.vatInvoiceZatca")}</div>
                   )}
                   {taxInclusive && (
-                    <div className="mb-2 text-left text-xs font-medium text-blue-600 sm:text-right">Prices include tax</div>
+                    <div className="mb-2 text-left text-xs font-medium text-blue-600 sm:text-right">{t("common.pricesIncludeTax")}</div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span>{t("common.subtotal")}</span>
                     <span key={`summary-subtotal:${totals.subtotal}`}>{fmt(totals.subtotal)}</span>
                   </div>
                   {totals.tax > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>{taxMode === "vat" ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
+                      <span>{taxMode === "vat" ? `${t("common.vat")} (ضريبة القيمة المضافة)` : t("common.gst")}</span>
                       <span key={`summary-tax:${totals.tax}`}>{fmt(totals.tax)}</span>
                     </div>
                   )}
                   {applyRoundOff && totals.roundOffAmount !== 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>Round Off</span>
+                      <span>{t("common.roundOff")}</span>
                       <span key={`summary-roundoff:${totals.roundOffAmount}`}>
                         {totals.roundOffAmount >= 0 ? "+" : ""}
                         {fmt(totals.roundOffAmount)}
@@ -1222,7 +1224,7 @@ export default function NewInvoicePage() {
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Total</span>
+                    <span>{t("common.total")}</span>
                     <span key={`summary-total:${totals.grandTotal}`}>{fmt(totals.grandTotal)}</span>
                   </div>
                 </div>
@@ -1237,14 +1239,14 @@ export default function NewInvoicePage() {
                       formRef.current?.requestSubmit();
                     }}
                   >
-                    {isSubmitting ? "Saving..." : "Save & New"}
+                    {isSubmitting ? t("common.saving") : t("common.saveAndNew")}
                   </Button>
                   <Button
                     type="submit"
                     className="w-full sm:w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
                   >
-                    {isSubmitting ? "Creating..." : "Create Invoice"}
+                    {isSubmitting ? t("common.creating") : t("sales.createInvoice")}
                   </Button>
                 </div>
               </CardContent>

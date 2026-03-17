@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, Pencil, XCircle, Ruler } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 import { useSession } from "next-auth/react";
 import { UnitConversionsSettings } from "./unit-conversions-settings";
@@ -43,6 +44,7 @@ interface Unit {
 
 export function UnitsSettings() {
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -64,7 +66,7 @@ export function UnitsSettings() {
       const data = await response.json();
       setUnits(data);
     } catch (error) {
-      toast.error("Failed to load units");
+      toast.error(t("units.loadFailed"));
       console.error("Failed to fetch units:", error);
     } finally {
       setIsLoading(false);
@@ -102,7 +104,7 @@ export function UnitsSettings() {
       resetForm();
       fetchUnits();
       setUnitRefreshKey(k => k + 1);
-      toast.success(editingUnit ? "Unit updated" : "Unit added");
+      toast.success(editingUnit ? t("units.updated") : t("units.added"));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save unit");
       console.error("Failed to save unit:", error);
@@ -119,16 +121,16 @@ export function UnitsSettings() {
   };
 
   const handleDeactivate = async (id: string) => {
-    if (!confirm("Are you sure you want to deactivate this unit?")) return;
+    if (!confirm(t("units.deactivateConfirm"))) return;
 
     try {
       const response = await fetch(`/api/units/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to deactivate");
       fetchUnits();
       setUnitRefreshKey(k => k + 1);
-      toast.success("Unit deactivated");
+      toast.success(t("units.deactivated"));
     } catch (error) {
-      toast.error("Failed to deactivate unit");
+      toast.error(t("units.deactivateFailed"));
       console.error("Failed to deactivate unit:", error);
     }
   };
@@ -143,9 +145,9 @@ export function UnitsSettings() {
       if (!response.ok) throw new Error("Failed to activate");
       fetchUnits();
       setUnitRefreshKey(k => k + 1);
-      toast.success("Unit activated");
+      toast.success(t("units.activated"));
     } catch (error) {
-      toast.error("Failed to activate unit");
+      toast.error(t("units.activateFailed"));
       console.error("Failed to activate unit:", error);
     }
   };
@@ -171,57 +173,57 @@ export function UnitsSettings() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Add Unit
+              {t("units.addUnit")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form className="contents" onSubmit={handleSubmit}>
               <DialogHeader className="pr-12">
                 <DialogTitle>
-                  {editingUnit ? "Edit Unit" : "Add New Unit"}
+                  {editingUnit ? t("units.editUnit") : t("units.addNewUnit")}
                 </DialogTitle>
                 <DialogDescription>
                   {editingUnit
-                    ? "Update the unit details below."
-                    : "Add a new unit of measurement."}
+                    ? t("units.editDesc")
+                    : t("units.addDesc")}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-2 sm:py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="code">Code *</Label>
+                  <Label htmlFor="code">{t("units.codeRequired")}</Label>
                   <Input
                     id="code"
                     value={formData.code}
                     onChange={(e) =>
                       setFormData({ ...formData, code: e.target.value })
                     }
-                    placeholder="e.g., mtr, kg, pcs"
+                    placeholder={t("units.codePlaceholder")}
                     required
                     disabled={!!editingUnit}
                   />
                   <p className="text-xs text-slate-500">
-                    Short code for the unit (will be converted to lowercase)
+                    {t("units.codeDescription")}
                   </p>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Name *</Label>
+                  <Label htmlFor="name">{t("common.nameRequired")}</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder="e.g., Meter, Kilogram, Piece"
+                    placeholder={t("units.namePlaceholder")}
                     required
                   />
                   <p className="text-xs text-slate-500">
-                    Full name of the unit
+                    {t("units.nameDescription")}
                   </p>
                 </div>
               </div>
               <DialogFooter>
                 <Button type="submit">
-                  {editingUnit ? "Update Unit" : "Add Unit"}
+                  {editingUnit ? t("units.updateUnit") : t("units.addUnit")}
                 </Button>
               </DialogFooter>
             </form>
@@ -232,7 +234,7 @@ export function UnitsSettings() {
       <Card>
         <CardHeader>
           <p className="text-sm text-slate-600">
-            Units are used when creating products. Active units appear in the dropdown selector.
+            {t("units.unitsDescription")}
           </p>
         </CardHeader>
         <CardContent>
@@ -241,20 +243,20 @@ export function UnitsSettings() {
           ) : units.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Ruler className="h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-semibold">No units found</h3>
+              <h3 className="mt-4 text-lg font-semibold">{t("units.noUnitsFoundList")}</h3>
               <p className="text-sm text-slate-500">
-                Add your first unit to get started
+                {t("units.noUnitsHint")}
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Products</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("common.code")}</TableHead>
+                  <TableHead>{t("common.name")}</TableHead>
+                  <TableHead>{t("common.products")}</TableHead>
+                  <TableHead>{t("common.status")}</TableHead>
+                  <TableHead className="text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -273,7 +275,7 @@ export function UnitsSettings() {
                       <Badge
                         variant={unit.isActive ? "default" : "secondary"}
                       >
-                        {unit.isActive ? "Active" : "Inactive"}
+                        {unit.isActive ? t("common.active") : t("common.inactive")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -297,7 +299,7 @@ export function UnitsSettings() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleActivate(unit.id)}
-                          title="Activate unit"
+                          title={t("units.activateUnit")}
                         >
                           <Plus className="h-4 w-4 text-green-500" />
                         </Button>

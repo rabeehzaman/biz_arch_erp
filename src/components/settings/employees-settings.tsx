@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface Employee {
   id: string;
@@ -32,6 +33,7 @@ interface Employee {
 }
 
 export function EmployeesSettings() {
+  const { t } = useLanguage();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -56,7 +58,7 @@ export function EmployeesSettings() {
       const data = await res.json();
       setEmployees(data);
     } catch (_error) {
-      toast.error("Failed to load POS employees");
+      toast.error(t("employees.loadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -84,11 +86,11 @@ export function EmployeesSettings() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.pinCode) {
-      toast.error("Name and PIN code are required");
+      toast.error(t("employees.nameAndPinRequired"));
       return;
     }
     if (formData.pinCode.length < 4) {
-      toast.error("PIN code must be at least 4 digits");
+      toast.error(t("employees.pinMinLength"));
       return;
     }
 
@@ -106,7 +108,7 @@ export function EmployeesSettings() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save employee");
 
-      toast.success(editingEmployee ? "Employee updated" : "Employee created");
+      toast.success(editingEmployee ? t("employees.updated") : t("employees.created"));
       setIsDialogOpen(false);
       fetchEmployees();
     } catch (error: any) {
@@ -124,7 +126,7 @@ export function EmployeesSettings() {
         const err = await res.json();
         throw new Error(err.error || "Failed to delete");
       }
-      toast.success("Employee deleted");
+      toast.success(t("employees.deleted"));
       fetchEmployees();
     } catch (error: any) {
       toast.error(error.message);
@@ -141,10 +143,10 @@ export function EmployeesSettings() {
         body: JSON.stringify({ ...employee, isActive: checked }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Status updated");
+      toast.success(t("employees.statusUpdated"));
       fetchEmployees();
     } catch {
-      toast.error("Failed to update status");
+      toast.error(t("employees.statusUpdateFailed"));
     }
   };
 
@@ -160,12 +162,12 @@ export function EmployeesSettings() {
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-200 p-6">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">POS Employees</h3>
-          <p className="text-sm text-slate-500">Manage names and PIN codes for POS cashiers</p>
+          <h3 className="text-lg font-semibold text-slate-900">{t("employees.posEmployees")}</h3>
+          <p className="text-sm text-slate-500">{t("employees.posEmployeesDesc")}</p>
         </div>
         <Button onClick={() => openDialog()}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Employee
+          {t("employees.addEmployee")}
         </Button>
       </div>
 
@@ -173,17 +175,17 @@ export function EmployeesSettings() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>PIN Code</TableHead>
-              <TableHead>Active Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t("common.name")}</TableHead>
+              <TableHead>{t("employees.pinCode")}</TableHead>
+              <TableHead>{t("employees.activeStatus")}</TableHead>
+              <TableHead className="text-right">{t("common.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {employees.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center text-slate-500">
-                  No employees found. Add your first POS staff.
+                  {t("employees.noEmployeesFound")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -220,14 +222,14 @@ export function EmployeesSettings() {
         <DialogContent>
           <form className="contents" onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle>{editingEmployee ? "Edit Employee" : "Add Employee"}</DialogTitle>
+              <DialogTitle>{editingEmployee ? t("employees.editEmployee") : t("employees.addEmployee")}</DialogTitle>
               <DialogDescription>
-                Assign a unique PIN code that this employee will use to open and close POS sessions.
+                {t("employees.dialogDesc")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t("common.name")}</Label>
                 <Input
                   id="name"
                   placeholder="e.g. John Doe"
@@ -237,7 +239,7 @@ export function EmployeesSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pinCode">PIN Code</Label>
+                <Label htmlFor="pinCode">{t("employees.pinCode")}</Label>
                 <Input
                   id="pinCode"
                   type="password"
@@ -250,10 +252,10 @@ export function EmployeesSettings() {
                   }}
                   required
                 />
-                <p className="text-xs text-slate-500">Only numbers allowed. Must be at least 4 digits.</p>
+                <p className="text-xs text-slate-500">{t("employees.pinCodeHint")}</p>
               </div>
               <div className="flex items-center justify-between mt-4">
-                <Label htmlFor="isActive">Active</Label>
+                <Label htmlFor="isActive">{t("common.active")}</Label>
                 <Switch
                   id="isActive"
                   checked={formData.isActive}
@@ -263,10 +265,10 @@ export function EmployeesSettings() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("common.saving") : t("common.save")}
               </Button>
             </DialogFooter>
           </form>
@@ -277,8 +279,8 @@ export function EmployeesSettings() {
         <ConfirmDialog
           open={!!confirmDialog}
           onOpenChange={(open) => !open && setConfirmDialog(null)}
-          title="Delete Employee"
-          description="Are you sure you want to delete this employee? This cannot be undone."
+          title={t("employees.deleteEmployee")}
+          description={t("employees.deleteConfirm")}
           onConfirm={handleDelete}
         />
       )}

@@ -57,14 +57,6 @@ const statusColors: Record<string, string> = {
   CANCELLED: "secondary",
 };
 
-const statusLabels: Record<string, string> = {
-  DRAFT: "Draft",
-  RECEIVED: "Received",
-  PAID: "Paid",
-  PARTIALLY_PAID: "Partial",
-  CANCELLED: "Cancelled",
-};
-
 export default function PurchaseInvoicesPage() {
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,6 +65,14 @@ export default function PurchaseInvoicesPage() {
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
+
+  const statusLabels: Record<string, string> = {
+    DRAFT: t("purchases.statusDraft"),
+    RECEIVED: t("purchases.statusReceived"),
+    PAID: t("purchases.statusPaid"),
+    PARTIALLY_PAID: t("purchases.statusPartial"),
+    CANCELLED: t("purchases.statusCancelled"),
+  };
 
   useEffect(() => {
     fetchInvoices();
@@ -128,7 +128,7 @@ export default function PurchaseInvoicesPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("purchases.purchaseInvoices")}</h2>
-            <p className="text-slate-500">{lang === "ar" ? "إدارة المشتريات من الموردين" : "Manage purchases from suppliers"}</p>
+            <p className="text-slate-500">{t("purchases.subtitle")}</p>
           </div>
           <Link href="/purchase-invoices/new" className="w-full sm:w-auto">
             <Button className="w-full">
@@ -144,7 +144,7 @@ export default function PurchaseInvoicesPage() {
               <div className="relative flex-1 min-w-[200px] max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder={lang === "ar" ? "بحث في المشتريات..." : "Search purchases..."}
+                  placeholder={t("purchases.searchPurchases")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -152,15 +152,15 @@ export default function PurchaseInvoicesPage() {
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder={t("purchases.filterByStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="DRAFT">Draft</SelectItem>
-                  <SelectItem value="RECEIVED">Received</SelectItem>
-                  <SelectItem value="PAID">Paid</SelectItem>
-                  <SelectItem value="PARTIALLY_PAID">Partially Paid</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="all">{t("purchases.allStatus")}</SelectItem>
+                  <SelectItem value="DRAFT">{t("purchases.statusDraft")}</SelectItem>
+                  <SelectItem value="RECEIVED">{t("purchases.statusReceived")}</SelectItem>
+                  <SelectItem value="PAID">{t("purchases.statusPaid")}</SelectItem>
+                  <SelectItem value="PARTIALLY_PAID">{t("purchases.statusPartial")}</SelectItem>
+                  <SelectItem value="CANCELLED">{t("purchases.statusCancelled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -207,7 +207,7 @@ export default function PurchaseInvoicesPage() {
                         )}
                         {invoice.supplierInvoiceRef && (
                           <p className="mt-2 text-sm text-slate-500">
-                            {lang === "ar" ? "مرجع المورد" : "Supplier Ref"}: {invoice.supplierInvoiceRef}
+                            {t("common.supplierRef")}: {invoice.supplierInvoiceRef}
                           </p>
                         )}
                       </div>
@@ -263,7 +263,7 @@ export default function PurchaseInvoicesPage() {
                       <TableRow>
                         <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>
                         <TableHead>{t("suppliers.supplier")}</TableHead>
-                        <TableHead>{lang === "ar" ? "مرجع المورد" : "Supplier Ref"}</TableHead>
+                        <TableHead>{t("common.supplierRef")}</TableHead>
                         <TableHead>{t("common.date")}</TableHead>
                         <TableHead>{t("sales.dueDate")}</TableHead>
                         <TableHead>{t("common.status")}</TableHead>

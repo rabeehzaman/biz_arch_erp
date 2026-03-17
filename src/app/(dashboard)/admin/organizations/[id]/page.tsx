@@ -26,6 +26,7 @@ import { SidebarConfigDialog } from "../sidebar-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { INDIAN_STATES } from "@/lib/gst/constants";
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
 
 interface OrganizationDetails {
     id: string;
@@ -83,6 +84,7 @@ export default function OrganizationDetailsPage() {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
+    const { t } = useLanguage();
 
     const [organization, setOrganization] = useState<OrganizationDetails | null>(null);
     const [loading, setLoading] = useState(true);
@@ -209,10 +211,10 @@ export default function OrganizationDetailsPage() {
                 setOrganization(data);
                 populateSettingsState(data);
             } else {
-                setError("Failed to load organization details");
+                setError(t("admin.failedToLoadOrg"));
             }
         } catch {
-            setError("Failed to load organization details");
+            setError(t("admin.failedToLoadOrg"));
         } finally {
             setLoading(false);
         }
@@ -255,7 +257,7 @@ export default function OrganizationDetailsPage() {
         setSaving(true);
 
         if (gstEnabled && !gstin) {
-            toast.error("GSTIN is required when GST is enabled");
+            toast.error(t("admin.gstinRequired"));
             setSaving(false);
             return;
         }
@@ -263,26 +265,26 @@ export default function OrganizationDetailsPage() {
         if (gstEnabled && gstin) {
             const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
             if (!gstinRegex.test(gstin)) {
-                toast.error("Invalid GSTIN format");
+                toast.error(t("admin.invalidGstin"));
                 setSaving(false);
                 return;
             }
         }
 
         if (eInvoicingEnabled && !gstEnabled) {
-            toast.error("GST must be enabled before enabling e-invoicing");
+            toast.error(t("admin.gstMustBeEnabled"));
             setSaving(false);
             return;
         }
 
         if (saudiEInvoiceEnabled && gstEnabled) {
-            toast.error("Cannot enable both GST and Saudi E-Invoice simultaneously");
+            toast.error(t("admin.cannotEnableBothGstSaudi"));
             setSaving(false);
             return;
         }
 
         if (saudiEInvoiceEnabled && vatNumber && !/^3\d{14}$/.test(vatNumber)) {
-            toast.error("Invalid VAT Number (TRN). Must be 15 digits starting with 3.");
+            toast.error(t("admin.invalidVatNumber"));
             setSaving(false);
             return;
         }
@@ -329,14 +331,14 @@ export default function OrganizationDetailsPage() {
             });
 
             if (res.ok) {
-                toast.success("Settings saved successfully.");
+                toast.success(t("admin.settingsSaved"));
                 fetchOrganization();
             } else {
                 const data = await res.json();
-                toast.error(data.error || "Failed to save organization settings");
+                toast.error(data.error || t("admin.failedToSaveSettings"));
             }
         } catch {
-            toast.error("Failed to save organization settings");
+            toast.error(t("admin.failedToSaveSettings"));
         } finally {
             setSaving(false);
         }
@@ -354,10 +356,10 @@ export default function OrganizationDetailsPage() {
                 router.push("/admin/organizations");
             } else {
                 const data = await res.json();
-                setDeleteError(data.error || "Failed to delete organization");
+                setDeleteError(data.error || t("admin.failedToDeleteOrg"));
             }
         } catch {
-            setDeleteError("Failed to delete organization");
+            setDeleteError(t("admin.failedToDeleteOrg"));
         } finally {
             setIsDeleting(false);
         }
@@ -374,16 +376,16 @@ export default function OrganizationDetailsPage() {
                 body: JSON.stringify({ type }),
             });
             if (res.ok) {
-                setResetSuccess(`Successfully performed ${type === "transactions_only" ? "transaction reset" : "complete reset"}.`);
+                setResetSuccess(type === "transactions_only" ? t("admin.transactionResetSuccess") : t("admin.completeResetSuccess"));
                 fetchOrganization();
                 setResetTxOpen(false);
                 setResetFullOpen(false);
             } else {
                 const data = await res.json();
-                setResetError(data.error || "Failed to reset organization");
+                setResetError(data.error || t("admin.failedToResetOrg"));
             }
         } catch {
-            setResetError("Failed to reset organization");
+            setResetError(t("admin.failedToResetOrg"));
         } finally {
             setIsResetting(false);
         }
@@ -399,14 +401,14 @@ export default function OrganizationDetailsPage() {
             });
             if (res.ok) {
                 const data = await res.json();
-                setRecalcSuccess(`Successfully recalculated FIFO for ${data.productsProcessed} products.`);
+                setRecalcSuccess(t("admin.fifoSuccess").replace("{count}", String(data.productsProcessed)));
                 setRecalcOpen(false);
             } else {
                 const data = await res.json();
-                setRecalcError(data.error || "Failed to recalculate FIFO");
+                setRecalcError(data.error || t("admin.failedToRecalcFifo"));
             }
         } catch {
-            setRecalcError("Failed to recalculate FIFO");
+            setRecalcError(t("admin.failedToRecalcFifo"));
         } finally {
             setIsRecalculating(false);
         }
@@ -433,7 +435,7 @@ export default function OrganizationDetailsPage() {
         setChangeRoleError("");
         if (!selectedRole || !changeRoleUser) return;
         if (selectedRole === changeRoleUser.role) {
-            setChangeRoleError("Please select a different role");
+            setChangeRoleError(t("admin.selectDifferentRole"));
             return;
         }
         setIsChangingRole(true);
@@ -446,13 +448,13 @@ export default function OrganizationDetailsPage() {
             if (res.ok) {
                 setChangeRoleOpen(false);
                 fetchOrganization();
-                toast.success(`Role updated to "${selectedRole}" for ${changeRoleUser.name || changeRoleUser.email}`);
+                toast.success(t("admin.roleUpdatedTo").replace("{role}", selectedRole) + ` — ${changeRoleUser.name || changeRoleUser.email}`);
             } else {
                 const data = await res.json();
-                setChangeRoleError(data.error || "Failed to change role");
+                setChangeRoleError(data.error || t("admin.failedToChangeRole"));
             }
         } catch {
-            setChangeRoleError("Failed to change role");
+            setChangeRoleError(t("admin.failedToChangeRole"));
         } finally {
             setIsChangingRole(false);
         }
@@ -461,11 +463,11 @@ export default function OrganizationDetailsPage() {
     const handleResetPassword = async () => {
         setResetPwError("");
         if (!newPassword || newPassword.length < 6) {
-            setResetPwError("Password must be at least 6 characters");
+            setResetPwError(t("admin.passwordMinLength"));
             return;
         }
         if (newPassword !== confirmPassword) {
-            setResetPwError("Passwords do not match");
+            setResetPwError(t("admin.passwordsDoNotMatch"));
             return;
         }
         if (!resetPwUser) return;
@@ -478,14 +480,14 @@ export default function OrganizationDetailsPage() {
                 body: JSON.stringify({ newPassword }),
             });
             if (res.ok) {
-                setResetPwSuccess(`Password reset successfully for ${resetPwUser.name || resetPwUser.email}`);
+                setResetPwSuccess(t("admin.passwordResetFor").replace("{name}", resetPwUser.name || resetPwUser.email));
                 setResetPwOpen(false);
             } else {
                 const data = await res.json();
-                setResetPwError(data.error || "Failed to reset password");
+                setResetPwError(data.error || t("admin.failedToResetPassword"));
             }
         } catch {
-            setResetPwError("Failed to reset password");
+            setResetPwError(t("admin.failedToResetPassword"));
         } finally {
             setIsResettingPw(false);
         }
@@ -497,8 +499,8 @@ export default function OrganizationDetailsPage() {
                 <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-6 text-center shadow-sm">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     <div className="space-y-1">
-                        <p className="text-sm font-medium text-slate-900">Loading organization details...</p>
-                        <p className="text-xs text-muted-foreground">Fetching settings, users, and controls for this workspace.</p>
+                        <p className="text-sm font-medium text-slate-900">{t("admin.loadingOrgDetails")}</p>
+                        <p className="text-xs text-muted-foreground">{t("admin.fetchingSettings")}</p>
                     </div>
                 </div>
             </div>
@@ -508,11 +510,11 @@ export default function OrganizationDetailsPage() {
     if (error || !organization) {
         return (
             <div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
-                <p className="text-xl font-medium text-destructive">{error || "Organization not found"}</p>
+                <p className="text-xl font-medium text-destructive">{error || t("admin.orgNotFound")}</p>
                 <Button variant="outline" asChild>
                     <Link href="/admin/organizations">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Organizations
+                        {t("admin.backToOrganizations")}
                     </Link>
                 </Button>
             </div>
@@ -536,10 +538,10 @@ export default function OrganizationDetailsPage() {
                             <div className="flex flex-wrap items-center gap-2">
                                 <h1 className="break-words text-2xl font-bold tracking-tight">{organization.name}</h1>
                                 <Badge variant="secondary" className="max-w-full break-all">{organization.slug}</Badge>
-                                {organization.gstEnabled && <Badge variant="default">GST Enabled</Badge>}
-                                {organization.saudiEInvoiceEnabled && <Badge variant="default">ZATCA</Badge>}
+                                {organization.gstEnabled && <Badge variant="default">{t("admin.gstEnabled")}</Badge>}
+                                {organization.saudiEInvoiceEnabled && <Badge variant="default">{t("admin.zatca")}</Badge>}
                             </div>
-                            <p className="break-words text-muted-foreground">Manage settings and configuration for this organization</p>
+                            <p className="break-words text-muted-foreground">{t("admin.manageSettingsDesc")}</p>
                         </div>
                     </div>
                     <Button onClick={handleSaveSettings} disabled={saving} className="w-full sm:w-auto">
@@ -547,7 +549,7 @@ export default function OrganizationDetailsPage() {
                             ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             : <Save className="mr-2 h-4 w-4" />
                         }
-                        Save Settings
+                        {t("admin.saveSettings")}
                     </Button>
                 </div>
 
@@ -557,29 +559,29 @@ export default function OrganizationDetailsPage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Building2 className="h-5 w-5" />
-                                Organization Details
+                                {t("admin.organizationDetails")}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Created</p>
+                                    <p className="text-sm font-medium text-muted-foreground">{t("admin.created")}</p>
                                     <p className="text-sm">{new Date(organization.createdAt).toLocaleDateString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">GSTIN</p>
-                                    <p className="text-sm">{organization.gstin || "Not provided"}</p>
+                                    <p className="text-sm font-medium text-muted-foreground">{t("admin.gstin")}</p>
+                                    <p className="text-sm">{organization.gstin || t("admin.notProvided")}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Users</p>
+                                    <p className="text-sm font-medium text-muted-foreground">{t("admin.users")}</p>
                                     <p className="text-sm">{organization._count.users}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Customers</p>
+                                    <p className="text-sm font-medium text-muted-foreground">{t("admin.customers")}</p>
                                     <p className="text-sm">{organization._count.customers}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Invoices</p>
+                                    <p className="text-sm font-medium text-muted-foreground">{t("admin.invoices")}</p>
                                     <p className="text-sm">{organization._count.invoices}</p>
                                 </div>
                             </div>
@@ -591,9 +593,9 @@ export default function OrganizationDetailsPage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Shield className="h-5 w-5" />
-                                Sidebar Features
+                                {t("admin.sidebarFeatures")}
                             </CardTitle>
-                            <CardDescription>Manage accessible menu items for this organization</CardDescription>
+                            <CardDescription>{t("admin.sidebarFeaturesDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -602,11 +604,11 @@ export default function OrganizationDetailsPage() {
                                         <Settings className="h-5 w-5" />
                                     </div>
                                     <div className="min-w-0">
-                                        <h4 className="text-sm font-semibold">Menu Configuration</h4>
-                                        <p className="break-words text-sm text-muted-foreground">Control which sidebar items are visible</p>
+                                        <h4 className="text-sm font-semibold">{t("admin.menuConfiguration")}</h4>
+                                        <p className="break-words text-sm text-muted-foreground">{t("admin.menuConfigDesc")}</p>
                                     </div>
                                 </div>
-                                <Button variant="outline" onClick={() => setSidebarConfigOpen(true)} className="w-full sm:w-auto">Configure</Button>
+                                <Button variant="outline" onClick={() => setSidebarConfigOpen(true)} className="w-full sm:w-auto">{t("admin.configure")}</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -616,9 +618,9 @@ export default function OrganizationDetailsPage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Receipt className="h-5 w-5" />
-                                Organization Settings
+                                {t("admin.orgSettings")}
                             </CardTitle>
-                            <CardDescription>Configure features and tax settings for this organization</CardDescription>
+                            <CardDescription>{t("admin.configureSettingsDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Tabs defaultValue="general" className="min-w-0 w-full">
@@ -628,25 +630,25 @@ export default function OrganizationDetailsPage() {
                                             value="general"
                                             className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
                                         >
-                                            General
+                                            {t("admin.tabGeneral")}
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="taxation"
                                             className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
                                         >
-                                            Taxation
+                                            {t("admin.tabTaxation")}
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="modules"
                                             className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
                                         >
-                                            Modules
+                                            {t("admin.tabModules")}
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="invoice"
                                             className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
                                         >
-                                            Invoice & PDF
+                                            {t("admin.tabInvoicePdf")}
                                         </TabsTrigger>
                                     </TabsList>
                                 </div>
@@ -658,10 +660,10 @@ export default function OrganizationDetailsPage() {
                                         <div className="space-y-0.5">
                                             <Label className="flex items-center gap-2">
                                                 <Globe className="h-4 w-4" />
-                                                Organization Language
+                                                {t("admin.organizationLanguageLabel")}
                                             </Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Set the UI language for all users of this organization
+                                                {t("admin.setLanguageDesc")}
                                             </p>
                                         </div>
                                         <Select value={language} onValueChange={setLanguage}>
@@ -669,7 +671,7 @@ export default function OrganizationDetailsPage() {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="en">English</SelectItem>
+                                                <SelectItem value="en">{t("admin.english")}</SelectItem>
                                                 <SelectItem value="ar">العربية (Arabic)</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -680,10 +682,10 @@ export default function OrganizationDetailsPage() {
                                         <div className="space-y-0.5">
                                             <Label className="flex items-center gap-2">
                                                 <Globe className="h-4 w-4" />
-                                                Currency
+                                                {t("admin.currency")}
                                             </Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Set the currency used for all transactions
+                                                {t("admin.setCurrencyFullDesc")}
                                             </p>
                                         </div>
                                         <Select value={currency} onValueChange={setCurrency}>
@@ -703,9 +705,9 @@ export default function OrganizationDetailsPage() {
                                     {/* GST */}
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
-                                            <Label htmlFor="gstEnabled">Enable GST</Label>
+                                            <Label htmlFor="gstEnabled">{t("admin.enableGst")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Enable Indian GST tax system for this organization
+                                                {t("admin.enableGstDesc")}
                                             </p>
                                         </div>
                                         <Switch
@@ -722,7 +724,7 @@ export default function OrganizationDetailsPage() {
                                     {gstEnabled && (
                                         <div className="space-y-6 pl-4 border-l-2 border-muted mt-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="gstin">GSTIN</Label>
+                                                <Label htmlFor="gstin">{t("admin.gstin")}</Label>
                                                 <Input
                                                     id="gstin"
                                                     value={gstin}
@@ -731,21 +733,21 @@ export default function OrganizationDetailsPage() {
                                                     maxLength={15}
                                                     className="font-mono max-w-xs"
                                                 />
-                                                <p className="text-xs text-muted-foreground">15-digit GST Identification Number</p>
+                                                <p className="text-xs text-muted-foreground">{t("admin.gstinHelp")}</p>
                                             </div>
 
                                             {gstStateCode && stateName && (
                                                 <div className="space-y-1">
-                                                    <Label>State (auto-derived)</Label>
+                                                    <Label>{t("admin.stateAutoDerived")}</Label>
                                                     <p className="text-sm font-medium">{gstStateCode} - {stateName}</p>
                                                 </div>
                                             )}
 
                                             <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="space-y-0.5">
-                                                    <Label htmlFor="eInvoicingEnabled">Enable E-Invoicing</Label>
+                                                    <Label htmlFor="eInvoicingEnabled">{t("admin.enableEInvoicing")}</Label>
                                                     <p className="text-xs text-muted-foreground">
-                                                        Enable NIC e-invoicing for B2B transactions
+                                                        {t("admin.enableEInvoicingDesc")}
                                                     </p>
                                                 </div>
                                                 <Switch
@@ -760,9 +762,9 @@ export default function OrganizationDetailsPage() {
                                     {/* Saudi E-Invoice */}
                                     <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
-                                            <Label htmlFor="saudiEInvoiceEnabled">Enable Saudi E-Invoice (ZATCA)</Label>
+                                            <Label htmlFor="saudiEInvoiceEnabled">{t("admin.enableSaudiEInvoice")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                ZATCA Phase 1 e-invoicing with VAT at 15% and QR codes. Disables GST.
+                                                {t("admin.saudiZatcaDesc")}
                                             </p>
                                         </div>
                                         <Switch
@@ -782,9 +784,9 @@ export default function OrganizationDetailsPage() {
                                     {(gstEnabled || saudiEInvoiceEnabled) && (
                                         <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="space-y-0.5">
-                                                <Label htmlFor="isTaxInclusivePrice">Tax-Inclusive Pricing</Label>
+                                                <Label htmlFor="isTaxInclusivePrice">{t("admin.taxInclusivePricing")}</Label>
                                                 <p className="text-xs text-muted-foreground">
-                                                    Selling prices already include tax. The system will back-calculate the tax-exclusive base amount.
+                                                    {t("admin.taxInclusiveFullDesc")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -799,7 +801,7 @@ export default function OrganizationDetailsPage() {
                                         <div className="space-y-4 pl-4 border-l-2 border-muted mt-4 max-w-md">
                                             <div className="space-y-2">
                                                 <Label htmlFor="vatNumber">
-                                                    VAT Number (TRN) <span className="text-xs text-muted-foreground">رقم التسجيل الضريبي</span>
+                                                    {t("admin.vatNumberLabel")} <span className="text-xs text-muted-foreground">رقم التسجيل الضريبي</span>
                                                 </Label>
                                                 <Input
                                                     id="vatNumber"
@@ -811,7 +813,7 @@ export default function OrganizationDetailsPage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="commercialRegNumber">
-                                                    Commercial Registration No. <span className="text-xs text-muted-foreground">رقم السجل التجاري</span>
+                                                    {t("admin.commercialRegLabel")} <span className="text-xs text-muted-foreground">رقم السجل التجاري</span>
                                                 </Label>
                                                 <Input
                                                     id="commercialRegNumber"
@@ -821,7 +823,7 @@ export default function OrganizationDetailsPage() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="arabicName">Arabic Company Name <span className="text-xs text-muted-foreground">(اسم الشركة)</span></Label>
+                                                <Label htmlFor="arabicName">{t("admin.arabicCompanyName")} <span className="text-xs text-muted-foreground">(اسم الشركة)</span></Label>
                                                 <Input
                                                     id="arabicName"
                                                     value={arabicName}
@@ -831,7 +833,7 @@ export default function OrganizationDetailsPage() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="arabicAddress">Arabic Address <span className="text-xs text-muted-foreground">(العنوان)</span></Label>
+                                                <Label htmlFor="arabicAddress">{t("admin.arabicAddress")} <span className="text-xs text-muted-foreground">(العنوان)</span></Label>
                                                 <Input
                                                     id="arabicAddress"
                                                     value={arabicAddress}
@@ -841,7 +843,7 @@ export default function OrganizationDetailsPage() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="arabicCity">Arabic City <span className="text-xs text-muted-foreground">(المدينة)</span></Label>
+                                                <Label htmlFor="arabicCity">{t("admin.arabicCity")} <span className="text-xs text-muted-foreground">(المدينة)</span></Label>
                                                 <Input
                                                     id="arabicCity"
                                                     value={arabicCity}
@@ -859,9 +861,9 @@ export default function OrganizationDetailsPage() {
                                     {/* Alternate Units */}
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
-                                            <Label htmlFor="multiUnitEnabled">Enable Alternate Units</Label>
+                                            <Label htmlFor="multiUnitEnabled">{t("admin.enableAlternateUnits")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Allow defining products with multiple units of measurement (e.g. Cartons vs Pieces)
+                                                {t("admin.enableAlternateUnitsDesc")}
                                             </p>
                                         </div>
                                         <Switch
@@ -874,9 +876,9 @@ export default function OrganizationDetailsPage() {
                                     {/* Multi-Branch */}
                                     <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
-                                            <Label htmlFor="multiBranchEnabled">Enable Multi-Branch</Label>
+                                            <Label htmlFor="multiBranchEnabled">{t("admin.enableMultiBranch")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Manage multiple branches, warehouses, and stock transfers across locations
+                                                {t("admin.enableMultiBranchDesc")}
                                             </p>
                                         </div>
                                         <Switch
@@ -889,9 +891,9 @@ export default function OrganizationDetailsPage() {
                                     {/* Mobile Shop */}
                                     <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
-                                            <Label htmlFor="isMobileShopModuleEnabled">Enable Mobile Shop</Label>
+                                            <Label htmlFor="isMobileShopModuleEnabled">{t("admin.enableMobileShop")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Track individual mobile devices by IMEI from purchase to sale
+                                                {t("admin.enableMobileShopDesc")}
                                             </p>
                                         </div>
                                         <Switch
@@ -906,10 +908,10 @@ export default function OrganizationDetailsPage() {
                                         <div className="space-y-0.5">
                                             <Label htmlFor="isWeighMachineEnabled" className="flex items-center gap-2">
                                                 <Scale className="h-4 w-4" />
-                                                Enable Weigh Machine
+                                                {t("admin.enableWeighMachine")}
                                             </Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Decode EAN-13 weight barcodes from weigh machines at POS/invoice screen
+                                                {t("admin.enableWeighMachineDesc")}
                                             </p>
                                         </div>
                                         <Switch
@@ -923,7 +925,7 @@ export default function OrganizationDetailsPage() {
                                         <div className="space-y-4 pl-4 border-l-2 border-muted mt-4">
                                             <div className="grid max-w-sm grid-cols-1 gap-3 sm:grid-cols-2">
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="weighMachineBarcodePrefix">Barcode Prefix</Label>
+                                                    <Label htmlFor="weighMachineBarcodePrefix">{t("admin.barcodePrefix")}</Label>
                                                     <Input
                                                         id="weighMachineBarcodePrefix"
                                                         value={weighMachineBarcodePrefix}
@@ -934,7 +936,7 @@ export default function OrganizationDetailsPage() {
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="weighMachineProductCodeLen">Product Code Length</Label>
+                                                    <Label htmlFor="weighMachineProductCodeLen">{t("admin.productCodeLen")}</Label>
                                                     <Input
                                                         id="weighMachineProductCodeLen"
                                                         type="number"
@@ -945,7 +947,7 @@ export default function OrganizationDetailsPage() {
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="weighMachineWeightDigits">Weight Digits</Label>
+                                                    <Label htmlFor="weighMachineWeightDigits">{t("admin.weightDigits")}</Label>
                                                     <Input
                                                         id="weighMachineWeightDigits"
                                                         type="number"
@@ -956,7 +958,7 @@ export default function OrganizationDetailsPage() {
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="weighMachineDecimalPlaces">Decimal Places</Label>
+                                                    <Label htmlFor="weighMachineDecimalPlaces">{t("admin.decimalPlaces")}</Label>
                                                     <Input
                                                         id="weighMachineDecimalPlaces"
                                                         type="number"
@@ -968,7 +970,7 @@ export default function OrganizationDetailsPage() {
                                                 </div>
                                             </div>
                                             <div className="rounded-md bg-muted p-3 max-w-sm">
-                                                <p className="text-xs font-medium text-muted-foreground mb-1">Barcode preview</p>
+                                                <p className="text-xs font-medium text-muted-foreground mb-1">{t("admin.barcodePreview")}</p>
                                                 <p className="font-mono text-sm">
                                                     <span className="text-blue-600">{weighMachineBarcodePrefix}</span>
                                                     <span className="text-green-600">{"P".repeat(weighMachineProductCodeLen)}</span>
@@ -987,12 +989,12 @@ export default function OrganizationDetailsPage() {
                                         <div className="space-y-0.5">
                                             <Label className="flex items-center gap-2">
                                                 <Receipt className="h-4 w-4" />
-                                                POS Accounting Mode
+                                                {t("admin.posAccountingMode")}
                                             </Label>
                                             <p className="text-xs text-muted-foreground max-w-md">
-                                                <strong>Direct:</strong> POS payments go directly to Cash/Bank in real-time.
+                                                {t("admin.posAccountingDirectDesc")}
                                                 <br />
-                                                <strong>Clearing Account:</strong> Payments are held in &quot;POS Undeposited Funds&quot; until session close, when they are transferred to a selected account.
+                                                {t("admin.posAccountingClearingDesc")}
                                             </p>
                                         </div>
                                         <Select value={posAccountingMode} onValueChange={setPosAccountingMode}>
@@ -1000,8 +1002,8 @@ export default function OrganizationDetailsPage() {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="DIRECT">Direct (Real-time)</SelectItem>
-                                                <SelectItem value="CLEARING_ACCOUNT">Clearing Account</SelectItem>
+                                                <SelectItem value="DIRECT">{t("admin.directRealtime")}</SelectItem>
+                                                <SelectItem value="CLEARING_ACCOUNT">{t("admin.clearingAccount")}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -1010,17 +1012,17 @@ export default function OrganizationDetailsPage() {
                                         <div className="space-y-4 border-l-2 border-muted pl-4 ml-2">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="space-y-0.5">
-                                                    <Label>Default Cash Settlement Account</Label>
+                                                    <Label>{t("admin.defaultCashSettlement")}</Label>
                                                     <p className="text-xs text-muted-foreground max-w-md">
-                                                        Pre-filled when closing a POS session. Can be overridden per session.
+                                                        {t("admin.defaultCashSettlementDesc")}
                                                     </p>
                                                 </div>
                                                 <Select value={posDefaultCashAccountId || "__none__"} onValueChange={(v) => setPosDefaultCashAccountId(v === "__none__" ? "" : v)}>
                                                     <SelectTrigger className="w-full sm:w-56">
-                                                        <SelectValue placeholder="Select cash account..." />
+                                                        <SelectValue placeholder={t("admin.selectCashAccount")} />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="__none__">None</SelectItem>
+                                                        <SelectItem value="__none__">{t("admin.none")}</SelectItem>
                                                         {orgCashBankAccounts
                                                             .filter(a => a.accountSubType === "CASH")
                                                             .map(a => (
@@ -1031,17 +1033,17 @@ export default function OrganizationDetailsPage() {
                                             </div>
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="space-y-0.5">
-                                                    <Label>Default Bank Settlement Account</Label>
+                                                    <Label>{t("admin.defaultBankSettlement")}</Label>
                                                     <p className="text-xs text-muted-foreground max-w-md">
-                                                        Pre-filled for non-cash payment settlement. Can be overridden per session.
+                                                        {t("admin.defaultBankSettlementDesc")}
                                                     </p>
                                                 </div>
                                                 <Select value={posDefaultBankAccountId || "__none__"} onValueChange={(v) => setPosDefaultBankAccountId(v === "__none__" ? "" : v)}>
                                                     <SelectTrigger className="w-full sm:w-56">
-                                                        <SelectValue placeholder="Select bank account..." />
+                                                        <SelectValue placeholder={t("admin.selectBankAccount")} />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="__none__">None</SelectItem>
+                                                        <SelectItem value="__none__">{t("admin.none")}</SelectItem>
                                                         {orgCashBankAccounts
                                                             .filter(a => a.accountSubType === "BANK")
                                                             .map(a => (
@@ -1059,9 +1061,9 @@ export default function OrganizationDetailsPage() {
                                     {/* Invoice PDF Format */}
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
-                                            <Label>Invoice PDF Format</Label>
+                                            <Label>{t("admin.invoicePdfFormat")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Paper size and orientation for generated invoice PDFs
+                                                {t("admin.invoicePdfFormatDesc")}
                                             </p>
                                         </div>
                                         <Select value={invoicePdfFormat} onValueChange={setInvoicePdfFormat}>
@@ -1069,12 +1071,12 @@ export default function OrganizationDetailsPage() {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="A5_LANDSCAPE">A5 Landscape (Default)</SelectItem>
-                                                <SelectItem value="A4_PORTRAIT">A4 Portrait (GST)</SelectItem>
-                                                <SelectItem value="A4_GST2">A4 Portrait (GST 2)</SelectItem>
-                                                <SelectItem value="A4_MODERN_GST">A4 Modern Portfolio</SelectItem>
-                                                <SelectItem value="A4_VAT">A4 Portrait (VAT - Arabic)</SelectItem>
-                                                <SelectItem value="A4_BILINGUAL">A4 Bilingual (Arabic-English)</SelectItem>
+                                                <SelectItem value="A5_LANDSCAPE">{t("admin.a5Landscape")}</SelectItem>
+                                                <SelectItem value="A4_PORTRAIT">{t("admin.a4PortraitGst")}</SelectItem>
+                                                <SelectItem value="A4_GST2">{t("admin.a4PortraitGst2")}</SelectItem>
+                                                <SelectItem value="A4_MODERN_GST">{t("admin.a4ModernPortfolio")}</SelectItem>
+                                                <SelectItem value="A4_VAT">{t("admin.a4PortraitVat")}</SelectItem>
+                                                <SelectItem value="A4_BILINGUAL">{t("admin.a4Bilingual")}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -1082,9 +1084,9 @@ export default function OrganizationDetailsPage() {
                                     {/* Transfer PDF Format */}
                                     <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
-                                            <Label>Transfer PDF Format</Label>
+                                            <Label>{t("admin.transferPdfFormat")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Language and layout for generated stock transfer PDFs
+                                                {t("admin.transferPdfFormatDesc")}
                                             </p>
                                         </div>
                                         <Select value={transferPdfFormat} onValueChange={setTransferPdfFormat}>
@@ -1092,8 +1094,8 @@ export default function OrganizationDetailsPage() {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="DEFAULT">Default (English)</SelectItem>
-                                                <SelectItem value="ARABIC">All Arabic (عربي)</SelectItem>
+                                                <SelectItem value="DEFAULT">{t("admin.defaultEnglish")}</SelectItem>
+                                                <SelectItem value="ARABIC">{t("admin.allArabic")} (عربي)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -1101,9 +1103,9 @@ export default function OrganizationDetailsPage() {
                                     {/* Transfer PDF Hide Cost */}
                                     <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
-                                            <Label>Hide Cost in Transfer PDF</Label>
+                                            <Label>{t("admin.hideCostTransferPdf")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Hide unit cost, line total, and transfer value from the PDF — only quantity is shown
+                                                {t("admin.hideCostTransferPdfDesc")}
                                             </p>
                                         </div>
                                         <Switch checked={transferPdfHideCost} onCheckedChange={setTransferPdfHideCost} />
@@ -1113,13 +1115,13 @@ export default function OrganizationDetailsPage() {
                                     {(invoicePdfFormat === "A4_PORTRAIT" || invoicePdfFormat === "A4_GST2" || invoicePdfFormat === "A4_VAT" || invoicePdfFormat === "A4_BILINGUAL") && (
                                         <div className="space-y-4 pt-6 border-t border-border mt-4">
                                             <div className="space-y-0.5 mb-2">
-                                                <Label>PDF Header / Footer Images</Label>
+                                                <Label>{t("admin.pdfHeaderFooterImages")}</Label>
                                                 <p className="text-xs text-muted-foreground">
-                                                    Optional images rendered edge-to-edge at the top/bottom of each A4 invoice page (e.g., company letterhead)
+                                                    {t("admin.pdfHeaderFooterDesc")}
                                                 </p>
                                             </div>
                                             <div className="space-y-2 max-w-md">
-                                                <Label htmlFor="pdfHeaderImageUrl" className="text-xs">Header Image URL</Label>
+                                                <Label htmlFor="pdfHeaderImageUrl" className="text-xs">{t("admin.headerImageUrl")}</Label>
                                                 <Input
                                                     id="pdfHeaderImageUrl"
                                                     value={pdfHeaderImageUrl}
@@ -1128,7 +1130,7 @@ export default function OrganizationDetailsPage() {
                                                 />
                                             </div>
                                             <div className="space-y-2 max-w-md">
-                                                <Label htmlFor="pdfFooterImageUrl" className="text-xs">Footer Image URL</Label>
+                                                <Label htmlFor="pdfFooterImageUrl" className="text-xs">{t("admin.footerImageUrl")}</Label>
                                                 <Input
                                                     id="pdfFooterImageUrl"
                                                     value={pdfFooterImageUrl}
@@ -1142,13 +1144,13 @@ export default function OrganizationDetailsPage() {
                                     {invoicePdfFormat === "A4_MODERN_GST" && (
                                         <div className="space-y-4 pt-6 border-t border-border mt-4">
                                             <div className="space-y-0.5 mb-2">
-                                                <Label>Company Logo Image URL</Label>
+                                                <Label>{t("admin.companyLogoUrl")}</Label>
                                                 <p className="text-xs text-muted-foreground">
-                                                    Optional logo image rendered at the top left of the invoice. For best results, use a square image.
+                                                    {t("admin.companyLogoDesc")}
                                                 </p>
                                             </div>
                                             <div className="space-y-2 max-w-md">
-                                                <Label htmlFor="pdfHeaderImageUrl" className="text-xs">Logo Image URL</Label>
+                                                <Label htmlFor="pdfHeaderImageUrl" className="text-xs">{t("admin.logoImageUrl")}</Label>
                                                 <Input
                                                     id="pdfHeaderImageUrl"
                                                     value={pdfHeaderImageUrl}
@@ -1157,7 +1159,7 @@ export default function OrganizationDetailsPage() {
                                                 />
                                             </div>
                                             <div className="space-y-2 max-w-md mt-4">
-                                                <Label className="text-xs">Invoice Logo Height: {invoiceLogoHeight}px</Label>
+                                                <Label className="text-xs">{t("admin.invoiceLogoHeight")}: {invoiceLogoHeight}px</Label>
                                                 <input
                                                     type="range"
                                                     min={20}
@@ -1166,13 +1168,13 @@ export default function OrganizationDetailsPage() {
                                                     onChange={(e) => setInvoiceLogoHeight(Number(e.target.value))}
                                                     className="w-full"
                                                 />
-                                                <p className="text-xs text-muted-foreground">Controls the maximum height of the logo on the invoice PDF.</p>
+                                                <p className="text-xs text-muted-foreground">{t("admin.logoHeightDesc")}</p>
                                             </div>
 
                                             <div className="space-y-0.5 mb-2 mt-6">
-                                                <Label>Brand Color</Label>
+                                                <Label>{t("admin.brandColor")}</Label>
                                                 <p className="text-xs text-muted-foreground">
-                                                    Customize the accent color used in the Modern PDF template (header, table header, balance banner). Defaults to dark green (#2a3b38).
+                                                    {t("admin.brandColorDesc")}
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-3 max-w-md">
@@ -1200,13 +1202,13 @@ export default function OrganizationDetailsPage() {
                                     {/* POS Receipt Logo */}
                                     <div className="space-y-4 pt-6 border-t border-border mt-4">
                                         <div className="space-y-0.5 mb-2">
-                                            <Label>POS Receipt Logo</Label>
+                                            <Label>{t("admin.posReceiptLogo")}</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Logo shown on POS thermal receipts. If left blank, the invoice logo above is used as fallback.
+                                                {t("admin.posReceiptLogoDesc")}
                                             </p>
                                         </div>
                                         <div className="space-y-2 max-w-md">
-                                            <Label className="text-xs">POS Logo URL</Label>
+                                            <Label className="text-xs">{t("admin.posLogoUrl")}</Label>
                                             <Input
                                                 value={posReceiptLogoUrl}
                                                 onChange={(e) => setPosReceiptLogoUrl(e.target.value)}
@@ -1214,7 +1216,7 @@ export default function OrganizationDetailsPage() {
                                             />
                                         </div>
                                         <div className="space-y-2 max-w-md">
-                                            <Label className="text-xs">POS Logo Height: {posReceiptLogoHeight}px</Label>
+                                            <Label className="text-xs">{t("admin.posLogoHeight")}: {posReceiptLogoHeight}px</Label>
                                             <input
                                                 type="range"
                                                 min={20}
@@ -1223,7 +1225,7 @@ export default function OrganizationDetailsPage() {
                                                 onChange={(e) => setPosReceiptLogoHeight(Number(e.target.value))}
                                                 className="w-full"
                                             />
-                                            <p className="text-xs text-muted-foreground">Controls the maximum height of the logo on POS thermal receipts.</p>
+                                            <p className="text-xs text-muted-foreground">{t("admin.posLogoHeightDesc")}</p>
                                         </div>
                                     </div>
                                 </TabsContent>
@@ -1237,9 +1239,9 @@ export default function OrganizationDetailsPage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Wrench className="h-5 w-5" />
-                                Maintenance Utilities
+                                {t("admin.maintenanceUtilities")}
                             </CardTitle>
-                            <CardDescription>Tools to ensure data integrity for this organization</CardDescription>
+                            <CardDescription>{t("admin.maintenanceDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             {recalcSuccess && (
@@ -1254,13 +1256,13 @@ export default function OrganizationDetailsPage() {
                             )}
                             <div className="flex flex-col gap-4 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="sm:max-w-[70%]">
-                                    <h4 className="font-semibold text-sm text-foreground">Recalculate FIFO Inventory</h4>
+                                    <h4 className="font-semibold text-sm text-foreground">{t("admin.recalculateFifo")}</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Rebuilds the entire Cost of Goods Sold (COGS) logic for all products chronologically. This fixes accounting irregularities caused by deep backdated changes, but may take some time depending on data volume.
+                                        {t("admin.recalculateFifoDesc")}
                                     </p>
                                 </div>
                                 <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 sm:w-auto" onClick={() => setRecalcOpen(true)}>
-                                    Recalculate FIFO
+                                    {t("admin.recalculateFifoButton")}
                                 </Button>
                             </div>
                         </CardContent>
@@ -1271,9 +1273,9 @@ export default function OrganizationDetailsPage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Users className="h-5 w-5" />
-                                Users ({organization.users?.length || 0})
+                                {t("admin.usersCount").replace("{count}", String(organization.users?.length || 0))}
                             </CardTitle>
-                            <CardDescription>Users belonging to this organization</CardDescription>
+                            <CardDescription>{t("admin.usersDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {resetPwSuccess && (
@@ -1288,7 +1290,7 @@ export default function OrganizationDetailsPage() {
                                             <div key={user.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                                 <div className="flex flex-wrap items-start justify-between gap-2">
                                                     <div className="min-w-0 space-y-1">
-                                                        <p className="font-medium text-slate-900">{user.name || "Unnamed user"}</p>
+                                                        <p className="font-medium text-slate-900">{user.name || t("admin.unnamedUser")}</p>
                                                         <p className="break-all text-sm text-muted-foreground">{user.email}</p>
                                                     </div>
                                                     <Badge variant={user.role === "admin" ? "default" : "secondary"}>
@@ -1296,7 +1298,7 @@ export default function OrganizationDetailsPage() {
                                                     </Badge>
                                                 </div>
                                                 <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                                                    <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
+                                                    <span>{t("admin.joined")} {new Date(user.createdAt).toLocaleDateString()}</span>
                                                     <div className="flex items-center gap-2">
                                                         <Button
                                                             variant="outline"
@@ -1305,7 +1307,7 @@ export default function OrganizationDetailsPage() {
                                                             onClick={() => openChangeRoleDialog(user)}
                                                         >
                                                             <UserCog className="mr-1.5 h-3.5 w-3.5" />
-                                                            Role
+                                                            {t("admin.role")}
                                                         </Button>
                                                         <Button
                                                             variant="outline"
@@ -1314,7 +1316,7 @@ export default function OrganizationDetailsPage() {
                                                             onClick={() => openResetPwDialog(user)}
                                                         >
                                                             <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-                                                            Reset
+                                                            {t("admin.resetPassword")}
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -1326,11 +1328,11 @@ export default function OrganizationDetailsPage() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Name</TableHead>
-                                                    <TableHead>Email</TableHead>
-                                                    <TableHead>Role</TableHead>
-                                                    <TableHead>Created</TableHead>
-                                                    <TableHead className="text-right">Actions</TableHead>
+                                                    <TableHead>{t("admin.name")}</TableHead>
+                                                    <TableHead>{t("admin.email")}</TableHead>
+                                                    <TableHead>{t("admin.role")}</TableHead>
+                                                    <TableHead>{t("admin.created")}</TableHead>
+                                                    <TableHead className="text-right">{t("admin.actions2")}</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -1352,7 +1354,7 @@ export default function OrganizationDetailsPage() {
                                                                     onClick={() => openChangeRoleDialog(user)}
                                                                 >
                                                                     <UserCog className="mr-1.5 h-3.5 w-3.5" />
-                                                                    Change Role
+                                                                    {t("admin.changeRole")}
                                                                 </Button>
                                                                 <Button
                                                                     variant="outline"
@@ -1360,7 +1362,7 @@ export default function OrganizationDetailsPage() {
                                                                     onClick={() => openResetPwDialog(user)}
                                                                 >
                                                                     <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-                                                                    Reset Password
+                                                                    {t("admin.resetPassword")}
                                                                 </Button>
                                                             </div>
                                                         </TableCell>
@@ -1371,7 +1373,7 @@ export default function OrganizationDetailsPage() {
                                     </div>
                                 </>
                             ) : (
-                                <p className="text-sm text-muted-foreground">No users found for this organization.</p>
+                                <p className="text-sm text-muted-foreground">{t("admin.noUsersFound")}</p>
                             )}
                         </CardContent>
                     </Card>
@@ -1381,9 +1383,9 @@ export default function OrganizationDetailsPage() {
                         <CardHeader>
                             <CardTitle className="text-red-600 flex items-center gap-2">
                                 <Trash2 className="h-5 w-5" />
-                                Danger Zone
+                                {t("admin.dangerZone")}
                             </CardTitle>
-                            <CardDescription>Irreversible actions for this organization</CardDescription>
+                            <CardDescription>{t("admin.dangerZoneDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             {resetSuccess && (
@@ -1393,37 +1395,37 @@ export default function OrganizationDetailsPage() {
                             )}
                             <div className="flex flex-col gap-4 rounded-lg border border-red-100 p-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="sm:max-w-[70%]">
-                                    <h4 className="font-semibold text-sm text-foreground">Reset Transactions Only</h4>
+                                    <h4 className="font-semibold text-sm text-foreground">{t("admin.resetTxOnly")}</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Permanently remove all transactions (invoices, bills, payments, journals) but keep master data such as products, customers, suppliers, chart of accounts, and settings.
+                                        {t("admin.resetTxOnlyDesc")}
                                     </p>
                                 </div>
                                 <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 sm:w-auto" onClick={() => setResetTxOpen(true)}>
-                                    Reset Transactions
+                                    {t("admin.resetTransactions")}
                                 </Button>
                             </div>
 
                             <div className="flex flex-col gap-4 rounded-lg border border-red-100 p-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="sm:max-w-[70%]">
-                                    <h4 className="font-semibold text-sm text-foreground">Complete Reset</h4>
+                                    <h4 className="font-semibold text-sm text-foreground">{t("admin.completeReset")}</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Permanently remove all data (transactions AND master data) associated with this organization. Administrative users will be kept, but the organization will be essentially new.
+                                        {t("admin.completeResetDesc")}
                                     </p>
                                 </div>
                                 <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 sm:w-auto" onClick={() => setResetFullOpen(true)}>
-                                    Complete Reset
+                                    {t("admin.completeReset")}
                                 </Button>
                             </div>
 
                             <div className="flex flex-col gap-4 rounded-lg border border-red-100 p-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="sm:max-w-[70%]">
-                                    <h4 className="font-semibold text-sm text-foreground">Delete Organization</h4>
+                                    <h4 className="font-semibold text-sm text-foreground">{t("admin.deleteOrganization")}</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Permanently remove this organization and all its data. This will cascade-delete all customers, invoices, products, and other associated records.
+                                        {t("admin.deleteOrgDesc")}
                                     </p>
                                 </div>
                                 <Button variant="destructive" className="w-full sm:w-auto" onClick={() => setDeleteOpen(true)}>
-                                    Yes, Delete Organization
+                                    {t("admin.yesDeleteOrg")}
                                 </Button>
                             </div>
                         </CardContent>
@@ -1442,10 +1444,9 @@ export default function OrganizationDetailsPage() {
                 <AlertDialog open={deleteOpen} onOpenChange={(open) => !open && !isDeleting && setDeleteOpen(false)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogTitle>{t("admin.areYouAbsolutelySure")}</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This will permanently delete the organization <strong className="text-foreground">{organization.name}</strong> and all its associated data (customers, invoices, products, etc).
-                                This action cannot be undone.
+                                {t("admin.deleteOrgDialogDesc")} — <strong className="text-foreground">{organization.name}</strong>
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         {deleteError && (
@@ -1454,10 +1455,10 @@ export default function OrganizationDetailsPage() {
                             </div>
                         )}
                         <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel disabled={isDeleting}>{t("common.cancel")}</AlertDialogCancel>
                             <Button variant="destructive" onClick={handleDeleteOrg} disabled={isDeleting}>
                                 {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                                Delete Organization
+                                {t("admin.deleteOrganization")}
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1466,12 +1467,11 @@ export default function OrganizationDetailsPage() {
                 <AlertDialog open={resetTxOpen} onOpenChange={(open) => !open && !isResetting && setResetTxOpen(false)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Reset Transactions?</AlertDialogTitle>
+                            <AlertDialogTitle>{t("admin.resetTransactionsConfirm")}</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Are you sure you want to delete all transactions for <strong className="text-foreground">{organization.name}</strong>?
-                                Master data like products, customers, and suppliers will be kept.
+                                {t("admin.resetTxDialogDesc")} — <strong className="text-foreground">{organization.name}</strong>
                                 <br />
-                                <span className="text-red-600 font-semibold mt-2 block">This action is irreversible and should be done with caution.</span>
+                                <span className="text-red-600 font-semibold mt-2 block">{t("admin.actionIrreversible")}</span>
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         {resetError && (
@@ -1480,10 +1480,10 @@ export default function OrganizationDetailsPage() {
                             </div>
                         )}
                         <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel disabled={isResetting}>{t("common.cancel")}</AlertDialogCancel>
                             <Button variant="destructive" onClick={() => handleReset("transactions_only")} disabled={isResetting}>
                                 {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                                Confirm Reset
+                                {t("admin.confirmReset")}
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1492,12 +1492,11 @@ export default function OrganizationDetailsPage() {
                 <AlertDialog open={resetFullOpen} onOpenChange={(open) => !open && !isResetting && setResetFullOpen(false)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Complete Reset?</AlertDialogTitle>
+                            <AlertDialogTitle>{t("admin.completeResetConfirm")}</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Are you sure you want to perform a complete reset for <strong className="text-foreground">{organization.name}</strong>?
-                                This will wipe ALL transactions and master data, effectively emptying the organization.
+                                {t("admin.completeResetDialogDesc")} — <strong className="text-foreground">{organization.name}</strong>
                                 <br />
-                                <span className="text-red-600 font-semibold mt-2 block">This action is irreversible and should be done with extreme caution.</span>
+                                <span className="text-red-600 font-semibold mt-2 block">{t("admin.actionIrreversibleExtreme")}</span>
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         {resetError && (
@@ -1506,10 +1505,10 @@ export default function OrganizationDetailsPage() {
                             </div>
                         )}
                         <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel disabled={isResetting}>{t("common.cancel")}</AlertDialogCancel>
                             <Button variant="destructive" onClick={() => handleReset("complete_reset")} disabled={isResetting}>
                                 {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                                Confirm Full Reset
+                                {t("admin.confirmFullReset")}
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1518,10 +1517,9 @@ export default function OrganizationDetailsPage() {
                 <AlertDialog open={recalcOpen} onOpenChange={(open) => !open && !isRecalculating && setRecalcOpen(false)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Recalculate FIFO Inventory?</AlertDialogTitle>
+                            <AlertDialogTitle>{t("admin.recalculateFifoConfirm")}</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This will reprocess all inventory stock consumptions to fix COGS calculation discrepancies.
-                                This operation is system intensive and might take up to a minute depending on the organization scale.
+                                {t("admin.recalculateFifoDialogDesc")}
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         {recalcError && (
@@ -1530,10 +1528,10 @@ export default function OrganizationDetailsPage() {
                             </div>
                         )}
                         <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                            <AlertDialogCancel disabled={isRecalculating}>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel disabled={isRecalculating}>{t("common.cancel")}</AlertDialogCancel>
                             <Button onClick={handleRecalculateFIFO} disabled={isRecalculating}>
                                 {isRecalculating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                                Start Recalculation
+                                {t("admin.startRecalculation")}
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1542,9 +1540,9 @@ export default function OrganizationDetailsPage() {
                 <AlertDialog open={changeRoleOpen} onOpenChange={(open) => { if (!open && !isChangingRole) { setChangeRoleOpen(false); setChangeRoleError(""); } }}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Change Role</AlertDialogTitle>
+                            <AlertDialogTitle>{t("admin.changeRole")}</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Update role for <strong className="text-foreground">{changeRoleUser?.name || changeRoleUser?.email}</strong>
+                                {t("admin.changeRoleDesc")} <strong className="text-foreground">{changeRoleUser?.name || changeRoleUser?.email}</strong>
                                 {changeRoleUser?.name && <span className="text-muted-foreground"> ({changeRoleUser.email})</span>}
                             </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -1555,10 +1553,10 @@ export default function OrganizationDetailsPage() {
                                 </div>
                             )}
                             <div className="space-y-2">
-                                <Label>New Role</Label>
+                                <Label>{t("admin.newRole")}</Label>
                                 <Select value={selectedRole} onValueChange={setSelectedRole}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select a role" />
+                                        <SelectValue placeholder={t("admin.selectRole")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="admin">admin</SelectItem>
@@ -1569,10 +1567,10 @@ export default function OrganizationDetailsPage() {
                             </div>
                         </div>
                         <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                            <AlertDialogCancel disabled={isChangingRole}>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel disabled={isChangingRole}>{t("common.cancel")}</AlertDialogCancel>
                             <Button onClick={handleChangeRole} disabled={isChangingRole || !selectedRole}>
                                 {isChangingRole ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCog className="h-4 w-4 mr-2" />}
-                                Change Role
+                                {t("admin.changeRole")}
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1581,9 +1579,9 @@ export default function OrganizationDetailsPage() {
                 <AlertDialog open={resetPwOpen} onOpenChange={(open) => { if (!open && !isResettingPw) { setResetPwOpen(false); setResetPwError(""); } }}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Reset Password</AlertDialogTitle>
+                            <AlertDialogTitle>{t("admin.resetPassword")}</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Set a new password for <strong className="text-foreground">{resetPwUser?.name || resetPwUser?.email}</strong>
+                                {t("admin.resetPasswordDesc")} <strong className="text-foreground">{resetPwUser?.name || resetPwUser?.email}</strong>
                                 {resetPwUser?.name && <span className="text-muted-foreground"> ({resetPwUser.email})</span>}
                             </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -1594,14 +1592,14 @@ export default function OrganizationDetailsPage() {
                                 </div>
                             )}
                             <div className="space-y-2">
-                                <Label htmlFor="newPassword">New Password</Label>
+                                <Label htmlFor="newPassword">{t("admin.newPassword")}</Label>
                                 <div className="relative">
                                     <Input
                                         id="newPassword"
                                         type={showPassword ? "text" : "password"}
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
-                                        placeholder="Minimum 6 characters"
+                                        placeholder={t("admin.minSixChars")}
                                     />
                                     <Button
                                         type="button"
@@ -1615,21 +1613,21 @@ export default function OrganizationDetailsPage() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                <Label htmlFor="confirmPassword">{t("admin.confirmPassword")}</Label>
                                 <Input
                                     id="confirmPassword"
                                     type={showPassword ? "text" : "password"}
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder="Re-enter password"
+                                    placeholder={t("admin.reenterPassword")}
                                 />
                             </div>
                         </div>
                         <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                            <AlertDialogCancel disabled={isResettingPw}>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel disabled={isResettingPw}>{t("common.cancel")}</AlertDialogCancel>
                             <Button onClick={handleResetPassword} disabled={isResettingPw || !newPassword || !confirmPassword}>
                                 {isResettingPw ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
-                                Reset Password
+                                {t("admin.resetPassword")}
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>

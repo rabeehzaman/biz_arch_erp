@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface Supplier {
   id: string;
@@ -33,6 +34,7 @@ export function SupplierCombobox({
   onSupplierCreated,
   autoFocus = false,
 }: SupplierComboboxProps) {
+  const { t } = useLanguage();
   const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
 
   const handleSupplierCreated = (newSupplier: Supplier) => {
@@ -64,8 +66,8 @@ export function SupplierCombobox({
               )}
             </div>
           )}
-          placeholder="Search suppliers..."
-          emptyText="No suppliers found. Click + to add one."
+          placeholder={t("suppliers.searchPlaceholder")}
+          emptyText={t("suppliers.noSuppliersFound")}
           required={required}
           onSelect={onSelect}
           onSelectFocusNext={onSelectFocusNext}
@@ -77,7 +79,7 @@ export function SupplierCombobox({
         variant="outline"
         size="icon"
         onClick={() => setIsSupplierDialogOpen(true)}
-        title="Add new supplier"
+        title={t("suppliers.addSupplier")}
       >
         <Plus className="h-4 w-4" />
       </Button>

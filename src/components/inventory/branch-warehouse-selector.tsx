@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSession } from "next-auth/react";
+import { useLanguage } from "@/lib/i18n";
 
 interface Branch {
     id: string;
@@ -34,6 +35,7 @@ export function BranchWarehouseSelector({
     disabled = false,
 }: BranchWarehouseSelectorProps) {
     const { data: session } = useSession();
+    const { t } = useLanguage();
     const multiBranchEnabled = session?.user?.multiBranchEnabled;
     const userId = session?.user?.id;
     const userRole = session?.user?.role;
@@ -112,7 +114,7 @@ export function BranchWarehouseSelector({
     return (
         <div className="mb-4 grid grid-cols-1 gap-4 rounded-lg border bg-slate-50 p-4 sm:grid-cols-2">
             <div className="space-y-2">
-                <Label>Branch</Label>
+                <Label>{t("inventory.branch")}</Label>
                 <Select
                     disabled={loading || disabled || branches.length === 0}
                     value={branchId || ""}
@@ -122,7 +124,7 @@ export function BranchWarehouseSelector({
                     }}
                 >
                     <SelectTrigger>
-                        <SelectValue placeholder="Select Branch" />
+                        <SelectValue placeholder={t("inventory.selectBranch")} />
                     </SelectTrigger>
                     <SelectContent>
                         {branches.map(b => (
@@ -133,14 +135,14 @@ export function BranchWarehouseSelector({
             </div>
 
             <div className="space-y-2">
-                <Label>Warehouse</Label>
+                <Label>{t("inventory.warehouse")}</Label>
                 <Select
                     disabled={loading || disabled || !branchId || availableWarehouses.length === 0}
                     value={warehouseId || ""}
                     onValueChange={onWarehouseChange}
                 >
                     <SelectTrigger>
-                        <SelectValue placeholder="Select Warehouse" />
+                        <SelectValue placeholder={t("inventory.selectWarehouse")} />
                     </SelectTrigger>
                     <SelectContent>
                         {availableWarehouses.map(w => (

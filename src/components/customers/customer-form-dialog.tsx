@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 interface Customer {
     id: string;
@@ -49,6 +50,7 @@ export function CustomerFormDialog({
     customerToEdit,
 }: CustomerFormDialogProps) {
     const { data: session } = useSession();
+    const { t } = useLanguage();
     const defaultCountry = (session?.user as any)?.saudiEInvoiceEnabled ? "Saudi Arabia" : "India";
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
@@ -158,7 +160,7 @@ export function CustomerFormDialog({
 
             const newCustomer = await response.json();
 
-            toast.success(customerToEdit ? "Customer updated successfully" : "Customer added successfully");
+            toast.success(customerToEdit ? t("customers.updatedSuccess") : t("customers.addedSuccess"));
 
             resetForm();
             onOpenChange(false);
@@ -167,7 +169,7 @@ export function CustomerFormDialog({
                 onSuccess(newCustomer);
             }
         } catch (error) {
-            toast.error("Failed to save customer");
+            toast.error(t("customers.saveFailed"));
             console.error("Failed to save customer:", error);
         } finally {
             setIsSubmitting(false);
@@ -186,18 +188,18 @@ export function CustomerFormDialog({
                 <form onSubmit={handleSubmit} className="contents">
                     <DialogHeader className="pr-12">
                         <DialogTitle>
-                            {customerToEdit ? "Edit Customer" : "Add New Customer"}
+                            {customerToEdit ? t("customers.editCustomer") : t("customers.addNewCustomer")}
                         </DialogTitle>
                         <DialogDescription>
                             {customerToEdit
-                                ? "Update the customer details below."
-                                : "Fill in the details to add a new customer."}
+                                ? t("customers.editDesc")
+                                : t("customers.addDesc")}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-2 sm:py-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="cust-name">Name *</Label>
+                                <Label htmlFor="cust-name">{t("common.nameRequired")}</Label>
                                 <Input
                                     id="cust-name"
                                     value={formData.name}
@@ -208,7 +210,7 @@ export function CustomerFormDialog({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="cust-email">Email</Label>
+                                <Label htmlFor="cust-email">{t("common.email")}</Label>
                                 <Input
                                     id="cust-email"
                                     type="email"
@@ -221,7 +223,7 @@ export function CustomerFormDialog({
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="cust-phone">Phone</Label>
+                                <Label htmlFor="cust-phone">{t("common.phone")}</Label>
                                 <Input
                                     id="cust-phone"
                                     value={formData.phone}
@@ -231,7 +233,7 @@ export function CustomerFormDialog({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="cust-country">Country</Label>
+                                <Label htmlFor="cust-country">{t("common.country")}</Label>
                                 <Input
                                     id="cust-country"
                                     value={formData.country}
@@ -244,7 +246,7 @@ export function CustomerFormDialog({
                         {session?.user?.gstEnabled && !(session?.user as any)?.saudiEInvoiceEnabled && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="cust-gstin">GSTIN</Label>
+                                    <Label htmlFor="cust-gstin">{t("customers.gstin")}</Label>
                                     <Input
                                         id="cust-gstin"
                                         value={formData.gstin}
@@ -261,7 +263,7 @@ export function CustomerFormDialog({
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="cust-gstStateCode">GST State Code</Label>
+                                    <Label htmlFor="cust-gstStateCode">{t("customers.gstStateCode")}</Label>
                                     <Input
                                         id="cust-gstStateCode"
                                         value={formData.gstStateCode}
@@ -274,7 +276,7 @@ export function CustomerFormDialog({
                             </div>
                         )}
                         <div className="grid gap-2">
-                            <Label htmlFor="cust-address">Address</Label>
+                            <Label htmlFor="cust-address">{t("common.address")}</Label>
                             <Input
                                 id="cust-address"
                                 value={formData.address}
@@ -287,7 +289,7 @@ export function CustomerFormDialog({
                             <>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="cust-district">District / الحي</Label>
+                                        <Label htmlFor="cust-district">{t("customers.district")}</Label>
                                         <Input
                                             id="cust-district"
                                             value={formData.district}
@@ -295,7 +297,7 @@ export function CustomerFormDialog({
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label htmlFor="cust-buildingNo">Building No / رقم المبنى</Label>
+                                        <Label htmlFor="cust-buildingNo">{t("customers.buildingNo")}</Label>
                                         <Input
                                             id="cust-buildingNo"
                                             value={formData.buildingNo}
@@ -305,7 +307,7 @@ export function CustomerFormDialog({
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="cust-addNo">Add. No / الرقم الفرعي</Label>
+                                        <Label htmlFor="cust-addNo">{t("customers.addNo")}</Label>
                                         <Input
                                             id="cust-addNo"
                                             value={formData.addNo}
@@ -313,7 +315,7 @@ export function CustomerFormDialog({
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label htmlFor="cust-ccNo">C.R No / معرف آخر</Label>
+                                        <Label htmlFor="cust-ccNo">{t("customers.crNo")}</Label>
                                         <Input
                                             id="cust-ccNo"
                                             value={formData.ccNo}
@@ -325,7 +327,7 @@ export function CustomerFormDialog({
                         )}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="cust-city">City</Label>
+                                <Label htmlFor="cust-city">{t("common.city")}</Label>
                                 <Input
                                     id="cust-city"
                                     value={formData.city}
@@ -335,7 +337,7 @@ export function CustomerFormDialog({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="cust-state">State</Label>
+                                <Label htmlFor="cust-state">{t("customers.state")}</Label>
                                 <Input
                                     id="cust-state"
                                     value={formData.state}
@@ -345,7 +347,7 @@ export function CustomerFormDialog({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="cust-zipCode">ZIP Code</Label>
+                                <Label htmlFor="cust-zipCode">{t("settings.zipCode")}</Label>
                                 <Input
                                     id="cust-zipCode"
                                     value={formData.zipCode}
@@ -356,22 +358,22 @@ export function CustomerFormDialog({
                             </div>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="cust-notes">Notes</Label>
+                            <Label htmlFor="cust-notes">{t("common.notes")}</Label>
                             <Textarea
                                 id="cust-notes"
                                 value={formData.notes}
                                 onChange={(e) =>
                                     setFormData({ ...formData, notes: e.target.value })
                                 }
-                                placeholder="Any additional notes..."
+                                placeholder={t("common.notesPlaceholder")}
                             />
                         </div>
                     </div>
                     <DialogFooter>
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
                             {isSubmitting
-                                ? (customerToEdit ? "Updating..." : "Adding...")
-                                : (customerToEdit ? "Update Customer" : "Add Customer")}
+                                ? (customerToEdit ? t("common.updating") : t("common.adding"))
+                                : (customerToEdit ? t("customers.updateCustomer") : t("customers.addCustomer"))}
                         </Button>
                     </DialogFooter>
                 </form>

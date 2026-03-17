@@ -38,6 +38,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface InvoiceItem {
   id: string;
@@ -102,6 +103,7 @@ export default function InvoiceDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { t } = useLanguage();
   const { symbol } = useCurrency();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -164,9 +166,9 @@ export default function InvoiceDetailPage({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success("PDF downloaded successfully");
+      toast.success(t("common.pdfDownloaded"));
     } catch (error) {
-      toast.error("Failed to download PDF");
+      toast.error(t("common.pdfDownloadFailed"));
       console.error(error);
     } finally {
       setIsDownloading(false);
@@ -194,14 +196,14 @@ export default function InvoiceDetailPage({
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.error || "Failed to record payment");
+        throw new Error(err.error || t("payments.failedToRecordPayment"));
       }
 
-      toast.success("Payment recorded");
+      toast.success(t("payments.paymentRecorded"));
       setIsPaymentDialogOpen(false);
       fetchInvoice();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to record payment");
+      toast.error(error instanceof Error ? error.message : t("payments.failedToRecordPayment"));
     } finally {
       setIsRecordingPayment(false);
     }
@@ -217,10 +219,10 @@ export default function InvoiceDetailPage({
         body: JSON.stringify({ action: "markSent" }),
       });
       if (!response.ok) throw new Error("Failed to mark as sent");
-      toast.success("Invoice marked as sent");
+      toast.success(t("sales.invoiceMarkedAsSent"));
       fetchInvoice();
     } catch {
-      toast.error("Failed to mark invoice as sent");
+      toast.error(t("sales.failedToMarkAsSent"));
     } finally {
       setIsMarkingSent(false);
     }
@@ -241,7 +243,7 @@ export default function InvoiceDetailPage({
         };
       }
     } catch (error) {
-      toast.error("Failed to print invoice");
+      toast.error(t("common.printFailed"));
       console.error(error);
     } finally {
       setIsPrinting(false);
@@ -251,7 +253,7 @@ export default function InvoiceDetailPage({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-slate-500">Loading...</div>
+        <div className="text-slate-500">{t("common.loading")}</div>
       </div>
     );
   }
@@ -273,14 +275,14 @@ export default function InvoiceDetailPage({
             </Link>
             <div className="min-w-0">
               <h2 className="truncate text-lg font-bold text-slate-900 sm:text-2xl">
-                Invoice {invoice.invoiceNumber}
+                {t("sales.invoice")} {invoice.invoiceNumber}
               </h2>
               <p className="text-sm text-slate-500">
-                Created on {format(new Date(invoice.issueDate), "dd MMM yyyy")}
+                {t("common.createdOn")} {format(new Date(invoice.issueDate), "dd MMM yyyy")}
               </p>
               {invoice.isTaxInclusive !== null && invoice.isTaxInclusive !== undefined && (
                 <span className="text-[11px] text-muted-foreground">
-                  {invoice.isTaxInclusive ? "Tax Inclusive" : "Tax Exclusive"}
+                  {invoice.isTaxInclusive ? t("common.taxInclusive") : t("common.taxExclusive")}
                 </span>
               )}
             </div>
@@ -289,14 +291,14 @@ export default function InvoiceDetailPage({
             <Link href={`/invoices/${id}/edit`} className="col-span-1 sm:w-auto">
               <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
                 <Pencil className="h-4 w-4 sm:mr-2" />
-                <span className="sm:inline">Edit</span>
+                <span className="sm:inline">{t("common.edit")}</span>
               </Button>
             </Link>
             {invoice && Number(invoice.balanceDue) > 0 && (
               <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
                 <CreditCard className="h-4 w-4 sm:mr-2" />
-                <span className="sm:hidden">Pay</span>
-                <span className="hidden sm:inline">Record Payment</span>
+                <span className="sm:hidden">{t("common.pay")}</span>
+                <span className="hidden sm:inline">{t("sales.recordPayment")}</span>
               </Button>
             )}
             {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
@@ -308,13 +310,13 @@ export default function InvoiceDetailPage({
                 className="col-span-1 h-9 w-full sm:h-10 sm:w-auto"
               >
                 <Send className="h-4 w-4 sm:mr-2" />
-                <span className="sm:hidden">Sent</span>
-                <span className="hidden sm:inline">Mark as Sent</span>
+                <span className="sm:hidden">{t("common.sent2")}</span>
+                <span className="hidden sm:inline">{t("sales.markAsSent")}</span>
               </Button>
             )}
             {invoice?.sentAt && (
               <span className="col-span-2 text-xs text-slate-500 sm:w-auto sm:text-sm">
-                Sent {format(new Date(invoice.sentAt), "dd MMM yyyy")}
+                {t("sales.sentOn")} {format(new Date(invoice.sentAt), "dd MMM yyyy")}
               </span>
             )}
             <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
@@ -322,21 +324,21 @@ export default function InvoiceDetailPage({
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
                 : <Download className="h-4 w-4 sm:mr-2" />}
               <span className="sm:hidden">{isDownloading ? "..." : "PDF"}</span>
-              <span className="hidden sm:inline">{isDownloading ? "Downloading..." : "Download PDF"}</span>
+              <span className="hidden sm:inline">{isDownloading ? t("common.downloading") : t("common.downloadPDF")}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isPrinting
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
                 : <Printer className="h-4 w-4 sm:mr-2" />}
-              <span>{isPrinting ? "..." : "Print"}</span>
+              <span>{isPrinting ? "..." : t("common.print")}</span>
             </Button>
           </div>
         </div>
 
         <Tabs defaultValue="invoice" className="w-full">
           <TabsList className="print:hidden h-auto min-w-full justify-start gap-1 rounded-xl p-0.5 sm:min-w-0 sm:w-fit sm:p-1">
-            <TabsTrigger value="invoice" className="min-h-[36px] shrink-0 px-3 py-1.5">Invoice</TabsTrigger>
-            <TabsTrigger value="journal" className="min-h-[36px] shrink-0 px-3 py-1.5">Journal</TabsTrigger>
+            <TabsTrigger value="invoice" className="min-h-[36px] shrink-0 px-3 py-1.5">{t("sales.invoice")}</TabsTrigger>
+            <TabsTrigger value="journal" className="min-h-[36px] shrink-0 px-3 py-1.5">{t("accounting.journal")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoice">
@@ -351,7 +353,7 @@ export default function InvoiceDetailPage({
                     </div>
                     <div>
                       <h1 className="text-xl font-bold sm:text-2xl">BizArch ERP</h1>
-                      <p className="text-sm text-slate-500">Invoice</p>
+                      <p className="text-sm text-slate-500">{t("sales.invoice")}</p>
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
@@ -363,7 +365,7 @@ export default function InvoiceDetailPage({
                 <div className="mb-5 grid gap-4 sm:mb-8 sm:grid-cols-2 sm:gap-8">
                   <div>
                     <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 sm:text-sm sm:normal-case sm:tracking-normal">
-                      Bill To
+                      {t("common.billTo")}
                     </h3>
                     <div>
                       <p className="font-semibold">{invoice.customer.name}</p>
@@ -386,32 +388,32 @@ export default function InvoiceDetailPage({
                   <div className="sm:text-right">
                     <div className="grid gap-1 text-sm sm:space-y-1">
                       <p className="text-sm">
-                        <span className="text-slate-500">Issue Date:</span>{" "}
+                        <span className="text-slate-500">{t("sales.issueDate")}:</span>{" "}
                         <span className="font-medium">
                           {format(new Date(invoice.issueDate), "dd MMM yyyy")}
                         </span>
                       </p>
                       <p className="text-sm">
-                        <span className="text-slate-500">Due Date:</span>{" "}
+                        <span className="text-slate-500">{t("sales.dueDate")}:</span>{" "}
                         <span className="font-medium">
                           {format(new Date(invoice.dueDate), "dd MMM yyyy")}
                         </span>
                       </p>
                       <p className="text-sm">
-                        <span className="text-slate-500">Payment Type:</span>{" "}
+                        <span className="text-slate-500">{t("sales.paymentType")}:</span>{" "}
                         <span className="font-medium">
-                          {invoice.paymentType === "CREDIT" ? "Credit" : "Cash"}
+                          {invoice.paymentType === "CREDIT" ? t("common.creditPaymentType") : t("common.cashPaymentType")}
                         </span>
                       </p>
                       {invoice.branch && (
                         <p className="text-sm">
-                          <span className="text-slate-500">Branch:</span>{" "}
+                          <span className="text-slate-500">{t("common.branch")}:</span>{" "}
                           <span className="font-medium">{invoice.branch.name}</span>
                         </p>
                       )}
                       {invoice.warehouse && (
                         <p className="text-sm">
-                          <span className="text-slate-500">Warehouse:</span>{" "}
+                          <span className="text-slate-500">{t("common.warehouse")}:</span>{" "}
                           <span className="font-medium">{invoice.warehouse.name}</span>
                         </p>
                       )}
@@ -424,11 +426,11 @@ export default function InvoiceDetailPage({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[40%]">Description</TableHead>
-                        <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">Unit Price</TableHead>
-                        <TableHead className="text-right">Discount</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="w-[40%]">{t("common.description")}</TableHead>
+                        <TableHead className="text-right">{t("common.qty")}</TableHead>
+                        <TableHead className="text-right">{t("common.unitPrice")}</TableHead>
+                        <TableHead className="text-right">{t("common.discount")}</TableHead>
+                        <TableHead className="text-right">{t("common.total")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -461,10 +463,10 @@ export default function InvoiceDetailPage({
                     <div key={item.id} className="p-3 space-y-1">
                       <div className="font-medium text-sm">{item.description}</div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
-                        <span>Qty: {Number(item.quantity)}</span>
-                        <span>Price: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                        <span>{t("common.qty")}: {Number(item.quantity)}</span>
+                        <span>{t("common.price")}: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
                         {Number(item.discount) > 0 && (
-                          <span className="text-green-600">Discount: {Number(item.discount)}%</span>
+                          <span className="text-green-600">{t("common.discount")}: {Number(item.discount)}%</span>
                         )}
                       </div>
                       <div className="text-right font-semibold text-sm">
@@ -480,7 +482,7 @@ export default function InvoiceDetailPage({
                     {invoice.saudiInvoiceType && invoice.qrCodeData && (
                       <div className="flex flex-col items-end gap-1 mb-4">
                         <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
-                          {invoice.saudiInvoiceType === "SIMPLIFIED" ? "Simplified Tax Invoice" : "Tax Invoice"} — ZATCA Phase 1
+                          {invoice.saudiInvoiceType === "SIMPLIFIED" ? t("sales.simplifiedTaxInvoice") : t("sales.taxInvoice")} — ZATCA Phase 1
                         </span>
                         {invoice.invoiceCounterValue && (
                           <span className="text-xs text-slate-400">ICV: {invoice.invoiceCounterValue}</span>
@@ -488,17 +490,17 @@ export default function InvoiceDetailPage({
                         <div className="border p-1 bg-white" title="Scan to verify invoice (ZATCA Phase 1)">
                           <QRCode value={invoice.qrCodeData} size={96} level="M" />
                         </div>
-                        <span className="text-[10px] text-slate-400">ZATCA Compliant QR</span>
+                        <span className="text-[10px] text-slate-400">{t("sales.zatcaCompliantQR")}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
-                      <span>Subtotal</span>
+                      <span>{t("common.subtotal")}</span>
                       <span>{symbol}{Number(invoice.subtotal).toLocaleString("en-IN")}</span>
                     </div>
                     {invoice.saudiInvoiceType ? (
                       Number(invoice.totalVat) > 0 && (
                         <div className="flex justify-between text-sm text-slate-500">
-                          <span>VAT (15%) — ضريبة القيمة المضافة</span>
+                          <span>{t("sales.vat")} — ضريبة القيمة المضافة</span>
                           <span>{symbol}{Number(invoice.totalVat).toFixed(2)}</span>
                         </div>
                       )
@@ -506,25 +508,25 @@ export default function InvoiceDetailPage({
                       <>
                         {Number(invoice.totalCgst) > 0 && (
                           <div className="flex justify-between text-sm text-slate-500">
-                            <span>CGST</span>
+                            <span>{t("common.cgst")}</span>
                             <span>{symbol}{Number(invoice.totalCgst).toLocaleString("en-IN")}</span>
                           </div>
                         )}
                         {Number(invoice.totalSgst) > 0 && (
                           <div className="flex justify-between text-sm text-slate-500">
-                            <span>SGST</span>
+                            <span>{t("common.sgst")}</span>
                             <span>{symbol}{Number(invoice.totalSgst).toLocaleString("en-IN")}</span>
                           </div>
                         )}
                         {Number(invoice.totalIgst) > 0 && (
                           <div className="flex justify-between text-sm text-slate-500">
-                            <span>IGST</span>
+                            <span>{t("common.igst")}</span>
                             <span>{symbol}{Number(invoice.totalIgst).toLocaleString("en-IN")}</span>
                           </div>
                         )}
                         {Number(invoice.totalCgst) === 0 && Number(invoice.totalSgst) === 0 && Number(invoice.totalIgst) === 0 && Number(invoice.taxAmount) > 0 && (
                           <div className="flex justify-between text-sm text-slate-500">
-                            <span>Tax</span>
+                            <span>{t("common.tax")}</span>
                             <span>{symbol}{Number(invoice.taxAmount).toLocaleString("en-IN")}</span>
                           </div>
                         )}
@@ -532,7 +534,7 @@ export default function InvoiceDetailPage({
                     )}
                     {invoice.applyRoundOff && Number(invoice.roundOffAmount) !== 0 && (
                       <div className="flex justify-between text-sm text-slate-500">
-                        <span>Round Off</span>
+                        <span>{t("common.roundOff")}</span>
                         <span>
                           {Number(invoice.roundOffAmount) >= 0 ? "+" : ""}
                           {symbol}{Number(invoice.roundOffAmount).toFixed(2)}
@@ -540,17 +542,17 @@ export default function InvoiceDetailPage({
                       </div>
                     )}
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
-                      <span>Total</span>
+                      <span>{t("common.total")}</span>
                       <span>{symbol}{Number(invoice.total).toLocaleString("en-IN")}</span>
                     </div>
                     {Number(invoice.amountPaid) > 0 && (
                       <div className="flex justify-between text-sm text-green-600">
-                        <span>Amount Paid</span>
+                        <span>{t("sales.amountPaid")}</span>
                         <span>{symbol}{Number(invoice.amountPaid).toLocaleString("en-IN")}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
-                      <span>Balance Due</span>
+                      <span>{t("common.balanceDue")}</span>
                       <span className={Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"}>
                         {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")}
                       </span>
@@ -564,7 +566,7 @@ export default function InvoiceDetailPage({
                     {invoice.notes && (
                       <div>
                         <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                          Notes
+                          {t("common.notes")}
                         </h3>
                         <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
                       </div>
@@ -572,7 +574,7 @@ export default function InvoiceDetailPage({
                     {invoice.terms && (
                       <div>
                         <h3 className="text-sm font-semibold text-slate-500 mb-2">
-                          Terms & Conditions
+                          {t("common.termsAndConditions")}
                         </h3>
                         <p className="text-sm whitespace-pre-wrap">{invoice.terms}</p>
                       </div>
@@ -594,18 +596,18 @@ export default function InvoiceDetailPage({
           <DialogContent className="sm:max-w-md">
             <form onSubmit={handleRecordPayment}>
               <DialogHeader>
-                <DialogTitle>Record Payment</DialogTitle>
+                <DialogTitle>{t("sales.recordPayment")}</DialogTitle>
                 <DialogDescription>
-                  Record a payment for invoice {invoice.invoiceNumber}.
+                  {t("sales.recordPaymentDesc")} {invoice.invoiceNumber}.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label>Customer</Label>
+                  <Label>{t("common.customer")}</Label>
                   <p className="text-sm font-medium">{invoice.customer.name}</p>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="pay-amount">Amount *</Label>
+                  <Label htmlFor="pay-amount">{t("common.amount")} *</Label>
                   <Input
                     id="pay-amount"
                     type="number"
@@ -617,7 +619,7 @@ export default function InvoiceDetailPage({
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="pay-date">Payment Date *</Label>
+                    <Label htmlFor="pay-date">{t("payments.paymentDate")} *</Label>
                     <Input
                       id="pay-date"
                       type="date"
@@ -627,7 +629,7 @@ export default function InvoiceDetailPage({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Payment Method</Label>
+                    <Label>{t("payments.paymentMethod")}</Label>
                     <Select
                       value={paymentForm.paymentMethod}
                       onValueChange={(v) => setPaymentForm({ ...paymentForm, paymentMethod: v })}
@@ -636,30 +638,30 @@ export default function InvoiceDetailPage({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="CASH">Cash</SelectItem>
-                        <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                        <SelectItem value="CHECK">Check</SelectItem>
-                        <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="OTHER">Other</SelectItem>
+                        <SelectItem value="CASH">{t("common.cash")}</SelectItem>
+                        <SelectItem value="BANK_TRANSFER">{t("common.bankTransfer")}</SelectItem>
+                        <SelectItem value="CHECK">{t("common.check")}</SelectItem>
+                        <SelectItem value="CREDIT_CARD">{t("common.creditCard")}</SelectItem>
+                        <SelectItem value="UPI">{t("common.upi")}</SelectItem>
+                        <SelectItem value="OTHER">{t("common.other")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="pay-ref">Reference</Label>
+                  <Label htmlFor="pay-ref">{t("common.reference")}</Label>
                   <Input
                     id="pay-ref"
                     value={paymentForm.reference}
                     onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                    placeholder="Transaction ID, check #..."
+                    placeholder={t("payments.referencePlaceholder")}
                   />
                 </div>
               </div>
               <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="submit" disabled={isRecordingPayment} className="w-full sm:w-auto">
                   {isRecordingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isRecordingPayment ? "Recording..." : "Record Payment"}
+                  {isRecordingPayment ? t("common.recording") : t("sales.recordPayment")}
                 </Button>
               </DialogFooter>
             </form>

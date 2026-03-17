@@ -37,11 +37,11 @@ export function AccountingSettings() {
         const err = await response.json();
         throw new Error(err.error || "Failed to seed");
       }
-      toast.success("Chart of accounts created successfully");
+      toast.success(t("accounting.coaCreatedSuccess"));
       setHasAccounts(true);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to seed chart of accounts"
+        error instanceof Error ? error.message : t("accounting.coaSeedFailed")
       );
     } finally {
       setIsSeeding(false);

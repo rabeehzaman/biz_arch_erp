@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { useLanguage } from "@/lib/i18n";
 
 interface ProductCategory {
   id: string;
@@ -26,9 +27,11 @@ interface CategorySelectProps {
 export function CategorySelect({
   value,
   onValueChange,
-  label = "Category",
+  label,
   className,
 }: CategorySelectProps) {
+  const { t } = useLanguage();
+  const displayLabel = label ?? t("products.category");
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,13 +56,13 @@ export function CategorySelect({
 
   return (
     <div className={`grid gap-2 ${className || ""}`}>
-      {label && <Label htmlFor="category">{label}</Label>}
+      {displayLabel && <Label htmlFor="category">{displayLabel}</Label>}
       <Select value={value} onValueChange={onValueChange} disabled={loading}>
         <SelectTrigger id="category" className="w-full min-w-0">
-          <SelectValue placeholder={loading ? "Loading..." : "Select a category"} />
+          <SelectValue placeholder={loading ? t("common.loading") : t("products.selectCategory")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">None</SelectItem>
+          <SelectItem value="none">{t("common.none")}</SelectItem>
           {categories.map((cat) => (
             <SelectItem key={cat.id} value={cat.id}>
               {cat.name}

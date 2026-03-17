@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 interface Unit {
     id: string;
@@ -31,6 +32,7 @@ export function UnitFormDialog({
     onOpenChange,
     onSuccess,
 }: UnitFormDialogProps) {
+    const { t } = useLanguage();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         code: "",
@@ -64,7 +66,7 @@ export function UnitFormDialog({
             // but let's assume it returns the unit object directly based on how it's used elsewhere
             const newUnit = rawData.unit || rawData;
 
-            toast.success("Unit added successfully");
+            toast.success(t("units.added"));
 
             resetForm();
             onOpenChange(false);
@@ -98,46 +100,46 @@ export function UnitFormDialog({
             <DialogContent>
                 <form className="contents" onSubmit={handleSubmit}>
                     <DialogHeader className="pr-12">
-                        <DialogTitle>Add New Unit</DialogTitle>
+                        <DialogTitle>{t("units.addNewUnit")}</DialogTitle>
                         <DialogDescription>
-                            Add a new unit of measurement.
+                            {t("units.addDesc")}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-2 sm:py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="code">Code *</Label>
+                            <Label htmlFor="code">{t("units.codeRequired")}</Label>
                             <Input
                                 id="code"
                                 value={formData.code}
                                 onChange={(e) =>
                                     setFormData({ ...formData, code: e.target.value })
                                 }
-                                placeholder="e.g., mtr, kg, pcs"
+                                placeholder={t("units.codePlaceholder")}
                                 required
                             />
                             <p className="text-xs text-slate-500">
-                                Short code for the unit (will be converted to lowercase)
+                                {t("units.codeDescription")}
                             </p>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Name *</Label>
+                            <Label htmlFor="name">{t("common.nameRequired")}</Label>
                             <Input
                                 id="name"
                                 value={formData.name}
                                 onChange={(e) =>
                                     setFormData({ ...formData, name: e.target.value })
                                 }
-                                placeholder="e.g., Meter, Kilogram, Piece"
+                                placeholder={t("units.namePlaceholder")}
                                 required
                             />
                             <p className="text-xs text-slate-500">
-                                Full name of the unit
+                                {t("units.nameDescription")}
                             </p>
                         </div>
                     </div>
                     <DialogFooter>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? "Adding..." : "Add Unit"}
+                            {isSubmitting ? t("common.adding") : t("units.addUnit")}
                         </Button>
                     </DialogFooter>
                 </form>

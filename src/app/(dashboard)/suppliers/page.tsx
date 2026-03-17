@@ -87,7 +87,7 @@ export default function SuppliersPage() {
       const data = await response.json();
       setSuppliers(data);
     } catch (error) {
-      toast.error("Failed to load suppliers");
+      toast.error(t("suppliers.failedToLoad"));
       console.error("Failed to fetch suppliers:", error);
     } finally {
       setIsLoading(false);
@@ -101,8 +101,8 @@ export default function SuppliersPage() {
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
-      title: "Delete Supplier",
-      description: "Are you sure you want to delete this supplier?",
+      title: t("suppliers.deleteSupplier"),
+      description: t("suppliers.deleteConfirm"),
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
@@ -111,9 +111,9 @@ export default function SuppliersPage() {
             throw new Error(data.error || "Failed to delete");
           }
           fetchSuppliers();
-          toast.success("Supplier deleted");
+          toast.success(t("suppliers.supplierDeleted"));
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Failed to delete supplier");
+          toast.error(error instanceof Error ? error.message : t("common.error"));
           console.error("Failed to delete supplier:", error);
         }
       },
@@ -143,9 +143,9 @@ export default function SuppliersPage() {
         transactionDate: new Date().toISOString().split("T")[0],
       });
       fetchSuppliers();
-      toast.success("Opening balance set successfully");
+      toast.success(t("suppliers.supplierUpdated"));
     } catch (error) {
-      toast.error("Failed to set opening balance");
+      toast.error(t("common.error"));
       console.error("Failed to set opening balance:", error);
     }
   };
@@ -216,14 +216,14 @@ export default function SuppliersPage() {
             <DialogContent>
               <form className="contents" onSubmit={handleOpeningBalanceSubmit}>
                 <DialogHeader className="pr-12">
-                  <DialogTitle>Set Opening Balance</DialogTitle>
+                  <DialogTitle>{t("common.setOpeningBalance")}</DialogTitle>
                   <DialogDescription>
-                    Set the opening balance for {selectedSupplierForBalance?.name}. This represents the initial payable amount.
+                    {t("suppliers.openingBalanceDesc")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-2 sm:py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="openingAmount">Opening Balance Amount *</Label>
+                    <Label htmlFor="openingAmount">{t("common.openingBalanceAmount")}</Label>
                     <Input
                       id="openingAmount"
                       type="number"
@@ -232,15 +232,15 @@ export default function SuppliersPage() {
                       onChange={(e) =>
                         setOpeningBalanceData({ ...openingBalanceData, amount: e.target.value })
                       }
-                      placeholder="Enter amount (positive for payable)"
+                      placeholder={t("suppliers.openingBalancePlaceholder")}
                       required
                     />
                     <p className="text-xs text-slate-500">
-                      Enter a positive amount for payables (you owe supplier), or negative for advances (supplier owes you).
+                      {t("suppliers.openingBalanceHint")}
                     </p>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="balanceDate">As of Date *</Label>
+                    <Label htmlFor="balanceDate">{t("common.asOfDate")}</Label>
                     <Input
                       id="balanceDate"
                       type="date"
@@ -253,7 +253,7 @@ export default function SuppliersPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Set Opening Balance</Button>
+                  <Button type="submit">{t("common.setOpeningBalance")}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -305,7 +305,7 @@ export default function SuppliersPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant={supplier.isActive ? "default" : "secondary"}>
-                              {supplier.isActive ? "Active" : "Inactive"}
+                              {supplier.isActive ? t("common.active") : t("common.inactive")}
                             </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -316,11 +316,11 @@ export default function SuppliersPage() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEdit(supplier)}>
                                   <Pencil className="mr-2 h-4 w-4" />
-                                  Edit
+                                  {t("common.edit")}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(supplier)}>
                                   <Wallet className="mr-2 h-4 w-4" />
-                                  Opening Balance
+                                  {t("common.openingBalance")}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -328,7 +328,7 @@ export default function SuppliersPage() {
                                   onClick={() => handleDelete(supplier.id)}
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                                  {t("common.delete")}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -337,19 +337,19 @@ export default function SuppliersPage() {
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Balance</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.balance")}</p>
                             <p className={`mt-1 font-semibold ${Number(supplier.balance) > 0 ? "text-red-600" : Number(supplier.balance) < 0 ? "text-green-600" : "text-slate-900"}`}>
                               {symbol}{Math.abs(Number(supplier.balance)).toLocaleString("en-IN")}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoices</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.invoices")}</p>
                             <p className="mt-1 font-medium text-slate-900">{supplier._count?.purchaseInvoices || 0}</p>
                           </div>
                         </div>
 
                         <div className="mt-4">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Location</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.location")}</p>
                           <p className="mt-1 text-sm text-slate-600">
                             {supplier.city && supplier.state
                               ? `${supplier.city}, ${supplier.state}`
@@ -365,13 +365,13 @@ export default function SuppliersPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead className="hidden sm:table-cell">Contact</TableHead>
-                            <TableHead className="hidden sm:table-cell">Location</TableHead>
-                            <TableHead>Balance</TableHead>
-                            <TableHead className="hidden sm:table-cell">Invoices</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{t("common.name")}</TableHead>
+                            <TableHead className="hidden sm:table-cell">{t("suppliers.contactInfo")}</TableHead>
+                            <TableHead className="hidden sm:table-cell">{t("common.location")}</TableHead>
+                            <TableHead>{t("common.balance")}</TableHead>
+                            <TableHead className="hidden sm:table-cell">{t("common.invoices")}</TableHead>
+                            <TableHead>{t("common.status")}</TableHead>
+                            <TableHead className="text-right">{t("common.actions")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -413,7 +413,7 @@ export default function SuppliersPage() {
                                 <Badge
                                   variant={supplier.isActive ? "default" : "secondary"}
                                 >
-                                  {supplier.isActive ? "Active" : "Inactive"}
+                                  {supplier.isActive ? t("common.active") : t("common.inactive")}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
@@ -426,11 +426,11 @@ export default function SuppliersPage() {
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEdit(supplier)}>
                                       <Pencil className="mr-2 h-4 w-4" />
-                                      Edit
+                                      {t("common.edit")}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(supplier)}>
                                       <Wallet className="mr-2 h-4 w-4" />
-                                      Opening Balance
+                                      {t("common.openingBalance")}
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
@@ -438,7 +438,7 @@ export default function SuppliersPage() {
                                       onClick={() => handleDelete(supplier.id)}
                                     >
                                       <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
+                                      {t("common.delete")}
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>

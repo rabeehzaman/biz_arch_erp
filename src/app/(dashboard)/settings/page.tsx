@@ -74,7 +74,7 @@ export default function SettingsPage() {
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="accounting">{t("settings.tabAccounting")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="pos">{t("settings.tabPOS")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="users">{t("settings.tabUsers")}</TabsTrigger>
-              <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="employees">POS Employees</TabsTrigger>
+              <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="employees">{t("settings.tabEmployees")}</TabsTrigger>
             </TabsList>
           </div>
           <TabsContent value="company" {...getForceMountProps("company")} className="mt-6 data-[state=inactive]:hidden">

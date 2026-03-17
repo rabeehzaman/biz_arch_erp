@@ -8,6 +8,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useLanguage } from "@/lib/i18n";
 
 interface UnitOption {
     id: string;
@@ -34,6 +35,7 @@ export function ItemUnitSelect({
     className,
     onSelectFocusNext,
 }: ItemUnitSelectProps) {
+    const { t } = useLanguage();
     const triggerRef = useRef<HTMLButtonElement>(null);
 
     // If there's only one option and no value is selected, auto-select it
@@ -59,7 +61,7 @@ export function ItemUnitSelect({
                     ref={triggerRef}
                     className="w-full h-10 border-0 bg-transparent hover:bg-slate-100 focus:ring-1 focus:ring-slate-950 rounded-sm"
                 >
-                    <SelectValue placeholder={options.length === 0 ? "No units" : "Unit"} />
+                    <SelectValue placeholder={options.length === 0 ? t("units.noUnits") : t("common.unit")} />
                 </SelectTrigger>
                 <SelectContent>
                     {options.map((opt) => (

@@ -21,6 +21,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
+import { useLanguage } from "@/lib/i18n";
 
 interface Customer {
   id: string;
@@ -83,6 +84,7 @@ export default function NewQuotationPage() {
 
   const { data: session } = useSession();
   const { symbol } = useCurrency();
+  const { t } = useLanguage();
   const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -326,14 +328,14 @@ export default function NewQuotationPage() {
 
       if (response.ok) {
         const quotation = await response.json();
-        toast.success("Quotation created");
+        toast.success(t("quotations.quotationCreated"));
         router.push(`/quotations/${quotation.id}`);
       } else {
-        toast.error("Failed to create quotation");
+        toast.error(t("quotations.failedToCreate"));
       }
     } catch (error) {
       console.error("Failed to create quotation:", error);
-      toast.error("Failed to create quotation");
+      toast.error(t("quotations.failedToCreate"));
     } finally {
       setIsSubmitting(false);
     }
@@ -349,8 +351,8 @@ export default function NewQuotationPage() {
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">New Quotation</h2>
-            <p className="text-slate-500">Create a new quotation for a customer</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("quotations.newQuotation")}</h2>
+            <p className="text-slate-500">{t("quotations.newQuotationDesc")}</p>
           </div>
         </div>
 
@@ -359,7 +361,7 @@ export default function NewQuotationPage() {
             {/* Customer & Dates */}
             <Card>
               <CardHeader>
-                <CardTitle>Quotation Details</CardTitle>
+                <CardTitle>{t("quotations.quotationDetails")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <BranchWarehouseSelector
@@ -370,7 +372,7 @@ export default function NewQuotationPage() {
                 />
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="grid gap-2">
-                    <Label htmlFor="customer">Customer *</Label>
+                    <Label htmlFor="customer">{t("common.customer")} *</Label>
                     <CustomerCombobox
                       customers={customers}
                       value={formData.customerId}
@@ -384,7 +386,7 @@ export default function NewQuotationPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="issueDate">Issue Date *</Label>
+                    <Label htmlFor="issueDate">{t("sales.issueDate")} *</Label>
                     <Input
                       id="issueDate"
                       type="date"
@@ -396,7 +398,7 @@ export default function NewQuotationPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="validUntil">Valid Until *</Label>
+                    <Label htmlFor="validUntil">{t("quotations.validUntil")} *</Label>
                     <Input
                       id="validUntil"
                       type="date"
@@ -410,14 +412,14 @@ export default function NewQuotationPage() {
                   </div>
                   {taxEnabled && (
                     <div className="grid gap-2">
-                      <Label>Pricing</Label>
+                      <Label>{t("common.pricing")}</Label>
                       <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="inclusive">Tax Inclusive</SelectItem>
-                          <SelectItem value="exclusive">Tax Exclusive</SelectItem>
+                          <SelectItem value="inclusive">{t("common.taxInclusive")}</SelectItem>
+                          <SelectItem value="exclusive">{t("common.taxExclusive")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -429,11 +431,11 @@ export default function NewQuotationPage() {
             {/* Line Items */}
             <Card>
               <CardHeader>
-                <CardTitle>Line Items</CardTitle>
+                <CardTitle>{t("common.lineItems")}</CardTitle>
                 <CardAction>
                   <Button type="button" variant="outline" size="sm" onClick={() => addLineItem(true)}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Item
+                    {t("common.addItem")}
                   </Button>
                 </CardAction>
               </CardHeader>
@@ -443,21 +445,21 @@ export default function NewQuotationPage() {
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow>
-                        <TableHead className="w-[30%] font-semibold">Product *</TableHead>
-                        <TableHead className="w-[10%] font-semibold">Quantity *</TableHead>
+                        <TableHead className="w-[30%] font-semibold">{t("common.product")} *</TableHead>
+                        <TableHead className="w-[10%] font-semibold">{t("common.quantity")} *</TableHead>
                         {session?.user?.multiUnitEnabled && (
-                          <TableHead className="w-[12%] font-semibold">Unit</TableHead>
+                          <TableHead className="w-[12%] font-semibold">{t("common.unit")}</TableHead>
                         )}
-                        <TableHead className="w-[12%] font-semibold">Unit Price *</TableHead>
-                        <TableHead className="w-[10%] font-semibold">Disc %</TableHead>
-                        {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">GST %</TableHead>}
+                        <TableHead className="w-[12%] font-semibold">{t("common.unitPrice")} *</TableHead>
+                        <TableHead className="w-[10%] font-semibold">{t("common.discountPercent")}</TableHead>
+                        {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">{t("common.gstPercent")}</TableHead>}
                         {session?.user?.gstEnabled ? (
                           <>
-                            <TableHead className="text-right font-semibold">Gross Amount</TableHead>
-                            <TableHead className="text-right font-semibold">Net Amount</TableHead>
+                            <TableHead className="text-right font-semibold">{t("common.grossAmount")}</TableHead>
+                            <TableHead className="text-right font-semibold">{t("common.netAmount")}</TableHead>
                           </>
                         ) : (
-                          <TableHead className="text-right font-semibold">Line Total</TableHead>
+                          <TableHead className="text-right font-semibold">{t("common.lineTotal")}</TableHead>
                         )}
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
@@ -671,7 +673,7 @@ export default function NewQuotationPage() {
                               productComboRefs.current.delete(item.id);
                             }
                           }}>
-                            <Label className="text-xs text-slate-500 mb-1 block">Product *</Label>
+                            <Label className="text-xs text-slate-500 mb-1 block">{t("common.product")} *</Label>
                             <ProductCombobox
                               products={products}
                               value={item.productId}
@@ -697,7 +699,7 @@ export default function NewQuotationPage() {
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label className="text-xs text-slate-500">Quantity *</Label>
+                            <Label className="text-xs text-slate-500">{t("common.quantity")} *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -711,7 +713,7 @@ export default function NewQuotationPage() {
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-slate-500">Unit Price *</Label>
+                            <Label className="text-xs text-slate-500">{t("common.unitPrice")} *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -725,7 +727,7 @@ export default function NewQuotationPage() {
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-slate-500">Discount %</Label>
+                            <Label className="text-xs text-slate-500">{t("common.discount")} %</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -741,7 +743,7 @@ export default function NewQuotationPage() {
                           </div>
                           {session?.user?.gstEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">GST %</Label>
+                              <Label className="text-xs text-slate-500">{t("common.gstPercent")}</Label>
                               <Input
                                 type="number"
                                 onFocus={(e) => e.target.select()}
@@ -758,7 +760,7 @@ export default function NewQuotationPage() {
                           )}
                           {session?.user?.multiUnitEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">Unit</Label>
+                              <Label className="text-xs text-slate-500">{t("common.unit")}</Label>
                               <ItemUnitSelect
                                 value={item.unitId}
                                 onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
@@ -795,29 +797,29 @@ export default function NewQuotationPage() {
             {/* Notes */}
             <Card>
               <CardHeader>
-                <CardTitle>Additional Information</CardTitle>
+                <CardTitle>{t("common.additionalInformation")}</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">{t("common.notes")}</Label>
                   <Textarea
                     id="notes"
                     value={formData.notes}
                     onChange={(e) =>
                       setFormData({ ...formData, notes: e.target.value })
                     }
-                    placeholder="Notes to the customer..."
+                    placeholder={t("sales.notesPlaceholder")}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="terms">Terms & Conditions</Label>
+                  <Label htmlFor="terms">{t("common.termsAndConditions")}</Label>
                   <Textarea
                     id="terms"
                     value={formData.terms}
                     onChange={(e) =>
                       setFormData({ ...formData, terms: e.target.value })
                     }
-                    placeholder="Payment terms..."
+                    placeholder={t("sales.termsPlaceholder")}
                   />
                 </div>
               </CardContent>
@@ -826,25 +828,25 @@ export default function NewQuotationPage() {
             {/* Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Summary</CardTitle>
+                <CardTitle>{t("common.summary")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
                   {taxInclusive && (
-                    <div className="mb-2 text-left text-xs font-medium text-blue-600 sm:text-right">Prices include tax</div>
+                    <div className="mb-2 text-left text-xs font-medium text-blue-600 sm:text-right">{t("common.pricesIncludeTax")}</div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span>{t("common.subtotal")}</span>
                     <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
                   </div>
                   {tax > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>GST</span>
+                      <span>{t("common.gst")}</span>
                       <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Total</span>
+                    <span>{t("common.total")}</span>
                     <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toLocaleString("en-IN")}</span>
                   </div>
                 </div>
@@ -854,7 +856,7 @@ export default function NewQuotationPage() {
                     className="w-full sm:w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.issueDate || !lineItems.some(item => item.productId)}
                   >
-                    {isSubmitting ? "Creating..." : "Create Quotation"}
+                    {isSubmitting ? t("common.creating") : t("quotations.createQuotation")}
                   </Button>
                 </div>
               </CardContent>

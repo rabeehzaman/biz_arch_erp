@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface AccountRow {
   account: { code: string; name: string };
@@ -35,6 +36,7 @@ const fmt = (n: number) =>
   n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
 export default function ProfitLossPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<ProfitLoss | null>(null);
   const [fromDate, setFromDate] = useState(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]
@@ -53,7 +55,7 @@ export default function ProfitLossPage() {
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
     } catch {
-      toast.error("Failed to load P&L");
+      toast.error(t("reports.noDataForPeriod"));
     } finally {
       setIsLoading(false);
     }
@@ -69,22 +71,22 @@ export default function ProfitLossPage() {
         <PageAnimation>
           <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Profit & Loss</h2>
-            <p className="text-slate-500">Income statement for a period</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("reports.profitLoss")}</h2>
+            <p className="text-slate-500">{t("reports.profitLossDesc")}</p>
           </div>
 
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="grid gap-2">
-                  <Label>From</Label>
+                  <Label>{t("common.from")}</Label>
                   <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>To</Label>
+                  <Label>{t("common.to")}</Label>
                   <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                 </div>
-                <Button onClick={fetchReport} className="mt-6">Generate</Button>
+                <Button onClick={fetchReport} className="mt-6">{t("reports.generate")}</Button>
               </div>
             </CardHeader>
           </Card>
@@ -97,7 +99,7 @@ export default function ProfitLossPage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-green-700">Revenue</CardTitle>
+                  <CardTitle className="text-green-700">{t("reports.totalRevenue")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 sm:hidden">
@@ -106,13 +108,13 @@ export default function ProfitLossPage() {
                         <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
                         <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
                         <div className="mt-4">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.amount")}</p>
                           <p className="mt-1 font-mono font-semibold text-green-600">{fmt(row.amount)}</p>
                         </div>
                       </div>
                     ))}
                     <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
-                      <p className="font-semibold text-slate-900">Total Revenue</p>
+                      <p className="font-semibold text-slate-900">{t("reports.totalRevenue2")}</p>
                       <p className="mt-2 font-mono text-lg font-bold text-green-700">{fmt(data.totalRevenue)}</p>
                     </div>
                   </div>
@@ -121,8 +123,8 @@ export default function ProfitLossPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Account</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>{t("reports.account")}</TableHead>
+                          <TableHead className="text-right">{t("common.amount")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -136,7 +138,7 @@ export default function ProfitLossPage() {
                           </TableRow>
                         ))}
                         <TableRow className="font-bold border-t-2">
-                          <TableCell>Total Revenue</TableCell>
+                          <TableCell>{t("reports.totalRevenue2")}</TableCell>
                           <TableCell className="text-right font-mono text-green-700">{fmt(data.totalRevenue)}</TableCell>
                         </TableRow>
                       </TableBody>
@@ -147,7 +149,7 @@ export default function ProfitLossPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-red-700">Expenses</CardTitle>
+                  <CardTitle className="text-red-700">{t("reports.expenses")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 sm:hidden">
@@ -156,13 +158,13 @@ export default function ProfitLossPage() {
                         <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
                         <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
                         <div className="mt-4">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.amount")}</p>
                           <p className="mt-1 font-mono font-semibold text-red-600">{fmt(row.amount)}</p>
                         </div>
                       </div>
                     ))}
                     <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-                      <p className="font-semibold text-slate-900">Total Expenses</p>
+                      <p className="font-semibold text-slate-900">{t("reports.totalExpenses2")}</p>
                       <p className="mt-2 font-mono text-lg font-bold text-red-700">{fmt(data.totalExpenses)}</p>
                     </div>
                   </div>
@@ -171,8 +173,8 @@ export default function ProfitLossPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Account</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>{t("reports.account")}</TableHead>
+                          <TableHead className="text-right">{t("common.amount")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -186,7 +188,7 @@ export default function ProfitLossPage() {
                           </TableRow>
                         ))}
                         <TableRow className="font-bold border-t-2">
-                          <TableCell>Total Expenses</TableCell>
+                          <TableCell>{t("reports.totalExpenses2")}</TableCell>
                           <TableCell className="text-right font-mono text-red-700">{fmt(data.totalExpenses)}</TableCell>
                         </TableRow>
                       </TableBody>
@@ -198,7 +200,7 @@ export default function ProfitLossPage() {
               <Card className="lg:col-span-2">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold">Net Income</span>
+                    <span className="text-xl font-bold">{t("reports.netIncome")}</span>
                     <span className={`text-2xl font-bold font-mono ${data.netIncome >= 0 ? "text-green-700" : "text-red-700"}`}>
                       {data.netIncome >= 0 ? "" : "-"}{fmt(Math.abs(data.netIncome))}
                     </span>
@@ -207,7 +209,7 @@ export default function ProfitLossPage() {
               </Card>
             </div>
           ) : (
-            <p className="text-center py-8 text-slate-500">No data available</p>
+            <p className="text-center py-8 text-slate-500">{t("reports.noDataAvailable")}</p>
           )}
         </div>
         </PageAnimation>

@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface QuotationItem {
   id: string;
@@ -77,6 +78,7 @@ export default function QuotationDetailPage({
   const { id } = use(params);
   const { symbol } = useCurrency();
   const router = useRouter();
+  const { t } = useLanguage();
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConverting, setIsConverting] = useState(false);
@@ -125,9 +127,9 @@ export default function QuotationDetailPage({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success("PDF downloaded successfully");
+      toast.success(t("common.pdfDownloaded"));
     } catch (error) {
-      toast.error("Failed to download PDF");
+      toast.error(t("common.pdfDownloadFailed"));
       console.error(error);
     } finally {
       setIsDownloading(false);
@@ -149,7 +151,7 @@ export default function QuotationDetailPage({
         };
       }
     } catch (error) {
-      toast.error("Failed to print quotation");
+      toast.error(t("common.printFailed"));
       console.error(error);
     } finally {
       setIsPrinting(false);
@@ -158,10 +160,10 @@ export default function QuotationDetailPage({
 
   const handleConvertToInvoice = async () => {
     setConfirmDialog({
-      title: "Convert to Invoice",
-      description: "Convert this quotation to an invoice? This action cannot be undone.",
+      title: t("quotations.convertToInvoice"),
+      description: `${t("quotations.convertConfirm")} ${t("common.thisActionCannot")}`,
       variant: "default",
-      confirmLabel: "Convert to Invoice",
+      confirmLabel: t("quotations.convertToInvoice"),
       onConfirm: async () => {
         setIsConverting(true);
         try {
@@ -175,10 +177,10 @@ export default function QuotationDetailPage({
           }
 
           const invoice = await response.json();
-          toast.success("Quotation converted to invoice");
+          toast.success(t("quotations.convertedToInvoice"));
           router.push(`/invoices/${invoice.id}`);
         } catch (error: any) {
-          toast.error(error.message || "Failed to convert quotation");
+          toast.error(error.message || t("quotations.failedToConvert"));
           console.error(error);
         } finally {
           setIsConverting(false);
@@ -189,8 +191,8 @@ export default function QuotationDetailPage({
 
   const handleCancelQuotation = async () => {
     setConfirmDialog({
-      title: "Cancel Quotation",
-      description: "Cancel this quotation? This action cannot be undone.",
+      title: t("quotations.cancelQuotation"),
+      description: `${t("quotations.cancelConfirm")} ${t("common.thisActionCannot")}`,
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/quotations/${id}`, {
@@ -202,9 +204,9 @@ export default function QuotationDetailPage({
           if (!response.ok) throw new Error("Failed to cancel");
 
           fetchQuotation();
-          toast.success("Quotation cancelled");
+          toast.success(t("quotations.quotationCancelled"));
         } catch (error) {
-          toast.error("Failed to cancel quotation");
+          toast.error(t("quotations.failedToCancel"));
           console.error(error);
         }
       },
@@ -219,9 +221,16 @@ export default function QuotationDetailPage({
       EXPIRED: "bg-red-500",
     };
 
+    const statusLabels: Record<string, string> = {
+      SENT: t("common.sent2"),
+      CONVERTED: t("common.converted"),
+      CANCELLED: t("common.cancelled"),
+      EXPIRED: t("common.expired"),
+    };
+
     return (
       <Badge className={colors[status]}>
-        {status}
+        {statusLabels[status] || status}
       </Badge>
     );
   };
@@ -231,7 +240,7 @@ export default function QuotationDetailPage({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-slate-500">Loading...</div>
+        <div className="text-slate-500">{t("common.loading")}</div>
       </div>
     );
   }
@@ -253,13 +262,13 @@ export default function QuotationDetailPage({
             </Link>
             <div className="min-w-0">
               <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold text-slate-900 sm:text-2xl">
-                Quotation {quotation.quotationNumber}
+                {t("quotations.quotation")} {quotation.quotationNumber}
                 {getStatusBadge(quotation.status)}
               </h2>
               <p className="text-sm text-slate-500">
-                Created on {format(new Date(quotation.issueDate), "dd MMM yyyy")}
+                {t("common.createdOn")} {format(new Date(quotation.issueDate), "dd MMM yyyy")}
                 {" • "}
-                Valid until {format(new Date(quotation.validUntil), "dd MMM yyyy")}
+                {t("quotations.validUntil")} {format(new Date(quotation.validUntil), "dd MMM yyyy")}
               </p>
             </div>
           </div>
@@ -268,7 +277,7 @@ export default function QuotationDetailPage({
               <Link href={`/quotations/${id}/edit`} className="col-span-1 sm:w-auto">
                 <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
                   <Pencil className="h-4 w-4 sm:mr-2" />
-                  Edit
+                  {t("common.edit")}
                 </Button>
               </Link>
             )}
@@ -277,24 +286,24 @@ export default function QuotationDetailPage({
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
                 : <Download className="h-4 w-4 sm:mr-2" />}
               <span className="sm:hidden">{isDownloading ? "..." : "PDF"}</span>
-              <span className="hidden sm:inline">{isDownloading ? "Downloading..." : "Download PDF"}</span>
+              <span className="hidden sm:inline">{isDownloading ? t("common.downloading") : t("common.downloadPDF")}</span>
             </Button>
             <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isPrinting
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
                 : <Printer className="h-4 w-4 sm:mr-2" />}
-              <span>{isPrinting ? "..." : "Print"}</span>
+              <span>{isPrinting ? "..." : t("common.print")}</span>
             </Button>
             {quotation.status === "SENT" && !isExpired && (
               <>
                 <Button onClick={handleConvertToInvoice} disabled={isConverting} size="sm" className="col-span-2 h-9 w-full sm:h-10 sm:w-auto">
                   <FileCheck className="h-4 w-4 sm:mr-2" />
-                  <span className="sm:hidden">{isConverting ? "..." : "Convert"}</span>
-                  <span className="hidden sm:inline">{isConverting ? "Converting..." : "Convert to Invoice"}</span>
+                  <span className="sm:hidden">{isConverting ? "..." : t("common.converted")}</span>
+                  <span className="hidden sm:inline">{isConverting ? t("quotations.converting") : t("quotations.convertToInvoice")}</span>
                 </Button>
                 <Button variant="destructive" size="sm" onClick={handleCancelQuotation} className="col-span-2 h-9 w-full sm:h-10 sm:w-auto">
                   <Ban className="h-4 w-4 sm:mr-2" />
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </>
             )}
@@ -306,7 +315,7 @@ export default function QuotationDetailPage({
           <Alert className="print:hidden">
             <Info className="h-4 w-4" />
             <AlertDescription>
-              This quotation was converted to invoice{" "}
+              {t("quotations.convertedAlert")}{" "}
               <Link
                 href={`/invoices/${quotation.convertedInvoice.id}`}
                 className="font-medium underline"
@@ -314,7 +323,7 @@ export default function QuotationDetailPage({
                 {quotation.convertedInvoice.invoiceNumber}
               </Link>
               {quotation.convertedAt &&
-                ` on ${format(new Date(quotation.convertedAt), "dd MMM yyyy")}`}
+                ` ${t("quotations.convertedToInvoiceOn")} ${format(new Date(quotation.convertedAt), "dd MMM yyyy")}`}
             </AlertDescription>
           </Alert>
         )}
@@ -324,7 +333,7 @@ export default function QuotationDetailPage({
           <Alert variant="destructive" className="print:hidden">
             <Info className="h-4 w-4" />
             <AlertDescription>
-              This quotation expired on {format(new Date(quotation.validUntil), "dd MMM yyyy")}
+              {t("quotations.expiredOn")} {format(new Date(quotation.validUntil), "dd MMM yyyy")}
             </AlertDescription>
           </Alert>
         )}
@@ -342,11 +351,11 @@ export default function QuotationDetailPage({
                   <h1 className="text-xl font-bold text-slate-900 print:text-xl sm:text-2xl">
                     BizArch ERP
                   </h1>
-                  <p className="text-slate-600">Quotation</p>
+                  <p className="text-slate-600">{t("quotations.quotation")}</p>
                 </div>
               </div>
               <div className="text-left sm:text-right">
-                <div className="text-sm text-slate-600">Quotation Number</div>
+                <div className="text-sm text-slate-600">{t("quotations.quotationNumber")}</div>
                 <div className="text-lg font-bold">{quotation.quotationNumber}</div>
               </div>
             </div>
@@ -355,7 +364,7 @@ export default function QuotationDetailPage({
             <div className="mb-5 grid gap-4 print:mb-6 sm:mb-8 sm:grid-cols-2 sm:gap-8">
               <div>
                 <h3 className="text-sm font-semibold text-slate-600 mb-2">
-                  Quotation To
+                  {t("quotations.quotationTo")}
                 </h3>
                 <div className="text-slate-900">
                   <div className="font-semibold">{quotation.customer.name}</div>
@@ -381,26 +390,26 @@ export default function QuotationDetailPage({
               </div>
               <div>
                 <div className="mb-4">
-                  <div className="text-sm text-slate-600">Issue Date</div>
+                  <div className="text-sm text-slate-600">{t("sales.issueDate")}</div>
                   <div className="font-medium">
                     {format(new Date(quotation.issueDate), "dd MMM yyyy")}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-slate-600">Valid Until</div>
+                  <div className="text-sm text-slate-600">{t("quotations.validUntil")}</div>
                   <div className="font-medium">
                     {format(new Date(quotation.validUntil), "dd MMM yyyy")}
                   </div>
                 </div>
                 {quotation.branch && (
                   <div className="mt-4">
-                    <div className="text-sm text-slate-600">Branch</div>
+                    <div className="text-sm text-slate-600">{t("common.branch")}</div>
                     <div className="font-medium">{quotation.branch.name}</div>
                   </div>
                 )}
                 {quotation.warehouse && (
                   <div className="mt-2">
-                    <div className="text-sm text-slate-600">Warehouse</div>
+                    <div className="text-sm text-slate-600">{t("common.warehouse")}</div>
                     <div className="font-medium">{quotation.warehouse.name}</div>
                   </div>
                 )}
@@ -412,11 +421,11 @@ export default function QuotationDetailPage({
               <Table className="print:text-sm">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>{t("common.description")}</TableHead>
+                    <TableHead className="text-right">{t("common.qty")}</TableHead>
+                    <TableHead className="text-right">{t("common.unitPrice")}</TableHead>
+                    <TableHead className="text-right">{t("common.discount")}</TableHead>
+                    <TableHead className="text-right">{t("common.total")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -447,10 +456,10 @@ export default function QuotationDetailPage({
                 <div key={item.id} className="p-3 space-y-1">
                   <div className="font-medium text-sm">{item.description}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
-                    <span>Qty: {Number(item.quantity).toLocaleString("en-IN")}</span>
-                    <span>Price: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                    <span>{t("common.qty")}: {Number(item.quantity).toLocaleString("en-IN")}</span>
+                    <span>{t("common.price")}: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
                     {Number(item.discount) > 0 && (
-                      <span className="text-green-600">Discount: {Number(item.discount)}%</span>
+                      <span className="text-green-600">{t("common.discount")}: {Number(item.discount)}%</span>
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
@@ -464,37 +473,37 @@ export default function QuotationDetailPage({
             <div className="flex justify-end mt-6 print:mt-4">
               <div className="w-full sm:w-64 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Subtotal</span>
+                  <span className="text-slate-600">{t("common.subtotal")}</span>
                   <span className="font-medium">
                     {symbol}{Number(quotation.subtotal).toLocaleString("en-IN")}
                   </span>
                 </div>
                 {Number(quotation.totalCgst) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">CGST</span>
+                    <span className="text-slate-600">{t("common.cgst")}</span>
                     <span className="font-medium">{symbol}{Number(quotation.totalCgst).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 {Number(quotation.totalSgst) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">SGST</span>
+                    <span className="text-slate-600">{t("common.sgst")}</span>
                     <span className="font-medium">{symbol}{Number(quotation.totalSgst).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 {Number(quotation.totalIgst) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">IGST</span>
+                    <span className="text-slate-600">{t("common.igst")}</span>
                     <span className="font-medium">{symbol}{Number(quotation.totalIgst).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 {Number(quotation.totalCgst) === 0 && Number(quotation.totalSgst) === 0 && Number(quotation.totalIgst) === 0 && Number(quotation.taxAmount) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Tax</span>
+                    <span className="text-slate-600">{t("common.tax")}</span>
                     <span className="font-medium">{symbol}{Number(quotation.taxAmount).toLocaleString("en-IN")}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
-                  <span>Total</span>
+                  <span>{t("common.total")}</span>
                   <span>{symbol}{Number(quotation.total).toLocaleString("en-IN")}</span>
                 </div>
               </div>
@@ -506,7 +515,7 @@ export default function QuotationDetailPage({
                 {quotation.notes && (
                   <div>
                     <h3 className="text-sm font-semibold text-slate-600 mb-2">
-                      Notes
+                      {t("common.notes")}
                     </h3>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">
                       {quotation.notes}
@@ -516,7 +525,7 @@ export default function QuotationDetailPage({
                 {quotation.terms && (
                   <div>
                     <h3 className="text-sm font-semibold text-slate-600 mb-2">
-                      Terms & Conditions
+                      {t("common.termsAndConditions")}
                     </h3>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">
                       {quotation.terms}

@@ -17,6 +17,7 @@ import {
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-react";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface ProductCostIssue {
   id: string;
@@ -64,6 +65,7 @@ interface FixResponse {
 }
 
 export default function FixBalancesPage() {
+  const { t } = useLanguage();
   const [isChecking, setIsChecking] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null);
@@ -97,13 +99,13 @@ export default function FixBalancesPage() {
       const response = await fetch("/api/admin/fix-customer-balances");
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to check balances");
+        throw new Error(data.error || t("admin.fixBalancesDesc"));
       }
 
       const data = await response.json();
       setCheckResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to check balances");
+      setError(err instanceof Error ? err.message : t("admin.fixBalancesDesc"));
     } finally {
       setIsChecking(false);
     }
@@ -111,8 +113,8 @@ export default function FixBalancesPage() {
 
   const handleFix = async () => {
     setConfirmDialog({
-      title: "Fix All Customer Balances",
-      description: "Are you sure you want to fix all customer balances? This will update the database.",
+      title: t("admin.fixAllCustomerBalances"),
+      description: t("admin.fixBalancesConfirm"),
       onConfirm: async () => {
         setIsFixing(true);
         setError(null);
@@ -124,14 +126,14 @@ export default function FixBalancesPage() {
 
           if (!response.ok) {
             const data = await response.json();
-            throw new Error(data.error || "Failed to fix balances");
+            throw new Error(data.error || t("admin.fixBalancesDesc"));
           }
 
           const data = await response.json();
           setFixResult(data);
           setCheckResult(null);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Failed to fix balances");
+          setError(err instanceof Error ? err.message : t("admin.fixBalancesDesc"));
         } finally {
           setIsFixing(false);
         }
@@ -148,11 +150,11 @@ export default function FixBalancesPage() {
       const response = await fetch("/api/admin/fix-product-costs");
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to check product costs");
+        throw new Error(data.error || t("admin.fixProductCostsDesc"));
       }
       setCostCheckResult(await response.json());
     } catch (err) {
-      setCostError(err instanceof Error ? err.message : "Failed to check product costs");
+      setCostError(err instanceof Error ? err.message : t("admin.fixProductCostsDesc"));
     } finally {
       setIsCheckingCosts(false);
     }
@@ -160,8 +162,8 @@ export default function FixBalancesPage() {
 
   const handleFixCosts = async () => {
     setConfirmDialog({
-      title: "Fix All Product Costs",
-      description: "Are you sure you want to fix all product costs to MRP? This will update the database.",
+      title: t("admin.fixAllProductCosts"),
+      description: t("admin.fixCostsConfirm"),
       onConfirm: async () => {
         setIsFixingCosts(true);
         setCostError(null);
@@ -170,12 +172,12 @@ export default function FixBalancesPage() {
           const response = await fetch("/api/admin/fix-product-costs", { method: "POST" });
           if (!response.ok) {
             const data = await response.json();
-            throw new Error(data.error || "Failed to fix product costs");
+            throw new Error(data.error || t("admin.fixProductCostsDesc"));
           }
           setCostFixResult(await response.json());
           setCostCheckResult(null);
         } catch (err) {
-          setCostError(err instanceof Error ? err.message : "Failed to fix product costs");
+          setCostError(err instanceof Error ? err.message : t("admin.fixProductCostsDesc"));
         } finally {
           setIsFixingCosts(false);
         }
@@ -189,18 +191,17 @@ export default function FixBalancesPage() {
         <PageAnimation>
           <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Fix Customer Balances</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{t("admin.fixCustomerBalances")}</h2>
             <p className="text-slate-500">
-              Check and fix customer balance discrepancies across the system
+              {t("admin.fixBalancesDesc")}
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Balance Checker</CardTitle>
+              <CardTitle>{t("admin.balanceChecker")}</CardTitle>
               <CardDescription>
-                This tool will check all customer balances against their transaction history and fix any
-                discrepancies.
+                {t("admin.balanceCheckerDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -211,7 +212,7 @@ export default function FixBalancesPage() {
                   ) : (
                     <Search className="mr-2 h-4 w-4" />
                   )}
-                  Check Balances
+                  {t("admin.checkBalances")}
                 </Button>
 
                 {checkResult && checkResult.customersWithIssues > 0 && (
@@ -221,7 +222,7 @@ export default function FixBalancesPage() {
                     ) : (
                       <RefreshCw className="mr-2 h-4 w-4" />
                     )}
-                    Fix All Balances
+                    {t("admin.fixAllBalances")}
                   </Button>
                 )}
               </div>
@@ -229,7 +230,7 @@ export default function FixBalancesPage() {
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
+                  <AlertTitle>{t("common.error")}</AlertTitle>
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
@@ -237,13 +238,13 @@ export default function FixBalancesPage() {
               {checkResult && (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Check Results</AlertTitle>
+                  <AlertTitle>{t("admin.checkResults")}</AlertTitle>
                   <AlertDescription>
                     {checkResult.message}
                     <div className="mt-2 flex gap-4">
-                      <Badge variant="outline">Total Customers: {checkResult.totalCustomers}</Badge>
+                      <Badge variant="outline">{t("admin.totalCustomers2")}: {checkResult.totalCustomers}</Badge>
                       <Badge variant={checkResult.customersWithIssues > 0 ? "destructive" : "default"}>
-                        Issues Found: {checkResult.customersWithIssues}
+                        {t("admin.issuesFound")}: {checkResult.customersWithIssues}
                       </Badge>
                     </div>
                   </AlertDescription>
@@ -253,14 +254,14 @@ export default function FixBalancesPage() {
               {fixResult && (
                 <Alert className="border-green-600 bg-green-50">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertTitle className="text-green-900">Success</AlertTitle>
+                  <AlertTitle className="text-green-900">{t("admin.success")}</AlertTitle>
                   <AlertDescription className="text-green-800">
                     {fixResult.message}
                     <div className="mt-2 flex gap-4">
-                      <Badge variant="outline">Total Customers: {fixResult.summary.totalCustomers}</Badge>
-                      <Badge className="bg-green-600">Fixed: {fixResult.summary.fixedCount}</Badge>
+                      <Badge variant="outline">{t("admin.totalCustomers2")}: {fixResult.summary.totalCustomers}</Badge>
+                      <Badge className="bg-green-600">{t("admin.fixed")}: {fixResult.summary.fixedCount}</Badge>
                       {fixResult.summary.errorCount > 0 && (
-                        <Badge variant="destructive">Errors: {fixResult.summary.errorCount}</Badge>
+                        <Badge variant="destructive">{t("admin.errors")}: {fixResult.summary.errorCount}</Badge>
                       )}
                     </div>
                   </AlertDescription>
@@ -272,10 +273,9 @@ export default function FixBalancesPage() {
           {checkResult && checkResult.issues.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Customers with Balance Issues</CardTitle>
+                <CardTitle>{t("admin.customersWithBalanceIssues")}</CardTitle>
                 <CardDescription>
-                  The following customers have discrepancies between their stored balance and calculated
-                  balance from transactions
+                  {t("admin.customersBalanceIssuesDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -285,15 +285,15 @@ export default function FixBalancesPage() {
                       <p className="font-semibold text-slate-900">{issue.name}</p>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Stored</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.stored")}</p>
                           <p className="mt-1 font-medium text-slate-900">{formatCurrency(issue.storedBalance || 0)}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Calculated</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.calculated")}</p>
                           <p className="mt-1 font-medium text-green-600">{formatCurrency(issue.calculatedBalance || 0)}</p>
                         </div>
                         <div className="col-span-2">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Difference</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.difference")}</p>
                           <p className="mt-1 font-semibold text-red-600">{formatCurrency(issue.difference)}</p>
                         </div>
                       </div>
@@ -305,10 +305,10 @@ export default function FixBalancesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Customer Name</TableHead>
-                        <TableHead className="text-right">Stored Balance</TableHead>
-                        <TableHead className="text-right">Calculated Balance</TableHead>
-                        <TableHead className="text-right">Difference</TableHead>
+                        <TableHead>{t("admin.customerName")}</TableHead>
+                        <TableHead className="text-right">{t("admin.storedBalance")}</TableHead>
+                        <TableHead className="text-right">{t("admin.calculatedBalance")}</TableHead>
+                        <TableHead className="text-right">{t("admin.difference")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -336,9 +336,9 @@ export default function FixBalancesPage() {
           {fixResult && fixResult.fixes.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Fixed Balances</CardTitle>
+                <CardTitle>{t("admin.fixedBalances")}</CardTitle>
                 <CardDescription>
-                  Successfully updated the following customer balances
+                  {t("admin.fixedBalancesDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -348,15 +348,15 @@ export default function FixBalancesPage() {
                       <p className="font-semibold text-slate-900">{fix.name}</p>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Old Balance</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.oldBalance")}</p>
                           <p className="mt-1 font-medium text-red-600">{formatCurrency(fix.oldBalance || 0)}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">New Balance</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.newBalance")}</p>
                           <p className="mt-1 font-medium text-green-600">{formatCurrency(fix.newBalance || 0)}</p>
                         </div>
                         <div className="col-span-2">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Correction</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.correction")}</p>
                           <p className="mt-1 font-semibold text-slate-900">{formatCurrency(fix.difference)}</p>
                         </div>
                       </div>
@@ -368,10 +368,10 @@ export default function FixBalancesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Customer Name</TableHead>
-                        <TableHead className="text-right">Old Balance</TableHead>
-                        <TableHead className="text-right">New Balance</TableHead>
-                        <TableHead className="text-right">Correction</TableHead>
+                        <TableHead>{t("admin.customerName")}</TableHead>
+                        <TableHead className="text-right">{t("admin.oldBalance")}</TableHead>
+                        <TableHead className="text-right">{t("admin.newBalance")}</TableHead>
+                        <TableHead className="text-right">{t("admin.correction")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -398,18 +398,17 @@ export default function FixBalancesPage() {
 
           {/* Product Cost Fix Section */}
           <div className="pt-6 border-t">
-            <h2 className="text-2xl font-bold text-slate-900">Fix Product Costs</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{t("admin.fixProductCosts")}</h2>
             <p className="text-slate-500">
-              Fix products whose cost was set to the discounted price instead of MRP
+              {t("admin.fixProductCostsDesc")}
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Product Cost Checker</CardTitle>
+              <CardTitle>{t("admin.productCostChecker")}</CardTitle>
               <CardDescription>
-                This tool checks all products with purchase history and ensures their cost reflects the
-                original MRP (pre-discount), not the discounted price.
+                {t("admin.productCostCheckerDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -420,7 +419,7 @@ export default function FixBalancesPage() {
                   ) : (
                     <Search className="mr-2 h-4 w-4" />
                   )}
-                  Check Product Costs
+                  {t("admin.checkProductCosts")}
                 </Button>
 
                 {costCheckResult && costCheckResult.productsWithIssues > 0 && (
@@ -430,7 +429,7 @@ export default function FixBalancesPage() {
                     ) : (
                       <RefreshCw className="mr-2 h-4 w-4" />
                     )}
-                    Fix All Costs
+                    {t("admin.fixAllCosts")}
                   </Button>
                 )}
               </div>
@@ -438,7 +437,7 @@ export default function FixBalancesPage() {
               {costError && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
+                  <AlertTitle>{t("common.error")}</AlertTitle>
                   <AlertDescription>{costError}</AlertDescription>
                 </Alert>
               )}
@@ -446,13 +445,13 @@ export default function FixBalancesPage() {
               {costCheckResult && (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Check Results</AlertTitle>
+                  <AlertTitle>{t("admin.checkResults")}</AlertTitle>
                   <AlertDescription>
                     {costCheckResult.message}
                     <div className="mt-2 flex gap-4">
-                      <Badge variant="outline">Total Products: {costCheckResult.totalProducts}</Badge>
+                      <Badge variant="outline">{t("admin.totalProducts")}: {costCheckResult.totalProducts}</Badge>
                       <Badge variant={costCheckResult.productsWithIssues > 0 ? "destructive" : "default"}>
-                        Issues Found: {costCheckResult.productsWithIssues}
+                        {t("admin.issuesFound")}: {costCheckResult.productsWithIssues}
                       </Badge>
                     </div>
                   </AlertDescription>
@@ -462,12 +461,12 @@ export default function FixBalancesPage() {
               {costFixResult && (
                 <Alert className="border-green-600 bg-green-50">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertTitle className="text-green-900">Success</AlertTitle>
+                  <AlertTitle className="text-green-900">{t("admin.success")}</AlertTitle>
                   <AlertDescription className="text-green-800">
                     {costFixResult.message}
                     <div className="mt-2 flex gap-4">
-                      <Badge variant="outline">Total Products: {costFixResult.summary.totalProducts}</Badge>
-                      <Badge className="bg-green-600">Fixed: {costFixResult.summary.fixedCount}</Badge>
+                      <Badge variant="outline">{t("admin.totalProducts")}: {costFixResult.summary.totalProducts}</Badge>
+                      <Badge className="bg-green-600">{t("admin.fixed")}: {costFixResult.summary.fixedCount}</Badge>
                     </div>
                   </AlertDescription>
                 </Alert>
@@ -478,9 +477,9 @@ export default function FixBalancesPage() {
           {costCheckResult && costCheckResult.issues.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Products with Incorrect Costs</CardTitle>
+                <CardTitle>{t("admin.productsWithIncorrectCosts")}</CardTitle>
                 <CardDescription>
-                  These products have their cost set to the discounted price instead of MRP
+                  {t("admin.incorrectCostsDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -490,19 +489,19 @@ export default function FixBalancesPage() {
                       <p className="font-semibold text-slate-900">{issue.name}</p>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Current Cost</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.currentCost")}</p>
                           <p className="mt-1 font-medium text-red-600">{formatCurrency(issue.currentCost)}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Correct MRP</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.correctMrp")}</p>
                           <p className="mt-1 font-medium text-green-600">{formatCurrency(issue.correctCost)}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Discount</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.discount")}</p>
                           <p className="mt-1 font-medium text-slate-900">{issue.discount}%</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Latest Invoice</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.latestInvoice")}</p>
                           <p className="mt-1 break-all text-slate-900">{issue.latestInvoice}</p>
                         </div>
                       </div>
@@ -514,11 +513,11 @@ export default function FixBalancesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Product Name</TableHead>
-                        <TableHead className="text-right">Current Cost</TableHead>
-                        <TableHead className="text-right">Correct MRP</TableHead>
-                        <TableHead className="text-right">Discount</TableHead>
-                        <TableHead>Latest Invoice</TableHead>
+                        <TableHead>{t("admin.productName")}</TableHead>
+                        <TableHead className="text-right">{t("admin.currentCost")}</TableHead>
+                        <TableHead className="text-right">{t("admin.correctMrp")}</TableHead>
+                        <TableHead className="text-right">{t("common.discount")}</TableHead>
+                        <TableHead>{t("admin.latestInvoice")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -545,9 +544,9 @@ export default function FixBalancesPage() {
           {costFixResult && costFixResult.fixes.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Fixed Product Costs</CardTitle>
+                <CardTitle>{t("admin.fixedProductCosts")}</CardTitle>
                 <CardDescription>
-                  Successfully updated the following product costs to MRP
+                  {t("admin.fixedProductCostsDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -557,15 +556,15 @@ export default function FixBalancesPage() {
                       <p className="font-semibold text-slate-900">{fix.name}</p>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Old Cost</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.oldCost")}</p>
                           <p className="mt-1 font-medium text-red-600">{formatCurrency(fix.oldCost)}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">New Cost</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.newCost")}</p>
                           <p className="mt-1 font-medium text-green-600">{formatCurrency(fix.newCost)}</p>
                         </div>
                         <div className="col-span-2">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Discount</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.discount")}</p>
                           <p className="mt-1 font-medium text-slate-900">{fix.discount}%</p>
                         </div>
                       </div>
@@ -577,10 +576,10 @@ export default function FixBalancesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Product Name</TableHead>
-                        <TableHead className="text-right">Old Cost</TableHead>
-                        <TableHead className="text-right">New Cost (MRP)</TableHead>
-                        <TableHead className="text-right">Discount</TableHead>
+                        <TableHead>{t("admin.productName")}</TableHead>
+                        <TableHead className="text-right">{t("admin.oldCost")}</TableHead>
+                        <TableHead className="text-right">{t("admin.newCostMrp")}</TableHead>
+                        <TableHead className="text-right">{t("common.discount")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface CreditNote {
   id: string;
@@ -66,6 +67,7 @@ export default function CreditNoteDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { symbol } = useCurrency();
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchCreditNote();
@@ -80,7 +82,7 @@ export default function CreditNoteDetailPage() {
       const data = await response.json();
       setCreditNote(data);
     } catch (error) {
-      toast.error("Failed to load credit note");
+      toast.error(t("creditNotes.failedToLoad"));
       console.error("Failed to fetch credit note:", error);
     } finally {
       setIsLoading(false);
@@ -89,18 +91,18 @@ export default function CreditNoteDetailPage() {
 
   const handleDelete = async () => {
     setConfirmDialog({
-      title: "Delete Credit Note",
-      description: "Are you sure you want to delete this credit note? This will restore customer balance and remove stock lots.",
+      title: t("accounting.deleteCreditNote"),
+      description: t("creditNotes.deleteConfirmDesc"),
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/credit-notes/${params.id}`, {
             method: "DELETE",
           });
           if (!response.ok) throw new Error("Failed to delete");
-          toast.success("Credit note deleted");
+          toast.success(t("creditNotes.creditNoteDeleted"));
           router.push("/credit-notes");
         } catch (error) {
-          toast.error("Failed to delete credit note");
+          toast.error(t("creditNotes.failedToDelete"));
           console.error("Failed to delete credit note:", error);
         }
       },
@@ -112,7 +114,7 @@ export default function CreditNoteDetailPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500">Loading credit note...</p>
+          <p className="text-slate-500">{t("creditNotes.loadingCreditNote")}</p>
         </div>
       </div>
     );
@@ -123,9 +125,9 @@ export default function CreditNoteDetailPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500">Credit note not found</p>
+          <p className="text-slate-500">{t("creditNotes.notFound")}</p>
           <Link href="/credit-notes" className="mt-4 inline-block">
-            <Button variant="outline">Back to Credit Notes</Button>
+            <Button variant="outline">{t("creditNotes.backToCreditNotes")}</Button>
           </Link>
         </div>
       </div>
@@ -146,19 +148,19 @@ export default function CreditNoteDetailPage() {
               <h2 className="truncate text-lg font-bold text-slate-900 sm:text-2xl">
                 {creditNote.creditNoteNumber}
               </h2>
-              <p className="text-sm text-slate-500">Credit Note Details</p>
+              <p className="text-sm text-slate-500">{t("creditNotes.creditNoteDetails")}</p>
             </div>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap">
             <Link href={`/credit-notes/${creditNote.id}/edit`} className="col-span-1 sm:w-auto">
               <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
                 <Edit className="h-4 w-4 sm:mr-2" />
-                Edit
+                {t("common.edit")}
               </Button>
             </Link>
             <Button variant="destructive" size="sm" onClick={handleDelete} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               <Trash2 className="h-4 w-4 sm:mr-2" />
-              Delete
+              {t("common.delete")}
             </Button>
           </div>
         </div>
@@ -166,16 +168,16 @@ export default function CreditNoteDetailPage() {
         <div className="grid gap-6 sm:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Customer Information</CardTitle>
+              <CardTitle>{t("common.customerInformation")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div>
-                <div className="text-sm text-slate-500">Customer Name</div>
+                <div className="text-sm text-slate-500">{t("customers.customerName")}</div>
                 <div className="font-medium">{creditNote.customer.name}</div>
               </div>
               {creditNote.customer.email && (
                 <div>
-                  <div className="text-sm text-slate-500">Email</div>
+                  <div className="text-sm text-slate-500">{t("common.email")}</div>
                   <div className="font-medium">{creditNote.customer.email}</div>
                 </div>
               )}
@@ -184,18 +186,18 @@ export default function CreditNoteDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Credit Note Information</CardTitle>
+              <CardTitle>{t("creditNotes.creditNoteInformation")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div>
-                <div className="text-sm text-slate-500">Issue Date</div>
+                <div className="text-sm text-slate-500">{t("sales.issueDate")}</div>
                 <div className="font-medium">
                   {format(new Date(creditNote.issueDate), "dd MMMM yyyy")}
                 </div>
               </div>
               {creditNote.invoice && (
                 <div>
-                  <div className="text-sm text-slate-500">Original Invoice</div>
+                  <div className="text-sm text-slate-500">{t("creditNotes.originalInvoice")}</div>
                   <Link
                     href={`/invoices/${creditNote.invoice.id}`}
                     className="font-medium text-blue-600 hover:underline"
@@ -206,25 +208,25 @@ export default function CreditNoteDetailPage() {
               )}
               {creditNote.reason && (
                 <div>
-                  <div className="text-sm text-slate-500">Reason</div>
+                  <div className="text-sm text-slate-500">{t("creditNotes.reason")}</div>
                   <div className="font-medium">{creditNote.reason}</div>
                 </div>
               )}
               {creditNote.createdBy && (
                 <div>
-                  <div className="text-sm text-slate-500">Created By</div>
+                  <div className="text-sm text-slate-500">{t("common.createdBy")}</div>
                   <div className="font-medium">{creditNote.createdBy.name}</div>
                 </div>
               )}
               {creditNote.branch && (
                 <div>
-                  <div className="text-sm text-slate-500">Branch</div>
+                  <div className="text-sm text-slate-500">{t("common.branch")}</div>
                   <div className="font-medium">{creditNote.branch.name}</div>
                 </div>
               )}
               {creditNote.warehouse && (
                 <div>
-                  <div className="text-sm text-slate-500">Warehouse</div>
+                  <div className="text-sm text-slate-500">{t("common.warehouse")}</div>
                   <div className="font-medium">{creditNote.warehouse.name}</div>
                 </div>
               )}
@@ -234,18 +236,18 @@ export default function CreditNoteDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Items</CardTitle>
+            <CardTitle>{t("sales.items")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="hidden sm:block">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>{t("common.description")}</TableHead>
+                    <TableHead className="text-right">{t("common.quantity")}</TableHead>
+                    <TableHead className="text-right">{t("common.unitPrice")}</TableHead>
+                    <TableHead className="text-right">{t("common.discount")}</TableHead>
+                    <TableHead className="text-right">{t("common.total")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -256,7 +258,7 @@ export default function CreditNoteDetailPage() {
                           <div className="font-medium">{item.description}</div>
                           {item.product?.sku && (
                             <div className="text-sm text-slate-500">
-                              SKU: {item.product.sku}
+                              {t("products.sku")}: {item.product.sku}
                             </div>
                           )}
                         </div>
@@ -280,13 +282,13 @@ export default function CreditNoteDetailPage() {
                 <div key={item.id} className="p-3 space-y-1">
                   <div className="font-medium text-sm">{item.description}</div>
                   {item.product?.sku && (
-                    <div className="text-xs text-slate-500">SKU: {item.product.sku}</div>
+                    <div className="text-xs text-slate-500">{t("products.sku")}: {item.product.sku}</div>
                   )}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
-                    <span>Qty: {item.quantity}</span>
-                    <span>Price: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
+                    <span>{t("common.qty")}: {item.quantity}</span>
+                    <span>{t("common.price")}: {symbol}{Number(item.unitPrice).toLocaleString("en-IN")}</span>
                     {Number(item.discount) > 0 && (
-                      <span className="text-green-600">Discount: {item.discount}%</span>
+                      <span className="text-green-600">{t("common.discount")}: {item.discount}%</span>
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
@@ -298,7 +300,7 @@ export default function CreditNoteDetailPage() {
 
             <div className="ml-auto mt-4 max-w-full space-y-2 sm:max-w-xs">
               <div className="flex justify-between text-lg font-bold">
-                <span>Total:</span>
+                <span>{t("common.total")}:</span>
                 <span className="text-green-600">
                   {symbol}{Number(creditNote.total).toLocaleString("en-IN")}
                 </span>
@@ -310,7 +312,7 @@ export default function CreditNoteDetailPage() {
         {creditNote.notes && (
           <Card>
             <CardHeader>
-              <CardTitle>Notes</CardTitle>
+              <CardTitle>{t("common.notes")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-slate-700 whitespace-pre-wrap">{creditNote.notes}</p>

@@ -19,6 +19,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
+import { useLanguage } from "@/lib/i18n";
 
 interface Account {
   id: string;
@@ -41,6 +42,7 @@ interface ExpenseLine {
 export default function NewExpensePage() {
   const router = useRouter();
   const { containerRef: formRef } = useEnterToTab();
+  const { t } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,7 +96,7 @@ export default function NewExpensePage() {
       (l) => l.accountId && l.description && parseFloat(l.amount) > 0
     );
     if (validLines.length === 0) {
-      toast.error("At least one line item is required");
+      toast.error(t("accounting.atLeastOneLineRequired"));
       return;
     }
 
@@ -121,11 +123,11 @@ export default function NewExpensePage() {
         throw new Error(err.error || "Failed to create");
       }
 
-      toast.success("Expense created");
+      toast.success(t("accounting.expenseCreated"));
       router.push("/accounting/expenses");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to create expense"
+        error instanceof Error ? error.message : t("accounting.failedToCreateExpense")
       );
     } finally {
       setIsSubmitting(false);
@@ -142,20 +144,20 @@ export default function NewExpensePage() {
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">New Expense</h2>
-            <p className="text-slate-500">Record a business expense</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("accounting.newExpense")}</h2>
+            <p className="text-slate-500">{t("accounting.recordBusinessExpense")}</p>
           </div>
         </div>
 
         <form ref={formRef} onSubmit={handleSubmit}>
           <Card>
             <CardHeader>
-              <CardTitle>Expense Details</CardTitle>
+              <CardTitle>{t("accounting.expenseDetails")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="grid gap-2">
-                  <Label>Date *</Label>
+                  <Label>{t("common.date")} *</Label>
                   <Input
                     type="date"
                     value={expenseDate}
@@ -164,10 +166,10 @@ export default function NewExpensePage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Supplier (optional)</Label>
+                  <Label>{t("accounting.supplierOptional")}</Label>
                   <Select value={supplierId} onValueChange={setSupplierId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="No supplier" />
+                      <SelectValue placeholder={t("accounting.noSupplier")} />
                     </SelectTrigger>
                     <SelectContent>
                       {suppliers.map((s) => (
@@ -181,17 +183,17 @@ export default function NewExpensePage() {
               </div>
 
               <div className="grid gap-2">
-                <Label>Description</Label>
+                <Label>{t("common.description")}</Label>
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is this expense for?"
+                  placeholder={t("accounting.expenseDescPlaceholder")}
                 />
               </div>
 
               <div>
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <Label className="text-base font-semibold">Line Items</Label>
+                  <Label className="text-base font-semibold">{t("accounting.lineItems")}</Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -200,15 +202,15 @@ export default function NewExpensePage() {
                     onClick={addLine}
                   >
                     <Plus className="mr-2 h-3 w-3" />
-                    Add Line
+                    {t("accounting.addLine")}
                   </Button>
                 </div>
 
                 <div className="space-y-3">
                   <div className="hidden grid-cols-[1fr_1fr_120px_40px] gap-2 px-1 text-xs font-medium text-slate-500 sm:grid">
-                    <span>Expense Account</span>
-                    <span>Description</span>
-                    <span className="text-right">Amount</span>
+                    <span>{t("accounting.expenseAccount")}</span>
+                    <span>{t("common.description")}</span>
+                    <span className="text-right">{t("common.amount")}</span>
                     <span />
                   </div>
 
@@ -222,7 +224,7 @@ export default function NewExpensePage() {
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select account" />
+                            <SelectValue placeholder={t("accounting.selectAccount")} />
                           </SelectTrigger>
                           <SelectContent>
                             {accounts.map((a) => (
@@ -238,7 +240,7 @@ export default function NewExpensePage() {
                           onChange={(e) =>
                             updateLine(index, "description", e.target.value)
                           }
-                          placeholder="Description"
+                          placeholder={t("common.description")}
                         />
 
                         <Input
@@ -267,7 +269,7 @@ export default function NewExpensePage() {
 
                       <div className="rounded-lg border border-slate-200 p-3 sm:hidden">
                         <div className="flex items-start justify-between gap-3">
-                          <Label className="text-sm font-semibold">Item {index + 1}</Label>
+                          <Label className="text-sm font-semibold">{t("common.item")} {index + 1}</Label>
                           <Button
                             type="button"
                             variant="ghost"
@@ -282,13 +284,13 @@ export default function NewExpensePage() {
 
                         <div className="mt-3 space-y-3">
                           <div className="grid gap-2">
-                            <Label className="text-xs text-slate-500">Expense Account</Label>
+                            <Label className="text-xs text-slate-500">{t("accounting.expenseAccount")}</Label>
                             <Select
                               value={line.accountId}
                               onValueChange={(v) => updateLine(index, "accountId", v)}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select account" />
+                                <SelectValue placeholder={t("accounting.selectAccount")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {accounts.map((a) => (
@@ -301,16 +303,16 @@ export default function NewExpensePage() {
                           </div>
 
                           <div className="grid gap-2">
-                            <Label className="text-xs text-slate-500">Description</Label>
+                            <Label className="text-xs text-slate-500">{t("common.description")}</Label>
                             <Input
                               value={line.description}
                               onChange={(e) => updateLine(index, "description", e.target.value)}
-                              placeholder="Description"
+                              placeholder={t("common.description")}
                             />
                           </div>
 
                           <div className="grid gap-2">
-                            <Label className="text-xs text-slate-500">Amount</Label>
+                            <Label className="text-xs text-slate-500">{t("common.amount")}</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -328,7 +330,7 @@ export default function NewExpensePage() {
 
                   <div className="border-t pt-3 space-y-1 text-sm">
                     <div className="flex justify-between font-bold text-base">
-                      <span>Total:</span>
+                      <span>{t("common.total")}:</span>
                       <span className="font-mono">
                         {subtotal.toLocaleString("en-IN", {
                           minimumFractionDigits: 2,
@@ -340,22 +342,22 @@ export default function NewExpensePage() {
               </div>
 
               <div className="grid gap-2">
-                <Label>Notes</Label>
+                <Label>{t("common.notes")}</Label>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Additional notes"
+                  placeholder={t("common.additionalNotesPlaceholder")}
                 />
               </div>
 
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <Link href="/accounting/expenses">
                   <Button type="button" variant="outline" className="w-full sm:w-auto">
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </Link>
                 <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || subtotal <= 0}>
-                  {isSubmitting ? "Creating..." : "Create Expense"}
+                  {isSubmitting ? t("common.creating") : t("accounting.createExpense")}
                 </Button>
               </div>
             </CardContent>

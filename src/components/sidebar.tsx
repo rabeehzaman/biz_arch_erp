@@ -275,10 +275,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         <div className="min-w-0">
           <span className="block truncate text-lg font-bold text-white">
-            BizArch ERP
+            {t("nav2.appName")}
           </span>
           <span className="block text-[11px] uppercase tracking-[0.18em] text-slate-400">
-            Workspace
+            {t("nav2.workspace")}
           </span>
         </div>
       </div>
@@ -397,6 +397,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function AboutDialog() {
+  const { t } = useLanguage();
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [updateStatus, setUpdateStatus] = useState<string>("");
   const [checking, setChecking] = useState(false);
@@ -417,7 +418,7 @@ function AboutDialog() {
   const handleCheckUpdate = useCallback(async () => {
     if (!isElectron) return;
     setChecking(true);
-    setUpdateStatus("Checking for updates...");
+    setUpdateStatus(t("nav2.checkingForUpdates"));
     await window.electronPOS!.checkForUpdates();
   }, [isElectron]);
 
@@ -429,23 +430,23 @@ function AboutDialog() {
           className="h-11 w-full justify-start gap-3 rounded-xl border border-transparent px-3.5 text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
         >
           <Info className="h-5 w-5" />
-          About
+          {t("nav2.about")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>About BizArch ERP</DialogTitle>
+          <DialogTitle>{t("nav2.aboutTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Version</span>
-              <span className="text-sm font-medium">{appVersion ?? "Web"}</span>
+              <span className="text-sm text-muted-foreground">{t("nav2.version")}</span>
+              <span className="text-sm font-medium">{appVersion ?? t("nav2.web")}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Platform</span>
+              <span className="text-sm text-muted-foreground">{t("nav2.platform")}</span>
               <span className="text-sm font-medium">
-                {isElectron ? (window.electronPOS!.platform === "win32" ? "Windows" : window.electronPOS!.platform === "darwin" ? "macOS" : "Linux") : "Browser"}
+                {isElectron ? (window.electronPOS!.platform === "win32" ? t("nav2.windows") : window.electronPOS!.platform === "darwin" ? t("nav2.macos") : t("nav2.linux")) : t("nav2.browser")}
               </span>
             </div>
           </div>
@@ -465,7 +466,7 @@ function AboutDialog() {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  Check for Updates
+                  {t("nav2.checkForUpdates")}
                 </Button>
                 {updateStatus && (
                   <p className="text-center text-sm text-muted-foreground">
@@ -478,7 +479,7 @@ function AboutDialog() {
 
           <Separator />
           <p className="text-center text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} BizArch. All rights reserved.
+            &copy; {new Date().getFullYear()} {t("nav2.copyright")}
           </p>
         </div>
       </DialogContent>
@@ -501,23 +502,23 @@ export function Sidebar() {
 
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
-  const { isRTL } = useLanguage();
+  const { t, isRTL } = useLanguage();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="md:hidden">
           <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle menu</span>
+          <span className="sr-only">{t("nav2.toggleMenu")}</span>
         </Button>
       </SheetTrigger>
       <SheetContent
         side={isRTL ? "right" : "left"}
         className="flex h-full min-h-0 w-[min(22rem,88vw)] flex-col overflow-hidden border-slate-800 bg-slate-950 p-0 text-white"
       >
-        <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+        <SheetTitle className="sr-only">{t("nav2.navigationMenu")}</SheetTitle>
         <SheetDescription className="sr-only">
-          Browse the BizArch ERP sections and open a page.
+          {t("nav2.navigationMenuDesc")}
         </SheetDescription>
         <div className="flex h-full min-h-0 flex-col">
           <SidebarContent onNavigate={() => setOpen(false)} />

@@ -88,9 +88,9 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
     setOpenDrawerOnSale(checked);
     try {
       localStorage.setItem("pos-open-drawer-on-sale", checked ? "true" : "false");
-      toast.success(`Cash drawer on sale ${checked ? "enabled" : "disabled"}`);
+      toast.success(checked ? t("pos.cashDrawerOnSaleEnabled") : t("pos.cashDrawerOnSaleDisabled"));
     } catch {
-      toast.error("Failed to save setting");
+      toast.error(t("pos.failedToSaveSetting"));
     }
   };
 
@@ -104,10 +104,10 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
         body: JSON.stringify({ value: checked ? "true" : "false" }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`Receipt printing ${checked ? "enabled" : "disabled"}`);
+      toast.success(checked ? t("pos.receiptPrintingEnabled") : t("pos.receiptPrintingDisabled"));
     } catch {
       setReceiptPrinting(prev);
-      toast.error("Failed to update receipt printing setting");
+      toast.error(t("pos.failedToUpdateReceiptPrinting"));
     }
   };
 
@@ -163,7 +163,7 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
         }
       }
     } catch {
-      toast.error("Failed to list printers");
+      toast.error(t("pos.failedToListPrinters"));
     } finally {
       setLoadingPrinters(false);
     }
@@ -183,7 +183,7 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
         }
       }
     } catch {
-      toast.error("Failed to list raw USB printers");
+      toast.error(t("pos.failedToListUsbPrinters"));
     } finally {
       setLoadingUsbPrinters(false);
     }
@@ -260,12 +260,12 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
     try {
       const res = await window.electronPOS.savePrinterConfig(config);
       if (res.success) {
-        toast.success("Printer configuration saved");
+        toast.success(t("pos.printerConfigSaved"));
       } else {
-        toast.error("Failed to save printer configuration");
+        toast.error(t("pos.printerConfigSaveFailed"));
       }
     } catch {
-      toast.error("Failed to save printer configuration");
+      toast.error(t("pos.printerConfigSaveFailed"));
     } finally {
       setIsSavingConfig(false);
     }
@@ -297,10 +297,10 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
     setIsTesting(true);
     try {
       const res = await window.electronPOS.testPrinter(config);
-      if (res.success && res.connected) toast.success("Printer is connected and reachable");
-      else toast.error(res.error || "Printer is not reachable");
+      if (res.success && res.connected) toast.success(t("pos.printerConnected"));
+      else toast.error(res.error || t("pos.printerNotReachable"));
     } catch {
-      toast.error("Connection test failed");
+      toast.error(t("pos.connectionTestFailed"));
     } finally {
       setIsTesting(false);
     }
@@ -313,10 +313,10 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
       if (err) { toast.error(err); return; }
       try {
         const res = await openMobileCashDrawer(config);
-        if (res.success) toast.success("Cash drawer opened");
-        else toast.error(res.error || "Failed to open cash drawer");
+        if (res.success) toast.success(t("pos.cashDrawerOpened"));
+        else toast.error(res.error || t("pos.cashDrawerFailed"));
       } catch {
-        toast.error("Failed to open cash drawer");
+        toast.error(t("pos.cashDrawerFailed"));
       }
       return;
     }
@@ -328,10 +328,10 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
 
     try {
       const res = await window.electronPOS.openCashDrawer(config);
-      if (res.success) toast.success("Cash drawer opened");
-      else toast.error(res.error || "Failed to open cash drawer");
+      if (res.success) toast.success(t("pos.cashDrawerOpened"));
+      else toast.error(res.error || t("pos.cashDrawerFailed"));
     } catch {
-      toast.error("Failed to open cash drawer");
+      toast.error(t("pos.cashDrawerFailed"));
     }
   };
 
@@ -363,10 +363,10 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
       const res = isCapacitor
         ? await capacitorPrintWithConfig(testReceiptData, config as MobilePrinterConfig)
         : await electronPrintWithConfig(testReceiptData, config as ElectronPrinterConfig);
-      if (res.success) toast.success("Test receipt printed");
-      else toast.error(res.error || "Test print failed");
+      if (res.success) toast.success(t("pos.testReceiptPrinted"));
+      else toast.error(res.error || t("pos.testPrintFailed"));
     } catch {
-      toast.error("Test print failed");
+      toast.error(t("pos.testPrintFailed"));
     }
   };
 
@@ -553,9 +553,9 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
             try {
               const res = await window.electronPOS.clearCache();
               if (res.success) toast.success(t("pos.cacheCleared"));
-              else toast.error(res.error || "Failed to clear cache");
+              else toast.error(res.error || t("pos.cacheClearFailed"));
             } catch {
-              toast.error("Failed to clear cache");
+              toast.error(t("pos.cacheClearFailed"));
             } finally {
               setIsClearingCache(false);
             }

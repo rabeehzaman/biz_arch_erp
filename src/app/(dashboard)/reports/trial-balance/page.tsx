@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface AccountRow {
   account: { code: string; name: string; accountType: string };
@@ -36,6 +37,7 @@ const fmt = (n: number) =>
   n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
 export default function TrialBalancePage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<TrialBalance | null>(null);
   const [asOfDate, setAsOfDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -51,7 +53,7 @@ export default function TrialBalancePage() {
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
     } catch {
-      toast.error("Failed to load trial balance");
+      toast.error(t("reports.noDataForPeriod"));
     } finally {
       setIsLoading(false);
     }
@@ -67,15 +69,15 @@ export default function TrialBalancePage() {
         <PageAnimation>
           <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Trial Balance</h2>
-            <p className="text-slate-500">Summary of all account balances</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("reports.trialBalance")}</h2>
+            <p className="text-slate-500">{t("reports.trialBalanceDesc")}</p>
           </div>
 
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="grid gap-2">
-                  <Label>As of Date</Label>
+                  <Label>{t("reports.asOfDate")}</Label>
                   <Input
                     type="date"
                     value={asOfDate}
@@ -83,7 +85,7 @@ export default function TrialBalancePage() {
                   />
                 </div>
                 <Button onClick={fetchReport} className="mt-6">
-                  Generate
+                  {t("reports.generate")}
                 </Button>
               </div>
             </CardHeader>
@@ -94,14 +96,14 @@ export default function TrialBalancePage() {
                 </div>
               ) : !data || data.accounts.length === 0 ? (
                 <p className="text-center py-8 text-slate-500">
-                  No journal entries found for this period
+                  {t("reports.noEntries")}
                 </p>
               ) : (
                 <>
                   {data.isBalanced ? (
-                    <Badge className="mb-4 bg-green-100 text-green-700">Balanced</Badge>
+                    <Badge className="mb-4 bg-green-100 text-green-700">{t("reports.balanced")}</Badge>
                   ) : (
-                    <Badge className="mb-4 bg-red-100 text-red-700">Unbalanced</Badge>
+                    <Badge className="mb-4 bg-red-100 text-red-700">{t("reports.unbalanced")}</Badge>
                   )}
                   <div className="space-y-3 sm:hidden">
                     {data.accounts.map((row) => (
@@ -116,13 +118,13 @@ export default function TrialBalancePage() {
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Debit</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.debit")}</p>
                             <p className="mt-1 font-mono font-medium text-slate-900">
                               {row.debit > 0 ? fmt(row.debit) : "-"}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Credit</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.credit")}</p>
                             <p className="mt-1 font-mono font-medium text-slate-900">
                               {row.credit > 0 ? fmt(row.credit) : "-"}
                             </p>
@@ -132,14 +134,14 @@ export default function TrialBalancePage() {
                     ))}
 
                     <div className="rounded-2xl border border-slate-200 bg-slate-100 p-4">
-                      <p className="font-semibold text-slate-900">Totals</p>
+                      <p className="font-semibold text-slate-900">{t("reports.totals")}</p>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Debit</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.debit")}</p>
                           <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(data.totalDebit)}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Credit</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.credit")}</p>
                           <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(data.totalCredit)}</p>
                         </div>
                       </div>
@@ -150,11 +152,11 @@ export default function TrialBalancePage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Code</TableHead>
-                          <TableHead>Account</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead className="text-right">Debit</TableHead>
-                          <TableHead className="text-right">Credit</TableHead>
+                          <TableHead>{t("common.code")}</TableHead>
+                          <TableHead>{t("reports.account")}</TableHead>
+                          <TableHead>{t("reports.type")}</TableHead>
+                          <TableHead className="text-right">{t("reports.debit")}</TableHead>
+                          <TableHead className="text-right">{t("reports.credit")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -177,7 +179,7 @@ export default function TrialBalancePage() {
                         ))}
                         <TableRow className="font-bold border-t-2">
                           <TableCell colSpan={3} className="text-right">
-                            Totals
+                            {t("reports.totals")}
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {fmt(data.totalDebit)}

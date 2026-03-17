@@ -203,7 +203,7 @@ export default function POSDashboardPage() {
     const pin = openingState?.locationKey === key ? openingState.pinCode : "";
 
     if (!pin) {
-      toast.error("Employee PIN code is required");
+      toast.error(t("pos.pinCodeRequired"));
       return;
     }
 
@@ -225,14 +225,14 @@ export default function POSDashboardPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to open session");
+        throw new Error(data.error || t("pos.failedToOpenSession"));
       }
 
       const session = await res.json();
-      toast.success("POS session opened");
+      toast.success(t("pos.sessionOpened"));
       router.push(`/pos/terminal?sessionId=${session.id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to open session");
+      toast.error(err instanceof Error ? err.message : t("pos.failedToOpenSession"));
       setOpeningState((prev) =>
         prev?.locationKey === key ? { ...prev, isOpening: false } : prev
       );
@@ -256,7 +256,7 @@ export default function POSDashboardPage() {
     try {
       const response = await fetch(`/api/pos/sessions/${selectedSessionId}/pdf`);
       if (!response.ok) {
-        throw new Error("Failed to generate PDF");
+        throw new Error(t("pos.failedToDownloadSessionReport"));
       }
 
       const blob = await response.blob();
@@ -268,10 +268,10 @@ export default function POSDashboardPage() {
       link.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(link);
-      toast.success("POS session report downloaded");
+      toast.success(t("pos.sessionReportDownloaded"));
     } catch (error) {
       console.error("Failed to download POS session report:", error);
-      toast.error("Failed to download POS session report");
+      toast.error(t("pos.failedToDownloadSessionReport"));
     } finally {
       setIsDownloadingReport(false);
     }
@@ -296,11 +296,11 @@ export default function POSDashboardPage() {
       });
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to print POS session report");
+        throw new Error(result.error || t("pos.failedToPrintSessionReport"));
       }
     } catch (error) {
       console.error("Failed to print POS session report:", error);
-      toast.error("Failed to print POS session report");
+      toast.error(t("pos.failedToPrintSessionReport"));
     } finally {
       setIsPrintingReport(false);
     }
@@ -331,15 +331,15 @@ export default function POSDashboardPage() {
 
       if (!res.ok) {
         const payload = await res.json();
-        throw new Error(payload.error || "Failed to save register accounts");
+        throw new Error(payload.error || t("pos.failedToSaveRegisterAccounts"));
       }
 
       await mutate();
       setConfigLocationKey(null);
-      toast.success("Register accounts saved");
+      toast.success(t("pos.registerAccountsSaved"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to save register accounts"
+        error instanceof Error ? error.message : t("pos.failedToSaveRegisterAccounts")
       );
     } finally {
       setIsSavingConfig(false);
@@ -462,7 +462,7 @@ export default function POSDashboardPage() {
                         size="icon"
                         className="h-8 w-8 text-slate-500 hover:text-slate-900"
                         onClick={() => openRegisterConfig(loc)}
-                        title="Register accounts"
+                        title={t("pos.registerAccounts")}
                       >
                         <Settings2 className="h-4 w-4" />
                       </Button>
@@ -567,12 +567,12 @@ export default function POSDashboardPage() {
                             </div>
                             <div>
                               <label className="text-sm font-medium text-muted-foreground mt-2 block">
-                                Employee PIN
+                                {t("pos.employeePin")}
                               </label>
                               <Input
                                 type="password"
                                 inputMode="numeric"
-                                placeholder="Enter your 4-digit PIN"
+                                placeholder={t("pos.enterFourDigitPin")}
                                 value={openingState?.pinCode ?? ""}
                                 onChange={(e) => {
                                   const val = e.target.value.replace(/\D/g, "");
@@ -632,15 +632,15 @@ export default function POSDashboardPage() {
 
                     <div className="mt-3 rounded-lg border bg-slate-50 px-3 py-2 text-xs text-slate-600">
                       <div className="flex items-center justify-between gap-2">
-                        <span>Cash</span>
+                        <span>{t("payments.cash")}</span>
                         <span className="truncate text-right font-medium text-slate-800">
-                          {loc.registerConfig?.defaultCashAccount?.name || "System default"}
+                          {loc.registerConfig?.defaultCashAccount?.name || t("pos.systemDefault")}
                         </span>
                       </div>
                       <div className="mt-1 flex items-center justify-between gap-2">
-                        <span>Bank</span>
+                        <span>{t("common.bank")}</span>
                         <span className="truncate text-right font-medium text-slate-800">
-                          {loc.registerConfig?.defaultBankAccount?.name || "System default"}
+                          {loc.registerConfig?.defaultBankAccount?.name || t("pos.systemDefault")}
                         </span>
                       </div>
                     </div>
@@ -676,9 +676,9 @@ export default function POSDashboardPage() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Register Accounts</DialogTitle>
+            <DialogTitle>{t("pos.registerAccounts")}</DialogTitle>
             <DialogDescription>
-              Set the store safe and bank accounts for this register. In clearing mode, the opening float is issued from the store safe and all cash returns to it at session close.
+              {t("pos.registerAccountsDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -692,13 +692,13 @@ export default function POSDashboardPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Store Safe Account</Label>
+                <Label>{t("pos.storeSafeAccount")}</Label>
                 <Select value={configCashAccountId} onValueChange={setConfigCashAccountId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select cash account" />
+                    <SelectValue placeholder={t("pos.selectCashAccountPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={SYSTEM_DEFAULT_VALUE}>System default</SelectItem>
+                    <SelectItem value={SYSTEM_DEFAULT_VALUE}>{t("pos.systemDefault")}</SelectItem>
                     {cashBankAccounts
                       .filter((account) => account.accountSubType === "CASH")
                       .map((account) => (
@@ -711,13 +711,13 @@ export default function POSDashboardPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Default Bank Account</Label>
+                <Label>{t("pos.defaultBankAccount")}</Label>
                 <Select value={configBankAccountId} onValueChange={setConfigBankAccountId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select bank account" />
+                    <SelectValue placeholder={t("pos.selectBankAccountPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={SYSTEM_DEFAULT_VALUE}>System default</SelectItem>
+                    <SelectItem value={SYSTEM_DEFAULT_VALUE}>{t("pos.systemDefault")}</SelectItem>
                     {cashBankAccounts
                       .filter((account) => account.accountSubType === "BANK")
                       .map((account) => (
@@ -742,7 +742,7 @@ export default function POSDashboardPage() {
             </Button>
             <Button onClick={saveRegisterConfig} disabled={isSavingConfig} className="w-full sm:w-auto">
               {isSavingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Accounts
+              {t("pos.saveAccounts")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -849,7 +849,7 @@ export default function POSDashboardPage() {
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Warehouse</span>
+                          <span className="text-muted-foreground">{t("common.warehouse")}</span>
                           <span className="text-right">
                             {sessionSummary.session.warehouse?.name || "-"}
                           </span>

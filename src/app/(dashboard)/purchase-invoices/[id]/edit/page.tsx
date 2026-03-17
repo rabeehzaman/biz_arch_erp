@@ -24,6 +24,7 @@ import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse
 import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
+import { useLanguage } from "@/lib/i18n";
 
 interface Supplier {
   id: string;
@@ -69,6 +70,7 @@ export default function EditPurchaseInvoicePage({
   const { data: session } = useSession();
   const { symbol } = useCurrency();
   const { unitConversions } = useUnitConversions();
+  const { t } = useLanguage();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -178,12 +180,12 @@ export default function EditPurchaseInvoicePage({
           }))
         );
       } else {
-        toast.error("Purchase invoice not found");
+        toast.error(t("purchases.notFound"));
         router.push("/purchase-invoices");
       }
     } catch (error) {
       console.error("Failed to fetch purchase invoice:", error);
-      toast.error("Failed to load purchase invoice");
+      toast.error(t("purchases.failedToLoad"));
       router.push("/purchase-invoices");
     } finally {
       setIsLoading(false);
@@ -324,7 +326,7 @@ export default function EditPurchaseInvoicePage({
     const validItems = lineItems.filter((item) => item.productId);
 
     if (validItems.length === 0) {
-      toast.error("Please add at least one product to the purchase invoice");
+      toast.error(t("purchases.addProductValidation"));
       return;
     }
 
@@ -363,15 +365,15 @@ export default function EditPurchaseInvoicePage({
       });
 
       if (response.ok) {
-        toast.success("Purchase invoice updated");
+        toast.success(t("purchases.invoiceUpdated"));
         router.push(`/purchase-invoices/${id}`);
       } else {
         const error = await response.json();
-        toast.error(error.error || "Failed to update purchase invoice");
+        toast.error(error.error || t("purchases.failedToUpdate"));
       }
     } catch (error) {
       console.error("Failed to update purchase invoice:", error);
-      toast.error("Failed to update purchase invoice");
+      toast.error(t("purchases.failedToUpdate"));
     } finally {
       setIsSubmitting(false);
     }
@@ -380,7 +382,7 @@ export default function EditPurchaseInvoicePage({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-slate-500">Loading...</div>
+        <div className="text-slate-500">{t("common.loading")}</div>
       </div>
     );
   }
@@ -395,8 +397,8 @@ export default function EditPurchaseInvoicePage({
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Edit Purchase Invoice</h2>
-            <p className="text-slate-500">Update purchase invoice details</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("purchases.editInvoice")}</h2>
+            <p className="text-slate-500">{t("purchases.updatePurchaseDesc")}</p>
           </div>
         </div>
 
@@ -404,7 +406,7 @@ export default function EditPurchaseInvoicePage({
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Purchase Details</CardTitle>
+                <CardTitle>{t("purchases.purchaseDetails")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <BranchWarehouseSelector
@@ -415,7 +417,7 @@ export default function EditPurchaseInvoicePage({
                 />
                 <div className="grid gap-4 sm:grid-cols-2 mt-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="supplier">Supplier *</Label>
+                    <Label htmlFor="supplier">{t("common.supplier")} *</Label>
                     <SupplierCombobox
                       suppliers={suppliers}
                       value={formData.supplierId}
@@ -427,18 +429,18 @@ export default function EditPurchaseInvoicePage({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="supplierInvoiceRef">Supplier Invoice Ref</Label>
+                    <Label htmlFor="supplierInvoiceRef">{t("purchases.supplierInvoiceRef")}</Label>
                     <Input
                       id="supplierInvoiceRef"
                       value={formData.supplierInvoiceRef}
                       onChange={(e) =>
                         setFormData({ ...formData, supplierInvoiceRef: e.target.value })
                       }
-                      placeholder="Supplier's invoice number"
+                      placeholder={t("purchases.supplierInvoiceRefPlaceholder")}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="invoiceDate">Purchase Date *</Label>
+                    <Label htmlFor="invoiceDate">{t("purchases.purchaseDate")} *</Label>
                     <Input
                       id="invoiceDate"
                       type="date"
@@ -450,7 +452,7 @@ export default function EditPurchaseInvoicePage({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="dueDate">Payment Due Date *</Label>
+                    <Label htmlFor="dueDate">{t("purchases.paymentDueDate")} *</Label>
                     <Input
                       id="dueDate"
                       type="date"
@@ -463,14 +465,14 @@ export default function EditPurchaseInvoicePage({
                   </div>
                   {taxEnabled && (
                     <div className="grid gap-2">
-                      <Label>Pricing</Label>
+                      <Label>{t("common.pricing")}</Label>
                       <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="inclusive">Tax Inclusive</SelectItem>
-                          <SelectItem value="exclusive">Tax Exclusive</SelectItem>
+                          <SelectItem value="inclusive">{t("common.taxInclusive")}</SelectItem>
+                          <SelectItem value="exclusive">{t("common.taxExclusive")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -481,11 +483,11 @@ export default function EditPurchaseInvoicePage({
 
             <Card>
               <CardHeader>
-                <CardTitle>Purchase Items</CardTitle>
+                <CardTitle>{t("purchases.purchaseItems")}</CardTitle>
                 <CardAction>
                   <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Item
+                    {t("common.addItem")}
                   </Button>
                 </CardAction>
               </CardHeader>
@@ -495,22 +497,22 @@ export default function EditPurchaseInvoicePage({
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow>
-                        <TableHead className="font-semibold" style={{ width: '30%' }}>Product *</TableHead>
-                        <TableHead className="font-semibold">Quantity *</TableHead>
+                        <TableHead className="font-semibold" style={{ width: '30%' }}>{t("common.product")} *</TableHead>
+                        <TableHead className="font-semibold">{t("common.quantity")} *</TableHead>
                         {session?.user?.multiUnitEnabled && (
-                          <TableHead className="font-semibold">Unit</TableHead>
+                          <TableHead className="font-semibold">{t("common.unit")}</TableHead>
                         )}
-                        <TableHead className="font-semibold">Unit Cost *</TableHead>
-                        <TableHead className="font-semibold">Disc %</TableHead>
-                        {saudiEnabled && <TableHead className="font-semibold">VAT %</TableHead>}
-                        {session?.user?.gstEnabled && !saudiEnabled && <TableHead className="font-semibold">GST %</TableHead>}
+                        <TableHead className="font-semibold">{t("common.unitCost")} *</TableHead>
+                        <TableHead className="font-semibold">{t("common.discountPercent")}</TableHead>
+                        {saudiEnabled && <TableHead className="font-semibold">{t("common.vatPercent")}</TableHead>}
+                        {session?.user?.gstEnabled && !saudiEnabled && <TableHead className="font-semibold">{t("common.gstPercent")}</TableHead>}
                         {taxEnabled ? (
                           <>
-                            <TableHead className="text-right font-semibold">Gross Amount</TableHead>
-                            <TableHead className="text-right font-semibold">Net Amount</TableHead>
+                            <TableHead className="text-right font-semibold">{t("common.grossAmount")}</TableHead>
+                            <TableHead className="text-right font-semibold">{t("common.netAmount")}</TableHead>
                           </>
                         ) : (
-                          <TableHead className="text-right font-semibold">Line Total</TableHead>
+                          <TableHead className="text-right font-semibold">{t("common.lineTotal")}</TableHead>
                         )}
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
@@ -709,7 +711,7 @@ export default function EditPurchaseInvoicePage({
                       <div key={item.id} className="p-3 space-y-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
-                            <Label className="text-xs text-slate-500 mb-1 block">Product *</Label>
+                            <Label className="text-xs text-slate-500 mb-1 block">{t("common.product")} *</Label>
                             <ProductCombobox
                               products={products}
                               value={item.productId}
@@ -733,7 +735,7 @@ export default function EditPurchaseInvoicePage({
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label className="text-xs text-slate-500">Quantity *</Label>
+                            <Label className="text-xs text-slate-500">{t("common.quantity")} *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -747,7 +749,7 @@ export default function EditPurchaseInvoicePage({
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-slate-500">Unit Cost *</Label>
+                            <Label className="text-xs text-slate-500">{t("common.unitCost")} *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -761,7 +763,7 @@ export default function EditPurchaseInvoicePage({
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-slate-500">Discount %</Label>
+                            <Label className="text-xs text-slate-500">{t("common.discountPercent")}</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -777,7 +779,7 @@ export default function EditPurchaseInvoicePage({
                           </div>
                           {saudiEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">VAT %</Label>
+                              <Label className="text-xs text-slate-500">{t("common.vatPercent")}</Label>
                               <Input
                                 type="number"
                                 onFocus={(e) => e.target.select()}
@@ -794,7 +796,7 @@ export default function EditPurchaseInvoicePage({
                           )}
                           {session?.user?.gstEnabled && !saudiEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">GST %</Label>
+                              <Label className="text-xs text-slate-500">{t("common.gstPercent")}</Label>
                               <Input
                                 type="number"
                                 onFocus={(e) => e.target.select()}
@@ -811,7 +813,7 @@ export default function EditPurchaseInvoicePage({
                           )}
                           {session?.user?.multiUnitEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">Unit</Label>
+                              <Label className="text-xs text-slate-500">{t("common.unit")}</Label>
                               <ItemUnitSelect
                                 value={item.unitId}
                                 onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
@@ -847,18 +849,18 @@ export default function EditPurchaseInvoicePage({
 
             <Card>
               <CardHeader>
-                <CardTitle>Additional Information</CardTitle>
+                <CardTitle>{t("common.additionalInformation")}</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">{t("common.notes")}</Label>
                   <Textarea
                     id="notes"
                     value={formData.notes}
                     onChange={(e) =>
                       setFormData({ ...formData, notes: e.target.value })
                     }
-                    placeholder="Any additional notes..."
+                    placeholder={t("common.notesPlaceholder")}
                   />
                 </div>
               </CardContent>
@@ -866,23 +868,23 @@ export default function EditPurchaseInvoicePage({
 
             <Card>
               <CardHeader>
-                <CardTitle>Summary</CardTitle>
+                <CardTitle>{t("common.summary")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
-                  <p className="font-medium">Stock Update</p>
+                  <p className="font-medium">{t("purchases.stockUpdate")}</p>
                   <p className="text-blue-600">
-                    Updating this purchase invoice will automatically adjust stock levels for the selected products.
+                    {t("purchases.stockUpdateEditDesc")}
                   </p>
                 </div>
                 <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
                   <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
                     <div>
-                      <p className="text-sm font-medium">Apply Round Off</p>
+                      <p className="text-sm font-medium">{t("common.applyRoundOff")}</p>
                       <p className="text-xs text-slate-500">
                         {roundOffEnabled
-                          ? "Use organization round off rule on the final total."
-                          : "Enable a round off mode in Settings > Company."}
+                          ? t("purchases.roundOffRuleEnabled")
+                          : t("purchases.roundOffRuleDisabled")}
                       </p>
                     </div>
                     <Switch
@@ -892,18 +894,18 @@ export default function EditPurchaseInvoicePage({
                     />
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span>{t("common.subtotal")}</span>
                     <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
                   </div>
                   {tax > 0 && (
                     <div className="flex justify-between text-sm text-slate-500">
-                      <span>{saudiEnabled ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
+                      <span>{saudiEnabled ? t("purchases.vatLabel") : t("common.gst")}</span>
                       <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   {applyRoundOff && roundOffAmount !== 0 && (
                     <div className="flex justify-between text-sm text-slate-500">
-                      <span>Round Off</span>
+                      <span>{t("common.roundOff")}</span>
                       <span key={`summary-roundoff:${roundOffAmount.toFixed(2)}`}>
                         {roundOffAmount >= 0 ? "+" : ""}
                         {symbol}{roundOffAmount.toFixed(2)}
@@ -911,7 +913,7 @@ export default function EditPurchaseInvoicePage({
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Total</span>
+                    <span>{t("common.total")}</span>
                     <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toLocaleString("en-IN")}</span>
                   </div>
                 </div>
@@ -921,7 +923,7 @@ export default function EditPurchaseInvoicePage({
                     className="w-full sm:w-auto"
                     disabled={isSubmitting || !formData.supplierId || !formData.dueDate}
                   >
-                    {isSubmitting ? "Updating..." : "Update Purchase Invoice"}
+                    {isSubmitting ? t("common.updating") : t("purchases.updatePurchaseInvoice")}
                   </Button>
                 </div>
               </CardContent>

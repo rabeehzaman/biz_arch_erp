@@ -10,6 +10,7 @@ import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/pa
 import { Loader2, AlertTriangle, Search, Smartphone, Download, Images } from "lucide-react";
 import Link from "next/link";
 import { ImeiCameraScanner } from "@/components/mobile-devices/imei-camera-scanner";
+import { useLanguage } from "@/lib/i18n";
 
 interface DeviceResult {
   id: string;
@@ -53,15 +54,6 @@ const statusColors: Record<string, string> = {
   RMA: "bg-red-100 text-red-800",
 };
 
-const conditionLabels: Record<string, string> = {
-  NEW: "New",
-  OPEN_BOX: "Open Box",
-  GRADE_A: "Grade A",
-  GRADE_B: "Grade B",
-  GRADE_C: "Grade C",
-  REFURBISHED: "Refurbished",
-};
-
 function isWarrantyActive(date: string | null) {
   if (!date) return false;
   return new Date(date) > new Date();
@@ -69,11 +61,29 @@ function isWarrantyActive(date: string | null) {
 
 export default function ImeiLookupPage() {
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const [query, setQuery] = useState(() => searchParams.get("imei") ?? "");
   const [loading, setLoading] = useState(false);
   const [device, setDevice] = useState<DeviceResult | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [searched, setSearched] = useState(false);
+
+  const conditionLabels: Record<string, string> = {
+    NEW: t("mobileShop.conditionNew"),
+    OPEN_BOX: t("mobileShop.conditionOpenBox"),
+    GRADE_A: t("mobileShop.conditionGradeA"),
+    GRADE_B: t("mobileShop.conditionGradeB"),
+    GRADE_C: t("mobileShop.conditionGradeC"),
+    REFURBISHED: t("mobileShop.conditionRefurbished"),
+  };
+
+  const statusLabels: Record<string, string> = {
+    IN_STOCK: t("mobileShop.inStock"),
+    RESERVED: t("mobileShop.reserved"),
+    SOLD: t("mobileShop.sold"),
+    IN_REPAIR: t("mobileShop.inRepair"),
+    RMA: t("mobileShop.rma"),
+  };
 
   // Auto-search when navigated from command palette with ?imei= param
   useEffect(() => {
@@ -115,9 +125,9 @@ export default function ImeiLookupPage() {
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Search className="h-6 w-6" />
-            IMEI Lookup
+            {t("mobileShop.imeiLookup")}
           </h2>
-          <p className="text-slate-500">Search for a device by scanning or entering its IMEI number</p>
+          <p className="text-slate-500">{t("mobileShop.imeiLookupDesc")}</p>
         </div>
 
         <Card>
@@ -126,7 +136,7 @@ export default function ImeiLookupPage() {
               <div className="flex items-stretch gap-2">
                 <Input
                   autoFocus
-                  placeholder="Scan or enter IMEI number..."
+                  placeholder={t("mobileShop.imeiPlaceholder")}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -146,10 +156,10 @@ export default function ImeiLookupPage() {
               </div>
               <Button type="button" className="w-full" onClick={() => handleSearch()}>
                 <Search className="mr-2 h-4 w-4" />
-                Search Device
+                {t("mobileShop.searchDevice")}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                Press Enter, tap the camera icon, or scan a barcode to search
+                {t("mobileShop.searchHelp")}
               </p>
             </div>
           </CardContent>
@@ -165,8 +175,8 @@ export default function ImeiLookupPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900">Device Not Found</h3>
-              <p className="text-slate-500 mt-1">No device matches IMEI: <span className="font-mono">{query}</span></p>
+              <h3 className="text-lg font-semibold text-slate-900">{t("mobileShop.deviceNotFound")}</h3>
+              <p className="text-slate-500 mt-1">{t("mobileShop.noDeviceMatchesImei")} <span className="font-mono">{query}</span></p>
             </CardContent>
           </Card>
         )}
@@ -179,59 +189,59 @@ export default function ImeiLookupPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Smartphone className="h-4 w-4" />
-                    Device Specs
+                    {t("mobileShop.deviceSpecs")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Brand</span>
+                    <span className="text-muted-foreground">{t("mobileShop.brand")}</span>
                     <span className="font-medium">{device.brand}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Model</span>
+                    <span className="text-muted-foreground">{t("mobileShop.model")}</span>
                     <span className="font-medium">{device.model}</span>
                   </div>
                   {device.color && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Color</span>
+                      <span className="text-muted-foreground">{t("mobileShop.color")}</span>
                       <span>{device.color}</span>
                     </div>
                   )}
                   {device.storageCapacity && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Storage</span>
+                      <span className="text-muted-foreground">{t("mobileShop.storage")}</span>
                       <span>{device.storageCapacity}</span>
                     </div>
                   )}
                   {device.ram && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">RAM</span>
+                      <span className="text-muted-foreground">{t("mobileShop.ram")}</span>
                       <span>{device.ram}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">IMEI 1</span>
+                    <span className="text-muted-foreground">{t("mobileShop.imei1")}</span>
                     <span className="font-mono text-xs">{device.imei1}</span>
                   </div>
                   {device.imei2 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">IMEI 2</span>
+                      <span className="text-muted-foreground">{t("mobileShop.imei2")}</span>
                       <span className="font-mono text-xs">{device.imei2}</span>
                     </div>
                   )}
                   {device.serialNumber && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Serial</span>
+                      <span className="text-muted-foreground">{t("mobileShop.serial")}</span>
                       <span className="font-mono text-xs">{device.serialNumber}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Network</span>
+                    <span className="text-muted-foreground">{t("mobileShop.network")}</span>
                     <span>{device.networkStatus}</span>
                   </div>
                   {device.product && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Product</span>
+                      <span className="text-muted-foreground">{t("mobileShop.product")}</span>
                       <span>{device.product.name}</span>
                     </div>
                   )}
@@ -243,34 +253,34 @@ export default function ImeiLookupPage() {
             <StaggerItem>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Inventory & Condition</CardTitle>
+                  <CardTitle className="text-base">{t("mobileShop.inventoryCondition")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Status</span>
+                    <span className="text-muted-foreground">{t("common.status")}</span>
                     <Badge className={statusColors[device.currentStatus] || "bg-gray-100 text-gray-800"}>
-                      {device.currentStatus.replace("_", " ")}
+                      {statusLabels[device.currentStatus] || device.currentStatus.replace("_", " ")}
                     </Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Condition</span>
+                    <span className="text-muted-foreground">{t("mobileShop.condition")}</span>
                     <span>{conditionLabels[device.conditionGrade] || device.conditionGrade}</span>
                   </div>
                   {device.batteryHealthPercentage !== null && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Battery Health</span>
+                      <span className="text-muted-foreground">{t("mobileShop.batteryHealth")}</span>
                       <span>{device.batteryHealthPercentage}%</span>
                     </div>
                   )}
                   {device.includedAccessories && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Accessories</span>
+                      <span className="text-muted-foreground">{t("mobileShop.accessories")}</span>
                       <span className="text-right text-xs">
                         {[
-                          device.includedAccessories.box && "Box",
-                          device.includedAccessories.charger && "Charger",
-                          device.includedAccessories.cable && "Cable",
-                        ].filter(Boolean).join(", ") || "None"}
+                          device.includedAccessories.box && t("mobileShop.box"),
+                          device.includedAccessories.charger && t("mobileShop.charger"),
+                          device.includedAccessories.cable && t("mobileShop.cable"),
+                        ].filter(Boolean).join(", ") || t("mobileShop.noneAccessories")}
                       </span>
                     </div>
                   )}
@@ -282,12 +292,12 @@ export default function ImeiLookupPage() {
             <StaggerItem>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Cost & Sourcing</CardTitle>
+                  <CardTitle className="text-base">{t("mobileShop.costSourcing")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   {device.supplier && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Supplier</span>
+                      <span className="text-muted-foreground">{t("mobileShop.supplier")}</span>
                       <Link href={`/suppliers`} className="text-blue-600 hover:underline">
                         {device.supplier.name}
                       </Link>
@@ -295,35 +305,35 @@ export default function ImeiLookupPage() {
                   )}
                   {device.purchaseInvoice && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Purchase Invoice</span>
+                      <span className="text-muted-foreground">{t("mobileShop.purchaseInvoice")}</span>
                       <Link href={`/purchase-invoices/${device.purchaseInvoice.id}`} className="text-blue-600 hover:underline font-mono text-xs">
                         {device.purchaseInvoice.purchaseInvoiceNumber}
                       </Link>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Inward Date</span>
+                    <span className="text-muted-foreground">{t("mobileShop.inwardDate")}</span>
                     <span>{new Date(device.inwardDate).toLocaleDateString("en-IN")}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cost Price</span>
+                    <span className="text-muted-foreground">{t("mobileShop.costPrice")}</span>
                     <span>&#8377;{Number(device.costPrice).toLocaleString("en-IN")}</span>
                   </div>
                   {Number(device.landedCost) > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Landed Cost</span>
+                      <span className="text-muted-foreground">{t("mobileShop.landedCost")}</span>
                       <span>&#8377;{Number(device.landedCost).toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   {Number(device.sellingPrice) > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Selling Price</span>
+                      <span className="text-muted-foreground">{t("mobileShop.sellingPrice")}</span>
                       <span>&#8377;{Number(device.sellingPrice).toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   {device.mrp !== null && Number(device.mrp) > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">MRP</span>
+                      <span className="text-muted-foreground">{t("mobileShop.mrp")}</span>
                       <span>&#8377;{Number(device.mrp).toLocaleString("en-IN")}</span>
                     </div>
                   )}
@@ -335,14 +345,14 @@ export default function ImeiLookupPage() {
             <StaggerItem>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Sales Details</CardTitle>
+                  <CardTitle className="text-base">{t("mobileShop.salesDetails")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   {device.currentStatus === "SOLD" ? (
                     <>
                       {device.customer && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Customer</span>
+                          <span className="text-muted-foreground">{t("mobileShop.customer")}</span>
                           <Link href={`/customers`} className="text-blue-600 hover:underline">
                             {device.customer.name}
                           </Link>
@@ -350,7 +360,7 @@ export default function ImeiLookupPage() {
                       )}
                       {device.salesInvoice && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Sales Invoice</span>
+                          <span className="text-muted-foreground">{t("mobileShop.salesInvoice")}</span>
                           <Link href={`/invoices/${device.salesInvoice.id}`} className="text-blue-600 hover:underline font-mono text-xs">
                             {device.salesInvoice.invoiceNumber}
                           </Link>
@@ -358,25 +368,25 @@ export default function ImeiLookupPage() {
                       )}
                       {device.outwardDate && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Outward Date</span>
+                          <span className="text-muted-foreground">{t("mobileShop.outwardDate")}</span>
                           <span>{new Date(device.outwardDate).toLocaleDateString("en-IN")}</span>
                         </div>
                       )}
                       {device.soldPrice !== null && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Sold Price</span>
+                          <span className="text-muted-foreground">{t("mobileShop.soldPrice")}</span>
                           <span>&#8377;{Number(device.soldPrice).toLocaleString("en-IN")}</span>
                         </div>
                       )}
                       {device.salesperson && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Salesperson</span>
+                          <span className="text-muted-foreground">{t("mobileShop.salesperson")}</span>
                           <span>{device.salesperson.name}</span>
                         </div>
                       )}
                     </>
                   ) : (
-                    <p className="text-muted-foreground text-center py-4">Not sold yet</p>
+                    <p className="text-muted-foreground text-center py-4">{t("mobileShop.notSoldYet")}</p>
                   )}
                 </CardContent>
               </Card>
@@ -389,7 +399,7 @@ export default function ImeiLookupPage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Images className="h-4 w-4" />
-                      Device Photos ({device.photoUrls.length})
+                      {t("mobileShop.devicePhotos")} ({device.photoUrls.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -400,7 +410,7 @@ export default function ImeiLookupPage() {
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={url}
-                              alt={`Photo ${index + 1}`}
+                              alt={`${t("mobileShop.photo")} ${index + 1}`}
                               className="h-28 w-28 rounded-md border object-cover cursor-pointer hover:opacity-90 transition-opacity"
                             />
                           </a>
@@ -409,7 +419,7 @@ export default function ImeiLookupPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="absolute bottom-1 right-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Download"
+                            title={t("common.download")}
                           >
                             <Download className="h-3 w-3" />
                           </a>
@@ -425,34 +435,34 @@ export default function ImeiLookupPage() {
             <StaggerItem className="md:col-span-2">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Warranty</CardTitle>
+                  <CardTitle className="text-base">{t("mobileShop.warranty")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Supplier Warranty</span>
+                      <span className="text-muted-foreground">{t("mobileShop.supplierWarranty")}</span>
                       {device.supplierWarrantyExpiry ? (
                         <span className="flex items-center gap-2">
                           {new Date(device.supplierWarrantyExpiry).toLocaleDateString("en-IN")}
                           <Badge variant={isWarrantyActive(device.supplierWarrantyExpiry) ? "default" : "secondary"} className="text-xs">
-                            {isWarrantyActive(device.supplierWarrantyExpiry) ? "Active" : "Expired"}
+                            {isWarrantyActive(device.supplierWarrantyExpiry) ? t("mobileShop.warrantyActive") : t("mobileShop.warrantyExpired")}
                           </Badge>
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">N/A</span>
+                        <span className="text-muted-foreground">{t("common.na")}</span>
                       )}
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Customer Warranty</span>
+                      <span className="text-muted-foreground">{t("mobileShop.customerWarranty")}</span>
                       {device.customerWarrantyExpiry ? (
                         <span className="flex items-center gap-2">
                           {new Date(device.customerWarrantyExpiry).toLocaleDateString("en-IN")}
                           <Badge variant={isWarrantyActive(device.customerWarrantyExpiry) ? "default" : "secondary"} className="text-xs">
-                            {isWarrantyActive(device.customerWarrantyExpiry) ? "Active" : "Expired"}
+                            {isWarrantyActive(device.customerWarrantyExpiry) ? t("mobileShop.warrantyActive") : t("mobileShop.warrantyExpired")}
                           </Badge>
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">N/A</span>
+                        <span className="text-muted-foreground">{t("common.na")}</span>
                       )}
                     </div>
                   </div>

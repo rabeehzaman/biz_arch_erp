@@ -149,8 +149,8 @@ export default function CashBankPage() {
           <div className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Cash & Bank</h2>
-              <p className="text-slate-500">Manage cash and bank accounts</p>
+              <h2 className="text-2xl font-bold text-slate-900">{t("accounting.cashAndBank")}</h2>
+              <p className="text-slate-500">{t("accounting.manageCashBankAccounts")}</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Link href="/reports/cash-bank-summary">
@@ -163,7 +163,7 @@ export default function CashBankPage() {
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full sm:w-auto">
                     <ArrowRightLeft className="mr-2 h-4 w-4" />
-                    Transfer
+                    {t("accounting.transfer")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
@@ -197,16 +197,16 @@ export default function CashBankPage() {
                       </div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="grid gap-2">
-                          <Label>Amount *</Label>
+                          <Label>{t("common.amount")} *</Label>
                           <Input type="number" step="0.01" value={transferData.amount} onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })} required />
                         </div>
                         <div className="grid gap-2">
-                          <Label>Date</Label>
+                          <Label>{t("common.date")}</Label>
                           <Input type="date" value={transferData.transactionDate} onChange={(e) => setTransferData({ ...transferData, transactionDate: e.target.value })} />
                         </div>
                       </div>
                       <div className="grid gap-2">
-                        <Label>Description</Label>
+                        <Label>{t("common.description")}</Label>
                         <Input value={transferData.description} onChange={(e) => setTransferData({ ...transferData, description: e.target.value })} placeholder={t("accounting.transferDescriptionPlaceholder")} />
                       </div>
                     </div>
@@ -221,35 +221,35 @@ export default function CashBankPage() {
                 <DialogTrigger asChild>
                   <Button className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Account
+                    {t("accounting.addAccount")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
                   <form className="contents" onSubmit={handleCreate}>
                     <DialogHeader className="pr-12">
-                      <DialogTitle>Add Cash/Bank Account</DialogTitle>
-                      <DialogDescription>Create a new cash or bank account.</DialogDescription>
+                      <DialogTitle>{t("accounting.addCashBankAccount")}</DialogTitle>
+                      <DialogDescription>{t("accounting.createCashBankAccountDesc")}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-2 sm:py-4">
                       <div className="grid gap-2">
-                        <Label>Name *</Label>
-                        <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. HDFC Current Account" required />
+                        <Label>{t("common.name")} *</Label>
+                        <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder={t("accounting.cashBankNamePlaceholder")} required />
                       </div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="grid gap-2">
-                          <Label>Type *</Label>
+                          <Label>{t("common.type")} *</Label>
                           <Select value={formData.accountSubType} onValueChange={(v) => setFormData({ ...formData, accountSubType: v })}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="BANK">Bank Account</SelectItem>
-                              <SelectItem value="CASH">Cash Account</SelectItem>
+                              <SelectItem value="BANK">{t("accounting.bankAccount")}</SelectItem>
+                              <SelectItem value="CASH">{t("accounting.cashAccount")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="grid gap-2">
-                          <Label>COA Account *</Label>
+                          <Label>{t("accounting.coaAccount")}</Label>
                           <Select value={formData.accountId} onValueChange={(v) => setFormData({ ...formData, accountId: v })}>
-                            <SelectTrigger><SelectValue placeholder="Link to COA" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t("accounting.linkToCoa")} /></SelectTrigger>
                             <SelectContent>
                               {coaAccounts.filter((a) => a.accountSubType === formData.accountSubType).map((a) => (
                                 <SelectItem key={a.id} value={a.id}>{a.code} - {a.name}</SelectItem>
@@ -261,22 +261,22 @@ export default function CashBankPage() {
                       {formData.accountSubType === "BANK" && (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div className="grid gap-2">
-                            <Label>Bank Name</Label>
+                            <Label>{t("accounting.bankName2")}</Label>
                             <Input value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })} />
                           </div>
                           <div className="grid gap-2">
-                            <Label>Account Number</Label>
+                            <Label>{t("accounting.accountNumber2")}</Label>
                             <Input value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })} />
                           </div>
                         </div>
                       )}
                       <div className="grid gap-2">
-                        <Label>Opening Balance</Label>
+                        <Label>{t("common.openingBalance")}</Label>
                         <Input type="number" step="0.01" value={formData.openingBalance} onChange={(e) => setFormData({ ...formData, openingBalance: e.target.value })} placeholder="0.00" />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit">Create Account</Button>
+                      <Button type="submit">{t("accounting.createAccount")}</Button>
                     </DialogFooter>
                   </form>
                 </DialogContent>
@@ -287,7 +287,7 @@ export default function CashBankPage() {
           {/* Summary Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Total Balance</CardTitle>
+              <CardTitle>{t("accounting.totalBalance")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">
@@ -301,15 +301,15 @@ export default function CashBankPage() {
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3 text-center">
                 <div className="animate-spin h-8 w-8 rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-sm text-slate-500">Loading accounts...</p>
+                <p className="text-sm text-slate-500">{t("accounting.loadingAccounts")}</p>
               </div>
             </div>
           ) : accounts.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <Wallet className="h-12 w-12 text-slate-300" />
-                <h3 className="mt-4 text-lg font-semibold">No accounts found</h3>
-                <p className="text-sm text-slate-500">Add your first cash or bank account</p>
+                <h3 className="mt-4 text-lg font-semibold">{t("accounting.noAccountsFound")}</h3>
+                <p className="text-sm text-slate-500">{t("accounting.addFirstCashBankAccount")}</p>
               </CardContent>
             </Card>
           ) : (
@@ -321,7 +321,7 @@ export default function CashBankPage() {
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="min-w-0 break-words font-semibold">{account.name}</h3>
                         <Badge variant="outline">
-                          {account.accountSubType === "BANK" ? "Bank" : "Cash"}
+                          {account.accountSubType === "BANK" ? t("accounting.bank") : t("accounting.cash")}
                         </Badge>
                       </div>
                       {account.bankName && (
@@ -331,11 +331,11 @@ export default function CashBankPage() {
                         {fmt(Number(account.balance))}
                       </p>
                       <p className="text-xs text-slate-400 mt-1">
-                        {account._count.transactions} transactions
+                        {account._count.transactions} {t("accounting.transactions")}
                       </p>
                       <div className="mt-3 flex items-center gap-2">
                         {account.isDefault && (
-                          <Badge variant="secondary">Default</Badge>
+                          <Badge variant="secondary">{t("common.default")}</Badge>
                         )}
                         <Link
                           href={`/reports/${account.accountSubType === "CASH" ? "cash-book" : "bank-book"}?accountId=${account.id}`}

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { UnitFormDialog } from "@/components/units/unit-form-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface Unit {
   id: string;
@@ -32,10 +33,12 @@ export function UnitSelect({
   value,
   onValueChange,
   required = false,
-  label = "Unit",
+  label,
   error,
   className,
 }: UnitSelectProps) {
+  const { t } = useLanguage();
+  const displayLabel = label ?? t("common.unit");
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false);
@@ -67,21 +70,21 @@ export function UnitSelect({
   };
   return (
     <div className={`grid gap-2 ${className || ""}`}>
-      {label && (
+      {displayLabel && (
         <Label htmlFor="unit">
-          {label}
+          {displayLabel}
           {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
       )}
       <div className="flex min-w-0 items-center gap-2">
         <Select value={value} onValueChange={onValueChange} disabled={loading}>
           <SelectTrigger id="unit" className={error ? "w-full min-w-0 flex-1 border-red-500" : "w-full min-w-0 flex-1"}>
-            <SelectValue placeholder={loading ? "Loading..." : "Select a unit"} />
+            <SelectValue placeholder={loading ? t("common.loading") : t("units.selectUnit")} />
           </SelectTrigger>
           <SelectContent>
             {units.length === 0 ? (
               <div className="px-3 py-2 text-sm text-muted-foreground">
-                No units found. Click + to add one.
+                {t("units.noUnitsFound")}
               </div>
             ) : (
               units.map((unit) => (

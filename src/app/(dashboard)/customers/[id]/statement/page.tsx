@@ -20,6 +20,7 @@ import { ArrowLeft, Download, FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface StatementTransaction {
   id: string;
@@ -48,13 +49,7 @@ interface CustomerStatement {
   generatedAt: string;
 }
 
-const typeLabels: Record<string, string> = {
-  OPENING_BALANCE: "Opening Balance",
-  INVOICE: "Invoice",
-  PAYMENT: "Payment",
-  CREDIT_NOTE: "Credit Note",
-  ADJUSTMENT: "Adjustment",
-};
+// typeLabels moved inside component to use t()
 
 const typeBadgeVariant: Record<string, "default" | "secondary" | "outline"> = {
   OPENING_BALANCE: "secondary",
@@ -70,6 +65,16 @@ export default function CustomerStatementPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { t } = useLanguage();
+
+  const typeLabels: Record<string, string> = {
+    OPENING_BALANCE: t("statement.typeOpeningBalance"),
+    INVOICE: t("statement.typeInvoice"),
+    PAYMENT: t("statement.typePayment"),
+    CREDIT_NOTE: t("statement.typeCreditNote"),
+    ADJUSTMENT: t("statement.typeAdjustment"),
+  };
+
   const [statement, setStatement] = useState<CustomerStatement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -148,9 +153,9 @@ export default function CustomerStatementPage({
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              Customer Statement
+              {t("statement.customerStatement")}
             </h2>
-            <p className="text-slate-500">Loading statement...</p>
+            <p className="text-slate-500">{t("common.loading")}</p>
           </div>
         </div>
         <Card>
@@ -173,9 +178,9 @@ export default function CustomerStatementPage({
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              Customer Statement
+              {t("statement.customerStatement")}
             </h2>
-            <p className="text-slate-500">Statement not found</p>
+            <p className="text-slate-500">{t("statement.notFound")}</p>
           </div>
         </div>
       </div>
@@ -194,7 +199,7 @@ export default function CustomerStatementPage({
               </Link>
               <div className="min-w-0">
                 <h2 className="text-2xl font-bold text-slate-900">
-                  Customer Statement
+                  {t("statement.customerStatement")}
                 </h2>
                 <p className="truncate text-slate-500">{statement.customer.name}</p>
               </div>
@@ -205,7 +210,7 @@ export default function CustomerStatementPage({
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              Download PDF
+              {t("common.downloadPDF")}
             </Button>
           </div>
 
@@ -213,7 +218,7 @@ export default function CustomerStatementPage({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Opening Balance
+                  {t("statement.openingBalance")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -227,7 +232,7 @@ export default function CustomerStatementPage({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Total Receivable
+                  {t("statement.totalReceivable")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -239,7 +244,7 @@ export default function CustomerStatementPage({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Total Received
+                  {t("statement.totalReceived")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -251,7 +256,7 @@ export default function CustomerStatementPage({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Closing Balance
+                  {t("statement.closingBalance")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -270,11 +275,11 @@ export default function CustomerStatementPage({
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <CardTitle>Transactions</CardTitle>
+                <CardTitle>{t("statement.transactions")}</CardTitle>
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
                   <div className="grid gap-2">
                     <Label htmlFor="fromDate" className="text-sm">
-                      From
+                      {t("common.from")}
                     </Label>
                     <Input
                       id="fromDate"
@@ -286,7 +291,7 @@ export default function CustomerStatementPage({
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="toDate" className="text-sm">
-                      To
+                      {t("common.to")}
                     </Label>
                     <Input
                       id="toDate"
@@ -297,7 +302,7 @@ export default function CustomerStatementPage({
                     />
                   </div>
                   <Button variant="outline" onClick={handleFilter} className="w-full sm:w-auto">
-                    Filter
+                    {t("common.filter")}
                   </Button>
                 </div>
               </div>
@@ -307,12 +312,12 @@ export default function CustomerStatementPage({
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <FileText className="h-12 w-12 text-slate-300" />
                   <h3 className="mt-4 text-lg font-semibold">
-                    No transactions found
+                    {t("statement.noTransactions")}
                   </h3>
                   <p className="text-sm text-slate-500">
                     {fromDate || toDate
-                      ? "Try adjusting the date filter"
-                      : "This customer has no transactions yet"}
+                      ? t("statement.adjustDateFilter")
+                      : t("statement.noCustomerTransactions")}
                   </p>
                 </div>
               ) : (
@@ -344,13 +349,13 @@ export default function CustomerStatementPage({
                         </div>
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div className="rounded-lg bg-rose-50 px-3 py-2">
-                            <p className="text-xs text-slate-500">Receivable</p>
+                            <p className="text-xs text-slate-500">{t("statement.receivable")}</p>
                             <p className="font-semibold text-red-600">
                               {txn.debit > 0 ? formatCurrency(txn.debit) : "-"}
                             </p>
                           </div>
                           <div className="rounded-lg bg-emerald-50 px-3 py-2">
-                            <p className="text-xs text-slate-500">Received</p>
+                            <p className="text-xs text-slate-500">{t("statement.received")}</p>
                             <p className="font-semibold text-green-600">
                               {txn.credit > 0 ? formatCurrency(txn.credit) : "-"}
                             </p>
@@ -361,15 +366,15 @@ export default function CustomerStatementPage({
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                       <div className="grid grid-cols-3 gap-3 text-sm">
                         <div>
-                          <p className="text-xs text-slate-500">Receivable</p>
+                          <p className="text-xs text-slate-500">{t("statement.receivable")}</p>
                           <p className="font-semibold text-red-600">{formatCurrency(statement.totalDebits)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-slate-500">Received</p>
+                          <p className="text-xs text-slate-500">{t("statement.received")}</p>
                           <p className="font-semibold text-green-600">{formatCurrency(statement.totalCredits)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-slate-500">Balance</p>
+                          <p className="text-xs text-slate-500">{t("common.balance")}</p>
                           <p className={`font-semibold ${statement.closingBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
                             {formatCurrency(statement.closingBalance)}
                           </p>
@@ -382,13 +387,13 @@ export default function CustomerStatementPage({
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Reference</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Receivable</TableHead>
-                          <TableHead className="text-right">Received</TableHead>
-                          <TableHead className="text-right">Balance</TableHead>
+                          <TableHead>{t("common.date")}</TableHead>
+                          <TableHead>{t("common.type")}</TableHead>
+                          <TableHead>{t("common.reference")}</TableHead>
+                          <TableHead>{t("common.description")}</TableHead>
+                          <TableHead className="text-right">{t("statement.receivable")}</TableHead>
+                          <TableHead className="text-right">{t("statement.received")}</TableHead>
+                          <TableHead className="text-right">{t("common.balance")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -422,7 +427,7 @@ export default function CustomerStatementPage({
                         ))}
                         <TableRow className="bg-slate-50 font-medium">
                           <TableCell colSpan={4} className="text-right">
-                            Totals
+                            {t("common.totals")}
                           </TableCell>
                           <TableCell className="text-right text-red-600">
                             {formatCurrency(statement.totalDebits)}
@@ -445,7 +450,7 @@ export default function CustomerStatementPage({
           </Card>
 
           <div className="text-center text-sm text-slate-400">
-            Statement generated on{" "}
+            {t("statement.generatedOn")}{" "}
             {format(new Date(statement.generatedAt), "dd MMM yyyy, hh:mm a")}
           </div>
         </div>

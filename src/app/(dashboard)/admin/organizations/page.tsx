@@ -40,6 +40,7 @@ import {
 import { Building2, Plus, Users, FileText, ShoppingCart, Loader2, UserPlus, ChevronRight, Copy, MoreHorizontal, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface Organization {
   id: string;
@@ -57,6 +58,7 @@ interface Organization {
 
 export default function OrganizationsPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -114,7 +116,7 @@ export default function OrganizationsPage() {
   const handleCreate = async () => {
     setError("");
     if (!name || !slug) {
-      setError("Name and slug are required");
+      setError(t("admin.nameAndSlugRequired"));
       return;
     }
 
@@ -133,10 +135,10 @@ export default function OrganizationsPage() {
         fetchOrganizations();
       } else {
         const data = await res.json();
-        setError(data.error || "Failed to create organization");
+        setError(data.error || t("admin.failedToCreateOrg"));
       }
     } catch {
-      setError("Failed to create organization");
+      setError(t("admin.failedToCreateOrg"));
     } finally {
       setCreating(false);
     }
@@ -146,7 +148,7 @@ export default function OrganizationsPage() {
     setUserError("");
     setUserSuccess("");
     if (!userName || !userEmail || !userPassword || !userOrgId) {
-      setUserError("All fields are required");
+      setUserError(t("admin.allFieldsRequired"));
       return;
     }
 
@@ -165,8 +167,7 @@ export default function OrganizationsPage() {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setUserSuccess(`User "${data.name}" created successfully!`);
+        setUserSuccess(t("admin.userCreatedSuccess"));
         setUserName("");
         setUserEmail("");
         setUserPassword("");
@@ -175,10 +176,10 @@ export default function OrganizationsPage() {
         fetchOrganizations();
       } else {
         const data = await res.json();
-        setUserError(data.error || "Failed to create user");
+        setUserError(data.error || t("admin.failedToCreateUser"));
       }
     } catch {
-      setUserError("Failed to create user");
+      setUserError(t("admin.failedToCreateUser"));
     } finally {
       setCreatingUser(false);
     }
@@ -201,7 +202,7 @@ export default function OrganizationsPage() {
   const handleDuplicate = async () => {
     setDuplicateError("");
     if (!duplicateName || !duplicateSlug || !duplicateSourceOrg) {
-      setDuplicateError("Name and slug are required");
+      setDuplicateError(t("admin.nameAndSlugRequired"));
       return;
     }
 
@@ -225,10 +226,10 @@ export default function OrganizationsPage() {
         fetchOrganizations();
       } else {
         const data = await res.json();
-        setDuplicateError(data.error || "Failed to duplicate organization");
+        setDuplicateError(data.error || t("admin.failedToDuplicateOrg"));
       }
     } catch {
-      setDuplicateError("Failed to duplicate organization");
+      setDuplicateError(t("admin.failedToDuplicateOrg"));
     } finally {
       setDuplicating(false);
     }
@@ -239,27 +240,27 @@ export default function OrganizationsPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
-            <p className="text-muted-foreground">Manage tenant organizations</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t("nav.organizations")}</h1>
+            <p className="text-muted-foreground">{t("admin.manageOrganizations")}</p>
           </div>
           <div className="flex gap-2">
             <Dialog open={userOpen} onOpenChange={(open) => { setUserOpen(open); if (!open) { setUserError(""); setUserSuccess(""); } }}>
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Create User
+                  {t("admin.createUser")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create User</DialogTitle>
+                  <DialogTitle>{t("admin.createUser")}</DialogTitle>
                   <DialogDescription>
-                    Create a new user and assign them to an organization.
+                    {t("admin.createUserDesc")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="userName">Full Name</Label>
+                    <Label htmlFor="userName">{t("admin.fullName")}</Label>
                     <Input
                       id="userName"
                       value={userName}
@@ -268,7 +269,7 @@ export default function OrganizationsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="userEmail">Email</Label>
+                    <Label htmlFor="userEmail">{t("admin.email")}</Label>
                     <Input
                       id="userEmail"
                       type="email"
@@ -278,33 +279,32 @@ export default function OrganizationsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="userPassword">Password</Label>
+                    <Label htmlFor="userPassword">{t("admin.password")}</Label>
                     <Input
                       id="userPassword"
                       type="password"
                       value={userPassword}
                       onChange={(e) => setUserPassword(e.target.value)}
-                      placeholder="Enter password"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="userRole">Role</Label>
+                    <Label htmlFor="userRole">{t("admin.role")}</Label>
                     <Select value={userRole} onValueChange={setUserRole}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="pos">POS Only</SelectItem>
+                        <SelectItem value="admin">{t("admin.roleAdmin")}</SelectItem>
+                        <SelectItem value="user">{t("admin.roleUser")}</SelectItem>
+                        <SelectItem value="pos">{t("admin.rolePosOnly")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="userOrg">Organization</Label>
+                    <Label htmlFor="userOrg">{t("admin.organization")}</Label>
                     <Select value={userOrgId} onValueChange={setUserOrgId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select organization" />
+                        <SelectValue placeholder={t("admin.selectOrganization")} />
                       </SelectTrigger>
                       <SelectContent>
                         {organizations.map((org) => (
@@ -324,11 +324,11 @@ export default function OrganizationsPage() {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setUserOpen(false)}>
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button onClick={handleCreateUser} disabled={creatingUser}>
                     {creatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create User
+                    {t("admin.createUser")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -337,19 +337,19 @@ export default function OrganizationsPage() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  New Organization
+                  {t("admin.newOrganization")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create Organization</DialogTitle>
+                  <DialogTitle>{t("admin.createOrganization")}</DialogTitle>
                   <DialogDescription>
-                    Add a new tenant organization to the system.
+                    {t("admin.createOrgDesc")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Organization Name</Label>
+                    <Label htmlFor="name">{t("admin.organizationName")}</Label>
                     <Input
                       id="name"
                       value={name}
@@ -358,7 +358,7 @@ export default function OrganizationsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="slug">Slug</Label>
+                    <Label htmlFor="slug">{t("admin.slug")}</Label>
                     <Input
                       id="slug"
                       value={slug}
@@ -366,7 +366,7 @@ export default function OrganizationsPage() {
                       placeholder="acme-corp"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Lowercase letters, numbers, and hyphens only
+                      {t("admin.slugHelp")}
                     </p>
                   </div>
                   {error && (
@@ -375,11 +375,11 @@ export default function OrganizationsPage() {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button onClick={handleCreate} disabled={creating}>
                     {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create
+                    {t("common.create")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -389,9 +389,9 @@ export default function OrganizationsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>All Organizations</CardTitle>
+            <CardTitle>{t("admin.allOrganizations")}</CardTitle>
             <CardDescription>
-              {organizations.length} organization{organizations.length !== 1 ? "s" : ""} total
+              {t("admin.orgTotal").replace("{count}", String(organizations.length))}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -404,7 +404,7 @@ export default function OrganizationsPage() {
                 <div className="space-y-3 sm:hidden">
                   {organizations.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-muted-foreground">
-                      No organizations found
+                      {t("admin.noOrganizationsFound")}
                     </div>
                   ) : (
                     organizations.map((org) => (
@@ -418,9 +418,9 @@ export default function OrganizationsPage() {
                             <div className="mt-2 flex flex-wrap gap-2">
                               <Badge variant="secondary">{org.slug}</Badge>
                               {org.gstEnabled ? (
-                                <Badge variant="default" className="text-xs">GST</Badge>
+                                <Badge variant="default" className="text-xs">{t("admin.gst")}</Badge>
                               ) : (
-                                <Badge variant="outline" className="text-xs text-muted-foreground">No GST</Badge>
+                                <Badge variant="outline" className="text-xs text-muted-foreground">{t("admin.noGst")}</Badge>
                               )}
                             </div>
                           </div>
@@ -429,17 +429,17 @@ export default function OrganizationsPage() {
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
                                 <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Actions</span>
+                                <span className="sr-only">{t("common.actions")}</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => router.push(`/admin/organizations/${org.id}`)}>
                                 <Eye className="mr-2 h-4 w-4" />
-                                View Details
+                                {t("admin.viewDetails")}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openDuplicateDialog(org)}>
                                 <Copy className="mr-2 h-4 w-4" />
-                                Duplicate Organization
+                                {t("admin.duplicateOrganization")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -447,26 +447,26 @@ export default function OrganizationsPage() {
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Users</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.users")}</p>
                             <p className="mt-1 font-medium text-slate-900">{org._count.users}</p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Customers</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.customers")}</p>
                             <p className="mt-1 font-medium text-slate-900">{org._count.customers}</p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoices</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.invoices")}</p>
                             <p className="mt-1 font-medium text-slate-900">{org._count.invoices}</p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Created</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("admin.created")}</p>
                             <p className="mt-1 text-slate-900">{new Date(org.createdAt).toLocaleDateString()}</p>
                           </div>
                         </div>
 
                         <Button variant="outline" className="mt-4 min-h-[44px] w-full" onClick={() => router.push(`/admin/organizations/${org.id}`)}>
                           <Eye className="mr-2 h-4 w-4" />
-                          Open details
+                          {t("admin.openDetails")}
                         </Button>
                       </div>
                     ))
@@ -478,13 +478,13 @@ export default function OrganizationsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[50px]"></TableHead>
-                        <TableHead>Organization</TableHead>
-                        <TableHead>Slug</TableHead>
-                        <TableHead className="text-center">Users</TableHead>
-                        <TableHead className="text-center">Customers</TableHead>
-                        <TableHead className="text-center">Invoices</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>GST</TableHead>
+                        <TableHead>{t("admin.organization")}</TableHead>
+                        <TableHead>{t("admin.slug")}</TableHead>
+                        <TableHead className="text-center">{t("admin.users")}</TableHead>
+                        <TableHead className="text-center">{t("admin.customers")}</TableHead>
+                        <TableHead className="text-center">{t("admin.invoices")}</TableHead>
+                        <TableHead>{t("admin.created")}</TableHead>
+                        <TableHead>{t("admin.gst")}</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -530,9 +530,9 @@ export default function OrganizationsPage() {
                           </TableCell>
                           <TableCell>
                             {org.gstEnabled ? (
-                              <Badge variant="default" className="text-xs">GST</Badge>
+                              <Badge variant="default" className="text-xs">{t("admin.gst")}</Badge>
                             ) : (
-                              <Badge variant="outline" className="text-xs text-muted-foreground">No GST</Badge>
+                              <Badge variant="outline" className="text-xs text-muted-foreground">{t("admin.noGst")}</Badge>
                             )}
                           </TableCell>
                           <TableCell>
@@ -545,7 +545,7 @@ export default function OrganizationsPage() {
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Actions</span>
+                                  <span className="sr-only">{t("common.actions")}</span>
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -556,7 +556,7 @@ export default function OrganizationsPage() {
                                   }}
                                 >
                                   <Eye className="mr-2 h-4 w-4" />
-                                  View Details
+                                  {t("admin.viewDetails")}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={(e) => {
@@ -565,7 +565,7 @@ export default function OrganizationsPage() {
                                   }}
                                 >
                                   <Copy className="mr-2 h-4 w-4" />
-                                  Duplicate Organization
+                                  {t("admin.duplicateOrganization")}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -575,7 +575,7 @@ export default function OrganizationsPage() {
                       {organizations.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                            No organizations found
+                            {t("admin.noOrganizationsFound")}
                           </TableCell>
                         </TableRow>
                       )}
@@ -591,32 +591,29 @@ export default function OrganizationsPage() {
         <Dialog open={duplicateOpen} onOpenChange={(open) => { setDuplicateOpen(open); if (!open) { setDuplicateError(""); setDuplicateSourceOrg(null); } }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Duplicate Organization</DialogTitle>
+              <DialogTitle>{t("admin.duplicateOrganization")}</DialogTitle>
               <DialogDescription>
-                Create a copy of <strong>{duplicateSourceOrg?.name}</strong> with all its configuration
-                (accounts, products, categories, units, settings, branches).
+                {t("admin.duplicateOrgDesc")} — <strong>{duplicateSourceOrg?.name}</strong>
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="duplicateName">New Organization Name</Label>
+                <Label htmlFor="duplicateName">{t("admin.newOrgName")}</Label>
                 <Input
                   id="duplicateName"
                   value={duplicateName}
                   onChange={(e) => handleDuplicateNameChange(e.target.value)}
-                  placeholder="Acme Corp (Copy)"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="duplicateSlug">Slug</Label>
+                <Label htmlFor="duplicateSlug">{t("admin.slug")}</Label>
                 <Input
                   id="duplicateSlug"
                   value={duplicateSlug}
                   onChange={(e) => setDuplicateSlug(e.target.value)}
-                  placeholder="acme-corp-copy"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Lowercase letters, numbers, and hyphens only
+                  {t("admin.slugHelp")}
                 </p>
               </div>
 
@@ -631,10 +628,10 @@ export default function OrganizationsPage() {
                     htmlFor="includeTransactions"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    Include Transactional Data
+                    {t("admin.includeTransactionalData")}
                   </label>
                   <p className="text-sm text-muted-foreground">
-                    Copy all customers, suppliers, invoices, payments, journal entries, and stock records.
+                    {t("admin.includeTransactionalDataDesc")}
                   </p>
                 </div>
               </div>
@@ -645,12 +642,12 @@ export default function OrganizationsPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDuplicateOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button onClick={handleDuplicate} disabled={duplicating}>
                 {duplicating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <Copy className="mr-2 h-4 w-4" />
-                Duplicate
+                {t("admin.duplicate")}
               </Button>
             </DialogFooter>
           </DialogContent>

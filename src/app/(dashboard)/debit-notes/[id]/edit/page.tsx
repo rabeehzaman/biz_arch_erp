@@ -21,6 +21,7 @@ import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { useCurrency } from "@/hooks/use-currency";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
+import { useLanguage } from "@/lib/i18n";
 
 interface Supplier {
   id: string;
@@ -90,6 +91,7 @@ export default function EditDebitNotePage({
   const { unitConversions } = useUnitConversions();
   const { symbol } = useCurrency();
   const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
+  const { t } = useLanguage();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -150,7 +152,7 @@ export default function EditDebitNotePage({
     try {
       const response = await fetch(`/api/debit-notes/${id}`);
       if (!response.ok) {
-        toast.error("Debit note not found");
+        toast.error(t("debitNotes.notFound"));
         router.push("/debit-notes");
         return;
       }
@@ -193,7 +195,7 @@ export default function EditDebitNotePage({
       );
     } catch (error) {
       console.error("Failed to fetch debit note:", error);
-      toast.error("Failed to load debit note");
+      toast.error(t("debitNotes.failedToLoad"));
       router.push("/debit-notes");
     } finally {
       setIsLoading(false);
@@ -339,13 +341,13 @@ export default function EditDebitNotePage({
     e.preventDefault();
 
     if (!supplierId) {
-      toast.error("Please select a supplier");
+      toast.error(t("common.pleaseSelectSupplier"));
       return;
     }
 
     const validItems = items.filter((item) => item.productId);
     if (validItems.length === 0) {
-      toast.error("Please add at least one item");
+      toast.error(t("common.pleaseAddAtLeastOneItem"));
       return;
     }
 
@@ -381,7 +383,7 @@ export default function EditDebitNotePage({
         throw new Error(error.error || "Failed to update debit note");
       }
 
-      toast.success("Debit note updated successfully");
+      toast.success(t("debitNotes.debitNoteUpdated"));
       router.push(`/debit-notes/${id}`);
     } catch (error: unknown) {
       const message =
@@ -396,7 +398,7 @@ export default function EditDebitNotePage({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-slate-500">Loading...</div>
+        <div className="text-slate-500">{t("common.loading")}</div>
       </div>
     );
   }
@@ -412,29 +414,28 @@ export default function EditDebitNotePage({
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              Edit Debit Note
+              {t("debitNotes.editDebitNote")}
             </h2>
-            <p className="text-slate-500">Update purchase return details</p>
+            <p className="text-slate-500">{t("debitNotes.editDesc")}</p>
           </div>
         </div>
 
         <div className="flex gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
           <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
           <div className="text-sm text-orange-800">
-            <strong>Stock Validation:</strong> Saving changes will re-check stock
-            availability and update the return quantities in inventory.
+            <strong>{t("debitNotes.stockValidation")}:</strong> {t("debitNotes.stockValidationEditDesc")}
           </div>
         </div>
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Debit Note Details</CardTitle>
+              <CardTitle>{t("debitNotes.debitNoteDetails")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="supplier">Supplier *</Label>
+                  <Label htmlFor="supplier">{t("common.supplier")} *</Label>
                   <SupplierCombobox
                     suppliers={suppliers}
                     value={supplierId}
@@ -447,7 +448,7 @@ export default function EditDebitNotePage({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="issueDate">Issue Date</Label>
+                  <Label htmlFor="issueDate">{t("sales.issueDate")}</Label>
                   <Input
                     id="issueDate"
                     type="date"
@@ -459,21 +460,21 @@ export default function EditDebitNotePage({
 
                 <div className="space-y-2">
                   <Label htmlFor="purchaseInvoiceId">
-                    Original Purchase Invoice (Optional)
+                    {t("debitNotes.originalPurchaseInvoice")} ({t("common.optional")})
                   </Label>
                   <Input
                     id="purchaseInvoiceId"
-                    placeholder="Leave blank for standalone debit note"
+                    placeholder={t("debitNotes.purchaseInvoicePlaceholder")}
                     value={purchaseInvoiceId}
                     onChange={(e) => setPurchaseInvoiceId(e.target.value)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reason">Reason for Return</Label>
+                  <Label htmlFor="reason">{t("debitNotes.reasonForReturn")}</Label>
                   <Input
                     id="reason"
-                    placeholder="e.g., Defective items"
+                    placeholder={t("debitNotes.reasonPlaceholder")}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />
@@ -485,7 +486,7 @@ export default function EditDebitNotePage({
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Items</CardTitle>
+                <CardTitle>{t("sales.items")}</CardTitle>
                 <Button
                   type="button"
                   onClick={() => addLineItem(true)}
@@ -493,7 +494,7 @@ export default function EditDebitNotePage({
                   size="sm"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Item
+                  {t("common.addItem")}
                 </Button>
               </div>
             </CardHeader>
@@ -507,7 +508,7 @@ export default function EditDebitNotePage({
                     <div key={item.id} className="flex items-start gap-2">
                       <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-5">
                         <div className="sm:col-span-5">
-                          <Label>Product *</Label>
+                          <Label>{t("common.product")} *</Label>
                           <div
                             ref={(el) => {
                               if (el) {
@@ -540,12 +541,12 @@ export default function EditDebitNotePage({
                         <div className="grid grid-cols-2 gap-2 sm:contents">
                           <div className="space-y-1">
                             <Label className="text-xs text-slate-500 sm:hidden">
-                              Quantity *
+                              {t("common.quantity")} *
                             </Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
-                              placeholder="Qty"
+                              placeholder={t("common.qty")}
                               value={item.quantity}
                               onChange={(e) =>
                                 updateLineItem(
@@ -567,7 +568,7 @@ export default function EditDebitNotePage({
                           {session?.user?.multiUnitEnabled && (
                             <div className="space-y-1">
                               <Label className="text-xs text-slate-500 sm:hidden">
-                                Unit
+                                {t("common.unit")}
                               </Label>
                               <ItemUnitSelect
                                 value={item.unitId}
@@ -585,7 +586,7 @@ export default function EditDebitNotePage({
                                     name:
                                       product.unit?.name ||
                                       product.unit?.code ||
-                                      "Base Unit",
+                                      t("sales.baseUnit"),
                                     conversionFactor: 1,
                                   };
                                   const alternateOptions = unitConversions
@@ -612,12 +613,12 @@ export default function EditDebitNotePage({
 
                           <div className="space-y-1">
                             <Label className="text-xs text-slate-500 sm:hidden">
-                              Unit Cost *
+                              {t("common.unitCost")} *
                             </Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
-                              placeholder="Unit Cost"
+                              placeholder={t("common.unitCost")}
                               value={item.unitCost}
                               onChange={(e) =>
                                 updateLineItem(
@@ -634,12 +635,12 @@ export default function EditDebitNotePage({
 
                           <div className="space-y-1">
                             <Label className="text-xs text-slate-500 sm:hidden">
-                              Discount %
+                              {t("common.discount")} %
                             </Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
-                              placeholder="Discount %"
+                              placeholder={t("common.discountPercent")}
                               value={item.discount || ""}
                               onChange={(e) =>
                                 updateLineItem(
@@ -710,14 +711,14 @@ export default function EditDebitNotePage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
+              <CardTitle>{t("common.additionalInformation")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes">{t("common.notes")}</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Additional notes..."
+                  placeholder={t("common.additionalNotesPlaceholder")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
@@ -728,17 +729,17 @@ export default function EditDebitNotePage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Summary</CardTitle>
+              <CardTitle>{t("common.summary")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
                   <div>
-                    <p className="text-sm font-medium">Apply Round Off</p>
+                    <p className="text-sm font-medium">{t("common.applyRoundOff")}</p>
                     <p className="text-xs text-slate-500">
                       {roundOffEnabled
-                        ? "Use organization round off rule on the final total."
-                        : "Enable a round off mode in Settings > Company."}
+                        ? t("common.roundOffEnabledDesc")
+                        : t("common.roundOffDisabledDesc")}
                     </p>
                   </div>
                   <Switch
@@ -748,7 +749,7 @@ export default function EditDebitNotePage({
                   />
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Subtotal:</span>
+                  <span>{t("common.subtotal")}:</span>
                   <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>
                     {symbol}
                     {subtotal.toFixed(2)}
@@ -756,7 +757,7 @@ export default function EditDebitNotePage({
                 </div>
                 {tax > 0 && (
                   <div className="flex justify-between text-sm text-slate-500">
-                    <span>GST:</span>
+                    <span>{t("common.gst")}:</span>
                     <span key={`summary-tax:${tax.toFixed(2)}`}>
                       {symbol}
                       {tax.toFixed(2)}
@@ -765,7 +766,7 @@ export default function EditDebitNotePage({
                 )}
                 {applyRoundOff && roundOffAmount !== 0 && (
                   <div className="flex justify-between text-sm text-slate-500">
-                    <span>Round Off:</span>
+                    <span>{t("common.roundOff")}:</span>
                     <span key={`summary-roundoff:${roundOffAmount.toFixed(2)}`}>
                       {roundOffAmount >= 0 ? "+" : ""}
                       {symbol}
@@ -774,7 +775,7 @@ export default function EditDebitNotePage({
                   </div>
                 )}
                 <div className="flex justify-between border-t pt-2 text-lg font-bold">
-                  <span>Total:</span>
+                  <span>{t("common.total")}:</span>
                   <span key={`summary-total:${roundedTotal.toFixed(2)}`}>
                     {symbol}
                     {roundedTotal.toFixed(2)}
@@ -787,11 +788,11 @@ export default function EditDebitNotePage({
           <div className="flex justify-end gap-4">
             <Link href={`/debit-notes/${id}`}>
               <Button type="button" variant="outline">
-                Cancel
+                {t("common.cancel")}
               </Button>
             </Link>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Updating..." : "Update Debit Note"}
+              {isSubmitting ? t("common.updating") : t("debitNotes.updateDebitNote")}
             </Button>
           </div>
         </form>

@@ -220,7 +220,7 @@ export function CompanySettings() {
                   placeholder="22AAAAA0000A1Z5"
                 />
                 <p className="text-xs text-slate-500">
-                  Format: 22AAAAA0000A1Z5 (15 characters)
+                  {t("settingsExtra.gstFormatHint")}
                 </p>
               </div>
             )}
@@ -257,7 +257,7 @@ export function CompanySettings() {
                 placeholder="SBIN0001234"
               />
               <p className="text-xs text-slate-500">
-                Format: SBIN0001234 (11 characters)
+                {t("settingsExtra.ifscFormatHint")}
               </p>
             </div>
 
@@ -273,7 +273,7 @@ export function CompanySettings() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="roundOffMode">Document Round Off</Label>
+              <Label htmlFor="roundOffMode">{t("settingsExtra.documentRoundOff")}</Label>
               <Select
                 value={formData.roundOffMode}
                 onValueChange={(value) =>
@@ -281,17 +281,17 @@ export function CompanySettings() {
                 }
               >
                 <SelectTrigger id="roundOffMode">
-                  <SelectValue placeholder="Select round off mode" />
+                  <SelectValue placeholder={t("settingsExtra.selectRoundOffMode")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="NONE">Disabled</SelectItem>
-                  <SelectItem value="NEAREST">Nearest whole amount</SelectItem>
-                  <SelectItem value="UP">Round up to next whole amount</SelectItem>
-                  <SelectItem value="DOWN">Round down to previous whole amount</SelectItem>
+                  <SelectItem value="NONE">{t("settingsExtra.roundOffDisabled")}</SelectItem>
+                  <SelectItem value="NEAREST">{t("settingsExtra.roundOffNearest")}</SelectItem>
+                  <SelectItem value="UP">{t("settingsExtra.roundOffUp")}</SelectItem>
+                  <SelectItem value="DOWN">{t("settingsExtra.roundOffDown")}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-slate-500">
-                Applies to invoice, POS, and purchase document totals.
+                {t("settingsExtra.roundOffDescription")}
               </p>
             </div>
           </CardContent>

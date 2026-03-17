@@ -21,6 +21,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface WarehouseRow {
     warehouseId: string | null;
@@ -87,6 +88,7 @@ function MobileMetric({
 }
 
 export default function BranchPLPage() {
+    const { t } = useLanguage();
     const { data: session } = useSession();
     const multiBranchEnabled = (session?.user as any)?.multiBranchEnabled;
     const { symbol } = useCurrency();
@@ -112,11 +114,11 @@ export default function BranchPLPage() {
             setRows(data.rows);
             setTotals(data.totals);
         } catch {
-            toast.error("Failed to load branch P&L");
+            toast.error(t("reports.noDataForPeriod"));
         } finally {
             setLoading(false);
         }
-    }, [fromDate, toDate]);
+    }, [fromDate, toDate, t]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -130,7 +132,7 @@ export default function BranchPLPage() {
     };
 
     function exportCSV() {
-        const headers = ["Type", "Branch", "Code", "Invoices", "Revenue", "Total Invoiced", "Collected", "Outstanding", "Purchases", "COGS", "Gross Profit", "Margin %"];
+        const headers = [t("reports.type"), t("reports.branchName"), t("common.code"), t("reports.invoiceNumber"), t("reports.totalRevenue"), t("reports.invoiced"), t("reports.collected"), t("reports.outstanding"), t("reports.purchases"), t("reports.cogs"), t("reports.grossProfit"), t("reports.margin")];
         const csvRows = [headers.join(",")];
         for (const r of rows) {
             csvRows.push([
@@ -162,10 +164,9 @@ export default function BranchPLPage() {
             <PageAnimation>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
                     <AlertTriangle className="h-12 w-12 text-amber-400 mb-4" />
-                    <h2 className="text-xl font-bold text-slate-900 mb-2">Multi-Branch Not Enabled</h2>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">{t("reports.multiBranchDisabled")}</h2>
                     <p className="text-slate-500 max-w-md">
-                        The Branch P&L report is only available for organizations with multi-branch mode enabled.
-                        Contact your administrator to enable this feature.
+                        {t("reports.multiBranchDisabledDesc")}
                     </p>
                 </div>
             </PageAnimation>
@@ -182,17 +183,17 @@ export default function BranchPLPage() {
                 {/* Header */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-900">Branch P&L Report</h2>
-                        <p className="text-slate-500">Revenue, COGS and gross profit breakdown by branch (expand for warehouse detail)</p>
+                        <h2 className="text-2xl font-bold text-slate-900">{t("reports.branchPL")}</h2>
+                        <p className="text-slate-500">{t("reports.branchPlDesc")}</p>
                     </div>
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
                             <RefreshCw className="h-4 w-4" />
-                            Refresh
+                            {t("reports.refresh")}
                         </Button>
                         <Button variant="outline" size="sm" onClick={exportCSV} className="gap-2">
                             <Download className="h-4 w-4" />
-                            Export CSV
+                            {t("reports.exportCsv")}
                         </Button>
                     </div>
                 </div>
@@ -202,14 +203,14 @@ export default function BranchPLPage() {
                     <CardContent className="p-4">
                         <div className="grid gap-4 sm:grid-cols-3">
                             <div className="space-y-1">
-                                <Label className="text-xs text-slate-500">From Date</Label>
+                                <Label className="text-xs text-slate-500">{t("reports.fromDate")}</Label>
                                 <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-xs text-slate-500">To Date</Label>
+                                <Label className="text-xs text-slate-500">{t("reports.toDate")}</Label>
                                 <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                             </div>
-                            <Button onClick={fetchData} size="sm" className="w-full self-end sm:w-auto">Apply</Button>
+                            <Button onClick={fetchData} size="sm" className="w-full self-end sm:w-auto">{t("reports.generate")}</Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -220,19 +221,19 @@ export default function BranchPLPage() {
                         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                             <StaggerItem>
                                 <Card><CardContent className="p-4">
-                                    <p className="text-xs text-slate-500">Total Revenue</p>
+                                    <p className="text-xs text-slate-500">{t("reports.totalRevenue")}</p>
                                     <p className="text-xl font-bold text-slate-900">{fmt(totals.revenue)}</p>
                                 </CardContent></Card>
                             </StaggerItem>
                             <StaggerItem>
                                 <Card><CardContent className="p-4">
-                                    <p className="text-xs text-slate-500">Total COGS</p>
+                                    <p className="text-xs text-slate-500">{t("reports.totalCogs")}</p>
                                     <p className="text-xl font-bold text-red-600">{fmt(totals.cogs)}</p>
                                 </CardContent></Card>
                             </StaggerItem>
                             <StaggerItem>
                                 <Card><CardContent className="p-4">
-                                    <p className="text-xs text-slate-500">Gross Profit</p>
+                                    <p className="text-xs text-slate-500">{t("reports.grossProfit")}</p>
                                     <p className={`text-xl font-bold ${totals.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                                         {fmt(totals.grossProfit)}
                                     </p>
@@ -240,7 +241,7 @@ export default function BranchPLPage() {
                             </StaggerItem>
                             <StaggerItem>
                                 <Card><CardContent className="p-4">
-                                    <p className="text-xs text-slate-500">Overall Margin</p>
+                                    <p className="text-xs text-slate-500">{t("reports.overallMargin")}</p>
                                     <p className={`text-xl font-bold ${marginColor(overallMargin)}`}>{pct(overallMargin)}</p>
                                 </CardContent></Card>
                             </StaggerItem>
@@ -253,8 +254,8 @@ export default function BranchPLPage() {
                     <CardHeader>
                         <CardTitle className="flex flex-wrap items-center gap-2">
                             <GitBranch className="h-5 w-5" />
-                            Branch Performance
-                            <span className="ml-0 text-xs font-normal text-slate-400 sm:ml-2">Click a branch row to expand warehouse details</span>
+                            {t("reports.branchPerformance")}
+                            <span className="ml-0 text-xs font-normal text-slate-400 sm:ml-2">{t("reports.expandHint")}</span>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -263,7 +264,7 @@ export default function BranchPLPage() {
                         ) : rows.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-slate-500">
                                 <TrendingUp className="h-12 w-12 mb-3 text-slate-300" />
-                                <p className="font-medium">No data for this period</p>
+                                <p className="font-medium">{t("reports.noDataAvailable")}</p>
                             </div>
                         ) : (
                             <>
@@ -284,9 +285,9 @@ export default function BranchPLPage() {
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <span className="font-semibold text-slate-900">{row.branchName}</span>
                                                             {row.branchCode && <span className="text-xs text-slate-400">({row.branchCode})</span>}
-                                                            {!row.branchId && <Badge variant="outline" className="text-xs text-slate-400">Unassigned</Badge>}
+                                                            {!row.branchId && <Badge variant="outline" className="text-xs text-slate-400">{t("common.inactive")}</Badge>}
                                                         </div>
-                                                        <p className="mt-1 text-sm text-slate-500">{row.invoiceCount} invoices</p>
+                                                        <p className="mt-1 text-sm text-slate-500">{row.invoiceCount} {t("reports.invoiceNumber")}</p>
                                                     </div>
                                                     {hasWarehouses ? (
                                                         isOpen ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />
@@ -294,12 +295,12 @@ export default function BranchPLPage() {
                                                 </button>
 
                                                 <div className="mt-4 grid grid-cols-2 gap-3">
-                                                    <MobileMetric label="Revenue" value={fmt(row.revenue)} />
-                                                    <MobileMetric label="COGS" value={fmt(row.cogs)} className="text-red-600" />
-                                                    <MobileMetric label="Gross Profit" value={fmt(row.grossProfit)} className={row.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
-                                                    <MobileMetric label="Margin" value={pct(row.grossMargin)} className={marginColor(row.grossMargin)} />
-                                                    <MobileMetric label="Collected" value={fmt(row.collected)} className="text-emerald-600" />
-                                                    <MobileMetric label="Outstanding" value={fmt(row.outstanding)} className={row.outstanding > 0 ? "text-amber-600" : "text-slate-500"} />
+                                                    <MobileMetric label={t("reports.totalRevenue")} value={fmt(row.revenue)} />
+                                                    <MobileMetric label={t("reports.cogs")} value={fmt(row.cogs)} className="text-red-600" />
+                                                    <MobileMetric label={t("reports.grossProfit")} value={fmt(row.grossProfit)} className={row.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
+                                                    <MobileMetric label={t("reports.margin")} value={pct(row.grossMargin)} className={marginColor(row.grossMargin)} />
+                                                    <MobileMetric label={t("reports.collected")} value={fmt(row.collected)} className="text-emerald-600" />
+                                                    <MobileMetric label={t("reports.outstanding")} value={fmt(row.outstanding)} className={row.outstanding > 0 ? "text-amber-600" : "text-slate-500"} />
                                                 </div>
 
                                                 {isOpen && hasWarehouses && (
@@ -312,10 +313,10 @@ export default function BranchPLPage() {
                                                                     {wh.warehouseCode && <span className="text-xs text-slate-400">({wh.warehouseCode})</span>}
                                                                 </div>
                                                                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                                                                    <MobileMetric label="Revenue" value={fmt(wh.revenue)} />
-                                                                    <MobileMetric label="Profit" value={fmt(wh.grossProfit)} className={wh.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
-                                                                    <MobileMetric label="Margin" value={pct(wh.grossMargin)} className={marginColor(wh.grossMargin)} />
-                                                                    <MobileMetric label="Outstanding" value={fmt(wh.outstanding)} className={wh.outstanding > 0 ? "text-amber-600" : "text-slate-500"} />
+                                                                    <MobileMetric label={t("reports.totalRevenue")} value={fmt(wh.revenue)} />
+                                                                    <MobileMetric label={t("reports.totalProfit")} value={fmt(wh.grossProfit)} className={wh.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
+                                                                    <MobileMetric label={t("reports.margin")} value={pct(wh.grossMargin)} className={marginColor(wh.grossMargin)} />
+                                                                    <MobileMetric label={t("reports.outstanding")} value={fmt(wh.outstanding)} className={wh.outstanding > 0 ? "text-amber-600" : "text-slate-500"} />
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -327,14 +328,14 @@ export default function BranchPLPage() {
 
                                     {totals && (
                                         <div className="rounded-xl border bg-slate-100 p-4">
-                                            <p className="font-semibold text-slate-900">Total</p>
+                                            <p className="font-semibold text-slate-900">{t("reports.totals")}</p>
                                             <div className="mt-4 grid grid-cols-2 gap-3">
-                                                <MobileMetric label="Revenue" value={fmt(totals.revenue)} />
-                                                <MobileMetric label="COGS" value={fmt(totals.cogs)} className="text-red-600" />
-                                                <MobileMetric label="Gross Profit" value={fmt(totals.grossProfit)} className={totals.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
-                                                <MobileMetric label="Margin" value={pct(overallMargin)} className={marginColor(overallMargin)} />
-                                                <MobileMetric label="Collected" value={fmt(totals.collected)} className="text-emerald-600" />
-                                                <MobileMetric label="Outstanding" value={fmt(totals.outstanding)} className="text-amber-600" />
+                                                <MobileMetric label={t("reports.totalRevenue")} value={fmt(totals.revenue)} />
+                                                <MobileMetric label={t("reports.cogs")} value={fmt(totals.cogs)} className="text-red-600" />
+                                                <MobileMetric label={t("reports.grossProfit")} value={fmt(totals.grossProfit)} className={totals.grossProfit >= 0 ? "text-emerald-600" : "text-red-600"} />
+                                                <MobileMetric label={t("reports.margin")} value={pct(overallMargin)} className={marginColor(overallMargin)} />
+                                                <MobileMetric label={t("reports.collected")} value={fmt(totals.collected)} className="text-emerald-600" />
+                                                <MobileMetric label={t("reports.outstanding")} value={fmt(totals.outstanding)} className="text-amber-600" />
                                             </div>
                                         </div>
                                     )}
@@ -345,14 +346,14 @@ export default function BranchPLPage() {
                                         <TableHeader className="bg-slate-50">
                                             <TableRow>
                                                 <TableHead className="w-8"></TableHead>
-                                                <TableHead>Branch / Warehouse</TableHead>
-                                                <TableHead className="text-right">Invoices</TableHead>
-                                                <TableHead className="text-right">Revenue</TableHead>
-                                                <TableHead className="text-right">COGS</TableHead>
-                                                <TableHead className="text-right">Gross Profit</TableHead>
-                                                <TableHead className="text-right">Margin</TableHead>
-                                                <TableHead className="text-right">Collected</TableHead>
-                                                <TableHead className="text-right">Outstanding</TableHead>
+                                                <TableHead>{t("reports.branchWarehouse")}</TableHead>
+                                                <TableHead className="text-right">{t("reports.invoiceNumber")}</TableHead>
+                                                <TableHead className="text-right">{t("reports.totalRevenue")}</TableHead>
+                                                <TableHead className="text-right">{t("reports.cogs")}</TableHead>
+                                                <TableHead className="text-right">{t("reports.grossProfit")}</TableHead>
+                                                <TableHead className="text-right">{t("reports.margin")}</TableHead>
+                                                <TableHead className="text-right">{t("reports.collected")}</TableHead>
+                                                <TableHead className="text-right">{t("reports.outstanding")}</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -382,7 +383,7 @@ export default function BranchPLPage() {
                                                                         <span className="font-semibold text-slate-900">{row.branchName}</span>
                                                                         {row.branchCode && <span className="ml-2 text-xs text-slate-400">({row.branchCode})</span>}
                                                                     </div>
-                                                                    {!row.branchId && <Badge variant="outline" className="text-xs text-slate-400">Unassigned</Badge>}
+                                                                    {!row.branchId && <Badge variant="outline" className="text-xs text-slate-400">{t("common.inactive")}</Badge>}
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell className="text-right tabular-nums">{row.invoiceCount}</TableCell>
@@ -410,7 +411,7 @@ export default function BranchPLPage() {
                                                                         <Warehouse className="h-3.5 w-3.5 text-indigo-400" />
                                                                         <span className="text-sm text-slate-700">{wh.warehouseName}</span>
                                                                         {wh.warehouseCode && <span className="text-xs text-slate-400">({wh.warehouseCode})</span>}
-                                                                        {!wh.warehouseId && <span className="text-xs text-slate-400 italic">unassigned</span>}
+                                                                        {!wh.warehouseId && <span className="text-xs text-slate-400 italic">{t("common.inactive").toLowerCase()}</span>}
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell className="text-right tabular-nums text-sm">{wh.invoiceCount}</TableCell>
@@ -437,7 +438,7 @@ export default function BranchPLPage() {
                                             {totals && (
                                                 <TableRow className="bg-slate-100 font-bold border-t-2">
                                                     <TableCell></TableCell>
-                                                    <TableCell>Total</TableCell>
+                                                    <TableCell>{t("reports.totals")}</TableCell>
                                                     <TableCell className="text-right tabular-nums">{totals.invoiceCount}</TableCell>
                                                     <TableCell className="text-right tabular-nums">{fmt(totals.revenue)}</TableCell>
                                                     <TableCell className="text-right tabular-nums text-red-600">{fmt(totals.cogs)}</TableCell>

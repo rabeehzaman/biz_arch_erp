@@ -381,11 +381,11 @@ export function PaymentPanel({
           disabled={!canComplete || isProcessing}
         >
           {isProcessing ? (
-            t("pos.processing") || "Processing..."
+            t("pos.processing")
           ) : (
             <>
               <CheckCircle2 className="h-5 w-5 mr-2" />
-              {t("pos.completeSale") || "Complete Sale"}
+              {t("pos.completeSale")}
             </>
           )}
         </Button>

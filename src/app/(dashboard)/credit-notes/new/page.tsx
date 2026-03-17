@@ -19,6 +19,7 @@ import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface Customer {
   id: string;
@@ -82,6 +83,7 @@ export default function NewCreditNotePage() {
   const { data: session } = useSession();
   const { unitConversions } = useUnitConversions();
   const { symbol } = useCurrency();
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchCustomers();
@@ -228,13 +230,13 @@ export default function NewCreditNotePage() {
     e.preventDefault();
 
     if (!customerId) {
-      toast.error("Please select a customer");
+      toast.error(t("common.pleaseSelectCustomer"));
       return;
     }
 
     const validItems = lineItems.filter((item) => item.productId);
     if (validItems.length === 0) {
-      toast.error("Please add at least one item");
+      toast.error(t("common.pleaseAddAtLeastOneItem"));
       return;
     }
 
@@ -272,7 +274,7 @@ export default function NewCreditNotePage() {
       }
 
       const data = await response.json();
-      toast.success("Credit note created successfully");
+      toast.success(t("creditNotes.creditNoteCreated"));
       router.push(`/credit-notes/${data.id}`);
     } catch (error: any) {
       toast.error(error.message);
@@ -293,16 +295,16 @@ export default function NewCreditNotePage() {
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              New Credit Note
+              {t("creditNotes.newCreditNote")}
             </h2>
-            <p className="text-slate-500">Create a new sales return</p>
+            <p className="text-slate-500">{t("creditNotes.newCreditNoteDesc")}</p>
           </div>
         </div>
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Credit Note Details</CardTitle>
+              <CardTitle>{t("creditNotes.creditNoteDetails")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <BranchWarehouseSelector
@@ -313,7 +315,7 @@ export default function NewCreditNotePage() {
               />
               <div className="grid gap-4 sm:grid-cols-2 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customer">Customer *</Label>
+                  <Label htmlFor="customer">{t("common.customer")} *</Label>
                   <CustomerCombobox
                     customers={customers}
                     value={customerId}
@@ -328,7 +330,7 @@ export default function NewCreditNotePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="issueDate">Issue Date</Label>
+                  <Label htmlFor="issueDate">{t("sales.issueDate")}</Label>
                   <Input
                     id="issueDate"
                     type="date"
@@ -339,20 +341,20 @@ export default function NewCreditNotePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="invoiceId">Original Invoice (Optional)</Label>
+                  <Label htmlFor="invoiceId">{t("creditNotes.originalInvoice")} ({t("common.optional")})</Label>
                   <Input
                     id="invoiceId"
-                    placeholder="Leave blank for standalone credit note"
+                    placeholder={t("creditNotes.invoicePlaceholder")}
                     value={invoiceId}
                     onChange={(e) => setInvoiceId(e.target.value)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reason">Reason for Return</Label>
+                  <Label htmlFor="reason">{t("creditNotes.reasonForReturn")}</Label>
                   <Input
                     id="reason"
-                    placeholder="e.g., Damaged goods"
+                    placeholder={t("creditNotes.reasonPlaceholder")}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />
@@ -364,10 +366,10 @@ export default function NewCreditNotePage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Items</CardTitle>
+                <CardTitle>{t("sales.items")}</CardTitle>
                 <Button type="button" onClick={() => addLineItem(true)} variant="outline" size="sm">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Item
+                  {t("common.addItem")}
                 </Button>
               </div>
             </CardHeader>
@@ -380,7 +382,7 @@ export default function NewCreditNotePage() {
                   <div key={item.id} className="flex gap-2 items-start">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
                       <div className="sm:col-span-5">
-                        <Label>Product *</Label>
+                        <Label>{t("common.product")} *</Label>
                         <div ref={(el) => {
                           if (el) {
                             const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
@@ -404,11 +406,11 @@ export default function NewCreditNotePage() {
 
                       <div className="grid grid-cols-2 sm:contents gap-2">
                         <div className="space-y-1">
-                          <Label className="sm:hidden text-xs text-slate-500">Quantity *</Label>
+                          <Label className="sm:hidden text-xs text-slate-500">{t("common.quantity")} *</Label>
                           <Input
                             type="number"
                             onFocus={(e) => e.target.select()}
-                            placeholder="Qty"
+                            placeholder={t("common.qty")}
                             value={item.quantity}
                             onChange={(e) =>
                               updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
@@ -424,14 +426,14 @@ export default function NewCreditNotePage() {
 
                         {session?.user?.multiUnitEnabled && (
                           <div className="space-y-1">
-                            <Label className="sm:hidden text-xs text-slate-500">Unit</Label>
+                            <Label className="sm:hidden text-xs text-slate-500">{t("common.unit")}</Label>
                             <ItemUnitSelect
                               value={item.unitId}
                               onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
                               options={(() => {
                                 const product = products.find((p) => p.id === item.productId);
                                 if (!product) return [];
-                                const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
+                                const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || t("sales.baseUnit"), conversionFactor: 1 };
                                 const alternateOptions = unitConversions
                                   .filter(uc => uc.toUnitId === product.unitId)
                                   .map(uc => ({
@@ -448,11 +450,11 @@ export default function NewCreditNotePage() {
                         )}
 
                         <div className="space-y-1">
-                          <Label className="sm:hidden text-xs text-slate-500">Unit Price *</Label>
+                          <Label className="sm:hidden text-xs text-slate-500">{t("common.unitPrice")} *</Label>
                           <Input
                             type="number"
                             onFocus={(e) => e.target.select()}
-                            placeholder="Unit Price"
+                            placeholder={t("common.unitPrice")}
                             value={item.unitPrice}
                             onChange={(e) =>
                               updateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)
@@ -463,11 +465,11 @@ export default function NewCreditNotePage() {
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="sm:hidden text-xs text-slate-500">Discount %</Label>
+                          <Label className="sm:hidden text-xs text-slate-500">{t("common.discount")} %</Label>
                           <Input
                             type="number"
                             onFocus={(e) => e.target.select()}
-                            placeholder="Discount %"
+                            placeholder={t("common.discountPercent")}
                             value={item.discount || ""}
                             onChange={(e) =>
                               updateLineItem(
@@ -526,14 +528,14 @@ export default function NewCreditNotePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
+              <CardTitle>{t("common.additionalInformation")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes">{t("common.notes")}</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Additional notes..."
+                  placeholder={t("common.additionalNotesPlaceholder")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
@@ -544,12 +546,12 @@ export default function NewCreditNotePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Summary</CardTitle>
+              <CardTitle>{t("common.summary")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
+                  <span>{t("common.total")}:</span>
                   <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toFixed(2)}</span>
                 </div>
               </div>
@@ -559,11 +561,11 @@ export default function NewCreditNotePage() {
           <div className="flex justify-end gap-4">
             <Link href="/credit-notes">
               <Button type="button" variant="outline">
-                Cancel
+                {t("common.cancel")}
               </Button>
             </Link>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Credit Note"}
+              {isSubmitting ? t("common.creating") : t("creditNotes.createCreditNote")}
             </Button>
           </div>
         </form>

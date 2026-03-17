@@ -44,6 +44,7 @@ import { ArrowLeft, CheckCircle, Wallet, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface ExpenseItem {
   id: string;
@@ -93,6 +94,7 @@ export default function ExpenseDetailPage({
 }) {
   const { id } = use(params);
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
   const [expense, setExpense] = useState<Expense | null>(null);
   const [cashBankAccounts, setCashBankAccounts] = useState<CashBankAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -116,7 +118,7 @@ export default function ExpenseDetailPage({
       setExpense(await expRes.json());
       setCashBankAccounts(await cbRes.json());
     } catch {
-      toast.error("Failed to load expense");
+      toast.error(t("accounting.failedToLoadExpense"));
     } finally {
       setIsLoading(false);
     }
@@ -131,11 +133,11 @@ export default function ExpenseDetailPage({
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success("Expense approved");
+      toast.success(t("accounting.expenseApproved"));
       setConfirmAction(null);
       fetchData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to approve");
+      toast.error(error instanceof Error ? error.message : t("accounting.failedToApprove"));
     }
   };
 
@@ -151,11 +153,11 @@ export default function ExpenseDetailPage({
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success("Expense paid");
+      toast.success(t("accounting.expensePaid"));
       setIsPayDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to pay");
+      toast.error(error instanceof Error ? error.message : t("accounting.failedToPay"));
     }
   };
 
@@ -168,11 +170,11 @@ export default function ExpenseDetailPage({
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success("Expense voided");
+      toast.success(t("accounting.expenseVoided"));
       setConfirmAction(null);
       fetchData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to void");
+      toast.error(error instanceof Error ? error.message : t("accounting.failedToVoid"));
     }
   };
 
@@ -185,7 +187,7 @@ export default function ExpenseDetailPage({
   }
 
   if (!expense) {
-    return <p className="text-center py-8 text-slate-500">Expense not found</p>;
+    return <p className="text-center py-8 text-slate-500">{t("accounting.expenseNotFound")}</p>;
   }
 
   return (
@@ -202,7 +204,7 @@ export default function ExpenseDetailPage({
                 <h2 className="text-2xl font-bold text-slate-900">
                   {expense.expenseNumber}
                 </h2>
-                <p className="text-slate-500">{expense.description || "Expense"}</p>
+                <p className="text-slate-500">{expense.description || t("accounting.expense")}</p>
               </div>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
@@ -210,19 +212,19 @@ export default function ExpenseDetailPage({
               {expense.status === "DRAFT" && (
                 <Button onClick={() => setConfirmAction("approve")} className="w-full sm:w-auto">
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Approve
+                  {t("common.approve")}
                 </Button>
               )}
               {expense.status === "APPROVED" && (
                 <Button onClick={() => setIsPayDialogOpen(true)} className="w-full sm:w-auto">
                   <Wallet className="mr-2 h-4 w-4" />
-                  Pay
+                  {t("common.pay")}
                 </Button>
               )}
               {expense.status !== "VOID" && expense.status !== "DRAFT" && (
                 <Button variant="destructive" onClick={() => setConfirmAction("void")} className="w-full sm:w-auto">
                   <XCircle className="mr-2 h-4 w-4" />
-                  Void
+                  {t("common.void")}
                 </Button>
               )}
             </div>
@@ -230,26 +232,26 @@ export default function ExpenseDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle>{t("common.details")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 <div>
-                  <span className="text-slate-500">Date</span>
+                  <span className="text-slate-500">{t("common.date")}</span>
                   <p className="font-medium">
                     {format(new Date(expense.expenseDate), "dd MMM yyyy")}
                   </p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Supplier</span>
-                  <p className="font-medium">{expense.supplier?.name || "None"}</p>
+                  <span className="text-slate-500">{t("common.supplier")}</span>
+                  <p className="font-medium">{expense.supplier?.name || t("common.none")}</p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Paid From</span>
-                  <p className="font-medium">{expense.cashBankAccount?.name || "Not yet paid"}</p>
+                  <span className="text-slate-500">{t("accounting.paidFrom")}</span>
+                  <p className="font-medium">{expense.cashBankAccount?.name || t("accounting.notYetPaid")}</p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Total</span>
+                  <span className="text-slate-500">{t("common.total")}</span>
                   <p className="font-medium text-lg">
                     {fmt(Number(expense.total))}
                   </p>
@@ -260,7 +262,7 @@ export default function ExpenseDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Line Items</CardTitle>
+              <CardTitle>{t("accounting.lineItems")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 sm:hidden">
@@ -272,14 +274,14 @@ export default function ExpenseDetailPage({
                     </div>
                     <div className="mt-2 text-slate-600">{item.description}</div>
                     <div className="mt-3 flex items-center justify-between border-t pt-3">
-                      <span className="text-xs uppercase tracking-wide text-slate-400">Amount</span>
+                      <span className="text-xs uppercase tracking-wide text-slate-400">{t("common.amount")}</span>
                       <span className="font-semibold text-slate-900">{fmt(Number(item.amount))}</span>
                     </div>
                   </div>
                 ))}
                 <div className="rounded-lg border p-4 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Subtotal</span>
+                    <span className="text-slate-500">{t("common.subtotal")}</span>
                     <span className="font-medium">{fmt(Number(expense.subtotal))}</span>
                   </div>
                   {Number(expense.totalCgst) > 0 && (
@@ -302,12 +304,12 @@ export default function ExpenseDetailPage({
                   )}
                   {Number(expense.totalCgst) === 0 && Number(expense.totalSgst) === 0 && Number(expense.totalIgst) === 0 && Number(expense.taxAmount) > 0 && (
                     <div className="mt-2 flex justify-between text-slate-500">
-                      <span>Tax</span>
+                      <span>{t("common.tax")}</span>
                       <span>{fmt(Number(expense.taxAmount))}</span>
                     </div>
                   )}
                   <div className="mt-3 flex items-center justify-between border-t pt-3 text-base font-semibold">
-                    <span>Total</span>
+                    <span>{t("common.total")}</span>
                     <span>{fmt(Number(expense.total))}</span>
                   </div>
                 </div>
@@ -316,9 +318,9 @@ export default function ExpenseDetailPage({
                 <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Account</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>{t("common.account")}</TableHead>
+                    <TableHead>{t("common.description")}</TableHead>
+                    <TableHead className="text-right">{t("common.amount")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -340,7 +342,7 @@ export default function ExpenseDetailPage({
                   ))}
                   <TableRow className="border-t-2">
                     <TableCell colSpan={2} className="text-right font-medium">
-                      Subtotal
+                      {t("common.subtotal")}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {Number(expense.subtotal).toLocaleString("en-IN", {
@@ -374,7 +376,7 @@ export default function ExpenseDetailPage({
                   )}
                   {Number(expense.totalCgst) === 0 && Number(expense.totalSgst) === 0 && Number(expense.totalIgst) === 0 && Number(expense.taxAmount) > 0 && (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-right text-slate-500">Tax</TableCell>
+                      <TableCell colSpan={2} className="text-right text-slate-500">{t("common.tax")}</TableCell>
                       <TableCell className="text-right font-mono text-slate-500">
                         {Number(expense.taxAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       </TableCell>
@@ -382,7 +384,7 @@ export default function ExpenseDetailPage({
                   )}
                   <TableRow className="font-bold">
                     <TableCell colSpan={2} className="text-right">
-                      Total
+                      {t("common.total")}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {Number(expense.total).toLocaleString("en-IN", {
@@ -401,19 +403,19 @@ export default function ExpenseDetailPage({
             <DialogContent className="sm:max-w-md">
               <form onSubmit={handlePay}>
                 <DialogHeader>
-                  <DialogTitle>Pay Expense</DialogTitle>
+                  <DialogTitle>{t("accounting.payExpense")}</DialogTitle>
                   <DialogDescription>
-                    Select the account to pay this expense from.
+                    {t("accounting.selectPayAccount")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                  <Label>Pay From *</Label>
+                  <Label>{t("accounting.payFrom")}</Label>
                   <Select
                     value={selectedAccountId}
                     onValueChange={setSelectedAccountId}
                   >
                     <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select account" />
+                      <SelectValue placeholder={t("accounting.selectAccount")} />
                     </SelectTrigger>
                     <SelectContent>
                       {cashBankAccounts
@@ -428,7 +430,7 @@ export default function ExpenseDetailPage({
                 </div>
                 <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <Button type="submit" disabled={!selectedAccountId} className="w-full sm:w-auto">
-                    Pay {fmt(Number(expense.total))}
+                    {t("common.pay")} {fmt(Number(expense.total))}
                   </Button>
                 </DialogFooter>
               </form>
@@ -443,16 +445,16 @@ export default function ExpenseDetailPage({
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  {confirmAction === "approve" ? "Approve Expense" : "Void Expense"}
+                  {confirmAction === "approve" ? t("accounting.approveExpense") : t("accounting.voidExpense")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   {confirmAction === "approve"
-                    ? "This will approve the expense for payment."
-                    : "This will void the expense and reverse any related transactions."}
+                    ? t("accounting.approveExpenseDesc")
+                    : t("accounting.voidExpenseDesc")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={confirmAction === "approve" ? handleApprove : handleVoid}
                   className={
@@ -461,7 +463,7 @@ export default function ExpenseDetailPage({
                       : undefined
                   }
                 >
-                  {confirmAction === "approve" ? "Approve" : "Void"}
+                  {confirmAction === "approve" ? t("common.approve") : t("common.void")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

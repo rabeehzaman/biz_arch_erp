@@ -145,7 +145,7 @@ export function POSSettings() {
         }
       }
     } catch {
-      toast.error("Failed to list printers");
+      toast.error(t("pos.failedToListPrinters"));
     } finally {
       setLoadingPrinters(false);
     }
@@ -165,7 +165,7 @@ export function POSSettings() {
         }
       }
     } catch {
-      toast.error("Failed to list raw USB printers");
+      toast.error(t("pos.failedToListUsbPrinters"));
     } finally {
       setLoadingUsbPrinters(false);
     }
@@ -254,7 +254,7 @@ export function POSSettings() {
       toast.success(`Receipt printing ${checked ? "enabled" : "disabled"}`);
     } catch {
       setReceiptPrinting(prev);
-      toast.error("Failed to update receipt printing setting");
+      toast.error(t("pos.receiptPrintingFailed"));
     }
   };
 
@@ -352,12 +352,12 @@ export function POSSettings() {
     try {
       const res = await window.electronPOS.savePrinterConfig(config);
       if (res.success) {
-        toast.success("Printer configuration saved");
+        toast.success(t("pos.printerConfigSaved"));
       } else {
-        toast.error("Failed to save printer configuration");
+        toast.error(t("pos.printerConfigSaveFailed"));
       }
     } catch {
-      toast.error("Failed to save printer configuration");
+      toast.error(t("pos.printerConfigSaveFailed"));
     } finally {
       setIsSavingConfig(false);
     }
@@ -401,12 +401,12 @@ export function POSSettings() {
     try {
       const res = await window.electronPOS.testPrinter(config);
       if (res.success && res.connected) {
-        toast.success("Printer is connected and reachable");
+        toast.success(t("pos.printerConnected"));
       } else {
         toast.error(res.error || "Printer is not reachable");
       }
     } catch {
-      toast.error("Connection test failed");
+      toast.error(t("pos.connectionTestFailed"));
     } finally {
       setIsTesting(false);
     }
@@ -424,12 +424,12 @@ export function POSSettings() {
       try {
         const res = await openMobileCashDrawer(config);
         if (res.success) {
-          toast.success("Cash drawer opened");
+          toast.success(t("pos.cashDrawerOpened"));
         } else {
-          toast.error(res.error || "Failed to open cash drawer");
+          toast.error(res.error || t("pos.cashDrawerFailed"));
         }
       } catch {
-        toast.error("Failed to open cash drawer");
+        toast.error(t("pos.cashDrawerFailed"));
       }
       return;
     }
@@ -446,12 +446,12 @@ export function POSSettings() {
     try {
       const res = await window.electronPOS.openCashDrawer(config);
       if (res.success) {
-        toast.success("Cash drawer opened");
+        toast.success(t("pos.cashDrawerOpened"));
       } else {
-        toast.error(res.error || "Failed to open cash drawer");
+        toast.error(res.error || t("pos.cashDrawerFailed"));
       }
     } catch {
-      toast.error("Failed to open cash drawer");
+      toast.error(t("pos.cashDrawerFailed"));
     }
   };
 
@@ -487,12 +487,12 @@ export function POSSettings() {
         ? await capacitorPrintWithConfig(testReceiptData, config as MobilePrinterConfig)
         : await electronPrintWithConfig(testReceiptData, config as ElectronPrinterConfig);
       if (res.success) {
-        toast.success("Test receipt printed");
+        toast.success(t("pos.testReceiptPrinted"));
       } else {
         toast.error(res.error || "Test print failed");
       }
     } catch {
-      toast.error("Test print failed");
+      toast.error(t("pos.testPrintFailed"));
     }
   };
 
@@ -900,10 +900,10 @@ export function POSSettings() {
                     if (res.success) {
                       toast.success(t("pos.cacheCleared"));
                     } else {
-                      toast.error(res.error || "Failed to clear cache");
+                      toast.error(res.error || t("pos.cacheClearFailed"));
                     }
                   } catch {
-                    toast.error("Failed to clear cache");
+                    toast.error(t("pos.cacheClearFailed"));
                   } finally {
                     setIsClearingCache(false);
                   }
@@ -1143,6 +1143,7 @@ interface WarehouseOption {
 }
 
 function POSSettlementAccounts() {
+  const { t } = useLanguage();
   const [orgSettings, setOrgSettings] = useState<{
     posAccountingMode: string;
     posDefaultCashAccountId: string | null;
@@ -1211,14 +1212,14 @@ function POSSettlementAccounts() {
         }),
       });
       if (res.ok) {
-        toast.success("Default settlement accounts saved.");
+        toast.success(t("pos.defaultSettlementSaved"));
         fetchAll();
       } else {
         const data = await res.json();
-        toast.error(data.error || "Failed to save");
+        toast.error(data.error || t("common.error"));
       }
     } catch {
-      toast.error("Failed to save default settlement accounts.");
+      toast.error(t("pos.defaultSettlementSaveFailed"));
     } finally {
       setIsSavingDefaults(false);
     }
@@ -1237,14 +1238,14 @@ function POSSettlementAccounts() {
         }),
       });
       if (res.ok) {
-        toast.success("Register config removed.");
+        toast.success(t("pos.registerConfigRemoved"));
         fetchAll();
       } else {
         const data = await res.json();
-        toast.error(data.error || "Failed to remove");
+        toast.error(data.error || t("common.error"));
       }
     } catch {
-      toast.error("Failed to remove register config.");
+      toast.error(t("pos.registerConfigRemoveFailed"));
     }
   };
 
@@ -1264,17 +1265,17 @@ function POSSettlementAccounts() {
         }),
       });
       if (res.ok) {
-        toast.success("Register config saved.");
+        toast.success(t("pos.registerConfigSaved"));
         setSelectedWarehouse("");
         setRegCashId("");
         setRegBankId("");
         fetchAll();
       } else {
         const data = await res.json();
-        toast.error(data.error || "Failed to save");
+        toast.error(data.error || t("common.error"));
       }
     } catch {
-      toast.error("Failed to save register config.");
+      toast.error(t("pos.registerConfigSaveFailed"));
     } finally {
       setIsSavingRegister(false);
     }

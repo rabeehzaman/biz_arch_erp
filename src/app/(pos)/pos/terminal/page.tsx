@@ -150,7 +150,7 @@ function getPaymentMethodLabel(method: string, t: (key: string) => string) {
     case "UPI":
       return "UPI";
     case "CASH_REFUND":
-      return "Cash Refund";
+      return t("pos.cashRefund");
     default:
       return method.replace(/_/g, " ");
   }
@@ -713,7 +713,7 @@ function POSTerminalContent() {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to close session");
+        throw new Error(data.error || t("pos.failedToCloseSession"));
       }
 
       let reportPrintError: string | null = null;
@@ -721,7 +721,7 @@ function POSTerminalContent() {
         const reportRes = await fetch(`/api/pos/sessions/${closedSessionId}/summary`);
         if (!reportRes.ok) {
           const data = await reportRes.json().catch(() => null);
-          throw new Error(data?.error || "Failed to load POS session report");
+          throw new Error(data?.error || t("pos.failedToPrintSessionReport"));
         }
 
         const report = await reportRes.json();
@@ -739,12 +739,12 @@ function POSTerminalContent() {
         });
 
         if (!printResult.success) {
-          reportPrintError = printResult.error || "Failed to print POS session report";
+          reportPrintError = printResult.error || t("pos.failedToPrintSessionReport");
         }
       } catch (error) {
         reportPrintError = error instanceof Error
           ? error.message
-          : "Failed to print POS session report";
+          : t("pos.failedToPrintSessionReport");
       }
 
       clearCart();
@@ -758,7 +758,7 @@ function POSTerminalContent() {
       }
       router.replace("/pos");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to close session");
+      toast.error(err instanceof Error ? err.message : t("pos.failedToCloseSession"));
     } finally {
       setIsClosingSession(false);
     }
@@ -831,7 +831,7 @@ function POSTerminalContent() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Checkout failed");
+        throw new Error(data.error || t("pos.checkoutFailed"));
       }
 
       const result = await res.json();
@@ -944,7 +944,7 @@ function POSTerminalContent() {
       }
 
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Checkout failed");
+      toast.error(err instanceof Error ? err.message : t("pos.checkoutFailed"));
       // Restore cart so user can retry
       dispatchCart({ type: "RESTORE", items: completedCart });
       if (completedHeldOrderId) setHeldOrderId(completedHeldOrderId);
@@ -972,13 +972,13 @@ function POSTerminalContent() {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to hold order");
+        throw new Error(data.error || t("pos.failedToHoldOrder"));
       }
       clearCart();
       await mutateHeldOrders();
-      toast.success("Order held successfully");
+      toast.success(t("pos.orderHeldSuccess"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to hold order");
+      toast.error(err instanceof Error ? err.message : t("pos.failedToHoldOrder"));
     }
   };
 
@@ -1002,7 +1002,7 @@ function POSTerminalContent() {
     }
     setShowHeldSheet(false);
     setMobileView("cart");
-    toast.success("Order restored to cart");
+    toast.success(t("pos.orderRestoredToCart"));
   };
 
   const deleteHeldOrder = async (orderId: string) => {
@@ -1010,11 +1010,11 @@ function POSTerminalContent() {
       const res = await fetch(`/api/pos/held-orders/${orderId}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete");
+      if (!res.ok) throw new Error(t("pos.failedToDeleteHeldOrder"));
       await mutateHeldOrders();
-      toast.success("Held order deleted");
+      toast.success(t("pos.heldOrderDeleted"));
     } catch {
-      toast.error("Failed to delete held order");
+      toast.error(t("pos.failedToDeleteHeldOrder"));
     }
   };
 
@@ -1058,7 +1058,7 @@ function POSTerminalContent() {
           return;
         }
         console.error("Receipt reprint failed:", result.error);
-        toast.error(result.error || "No cached receipt available");
+        toast.error(result.error || t("pos.noCachedReceipt"));
       });
       return;
     }
@@ -1411,12 +1411,12 @@ function POSTerminalContent() {
             {posSession.employeeId && (
               <div className="mt-2">
                 <label className="mb-1 block text-sm font-medium">
-                  Employee PIN
+                  {t("pos.employeePin")}
                 </label>
                 <Input
                   type="password"
                   inputMode="numeric"
-                  placeholder="Enter your 4-digit PIN"
+                  placeholder={t("pos.enterFourDigitPin")}
                   value={closePinCode}
                   onChange={(e) => setClosePinCode(e.target.value.replace(/\D/g, ""))}
                   className="font-mono"
@@ -1480,7 +1480,7 @@ function POSTerminalContent() {
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {(order.items as CartItemData[]).length} item(s)
+                      {(order.items as CartItemData[]).length} {t("common.items")}
                       {order.notes && ` — ${order.notes}`}
                     </p>
                     <div className="flex gap-2">

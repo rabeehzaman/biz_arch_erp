@@ -21,6 +21,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
+import { useLanguage } from "@/lib/i18n";
 
 interface Supplier {
   id: string;
@@ -84,6 +85,7 @@ export default function NewDebitNotePage() {
   const { symbol } = useCurrency();
   const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
   const [applyRoundOff, setApplyRoundOff] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     setApplyRoundOff(roundOffEnabled);
@@ -258,13 +260,13 @@ export default function NewDebitNotePage() {
     e.preventDefault();
 
     if (!supplierId) {
-      toast.error("Please select a supplier");
+      toast.error(t("common.pleaseSelectSupplier"));
       return;
     }
 
     const validItems = items.filter((item) => item.productId);
     if (validItems.length === 0) {
-      toast.error("Please add at least one item");
+      toast.error(t("common.pleaseAddAtLeastOneItem"));
       return;
     }
 
@@ -301,7 +303,7 @@ export default function NewDebitNotePage() {
       }
 
       const data = await response.json();
-      toast.success("Debit note created successfully");
+      toast.success(t("debitNotes.debitNoteCreated"));
       router.push(`/debit-notes/${data.id}`);
     } catch (error: any) {
       toast.error(error.message);
@@ -322,30 +324,28 @@ export default function NewDebitNotePage() {
           </Link>
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              New Debit Note
+              {t("debitNotes.newDebitNote")}
             </h2>
-            <p className="text-slate-500">Create a new purchase return</p>
+            <p className="text-slate-500">{t("debitNotes.newDebitNoteDesc")}</p>
           </div>
         </div>
 
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex gap-3">
           <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-orange-800">
-            <strong>Stock Validation:</strong> Debit notes will check if you have
-            sufficient stock available before processing the return. Make sure the
-            products you&apos;re returning are still in your inventory.
+            <strong>{t("debitNotes.stockValidation")}:</strong> {t("debitNotes.stockValidationNewDesc")}
           </div>
         </div>
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Debit Note Details</CardTitle>
+              <CardTitle>{t("debitNotes.debitNoteDetails")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="supplier">Supplier *</Label>
+                  <Label htmlFor="supplier">{t("common.supplier")} *</Label>
                   <SupplierCombobox
                     suppliers={suppliers}
                     value={supplierId}
@@ -358,7 +358,7 @@ export default function NewDebitNotePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="issueDate">Issue Date</Label>
+                  <Label htmlFor="issueDate">{t("sales.issueDate")}</Label>
                   <Input
                     id="issueDate"
                     type="date"
@@ -370,21 +370,21 @@ export default function NewDebitNotePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="purchaseInvoiceId">
-                    Original Purchase Invoice (Optional)
+                    {t("debitNotes.originalPurchaseInvoice")} ({t("common.optional")})
                   </Label>
                   <Input
                     id="purchaseInvoiceId"
-                    placeholder="Leave blank for standalone debit note"
+                    placeholder={t("debitNotes.purchaseInvoicePlaceholder")}
                     value={purchaseInvoiceId}
                     onChange={(e) => setPurchaseInvoiceId(e.target.value)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reason">Reason for Return</Label>
+                  <Label htmlFor="reason">{t("debitNotes.reasonForReturn")}</Label>
                   <Input
                     id="reason"
-                    placeholder="e.g., Defective items"
+                    placeholder={t("debitNotes.reasonPlaceholder")}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />
@@ -396,10 +396,10 @@ export default function NewDebitNotePage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Items</CardTitle>
+                <CardTitle>{t("sales.items")}</CardTitle>
                 <Button type="button" onClick={() => addLineItem(true)} variant="outline" size="sm">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Item
+                  {t("common.addItem")}
                 </Button>
               </div>
             </CardHeader>
@@ -412,7 +412,7 @@ export default function NewDebitNotePage() {
                   <div key={item.id} className="flex gap-2 items-start">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
                       <div className="sm:col-span-5">
-                        <Label>Product *</Label>
+                        <Label>{t("common.product")} *</Label>
                         <div ref={(el) => {
                           if (el) {
                             const button = el.querySelector('button[role="combobox"]') as HTMLButtonElement;
@@ -436,11 +436,11 @@ export default function NewDebitNotePage() {
 
                       <div className="grid grid-cols-2 sm:contents gap-2">
                         <div className="space-y-1">
-                          <Label className="sm:hidden text-xs text-slate-500">Quantity *</Label>
+                          <Label className="sm:hidden text-xs text-slate-500">{t("common.quantity")} *</Label>
                           <Input
                             type="number"
                             onFocus={(e) => e.target.select()}
-                            placeholder="Qty"
+                            placeholder={t("common.qty")}
                             value={item.quantity}
                             onChange={(e) =>
                               updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
@@ -457,14 +457,14 @@ export default function NewDebitNotePage() {
 
                         {session?.user?.multiUnitEnabled && (
                           <div className="space-y-1">
-                            <Label className="sm:hidden text-xs text-slate-500">Unit</Label>
+                            <Label className="sm:hidden text-xs text-slate-500">{t("common.unit")}</Label>
                             <ItemUnitSelect
                               value={item.unitId}
                               onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
                               options={(() => {
                                 const product = products.find((p) => p.id === item.productId);
                                 if (!product) return [];
-                                const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
+                                const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || t("sales.baseUnit"), conversionFactor: 1 };
                                 const alternateOptions = unitConversions
                                   .filter(uc => uc.toUnitId === product.unitId)
                                   .map(uc => ({
@@ -481,11 +481,11 @@ export default function NewDebitNotePage() {
                         )}
 
                         <div className="space-y-1">
-                          <Label className="sm:hidden text-xs text-slate-500">Unit Cost *</Label>
+                          <Label className="sm:hidden text-xs text-slate-500">{t("common.unitCost")} *</Label>
                           <Input
                             type="number"
                             onFocus={(e) => e.target.select()}
-                            placeholder="Unit Cost"
+                            placeholder={t("common.unitCost")}
                             value={item.unitCost}
                             onChange={(e) =>
                               updateLineItem(item.id, "unitCost", parseFloat(e.target.value) || 0)
@@ -497,11 +497,11 @@ export default function NewDebitNotePage() {
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="sm:hidden text-xs text-slate-500">Discount %</Label>
+                          <Label className="sm:hidden text-xs text-slate-500">{t("common.discount")} %</Label>
                           <Input
                             type="number"
                             onFocus={(e) => e.target.select()}
-                            placeholder="Discount %"
+                            placeholder={t("common.discountPercent")}
                             value={item.discount || ""}
                             onChange={(e) =>
                               updateLineItem(
@@ -560,14 +560,14 @@ export default function NewDebitNotePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
+              <CardTitle>{t("common.additionalInformation")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes">{t("common.notes")}</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Additional notes..."
+                  placeholder={t("common.additionalNotesPlaceholder")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
@@ -578,17 +578,17 @@ export default function NewDebitNotePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Summary</CardTitle>
+              <CardTitle>{t("common.summary")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
                   <div>
-                    <p className="text-sm font-medium">Apply Round Off</p>
+                    <p className="text-sm font-medium">{t("common.applyRoundOff")}</p>
                     <p className="text-xs text-slate-500">
                       {roundOffEnabled
-                        ? "Use organization round off rule on the final total."
-                        : "Enable a round off mode in Settings > Company."}
+                        ? t("common.roundOffEnabledDesc")
+                        : t("common.roundOffDisabledDesc")}
                     </p>
                   </div>
                   <Switch
@@ -598,18 +598,18 @@ export default function NewDebitNotePage() {
                   />
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Subtotal:</span>
+                  <span>{t("common.subtotal")}:</span>
                   <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toFixed(2)}</span>
                 </div>
                 {tax > 0 && (
                   <div className="flex justify-between text-sm text-slate-500">
-                    <span>GST:</span>
+                    <span>{t("common.gst")}:</span>
                     <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toFixed(2)}</span>
                   </div>
                 )}
                 {applyRoundOff && roundOffAmount !== 0 && (
                   <div className="flex justify-between text-sm text-slate-500">
-                    <span>Round Off:</span>
+                    <span>{t("common.roundOff")}:</span>
                     <span key={`summary-roundoff:${roundOffAmount.toFixed(2)}`}>
                       {roundOffAmount >= 0 ? "+" : ""}
                       {symbol}{roundOffAmount.toFixed(2)}
@@ -617,7 +617,7 @@ export default function NewDebitNotePage() {
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
-                  <span>Total:</span>
+                  <span>{t("common.total")}:</span>
                   <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toFixed(2)}</span>
                 </div>
               </div>
@@ -627,11 +627,11 @@ export default function NewDebitNotePage() {
           <div className="flex justify-end gap-4">
             <Link href="/debit-notes">
               <Button type="button" variant="outline">
-                Cancel
+                {t("common.cancel")}
               </Button>
             </Link>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Debit Note"}
+              {isSubmitting ? t("common.creating") : t("debitNotes.createDebitNote")}
             </Button>
           </div>
         </form>

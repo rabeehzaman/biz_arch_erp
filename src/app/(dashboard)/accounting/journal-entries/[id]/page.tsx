@@ -27,6 +27,7 @@ import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface JournalLine {
   id: string;
@@ -59,6 +60,7 @@ export default function JournalEntryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { t } = useLanguage();
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmAction, setConfirmAction] = useState<"post" | "void" | null>(null);
@@ -76,7 +78,7 @@ export default function JournalEntryDetailPage({
       const data = await response.json();
       setEntry(data);
     } catch {
-      toast.error("Failed to load journal entry");
+      toast.error(t("accounting.failedToLoadJournalEntry"));
     } finally {
       setIsLoading(false);
     }
@@ -96,14 +98,14 @@ export default function JournalEntryDetailPage({
       }
       toast.success(
         confirmAction === "post"
-          ? "Journal entry posted"
-          : "Journal entry voided"
+          ? t("accounting.journalEntryPosted")
+          : t("accounting.journalEntryVoided")
       );
       setConfirmAction(null);
       fetchEntry();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : `Failed to ${confirmAction}`
+        error instanceof Error ? error.message : t("common.error")
       );
     }
   };
@@ -117,7 +119,7 @@ export default function JournalEntryDetailPage({
   }
 
   if (!entry) {
-    return <p className="text-center py-8 text-slate-500">Entry not found</p>;
+    return <p className="text-center py-8 text-slate-500">{t("accounting.entryNotFound")}</p>;
   }
 
   const totalDebit = entry.lines.reduce((sum, l) => sum + Number(l.debit), 0);
@@ -148,7 +150,7 @@ export default function JournalEntryDetailPage({
               {entry.status === "DRAFT" && (
                 <Button onClick={() => setConfirmAction("post")} className="w-full sm:w-auto">
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Post
+                  {t("accounting.post")}
                 </Button>
               )}
               {entry.status === "POSTED" && entry.sourceType === "MANUAL" && (
@@ -158,7 +160,7 @@ export default function JournalEntryDetailPage({
                   className="w-full sm:w-auto"
                 >
                   <XCircle className="mr-2 h-4 w-4" />
-                  Void
+                  {t("common.void")}
                 </Button>
               )}
             </div>
@@ -166,22 +168,22 @@ export default function JournalEntryDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Entry Details</CardTitle>
+              <CardTitle>{t("accounting.entryDetails")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 <div>
-                  <span className="text-slate-500">Date</span>
+                  <span className="text-slate-500">{t("common.date")}</span>
                   <p className="font-medium">
                     {format(new Date(entry.date), "dd MMM yyyy")}
                   </p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Source</span>
+                  <span className="text-slate-500">{t("common.source")}</span>
                   <p className="font-medium">{entry.sourceType}</p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Total Debit</span>
+                  <span className="text-slate-500">{t("accounting.totalDebit")}</span>
                   <p className="font-medium font-mono">
                     {totalDebit.toLocaleString("en-IN", {
                       minimumFractionDigits: 2,
@@ -189,7 +191,7 @@ export default function JournalEntryDetailPage({
                   </p>
                 </div>
                 <div>
-                  <span className="text-slate-500">Total Credit</span>
+                  <span className="text-slate-500">{t("accounting.totalCredit")}</span>
                   <p className="font-medium font-mono">
                     {totalCredit.toLocaleString("en-IN", {
                       minimumFractionDigits: 2,
@@ -202,7 +204,7 @@ export default function JournalEntryDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Lines</CardTitle>
+              <CardTitle>{t("accounting.lines")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 sm:hidden">
@@ -212,10 +214,10 @@ export default function JournalEntryDetailPage({
                       <span className="mr-2 font-mono text-slate-500">{line.account.code}</span>
                       {line.account.name}
                     </div>
-                    <div className="mt-2 text-slate-600">{line.description || "No description"}</div>
+                    <div className="mt-2 text-slate-600">{line.description || t("common.noDescription")}</div>
                     <div className="mt-3 grid grid-cols-2 gap-3 border-t pt-3">
                       <div>
-                        <div className="text-xs uppercase tracking-wide text-slate-400">Debit</div>
+                        <div className="text-xs uppercase tracking-wide text-slate-400">{t("accounting.debit")}</div>
                         <div className="font-medium text-slate-900">
                           {Number(line.debit) > 0
                             ? Number(line.debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })
@@ -223,7 +225,7 @@ export default function JournalEntryDetailPage({
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs uppercase tracking-wide text-slate-400">Credit</div>
+                        <div className="text-xs uppercase tracking-wide text-slate-400">{t("accounting.credit")}</div>
                         <div className="font-medium text-slate-900">
                           {Number(line.credit) > 0
                             ? Number(line.credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })
@@ -235,13 +237,13 @@ export default function JournalEntryDetailPage({
                 ))}
                 <div className="rounded-lg border p-4 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Total Debit</span>
+                    <span className="text-slate-500">{t("accounting.totalDebit")}</span>
                     <span className="font-semibold">
                       {totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
-                    <span className="text-slate-500">Total Credit</span>
+                    <span className="text-slate-500">{t("accounting.totalCredit")}</span>
                     <span className="font-semibold">
                       {totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </span>
@@ -252,10 +254,10 @@ export default function JournalEntryDetailPage({
                 <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Account</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Debit</TableHead>
-                    <TableHead className="text-right">Credit</TableHead>
+                    <TableHead>{t("common.account")}</TableHead>
+                    <TableHead>{t("common.description")}</TableHead>
+                    <TableHead className="text-right">{t("accounting.debit")}</TableHead>
+                    <TableHead className="text-right">{t("accounting.credit")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -288,7 +290,7 @@ export default function JournalEntryDetailPage({
                   ))}
                   <TableRow className="font-bold border-t-2">
                     <TableCell colSpan={2} className="text-right">
-                      Totals
+                      {t("common.totals")}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {totalDebit.toLocaleString("en-IN", {
@@ -315,17 +317,17 @@ export default function JournalEntryDetailPage({
               <AlertDialogHeader>
                 <AlertDialogTitle>
                   {confirmAction === "post"
-                    ? "Post Journal Entry"
-                    : "Void Journal Entry"}
+                    ? t("accounting.postJournalEntry")
+                    : t("accounting.voidJournalEntry")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   {confirmAction === "post"
-                    ? "Once posted, this entry will affect account balances. Are you sure?"
-                    : "This will create a reversal entry and mark the original as void. Are you sure?"}
+                    ? t("accounting.postJournalEntryConfirm")
+                    : t("accounting.voidJournalEntryConfirm")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleAction}
                   className={
@@ -334,7 +336,7 @@ export default function JournalEntryDetailPage({
                       : undefined
                   }
                 >
-                  {confirmAction === "post" ? "Post Entry" : "Void Entry"}
+                  {confirmAction === "post" ? t("accounting.postEntry") : t("accounting.voidEntry")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

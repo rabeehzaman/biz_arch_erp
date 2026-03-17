@@ -315,7 +315,7 @@ export default function CustomersPage() {
                 <DialogHeader className="pr-12">
                   <DialogTitle>{t("common.openingBalance")}</DialogTitle>
                   <DialogDescription>
-                    Set the opening balance for {selectedCustomerForBalance?.name}. This represents the initial receivable amount.
+                    {t("customers.openingBalanceDesc").replace("{name}", selectedCustomerForBalance?.name || "")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-2 sm:py-4">
@@ -329,11 +329,11 @@ export default function CustomersPage() {
                       onChange={(e) =>
                         setOpeningBalanceData({ ...openingBalanceData, amount: e.target.value })
                       }
-                      placeholder="Enter amount (positive for receivable)"
+                      placeholder={t("customers.openingBalancePlaceholder")}
                       required
                     />
                     <p className="text-xs text-slate-500">
-                      Enter a positive amount for receivables (customer owes you), or negative for advances (you owe customer).
+                      {t("customers.openingBalanceHint")}
                     </p>
                   </div>
                   <div className="grid gap-2">
@@ -366,9 +366,9 @@ export default function CustomersPage() {
           }}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Assign Customer</DialogTitle>
+                <DialogTitle>{t("customers.assignCustomer")}</DialogTitle>
                 <DialogDescription>
-                  Select users to assign {selectedCustomerForAssign?.name} to. Only assigned users (and admins) will be able to see this customer.
+                  {t("customers.assignDesc")}
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4">
@@ -396,21 +396,21 @@ export default function CustomersPage() {
                     </div>
                   ))}
                   {users.filter(u => u.role !== "admin").length === 0 && (
-                    <p className="text-sm text-slate-500">No users available for assignment.</p>
+                    <p className="text-sm text-slate-500">{t("customers.noUsersAvailable")}</p>
                   )}
                 </div>
                 {selectedUserIds.length === 0 && (
                   <p className="mt-4 text-xs text-amber-600">
-                    Note: If no users are selected, only admins will be able to see this customer.
+                    {t("customers.noUsersNote")}
                   </p>
                 )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button onClick={handleAssignSubmit}>
-                  Save Assignments
+                  {t("customers.saveAssignments")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -488,7 +488,7 @@ export default function CustomersPage() {
                                 {isAdmin && (
                                   <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
                                     <UserPlus className="mr-2 h-4 w-4" />
-                                    Assign
+                                    {t("customers.assign")}
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
@@ -527,7 +527,7 @@ export default function CustomersPage() {
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-sm text-slate-400">Unassigned</span>
+                              <span className="text-sm text-slate-400">{t("common.unassigned")}</span>
                             )}
                           </div>
                         </div>
@@ -580,7 +580,7 @@ export default function CustomersPage() {
                                     </Badge>
                                   ))
                                 ) : (
-                                  <span className="text-slate-400 text-sm">Unassigned</span>
+                                  <span className="text-slate-400 text-sm">{t("common.unassigned")}</span>
                                 )}
                               </div>
                             </TableCell>
@@ -630,7 +630,7 @@ export default function CustomersPage() {
                                   {isAdmin && (
                                     <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
                                       <UserPlus className="mr-2 h-4 w-4" />
-                                      Assign
+                                      {t("customers.assign")}
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuSeparator />

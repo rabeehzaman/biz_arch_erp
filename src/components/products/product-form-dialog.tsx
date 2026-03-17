@@ -22,6 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 import { UnitSelect } from "@/components/units/unit-select";
 import { CategorySelect } from "@/components/products/category-select";
 import { Plus, Trash2, Package } from "lucide-react";
@@ -90,6 +91,7 @@ export function ProductFormDialog({
     initialBarcode
 }: ProductFormDialogProps) {
     const { data: session } = useSession();
+    const { t } = useLanguage();
     const sessionUser = session?.user as ({ gstEnabled?: boolean } & { saudiEInvoiceEnabled?: boolean } & { isMobileShopModuleEnabled?: boolean } & { isWeighMachineEnabled?: boolean } & { weighMachineProductCodeLen?: number }) | undefined;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -173,25 +175,25 @@ export function ProductFormDialog({
         e.stopPropagation();
 
         const errors: Record<string, string> = {};
-        if (!formData.name.trim()) errors.name = "Name is required";
+        if (!formData.name.trim()) errors.name = t("products.nameRequired");
         if (!formData.price || parseFloat(formData.price) < 0)
-            errors.price = "A valid price is required";
+            errors.price = t("products.validPriceRequired");
         if (formData.cost && parseFloat(formData.cost) < 0)
-            errors.cost = "Cost cannot be negative";
-        if (!formData.unitId) errors.unitId = "Unit is required";
+            errors.cost = t("products.costCannotBeNegative");
+        if (!formData.unitId) errors.unitId = t("products.unitRequired");
 
         // Validate bundle items
         if (formData.isBundle) {
             if (bundleItems.length === 0) {
-                errors.bundle = "At least one component is required for a bundle";
+                errors.bundle = t("products.bundleComponentRequired");
             }
             for (const bi of bundleItems) {
                 if (!bi.componentProductId) {
-                    errors.bundle = "All components must have a product selected";
+                    errors.bundle = t("products.bundleProductRequired");
                     break;
                 }
                 if (!bi.quantity || parseFloat(bi.quantity) <= 0) {
-                    errors.bundle = "All components must have a valid quantity";
+                    errors.bundle = t("products.bundleValidQuantity");
                     break;
                 }
             }
@@ -249,7 +251,7 @@ export function ProductFormDialog({
             const rawData = await response.json();
             const newProduct = productToEdit ? rawData : (rawData.product || rawData);
 
-            toast.success(productToEdit ? "Product updated successfully" : "Product added successfully");
+            toast.success(productToEdit ? t("products.updatedSuccess") : t("products.addedSuccess"));
 
             resetForm();
             onOpenChange(false);
@@ -332,18 +334,18 @@ export function ProductFormDialog({
                 <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
                     <DialogHeader className="shrink-0 gap-1 pr-12">
                         <DialogTitle>
-                            {productToEdit ? "Edit Product" : "Add New Product"}
+                            {productToEdit ? t("products.editProduct") : t("products.addNewProduct")}
                         </DialogTitle>
                         <DialogDescription>
                             {productToEdit
-                                ? "Update the product details below."
-                                : "Fill in the details to add a new product."}
+                                ? t("products.editDesc")
+                                : t("products.addDesc")}
                         </DialogDescription>
                     </DialogHeader>
                     <div data-testid="product-form-body" className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
                         <div className="grid gap-3 py-2 sm:gap-4 sm:py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="prod-name">Name *</Label>
+                            <Label htmlFor="prod-name">{t("common.nameRequired")}</Label>
                             <Input
                                 id="prod-name"
                                 value={formData.name}
@@ -358,7 +360,7 @@ export function ProductFormDialog({
                             )}
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="prod-description">Description</Label>
+                            <Label htmlFor="prod-description">{t("products.description")}</Label>
                             <Textarea
                                 id="prod-description"
                                 value={formData.description}
@@ -369,7 +371,7 @@ export function ProductFormDialog({
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="prod-price">Price *</Label>
+                                <Label htmlFor="prod-price">{t("common.price")} *</Label>
                                 <Input
                                     id="prod-price"
                                     type="number"
@@ -386,7 +388,7 @@ export function ProductFormDialog({
                                 )}
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="prod-cost">Cost</Label>
+                                <Label htmlFor="prod-cost">{t("products.cost")}</Label>
                                 <Input
                                     id="prod-cost"
                                     type="number"
@@ -404,7 +406,7 @@ export function ProductFormDialog({
                                     <p className="text-sm text-red-500">{formErrors.cost}</p>
                                 ) : (
                                     <p className="text-xs text-muted-foreground">
-                                        Used as the default purchase/fallback cost when no stock lot cost is available.
+                                        {t("products.costDescription")}
                                     </p>
                                 )}
                             </div>
@@ -430,30 +432,30 @@ export function ProductFormDialog({
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="prod-sku">SKU</Label>
+                                <Label htmlFor="prod-sku">{t("products.sku")}</Label>
                                 <Input
                                     id="prod-sku"
                                     value={formData.sku}
                                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                                    placeholder="Optional product code"
+                                    placeholder={t("products.skuPlaceholder")}
                                 />
                             </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="prod-barcode">Barcode</Label>
+                                <Label htmlFor="prod-barcode">{t("products.barcode")}</Label>
                                 <Input
                                     id="prod-barcode"
                                     value={formData.barcode}
                                     onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                                    placeholder="Scan barcode"
+                                    placeholder={t("products.barcodePlaceholder")}
                                 />
                             </div>
                         </div>
                         {sessionUser?.gstEnabled && !sessionUser.saudiEInvoiceEnabled && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="prod-hsnCode">HSN Code</Label>
+                                    <Label htmlFor="prod-hsnCode">{t("products.hsnCode")}</Label>
                                     <Input
                                         id="prod-hsnCode"
                                         value={formData.hsnCode}
@@ -462,7 +464,7 @@ export function ProductFormDialog({
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="prod-gstRate">GST Rate</Label>
+                                    <Label htmlFor="prod-gstRate">{t("products.gstRate")}</Label>
                                     <Select
                                         value={formData.gstRate}
                                         onValueChange={(value) => setFormData({ ...formData, gstRate: value })}
@@ -489,7 +491,7 @@ export function ProductFormDialog({
                                 }
                                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
                             />
-                            <Label htmlFor="prod-isService" className="leading-5">Service product (no inventory tracking)</Label>
+                            <Label htmlFor="prod-isService" className="leading-5">{t("products.isServiceLabel")}</Label>
                         </div>
 
                         {!formData.isService && (
@@ -504,7 +506,7 @@ export function ProductFormDialog({
                                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
                                 />
                                 <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                                <Label htmlFor="prod-isBundle" className="leading-5">Bundle / Kit (stock deducted from components)</Label>
+                                <Label htmlFor="prod-isBundle" className="leading-5">{t("products.isBundleLabel")}</Label>
                             </div>
                         )}
 
@@ -513,31 +515,31 @@ export function ProductFormDialog({
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <Label className="flex items-center gap-2 text-sm font-semibold">
                                         <Package className="h-4 w-4" />
-                                        Bundle Components
+                                        {t("products.bundleComponents")}
                                     </Label>
                                     <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={addBundleItem}>
-                                        <Plus className="h-3 w-3 mr-1" /> Add Component
+                                        <Plus className="h-3 w-3 mr-1" /> {t("products.addComponent")}
                                     </Button>
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Define what raw products make up 1 unit of this bundle. When sold, stock is deducted from these components.
+                                    {t("products.bundleDescription")}
                                 </p>
                                 {bundleItems.length === 0 && (
                                     <p className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded">
-                                        No components added yet. Click &quot;Add Component&quot; to start.
+                                        {t("products.noComponentsYet")}
                                     </p>
                                 )}
                                 {bundleItems.map((bi, index) => (
                                     <div key={index} className="rounded-xl border border-slate-200 bg-white p-3">
                                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_110px_auto] sm:items-start">
                                             <div className="min-w-0">
-                                                <Label className="mb-2 block text-xs text-slate-500 sm:hidden">Component</Label>
+                                                <Label className="mb-2 block text-xs text-slate-500 sm:hidden">{t("products.component")}</Label>
                                             <Select
                                                 value={bi.componentProductId}
                                                 onValueChange={(value) => updateBundleItem(index, "componentProductId", value)}
                                             >
                                                 <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select product..." />
+                                                    <SelectValue placeholder={t("products.selectProductPlaceholder")} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {getAvailableProducts(index).map((p) => (
@@ -549,7 +551,7 @@ export function ProductFormDialog({
                                             </Select>
                                             </div>
                                             <div className="grid gap-2">
-                                                <Label className="text-xs text-slate-500 sm:hidden">Quantity</Label>
+                                                <Label className="text-xs text-slate-500 sm:hidden">{t("common.quantity")}</Label>
                                                 <Input
                                                     type="number"
                                                     min="0.0001"
@@ -587,13 +589,13 @@ export function ProductFormDialog({
                                     }
                                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
                                 />
-                                <Label htmlFor="prod-isImeiTracked" className="leading-5">Track by IMEI (individual device tracking)</Label>
+                                <Label htmlFor="prod-isImeiTracked" className="leading-5">{t("products.trackByImei")}</Label>
                             </div>
                         )}
 
                         {sessionUser?.isWeighMachineEnabled && !formData.isService && (
                             <div className="grid gap-2">
-                                <Label htmlFor="prod-weighMachineCode">Weigh Machine Code</Label>
+                                <Label htmlFor="prod-weighMachineCode">{t("products.weighMachineCode")}</Label>
                                 <Input
                                     id="prod-weighMachineCode"
                                     value={formData.weighMachineCode}
@@ -605,7 +607,7 @@ export function ProductFormDialog({
                                     className="font-mono"
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Numeric code embedded in the weigh machine barcode label
+                                    {t("products.weighMachineCodeDesc")}
                                 </p>
                             </div>
                         )}
@@ -614,8 +616,8 @@ export function ProductFormDialog({
                     <DialogFooter className="mt-2 shrink-0 sm:mt-4">
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
                             {isSubmitting
-                                ? (productToEdit ? "Updating..." : "Adding...")
-                                : (productToEdit ? "Update Product" : "Add Product")}
+                                ? (productToEdit ? t("common.updating") : t("common.adding"))
+                                : (productToEdit ? t("products.updateProduct") : t("products.addProduct"))}
                         </Button>
                     </DialogFooter>
                 </form>

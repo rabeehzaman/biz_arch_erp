@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 export interface Supplier {
     id: string;
@@ -48,6 +49,7 @@ export function SupplierFormDialog({
     supplierToEdit,
 }: SupplierFormDialogProps) {
     const { data: session } = useSession();
+    const { t } = useLanguage();
     const isSaudi = !!(session?.user as any)?.saudiEInvoiceEnabled;
     const defaultCountry = isSaudi ? "Saudi Arabia" : "India";
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -142,7 +144,7 @@ export function SupplierFormDialog({
 
             const newSupplier = await response.json();
 
-            toast.success(supplierToEdit ? "Supplier updated successfully" : "Supplier added successfully");
+            toast.success(supplierToEdit ? t("suppliers.updatedSuccess") : t("suppliers.addedSuccess"));
 
             resetForm();
             onOpenChange(false);
@@ -151,7 +153,7 @@ export function SupplierFormDialog({
                 onSuccess(newSupplier);
             }
         } catch (error) {
-            toast.error("Failed to save supplier");
+            toast.error(t("suppliers.saveFailed"));
             console.error("Failed to save supplier:", error);
         } finally {
             setIsSubmitting(false);
@@ -170,18 +172,18 @@ export function SupplierFormDialog({
                 <form onSubmit={handleSubmit} className="contents">
                     <DialogHeader className="pr-12">
                         <DialogTitle>
-                            {supplierToEdit ? "Edit Supplier" : "Add New Supplier"}
+                            {supplierToEdit ? t("suppliers.editSupplier") : t("suppliers.addNewSupplier")}
                         </DialogTitle>
                         <DialogDescription>
                             {supplierToEdit
-                                ? "Update the supplier details below."
-                                : "Fill in the details to add a new supplier."}
+                                ? t("suppliers.editDesc")
+                                : t("suppliers.addDesc")}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-2 sm:py-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="sup-name">Name *</Label>
+                                <Label htmlFor="sup-name">{t("common.nameRequired")}</Label>
                                 <Input
                                     id="sup-name"
                                     value={formData.name}
@@ -192,7 +194,7 @@ export function SupplierFormDialog({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="sup-email">Email</Label>
+                                <Label htmlFor="sup-email">{t("common.email")}</Label>
                                 <Input
                                     id="sup-email"
                                     type="email"
@@ -205,7 +207,7 @@ export function SupplierFormDialog({
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="sup-phone">Phone</Label>
+                                <Label htmlFor="sup-phone">{t("common.phone")}</Label>
                                 <Input
                                     id="sup-phone"
                                     value={formData.phone}
@@ -215,7 +217,7 @@ export function SupplierFormDialog({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="sup-country">Country</Label>
+                                <Label htmlFor="sup-country">{t("common.country")}</Label>
                                 <Input
                                     id="sup-country"
                                     value={formData.country}
@@ -228,7 +230,7 @@ export function SupplierFormDialog({
                         {session?.user?.gstEnabled && !(session?.user as any)?.saudiEInvoiceEnabled && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="sup-gstin">GSTIN</Label>
+                                    <Label htmlFor="sup-gstin">{t("suppliers.gstin")}</Label>
                                     <Input
                                         id="sup-gstin"
                                         value={formData.gstin}
@@ -245,7 +247,7 @@ export function SupplierFormDialog({
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="sup-gstStateCode">GST State Code</Label>
+                                    <Label htmlFor="sup-gstStateCode">{t("suppliers.gstStateCode")}</Label>
                                     <Input
                                         id="sup-gstStateCode"
                                         value={formData.gstStateCode}
@@ -258,7 +260,7 @@ export function SupplierFormDialog({
                             </div>
                         )}
                         <div className="grid gap-2">
-                            <Label htmlFor="sup-address">Address</Label>
+                            <Label htmlFor="sup-address">{t("common.address")}</Label>
                             <Input
                                 id="sup-address"
                                 value={formData.address}
@@ -269,7 +271,7 @@ export function SupplierFormDialog({
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="sup-city">City</Label>
+                                <Label htmlFor="sup-city">{t("common.city")}</Label>
                                 <Input
                                     id="sup-city"
                                     value={formData.city}
@@ -279,7 +281,7 @@ export function SupplierFormDialog({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="sup-state">State</Label>
+                                <Label htmlFor="sup-state">{t("customers.state")}</Label>
                                 <Input
                                     id="sup-state"
                                     value={formData.state}
@@ -289,7 +291,7 @@ export function SupplierFormDialog({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="sup-zipCode">ZIP Code</Label>
+                                <Label htmlFor="sup-zipCode">{t("settings.zipCode")}</Label>
                                 <Input
                                     id="sup-zipCode"
                                     value={formData.zipCode}
@@ -300,22 +302,22 @@ export function SupplierFormDialog({
                             </div>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="sup-notes">Notes</Label>
+                            <Label htmlFor="sup-notes">{t("common.notes")}</Label>
                             <Textarea
                                 id="sup-notes"
                                 value={formData.notes}
                                 onChange={(e) =>
                                     setFormData({ ...formData, notes: e.target.value })
                                 }
-                                placeholder="Any additional notes..."
+                                placeholder={t("common.notesPlaceholder")}
                             />
                         </div>
                     </div>
                     <DialogFooter>
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
                             {isSubmitting
-                                ? (supplierToEdit ? "Updating..." : "Adding...")
-                                : (supplierToEdit ? "Update Supplier" : "Add Supplier")}
+                                ? (supplierToEdit ? t("common.updating") : t("common.adding"))
+                                : (supplierToEdit ? t("suppliers.updateSupplier") : t("suppliers.addSupplier"))}
                         </Button>
                     </DialogFooter>
                 </form>

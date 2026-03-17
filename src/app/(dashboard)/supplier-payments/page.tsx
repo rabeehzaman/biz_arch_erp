@@ -87,20 +87,24 @@ interface Account {
   code: string;
 }
 
-const methodLabels: Record<string, string> = {
-  CASH: "Cash",
-  BANK_TRANSFER: "Bank Transfer",
-  CHECK: "Check",
-  CREDIT_CARD: "Credit Card",
-  UPI: "UPI",
-  OTHER: "Other",
-  ADJUSTMENT: "Adjustment",
-};
 import { useLanguage } from "@/lib/i18n";
+
+// methodLabels moved inside component to use t()
 
 export default function SupplierPaymentsPage() {
   const { t, lang } = useLanguage();
   const { symbol } = useCurrency();
+
+  const methodLabels: Record<string, string> = {
+    CASH: t("common.cash"),
+    BANK_TRANSFER: t("common.bankTransfer"),
+    CHECK: t("common.check"),
+    CREDIT_CARD: t("common.creditCard"),
+    UPI: t("common.upi"),
+    OTHER: t("common.other"),
+    ADJUSTMENT: t("common.adjustment"),
+  };
+
   const [payments, setPayments] = useState<SupplierPayment[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
@@ -136,7 +140,7 @@ export default function SupplierPaymentsPage() {
       const data = await response.json();
       setPayments(data);
     } catch (error) {
-      toast.error("Failed to load payments");
+      toast.error(t("payments.failedToLoad"));
       console.error("Failed to fetch payments:", error);
     } finally {
       setIsLoading(false);
@@ -175,11 +179,11 @@ export default function SupplierPaymentsPage() {
     e.preventDefault();
 
     const errors: Record<string, string> = {};
-    if (!formData.supplierId) errors.supplierId = "Supplier is required";
-    if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = "Valid amount is required";
-    if (!formData.paymentDate) errors.paymentDate = "Payment date is required";
+    if (!formData.supplierId) errors.supplierId = t("common.required");
+    if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = t("common.required");
+    if (!formData.paymentDate) errors.paymentDate = t("common.required");
     if (formData.paymentMethod === "ADJUSTMENT" && !formData.adjustmentAccountId) {
-      errors.adjustmentAccountId = "Account is required for adjustments";
+      errors.adjustmentAccountId = t("common.required");
     }
 
     if (Object.keys(errors).length > 0) {
@@ -211,9 +215,9 @@ export default function SupplierPaymentsPage() {
       fetchPayments();
       fetchSuppliers();
       fetchInvoices();
-      toast.success("Payment recorded");
+      toast.success(t("payments.paymentRecorded"));
     } catch (error) {
-      toast.error("Failed to record payment");
+      toast.error(t("payments.failedToRecordPayment"));
       console.error("Failed to save payment:", error);
     }
   };
@@ -247,9 +251,9 @@ export default function SupplierPaymentsPage() {
       fetchPayments();
       fetchSuppliers();
       fetchInvoices();
-      toast.success("Payment deleted successfully");
+      toast.success(t("payments.paymentDeleted"));
     } catch (error) {
-      toast.error("Failed to delete payment");
+      toast.error(t("payments.failedToDelete"));
       console.error("Failed to delete payment:", error);
     }
   };
@@ -281,14 +285,14 @@ export default function SupplierPaymentsPage() {
             <DialogContent>
               <form className="contents" onSubmit={handleSubmit}>
                 <DialogHeader className="pr-12">
-                  <DialogTitle>Record Supplier Payment</DialogTitle>
+                  <DialogTitle>{t("payments.recordSupplierPayment")}</DialogTitle>
                   <DialogDescription>
-                    Record a payment to a supplier.
+                    {t("payments.recordSupplierPaymentDesc")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-2 sm:py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="supplier">Supplier *</Label>
+                    <Label htmlFor="supplier">{t("common.supplier")} *</Label>
                     <Combobox
                       items={suppliers}
                       value={formData.supplierId}
@@ -304,18 +308,18 @@ export default function SupplierPaymentsPage() {
                         <div className="flex justify-between w-full">
                           <span>{supplier.name}</span>
                           <span className="text-slate-500 text-xs">
-                            Payable: {symbol}{Number(supplier.balance).toLocaleString("en-IN")}
+                            {t("statement.payable")}: {symbol}{Number(supplier.balance).toLocaleString("en-IN")}
                           </span>
                         </div>
                       )}
-                      placeholder="Search supplier..."
-                      emptyText="No suppliers found."
+                      placeholder={t("suppliers.searchPlaceholder")}
+                      emptyText={t("suppliers.noSuppliersFound")}
                     />
                     {formErrors.supplierId && <p className="text-sm text-red-500">{formErrors.supplierId}</p>}
                   </div>
                   {formData.supplierId && supplierInvoices.length > 0 && (
                     <div className="grid gap-2">
-                      <Label htmlFor="invoice">Link to Purchase Invoice (Optional)</Label>
+                      <Label htmlFor="invoice">{t("payments.linkToPurchaseInvoice")}</Label>
                       <Select
                         value={formData.purchaseInvoiceId}
                         onValueChange={(value) =>
@@ -323,12 +327,12 @@ export default function SupplierPaymentsPage() {
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select invoice" />
+                          <SelectValue placeholder={t("common.selectInvoice")} />
                         </SelectTrigger>
                         <SelectContent>
                           {supplierInvoices.map((invoice) => (
                             <SelectItem key={invoice.id} value={invoice.id}>
-                              {invoice.purchaseInvoiceNumber} (Due: {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")})
+                              {invoice.purchaseInvoiceNumber} ({t("common.due")}: {symbol}{Number(invoice.balanceDue).toLocaleString("en-IN")})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -337,7 +341,7 @@ export default function SupplierPaymentsPage() {
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label htmlFor="amount">Amount *</Label>
+                      <Label htmlFor="amount">{t("common.amount")} *</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -352,7 +356,7 @@ export default function SupplierPaymentsPage() {
                       {formErrors.amount && <p className="text-sm text-red-500">{formErrors.amount}</p>}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="discountGiven">Discount Given</Label>
+                      <Label htmlFor="discountGiven">{t("payments.discountGiven")}</Label>
                       <Input
                         id="discountGiven"
                         type="number"
@@ -367,7 +371,7 @@ export default function SupplierPaymentsPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label htmlFor="paymentDate">Payment Date *</Label>
+                      <Label htmlFor="paymentDate">{t("payments.paymentDate")} *</Label>
                       <Input
                         id="paymentDate"
                         type="date"
@@ -381,7 +385,7 @@ export default function SupplierPaymentsPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label htmlFor="paymentMethod">Payment Method</Label>
+                      <Label htmlFor="paymentMethod">{t("payments.paymentMethod")}</Label>
                       <Select
                         value={formData.paymentMethod}
                         onValueChange={(value) =>
@@ -392,26 +396,26 @@ export default function SupplierPaymentsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="CASH">Cash</SelectItem>
-                          <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                          <SelectItem value="CHECK">Check</SelectItem>
-                          <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                          <SelectItem value="UPI">UPI</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
-                          <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
+                          <SelectItem value="CASH">{t("common.cash")}</SelectItem>
+                          <SelectItem value="BANK_TRANSFER">{t("common.bankTransfer")}</SelectItem>
+                          <SelectItem value="CHECK">{t("common.check")}</SelectItem>
+                          <SelectItem value="CREDIT_CARD">{t("common.creditCard")}</SelectItem>
+                          <SelectItem value="UPI">{t("common.upi")}</SelectItem>
+                          <SelectItem value="OTHER">{t("common.other")}</SelectItem>
+                          <SelectItem value="ADJUSTMENT">{t("common.adjustment")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     {formData.paymentMethod !== "ADJUSTMENT" && (
                       <div className="grid gap-2">
-                        <Label htmlFor="reference">Reference</Label>
+                        <Label htmlFor="reference">{t("common.reference")}</Label>
                         <Input
                           id="reference"
                           value={formData.reference}
                           onChange={(e) =>
                             setFormData({ ...formData, reference: e.target.value })
                           }
-                          placeholder="Check #, Transaction ID..."
+                          placeholder={t("payments.referencePlaceholder")}
                         />
                       </div>
                     )}
@@ -419,7 +423,7 @@ export default function SupplierPaymentsPage() {
 
                   {formData.paymentMethod === "ADJUSTMENT" && (
                     <div className="grid gap-2">
-                      <Label htmlFor="adjustmentAccount">Adjustment Account *</Label>
+                      <Label htmlFor="adjustmentAccount">{t("common.adjustmentAccount")} *</Label>
                       <Combobox
                         items={accounts}
                         value={formData.adjustmentAccountId}
@@ -438,15 +442,15 @@ export default function SupplierPaymentsPage() {
                             <span className="text-slate-500 text-xs">{account.code}</span>
                           </div>
                         )}
-                        placeholder="Search account..."
-                        emptyText="No results"
+                        placeholder={t("common.searchAccount")}
+                        emptyText={t("common.noResults")}
                       />
                       {formErrors.adjustmentAccountId && <p className="text-sm text-red-500">{formErrors.adjustmentAccountId}</p>}
                     </div>
                   )}
 
                   <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes</Label>
+                    <Label htmlFor="notes">{t("common.notes")}</Label>
                     <Textarea
                       id="notes"
                       value={formData.notes}
@@ -457,7 +461,7 @@ export default function SupplierPaymentsPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Record Payment</Button>
+                  <Button type="submit">{t("payments.recordPayment")}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -498,7 +502,7 @@ export default function SupplierPaymentsPage() {
                     <div key={payment.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Payment #</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("payments.paymentNo")}</p>
                           <p className="mt-1 font-semibold text-slate-900">{payment.paymentNumber}</p>
                         </div>
                         <p className="text-sm font-semibold text-orange-600">
@@ -518,13 +522,13 @@ export default function SupplierPaymentsPage() {
 
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Date</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.date")}</p>
                           <p className="mt-1 font-medium text-slate-900">
                             {format(new Date(payment.paymentDate), "dd MMM yyyy")}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Discount</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.discount")}</p>
                           <p className="mt-1 font-medium text-slate-900">
                             {Number(payment.discountGiven) > 0
                               ? `${symbol}${Number(payment.discountGiven).toLocaleString("en-IN")}`
@@ -551,14 +555,14 @@ export default function SupplierPaymentsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Payment #</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead className="hidden sm:table-cell">Purchase Invoice</TableHead>
-                        <TableHead className="hidden sm:table-cell">Date</TableHead>
-                        <TableHead className="hidden sm:table-cell">Method</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead className="text-right">Discount</TableHead>
-                        <TableHead className="w-[80px]">Actions</TableHead>
+                        <TableHead>{t("payments.paymentNo")}</TableHead>
+                        <TableHead>{t("common.supplier")}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t("purchases.purchaseInvoiceNumber")}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t("common.date")}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t("payments.paymentMethod")}</TableHead>
+                        <TableHead className="text-right">{t("common.amount")}</TableHead>
+                        <TableHead className="text-right">{t("common.discount")}</TableHead>
+                        <TableHead className="w-[80px]">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -610,20 +614,18 @@ export default function SupplierPaymentsPage() {
         <AlertDialog open={!!deletePayment} onOpenChange={() => setDeletePayment(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Payment</AlertDialogTitle>
+              <AlertDialogTitle>{t("payments.deletePayment")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete payment {deletePayment?.paymentNumber}?
-                This will reverse the supplier balance and any invoice allocations.
-                This action cannot be undone.
+                {t("payments.deletePaymentConfirm")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 className="bg-red-600 hover:bg-red-700"
               >
-                Delete
+                {t("common.delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

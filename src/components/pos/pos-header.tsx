@@ -126,11 +126,11 @@ export function POSHeader({
             size="sm"
             className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
             onClick={onPreviousOrders}
-            title="Previous Orders"
-            aria-label="Previous Orders"
+            title={t("pos.previousOrders")}
+            aria-label={t("pos.previousOrders")}
           >
             <History className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Orders</span>
+            <span className="hidden sm:inline ml-1">{t("pos.previousOrders")}</span>
           </Button>
         )}
 

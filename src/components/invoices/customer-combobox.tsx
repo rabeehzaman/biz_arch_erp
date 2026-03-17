@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface Customer {
   id: string;
@@ -33,6 +34,7 @@ export function CustomerCombobox({
   onCustomerCreated,
   autoFocus = false,
 }: CustomerComboboxProps) {
+  const { t } = useLanguage();
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [localCustomer, setLocalCustomer] = useState<Customer | null>(null);
 
@@ -70,8 +72,8 @@ export function CustomerCombobox({
               )}
             </div>
           )}
-          placeholder="Search customers..."
-          emptyText="No customers found. Click + to add one."
+          placeholder={t("customers.searchCustomers")}
+          emptyText={t("customers.noCustomers")}
           required={required}
           onSelect={onSelect}
           onSelectFocusNext={onSelectFocusNext}
@@ -83,7 +85,7 @@ export function CustomerCombobox({
         variant="outline"
         size="icon"
         onClick={() => setIsCustomerDialogOpen(true)}
-        title="Add new customer"
+        title={t("customers.addCustomer")}
       >
         <Plus className="h-4 w-4" />
       </Button>

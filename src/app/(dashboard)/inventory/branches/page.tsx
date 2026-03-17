@@ -22,6 +22,7 @@ import { Plus, Pencil, Trash2, Search, GitBranch, Warehouse, Loader2, Star } fro
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 
 interface Branch {
@@ -51,6 +52,7 @@ interface WarehouseItem {
 function BranchesPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { t } = useLanguage();
     const activeTab = searchParams.get("tab") === "warehouses"
         ? "warehouses"
         : "branches";
@@ -90,7 +92,7 @@ function BranchesPageContent() {
         try {
             const res = await fetch("/api/branches");
             if (res.ok) { setBranches(await res.json()); setBranchesLoaded(true); }
-        } catch { toast.error("Failed to load branches"); }
+        } catch { toast.error(t("inventory.failedToLoadBranches")); }
         finally { setBranchesLoading(false); }
     };
 
@@ -99,7 +101,7 @@ function BranchesPageContent() {
         try {
             const res = await fetch("/api/warehouses");
             if (res.ok) { setWarehouses(await res.json()); setWarehousesLoaded(true); }
-        } catch { toast.error("Failed to load warehouses"); }
+        } catch { toast.error(t("inventory.failedToLoadWarehouses")); }
         finally { setWarehousesLoading(false); }
     };
 
@@ -116,34 +118,34 @@ function BranchesPageContent() {
     };
 
     const saveBranch = async () => {
-        if (!branchForm.name || !branchForm.code) { toast.error("Name and code are required"); return; }
+        if (!branchForm.name || !branchForm.code) { toast.error(t("inventory.nameAndCodeRequired")); return; }
         setBranchSaving(true);
         try {
             const url = editingBranch ? `/api/branches/${editingBranch.id}` : "/api/branches";
             const method = editingBranch ? "PUT" : "POST";
             const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(branchForm) });
             if (res.ok) {
-                toast.success(editingBranch ? "Branch updated" : "Branch created");
+                toast.success(editingBranch ? t("inventory.branchUpdated") : t("inventory.branchCreated"));
                 setBranchDialogOpen(false);
                 fetchBranches();
             } else {
                 const data = await res.json();
-                toast.error(data.error || "Failed to save branch");
+                toast.error(data.error || t("inventory.failedToSaveBranch"));
             }
-        } catch { toast.error("Failed to save branch"); }
+        } catch { toast.error(t("inventory.failedToSaveBranch")); }
         finally { setBranchSaving(false); }
     };
 
     const deleteBranch = (id: string) => {
         setConfirmDialog({
-            title: "Delete Branch",
-            description: "This will permanently delete this branch and all its warehouses. This cannot be undone.",
+            title: t("inventory.deleteBranch"),
+            description: t("inventory.deleteBranchDesc"),
             onConfirm: async () => {
                 try {
                     const res = await fetch(`/api/branches/${id}`, { method: "DELETE" });
-                    if (res.ok) { toast.success("Branch deleted"); fetchBranches(); }
-                    else { const d = await res.json(); toast.error(d.error || "Failed to delete"); }
-                } catch { toast.error("Failed to delete branch"); }
+                    if (res.ok) { toast.success(t("inventory.branchDeleted")); fetchBranches(); }
+                    else { const d = await res.json(); toast.error(d.error || t("inventory.failedToDeleteBranch")); }
+                } catch { toast.error(t("inventory.failedToDeleteBranch")); }
             },
         });
     };
@@ -161,21 +163,21 @@ function BranchesPageContent() {
     };
 
     const saveWarehouse = async () => {
-        if (!warehouseForm.name || !warehouseForm.code || !warehouseForm.branchId) { toast.error("Name, code, and branch are required"); return; }
+        if (!warehouseForm.name || !warehouseForm.code || !warehouseForm.branchId) { toast.error(t("inventory.nameCodeBranchRequired")); return; }
         setWarehouseSaving(true);
         try {
             const url = editingWarehouse ? `/api/warehouses/${editingWarehouse.id}` : "/api/warehouses";
             const method = editingWarehouse ? "PUT" : "POST";
             const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(warehouseForm) });
             if (res.ok) {
-                toast.success(editingWarehouse ? "Warehouse updated" : "Warehouse created");
+                toast.success(editingWarehouse ? t("inventory.warehouseUpdated") : t("inventory.warehouseCreated"));
                 setWarehouseDialogOpen(false);
                 fetchWarehouses();
             } else {
                 const data = await res.json();
-                toast.error(data.error || "Failed to save warehouse");
+                toast.error(data.error || t("inventory.failedToSaveWarehouse"));
             }
-        } catch { toast.error("Failed to save warehouse"); }
+        } catch { toast.error(t("inventory.failedToSaveWarehouse")); }
         finally { setWarehouseSaving(false); }
     };
 
@@ -187,25 +189,25 @@ function BranchesPageContent() {
                 body: JSON.stringify({ isDefault: true }),
             });
             if (res.ok) {
-                toast.success("Default warehouse updated");
+                toast.success(t("inventory.defaultWarehouseUpdated"));
                 fetchWarehouses();
             } else {
                 const d = await res.json();
-                toast.error(d.error || "Failed to update default warehouse");
+                toast.error(d.error || t("inventory.failedToUpdateDefaultWarehouse"));
             }
-        } catch { toast.error("Failed to update default warehouse"); }
+        } catch { toast.error(t("inventory.failedToUpdateDefaultWarehouse")); }
     };
 
     const deleteWarehouse = (id: string) => {
         setConfirmDialog({
-            title: "Delete Warehouse",
-            description: "This will permanently delete this warehouse. This cannot be undone.",
+            title: t("inventory.deleteWarehouse"),
+            description: t("inventory.deleteWarehouseDesc"),
             onConfirm: async () => {
                 try {
                     const res = await fetch(`/api/warehouses/${id}`, { method: "DELETE" });
-                    if (res.ok) { toast.success("Warehouse deleted"); fetchWarehouses(); }
-                    else { const d = await res.json(); toast.error(d.error || "Failed to delete"); }
-                } catch { toast.error("Failed to delete warehouse"); }
+                    if (res.ok) { toast.success(t("inventory.warehouseDeleted")); fetchWarehouses(); }
+                    else { const d = await res.json(); toast.error(d.error || t("inventory.failedToDeleteWarehouse")); }
+                } catch { toast.error(t("inventory.failedToDeleteWarehouse")); }
             },
         });
     };
@@ -223,17 +225,17 @@ function BranchesPageContent() {
         <PageAnimation>
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Branches & Warehouses</h2>
-                    <p className="text-slate-500">Manage your organization locations and storage facilities</p>
+                    <h2 className="text-2xl font-bold text-slate-900">{t("inventory.branchesAndWarehouses")}</h2>
+                    <p className="text-slate-500">{t("inventory.manageBranchesDesc")}</p>
                 </div>
 
                 <div className="border-b border-slate-200">
                     <nav className="-mb-px flex gap-1">
                         <button onClick={() => switchTab("branches")} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === "branches" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300")}>
-                            Branches
+                            {t("inventory.branches")}
                         </button>
                         <button onClick={() => switchTab("warehouses")} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === "warehouses" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300")}>
-                            Warehouses
+                            {t("inventory.warehouses")}
                         </button>
                     </nav>
                 </div>
@@ -243,7 +245,7 @@ function BranchesPageContent() {
                     <div className="space-y-4">
                         <div className="flex justify-end">
                             <Button onClick={() => openBranchDialog()}>
-                                <Plus className="mr-2 h-4 w-4" /> Add Branch
+                                <Plus className="mr-2 h-4 w-4" /> {t("inventory.addBranch")}
                             </Button>
                         </div>
                         <StaggerContainer className="space-y-4">
@@ -253,7 +255,7 @@ function BranchesPageContent() {
                                         <div className="flex items-center gap-4">
                                             <div className="relative flex-1 max-w-sm">
                                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                                <Input placeholder="Search branches..." value={branchSearch} onChange={(e) => setBranchSearch(e.target.value)} className="pl-10" />
+                                                <Input placeholder={t("inventory.searchBranches")} value={branchSearch} onChange={(e) => setBranchSearch(e.target.value)} className="pl-10" />
                                             </div>
                                         </div>
                                     </CardHeader>
@@ -261,8 +263,8 @@ function BranchesPageContent() {
                                         {branchesLoading ? <TableSkeleton columns={6} rows={3} /> : filteredBranches.length === 0 ? (
                                             <div className="flex flex-col items-center justify-center py-8 text-center">
                                                 <GitBranch className="h-12 w-12 text-slate-300" />
-                                                <h3 className="mt-4 text-lg font-semibold">No branches found</h3>
-                                                <p className="text-sm text-slate-500">{branchSearch ? "Try a different search term" : "Create your first branch"}</p>
+                                                <h3 className="mt-4 text-lg font-semibold">{t("inventory.noBranchesFound")}</h3>
+                                                <p className="text-sm text-slate-500">{branchSearch ? t("common.tryDifferentSearch") : t("inventory.createFirstBranch")}</p>
                                             </div>
                                         ) : (
                                             <>
@@ -275,7 +277,7 @@ function BranchesPageContent() {
                                                                     <div className="mt-2 flex flex-wrap gap-2">
                                                                         <Badge variant="outline">{branch.code}</Badge>
                                                                         <Badge variant={branch.isActive ? "default" : "secondary"}>
-                                                                            {branch.isActive ? "Active" : "Inactive"}
+                                                                            {branch.isActive ? t("common.active") : t("common.inactive")}
                                                                         </Badge>
                                                                     </div>
                                                                 </div>
@@ -283,15 +285,15 @@ function BranchesPageContent() {
 
                                                             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                                                                 <div>
-                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">City</p>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.city")}</p>
                                                                     <p className="mt-1 text-slate-900">{branch.city || "-"}</p>
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Phone</p>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.phone")}</p>
                                                                     <p className="mt-1 text-slate-900">{branch.phone || "-"}</p>
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Warehouses</p>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.warehouses")}</p>
                                                                     <p className="mt-1 font-medium text-slate-900">{branch._count.warehouses}</p>
                                                                 </div>
                                                             </div>
@@ -299,7 +301,7 @@ function BranchesPageContent() {
                                                             <div className="mt-4 grid grid-cols-2 gap-2">
                                                                 <Button variant="outline" className="min-h-[44px]" onClick={() => openBranchDialog(branch)}>
                                                                     <Pencil className="mr-2 h-4 w-4" />
-                                                                    Edit
+                                                                    {t("common.edit")}
                                                                 </Button>
                                                                 <Button
                                                                     variant="outline"
@@ -307,7 +309,7 @@ function BranchesPageContent() {
                                                                     onClick={() => deleteBranch(branch.id)}
                                                                 >
                                                                     <Trash2 className="mr-2 h-4 w-4" />
-                                                                    Delete
+                                                                    {t("common.delete")}
                                                                 </Button>
                                                             </div>
                                                         </div>
@@ -318,13 +320,13 @@ function BranchesPageContent() {
                                                     <Table>
                                                         <TableHeader>
                                                             <TableRow>
-                                                                <TableHead>Name</TableHead>
-                                                                <TableHead>Code</TableHead>
-                                                                <TableHead className="hidden sm:table-cell">City</TableHead>
-                                                                <TableHead className="hidden sm:table-cell">Phone</TableHead>
-                                                                <TableHead>Warehouses</TableHead>
-                                                                <TableHead>Status</TableHead>
-                                                                <TableHead className="text-right">Actions</TableHead>
+                                                                <TableHead>{t("common.name")}</TableHead>
+                                                                <TableHead>{t("common.code")}</TableHead>
+                                                                <TableHead className="hidden sm:table-cell">{t("common.city")}</TableHead>
+                                                                <TableHead className="hidden sm:table-cell">{t("common.phone")}</TableHead>
+                                                                <TableHead>{t("inventory.warehouses")}</TableHead>
+                                                                <TableHead>{t("common.status")}</TableHead>
+                                                                <TableHead className="text-right">{t("common.actions")}</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -337,7 +339,7 @@ function BranchesPageContent() {
                                                                     <TableCell>{branch._count.warehouses}</TableCell>
                                                                     <TableCell>
                                                                         <Badge variant={branch.isActive ? "default" : "secondary"}>
-                                                                            {branch.isActive ? "Active" : "Inactive"}
+                                                                            {branch.isActive ? t("common.active") : t("common.inactive")}
                                                                         </Badge>
                                                                     </TableCell>
                                                                     <TableCell className="text-right">
@@ -367,7 +369,7 @@ function BranchesPageContent() {
                     <div className="space-y-4">
                         <div className="flex justify-end">
                             <Button onClick={() => openWarehouseDialog()}>
-                                <Plus className="mr-2 h-4 w-4" /> Add Warehouse
+                                <Plus className="mr-2 h-4 w-4" /> {t("inventory.addWarehouse")}
                             </Button>
                         </div>
                         <StaggerContainer className="space-y-4">
@@ -377,7 +379,7 @@ function BranchesPageContent() {
                                         <div className="flex items-center gap-4">
                                             <div className="relative flex-1 max-w-sm">
                                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                                <Input placeholder="Search warehouses..." value={warehouseSearch} onChange={(e) => setWarehouseSearch(e.target.value)} className="pl-10" />
+                                                <Input placeholder={t("inventory.searchWarehouses")} value={warehouseSearch} onChange={(e) => setWarehouseSearch(e.target.value)} className="pl-10" />
                                             </div>
                                         </div>
                                     </CardHeader>
@@ -385,8 +387,8 @@ function BranchesPageContent() {
                                         {warehousesLoading ? <TableSkeleton columns={5} rows={3} /> : filteredWarehouses.length === 0 ? (
                                             <div className="flex flex-col items-center justify-center py-8 text-center">
                                                 <Warehouse className="h-12 w-12 text-slate-300" />
-                                                <h3 className="mt-4 text-lg font-semibold">No warehouses found</h3>
-                                                <p className="text-sm text-slate-500">{warehouseSearch ? "Try a different search term" : "Create your first warehouse"}</p>
+                                                <h3 className="mt-4 text-lg font-semibold">{t("inventory.noWarehousesFound")}</h3>
+                                                <p className="text-sm text-slate-500">{warehouseSearch ? t("common.tryDifferentSearch") : t("inventory.createFirstWarehouse")}</p>
                                             </div>
                                         ) : (
                                             <>
@@ -401,13 +403,13 @@ function BranchesPageContent() {
                                                                         {wh.isDefault && (
                                                                             <Badge variant="secondary" className="text-xs">
                                                                                 <Star className="mr-1 h-3 w-3 fill-current" />
-                                                                                Default
+                                                                                {t("common.default")}
                                                                             </Badge>
                                                                         )}
                                                                     </div>
                                                                     <div className="mt-2">
                                                                         <Badge variant={wh.isActive ? "default" : "secondary"}>
-                                                                            {wh.isActive ? "Active" : "Inactive"}
+                                                                            {wh.isActive ? t("common.active") : t("common.inactive")}
                                                                         </Badge>
                                                                     </div>
                                                                 </div>
@@ -415,11 +417,11 @@ function BranchesPageContent() {
 
                                                             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                                                                 <div>
-                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Branch</p>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.branch")}</p>
                                                                     <p className="mt-1 text-slate-900">{wh.branch.name}</p>
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Stock lots</p>
+                                                                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.stockLots")}</p>
                                                                     <p className="mt-1 font-medium text-slate-900">{wh._count.stockLots}</p>
                                                                 </div>
                                                             </div>
@@ -428,13 +430,13 @@ function BranchesPageContent() {
                                                                 {!wh.isDefault && (
                                                                     <Button variant="outline" className="min-h-[44px]" onClick={() => setDefaultWarehouse(wh.id)}>
                                                                         <Star className="mr-2 h-4 w-4" />
-                                                                        Set as Default
+                                                                        {t("inventory.setAsDefault")}
                                                                     </Button>
                                                                 )}
                                                                 <div className="grid grid-cols-2 gap-2">
                                                                     <Button variant="outline" className="min-h-[44px]" onClick={() => openWarehouseDialog(wh)}>
                                                                         <Pencil className="mr-2 h-4 w-4" />
-                                                                        Edit
+                                                                        {t("common.edit")}
                                                                     </Button>
                                                                     <Button
                                                                         variant="outline"
@@ -442,7 +444,7 @@ function BranchesPageContent() {
                                                                         onClick={() => deleteWarehouse(wh.id)}
                                                                     >
                                                                         <Trash2 className="mr-2 h-4 w-4" />
-                                                                        Delete
+                                                                        {t("common.delete")}
                                                                     </Button>
                                                                 </div>
                                                             </div>
@@ -454,12 +456,12 @@ function BranchesPageContent() {
                                                     <Table>
                                                         <TableHeader>
                                                             <TableRow>
-                                                                <TableHead>Name</TableHead>
-                                                                <TableHead>Code</TableHead>
-                                                                <TableHead>Branch</TableHead>
-                                                                <TableHead className="hidden sm:table-cell">Stock Lots</TableHead>
-                                                                <TableHead>Status</TableHead>
-                                                                <TableHead className="text-right">Actions</TableHead>
+                                                                <TableHead>{t("common.name")}</TableHead>
+                                                                <TableHead>{t("common.code")}</TableHead>
+                                                                <TableHead>{t("inventory.branch")}</TableHead>
+                                                                <TableHead className="hidden sm:table-cell">{t("inventory.stockLots")}</TableHead>
+                                                                <TableHead>{t("common.status")}</TableHead>
+                                                                <TableHead className="text-right">{t("common.actions")}</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -471,7 +473,7 @@ function BranchesPageContent() {
                                                                             {wh.isDefault && (
                                                                                 <Badge variant="secondary" className="text-xs">
                                                                                     <Star className="mr-1 h-3 w-3 fill-current" />
-                                                                                    Default
+                                                                                    {t("common.default")}
                                                                                 </Badge>
                                                                             )}
                                                                         </div>
@@ -481,12 +483,12 @@ function BranchesPageContent() {
                                                                     <TableCell className="hidden sm:table-cell">{wh._count.stockLots}</TableCell>
                                                                     <TableCell>
                                                                         <Badge variant={wh.isActive ? "default" : "secondary"}>
-                                                                            {wh.isActive ? "Active" : "Inactive"}
+                                                                            {wh.isActive ? t("common.active") : t("common.inactive")}
                                                                         </Badge>
                                                                     </TableCell>
                                                                     <TableCell className="text-right">
                                                                         {!wh.isDefault && (
-                                                                            <Button variant="ghost" size="icon" title="Set as Default" onClick={() => setDefaultWarehouse(wh.id)}>
+                                                                            <Button variant="ghost" size="icon" title={t("inventory.setAsDefault")} onClick={() => setDefaultWarehouse(wh.id)}>
                                                                                 <Star className="h-4 w-4 text-slate-400" />
                                                                             </Button>
                                                                         )}
@@ -515,43 +517,43 @@ function BranchesPageContent() {
                 <Dialog open={branchDialogOpen} onOpenChange={setBranchDialogOpen}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>{editingBranch ? "Edit Branch" : "Add Branch"}</DialogTitle>
+                            <DialogTitle>{editingBranch ? t("inventory.editBranch") : t("inventory.addBranch")}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Name *</Label>
-                                    <Input value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} placeholder="Head Office" />
+                                    <Label>{t("common.name")} *</Label>
+                                    <Input value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} placeholder={t("inventory.branchNamePlaceholder")} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Code *</Label>
-                                    <Input value={branchForm.code} onChange={(e) => setBranchForm({ ...branchForm, code: e.target.value.toUpperCase() })} placeholder="HO" maxLength={10} className="font-mono" />
+                                    <Label>{t("common.code")} *</Label>
+                                    <Input value={branchForm.code} onChange={(e) => setBranchForm({ ...branchForm, code: e.target.value.toUpperCase() })} placeholder={t("inventory.branchCodePlaceholder")} maxLength={10} className="font-mono" />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label>Address</Label>
+                                <Label>{t("common.address")}</Label>
                                 <Input value={branchForm.address} onChange={(e) => setBranchForm({ ...branchForm, address: e.target.value })} placeholder="123 Business St" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>City</Label>
+                                    <Label>{t("common.city")}</Label>
                                     <Input value={branchForm.city} onChange={(e) => setBranchForm({ ...branchForm, city: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>State</Label>
+                                    <Label>{t("settings.state")}</Label>
                                     <Input value={branchForm.state} onChange={(e) => setBranchForm({ ...branchForm, state: e.target.value })} />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label>Phone</Label>
+                                <Label>{t("common.phone")}</Label>
                                 <Input value={branchForm.phone} onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })} />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setBranchDialogOpen(false)}>Cancel</Button>
+                            <Button variant="outline" onClick={() => setBranchDialogOpen(false)}>{t("common.cancel")}</Button>
                             <Button onClick={saveBranch} disabled={branchSaving}>
                                 {branchSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {editingBranch ? "Update" : "Create"}
+                                {editingBranch ? t("common.update") : t("common.create")}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -561,23 +563,23 @@ function BranchesPageContent() {
                 <Dialog open={warehouseDialogOpen} onOpenChange={setWarehouseDialogOpen}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>{editingWarehouse ? "Edit Warehouse" : "Add Warehouse"}</DialogTitle>
+                            <DialogTitle>{editingWarehouse ? t("inventory.editWarehouse") : t("inventory.addWarehouse")}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Name *</Label>
-                                    <Input value={warehouseForm.name} onChange={(e) => setWarehouseForm({ ...warehouseForm, name: e.target.value })} placeholder="Main Warehouse" />
+                                    <Label>{t("common.name")} *</Label>
+                                    <Input value={warehouseForm.name} onChange={(e) => setWarehouseForm({ ...warehouseForm, name: e.target.value })} placeholder={t("inventory.warehouseNamePlaceholder")} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Code *</Label>
-                                    <Input value={warehouseForm.code} onChange={(e) => setWarehouseForm({ ...warehouseForm, code: e.target.value.toUpperCase() })} placeholder="MW" maxLength={10} className="font-mono" />
+                                    <Label>{t("common.code")} *</Label>
+                                    <Input value={warehouseForm.code} onChange={(e) => setWarehouseForm({ ...warehouseForm, code: e.target.value.toUpperCase() })} placeholder={t("inventory.warehouseCodePlaceholder")} maxLength={10} className="font-mono" />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label>Branch *</Label>
+                                <Label>{t("inventory.branch")} *</Label>
                                 <Select value={warehouseForm.branchId} onValueChange={(v) => setWarehouseForm({ ...warehouseForm, branchId: v })}>
-                                    <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder={t("inventory.selectBranch")} /></SelectTrigger>
                                     <SelectContent>
                                         {branches.filter((b) => b.isActive).map((b) => (
                                             <SelectItem key={b.id} value={b.id}>{b.name} ({b.code})</SelectItem>
@@ -586,15 +588,15 @@ function BranchesPageContent() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Address</Label>
+                                <Label>{t("common.address")}</Label>
                                 <Input value={warehouseForm.address} onChange={(e) => setWarehouseForm({ ...warehouseForm, address: e.target.value })} />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setWarehouseDialogOpen(false)}>Cancel</Button>
+                            <Button variant="outline" onClick={() => setWarehouseDialogOpen(false)}>{t("common.cancel")}</Button>
                             <Button onClick={saveWarehouse} disabled={warehouseSaving}>
                                 {warehouseSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {editingWarehouse ? "Update" : "Create"}
+                                {editingWarehouse ? t("common.update") : t("common.create")}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface Product {
   id: string;
@@ -37,6 +38,7 @@ export function ProductCombobox({
   onSelectFocusNext,
   onProductCreated,
 }: ProductComboboxProps) {
+  const { t } = useLanguage();
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [localProduct, setLocalProduct] = useState<Product | null>(null);
 
@@ -83,31 +85,31 @@ export function ProductCombobox({
                   <span className="font-medium">{product.name}</span>
                   {isOutOfStock && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">
-                      Out of stock
+                      {t("products.outOfStock2")}
                     </span>
                   )}
                   {isLowStock && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 font-medium">
-                      Low stock
+                      {t("products.lowStock2")}
                     </span>
                   )}
                 </div>
                 <div className="text-sm text-slate-500">
-                  {product.sku && <span>SKU: {product.sku} | </span>}
+                  {product.sku && <span>{t("products.skuPrefix")} {product.sku} | </span>}
                   ₹{Number(product.price).toLocaleString("en-IN")}
                   {product.isService ? (
-                    <span className="ml-2 text-blue-600">Service</span>
+                    <span className="ml-2 text-blue-600">{t("products.service")}</span>
                   ) : (
                     <span className="ml-2">
-                      Stock: <span className={isOutOfStock ? "text-red-600 font-medium" : isLowStock ? "text-yellow-600 font-medium" : ""}>{stock}</span> units
+                      {t("products.stockLabel")} <span className={isOutOfStock ? "text-red-600 font-medium" : isLowStock ? "text-yellow-600 font-medium" : ""}>{stock}</span>
                     </span>
                   )}
                 </div>
               </div>
             );
           }}
-          placeholder="Search products..."
-          emptyText="No products found. Click + to add one."
+          placeholder={t("products.searchPlaceholder")}
+          emptyText={t("products.noProductsFound")}
           required={required}
           onSelect={onSelect}
           onSelectFocusNext={onSelectFocusNext}
@@ -118,7 +120,7 @@ export function ProductCombobox({
         variant="outline"
         size="icon"
         onClick={() => setIsProductDialogOpen(true)}
-        title="Add new product"
+        title={t("products.addProduct")}
       >
         <Plus className="h-4 w-4" />
       </Button>

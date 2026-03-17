@@ -20,6 +20,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface Product {
   id: string;
@@ -77,6 +78,7 @@ interface ReportData {
 }
 
 export default function ProfitByItemsPage() {
+  const { t } = useLanguage();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -162,9 +164,9 @@ export default function ProfitByItemsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Profit by Invoice</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t("reports.profitByInvoice")}</h2>
           <p className="text-slate-500">
-            View profit analysis by invoice with expandable item details
+            {t("reports.profitByInvoiceDesc")}
           </p>
         </div>
         <Card>
@@ -180,9 +182,9 @@ export default function ProfitByItemsPage() {
         <PageAnimation>
           <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Profit by Invoice</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{t("reports.profitByInvoice")}</h2>
             <p className="text-slate-500">
-              View profit analysis by invoice with expandable item details
+              {t("reports.profitByInvoiceDesc")}
             </p>
           </div>
 
@@ -192,7 +194,7 @@ export default function ProfitByItemsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">
-                    Total Invoices
+                    {t("reports.totalInvoices")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -201,14 +203,14 @@ export default function ProfitByItemsPage() {
                   </div>
                   <p className="text-xs text-slate-500">
                     {reportData.summary.totalItems} items,{" "}
-                    {reportData.summary.totalQuantity.toLocaleString("en-IN")} units
+                    {reportData.summary.totalQuantity.toLocaleString("en-IN")} {t("reports.units")}
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">
-                    Total Revenue
+                    {t("reports.totalRevenue")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -220,7 +222,7 @@ export default function ProfitByItemsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">
-                    Total COGS
+                    {t("reports.cogs")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -232,7 +234,7 @@ export default function ProfitByItemsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">
-                    Total Profit
+                    {t("reports.totalProfit")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -242,7 +244,7 @@ export default function ProfitByItemsPage() {
                     {formatCurrency(reportData.summary.totalProfit)}
                   </div>
                   <p className="text-xs text-slate-500">
-                    {reportData.summary.averageProfitPercent.toFixed(1)}% margin
+                    {reportData.summary.averageProfitPercent.toFixed(1)}% {t("reports.margin").toLowerCase()}
                   </p>
                 </CardContent>
               </Card>
@@ -253,7 +255,7 @@ export default function ProfitByItemsPage() {
           <Card>
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <CardTitle>Invoice Details</CardTitle>
+                <CardTitle>{t("reports.invoiceDetails")}</CardTitle>
                 <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                   <div className="w-full sm:w-64">
                     <ProductCombobox
@@ -264,7 +266,7 @@ export default function ProfitByItemsPage() {
                   </div>
                   <div className="flex w-full items-center gap-2 sm:w-auto">
                     <Label htmlFor="fromDate" className="text-sm">
-                      From
+                      {t("common.from")}
                     </Label>
                     <Input
                       id="fromDate"
@@ -276,7 +278,7 @@ export default function ProfitByItemsPage() {
                   </div>
                   <div className="flex w-full items-center gap-2 sm:w-auto">
                     <Label htmlFor="toDate" className="text-sm">
-                      To
+                      {t("common.to")}
                     </Label>
                     <Input
                       id="toDate"
@@ -287,7 +289,7 @@ export default function ProfitByItemsPage() {
                     />
                   </div>
                   <Button variant="outline" onClick={handleFilter} className="w-full sm:w-auto">
-                    Filter
+                    {t("common.filter")}
                   </Button>
                   {hasFilters && (
                     <Button variant="ghost" size="icon" onClick={handleClearFilters} className="self-start sm:self-auto">
@@ -301,19 +303,18 @@ export default function ProfitByItemsPage() {
               {!reportData || reportData.invoices.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <FileText className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No invoices found</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t("reports.noInvoicesFound")}</h3>
                   <p className="text-sm text-slate-500">
                     {hasFilters
-                      ? "Try adjusting your filters"
-                      : "No invoices have been recorded yet"}
+                      ? t("reports.tryAdjustingFilters")
+                      : t("reports.noInvoicesRecorded")}
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="mb-2 flex items-center justify-between text-sm text-slate-500">
                     <span>
-                      Showing {Math.min(displayCount, reportData.invoices.length)} of{" "}
-                      {reportData.invoices.length} invoices
+                      {t("reports.showingOfInvoices")} {Math.min(displayCount, reportData.invoices.length)} / {reportData.invoices.length}
                     </span>
                     {reportData.invoices.length > displayCount && (
                       <Button
@@ -322,7 +323,7 @@ export default function ProfitByItemsPage() {
                         className="text-blue-600"
                         onClick={() => setDisplayCount(reportData.invoices.length)}
                       >
-                        Show All
+                        {t("reports.showAll")}
                       </Button>
                     )}
                   </div>
@@ -356,25 +357,25 @@ export default function ProfitByItemsPage() {
 
                           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Qty</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.qtyInStock")}</p>
                               <p className="mt-1 font-medium text-slate-900">{invoice.totalQty}</p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Revenue</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.totalRevenue")}</p>
                               <p className="mt-1 font-medium text-slate-900">{formatCurrency(invoice.totalRevenue)}</p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">COGS</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.cogs")}</p>
                               <p className="mt-1 font-medium text-orange-600">{formatCurrency(invoice.totalCOGS)}</p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Profit</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.totalProfit")}</p>
                               <p className={`mt-1 font-semibold ${invoice.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
                                 {formatCurrency(invoice.totalProfit)}
                               </p>
                             </div>
                             <div className="col-span-2">
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Profit %</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.profitMargin")}</p>
                               <p className={`mt-1 font-semibold ${invoice.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
                                 {invoice.profitPercent.toFixed(1)}%
                               </p>
@@ -389,7 +390,7 @@ export default function ProfitByItemsPage() {
                                     <div className="min-w-0">
                                       <p className="font-medium text-slate-900">{item.productName}</p>
                                       {item.productSku && (
-                                        <p className="mt-1 text-xs text-slate-500">SKU: {item.productSku}</p>
+                                        <p className="mt-1 text-xs text-slate-500">{t("reports.skuLabel")} {item.productSku}</p>
                                       )}
                                     </div>
                                     <p className={`text-sm font-semibold ${item.lineProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
@@ -398,28 +399,28 @@ export default function ProfitByItemsPage() {
                                   </div>
                                   <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                     <div>
-                                      <p className="text-xs text-slate-500">Price x Qty</p>
+                                      <p className="text-xs text-slate-500">{t("reports.priceTimesQty")}</p>
                                       <p className="font-medium text-slate-900">
                                         {formatCurrency(item.unitPrice)} x {item.quantity}
                                       </p>
                                     </div>
                                     <div>
-                                      <p className="text-xs text-slate-500">Revenue</p>
+                                      <p className="text-xs text-slate-500">{t("reports.totalRevenue")}</p>
                                       <p className="font-medium text-slate-900">{formatCurrency(item.lineTotal)}</p>
                                     </div>
                                     <div>
-                                      <p className="text-xs text-slate-500">COGS</p>
+                                      <p className="text-xs text-slate-500">{t("reports.cogs")}</p>
                                       <p className="font-medium text-orange-600">{formatCurrency(item.lineCOGS)}</p>
                                     </div>
                                     <div>
-                                      <p className="text-xs text-slate-500">Profit %</p>
+                                      <p className="text-xs text-slate-500">{t("reports.profitMargin")}</p>
                                       <p className={`font-medium ${item.profitPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
                                         {item.profitPercent.toFixed(1)}%
                                       </p>
                                     </div>
                                   </div>
                                   {item.discount > 0 && (
-                                    <p className="mt-2 text-xs text-orange-600">Discount: {item.discount}%</p>
+                                    <p className="mt-2 text-xs text-orange-600">{t("reports.discountLabel")} {item.discount}%</p>
                                   )}
                                 </div>
                               ))}
@@ -435,14 +436,14 @@ export default function ProfitByItemsPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-10"></TableHead>
-                          <TableHead>Invoice #</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Customer</TableHead>
-                          <TableHead className="text-right">Total Qty</TableHead>
-                          <TableHead className="text-right">Revenue</TableHead>
-                          <TableHead className="text-right">COGS</TableHead>
-                          <TableHead className="text-right">Profit</TableHead>
-                          <TableHead className="text-right">Profit %</TableHead>
+                          <TableHead>{t("reports.invoiceNumber")}</TableHead>
+                          <TableHead>{t("reports.date")}</TableHead>
+                          <TableHead>{t("reports.customerName")}</TableHead>
+                          <TableHead className="text-right">{t("reports.qtyInStock")}</TableHead>
+                          <TableHead className="text-right">{t("reports.totalRevenue")}</TableHead>
+                          <TableHead className="text-right">{t("reports.cogs")}</TableHead>
+                          <TableHead className="text-right">{t("reports.totalProfit")}</TableHead>
+                          <TableHead className="text-right">{t("reports.profitMargin")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -506,7 +507,7 @@ export default function ProfitByItemsPage() {
                                       </div>
                                       {item.productSku && (
                                         <div className="text-xs text-slate-500">
-                                          SKU: {item.productSku}
+                                          {t("reports.skuLabel")} {item.productSku}
                                         </div>
                                       )}
                                     </div>
@@ -552,7 +553,7 @@ export default function ProfitByItemsPage() {
                         variant="outline"
                         onClick={() => setDisplayCount((prev) => prev + 20)}
                       >
-                        Show More ({reportData.invoices.length - displayCount} remaining)
+                        {t("reports.showMore")} ({reportData.invoices.length - displayCount})
                       </Button>
                     </div>
                   )}
@@ -563,7 +564,7 @@ export default function ProfitByItemsPage() {
 
           {reportData && (
             <div className="text-center text-sm text-slate-400">
-              Report generated on{" "}
+              {t("reports.reportGeneratedOn")}{" "}
               {format(new Date(reportData.generatedAt), "dd MMM yyyy, hh:mm a")}
             </div>
           )}

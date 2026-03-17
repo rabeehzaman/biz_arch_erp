@@ -468,7 +468,7 @@ export default function ChartOfAccountsPage() {
       const topLevelIds = new Set<string>(treeData.map((n: TreeNode) => n.id));
       setExpanded(topLevelIds);
     } catch {
-      toast.error("Failed to load chart of accounts");
+      toast.error(t("accounting.failedToLoadCOA"));
     } finally {
       setIsLoading(false);
     }
@@ -539,7 +539,7 @@ export default function ChartOfAccountsPage() {
           const err = await response.json();
           throw new Error(err.error || "Failed to update");
         }
-        toast.success("Account updated");
+        toast.success(t("accounting.accountUpdated"));
       } else {
         const response = await fetch("/api/accounts", {
           method: "POST",
@@ -557,7 +557,7 @@ export default function ChartOfAccountsPage() {
           const err = await response.json();
           throw new Error(err.error || "Failed to create");
         }
-        toast.success("Account created");
+        toast.success(t("accounting.accountCreated"));
       }
 
       setIsDialogOpen(false);
@@ -565,7 +565,7 @@ export default function ChartOfAccountsPage() {
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save account");
+      toast.error(error instanceof Error ? error.message : t("accounting.failedToSaveAccount"));
     }
   };
 
@@ -579,11 +579,11 @@ export default function ChartOfAccountsPage() {
         const err = await response.json();
         throw new Error(err.error || "Failed to delete");
       }
-      toast.success("Account deleted");
+      toast.success(t("accounting.accountDeleted"));
       setDeleteAccount(null);
       fetchData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete account");
+      toast.error(error instanceof Error ? error.message : t("accounting.failedToDeleteAccount"));
     }
   };
 
@@ -653,7 +653,7 @@ export default function ChartOfAccountsPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, name: e.target.value })
                       }
-                      placeholder="e.g. Rent"
+                      placeholder={t("accounting.accountNamePlaceholder")}
                       required
                     />
                   </div>
@@ -763,7 +763,7 @@ export default function ChartOfAccountsPage() {
                         setFormData({ ...formData, code: e.target.value })
                       }
                       disabled={!!editingAccount}
-                      placeholder="e.g. 5210"
+                      placeholder={t("accounting.accountCodePlaceholder")}
                       required
                     />
                   </div>

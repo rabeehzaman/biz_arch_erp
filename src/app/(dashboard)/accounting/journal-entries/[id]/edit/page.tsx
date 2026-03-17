@@ -19,6 +19,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
+import { useLanguage } from "@/lib/i18n";
 
 interface Account {
     id: string;
@@ -38,6 +39,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
     const router = useRouter();
     const { id } = use(params);
     const { containerRef: formRef } = useEnterToTab();
+    const { t } = useLanguage();
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +51,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
         fetch("/api/accounts")
             .then((r) => r.json())
             .then(setAccounts)
-            .catch(() => toast.error("Failed to load accounts"));
+            .catch(() => toast.error(t("accounting.failedToLoadAccounts")));
 
         fetch(`/api/journal-entries/${id}`)
             .then((r) => r.json())
@@ -65,7 +67,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                     }))
                 );
             })
-            .catch(() => toast.error("Failed to load journal entry"))
+            .catch(() => toast.error(t("accounting.failedToLoadJournalEntry")))
             .finally(() => setIsLoading(false));
     }, [id]);
 
@@ -94,13 +96,13 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
         e.preventDefault();
 
         if (!isBalanced) {
-            toast.error("Total debits must equal total credits");
+            toast.error(t("accounting.debitsEqualCredits"));
             return;
         }
 
         const validLines = lines.filter((l) => l.accountId && (parseFloat(l.debit) > 0 || parseFloat(l.credit) > 0));
         if (validLines.length < 2) {
-            toast.error("At least 2 lines with accounts and amounts are required");
+            toast.error(t("accounting.atLeastTwoLines"));
             return;
         }
 
@@ -126,16 +128,16 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                 throw new Error(err.error || "Failed to update");
             }
 
-            toast.success("Journal entry updated");
+            toast.success(t("accounting.journalEntryUpdated"));
             router.push("/accounting/journal-entries");
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Failed to update journal entry");
+            toast.error(error instanceof Error ? error.message : t("accounting.failedToUpdateJournalEntry"));
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    if (isLoading) return <div className="p-8">Loading entry...</div>;
+    if (isLoading) return <div className="p-8">{t("accounting.loadingEntry")}</div>;
 
     return (
         <PageAnimation>
@@ -147,20 +149,20 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                         </Button>
                     </Link>
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-900">Edit Journal Entry</h2>
-                        <p className="text-slate-500">Modify existing journal entry</p>
+                        <h2 className="text-2xl font-bold text-slate-900">{t("accounting.editJournalEntry")}</h2>
+                        <p className="text-slate-500">{t("accounting.modifyJournalEntry")}</p>
                     </div>
                 </div>
 
                 <form ref={formRef} onSubmit={handleSubmit}>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Entry Details</CardTitle>
+                            <CardTitle>{t("accounting.entryDetails")}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="grid gap-2">
-                                    <Label>Date *</Label>
+                                    <Label>{t("common.date")} *</Label>
                                     <Input
                                         type="date"
                                         value={date}
@@ -169,11 +171,11 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label>Description *</Label>
+                                    <Label>{t("common.description")} *</Label>
                                     <Textarea
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
-                                        placeholder="Description of this journal entry"
+                                        placeholder={t("accounting.journalEntryDescPlaceholder")}
                                         required
                                     />
                                 </div>
@@ -181,19 +183,19 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
 
                             <div>
                                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <Label className="text-base font-semibold">Lines</Label>
+                                    <Label className="text-base font-semibold">{t("accounting.lines")}</Label>
                                     <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={addLine}>
                                         <Plus className="mr-2 h-3 w-3" />
-                                        Add Line
+                                        {t("accounting.addLine")}
                                     </Button>
                                 </div>
 
                                 <div className="space-y-3">
                                     <div className="hidden grid-cols-[1fr_1fr_120px_120px_40px] gap-2 px-1 text-xs font-medium text-slate-500 sm:grid">
-                                        <span>Account</span>
-                                        <span>Description</span>
-                                        <span className="text-right">Debit</span>
-                                        <span className="text-right">Credit</span>
+                                        <span>{t("common.account")}</span>
+                                        <span>{t("common.description")}</span>
+                                        <span className="text-right">{t("accounting.debit")}</span>
+                                        <span className="text-right">{t("accounting.credit")}</span>
                                         <span />
                                     </div>
 
@@ -205,7 +207,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                                     onValueChange={(v) => updateLine(index, "accountId", v)}
                                                 >
                                                     <SelectTrigger className="w-full min-w-0">
-                                                        <SelectValue placeholder="Select account" />
+                                                        <SelectValue placeholder={t("accounting.selectAccount")} />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {accounts.map((a) => (
@@ -221,7 +223,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                                     onChange={(e) =>
                                                         updateLine(index, "description", e.target.value)
                                                     }
-                                                    placeholder="Line description"
+                                                    placeholder={t("accounting.lineDescPlaceholder")}
                                                 />
 
                                                 <Input
@@ -262,7 +264,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
 
                                             <div className="overflow-hidden rounded-lg border border-slate-200 p-3 sm:hidden">
                                                 <div className="flex items-start justify-between gap-3">
-                                                    <Label className="text-sm font-semibold">Line {index + 1}</Label>
+                                                    <Label className="text-sm font-semibold">{t("accounting.lineNumber")} {index + 1}</Label>
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
@@ -277,13 +279,13 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
 
                                                 <div className="mt-3 space-y-3">
                                                     <div className="grid min-w-0 gap-2">
-                                                        <Label className="text-xs text-slate-500">Account</Label>
+                                                        <Label className="text-xs text-slate-500">{t("common.account")}</Label>
                                                         <Select
                                                             value={line.accountId}
                                                             onValueChange={(v) => updateLine(index, "accountId", v)}
                                                         >
                                                             <SelectTrigger className="w-full min-w-0">
-                                                                <SelectValue placeholder="Select account" />
+                                                                <SelectValue placeholder={t("accounting.selectAccount")} />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 {accounts.map((a) => (
@@ -296,17 +298,17 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                                     </div>
 
                                                     <div className="grid gap-2">
-                                                        <Label className="text-xs text-slate-500">Description</Label>
+                                                        <Label className="text-xs text-slate-500">{t("common.description")}</Label>
                                                         <Input
                                                             value={line.description}
                                                             onChange={(e) => updateLine(index, "description", e.target.value)}
-                                                            placeholder="Line description"
+                                                            placeholder={t("accounting.lineDescPlaceholder")}
                                                         />
                                                     </div>
 
                                                     <div className="grid grid-cols-2 gap-3">
                                                         <div className="grid gap-2">
-                                                            <Label className="text-xs text-slate-500">Debit</Label>
+                                                            <Label className="text-xs text-slate-500">{t("accounting.debit")}</Label>
                                                             <Input
                                                                 type="number"
                                                                 step="0.01"
@@ -318,7 +320,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                                             />
                                                         </div>
                                                         <div className="grid gap-2">
-                                                            <Label className="text-xs text-slate-500">Credit</Label>
+                                                            <Label className="text-xs text-slate-500">{t("accounting.credit")}</Label>
                                                             <Input
                                                                 type="number"
                                                                 step="0.01"
@@ -337,7 +339,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
 
                                     <div className="hidden grid-cols-[1fr_1fr_120px_120px_40px] gap-2 border-t pt-3 font-semibold sm:grid">
                                         <span />
-                                        <span className="text-right">Totals:</span>
+                                        <span className="text-right">{t("common.totals")}:</span>
                                         <span className="text-right font-mono">
                                             {totalDebit.toLocaleString("en-IN", {
                                                 minimumFractionDigits: 2,
@@ -353,7 +355,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
 
                                     <div className="rounded-lg bg-slate-50 p-3 sm:hidden">
                                         <div className="flex items-center justify-between text-sm font-semibold">
-                                            <span>Total Debit</span>
+                                            <span>{t("accounting.totalDebit")}</span>
                                             <span className="font-mono">
                                                 {totalDebit.toLocaleString("en-IN", {
                                                     minimumFractionDigits: 2,
@@ -361,7 +363,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                             </span>
                                         </div>
                                         <div className="mt-2 flex items-center justify-between text-sm font-semibold">
-                                            <span>Total Credit</span>
+                                            <span>{t("accounting.totalCredit")}</span>
                                             <span className="font-mono">
                                                 {totalCredit.toLocaleString("en-IN", {
                                                     minimumFractionDigits: 2,
@@ -372,7 +374,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
 
                                     {!isBalanced && totalDebit + totalCredit > 0 && (
                                         <p className="text-sm text-red-600">
-                                            Difference: {Math.abs(totalDebit - totalCredit).toLocaleString("en-IN", { minimumFractionDigits: 2 })} — debits must equal credits
+                                            {t("accounting.difference")}: {Math.abs(totalDebit - totalCredit).toLocaleString("en-IN", { minimumFractionDigits: 2 })} — {t("accounting.debitsEqualCredits")}
                                         </p>
                                     )}
                                 </div>
@@ -381,7 +383,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                                 <Link href="/accounting/journal-entries">
                                     <Button type="button" variant="outline" className="w-full sm:w-auto">
-                                        Cancel
+                                        {t("common.cancel")}
                                     </Button>
                                 </Link>
                                 <Button
@@ -389,7 +391,7 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                     className="w-full sm:w-auto"
                                     disabled={isSubmitting || !isBalanced || totalDebit === 0}
                                 >
-                                    {isSubmitting ? "Updating..." : "Update Journal Entry"}
+                                    {isSubmitting ? t("common.updating") : t("accounting.updateJournalEntry")}
                                 </Button>
                             </div>
                         </CardContent>

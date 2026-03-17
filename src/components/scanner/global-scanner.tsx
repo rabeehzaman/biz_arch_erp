@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { X, Loader2, ScanLine, Edit, Search } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { getCameraAvailability } from "@/lib/camera-support";
+import { useLanguage } from "@/lib/i18n";
 
 async function getBarcodeDetector(formats: string[]) {
     if (typeof window !== "undefined" && "BarcodeDetector" in window) {
@@ -17,6 +18,7 @@ async function getBarcodeDetector(formats: string[]) {
 
 export function GlobalScanner() {
     const router = useRouter();
+    const { t } = useLanguage();
     const [isMounted, setIsMounted] = useState(false);
     const [cameraAvailable, setCameraAvailable] = useState(false);
     const [cameraUnavailableReason, setCameraUnavailableReason] = useState<string | null>(null);
@@ -65,14 +67,14 @@ export function GlobalScanner() {
                 if (res.status === 404) {
                     setLookupResult({ type: "not_found", code });
                 } else {
-                    setLookupResult({ type: "error", message: "Failed to fetch data." });
+                    setLookupResult({ type: "error", message: t("scanner.fetchFailed") });
                 }
             } else {
                 const data = await res.json();
                 setLookupResult(data);
             }
         } catch (_err) {
-            setLookupResult({ type: "error", message: "An error occurred." });
+            setLookupResult({ type: "error", message: t("scanner.errorOccurred") });
         } finally {
             setIsLookingUp(false);
         }
@@ -191,11 +193,11 @@ export function GlobalScanner() {
         } catch (err) {
             const e = err as Error;
             if (e.name === "NotAllowedError") {
-                setError("Camera permission denied. Please allow camera access and try again.");
+                setError(t("scanner.cameraPermissionDenied"));
             } else if (e.name === "NotFoundError") {
-                setError("No camera found on this device.");
+                setError(t("scanner.noCameraFound"));
             } else {
-                setError("Could not start camera: " + e.message);
+                setError(t("scanner.couldNotStartCamera") + ": " + e.message);
             }
         }
     }, [scanLoop]);
@@ -235,7 +237,7 @@ export function GlobalScanner() {
             {open && (
                 <div className="fixed inset-0 z-[100] flex flex-col bg-black">
                     <div className="flex items-center justify-between px-4 py-3 text-white">
-                        <span className="text-sm font-medium">Scan Barcode / QR Code</span>
+                        <span className="text-sm font-medium">{t("scanner.scanBarcodeQR")}</span>
                         <Button
                             type="button"
                             variant="ghost"
@@ -267,7 +269,7 @@ export function GlobalScanner() {
                                     <div className="absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 animate-scan-line bg-emerald-400/80" />
                                 </div>
                                 <p className="absolute bottom-24 z-10 text-center text-sm text-white/80">
-                                    Point at a barcode or QR code
+                                    {t("scanner.pointAtBarcodeQR")}
                                 </p>
                             </div>
                         )}
@@ -282,7 +284,7 @@ export function GlobalScanner() {
                             <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                                 <div className="flex flex-col items-center gap-3 rounded-xl bg-emerald-600 px-8 py-6 text-white">
                                     <ScanLine className="h-8 w-8" />
-                                    <p className="text-sm font-medium">Detected</p>
+                                    <p className="text-sm font-medium">{t("scanner.detected")}</p>
                                     <p className="font-mono text-xl font-bold tracking-wider">{detected}</p>
                                 </div>
                             </div>
@@ -294,11 +296,10 @@ export function GlobalScanner() {
                                     <p className="text-sm font-medium text-slate-800">{error}</p>
                                     {!cameraAvailable && cameraUnavailableReason && (
                                         <p className="mt-3 text-xs leading-5 text-slate-500">
-                                            Mobile camera scanning works in a secure browser context. If you are testing from
-                                            another phone on your laptop&apos;s IP address, use HTTPS.
+                                            {t("scanner.secureContextWarning")}
                                         </p>
                                     )}
-                                    <Button className="mt-4" onClick={closeScanner}>Close</Button>
+                                    <Button className="mt-4" onClick={closeScanner}>{t("common.close")}</Button>
                                 </div>
                             </div>
                         )}
@@ -311,7 +312,7 @@ export function GlobalScanner() {
                     {isLookingUp ? (
                         <div className="flex flex-col items-center justify-center py-10">
                             <Loader2 className="h-10 w-10 animate-spin text-emerald-600 mb-4" />
-                            <p className="text-gray-500 font-medium">Looking up details...</p>
+                            <p className="text-gray-500 font-medium">{t("scanner.lookingUpDetails")}</p>
                         </div>
                     ) : lookupResult ? (
                         <div className="space-y-6">
@@ -320,18 +321,18 @@ export function GlobalScanner() {
                                     <SheetHeader>
                                         <SheetTitle>{lookupResult.data.name}</SheetTitle>
                                         <SheetDescription className="break-all font-mono">
-                                            {lookupResult.data.barcode || lookupResult.data.sku || "No Code"}
+                                            {lookupResult.data.barcode || lookupResult.data.sku || t("scanner.noCode")}
                                         </SheetDescription>
                                     </SheetHeader>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-gray-50 p-4 rounded-xl">
-                                            <p className="text-xs text-gray-500 uppercase font-semibold">Price</p>
+                                            <p className="text-xs text-gray-500 uppercase font-semibold">{t("scanner.price")}</p>
                                             <p className="text-lg font-bold mt-1 text-emerald-700">
                                                 {Number(lookupResult.data.price).toFixed(2)}
                                             </p>
                                         </div>
                                         <div className={`p-4 rounded-xl ${lookupResult.data.availableStock > 0 ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"}`}>
-                                            <p className="text-xs uppercase font-semibold opacity-80">Stock</p>
+                                            <p className="text-xs uppercase font-semibold opacity-80">{t("scanner.stock")}</p>
                                             <p className="text-lg font-bold mt-1">
                                                 {lookupResult.data.availableStock} {lookupResult.data.unit?.code}
                                             </p>
@@ -346,7 +347,7 @@ export function GlobalScanner() {
                                         }}
                                     >
                                         <Edit className="h-4 w-4 mr-2" />
-                                        Edit Product
+                                        {t("scanner.editProduct")}
                                     </Button>
                                 </>
                             )}
@@ -361,13 +362,13 @@ export function GlobalScanner() {
                                     </SheetHeader>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-gray-50 p-4 rounded-xl">
-                                            <p className="text-xs text-gray-500 uppercase font-semibold">Status</p>
+                                            <p className="text-xs text-gray-500 uppercase font-semibold">{t("scanner.status")}</p>
                                             <p className="text-lg font-bold mt-1 text-emerald-700">
                                                 {lookupResult.data.currentStatus}
                                             </p>
                                         </div>
                                         <div className="bg-gray-50 p-4 rounded-xl">
-                                            <p className="text-xs text-gray-500 uppercase font-semibold">Cost Price</p>
+                                            <p className="text-xs text-gray-500 uppercase font-semibold">{t("scanner.costPrice")}</p>
                                             <p className="text-lg font-bold mt-1">
                                                 {Number(lookupResult.data.costPrice).toFixed(2)}
                                             </p>
@@ -383,7 +384,7 @@ export function GlobalScanner() {
                                         }}
                                     >
                                         <Search className="h-4 w-4 mr-2" />
-                                        View Device
+                                        {t("scanner.viewDevice")}
                                     </Button>
                                 </>
                             )}
@@ -393,7 +394,7 @@ export function GlobalScanner() {
                                     <div className="bg-orange-100 text-orange-600 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
                                         <ScanLine className="h-8 w-8" />
                                     </div>
-                                    <h3 className="text-xl font-bold mb-2">Item Not Found</h3>
+                                    <h3 className="text-xl font-bold mb-2">{t("scanner.itemNotFound")}</h3>
                                     <p className="text-gray-500 mb-6 font-mono break-all">{lookupResult.code}</p>
 
                                     <div className="flex gap-3">
@@ -402,7 +403,7 @@ export function GlobalScanner() {
                                             className="flex-1"
                                             onClick={() => setShowResultSheet(false)}
                                         >
-                                            Close
+                                            {t("common.close")}
                                         </Button>
                                         <Button
                                             className="flex-1"
@@ -411,7 +412,7 @@ export function GlobalScanner() {
                                                 router.push(`/products?action=new&barcode=${encodeURIComponent(lookupResult.code)}`);
                                             }}
                                         >
-                                            Create New
+                                            {t("scanner.createNew")}
                                         </Button>
                                     </div>
                                 </div>
@@ -425,7 +426,7 @@ export function GlobalScanner() {
                                         variant="outline"
                                         onClick={() => setShowResultSheet(false)}
                                     >
-                                        Close
+                                        {t("common.close")}
                                     </Button>
                                 </div>
                             )}

@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface Expense {
   id: string;
@@ -42,6 +43,7 @@ const statusColors: Record<string, string> = {
 
 export default function ExpensesPage() {
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,7 +58,7 @@ export default function ExpensesPage() {
       if (!response.ok) throw new Error("Failed to fetch");
       setExpenses(await response.json());
     } catch {
-      toast.error("Failed to load expenses");
+      toast.error(t("accounting.failedToLoadExpenses"));
     } finally {
       setIsLoading(false);
     }
@@ -74,13 +76,13 @@ export default function ExpensesPage() {
           <div className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Expenses</h2>
-              <p className="text-slate-500">Track and manage business expenses</p>
+              <h2 className="text-2xl font-bold text-slate-900">{t("accounting.expenses")}</h2>
+              <p className="text-slate-500">{t("accounting.trackManageExpenses")}</p>
             </div>
             <Link href="/accounting/expenses/new" className="w-full sm:w-auto">
               <Button className="w-full">
                 <Plus className="mr-2 h-4 w-4" />
-                New Expense
+                {t("accounting.newExpense")}
               </Button>
             </Link>
           </div>
@@ -91,7 +93,7 @@ export default function ExpensesPage() {
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
-                    placeholder="Search expenses..."
+                    placeholder={t("accounting.searchExpenses")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -105,11 +107,11 @@ export default function ExpensesPage() {
               ) : filteredExpenses.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Receipt className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No expenses found</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t("accounting.noExpenses")}</h3>
                   <p className="text-sm text-slate-500">
                     {searchQuery
-                      ? "Try a different search term"
-                      : "Create your first expense to get started"}
+                      ? t("common.tryDifferentSearch")
+                      : t("accounting.createFirstExpense")}
                     </p>
                 </div>
               ) : (
@@ -119,7 +121,7 @@ export default function ExpensesPage() {
                       <div key={expense.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Number</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.number")}</p>
                             <Link
                               href={`/accounting/expenses/${expense.id}`}
                               className="mt-1 block font-semibold text-blue-600 hover:underline"
@@ -136,21 +138,21 @@ export default function ExpensesPage() {
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Date</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.date")}</p>
                             <p className="mt-1 font-medium text-slate-900">
                               {format(new Date(expense.expenseDate), "dd MMM yyyy")}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Supplier</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.supplier")}</p>
                             <p className="mt-1 font-medium text-slate-900">{expense.supplier?.name || "-"}</p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.amount")}</p>
                             <p className="mt-1 font-semibold text-slate-900">{fmt(Number(expense.total))}</p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Items</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.items")}</p>
                             <p className="mt-1 font-medium text-slate-900">{expense._count.items}</p>
                           </div>
                         </div>
@@ -162,12 +164,12 @@ export default function ExpensesPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Number</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Supplier</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>{t("common.number")}</TableHead>
+                          <TableHead>{t("common.date")}</TableHead>
+                          <TableHead>{t("common.description")}</TableHead>
+                          <TableHead>{t("common.supplier")}</TableHead>
+                          <TableHead>{t("common.status")}</TableHead>
+                          <TableHead className="text-right">{t("common.amount")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

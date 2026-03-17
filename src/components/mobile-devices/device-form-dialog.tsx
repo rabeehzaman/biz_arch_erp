@@ -27,6 +27,7 @@ import { Loader2, Upload, X } from "lucide-react";
 import { ImeiCameraScanner } from "./imei-camera-scanner";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { useSession } from "next-auth/react";
+import { useLanguage } from "@/lib/i18n";
 
 interface Supplier {
   id: string;
@@ -49,6 +50,7 @@ interface DeviceFormDialogProps {
 
 export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: DeviceFormDialogProps) {
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
   const [saving, setSaving] = useState(false);
@@ -118,7 +120,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
   const handlePhotoUpload = async (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Photo too large. Maximum size is 10 MB.");
+      toast.error(t("devices.photoTooLarge"));
       return;
     }
     setPhotoUploading(true);
@@ -135,7 +137,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
         throw new Error(data?.error?.message || "Upload failed");
       }
       setFormData((prev) => ({ ...prev, photoUrls: [...prev.photoUrls, data.secure_url] }));
-      toast.success("Photo uploaded");
+      toast.success(t("devices.photoUploaded"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Photo upload failed");
     } finally {
@@ -151,15 +153,15 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
     e.preventDefault();
     e.stopPropagation();
     if (!formData.imei1 || !formData.supplierId || !formData.costPrice) {
-      toast.error("IMEI 1, Supplier, and Cost Price are required");
+      toast.error(t("devices.requiredFieldsError"));
       return;
     }
     if (!editDevice && !formData.productId) {
-      toast.error("Product is required");
+      toast.error(t("devices.productRequired"));
       return;
     }
     if (multiBranchEnabled && !formData.warehouseId && !editDevice) {
-      toast.error("Warehouse is required");
+      toast.error(t("devices.warehouseRequired"));
       return;
     }
 
@@ -187,16 +189,16 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
       });
 
       if (res.ok) {
-        toast.success(editDevice ? "Device updated successfully" : "Device added successfully");
+        toast.success(editDevice ? t("devices.updatedSuccess") : t("devices.addedSuccess"));
         resetForm();
         onOpenChange(false);
         onSuccess?.();
       } else {
         const data = await res.json();
-        toast.error(data.error || "Failed to add device");
+        toast.error(data.error || t("devices.saveFailed"));
       }
     } catch {
-      toast.error("Failed to add device");
+      toast.error(t("devices.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -211,9 +213,9 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
         <form className="contents" onSubmit={handleSubmit}>
 
           <DialogHeader>
-            <DialogTitle>{editDevice ? "Edit Device" : "Add Device"}</DialogTitle>
+            <DialogTitle>{editDevice ? t("devices.editDevice") : t("devices.addDevice")}</DialogTitle>
             <DialogDescription>
-              {editDevice ? "Update details for this mobile device" : "Manually add a mobile device to inventory"}
+              {editDevice ? t("devices.editDesc") : t("devices.addDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -221,7 +223,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
             {multiBranchEnabled && !editDevice && (
               <fieldset className="space-y-3">
-                <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Location</legend>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("devices.location")}</legend>
                 <BranchWarehouseSelector
                   branchId={formData.branchId}
                   warehouseId={formData.warehouseId}
@@ -233,15 +235,15 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
             {/* Identifiers */}
             <fieldset className="space-y-3">
-              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Identifiers</legend>
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("devices.identifiers")}</legend>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
-                  <Label>IMEI 1 *</Label>
+                  <Label>{t("devices.imei1Required")}</Label>
                   <div className="flex gap-1">
                     <Input
                       value={formData.imei1}
                       onChange={(e) => setFormData({ ...formData, imei1: e.target.value })}
-                      placeholder="15-digit IMEI"
+                      placeholder={t("devices.imeiPlaceholder")}
                       maxLength={15}
                       inputMode="numeric"
                       className="font-mono"
@@ -251,7 +253,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   </div>
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>IMEI 2</Label>
+                  <Label>{t("devices.imei2")}</Label>
                   <div className="flex gap-1">
                     <Input
                       value={formData.imei2}
@@ -266,7 +268,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                 </div>
               </div>
               <div className="grid gap-1.5">
-                <Label>Serial Number</Label>
+                <Label>{t("devices.serialNumber")}</Label>
                 <Input
                   value={formData.serialNumber}
                   onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
@@ -277,18 +279,18 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
             {/* Specifications — 2 cols on mobile, 3 on sm+ */}
             <fieldset className="space-y-3">
-              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Specifications</legend>
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("devices.specifications")}</legend>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="grid gap-1.5">
-                  <Label>Color</Label>
+                  <Label>{t("devices.color")}</Label>
                   <Input
                     value={formData.color}
                     onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    placeholder="e.g. Black"
+                    placeholder={t("devices.colorPlaceholder")}
                   />
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Storage</Label>
+                  <Label>{t("devices.storage")}</Label>
                   <Select value={formData.storageCapacity} onValueChange={(value) => setFormData({ ...formData, storageCapacity: value })}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select" />
@@ -301,7 +303,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   </Select>
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>RAM</Label>
+                  <Label>{t("devices.ram")}</Label>
                   <Select value={formData.ram} onValueChange={(value) => setFormData({ ...formData, ram: value })}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select" />
@@ -314,35 +316,35 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   </Select>
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Network</Label>
+                  <Label>{t("devices.network")}</Label>
                   <Select value={formData.networkStatus} onValueChange={(value) => setFormData({ ...formData, networkStatus: value })}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="UNLOCKED">Unlocked</SelectItem>
-                      <SelectItem value="LOCKED">Locked</SelectItem>
+                      <SelectItem value="UNLOCKED">{t("devices.unlocked")}</SelectItem>
+                      <SelectItem value="LOCKED">{t("devices.locked")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Condition</Label>
+                  <Label>{t("devices.condition")}</Label>
                   <Select value={formData.conditionGrade} onValueChange={(value) => setFormData({ ...formData, conditionGrade: value })}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="NEW">New</SelectItem>
-                      <SelectItem value="OPEN_BOX">Open Box</SelectItem>
-                      <SelectItem value="GRADE_A">Grade A</SelectItem>
-                      <SelectItem value="GRADE_B">Grade B</SelectItem>
-                      <SelectItem value="GRADE_C">Grade C</SelectItem>
-                      <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                      <SelectItem value="NEW">{t("devices.conditionNew")}</SelectItem>
+                      <SelectItem value="OPEN_BOX">{t("devices.conditionOpenBox")}</SelectItem>
+                      <SelectItem value="GRADE_A">{t("devices.conditionGradeA")}</SelectItem>
+                      <SelectItem value="GRADE_B">{t("devices.conditionGradeB")}</SelectItem>
+                      <SelectItem value="GRADE_C">{t("devices.conditionGradeC")}</SelectItem>
+                      <SelectItem value="REFURBISHED">{t("devices.conditionRefurbished")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Battery %</Label>
+                  <Label>{t("devices.batteryHealth")}</Label>
                   <Input
                     type="number"
                     inputMode="numeric"
@@ -358,10 +360,10 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
             {/* Product & Supplier */}
             <fieldset className="space-y-3">
-              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Product & Supplier</legend>
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("devices.productSupplier")}</legend>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
-                  <Label>Product {!editDevice && "*"}</Label>
+                  <Label>{t("common.product")} {!editDevice && "*"}</Label>
                   <Combobox
                     items={products}
                     value={formData.productId}
@@ -369,15 +371,15 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     getId={(p) => p.id}
                     getLabel={(p) => p.name}
                     filterFn={(p, query) => p.name.toLowerCase().includes(query)}
-                    placeholder="Search products..."
-                    emptyText={products.length === 0 ? "No IMEI-tracked products found." : "No products found."}
+                    placeholder={t("products.searchPlaceholder")}
+                    emptyText={products.length === 0 ? t("devices.noImeiProducts") : t("products.noProductsFound")}
                   />
                   {products.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No IMEI-tracked products found. Create one from the Products page first.</p>
+                    <p className="text-xs text-muted-foreground">{t("devices.noImeiProductsHint")}</p>
                   )}
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Supplier *</Label>
+                  <Label>{t("devices.supplierRequired")}</Label>
                   <SupplierCombobox
                     suppliers={suppliers as any}
                     value={formData.supplierId}
@@ -391,10 +393,10 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
             {/* Pricing — always 3 cols, shortened labels fit on small screens */}
             <fieldset className="space-y-3">
-              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pricing</legend>
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("devices.pricing")}</legend>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="grid gap-1.5">
-                  <Label>Cost *</Label>
+                  <Label>{t("devices.costRequired")}</Label>
                   <Input
                     type="number"
                     inputMode="decimal"
@@ -406,7 +408,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   />
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>MRP</Label>
+                  <Label>{t("devices.mrp")}</Label>
                   <Input
                     type="number"
                     inputMode="decimal"
@@ -417,7 +419,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   />
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Landed</Label>
+                  <Label>{t("devices.landed")}</Label>
                   <Input
                     type="number"
                     inputMode="decimal"
@@ -428,7 +430,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   />
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Selling</Label>
+                  <Label>{t("devices.selling")}</Label>
                   <Input
                     type="number"
                     inputMode="decimal"
@@ -443,10 +445,10 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
             {/* Warranty */}
             <fieldset className="space-y-3">
-              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Warranty</legend>
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("devices.warranty")}</legend>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
-                  <Label>Supplier Expiry</Label>
+                  <Label>{t("devices.supplierExpiry")}</Label>
                   <Input
                     type="date"
                     value={formData.supplierWarrantyExpiry}
@@ -454,7 +456,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   />
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Customer Expiry</Label>
+                  <Label>{t("devices.customerExpiry")}</Label>
                   <Input
                     type="date"
                     value={formData.customerWarrantyExpiry}
@@ -466,7 +468,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
             {/* Photos */}
             <fieldset className="space-y-3">
-              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Device Photos</legend>
+              <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("devices.devicePhotos")}</legend>
               <div className="flex flex-wrap gap-2">
                 {formData.photoUrls.map((url, index) => (
                   <div key={url} className="relative h-20 w-20 shrink-0 rounded-md border overflow-hidden bg-muted">
@@ -503,21 +505,21 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   ) : (
                     <>
                       <Upload className="h-5 w-5 text-muted-foreground pointer-events-none" />
-                      <span className="text-xs text-muted-foreground text-center leading-tight pointer-events-none">Add Photo</span>
+                      <span className="text-xs text-muted-foreground text-center leading-tight pointer-events-none">{t("devices.addPhoto")}</span>
                     </>
                   )}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">JPG, PNG or WEBP. Gallery or camera.</p>
+              <p className="text-xs text-muted-foreground">{t("devices.photoFormats")}</p>
             </fieldset>
 
             {/* Notes */}
             <div className="grid gap-1.5">
-              <Label>Notes</Label>
+              <Label>{t("common.notes")}</Label>
               <Textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Any additional notes..."
+                placeholder={t("common.notesPlaceholder")}
                 rows={3}
               />
             </div>
@@ -526,11 +528,11 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
 
           <DialogFooter>
             <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={saving} className="flex-1 sm:flex-none">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editDevice ? "Update Device" : "Add Device"}
+              {editDevice ? t("devices.updateDevice") : t("devices.addDevice")}
             </Button>
           </DialogFooter>
 

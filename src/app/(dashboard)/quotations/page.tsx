@@ -112,9 +112,12 @@ export default function QuotationsPage() {
       EXPIRED: "bg-red-500",
     };
 
-    const statusLabels: Record<string, string> = lang === "ar"
-      ? { SENT: "مُرسل", CONVERTED: "مُحوّل", CANCELLED: "ملغي", EXPIRED: "منتهي الصلاحية" }
-      : { SENT: "SENT", CONVERTED: "CONVERTED", CANCELLED: "CANCELLED", EXPIRED: "EXPIRED" };
+    const statusLabels: Record<string, string> = {
+      SENT: t("common.sent2"),
+      CONVERTED: t("common.converted"),
+      CANCELLED: t("common.cancelled"),
+      EXPIRED: t("common.expired"),
+    };
 
     return (
       <Badge variant={variants[status] || "default"} className={colors[status]}>
@@ -129,7 +132,7 @@ export default function QuotationsPage() {
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("quotations.title")}</h2>
-            <p className="text-slate-500">{lang === "ar" ? "إنشاء وإدارة عروض الأسعار" : "Create and manage quotations"}</p>
+            <p className="text-slate-500">{t("quotations.manageQuotations")}</p>
           </div>
           <Link href="/quotations/new" className="w-full sm:w-auto">
             <Button className="w-full">
@@ -216,7 +219,7 @@ export default function QuotationsPage() {
                             <p className="mt-1 font-semibold text-slate-900">{fmt(Number(quotation.total))}</p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Items</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.items")}</p>
                             <p className="mt-1 font-medium text-slate-900">{quotation._count.items}</p>
                           </div>
                         </div>

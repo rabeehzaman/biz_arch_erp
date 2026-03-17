@@ -127,7 +127,7 @@ export default function CashBankSummaryPage() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch {
-      toast.error("Failed to download PDF");
+      toast.error(t("reports.pdfDownloadError"));
     } finally {
       setIsDownloading(false);
     }

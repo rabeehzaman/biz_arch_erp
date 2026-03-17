@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, X, Loader2, ScanLine } from "lucide-react";
 import { getCameraAvailability } from "@/lib/camera-support";
+import { useLanguage } from "@/lib/i18n";
 
 interface ImeiCameraScannerProps {
   onScan: (imei: string) => void;
@@ -28,6 +29,7 @@ async function getBarcodeDetector(
 }
 
 export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProps) {
+  const { t } = useLanguage();
   const [isMounted, setIsMounted] = useState(false);
   const [cameraAvailable, setCameraAvailable] = useState(false);
   const [cameraUnavailableReason, setCameraUnavailableReason] = useState<string | null>(null);
@@ -151,11 +153,11 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
     } catch (err) {
       const e = err as Error;
       if (e.name === "NotAllowedError") {
-        setError("Camera permission denied. Please allow camera access and try again.");
+        setError(t("scanner.cameraPermissionDenied"));
       } else if (e.name === "NotFoundError") {
-        setError("No camera found on this device.");
+        setError(t("scanner.noCameraFound"));
       } else {
-        setError("Could not start camera: " + e.message);
+        setError(t("scanner.couldNotStartCamera") + ": " + e.message);
       }
     }
   }, [scanLoop]);
@@ -185,7 +187,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
         size="icon"
         className={`h-12 w-12 shrink-0 ${cameraAvailable ? "" : "border-slate-300 text-slate-600"}`}
         onClick={() => setOpen(true)}
-        title={cameraAvailable ? "Scan IMEI with camera" : "IMEI scanner setup"}
+        title={cameraAvailable ? t("scanner.scanImeiTitle") : t("scanner.scannerSetup")}
       >
         <Camera className="h-4 w-4" />
       </Button>
@@ -194,7 +196,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
         <div className="fixed inset-0 z-50 flex flex-col bg-black">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 text-white">
-            <span className="text-sm font-medium">Scan IMEI Barcode</span>
+            <span className="text-sm font-medium">{t("scanner.scanImeiBarcode")}</span>
             <Button
               type="button"
               variant="ghost"
@@ -232,7 +234,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
                   <div className="absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 animate-scan-line bg-emerald-400/80" />
                 </div>
                 <p className="absolute bottom-24 z-10 text-center text-sm text-white/80">
-                  Point at the IMEI barcode on the device or box
+                  {t("scanner.pointAtBarcode")}
                 </p>
               </div>
             )}
@@ -249,7 +251,7 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
               <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                 <div className="flex flex-col items-center gap-3 rounded-xl bg-emerald-600 px-8 py-6 text-white">
                   <ScanLine className="h-8 w-8" />
-                  <p className="text-sm font-medium">IMEI Detected</p>
+                  <p className="text-sm font-medium">{t("scanner.imeiDetected")}</p>
                   <p className="font-mono text-xl font-bold tracking-wider">{detected}</p>
                 </div>
               </div>
@@ -262,11 +264,10 @@ export function ImeiCameraScanner({ onScan, show = true }: ImeiCameraScannerProp
                   <p className="text-sm font-medium text-slate-800">{error}</p>
                   {!cameraAvailable && cameraUnavailableReason && (
                     <p className="mt-3 text-xs leading-5 text-slate-500">
-                      Mobile camera scanning works in a secure browser context. If you are testing from another phone on
-                      your laptop&apos;s IP address, use HTTPS.
+                      {t("scanner.secureContextWarning")}
                     </p>
                   )}
-                  <Button className="mt-4" onClick={closeScanner}>Close</Button>
+                  <Button className="mt-4" onClick={closeScanner}>{t("common.close")}</Button>
                 </div>
               </div>
             )}

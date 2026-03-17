@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { smartPrintReceipt } from "@/lib/electron-print";
 import type { ReceiptData } from "@/components/pos/receipt";
+import { useLanguage } from "@/lib/i18n";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -81,6 +82,7 @@ export function PreviousOrdersSheet({
   sessionId,
   companySettings,
 }: PreviousOrdersSheetProps) {
+  const { t } = useLanguage();
   const { data, isLoading } = useSWR<{ orders: Order[]; receiptMeta: ReceiptMeta }>(
     open && sessionId ? `/api/pos/sessions/${sessionId}/orders` : null,
     fetcher
@@ -149,7 +151,7 @@ export function PreviousOrdersSheet({
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent side="right" className="w-full sm:w-[420px] sm:max-w-[480px] p-0 flex flex-col">
         <SheetHeader className="p-4 border-b shrink-0">
-          <SheetTitle>Previous Orders</SheetTitle>
+          <SheetTitle>{t("pos.previousOrders")}</SheetTitle>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
@@ -159,7 +161,7 @@ export function PreviousOrdersSheet({
           ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
               <ShoppingBag className="h-8 w-8" />
-              <span className="text-sm">No orders yet</span>
+              <span className="text-sm">{t("pos.noOrdersYet")}</span>
             </div>
           ) : (
             <ul className="divide-y">
@@ -176,7 +178,7 @@ export function PreviousOrdersSheet({
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                       <span>{formatDistanceToNow(new Date(order.issueDate), { addSuffix: true })}</span>
-                      <span>· {order.items.length} item{order.items.length !== 1 ? "s" : ""}</span>
+                      <span>· {order.items.length} {order.items.length !== 1 ? t("common.items") : t("common.item")}</span>
                     </div>
                   </div>
                   <span className="text-sm font-semibold shrink-0">
@@ -188,7 +190,7 @@ export function PreviousOrdersSheet({
                     className="h-8 w-8 shrink-0"
                     onClick={() => handlePrint(order)}
                     disabled={printingOrderId === order.id}
-                    title="Print receipt"
+                    title={t("pos.printReceipt")}
                   >
                     {printingOrderId === order.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

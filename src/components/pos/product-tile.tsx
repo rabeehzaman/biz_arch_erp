@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Package, Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/lib/i18n";
 
 export interface ProductTileProduct {
   id: string;
@@ -41,6 +42,7 @@ export function ProductTile({
   onAdd,
 }: ProductTileProps) {
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
   const outOfStock = !product.isService && !product.isBundle && (product.stockQuantity ?? 0) <= 0;
   const isSelected = selectedQuantity > 0;
 
@@ -78,7 +80,7 @@ export function ProductTile({
       </div>
       {product.isBundle && (
         <span className="mb-0.5 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-          Bundle
+          {t("pos.bundle")}
         </span>
       )}
       <span className="text-sm font-medium line-clamp-2 leading-tight">

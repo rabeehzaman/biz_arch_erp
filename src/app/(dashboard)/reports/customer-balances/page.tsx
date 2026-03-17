@@ -17,6 +17,7 @@ import { Users, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface Customer {
   id: string;
@@ -52,6 +53,7 @@ interface ReportData {
 }
 
 export default function CustomerBalancesPage() {
+  const { t } = useLanguage();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -86,8 +88,8 @@ export default function CustomerBalancesPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Customer Balances</h2>
-          <p className="text-slate-500">View customer balances - positive amounts are receivables (owed to you), negative amounts in green are advances (paid in advance)</p>
+          <h2 className="text-2xl font-bold text-slate-900">{t("reports.customerBalances")}</h2>
+          <p className="text-slate-500">{t("reports.customerBalancesDesc")}</p>
         </div>
         <Card>
           <CardContent className="pt-6">
@@ -102,8 +104,8 @@ export default function CustomerBalancesPage() {
         <PageAnimation>
           <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Customer Balances</h2>
-            <p className="text-slate-500">View customer balances - positive amounts are receivables (owed to you), negative amounts in green are advances (paid in advance)</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("reports.customerBalances")}</h2>
+            <p className="text-slate-500">{t("reports.customerBalancesDesc")}</p>
           </div>
 
           {reportData && (
@@ -111,53 +113,53 @@ export default function CustomerBalancesPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">
-                    Total Customers
+                    {t("reports.totalCustomers")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
                     {reportData.summary.totalCustomers}
                   </div>
-                  <p className="text-xs text-slate-500">{reportData.summary.activeCustomers} active</p>
+                  <p className="text-xs text-slate-500">{reportData.summary.activeCustomers} {t("common.active").toLowerCase()}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">
-                    Total Receivable
+                    {t("reports.totalReceivable")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-600">
                     {formatCurrency(reportData.summary.totalReceivable)}
                   </div>
-                  <p className="text-xs text-slate-500">{reportData.summary.customersWithBalance} customers</p>
+                  <p className="text-xs text-slate-500">{reportData.summary.customersWithBalance} {t("reports.totalCustomers").toLowerCase()}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">
-                    Total Advances
+                    {t("reports.totalAdvances")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-green-600">
                     {formatCurrency(reportData.summary.totalAdvances)}
                   </div>
-                  <p className="text-xs text-slate-500">{reportData.summary.customersWithAdvances} customers</p>
+                  <p className="text-xs text-slate-500">{reportData.summary.customersWithAdvances} {t("reports.totalCustomers").toLowerCase()}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">
-                    Net Balance
+                    {t("reports.netBalance")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className={`text-2xl font-bold ${reportData.summary.netBalance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
                     {formatCurrency(reportData.summary.netBalance)}
                   </div>
-                  <p className="text-xs text-slate-500">total outstanding</p>
+                  <p className="text-xs text-slate-500">{t("reports.outstanding").toLowerCase()}</p>
                 </CardContent>
               </Card>
               {reportData.reconciliation && (
@@ -167,12 +169,12 @@ export default function CustomerBalancesPage() {
                       {reportData.reconciliation.isReconciled
                         ? <CheckCircle className="h-4 w-4 text-green-500" />
                         : <AlertTriangle className="h-4 w-4 text-orange-500" />}
-                      AR Reconciliation
+                      {t("reports.arReconciliation")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className={`text-sm font-bold ${reportData.reconciliation.isReconciled ? 'text-green-600' : 'text-orange-600'}`}>
-                      {reportData.reconciliation.isReconciled ? "Reconciled" : `Off by ${formatCurrency(Math.abs(reportData.reconciliation.difference))}`}
+                      {reportData.reconciliation.isReconciled ? t("reports.reconciled") : `${t("reports.offBy")} ${formatCurrency(Math.abs(reportData.reconciliation.difference))}`}
                     </div>
                     <p className="text-xs text-slate-500">GL: {formatCurrency(reportData.reconciliation.glBalance)}</p>
                   </CardContent>
@@ -184,11 +186,11 @@ export default function CustomerBalancesPage() {
           <Card>
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <CardTitle>Balance Details</CardTitle>
+                <CardTitle>{t("reports.balanceDetails")}</CardTitle>
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
-                    placeholder="Search customers..."
+                    placeholder={t("reports.searchCustomers")}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9"
@@ -200,11 +202,11 @@ export default function CustomerBalancesPage() {
               {!filteredCustomers || filteredCustomers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Users className="h-12 w-12 text-slate-300" />
-                  <h3 className="mt-4 text-lg font-semibold">No customers found</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t("reports.noCustomersFound")}</h3>
                   <p className="text-sm text-slate-500">
                     {searchTerm
-                      ? "Try adjusting your search"
-                      : "No customers have been added yet"}
+                      ? t("reports.tryAdjustingSearch")
+                      : t("reports.noCustomersAdded")}
                   </p>
                 </div>
               ) : (
@@ -225,17 +227,17 @@ export default function CustomerBalancesPage() {
                             </Link>
                             <div className="mt-1 space-y-1 text-sm text-slate-500">
                               {customer.email && <p className="break-all">{customer.email}</p>}
-                              <p>{customer.phone || "No phone number"}</p>
+                              <p>{customer.phone || t("reports.noPhoneNumber")}</p>
                             </div>
                           </div>
                           <Badge variant={customer.isActive ? "default" : "secondary"}>
-                            {customer.isActive ? "Active" : "Inactive"}
+                            {customer.isActive ? t("common.active") : t("common.inactive")}
                           </Badge>
                         </div>
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Balance</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.balance")}</p>
                             <p
                               className={`mt-1 font-semibold ${
                                 customer.balance > 0
@@ -251,7 +253,7 @@ export default function CustomerBalancesPage() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoices</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.invoiceNumber")}</p>
                             <p className="mt-1 font-medium text-slate-900">{customer.invoiceCount}</p>
                           </div>
                         </div>
@@ -260,7 +262,7 @@ export default function CustomerBalancesPage() {
                           href={`/customers/${customer.id}/statement`}
                           className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center rounded-md border border-slate-200 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                         >
-                          View statement
+                          {t("reports.viewStatement")}
                         </Link>
                       </div>
                     ))}
@@ -271,12 +273,12 @@ export default function CustomerBalancesPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead className="text-right">Balance</TableHead>
-                            <TableHead className="text-right">Invoices</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>{t("common.name")}</TableHead>
+                            <TableHead>{t("common.email")}</TableHead>
+                            <TableHead>{t("common.phone")}</TableHead>
+                            <TableHead className="text-right">{t("reports.balance")}</TableHead>
+                            <TableHead className="text-right">{t("reports.invoiceNumber")}</TableHead>
+                            <TableHead>{t("common.status")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -316,7 +318,7 @@ export default function CustomerBalancesPage() {
                                 <Badge
                                   variant={customer.isActive ? "default" : "secondary"}
                                 >
-                                  {customer.isActive ? "Active" : "Inactive"}
+                                  {customer.isActive ? t("common.active") : t("common.inactive")}
                                 </Badge>
                               </TableCell>
                             </TableRow>

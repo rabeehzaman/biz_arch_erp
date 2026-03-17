@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 import {
     Select,
     SelectContent,
@@ -50,6 +51,7 @@ interface UnitConversion {
 }
 
 export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: number }) {
+    const { t } = useLanguage();
     const [conversions, setConversions] = useState<UnitConversion[]>([]);
     const [units, setUnits] = useState<Unit[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -82,7 +84,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
             setConversions(conversionsData);
             setUnits(unitsData.filter((u: Unit) => u.isActive));
         } catch (error) {
-            toast.error("Failed to load unit conversions");
+            toast.error(t("units.loadFailed"));
             console.error("Failed to fetch unit conversions:", error);
         } finally {
             setIsLoading(false);
@@ -105,7 +107,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
         e.stopPropagation();
 
         if (formData.fromUnitId === formData.toUnitId) {
-            toast.error("From and To units must be different");
+            toast.error(t("units.unitsMustBeDifferent"));
             return;
         }
 
@@ -136,7 +138,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
             setIsDialogOpen(false);
             resetForm();
             fetchConversions();
-            toast.success(editingConversion ? "Conversion updated" : "Conversion added");
+            toast.success(editingConversion ? t("units.conversionUpdated") : t("units.conversionAdded"));
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Failed to save conversion");
             console.error("Failed to save conversion:", error);
@@ -154,15 +156,15 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this conversion rule?")) return;
+        if (!confirm(t("units.deleteConversionConfirm"))) return;
 
         try {
             const response = await fetch(`/api/unit-conversions/${id}`, { method: "DELETE" });
             if (!response.ok) throw new Error("Failed to delete");
             fetchConversions();
-            toast.success("Conversion deleted");
+            toast.success(t("units.conversionDeleted"));
         } catch (error) {
-            toast.error("Failed to delete conversion");
+            toast.error(t("units.conversionDeleteFailed"));
             console.error("Failed to delete conversion:", error);
         }
     };
@@ -180,9 +182,9 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
         <Card className="mt-8">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle className="text-xl">Global Unit Conversions</CardTitle>
+                    <CardTitle className="text-xl">{t("units.globalConversions")}</CardTitle>
                     <p className="text-sm text-slate-600 mt-1">
-                        Define standard conversion rules across all products (e.g., 1 Box = 10 Pieces).
+                        {t("units.globalConversionsDesc")}
                     </p>
                 </div>
                 <Dialog
@@ -195,24 +197,24 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                     <DialogTrigger asChild>
                         <Button>
                             <Plus className="mr-2 h-4 w-4" />
-                            Add Conversion
+                            {t("units.addConversion")}
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
                         <form className="contents" onSubmit={handleSubmit}>
                             <DialogHeader className="pr-12">
                                 <DialogTitle>
-                                    {editingConversion ? "Edit Conversion Rule" : "Add New Conversion Rule"}
+                                    {editingConversion ? t("units.editConversionRule") : t("units.addConversionRule")}
                                 </DialogTitle>
                                 <DialogDescription>
                                     {editingConversion
-                                        ? "Update the conversion factor below."
-                                        : "Create a new rule connecting two different units."}
+                                        ? t("units.editConversionDesc")
+                                        : t("units.addConversionDesc")}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-2 sm:py-4">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="fromUnit">Alternate Unit (From) *</Label>
+                                    <Label htmlFor="fromUnit">{t("units.alternateUnitFrom")}</Label>
                                     <Select
                                         value={formData.fromUnitId}
                                         onValueChange={(value) => setFormData({ ...formData, fromUnitId: value })}
@@ -220,7 +222,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                                         required
                                     >
                                         <SelectTrigger id="fromUnit">
-                                            <SelectValue placeholder="Select unit (e.g. Box)" />
+                                            <SelectValue placeholder={t("units.selectUnitPlaceholder")} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {units.map((unit) => (
@@ -229,7 +231,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                                         </SelectContent>
                                     </Select>
                                     <p className="text-xs text-slate-500">
-                                        The larger/alternate unit you sell or purchase in.
+                                        {t("units.alternateUnitDesc")}
                                     </p>
                                 </div>
 
@@ -238,7 +240,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="toUnit">Base Unit (To) *</Label>
+                                    <Label htmlFor="toUnit">{t("units.baseUnitTo")}</Label>
                                     <Select
                                         value={formData.toUnitId}
                                         onValueChange={(value) => setFormData({ ...formData, toUnitId: value })}
@@ -246,7 +248,7 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                                         required
                                     >
                                         <SelectTrigger id="toUnit">
-                                            <SelectValue placeholder="Select base unit (e.g. Piece)" />
+                                            <SelectValue placeholder={t("units.selectBaseUnitPlaceholder")} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {units.map((unit) => (
@@ -255,12 +257,12 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                                         </SelectContent>
                                     </Select>
                                     <p className="text-xs text-slate-500">
-                                        The smallest base unit to convert to.
+                                        {t("units.baseUnitDesc")}
                                     </p>
                                 </div>
 
                                 <div className="grid gap-2 mt-2">
-                                    <Label htmlFor="conversionFactor">Conversion Factor (Multiplier) *</Label>
+                                    <Label htmlFor="conversionFactor">{t("units.conversionFactor")}</Label>
                                     <Input
                                         id="conversionFactor"
                                         type="number"
@@ -274,13 +276,13 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                                         required
                                     />
                                     <p className="text-xs text-slate-500">
-                                        How many base units are in one alternate unit? (e.g., 1 Box = 10 Pieces, Factor is 10)
+                                        {t("units.conversionFactorDesc")}
                                     </p>
                                 </div>
                             </div>
                             <DialogFooter>
                                 <Button type="submit">
-                                    {editingConversion ? "Update Rule" : "Add Rule"}
+                                    {editingConversion ? t("units.updateRule") : t("units.addRule")}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -294,19 +296,19 @@ export function UnitConversionsSettings({ unitRefreshKey }: { unitRefreshKey?: n
                 ) : conversions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center border rounded-lg border-dashed">
                         <ArrowRightLeft className="h-10 w-10 text-slate-300 mb-2" />
-                        <h3 className="text-base font-semibold">No conversion rules</h3>
+                        <h3 className="text-base font-semibold">{t("units.noConversionRules")}</h3>
                         <p className="text-sm text-slate-500 max-w-sm mt-1">
-                            Add rules to allow calculating transactions in multiple units (e.g., selling in cartons while tracking stock in pieces).
+                            {t("units.noConversionRulesDesc")}
                         </p>
                     </div>
                 ) : (
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Rule</TableHead>
-                                <TableHead>From Unit</TableHead>
-                                <TableHead>To Base Unit</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                <TableHead>{t("units.rule")}</TableHead>
+                                <TableHead>{t("units.fromUnit")}</TableHead>
+                                <TableHead>{t("units.toBaseUnit")}</TableHead>
+                                <TableHead className="text-right">{t("common.actions")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

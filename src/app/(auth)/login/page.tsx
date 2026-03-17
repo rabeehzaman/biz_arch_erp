@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { lang, setLanguage, tt } = useLanguage();
+  const { lang, setLanguage, t, tt } = useLanguage();
   const featurePills = [
     tt("Sales Invoices"),
     tt("Purchase Invoices"),
@@ -50,13 +50,13 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        setError(t("login.invalidCredentials"));
       } else if (result?.ok) {
         // Force a hard navigation to ensure session is picked up
         window.location.href = "/";
       }
     } catch {
-      setError("An error occurred. Please try again.");
+      setError(t("login.genericError"));
     } finally {
       setIsLoading(false);
     }

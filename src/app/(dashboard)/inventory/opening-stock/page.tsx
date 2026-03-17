@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
+import { useLanguage } from "@/lib/i18n";
 
 interface Product {
   id: string;
@@ -101,6 +102,7 @@ const emptyForm = {
 export default function OpeningStockPage() {
   const { data: session } = useSession();
   const { symbol } = useCurrency();
+  const { t } = useLanguage();
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
   const [openingStocks, setOpeningStocks] = useState<OpeningStock[]>([]);
@@ -149,7 +151,7 @@ export default function OpeningStockPage() {
         setSuppliers(await suppliersRes.json());
       }
     } catch {
-      toast.error("Failed to load data");
+      toast.error(t("inventory.failedToLoadData2"));
     } finally {
       setIsLoading(false);
     }
@@ -224,22 +226,22 @@ export default function OpeningStockPage() {
 
   async function handleSave() {
     if (!formData.productId || !formData.quantity || !formData.stockDate) {
-      toast.error("Product, quantity, and stock date are required");
+      toast.error(t("inventory.productQtyDateRequired"));
       return;
     }
     if (parseFloat(formData.quantity) <= 0) {
-      toast.error("Quantity must be greater than 0");
+      toast.error(t("inventory.quantityGreaterThanZero"));
       return;
     }
 
     if (isImeiTracked) {
       if (!formData.supplierId) {
-        toast.error("Supplier is required for IMEI tracked products");
+        toast.error(t("inventory.supplierRequiredForImei"));
         return;
       }
       const missingImei = formData.imeiNumbers.some((imei) => !imei.imei1 || !imei.brand || !imei.model);
       if (missingImei || formData.imeiNumbers.length === 0) {
-        toast.error("Please fill in all required IMEI fields (IMEI 1, Brand, Model)");
+        toast.error(t("inventory.fillRequiredImeiFields"));
         return;
       }
     }
@@ -263,15 +265,15 @@ export default function OpeningStockPage() {
         }),
       });
       if (res.ok) {
-        toast.success("Opening stock added and stock lot created");
+        toast.success(t("inventory.openingStockAdded"));
         setIsDialogOpen(false);
         fetchData();
       } else {
         const err = await res.json();
-        toast.error(err.error || "Failed to add opening stock");
+        toast.error(err.error || t("inventory.failedToAddOpeningStock"));
       }
     } catch {
-      toast.error("Failed to add opening stock");
+      toast.error(t("inventory.failedToAddOpeningStock"));
     } finally {
       setSaving(false);
     }
@@ -283,15 +285,15 @@ export default function OpeningStockPage() {
     try {
       const res = await fetch(`/api/opening-stocks/${deleteId}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Opening stock entry deleted");
+        toast.success(t("inventory.openingStockDeleted"));
         setDeleteId(null);
         fetchData();
       } else {
         const err = await res.json();
-        toast.error(err.error || "Failed to delete");
+        toast.error(err.error || t("common.delete"));
       }
     } catch {
-      toast.error("Failed to delete");
+      toast.error(t("common.delete"));
     } finally {
       setDeleting(false);
     }
@@ -303,12 +305,12 @@ export default function OpeningStockPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Opening Stock</h2>
-            <p className="text-slate-500">Set initial inventory quantities and values for your products</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("inventory.openingStock")}</h2>
+            <p className="text-slate-500">{t("inventory.openingStockDesc")}</p>
           </div>
           <Button onClick={openDialog} className="gap-2">
             <Plus className="h-4 w-4" />
-            Add Opening Stock
+            {t("inventory.addOpeningStock")}
           </Button>
         </div>
 
@@ -323,7 +325,7 @@ export default function OpeningStockPage() {
                       <Package className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Products</p>
+                      <p className="text-sm text-slate-500">{t("common.products")}</p>
                       <p className="text-2xl font-bold">{openingStocks.length}</p>
                     </div>
                   </div>
@@ -338,7 +340,7 @@ export default function OpeningStockPage() {
                       <Package className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Total Value</p>
+                      <p className="text-sm text-slate-500">{t("inventory.totalValue")}</p>
                       <p className="text-2xl font-bold">
                         {symbol}{totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                       </p>
@@ -355,8 +357,8 @@ export default function OpeningStockPage() {
                       <Warehouse className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Warehouses</p>
-                      <p className="text-2xl font-bold">{uniqueWarehouses || (multiBranchEnabled ? "0" : "—")}</p>
+                      <p className="text-sm text-slate-500">{t("inventory.warehouses")}</p>
+                      <p className="text-2xl font-bold">{uniqueWarehouses || (multiBranchEnabled ? "0" : "\u2014")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -372,7 +374,7 @@ export default function OpeningStockPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Search products..."
+                  placeholder={t("inventory.searchProducts")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
@@ -381,11 +383,11 @@ export default function OpeningStockPage() {
               {multiBranchEnabled && warehouses.length > 0 && (
                 <Select value={filterWarehouse} onValueChange={setFilterWarehouse}>
                   <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="All Warehouses" />
+                    <SelectValue placeholder={t("inventory.allWarehouses")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Warehouses</SelectItem>
-                    <SelectItem value="none">No Warehouse (Global)</SelectItem>
+                    <SelectItem value="all">{t("inventory.allWarehouses")}</SelectItem>
+                    <SelectItem value="none">{t("inventory.noWarehouseGlobal")}</SelectItem>
                     {warehouses.map((w) => (
                       <SelectItem key={w.id} value={w.id}>
                         {w.branch.name} → {w.name}
@@ -401,7 +403,7 @@ export default function OpeningStockPage() {
         {/* Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Stock Entries ({filtered.length})</CardTitle>
+            <CardTitle>{t("inventory.stockEntries")} ({filtered.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
@@ -409,8 +411,8 @@ export default function OpeningStockPage() {
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-slate-500">
                 <Package className="h-12 w-12 mb-3 text-slate-300" />
-                <p className="font-medium">No opening stock entries</p>
-                <p className="text-sm">Click &quot;Add Opening Stock&quot; to set initial inventory</p>
+                <p className="font-medium">{t("inventory.noOpeningStockEntries")}</p>
+                <p className="text-sm">{t("inventory.addOpeningStockCTA")}</p>
               </div>
             ) : (
               <>
@@ -441,7 +443,7 @@ export default function OpeningStockPage() {
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Opening Qty</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.openingQty")}</p>
                             <p className="mt-1 font-medium text-slate-900">
                               {Number(stock.quantity).toLocaleString("en-IN")}
                               {stock.product.unit && (
@@ -450,7 +452,7 @@ export default function OpeningStockPage() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Remaining</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.remaining")}</p>
                             <div className="mt-1 flex flex-wrap items-center gap-2">
                               <span className="font-medium text-slate-900">{remaining.toLocaleString("en-IN")}</span>
                               <Badge
@@ -463,30 +465,30 @@ export default function OpeningStockPage() {
                                       : "text-xs border-red-200 text-red-700 bg-red-50"
                                 }
                               >
-                                {pct.toFixed(0)}% left
+                                {pct.toFixed(0)}% {t("inventory.pctLeft")}
                               </Badge>
                             </div>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Unit Cost</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.unitCost")}</p>
                             <p className="mt-1 font-medium text-slate-900">
                               {symbol}{Number(stock.unitCost).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Total Value</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.totalValue")}</p>
                             <p className="mt-1 font-semibold text-slate-900">
                               {symbol}{totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                             </p>
                           </div>
                           {multiBranchEnabled && (
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Warehouse</p>
-                              <p className="mt-1 text-slate-900">{stock.warehouse?.name || "Global"}</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("inventory.warehouse")}</p>
+                              <p className="mt-1 text-slate-900">{stock.warehouse?.name || t("inventory.global")}</p>
                             </div>
                           )}
                           <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Date</p>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.date")}</p>
                             <p className="mt-1 text-slate-900">{format(new Date(stock.stockDate), "dd MMM yyyy")}</p>
                           </div>
                         </div>
@@ -499,13 +501,13 @@ export default function OpeningStockPage() {
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead className="text-right">Opening Qty</TableHead>
-                        <TableHead className="hidden sm:table-cell text-right">Remaining</TableHead>
-                        <TableHead className="hidden md:table-cell text-right">Unit Cost</TableHead>
-                        <TableHead className="hidden sm:table-cell text-right">Total Value</TableHead>
-                        {multiBranchEnabled && <TableHead className="hidden sm:table-cell">Warehouse</TableHead>}
-                        <TableHead className="hidden sm:table-cell">Date</TableHead>
+                        <TableHead>{t("common.product")}</TableHead>
+                        <TableHead className="text-right">{t("inventory.openingQty")}</TableHead>
+                        <TableHead className="hidden sm:table-cell text-right">{t("inventory.remaining")}</TableHead>
+                        <TableHead className="hidden md:table-cell text-right">{t("inventory.unitCost")}</TableHead>
+                        <TableHead className="hidden sm:table-cell text-right">{t("inventory.totalValue")}</TableHead>
+                        {multiBranchEnabled && <TableHead className="hidden sm:table-cell">{t("inventory.warehouse")}</TableHead>}
+                        <TableHead className="hidden sm:table-cell">{t("common.date")}</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -542,7 +544,7 @@ export default function OpeningStockPage() {
                                         : "text-xs border-red-200 text-red-700 bg-red-50"
                                   }
                                 >
-                                  {pct.toFixed(0)}% left
+                                  {pct.toFixed(0)}% {t("inventory.pctLeft")}
                                 </Badge>
                               </div>
                             </TableCell>
@@ -557,7 +559,7 @@ export default function OpeningStockPage() {
                                 {stock.warehouse ? (
                                   <span className="text-sm text-slate-600">{stock.warehouse.name}</span>
                                 ) : (
-                                  <span className="text-sm text-slate-400">Global</span>
+                                  <span className="text-sm text-slate-400">{t("inventory.global")}</span>
                                 )}
                               </TableCell>
                             )}
@@ -590,19 +592,19 @@ export default function OpeningStockPage() {
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setIsDialogOpen(false); }}>
         <DialogContent className={isImeiTracked ? "max-w-3xl" : "max-w-md"}>
           <DialogHeader>
-            <DialogTitle>Add Opening Stock</DialogTitle>
+            <DialogTitle>{t("inventory.addOpeningStock")}</DialogTitle>
             <DialogDescription>
-              Set the initial quantity and cost for a product. A stock lot will be created automatically.
+              {t("inventory.addOpeningStockDialogDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {/* Warehouse selector (multi-branch only) */}
             {multiBranchEnabled && (
               <div className="border rounded-lg p-3 bg-slate-50 space-y-3">
-                <p className="text-sm font-medium text-slate-700">Warehouse (optional)</p>
+                <p className="text-sm font-medium text-slate-700">{t("inventory.warehouseOptional")}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Branch</Label>
+                    <Label className="text-xs">{t("inventory.branch")}</Label>
                     <Select
                       value={formData.selectedBranchId}
                       onValueChange={(bId) =>
@@ -610,7 +612,7 @@ export default function OpeningStockPage() {
                       }
                     >
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="All branches" />
+                        <SelectValue placeholder={t("inventory.allBranches")} />
                       </SelectTrigger>
                       <SelectContent>
                         {branches.map((b) => (
@@ -620,14 +622,14 @@ export default function OpeningStockPage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Warehouse</Label>
+                    <Label className="text-xs">{t("inventory.warehouse")}</Label>
                     <Select
                       value={formData.warehouseId}
                       onValueChange={(wId) => setFormData((f) => ({ ...f, warehouseId: wId }))}
                       disabled={dialogWarehouses.length === 0}
                     >
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select" />
+                        <SelectValue placeholder={t("common.select")} />
                       </SelectTrigger>
                       <SelectContent>
                         {dialogWarehouses.map((w) => (
@@ -642,7 +644,7 @@ export default function OpeningStockPage() {
 
             {/* Product */}
             <div className="space-y-2">
-              <Label>Product *</Label>
+              <Label>{t("inventory.product2")}</Label>
               <Select
                 value={formData.productId}
                 onValueChange={(v) => {
@@ -656,12 +658,12 @@ export default function OpeningStockPage() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a product" />
+                  <SelectValue placeholder={t("inventory.selectProduct")} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableProducts.length === 0 ? (
                     <div className="p-3 text-sm text-slate-500 text-center">
-                      All products have opening stock for this warehouse
+                      {t("inventory.allProductsHaveStock")}
                     </div>
                   ) : (
                     availableProducts.map((p) => (
@@ -678,7 +680,7 @@ export default function OpeningStockPage() {
             {/* Quantity & Cost */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Quantity *</Label>
+                <Label>{t("inventory.quantity2")}</Label>
                 <Input
                   type="number"
                   min="0.01"
@@ -693,7 +695,7 @@ export default function OpeningStockPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Unit Cost ({symbol})</Label>
+                <Label>{t("inventory.unitCost2")} ({symbol})</Label>
                 <Input
                   type="number"
                   min="0"
@@ -709,29 +711,29 @@ export default function OpeningStockPage() {
             {/* Value preview */}
             {formData.quantity && formData.unitCost && parseFloat(formData.quantity) > 0 && (
               <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
-                <span className="font-medium">Total Value: </span>
+                <span className="font-medium">{t("inventory.totalValue")}: </span>
                 {symbol}{(parseFloat(formData.quantity || "0") * parseFloat(formData.unitCost || "0")).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </div>
             )}
 
             {/* Stock Date */}
             <div className="space-y-2">
-              <Label>Stock Date *</Label>
+              <Label>{t("inventory.stockDate")}</Label>
               <Input
                 type="date"
                 value={formData.stockDate}
                 onChange={(e) => setFormData((f) => ({ ...f, stockDate: e.target.value }))}
               />
               <p className="text-xs text-slate-500">
-                Stock from earlier dates is consumed first (FIFO order).
+                {t("inventory.fifoNote")}
               </p>
             </div>
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label>Notes</Label>
+              <Label>{t("common.notes")}</Label>
               <Textarea
-                placeholder="Optional notes..."
+                placeholder={t("inventory.optionalNotesPlaceholder")}
                 value={formData.notes}
                 onChange={(e) => setFormData((f) => ({ ...f, notes: e.target.value }))}
                 rows={2}
@@ -742,7 +744,7 @@ export default function OpeningStockPage() {
             {isImeiTracked && (
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
-                  <Label>Supplier *</Label>
+                  <Label>{t("inventory.supplier2")}</Label>
                   <SupplierCombobox
                     suppliers={suppliers}
                     value={formData.supplierId}
@@ -752,12 +754,12 @@ export default function OpeningStockPage() {
                 </div>
                 {formData.imeiNumbers.length > 0 && (
                   <div className="space-y-3">
-                    <Label>Device Details *</Label>
+                    <Label>{t("inventory.deviceDetails2")}</Label>
                     <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3">
                       {formData.imeiNumbers.map((imei, idx) => (
                         <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-slate-50 border rounded-lg">
                           <Input
-                            placeholder={`IMEI 1 (Device ${idx + 1}) *`}
+                            placeholder={`IMEI 1 (${idx + 1}) *`}
                             value={imei.imei1}
                             onChange={(e) => updateImeiField(idx, "imei1", e.target.value)}
                             className="font-mono text-xs"
@@ -772,21 +774,21 @@ export default function OpeningStockPage() {
                             maxLength={15}
                           />
                           <Input
-                            placeholder="Brand *"
+                            placeholder={`${t("mobileShop.brand")} *`}
                             value={imei.brand}
                             onChange={(e) => updateImeiField(idx, "brand", e.target.value)}
                             className="text-xs"
                             required
                           />
                           <Input
-                            placeholder="Model *"
+                            placeholder={`${t("mobileShop.model")} *`}
                             value={imei.model}
                             onChange={(e) => updateImeiField(idx, "model", e.target.value)}
                             className="text-xs"
                             required
                           />
                           <Input
-                            placeholder="Color"
+                            placeholder={t("mobileShop.color")}
                             value={imei.color}
                             onChange={(e) => updateImeiField(idx, "color", e.target.value)}
                             className="text-xs"
@@ -796,7 +798,7 @@ export default function OpeningStockPage() {
                             onValueChange={(value) => updateImeiField(idx, "storageCapacity", value)}
                           >
                             <SelectTrigger className="text-xs h-9">
-                              <SelectValue placeholder="Storage" />
+                              <SelectValue placeholder={t("mobileShop.storage")} />
                             </SelectTrigger>
                             <SelectContent>
                               {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
@@ -809,7 +811,7 @@ export default function OpeningStockPage() {
                             onValueChange={(value) => updateImeiField(idx, "ram", value)}
                           >
                             <SelectTrigger className="text-xs h-9">
-                              <SelectValue placeholder="RAM" />
+                              <SelectValue placeholder={t("mobileShop.ram")} />
                             </SelectTrigger>
                             <SelectContent>
                               {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
@@ -825,12 +827,12 @@ export default function OpeningStockPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="NEW">New</SelectItem>
-                              <SelectItem value="OPEN_BOX">Open Box</SelectItem>
-                              <SelectItem value="GRADE_A">Grade A</SelectItem>
-                              <SelectItem value="GRADE_B">Grade B</SelectItem>
-                              <SelectItem value="GRADE_C">Grade C</SelectItem>
-                              <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                              <SelectItem value="NEW">{t("inventory.conditionNew")}</SelectItem>
+                              <SelectItem value="OPEN_BOX">{t("inventory.conditionOpenBox")}</SelectItem>
+                              <SelectItem value="GRADE_A">{t("inventory.conditionGradeA")}</SelectItem>
+                              <SelectItem value="GRADE_B">{t("inventory.conditionGradeB")}</SelectItem>
+                              <SelectItem value="GRADE_C">{t("inventory.conditionGradeC")}</SelectItem>
+                              <SelectItem value="REFURBISHED">{t("inventory.conditionRefurbished")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -842,9 +844,9 @@ export default function OpeningStockPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Add Stock"}
+              {saving ? t("common.saving") : t("inventory.addStock")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -854,9 +856,9 @@ export default function OpeningStockPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete Opening Stock"
-        description="This will remove the opening stock entry and its associated stock lot. Any sales that consumed this stock will be affected. This action cannot be undone."
-        confirmLabel="Delete"
+        title={t("inventory.deleteOpeningStock")}
+        description={t("inventory.deleteOpeningStockDesc")}
+        confirmLabel={t("common.delete")}
         variant="destructive"
         onConfirm={handleDelete}
       />

@@ -222,7 +222,7 @@ export function POSReturnDialog({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to process return");
+        throw new Error(data.error || t("pos.failedToProcessReturn"));
       }
 
       const result = await res.json();
@@ -278,7 +278,7 @@ export function POSReturnDialog({
       setStep("success");
       toast.success(t("pos.creditNoteCreated"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to process return");
+      toast.error(err instanceof Error ? err.message : t("pos.failedToProcessReturn"));
     } finally {
       setIsProcessing(false);
     }

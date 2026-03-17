@@ -17,6 +17,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useLanguage } from "@/lib/i18n";
 
 interface CategoryRow {
   account: { code: string; name: string };
@@ -60,6 +61,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function ExpenseReportPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<ExpenseReport | null>(null);
   const [fromDate, setFromDate] = useState(
     new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]
@@ -78,7 +80,7 @@ export default function ExpenseReportPage() {
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
     } catch {
-      toast.error("Failed to load expense report");
+      toast.error(t("reports.noDataForPeriod"));
     } finally {
       setIsLoading(false);
     }
@@ -94,22 +96,22 @@ export default function ExpenseReportPage() {
         <PageAnimation>
           <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Expense Report</h2>
-            <p className="text-slate-500">Expenses by category and supplier</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("reports.expenseReport")}</h2>
+            <p className="text-slate-500">{t("reports.expenseReportDesc")}</p>
           </div>
 
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="grid gap-2">
-                  <Label>From</Label>
+                  <Label>{t("common.from")}</Label>
                   <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>To</Label>
+                  <Label>{t("common.to")}</Label>
                   <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                 </div>
-                <Button onClick={fetchReport} className="mt-6">Generate</Button>
+                <Button onClick={fetchReport} className="mt-6">{t("reports.generate")}</Button>
               </div>
             </CardHeader>
           </Card>
@@ -124,11 +126,11 @@ export default function ExpenseReportPage() {
                 <CardContent className="p-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <span className="text-sm text-slate-500">Total Expenses</span>
+                      <span className="text-sm text-slate-500">{t("reports.totalExpenses")}</span>
                       <p className="text-2xl font-bold text-red-600 font-mono">{fmt(data.totalExpenses)}</p>
                     </div>
                     <div>
-                      <span className="text-sm text-slate-500">Number of Expenses</span>
+                      <span className="text-sm text-slate-500">{t("reports.numberOfExpenses")}</span>
                       <p className="text-2xl font-bold">{data.expenseCount}</p>
                     </div>
                   </div>
@@ -138,7 +140,7 @@ export default function ExpenseReportPage() {
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>By Category</CardTitle>
+                    <CardTitle>{t("reports.byCategory")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:hidden">
@@ -148,11 +150,11 @@ export default function ExpenseReportPage() {
                           <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
                           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.amount")}</p>
                               <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(row.total)}</p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Items</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.count")}</p>
                               <p className="mt-1 font-medium text-slate-900">{row.count}</p>
                             </div>
                           </div>
@@ -164,9 +166,9 @@ export default function ExpenseReportPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Category</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                            <TableHead className="text-right">Items</TableHead>
+                            <TableHead>{t("reports.category")}</TableHead>
+                            <TableHead className="text-right">{t("common.amount")}</TableHead>
+                            <TableHead className="text-right">{t("reports.count")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -188,7 +190,7 @@ export default function ExpenseReportPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>By Supplier</CardTitle>
+                    <CardTitle>{t("reports.bySupplier")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:hidden">
@@ -197,11 +199,11 @@ export default function ExpenseReportPage() {
                           <p className="font-semibold text-slate-900">{row.name}</p>
                           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.amount")}</p>
                               <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(row.total)}</p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Count</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.count")}</p>
                               <p className="mt-1 font-medium text-slate-900">{row.count}</p>
                             </div>
                           </div>
@@ -213,9 +215,9 @@ export default function ExpenseReportPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Supplier</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                            <TableHead className="text-right">Count</TableHead>
+                            <TableHead>{t("reports.supplierName")}</TableHead>
+                            <TableHead className="text-right">{t("common.amount")}</TableHead>
+                            <TableHead className="text-right">{t("reports.count")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -235,7 +237,7 @@ export default function ExpenseReportPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>All Expenses</CardTitle>
+                  <CardTitle>{t("reports.allExpenses")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 sm:hidden">
@@ -251,11 +253,11 @@ export default function ExpenseReportPage() {
 
                         <div className="mt-3 space-y-1 text-sm text-slate-600">
                           <p>{exp.description || "-"}</p>
-                          <p>Supplier: {exp.supplier || "-"}</p>
+                          <p>{t("reports.supplierName")}: {exp.supplier || "-"}</p>
                         </div>
 
                         <div className="mt-4">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Amount</p>
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.amount")}</p>
                           <p className="mt-1 font-mono font-semibold text-slate-900">{fmt(exp.total)}</p>
                         </div>
                       </div>
@@ -266,12 +268,12 @@ export default function ExpenseReportPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Number</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Supplier</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>{t("reports.invoiceNumber")}</TableHead>
+                          <TableHead>{t("reports.date")}</TableHead>
+                          <TableHead>{t("reports.description")}</TableHead>
+                          <TableHead>{t("reports.supplierName")}</TableHead>
+                          <TableHead>{t("common.status")}</TableHead>
+                          <TableHead className="text-right">{t("common.amount")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -294,7 +296,7 @@ export default function ExpenseReportPage() {
               </Card>
             </>
           ) : (
-            <p className="text-center py-8 text-slate-500">No data available</p>
+            <p className="text-center py-8 text-slate-500">{t("reports.noDataAvailable")}</p>
           )}
         </div>
         </PageAnimation>

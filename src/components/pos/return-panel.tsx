@@ -96,7 +96,7 @@ export function ReturnPanel({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to process return");
+        throw new Error(data.error || t("pos.failedToProcessReturn"));
       }
 
       const result = await res.json();
@@ -150,7 +150,7 @@ export function ReturnPanel({
       setStep("success");
       toast.success(t("pos.creditNoteCreated"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to process return");
+      toast.error(err instanceof Error ? err.message : t("pos.failedToProcessReturn"));
     } finally {
       setIsProcessing(false);
     }
@@ -247,7 +247,7 @@ export function ReturnPanel({
           )}
           {totals.roundOffAmount !== 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Round Off</span>
+              <span className="text-muted-foreground">{t("common.roundOff")}</span>
               <span>{totals.roundOffAmount > 0 ? "+" : ""}{fmt(totals.roundOffAmount)}</span>
             </div>
           )}
@@ -299,7 +299,7 @@ export function ReturnPanel({
           {isProcessing ? (
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              {t("pos.processing") || "Processing..."}
+              {t("pos.processing")}
             </>
           ) : (
             <>

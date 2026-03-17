@@ -20,27 +20,27 @@ export function CartSummary({ items, isTaxInclusivePrice, roundOffMode }: CartSu
   return (
     <div className="space-y-2">
       {isTaxInclusivePrice && (
-        <div className="text-xs text-blue-600 text-right font-medium">{t("common.pricesIncludeTax") || "Prices include tax"}</div>
+        <div className="text-xs text-blue-600 text-right font-medium">{t("common.pricesIncludeTax")}</div>
       )}
       <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">{t("common.subtotal") || "Subtotal"}</span>
+        <span className="text-muted-foreground">{t("common.subtotal")}</span>
         <span>{formatCurrency(subtotal)}</span>
       </div>
       {taxAmount > 0 && (
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">{t("common.tax") || "Tax"}{isTaxInclusivePrice ? " (incl.)" : ""}</span>
+          <span className="text-muted-foreground">{t("common.tax")}{isTaxInclusivePrice ? " (incl.)" : ""}</span>
           <span>{formatCurrency(taxAmount)}</span>
         </div>
       )}
       {roundOffAmount !== 0 && (
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Round Off</span>
+          <span className="text-muted-foreground">{t("common.roundOff")}</span>
           <span>{roundOffAmount > 0 ? "+" : ""}{formatCurrency(roundOffAmount)}</span>
         </div>
       )}
       <Separator />
       <div className="flex justify-between text-lg font-bold">
-        <span>{t("common.total") || "Total"}</span>
+        <span>{t("common.total")}</span>
         <span>{formatCurrency(total)}</span>
       </div>
     </div>

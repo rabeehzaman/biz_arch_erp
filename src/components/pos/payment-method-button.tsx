@@ -28,10 +28,10 @@ export function PaymentMethodButton({
   const Icon = methodIcons[method] || Banknote;
 
   const methodLabels: Record<string, string> = {
-    CASH: t("payments.cash") || "Cash",
-    CREDIT_CARD: t("pos.card") || "Card",
+    CASH: t("payments.cash"),
+    CREDIT_CARD: t("pos.card"),
     UPI: "UPI",
-    BANK_TRANSFER: t("pos.bankMethod") || "Bank",
+    BANK_TRANSFER: t("pos.bankMethod"),
   };
 
   const label = methodLabels[method] || method;

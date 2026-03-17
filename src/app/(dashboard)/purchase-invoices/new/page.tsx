@@ -24,6 +24,7 @@ import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse
 import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
+import { useLanguage } from "@/lib/i18n";
 
 interface Supplier {
   id: string;
@@ -101,6 +102,7 @@ export default function NewPurchaseInvoicePage() {
   const { data: session } = useSession();
   const { symbol } = useCurrency();
   const { unitConversions } = useUnitConversions();
+  const { t } = useLanguage();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -353,12 +355,12 @@ export default function NewPurchaseInvoicePage() {
 
     // Validate that at least one item has a product selected
     if (validItems.length === 0) {
-      toast.error("Please add at least one product to the purchase invoice");
+      toast.error(t("purchases.addProductValidation"));
       return;
     }
 
     if (session?.user?.multiBranchEnabled && !formData.warehouseId) {
-      toast.error("Please select a branch and warehouse");
+      toast.error(t("purchases.selectBranchWarehouse"));
       return;
     }
 
@@ -399,15 +401,15 @@ export default function NewPurchaseInvoicePage() {
 
       if (response.ok) {
         const invoice = await response.json();
-        toast.success("Purchase invoice created and stock updated");
+        toast.success(t("purchases.purchaseInvoiceCreatedStock"));
         router.push(`/purchase-invoices/${invoice.id}`);
       } else {
         const error = await response.json();
-        toast.error(error.error || "Failed to create purchase invoice");
+        toast.error(error.error || t("purchases.failedToLoad"));
       }
     } catch (error) {
       console.error("Failed to create purchase invoice:", error);
-      toast.error("Failed to create purchase invoice");
+      toast.error(t("purchases.failedToLoad"));
     } finally {
       setIsSubmitting(false);
     }
@@ -423,8 +425,8 @@ export default function NewPurchaseInvoicePage() {
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">New Purchase Invoice</h2>
-            <p className="text-slate-500">Record a purchase from a supplier</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("purchases.newInvoice")}</h2>
+            <p className="text-slate-500">{t("purchases.recordPurchaseDesc")}</p>
           </div>
         </div>
 
@@ -433,7 +435,7 @@ export default function NewPurchaseInvoicePage() {
             {/* Supplier & Date */}
             <Card>
               <CardHeader>
-                <CardTitle>Purchase Details</CardTitle>
+                <CardTitle>{t("purchases.purchaseDetails")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <BranchWarehouseSelector
@@ -444,7 +446,7 @@ export default function NewPurchaseInvoicePage() {
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="supplier">Supplier *</Label>
+                    <Label htmlFor="supplier">{t("common.supplier")} *</Label>
                     <SupplierCombobox
                       suppliers={suppliers}
                       value={formData.supplierId}
@@ -458,18 +460,18 @@ export default function NewPurchaseInvoicePage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="supplierInvoiceRef">Supplier Invoice Ref</Label>
+                    <Label htmlFor="supplierInvoiceRef">{t("purchases.supplierInvoiceRef")}</Label>
                     <Input
                       id="supplierInvoiceRef"
                       value={formData.supplierInvoiceRef}
                       onChange={(e) =>
                         setFormData({ ...formData, supplierInvoiceRef: e.target.value })
                       }
-                      placeholder="Supplier's invoice number"
+                      placeholder={t("purchases.supplierInvoiceRefPlaceholder")}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="invoiceDate">Purchase Date *</Label>
+                    <Label htmlFor="invoiceDate">{t("purchases.purchaseDate")} *</Label>
                     <Input
                       id="invoiceDate"
                       type="date"
@@ -481,7 +483,7 @@ export default function NewPurchaseInvoicePage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="dueDate">Payment Due Date *</Label>
+                    <Label htmlFor="dueDate">{t("purchases.paymentDueDate")} *</Label>
                     <Input
                       id="dueDate"
                       type="date"
@@ -494,14 +496,14 @@ export default function NewPurchaseInvoicePage() {
                   </div>
                   {taxEnabled && (
                     <div className="grid gap-2">
-                      <Label>Pricing</Label>
+                      <Label>{t("common.pricing")}</Label>
                       <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="inclusive">Tax Inclusive</SelectItem>
-                          <SelectItem value="exclusive">Tax Exclusive</SelectItem>
+                          <SelectItem value="inclusive">{t("common.taxInclusive")}</SelectItem>
+                          <SelectItem value="exclusive">{t("common.taxExclusive")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -513,11 +515,11 @@ export default function NewPurchaseInvoicePage() {
             {/* Line Items */}
             <Card>
               <CardHeader>
-                <CardTitle>Purchase Items</CardTitle>
+                <CardTitle>{t("purchases.purchaseItems")}</CardTitle>
                 <CardAction>
                   <Button type="button" variant="outline" size="sm" onClick={() => addLineItem(true)}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Item
+                    {t("common.addItem")}
                   </Button>
                 </CardAction>
               </CardHeader>
@@ -527,22 +529,22 @@ export default function NewPurchaseInvoicePage() {
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow>
-                        <TableHead className="font-semibold" style={{ width: '30%' }}>Product *</TableHead>
-                        <TableHead className="font-semibold">Quantity *</TableHead>
+                        <TableHead className="font-semibold" style={{ width: '30%' }}>{t("common.product")} *</TableHead>
+                        <TableHead className="font-semibold">{t("common.quantity")} *</TableHead>
                         {session?.user?.multiUnitEnabled && (
-                          <TableHead className="font-semibold">Unit</TableHead>
+                          <TableHead className="font-semibold">{t("common.unit")}</TableHead>
                         )}
-                        <TableHead className="font-semibold">Unit Cost *</TableHead>
-                        <TableHead className="font-semibold">Disc %</TableHead>
-                        {saudiEnabled && <TableHead className="font-semibold">VAT %</TableHead>}
-                        {session?.user?.gstEnabled && !saudiEnabled && <TableHead className="font-semibold">GST %</TableHead>}
+                        <TableHead className="font-semibold">{t("common.unitCost")} *</TableHead>
+                        <TableHead className="font-semibold">{t("common.discountPercent")}</TableHead>
+                        {saudiEnabled && <TableHead className="font-semibold">{t("common.vatPercent")}</TableHead>}
+                        {session?.user?.gstEnabled && !saudiEnabled && <TableHead className="font-semibold">{t("common.gstPercent")}</TableHead>}
                         {taxEnabled ? (
                           <>
-                            <TableHead className="text-right font-semibold">Gross Amount</TableHead>
-                            <TableHead className="text-right font-semibold">Net Amount</TableHead>
+                            <TableHead className="text-right font-semibold">{t("common.grossAmount")}</TableHead>
+                            <TableHead className="text-right font-semibold">{t("common.netAmount")}</TableHead>
                           </>
                         ) : (
-                          <TableHead className="text-right font-semibold">Line Total</TableHead>
+                          <TableHead className="text-right font-semibold">{t("common.lineTotal")}</TableHead>
                         )}
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
@@ -756,11 +758,11 @@ export default function NewPurchaseInvoicePage() {
                               <TableRow key={`${item.id}-imei`} className="bg-blue-50/50">
                                 <TableCell colSpan={99} className="p-3">
                                   <div className="space-y-2">
-                                    <p className="text-xs font-medium text-blue-700">IMEI Details ({item.imeiNumbers.length} device{item.imeiNumbers.length > 1 ? "s" : ""})</p>
+                                    <p className="text-xs font-medium text-blue-700">{t("mobileShop.deviceDetails")} ({item.imeiNumbers.length})</p>
                                     {item.imeiNumbers.map((imei, idx) => (
                                       <div key={idx} className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2 bg-white rounded border">
                                         <Input
-                                          placeholder={`IMEI 1 *`}
+                                          placeholder={`${t("mobileShop.imei1")} *`}
                                           value={imei.imei1}
                                           onChange={(e) => updateImeiField(item.id, idx, "imei1", e.target.value)}
                                           className="font-mono text-xs h-8"
@@ -768,26 +770,26 @@ export default function NewPurchaseInvoicePage() {
                                           required
                                         />
                                         <Input
-                                          placeholder="IMEI 2"
+                                          placeholder={t("mobileShop.imei2")}
                                           value={imei.imei2}
                                           onChange={(e) => updateImeiField(item.id, idx, "imei2", e.target.value)}
                                           className="font-mono text-xs h-8"
                                           maxLength={15}
                                         />
                                         <Input
-                                          placeholder="Brand"
+                                          placeholder={t("mobileShop.brand")}
                                           value={imei.brand}
                                           onChange={(e) => updateImeiField(item.id, idx, "brand", e.target.value)}
                                           className="text-xs h-8"
                                         />
                                         <Input
-                                          placeholder="Model"
+                                          placeholder={t("mobileShop.model")}
                                           value={imei.model}
                                           onChange={(e) => updateImeiField(item.id, idx, "model", e.target.value)}
                                           className="text-xs h-8"
                                         />
                                         <Input
-                                          placeholder="Color"
+                                          placeholder={t("mobileShop.color")}
                                           value={imei.color}
                                           onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
                                           className="text-xs h-8"
@@ -797,7 +799,7 @@ export default function NewPurchaseInvoicePage() {
                                           onValueChange={(value) => updateImeiField(item.id, idx, "storageCapacity", value)}
                                         >
                                           <SelectTrigger className="text-xs h-8">
-                                            <SelectValue placeholder="Storage" />
+                                            <SelectValue placeholder={t("mobileShop.storage")} />
                                           </SelectTrigger>
                                           <SelectContent>
                                             {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
@@ -810,7 +812,7 @@ export default function NewPurchaseInvoicePage() {
                                           onValueChange={(value) => updateImeiField(item.id, idx, "ram", value)}
                                         >
                                           <SelectTrigger className="text-xs h-8">
-                                            <SelectValue placeholder="RAM" />
+                                            <SelectValue placeholder={t("mobileShop.ram")} />
                                           </SelectTrigger>
                                           <SelectContent>
                                             {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
@@ -826,12 +828,12 @@ export default function NewPurchaseInvoicePage() {
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="NEW">New</SelectItem>
-                                            <SelectItem value="OPEN_BOX">Open Box</SelectItem>
-                                            <SelectItem value="GRADE_A">Grade A</SelectItem>
-                                            <SelectItem value="GRADE_B">Grade B</SelectItem>
-                                            <SelectItem value="GRADE_C">Grade C</SelectItem>
-                                            <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                                            <SelectItem value="NEW">{t("inventory.conditionNew")}</SelectItem>
+                                            <SelectItem value="OPEN_BOX">{t("inventory.conditionOpenBox")}</SelectItem>
+                                            <SelectItem value="GRADE_A">{t("inventory.conditionGradeA")}</SelectItem>
+                                            <SelectItem value="GRADE_B">{t("inventory.conditionGradeB")}</SelectItem>
+                                            <SelectItem value="GRADE_C">{t("inventory.conditionGradeC")}</SelectItem>
+                                            <SelectItem value="REFURBISHED">{t("inventory.conditionRefurbished")}</SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
@@ -868,7 +870,7 @@ export default function NewPurchaseInvoicePage() {
                               productComboRefs.current.delete(item.id);
                             }
                           }}>
-                            <Label className="text-xs text-slate-500 mb-1 block">Product *</Label>
+                            <Label className="text-xs text-slate-500 mb-1 block">{t("common.product")} *</Label>
                             <ProductCombobox
                               products={products}
                               value={item.productId}
@@ -894,7 +896,7 @@ export default function NewPurchaseInvoicePage() {
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label className="text-xs text-slate-500">Quantity *</Label>
+                            <Label className="text-xs text-slate-500">{t("common.quantity")} *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -908,7 +910,7 @@ export default function NewPurchaseInvoicePage() {
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-slate-500">Unit Cost *</Label>
+                            <Label className="text-xs text-slate-500">{t("common.unitCost")} *</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -922,7 +924,7 @@ export default function NewPurchaseInvoicePage() {
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-slate-500">Discount %</Label>
+                            <Label className="text-xs text-slate-500">{t("common.discountPercent")}</Label>
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
@@ -938,7 +940,7 @@ export default function NewPurchaseInvoicePage() {
                           </div>
                           {saudiEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">VAT %</Label>
+                              <Label className="text-xs text-slate-500">{t("common.vatPercent")}</Label>
                               <Input
                                 type="number"
                                 onFocus={(e) => e.target.select()}
@@ -955,7 +957,7 @@ export default function NewPurchaseInvoicePage() {
                           )}
                           {session?.user?.gstEnabled && !saudiEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">GST %</Label>
+                              <Label className="text-xs text-slate-500">{t("common.gstPercent")}</Label>
                               <Input
                                 type="number"
                                 onFocus={(e) => e.target.select()}
@@ -972,7 +974,7 @@ export default function NewPurchaseInvoicePage() {
                           )}
                           {session?.user?.multiUnitEnabled && (
                             <div>
-                              <Label className="text-xs text-slate-500">Unit</Label>
+                              <Label className="text-xs text-slate-500">{t("common.unit")}</Label>
                               <ItemUnitSelect
                                 value={item.unitId}
                                 onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
@@ -1003,11 +1005,11 @@ export default function NewPurchaseInvoicePage() {
                         {/* Mobile IMEI Section */}
                         {isImeiTracked && item.imeiNumbers.length > 0 && (
                           <div className="bg-blue-50/50 rounded-lg p-3 space-y-2">
-                            <p className="text-xs font-medium text-blue-700">IMEI Details ({item.imeiNumbers.length} device{item.imeiNumbers.length > 1 ? "s" : ""})</p>
+                            <p className="text-xs font-medium text-blue-700">{t("mobileShop.deviceDetails")} ({item.imeiNumbers.length})</p>
                             {item.imeiNumbers.map((imei, idx) => (
                               <div key={idx} className="grid grid-cols-1 gap-2 rounded border bg-white p-2">
                                 <Input
-                                  placeholder="IMEI 1 *"
+                                  placeholder={`${t("mobileShop.imei1")} *`}
                                   value={imei.imei1}
                                   onChange={(e) => updateImeiField(item.id, idx, "imei1", e.target.value)}
                                   className="font-mono text-xs h-8"
@@ -1015,26 +1017,26 @@ export default function NewPurchaseInvoicePage() {
                                   required
                                 />
                                 <Input
-                                  placeholder="IMEI 2"
+                                  placeholder={t("mobileShop.imei2")}
                                   value={imei.imei2}
                                   onChange={(e) => updateImeiField(item.id, idx, "imei2", e.target.value)}
                                   className="font-mono text-xs h-8"
                                   maxLength={15}
                                 />
                                 <Input
-                                  placeholder="Brand"
+                                  placeholder={t("mobileShop.brand")}
                                   value={imei.brand}
                                   onChange={(e) => updateImeiField(item.id, idx, "brand", e.target.value)}
                                   className="text-xs h-8"
                                 />
                                 <Input
-                                  placeholder="Model"
+                                  placeholder={t("mobileShop.model")}
                                   value={imei.model}
                                   onChange={(e) => updateImeiField(item.id, idx, "model", e.target.value)}
                                   className="text-xs h-8"
                                 />
                                 <Input
-                                  placeholder="Color"
+                                  placeholder={t("mobileShop.color")}
                                   value={imei.color}
                                   onChange={(e) => updateImeiField(item.id, idx, "color", e.target.value)}
                                   className="text-xs h-8"
@@ -1044,7 +1046,7 @@ export default function NewPurchaseInvoicePage() {
                                   onValueChange={(value) => updateImeiField(item.id, idx, "storageCapacity", value)}
                                 >
                                   <SelectTrigger className="text-xs h-8">
-                                    <SelectValue placeholder="Storage" />
+                                    <SelectValue placeholder={t("mobileShop.storage")} />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
@@ -1057,7 +1059,7 @@ export default function NewPurchaseInvoicePage() {
                                   onValueChange={(value) => updateImeiField(item.id, idx, "ram", value)}
                                 >
                                   <SelectTrigger className="text-xs h-8">
-                                    <SelectValue placeholder="RAM" />
+                                    <SelectValue placeholder={t("mobileShop.ram")} />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
@@ -1073,12 +1075,12 @@ export default function NewPurchaseInvoicePage() {
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="NEW">New</SelectItem>
-                                    <SelectItem value="OPEN_BOX">Open Box</SelectItem>
-                                    <SelectItem value="GRADE_A">Grade A</SelectItem>
-                                    <SelectItem value="GRADE_B">Grade B</SelectItem>
-                                    <SelectItem value="GRADE_C">Grade C</SelectItem>
-                                    <SelectItem value="REFURBISHED">Refurbished</SelectItem>
+                                    <SelectItem value="NEW">{t("inventory.conditionNew")}</SelectItem>
+                                    <SelectItem value="OPEN_BOX">{t("inventory.conditionOpenBox")}</SelectItem>
+                                    <SelectItem value="GRADE_A">{t("inventory.conditionGradeA")}</SelectItem>
+                                    <SelectItem value="GRADE_B">{t("inventory.conditionGradeB")}</SelectItem>
+                                    <SelectItem value="GRADE_C">{t("inventory.conditionGradeC")}</SelectItem>
+                                    <SelectItem value="REFURBISHED">{t("inventory.conditionRefurbished")}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -1095,18 +1097,18 @@ export default function NewPurchaseInvoicePage() {
             {/* Notes */}
             <Card>
               <CardHeader>
-                <CardTitle>Additional Information</CardTitle>
+                <CardTitle>{t("common.additionalInformation")}</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">{t("common.notes")}</Label>
                   <Textarea
                     id="notes"
                     value={formData.notes}
                     onChange={(e) =>
                       setFormData({ ...formData, notes: e.target.value })
                     }
-                    placeholder="Any additional notes..."
+                    placeholder={t("common.notesPlaceholder")}
                   />
                 </div>
               </CardContent>
@@ -1115,23 +1117,23 @@ export default function NewPurchaseInvoicePage() {
             {/* Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Summary</CardTitle>
+                <CardTitle>{t("common.summary")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
-                  <p className="font-medium">Stock Update</p>
+                  <p className="font-medium">{t("purchases.stockUpdate")}</p>
                   <p className="text-blue-600">
-                    Creating this purchase invoice will automatically add stock for the selected products.
+                    {t("purchases.stockUpdateCreateDesc")}
                   </p>
                 </div>
                 <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
                   <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
                     <div>
-                      <p className="text-sm font-medium">Apply Round Off</p>
+                      <p className="text-sm font-medium">{t("common.applyRoundOff")}</p>
                       <p className="text-xs text-slate-500">
                         {roundOffEnabled
-                          ? "Use organization round off rule on the final total."
-                          : "Enable a round off mode in Settings > Company."}
+                          ? t("purchases.roundOffRuleEnabled")
+                          : t("purchases.roundOffRuleDisabled")}
                       </p>
                     </div>
                     <Switch
@@ -1141,18 +1143,18 @@ export default function NewPurchaseInvoicePage() {
                     />
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span>{t("common.subtotal")}</span>
                     <span key={`summary-subtotal:${subtotal.toFixed(2)}`}>{symbol}{subtotal.toLocaleString("en-IN")}</span>
                   </div>
                   {tax > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>{saudiEnabled ? "VAT (ضريبة القيمة المضافة)" : "GST"}</span>
+                      <span>{saudiEnabled ? t("purchases.vatLabel") : t("common.gst")}</span>
                       <span key={`summary-tax:${tax.toFixed(2)}`}>{symbol}{tax.toLocaleString("en-IN")}</span>
                     </div>
                   )}
                   {applyRoundOff && roundOffAmount !== 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>Round Off</span>
+                      <span>{t("common.roundOff")}</span>
                       <span key={`summary-roundoff:${roundOffAmount.toFixed(2)}`}>
                         {roundOffAmount >= 0 ? "+" : ""}
                         {symbol}{roundOffAmount.toFixed(2)}
@@ -1160,7 +1162,7 @@ export default function NewPurchaseInvoicePage() {
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Total</span>
+                    <span>{t("common.total")}</span>
                     <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toLocaleString("en-IN")}</span>
                   </div>
                 </div>
@@ -1170,7 +1172,7 @@ export default function NewPurchaseInvoicePage() {
                     className="w-full sm:w-auto"
                     disabled={isSubmitting || !formData.supplierId || !formData.dueDate}
                   >
-                    {isSubmitting ? "Creating..." : "Create Purchase Invoice"}
+                    {isSubmitting ? t("common.creating") : t("purchases.createInvoice")}
                   </Button>
                 </div>
               </CardContent>

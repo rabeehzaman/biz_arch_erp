@@ -18,6 +18,7 @@ import { Plus, Trash2, Users, Warehouse, Loader2, ShieldCheck } from "lucide-rea
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 interface AccessRow {
     id: string;
@@ -42,6 +43,7 @@ interface WarehouseItem {
 }
 
 export function UserWarehouseSettings() {
+    const { t } = useLanguage();
     const [access, setAccess] = useState<AccessRow[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [warehouses, setWarehouses] = useState<WarehouseItem[]>([]);
@@ -63,7 +65,7 @@ export function UserWarehouseSettings() {
             if (usrRes.ok) setUsers(await usrRes.json());
             if (whRes.ok) setWarehouses(await whRes.json());
         } catch {
-            toast.error("Failed to load user access data");
+            toast.error(t("userWarehouse.loadFailed"));
         } finally {
             setLoading(false);
         }
@@ -78,7 +80,7 @@ export function UserWarehouseSettings() {
 
     const save = async () => {
         if (!form.userId || !form.warehouseId) {
-            toast.error("User and warehouse are required");
+            toast.error(t("userWarehouse.userAndWarehouseRequired"));
             return;
         }
         setSaving(true);
@@ -89,15 +91,15 @@ export function UserWarehouseSettings() {
                 body: JSON.stringify(form),
             });
             if (res.ok) {
-                toast.success("Access granted");
+                toast.success(t("userWarehouse.accessGranted"));
                 setDialogOpen(false);
                 fetchAll();
             } else {
                 const d = await res.json();
-                toast.error(d.error || "Failed to grant access");
+                toast.error(d.error || t("userWarehouse.grantFailed"));
             }
         } catch {
-            toast.error("Failed to grant access");
+            toast.error(t("userWarehouse.grantFailed"));
         } finally {
             setSaving(false);
         }
@@ -105,14 +107,14 @@ export function UserWarehouseSettings() {
 
     const revoke = (row: AccessRow) => {
         setConfirmDialog({
-            title: "Revoke Access",
+            title: t("userWarehouse.revokeAccess"),
             description: `Remove ${row.user.name}'s access to ${row.warehouse?.name ?? "this warehouse"}?`,
             onConfirm: async () => {
                 try {
                     const res = await fetch(`/api/user-warehouse-access?id=${row.id}`, { method: "DELETE" });
-                    if (res.ok) { toast.success("Access revoked"); fetchAll(); }
-                    else { const d = await res.json(); toast.error(d.error || "Failed to revoke"); }
-                } catch { toast.error("Failed to revoke access"); }
+                    if (res.ok) { toast.success(t("userWarehouse.accessRevoked")); fetchAll(); }
+                    else { const d = await res.json(); toast.error(d.error || t("userWarehouse.grantFailed")); }
+                } catch { toast.error(t("userWarehouse.grantFailed")); }
             },
         });
     };
@@ -132,12 +134,12 @@ export function UserWarehouseSettings() {
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-sm text-slate-500">
-                        Assign users to specific warehouses. Users with no assignments can access all warehouses.
+                        {t("userWarehouse.description")}
                     </p>
                 </div>
                 <Button onClick={openDialog}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Grant Access
+                    {t("userWarehouse.grantAccess")}
                 </Button>
             </div>
 
@@ -146,25 +148,24 @@ export function UserWarehouseSettings() {
             ) : access.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-slate-50">
                     <ShieldCheck className="h-12 w-12 text-slate-300 mb-3" />
-                    <h3 className="font-semibold text-slate-700">No access assignments</h3>
+                    <h3 className="font-semibold text-slate-700">{t("userWarehouse.noAssignments")}</h3>
                     <p className="text-sm text-slate-500 mt-1">
-                        All users currently have unrestricted access to all warehouses.<br />
-                        Grant specific access to restrict users to certain warehouses.
+                        {t("userWarehouse.noAssignmentsDesc")}
                     </p>
                     <Button onClick={openDialog} className="mt-4">
                         <Plus className="mr-2 h-4 w-4" />
-                        Grant First Access
+                        {t("userWarehouse.grantFirstAccess")}
                     </Button>
                 </div>
             ) : (
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Branch</TableHead>
-                            <TableHead>Warehouse</TableHead>
-                            <TableHead className="text-center">Default</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{t("common.user")}</TableHead>
+                            <TableHead>{t("common.branch")}</TableHead>
+                            <TableHead>{t("common.warehouse")}</TableHead>
+                            <TableHead className="text-center">{t("common.default")}</TableHead>
+                            <TableHead className="text-right">{t("common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -219,13 +220,13 @@ export function UserWarehouseSettings() {
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Grant Warehouse Access</DialogTitle>
+                        <DialogTitle>{t("userWarehouse.grantWarehouseAccess")}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label>User *</Label>
+                            <Label>{t("common.user")} *</Label>
                             <Select value={form.userId} onValueChange={(v) => setForm({ ...form, userId: v })}>
-                                <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder={t("userWarehouse.selectUser")} /></SelectTrigger>
                                 <SelectContent>
                                     {users.map((u) => (
                                         <SelectItem key={u.id} value={u.id}>
@@ -236,9 +237,9 @@ export function UserWarehouseSettings() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Warehouse *</Label>
+                            <Label>{t("common.warehouse")} *</Label>
                             <Select value={form.warehouseId} onValueChange={(v) => setForm({ ...form, warehouseId: v })}>
-                                <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder={t("inventory.selectWarehouse")} /></SelectTrigger>
                                 <SelectContent>
                                     {warehouses.map((w) => (
                                         <SelectItem key={w.id} value={w.id}>
@@ -255,15 +256,15 @@ export function UserWarehouseSettings() {
                                 onCheckedChange={(v) => setForm({ ...form, isDefault: v })}
                             />
                             <Label htmlFor="isDefault" className="cursor-pointer">
-                                Set as default warehouse for this user
+                                {t("userWarehouse.setAsDefault")}
                             </Label>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                        <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
                         <Button onClick={save} disabled={saving}>
                             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Grant Access
+                            {t("userWarehouse.grantAccess")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

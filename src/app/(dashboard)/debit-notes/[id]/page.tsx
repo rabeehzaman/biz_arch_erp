@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 
 interface DebitNote {
   id: string;
@@ -69,6 +70,7 @@ export default function DebitNoteDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { symbol } = useCurrency();
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchDebitNote();
@@ -83,7 +85,7 @@ export default function DebitNoteDetailPage() {
       const data = await response.json();
       setDebitNote(data);
     } catch (error) {
-      toast.error("Failed to load debit note");
+      toast.error(t("debitNotes.failedToLoad"));
       console.error("Failed to fetch debit note:", error);
     } finally {
       setIsLoading(false);
@@ -92,18 +94,18 @@ export default function DebitNoteDetailPage() {
 
   const handleDelete = async () => {
     setConfirmDialog({
-      title: "Delete Debit Note",
-      description: "Are you sure you want to delete this debit note? This will restore supplier balance and restore stock.",
+      title: t("accounting.deleteDebitNote"),
+      description: t("debitNotes.deleteConfirmDesc"),
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/debit-notes/${params.id}`, {
             method: "DELETE",
           });
           if (!response.ok) throw new Error("Failed to delete");
-          toast.success("Debit note deleted");
+          toast.success(t("debitNotes.debitNoteDeleted"));
           router.push("/debit-notes");
         } catch (error) {
-          toast.error("Failed to delete debit note");
+          toast.error(t("debitNotes.failedToDelete"));
           console.error("Failed to delete debit note:", error);
         }
       },
@@ -115,7 +117,7 @@ export default function DebitNoteDetailPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500">Loading debit note...</p>
+          <p className="text-slate-500">{t("debitNotes.loadingDebitNote")}</p>
         </div>
       </div>
     );
@@ -126,9 +128,9 @@ export default function DebitNoteDetailPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500">Debit note not found</p>
+          <p className="text-slate-500">{t("debitNotes.notFound")}</p>
           <Link href="/debit-notes" className="mt-4 inline-block">
-            <Button variant="outline">Back to Debit Notes</Button>
+            <Button variant="outline">{t("debitNotes.backToDebitNotes")}</Button>
           </Link>
         </div>
       </div>
@@ -149,19 +151,19 @@ export default function DebitNoteDetailPage() {
               <h2 className="truncate text-lg font-bold text-slate-900 sm:text-2xl">
                 {debitNote.debitNoteNumber}
               </h2>
-              <p className="text-sm text-slate-500">Debit Note Details</p>
+              <p className="text-sm text-slate-500">{t("debitNotes.debitNoteDetails")}</p>
             </div>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap">
             <Link href={`/debit-notes/${debitNote.id}/edit`} className="col-span-1 sm:w-auto">
               <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
                 <Edit className="h-4 w-4 sm:mr-2" />
-                Edit
+                {t("common.edit")}
               </Button>
             </Link>
             <Button variant="destructive" size="sm" onClick={handleDelete} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               <Trash2 className="h-4 w-4 sm:mr-2" />
-              Delete
+              {t("common.delete")}
             </Button>
           </div>
         </div>
@@ -169,16 +171,16 @@ export default function DebitNoteDetailPage() {
         <div className="grid gap-6 sm:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Supplier Information</CardTitle>
+              <CardTitle>{t("common.supplierInformation")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div>
-                <div className="text-sm text-slate-500">Supplier Name</div>
+                <div className="text-sm text-slate-500">{t("suppliers.supplierName")}</div>
                 <div className="font-medium">{debitNote.supplier.name}</div>
               </div>
               {debitNote.supplier.email && (
                 <div>
-                  <div className="text-sm text-slate-500">Email</div>
+                  <div className="text-sm text-slate-500">{t("common.email")}</div>
                   <div className="font-medium">{debitNote.supplier.email}</div>
                 </div>
               )}
@@ -187,11 +189,11 @@ export default function DebitNoteDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Debit Note Information</CardTitle>
+              <CardTitle>{t("debitNotes.debitNoteInformation")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div>
-                <div className="text-sm text-slate-500">Issue Date</div>
+                <div className="text-sm text-slate-500">{t("sales.issueDate")}</div>
                 <div className="font-medium">
                   {format(new Date(debitNote.issueDate), "dd MMMM yyyy")}
                 </div>
@@ -199,7 +201,7 @@ export default function DebitNoteDetailPage() {
               {debitNote.purchaseInvoice && (
                 <div>
                   <div className="text-sm text-slate-500">
-                    Original Purchase Invoice
+                    {t("debitNotes.originalPurchaseInvoice")}
                   </div>
                   <Link
                     href={`/purchase-invoices/${debitNote.purchaseInvoice.id}`}
@@ -211,19 +213,19 @@ export default function DebitNoteDetailPage() {
               )}
               {debitNote.reason && (
                 <div>
-                  <div className="text-sm text-slate-500">Reason</div>
+                  <div className="text-sm text-slate-500">{t("debitNotes.reason")}</div>
                   <div className="font-medium">{debitNote.reason}</div>
                 </div>
               )}
               {debitNote.branch && (
                 <div>
-                  <div className="text-sm text-slate-500">Branch</div>
+                  <div className="text-sm text-slate-500">{t("common.branch")}</div>
                   <div className="font-medium">{debitNote.branch.name}</div>
                 </div>
               )}
               {debitNote.warehouse && (
                 <div>
-                  <div className="text-sm text-slate-500">Warehouse</div>
+                  <div className="text-sm text-slate-500">{t("common.warehouse")}</div>
                   <div className="font-medium">{debitNote.warehouse.name}</div>
                 </div>
               )}
@@ -233,18 +235,18 @@ export default function DebitNoteDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Items</CardTitle>
+            <CardTitle>{t("sales.items")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="hidden sm:block">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Cost</TableHead>
-                    <TableHead className="text-right">Discount</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>{t("common.description")}</TableHead>
+                    <TableHead className="text-right">{t("common.quantity")}</TableHead>
+                    <TableHead className="text-right">{t("common.unitCost")}</TableHead>
+                    <TableHead className="text-right">{t("common.discount")}</TableHead>
+                    <TableHead className="text-right">{t("common.total")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -255,7 +257,7 @@ export default function DebitNoteDetailPage() {
                           <div className="font-medium">{item.description}</div>
                           {item.product?.sku && (
                             <div className="text-sm text-slate-500">
-                              SKU: {item.product.sku}
+                              {t("products.sku")}: {item.product.sku}
                             </div>
                           )}
                         </div>
@@ -279,13 +281,13 @@ export default function DebitNoteDetailPage() {
                 <div key={item.id} className="p-3 space-y-1">
                   <div className="font-medium text-sm">{item.description}</div>
                   {item.product?.sku && (
-                    <div className="text-xs text-slate-500">SKU: {item.product.sku}</div>
+                    <div className="text-xs text-slate-500">{t("products.sku")}: {item.product.sku}</div>
                   )}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
-                    <span>Qty: {item.quantity}</span>
-                    <span>Cost: {symbol}{Number(item.unitCost).toLocaleString("en-IN")}</span>
+                    <span>{t("common.qty")}: {item.quantity}</span>
+                    <span>{t("common.cost")}: {symbol}{Number(item.unitCost).toLocaleString("en-IN")}</span>
                     {Number(item.discount) > 0 && (
-                      <span className="text-green-600">Discount: {item.discount}%</span>
+                      <span className="text-green-600">{t("common.discount")}: {item.discount}%</span>
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
@@ -297,36 +299,36 @@ export default function DebitNoteDetailPage() {
 
             <div className="ml-auto mt-4 max-w-full space-y-2 sm:max-w-xs">
               <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
+                <span>{t("common.subtotal")}:</span>
                 <span>{symbol}{Number(debitNote.subtotal).toLocaleString("en-IN")}</span>
               </div>
               {Number(debitNote.totalCgst) > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
-                  <span>CGST:</span>
+                  <span>{t("common.cgst")}:</span>
                   <span>{symbol}{Number(debitNote.totalCgst).toLocaleString("en-IN")}</span>
                 </div>
               )}
               {Number(debitNote.totalSgst) > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
-                  <span>SGST:</span>
+                  <span>{t("common.sgst")}:</span>
                   <span>{symbol}{Number(debitNote.totalSgst).toLocaleString("en-IN")}</span>
                 </div>
               )}
               {Number(debitNote.totalIgst) > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
-                  <span>IGST:</span>
+                  <span>{t("common.igst")}:</span>
                   <span>{symbol}{Number(debitNote.totalIgst).toLocaleString("en-IN")}</span>
                 </div>
               )}
               {Number(debitNote.totalCgst) === 0 && Number(debitNote.totalSgst) === 0 && Number(debitNote.totalIgst) === 0 && Number(debitNote.taxAmount) > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
-                  <span>Tax:</span>
+                  <span>{t("common.tax")}:</span>
                   <span>{symbol}{Number(debitNote.taxAmount).toLocaleString("en-IN")}</span>
                 </div>
               )}
               {debitNote.applyRoundOff && Number(debitNote.roundOffAmount) !== 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
-                  <span>Round Off:</span>
+                  <span>{t("common.roundOff")}:</span>
                   <span>
                     {Number(debitNote.roundOffAmount) >= 0 ? "+" : ""}
                     {symbol}{Number(debitNote.roundOffAmount).toFixed(2)}
@@ -334,7 +336,7 @@ export default function DebitNoteDetailPage() {
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
+                <span>{t("common.total")}:</span>
                 <span className="text-orange-600">
                   {symbol}{Number(debitNote.total).toLocaleString("en-IN")}
                 </span>
@@ -346,7 +348,7 @@ export default function DebitNoteDetailPage() {
         {debitNote.notes && (
           <Card>
             <CardHeader>
-              <CardTitle>Notes</CardTitle>
+              <CardTitle>{t("common.notes")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-slate-700 whitespace-pre-wrap">{debitNote.notes}</p>
