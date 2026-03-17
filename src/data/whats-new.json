@@ -1,0 +1,169 @@
+[
+  {
+    "version": "2026-03-17",
+    "date": "2026-03-17",
+    "lastCommit": "33dd78b",
+    "entries": [
+      {
+        "type": "feature",
+        "scope": "admin",
+        "title": "India vs Saudi edition system",
+        "description": "Organizations can now be configured as India or Saudi editions with market-specific features, currencies, and tax settings cleanly separated."
+      },
+      {
+        "type": "feature",
+        "scope": "admin",
+        "title": "What's New changelog page",
+        "description": "Super admins can now view all recent features, fixes, and improvements in a beautiful timeline under the admin area."
+      }
+    ]
+  },
+  {
+    "version": "2026-03-17",
+    "date": "2026-03-17",
+    "lastCommit": "8a34ba6",
+    "entries": [
+      {
+        "type": "feature",
+        "scope": "i18n",
+        "title": "Complete Arabic & English internationalization",
+        "description": "All pages and components now support Arabic and English with full RTL layout."
+      },
+      {
+        "type": "feature",
+        "scope": "reports",
+        "title": "Unified Ledger upgrade with PDF download & date filtering",
+        "description": "Added PDF export, date range filtering, and Chart of Accounts link to the Unified Ledger."
+      },
+      {
+        "type": "feature",
+        "scope": "reports",
+        "title": "PDF download for Cash Book, Bank Book & Cash & Bank Summary",
+        "description": "All cash and bank reports now support PDF export."
+      },
+      {
+        "type": "fix",
+        "scope": "admin",
+        "title": "Cascade-delete all org data on organization deletion",
+        "description": "Deleting an organization now properly removes all related data."
+      },
+      {
+        "type": "fix",
+        "scope": "admin",
+        "title": "Transfer PDF hide cost setting",
+        "description": "Added option to hide cost information on stock transfer PDFs."
+      },
+      {
+        "type": "fix",
+        "scope": "pdf",
+        "title": "Server-safe translate module for PDF rendering",
+        "description": "Extracted translate() to a server-compatible module for reliable PDF generation."
+      }
+    ]
+  },
+  {
+    "version": "2026-03-14",
+    "date": "2026-03-14",
+    "lastCommit": "3fe1584",
+    "entries": [
+      {
+        "type": "fix",
+        "scope": "purchases",
+        "title": "VAT support for purchase invoice detail page and PDF",
+        "description": "Purchase invoices now correctly display VAT details in both the UI and PDF exports."
+      },
+      {
+        "type": "fix",
+        "scope": "build",
+        "title": "Resolved all ESLint warnings and errors",
+        "description": "Clean build with zero warnings."
+      },
+      {
+        "type": "feature",
+        "scope": "pdf",
+        "title": "Signature fields on Arabic transfer PDF",
+        "description": "Added sender, driver, and receiver signature fields to the Arabic stock transfer PDF."
+      },
+      {
+        "type": "fix",
+        "scope": "pdf",
+        "title": "Local Arial font for PDF rendering",
+        "description": "Switched from CDN Cairo to local Arial font for faster and more reliable PDF generation."
+      }
+    ]
+  },
+  {
+    "version": "2026-03-10",
+    "date": "2026-03-10",
+    "lastCommit": "6a6650c",
+    "entries": [
+      {
+        "type": "feature",
+        "scope": "transfers",
+        "title": "Edit completed stock transfers with FIFO undo & redo",
+        "description": "Completed transfers can now be edited — FIFO cost calculations are automatically undone and recalculated."
+      },
+      {
+        "type": "feature",
+        "scope": "transfers",
+        "title": "Dedicated new-transfer page with Arabic PDF option",
+        "description": "New full-page transfer creation form with Arabic PDF layout support."
+      },
+      {
+        "type": "fix",
+        "scope": "transfers",
+        "title": "Auto-add row, edit page & Arabic PDF fixes",
+        "description": "Multiple UX improvements to stock transfer editing."
+      },
+      {
+        "type": "fix",
+        "scope": "pos",
+        "title": "POS category tabs wrap to two lines",
+        "description": "Category tabs now wrap instead of scrolling horizontally."
+      },
+      {
+        "type": "fix",
+        "scope": "pos",
+        "title": "Register cash account fallback on session close",
+        "description": "POS sessions now reliably fall back to the register's configured cash account."
+      }
+    ]
+  },
+  {
+    "version": "2026-03-05",
+    "date": "2026-03-05",
+    "lastCommit": "02b5733",
+    "entries": [
+      {
+        "type": "feature",
+        "scope": "pos",
+        "title": "Sales return / credit note flow from POS terminal",
+        "description": "POS operators can now process sales returns directly from the terminal, creating credit notes automatically."
+      },
+      {
+        "type": "feature",
+        "scope": "pos",
+        "title": "Previous orders sheet with per-receipt reprint",
+        "description": "View and reprint receipts from past POS sessions."
+      },
+      {
+        "type": "fix",
+        "scope": "pos",
+        "title": "POS return cash tracking, barcode scanning & round-off",
+        "description": "Fixed cash tracking during returns, barcode scanning accuracy, and round-off calculations."
+      },
+      {
+        "type": "fix",
+        "scope": "pos",
+        "title": "Tax-inclusive pricing in POS returns",
+        "description": "Return calculations now correctly handle tax-inclusive pricing mode."
+      },
+      {
+        "type": "fix",
+        "scope": "pos",
+        "title": "Cash drawer opens on every sale",
+        "description": "Cash drawer now reliably opens regardless of payment method."
+      }
+    ]
+  }
+]
