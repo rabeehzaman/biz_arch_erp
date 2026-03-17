@@ -40,6 +40,7 @@ import {
   Info,
   RefreshCw,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,7 @@ const mobileShopNavigation = [
 
 const superadminNavigation = [
   { nameKey: "nav.organizations", href: "/admin/organizations", icon: Building2 },
+  { nameKey: "nav.whatsNew", href: "/admin/whats-new", icon: Sparkles },
 ];
 
 // Map from English name to nameKey for sidebar filtering (backward compat with API)
