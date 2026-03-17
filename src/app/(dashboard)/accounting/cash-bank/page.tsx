@@ -24,7 +24,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Wallet, ArrowRightLeft } from "lucide-react";
+import { Plus, Wallet, ArrowRightLeft, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
@@ -153,6 +153,12 @@ export default function CashBankPage() {
               <p className="text-slate-500">Manage cash and bank accounts</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
+              <Link href="/reports/cash-bank-summary">
+                <Button variant="outline" className="w-full sm:w-auto">
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t("reports.summaryReport")}
+                </Button>
+              </Link>
               <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full sm:w-auto">
@@ -327,9 +333,18 @@ export default function CashBankPage() {
                       <p className="text-xs text-slate-400 mt-1">
                         {account._count.transactions} transactions
                       </p>
-                      {account.isDefault && (
-                        <Badge variant="secondary" className="mt-2">Default</Badge>
-                      )}
+                      <div className="mt-3 flex items-center gap-2">
+                        {account.isDefault && (
+                          <Badge variant="secondary">Default</Badge>
+                        )}
+                        <Link
+                          href={`/reports/${account.accountSubType === "CASH" ? "cash-book" : "bank-book"}?accountId=${account.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="ml-auto text-xs text-blue-600 hover:underline"
+                        >
+                          {t("reports.viewReport")}
+                        </Link>
+                      </div>
                     </CardContent>
                   </Card>
                 </Link>

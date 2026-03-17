@@ -6,7 +6,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft } from "lucide-react";
+import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ import { CustomerSelect } from "@/components/pos/customer-select";
 import { PaymentPanel } from "@/components/pos/payment-panel";
 import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
-import { POSReturnDialog } from "@/components/pos/pos-return-dialog";
+import { ReturnPanel } from "@/components/pos/return-panel";
 import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
 import {
   cacheReceiptArtifactWithConfig,
@@ -322,7 +322,7 @@ function POSTerminalContent() {
   // Dialog state
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showHeldSheet, setShowHeldSheet] = useState(false);
-  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [isReturnMode, setIsReturnMode] = useState(false);
   const [showPreviousOrdersSheet, setShowPreviousOrdersSheet] = useState(false);
   const [closingCash, setClosingCash] = useState("");
   const [closePinCode, setClosePinCode] = useState("");
@@ -1022,15 +1022,26 @@ function POSTerminalContent() {
     setShowHeldSheet(true);
   }, []);
 
-  const openReturnDialog = useCallback(() => {
-    setShowReturnDialog(true);
+  const toggleReturnMode = useCallback(() => {
+    setIsReturnMode((prev) => !prev);
+    dispatchCart({ type: "CLEAR" });
+    setSelectedCustomer(null);
+    setHeldOrderId(null);
+    setView("cart");
+    setMobileView("products");
   }, []);
 
   const openPreviousOrders = useCallback(() => {
     setShowPreviousOrdersSheet(true);
   }, []);
 
-  const handleReturnComplete = useCallback(() => {
+  const handleReturnDone = useCallback(() => {
+    dispatchCart({ type: "CLEAR" });
+    setIsReturnMode(false);
+    setSelectedCustomer(null);
+    setHeldOrderId(null);
+    setView("cart");
+    setMobileView("products");
     void Promise.all([mutateSession(), mutateProducts()]);
   }, [mutateSession, mutateProducts]);
 
@@ -1091,7 +1102,8 @@ function POSTerminalContent() {
         onBackToSessions={backToSessions}
         onReprintReceipt={lastReceiptData && !isPendingReceipt ? reprintReceipt : undefined}
         isReprintLoading={isPendingReceipt}
-        onReturn={openReturnDialog}
+        onReturn={toggleReturnMode}
+        isReturnMode={isReturnMode}
         onPreviousOrders={openPreviousOrders}
       />
 
@@ -1135,8 +1147,11 @@ function POSTerminalContent() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h2 className="text-lg font-bold">
-              {mobileView === "payment" ? t("pos.checkout") : t("pos.cart")}
+            <h2 className={cn("text-lg font-bold", isReturnMode && "text-red-600")}>
+              {isReturnMode
+                ? t("pos.salesReturn")
+                : (mobileView === "payment" ? t("pos.checkout") : t("pos.cart"))
+              }
             </h2>
             {cart.length > 0 && (
               <div className="ml-auto text-sm font-bold text-primary">
@@ -1154,6 +1169,15 @@ function POSTerminalContent() {
                   onSelect={setSelectedCustomer}
                 />
               </div>
+
+              {/* Return Mode Banner */}
+              {isReturnMode && (
+                <div className="mx-3 mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-red-600 shrink-0" />
+                  <span className="text-sm font-medium text-red-700">{t("pos.returnMode")}</span>
+                  <span className="text-xs text-red-500 ml-auto">{t("pos.addItemsToReturn")}</span>
+                </div>
+              )}
 
               {/* Cart Items */}
               <div
@@ -1185,14 +1209,16 @@ function POSTerminalContent() {
                 >
                   <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={holdOrder}
-                    >
-                      <PauseCircle className="h-4 w-4 mr-1" />
-                      {t("pos.holdOrder").split(" ")[0]}
-                    </Button>
+                    {!isReturnMode && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={holdOrder}
+                      >
+                        <PauseCircle className="h-4 w-4 mr-1" />
+                        {t("pos.holdOrder").split(" ")[0]}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="flex-1"
@@ -1203,18 +1229,48 @@ function POSTerminalContent() {
                     </Button>
                   </div>
                   <Button
-                    className="w-full h-12 text-lg font-bold"
+                    className={cn(
+                      "w-full h-12 text-lg font-bold",
+                      isReturnMode && "bg-red-600 hover:bg-red-700"
+                    )}
                     onClick={() => {
                       setView("payment");
                       setMobileView("payment");
                     }}
                   >
-                    {t("pos.payNow")}{" "}
-                    {fmt(cartTotals.total)}
+                    {isReturnMode ? (
+                      <>
+                        <RotateCcw className="h-5 w-5 mr-2" />
+                        {t("pos.processReturn")} {fmt(cartTotals.total)}
+                      </>
+                    ) : (
+                      <>
+                        {t("pos.payNow")} {fmt(cartTotals.total)}
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
             </>
+          ) : isReturnMode ? (
+            <ReturnPanel
+              items={cart}
+              sessionId={posSession.id}
+              branchId={posSession.branch?.id}
+              warehouseId={posSession.warehouse?.id}
+              customerId={selectedCustomer?.id}
+              customerName={selectedCustomer?.name}
+              companySettings={companySettings}
+              receiptPrintingEnabled={receiptPrintingEnabled}
+              isSaudiOrg={isSaudiOrg}
+              isTaxInclusive={taxInclusive}
+              roundOffMode={roundOffMode}
+              onBack={() => {
+                setView("cart");
+                setMobileView("cart");
+              }}
+              onComplete={handleReturnDone}
+            />
           ) : (
             <PaymentPanel
               total={cartTotals.total}
@@ -1243,21 +1299,6 @@ function POSTerminalContent() {
           </button>
         )}
       </div>
-
-      {/* POS Return Dialog */}
-      <POSReturnDialog
-        open={showReturnDialog}
-        onOpenChange={setShowReturnDialog}
-        sessionId={posSession.id}
-        branchId={posSession.branch?.id}
-        warehouseId={posSession.warehouse?.id}
-        products={products}
-        onComplete={handleReturnComplete}
-        companySettings={companySettings}
-        receiptPrintingEnabled={receiptPrintingEnabled}
-        isSaudiOrg={isSaudiOrg}
-        isTaxInclusive={taxInclusive}
-      />
 
       {/* Close Session Dialog */}
       <Dialog

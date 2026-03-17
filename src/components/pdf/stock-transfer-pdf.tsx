@@ -45,6 +45,7 @@ interface StockTransferPDFProps {
     destinationWarehouse: { name: string };
     items: TransferItemPDF[];
   };
+  hideCost?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -347,7 +348,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
   },
 });
 
-export function StockTransferPDF({ organization, transfer }: StockTransferPDFProps) {
+export function StockTransferPDF({ organization, transfer, hideCost }: StockTransferPDFProps) {
   const currency = organization.currency || "INR";
   const brandColor = safeBrandColor(organization.brandColor);
   const styles = buildStyles(brandColor);
@@ -427,12 +428,12 @@ export function StockTransferPDF({ organization, transfer }: StockTransferPDFPro
         <Text style={styles.sectionTitle}>Items</Text>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.colIndex]}>#</Text>
-            <Text style={[styles.tableHeaderText, styles.colProduct]}>Product</Text>
-            <Text style={[styles.tableHeaderText, styles.colSku]}>SKU</Text>
-            <Text style={[styles.tableHeaderText, styles.colQty]}>Qty</Text>
-            <Text style={[styles.tableHeaderText, styles.colUnitCost]}>Unit Cost</Text>
-            <Text style={[styles.tableHeaderText, styles.colLineTotal]}>Line Total</Text>
+            <Text style={[styles.tableHeaderText, hideCost ? { width: "10%" } : styles.colIndex]}>#</Text>
+            <Text style={[styles.tableHeaderText, hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct]}>Product</Text>
+            <Text style={[styles.tableHeaderText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>SKU</Text>
+            <Text style={[styles.tableHeaderText, hideCost ? { width: "15%", textAlign: "right" as const } : styles.colQty]}>Qty</Text>
+            {!hideCost && <Text style={[styles.tableHeaderText, styles.colUnitCost]}>Unit Cost</Text>}
+            {!hideCost && <Text style={[styles.tableHeaderText, styles.colLineTotal]}>Line Total</Text>}
           </View>
 
           {transfer.items.length === 0 ? (
@@ -444,8 +445,8 @@ export function StockTransferPDF({ organization, transfer }: StockTransferPDFPro
                 style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}
                 wrap={false}
               >
-                <Text style={[styles.cellText, styles.colIndex]}>{index + 1}</Text>
-                <View style={styles.colProduct}>
+                <Text style={[styles.cellText, hideCost ? { width: "10%" } : styles.colIndex]}>{index + 1}</Text>
+                <View style={hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct}>
                   <Text style={styles.productName}>{item.product.name}</Text>
                   {item.product.arabicName && item.product.arabicName !== item.product.name && (
                     <Text style={styles.productSubtext}>{item.product.arabicName}</Text>
@@ -454,19 +455,23 @@ export function StockTransferPDF({ organization, transfer }: StockTransferPDFPro
                     <Text style={styles.productSubtext}>{item.notes}</Text>
                   )}
                 </View>
-                <Text style={[styles.cellText, styles.colSku]}>{item.product.sku || "-"}</Text>
-                <Text style={[styles.cellTextRight, styles.colQty]}>
+                <Text style={[styles.cellText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>{item.product.sku || "-"}</Text>
+                <Text style={[styles.cellTextRight, hideCost ? { width: "15%", textAlign: "right" as const } : styles.colQty]}>
                   {item.quantity.toLocaleString("en-IN", {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
                   })}
                 </Text>
-                <Text style={[styles.cellTextRight, styles.colUnitCost]}>
-                  {formatAmount(item.unitCost, currency)}
-                </Text>
-                <Text style={[styles.cellTextRight, styles.colLineTotal]}>
-                  {formatAmount(item.quantity * item.unitCost, currency)}
-                </Text>
+                {!hideCost && (
+                  <Text style={[styles.cellTextRight, styles.colUnitCost]}>
+                    {formatAmount(item.unitCost, currency)}
+                  </Text>
+                )}
+                {!hideCost && (
+                  <Text style={[styles.cellTextRight, styles.colLineTotal]}>
+                    {formatAmount(item.quantity * item.unitCost, currency)}
+                  </Text>
+                )}
               </View>
             ))
           )}
@@ -495,11 +500,15 @@ export function StockTransferPDF({ organization, transfer }: StockTransferPDFPro
                 })}
               </Text>
             </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Transfer Value</Text>
-              <Text style={styles.summaryValue}>{formatAmount(totalValue, currency)}</Text>
-            </View>
+            {!hideCost && (
+              <>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Transfer Value</Text>
+                  <Text style={styles.summaryValue}>{formatAmount(totalValue, currency)}</Text>
+                </View>
+              </>
+            )}
           </View>
         </View>
 

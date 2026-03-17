@@ -45,6 +45,7 @@ export interface StockTransferPDFProps {
     destinationWarehouse: { name: string };
     items: TransferItemPDF[];
   };
+  hideCost?: boolean;
 }
 
 const STATUS_LABELS_AR: Record<string, string> = {
@@ -384,7 +385,7 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
   },
 });
 
-export function StockTransferArabicPDF({ organization, transfer }: StockTransferPDFProps) {
+export function StockTransferArabicPDF({ organization, transfer, hideCost }: StockTransferPDFProps) {
   const currency = organization.currency || "INR";
   const brandColor = safeBrandColor(organization.brandColor);
   const styles = buildStyles(brandColor);
@@ -468,12 +469,12 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
         <Text style={styles.sectionTitle}>البنود</Text>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.colLineTotal]}>الإجمالي</Text>
-            <Text style={[styles.tableHeaderText, styles.colUnitCost]}>تكلفة الوحدة</Text>
-            <Text style={[styles.tableHeaderText, styles.colQty]}>الكمية</Text>
-            <Text style={[styles.tableHeaderText, styles.colSku]}>رمز المنتج</Text>
-            <Text style={[styles.tableHeaderText, styles.colProduct]}>المنتج</Text>
-            <Text style={[styles.tableHeaderText, styles.colIndex]}>#</Text>
+            {!hideCost && <Text style={[styles.tableHeaderText, styles.colLineTotal]}>الإجمالي</Text>}
+            {!hideCost && <Text style={[styles.tableHeaderText, styles.colUnitCost]}>تكلفة الوحدة</Text>}
+            <Text style={[styles.tableHeaderText, hideCost ? { width: "15%" } : styles.colQty]}>الكمية</Text>
+            <Text style={[styles.tableHeaderText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>رمز المنتج</Text>
+            <Text style={[styles.tableHeaderText, hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct]}>المنتج</Text>
+            <Text style={[styles.tableHeaderText, hideCost ? { width: "10%", textAlign: "right" as const } : styles.colIndex]}>#</Text>
           </View>
 
           {transfer.items.length === 0 ? (
@@ -485,22 +486,26 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
                 style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}
                 wrap={false}
               >
-                <Text style={[styles.cellText, styles.colLineTotal]}>
-                  {formatAmount(item.quantity * item.unitCost, currency)}
-                </Text>
-                <Text style={[styles.cellText, styles.colUnitCost]}>
-                  {formatAmount(item.unitCost, currency)}
-                </Text>
-                <Text style={[styles.cellText, styles.colQty]}>
+                {!hideCost && (
+                  <Text style={[styles.cellText, styles.colLineTotal]}>
+                    {formatAmount(item.quantity * item.unitCost, currency)}
+                  </Text>
+                )}
+                {!hideCost && (
+                  <Text style={[styles.cellText, styles.colUnitCost]}>
+                    {formatAmount(item.unitCost, currency)}
+                  </Text>
+                )}
+                <Text style={[styles.cellText, hideCost ? { width: "15%" } : styles.colQty]}>
                   {item.quantity.toLocaleString("en-IN", {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
                   })}
                 </Text>
-                <Text style={[styles.cellText, styles.colSku]}>
+                <Text style={[styles.cellText, hideCost ? { width: "20%", paddingRight: 8 } : styles.colSku]}>
                   {item.product.sku || "-"}
                 </Text>
-                <View style={styles.colProduct}>
+                <View style={hideCost ? { width: "55%", paddingRight: 8 } : styles.colProduct}>
                   <Text style={styles.productName}>
                     {item.product.arabicName && item.product.arabicName !== item.product.name
                       ? item.product.arabicName
@@ -513,7 +518,7 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
                     <Text style={styles.productSubtext}>{item.notes}</Text>
                   )}
                 </View>
-                <Text style={[styles.cellText, styles.colIndex]}>{index + 1}</Text>
+                <Text style={[styles.cellText, hideCost ? { width: "10%", textAlign: "right" as const } : styles.colIndex]}>{index + 1}</Text>
               </View>
             ))
           )}
@@ -536,11 +541,15 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
               </Text>
               <Text style={styles.summaryLabel}>إجمالي الكمية</Text>
             </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>{formatAmount(totalValue, currency)}</Text>
-              <Text style={styles.summaryLabel}>قيمة التحويل</Text>
-            </View>
+            {!hideCost && (
+              <>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryValue}>{formatAmount(totalValue, currency)}</Text>
+                  <Text style={styles.summaryLabel}>قيمة التحويل</Text>
+                </View>
+              </>
+            )}
           </View>
           <View style={styles.notesBox}>
             <Text style={styles.notesLabel}>ملاحظات</Text>

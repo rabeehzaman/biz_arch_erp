@@ -365,7 +365,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Create auto journal entry: DR Sales Revenue [+ DR VAT/GST Output], CR Accounts Receivable (or Cash for POS)
-      if (appliedToBalance) {
+      // Always create journal entries for POS returns (cash is physically returned) or when applied to balance
+      if (appliedToBalance || posSessionId) {
         const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
         // POS returns are cash refunds — credit Cash instead of AR
         const creditAccount = posSessionId

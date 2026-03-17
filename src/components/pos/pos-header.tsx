@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 interface POSHeaderProps {
   session: {
@@ -24,6 +25,7 @@ interface POSHeaderProps {
   onReprintReceipt?: () => void;
   isReprintLoading?: boolean;
   onReturn?: () => void;
+  isReturnMode?: boolean;
   onPreviousOrders?: () => void;
 }
 
@@ -50,6 +52,7 @@ export function POSHeader({
   onReprintReceipt,
   isReprintLoading,
   onReturn,
+  isReturnMode,
   onPreviousOrders,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
@@ -100,13 +103,20 @@ export function POSHeader({
           <Button
             variant="ghost"
             size="sm"
-            className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
+            className={cn(
+              "px-2",
+              isReturnMode
+                ? "bg-red-600 text-white hover:bg-red-700 hover:text-white"
+                : "text-slate-300 hover:text-white hover:bg-slate-800"
+            )}
             onClick={onReturn}
             title={t("pos.salesReturn")}
             aria-label={t("pos.salesReturn")}
           >
             <RotateCcw className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">{t("pos.salesReturn").split(" ")[0]}</span>
+            <span className="hidden sm:inline ml-1">
+              {isReturnMode ? t("pos.salesReturn") : t("pos.salesReturn").split(" ")[0]}
+            </span>
           </Button>
         )}
 

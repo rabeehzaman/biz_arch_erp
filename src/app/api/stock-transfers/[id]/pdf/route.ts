@@ -29,7 +29,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const dispositionType = searchParams.get("download") === "0" ? "inline" : "attachment";
 
-    const [organization, pdfFormatSetting, transfer] = await Promise.all([
+    const [organization, pdfFormatSetting, hideCostSetting, transfer] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: organizationId },
         select: {
@@ -41,6 +41,10 @@ export async function GET(
       }),
       prisma.setting.findFirst({
         where: { organizationId, key: "transfer_pdf_format" },
+        select: { value: true },
+      }),
+      prisma.setting.findFirst({
+        where: { organizationId, key: "transfer_pdf_hide_cost" },
         select: { value: true },
       }),
       prisma.stockTransfer.findFirst({
@@ -78,6 +82,7 @@ export async function GET(
     }
 
     const useArabic = pdfFormatSetting?.value === "ARABIC";
+    const hideCost = hideCostSetting?.value === "true";
     const PDFComponent = useArabic ? StockTransferArabicPDF : StockTransferPDF;
 
     const pdfProps = {
@@ -87,6 +92,7 @@ export async function GET(
         brandColor: organization?.brandColor ?? null,
         currency: organization?.currency || "INR",
       },
+      hideCost,
       transfer: {
         transferNumber: transfer.transferNumber,
         status: transfer.status,
