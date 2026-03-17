@@ -350,6 +350,29 @@ const buildStyles = (brandColor: string) => StyleSheet.create({
     lineHeight: 1.45,
     textAlign: "right",
   },
+  signatureSection: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 32,
+    paddingHorizontal: 8,
+  },
+  signatureBlock: {
+    width: "28%",
+    alignItems: "center",
+  },
+  signatureLine: {
+    width: "100%",
+    borderBottomWidth: 1,
+    borderBottomColor: "#475569",
+    marginBottom: 6,
+    height: 40,
+  },
+  signatureLabel: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#0f172a",
+    textAlign: "center",
+  },
   footer: {
     marginTop: 18,
     paddingTop: 12,
@@ -524,6 +547,22 @@ export function StockTransferArabicPDF({ organization, transfer }: StockTransfer
             <Text style={styles.notesText}>
               {transfer.notes?.trim() || "لا توجد ملاحظات إضافية لهذا التحويل."}
             </Text>
+          </View>
+        </View>
+
+        {/* Signatures — RTL order: Sender(right), Driver(middle), Receiver(left) */}
+        <View style={styles.signatureSection}>
+          <View style={styles.signatureBlock}>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureLabel}>المُستلِم</Text>
+          </View>
+          <View style={styles.signatureBlock}>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureLabel}>السائق</Text>
+          </View>
+          <View style={styles.signatureBlock}>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureLabel}>المُرسِل</Text>
           </View>
         </View>
 
