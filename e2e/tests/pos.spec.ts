@@ -106,6 +106,7 @@ async function checkout(
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.beforeAll(async () => {
+  test.setTimeout(180_000);
   api = await playwrightRequest.newContext({
     baseURL,
     storageState: authStatePath,

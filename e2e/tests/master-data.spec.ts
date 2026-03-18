@@ -43,6 +43,7 @@ let api: APIRequestContext;
 let defaultUnitId: string; // "pcs" unit that every org should have
 
 test.beforeAll(async () => {
+  test.setTimeout(180_000);
   api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath });
   // Grab the default pcs unit for product creation
   const units = await parse(await api.get("/api/units"));

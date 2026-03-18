@@ -73,6 +73,7 @@ let warehouseId: string;
 let seedPurchaseId: string;
 
 test.beforeAll(async () => {
+  test.setTimeout(180_000);
   api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath, timeout: 60_000 });
 
   // Warm up the DB connection pool (first request after inactivity can timeout)

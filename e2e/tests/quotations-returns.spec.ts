@@ -36,6 +36,7 @@ let seedInvoiceId: string;
 let seedInvoiceItemId: string;
 
 test.beforeAll(async () => {
+  test.setTimeout(180_000);
   api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath });
 
   const run = uid();

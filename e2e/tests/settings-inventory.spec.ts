@@ -71,6 +71,7 @@ let createdEmployeeId: string;
 let originalSettings: Record<string, unknown>;
 
 test.beforeAll(async () => {
+  test.setTimeout(180_000);
   api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath, timeout: 60_000 });
 
   // Warm up DB connection pool

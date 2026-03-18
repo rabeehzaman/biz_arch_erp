@@ -64,6 +64,7 @@ const FROM = isoDate(-365);
 const TO = isoDate(0);
 
 test.beforeAll(async () => {
+  test.setTimeout(180_000);
   api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath, timeout: 60_000 });
 
   // Warm up DB connection pool

@@ -69,6 +69,7 @@ let assetsParentId: string;      // code 1000
 let cashBankAccountId: string;
 
 test.beforeAll(async () => {
+  test.setTimeout(180_000);
   api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath, timeout: 60_000 });
 
   // Warm up DB connection pool
