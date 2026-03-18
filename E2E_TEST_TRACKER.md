@@ -13,8 +13,8 @@
 | 1 | FIFO Comprehensive | `e2e/fifo-comprehensive.spec.ts` | 107 | PASSING (~2 timeouts, 1 skip) |
 | 2 | Products, Customers, Suppliers, Units | `e2e/tests/master-data.spec.ts` | 120 | ✅ PASSING (122/122) |
 | 3 | Invoices & Purchases (CRUD + tax) | `e2e/tests/invoices-purchases.spec.ts` | 150 | ✅ PASSING (150/150, transient Supabase timeouts) |
-| 4 | Quotations, Credit/Debit Notes | `e2e/tests/quotations-returns.spec.ts` | 80 | WRITTEN — NOT YET RUN |
-| 5 | Payments (customer + supplier) | `e2e/tests/payments.spec.ts` | 60 | WRITTEN — NOT YET RUN |
+| 4 | Quotations, Credit/Debit Notes | `e2e/tests/quotations-returns.spec.ts` | 80 | ✅ PASSING (82/82) |
+| 5 | Payments (customer + supplier) | `e2e/tests/payments.spec.ts` | 60 | ✅ PASSING (62/62) |
 | 6 | Accounting (COA, Journals, Cash/Bank, Expenses) | `e2e/tests/accounting.spec.ts` | 120 | WRITTEN — NOT YET RUN |
 | 7 | POS (sessions, checkout, held orders) | `e2e/tests/pos.spec.ts` | 100 | WRITTEN — NOT YET RUN |
 | 8 | Reports (all 30+ reports) | `e2e/tests/reports.spec.ts` | 100 | WRITTEN — NOT YET RUN |

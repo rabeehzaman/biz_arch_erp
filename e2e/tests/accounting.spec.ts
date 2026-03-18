@@ -967,9 +967,10 @@ test.describe("Journal Entries", () => {
     }));
     createdJEIds.push(je2.id);
 
-    const num1 = parseInt(je1.journalNumber.replace("JV-", ""));
-    const num2 = parseInt(je2.journalNumber.replace("JV-", ""));
-    expect(num2).toBeGreaterThan(num1);
+    // Compare sequence suffixes (JV-YYYYMMDD-NNN → NNN)
+    const seq1 = parseInt(je1.journalNumber.split("-").pop() || "0");
+    const seq2 = parseInt(je2.journalNumber.split("-").pop() || "0");
+    expect(seq2).toBeGreaterThan(seq1);
   });
 
   // 62
@@ -1139,7 +1140,7 @@ test.describe("Journal Entries", () => {
     }));
     createdJEIds.push(je.id);
 
-    const ledger = await parse(await api.get(`/api/reports/ledger?accountId=${cashAccountId}&startDate=${isoDate(-30)}&endDate=${isoDate()}`));
+    const ledger = await parse(await api.get(`/api/reports/ledger?type=ACCOUNT&id=${cashAccountId}&fromDate=${isoDate(-30)}&toDate=${isoDate()}`));
     expect(ledger).toBeTruthy();
   });
 
@@ -1717,9 +1718,10 @@ test.describe("Expenses", () => {
   test("110: Multiple expenses → sequential numbers", async () => {
     const exp1 = await createDraftExpense(50, `Seq1 ${uid()}`);
     const exp2 = await createDraftExpense(50, `Seq2 ${uid()}`);
-    const num1 = parseInt(exp1.expenseNumber.replace("EXP-", ""));
-    const num2 = parseInt(exp2.expenseNumber.replace("EXP-", ""));
-    expect(num2).toBeGreaterThan(num1);
+    // Compare sequence suffixes (EXP-YYYYMMDD-NNN → NNN)
+    const seq1 = parseInt(exp1.expenseNumber.split("-").pop() || "0");
+    const seq2 = parseInt(exp2.expenseNumber.split("-").pop() || "0");
+    expect(seq2).toBeGreaterThan(seq1);
   });
 
   // 111
