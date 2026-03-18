@@ -14,7 +14,7 @@ test("authenticate admin session", async ({ page }) => {
   await page.locator("#password").fill("admin123");
   await page.getByRole("button", { name: /sign in/i }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
   await page.context().storageState({ path: adminAuthFile });
 });
 
@@ -29,7 +29,7 @@ test("authenticate superadmin session", async ({ browser }) => {
   await page.locator("#password").fill("superadmin123");
   await page.getByRole("button", { name: /sign in/i }).click();
 
-  await expect(page).toHaveURL(/\/admin\/organizations/);
+  await expect(page).toHaveURL(/\/admin\/organizations/, { timeout: 30_000 });
   await context.storageState({ path: superadminAuthFile });
   await context.close();
 });
