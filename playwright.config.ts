@@ -26,5 +26,11 @@ export default defineConfig({
       dependencies: ["setup"],
       testMatch: /.*cogs.*\.spec\.ts/,
     },
+    {
+      name: "comprehensive",
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
+      testMatch: /e2e\/tests\/.*\.spec\.ts/,
+    },
   ],
 });
