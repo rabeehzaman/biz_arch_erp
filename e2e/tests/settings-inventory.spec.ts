@@ -172,11 +172,11 @@ test.describe("Settings", () => {
   });
 
   test("9 — Update roundOffMode setting", async () => {
-    const payload = { ...originalSettings, roundOffMode: "round_to_1" };
+    const payload = { ...originalSettings, roundOffMode: "NEAREST" };
     await parse(await api.put("/api/settings", { data: payload }));
 
     const updated = await parse(await api.get("/api/settings"));
-    expect(updated.roundOffMode).toBe("round_to_1");
+    expect(updated.roundOffMode).toBe("NEAREST");
 
     // Restore
     await parse(await api.put("/api/settings", { data: originalSettings }));
@@ -987,8 +987,9 @@ test.describe("Navigation & UI APIs", () => {
 
   test("76 — Scanner lookup with valid barcode finds product", async () => {
     // Get a product to look up
-    const products = await parse(await api.get("/api/products"));
-    if (products.length === 0) {
+    const productsRes = await parse(await api.get("/api/products"));
+    const products = productsRes.data ?? productsRes;
+    if (!Array.isArray(products) || products.length === 0) {
       test.skip(true, "No products to test scanner with");
       return;
     }
