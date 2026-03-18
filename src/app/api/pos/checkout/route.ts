@@ -90,6 +90,7 @@ interface CheckoutBody {
   heldOrderId?: string;
   notes?: string;
   sessionId?: string;
+  idempotencyKey?: string;
 }
 
 function roundTimingMs(value: number) {
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     const body: CheckoutBody = await request.json();
     markRequestStage("request_body");
-    const { customerId, items, payments, heldOrderId, notes, sessionId } = body;
+    const { customerId, items, payments, heldOrderId, notes, sessionId, idempotencyKey } = body;
 
     // Validate required fields
     if (!items || items.length === 0) {
@@ -136,6 +137,20 @@ export async function POST(request: NextRequest) {
         { error: "Payments array is missing" },
         { status: 400 }
       );
+    }
+
+    // Idempotency check: return existing invoice if this key was already processed
+    if (idempotencyKey) {
+      const existingInvoice = await prisma.invoice.findFirst({
+        where: { organizationId, idempotencyKey },
+        include: { items: true, customer: true },
+      });
+      if (existingInvoice) {
+        return NextResponse.json(
+          { invoice: existingInvoice, payments: [], change: 0, warnings: [], duplicate: true },
+          { status: 201 }
+        );
+      }
     }
 
     // Fetch org for ZATCA/branding info
@@ -425,6 +440,7 @@ export async function POST(request: NextRequest) {
         roundOffAmount,
         applyRoundOff: shouldApplyRoundOff,
         notes: notes || null,
+        idempotencyKey: idempotencyKey || null,
       };
 
       if (saudiEnabled) {

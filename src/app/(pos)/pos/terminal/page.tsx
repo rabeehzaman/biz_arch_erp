@@ -333,6 +333,7 @@ function POSTerminalContent() {
   const autoFilledRef = useRef(false);
   const cartItemsContainerRef = useRef<HTMLDivElement | null>(null);
   const previousCartMetricsRef = useRef({ items: 0, quantity: 0 });
+  const checkoutInFlightRef = useRef(false);
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null }>(
@@ -783,6 +784,10 @@ function POSTerminalContent() {
   // ── Checkout ───────────────────────────────────────────────────────
 
   const handleCheckout = async (payments: PaymentEntry[]) => {
+    if (checkoutInFlightRef.current) return;
+    checkoutInFlightRef.current = true;
+
+    const idempotencyKey = crypto.randomUUID();
     const checkoutStartedAt = performance.now();
     setIsProcessing(true);
 
@@ -825,6 +830,7 @@ function POSTerminalContent() {
           })),
           heldOrderId: completedHeldOrderId || undefined,
           notes: undefined,
+          idempotencyKey,
         }),
       });
       const responseReceivedAt = performance.now();
@@ -952,6 +958,7 @@ function POSTerminalContent() {
       setIsPendingReceipt(false); // restore reprint of previous receipt on failure
     } finally {
       setIsProcessing(false);
+      checkoutInFlightRef.current = false;
     }
   };
 

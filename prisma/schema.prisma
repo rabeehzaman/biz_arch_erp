@@ -436,6 +436,8 @@ model Invoice {
 
   isTaxInclusive Boolean? // null = use org default, true/false = per-voucher override
 
+  idempotencyKey String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -447,6 +449,7 @@ model Invoice {
   mobileDevices      MobileDevice[]
 
   @@unique([organizationId, invoiceNumber])
+  @@unique([organizationId, idempotencyKey])
   @@index([organizationId])
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, issueDate(sort: Desc)])
