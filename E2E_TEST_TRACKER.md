@@ -9,51 +9,70 @@
 
 | # | Batch | File | Tests | Status |
 |---|-------|------|-------|--------|
-| 0 | Stock Transfer Fix | `e2e/stock-transfer-fifo.spec.ts` | 8 | WRITTEN + PASSING |
-| 1 | FIFO Comprehensive | `e2e/fifo-comprehensive.spec.ts` | 107 | WRITTEN + PASSING (~2 timeouts, 1 skip) |
-| 2 | Products, Customers, Suppliers, Units | `e2e/tests/master-data.spec.ts` | 120 | WRITTEN |
-| 3 | Invoices & Purchases (CRUD + tax) | `e2e/tests/invoices-purchases.spec.ts` | 150 | WRITTEN |
-| 4 | Quotations, Credit/Debit Notes | `e2e/tests/quotations-returns.spec.ts` | 80 | WRITTEN |
-| 5 | Payments (customer + supplier) | `e2e/tests/payments.spec.ts` | 60 | WRITTEN |
-| 6 | Accounting (COA, Journals, Cash/Bank, Expenses) | `e2e/tests/accounting.spec.ts` | 120 | WRITTEN |
-| 7 | POS (sessions, checkout, held orders) | `e2e/tests/pos.spec.ts` | 100 | WRITTEN |
-| 8 | Reports (all 30+ reports) | `e2e/tests/reports.spec.ts` | 100 | WRITTEN |
-| 9 | Settings, Branches, Employees, Mobile Devices | `e2e/tests/settings-inventory.spec.ts` | 80 | WRITTEN |
-| 10 | Auth, Permissions, Navigation, Dashboard | `e2e/tests/auth-navigation.spec.ts` | 60 | WRITTEN |
-| 11 | GST vs VAT (India vs Saudi edition) | `e2e/tests/tax-editions.spec.ts` | 80 | WRITTEN |
-| 12 | Edge cases, validation, stress tests | `e2e/tests/edge-cases.spec.ts` | 100 | WRITTEN |
-| **TOTAL** | | **13 files** | **1,165** | **All written, compiling clean** |
+| 0 | Stock Transfer Fix | `e2e/stock-transfer-fifo.spec.ts` | 8 | PASSING |
+| 1 | FIFO Comprehensive | `e2e/fifo-comprehensive.spec.ts` | 107 | PASSING (~2 timeouts, 1 skip) |
+| 2 | Products, Customers, Suppliers, Units | `e2e/tests/master-data.spec.ts` | 120 | WRITTEN — NOT YET RUN |
+| 3 | Invoices & Purchases (CRUD + tax) | `e2e/tests/invoices-purchases.spec.ts` | 150 | WRITTEN — NOT YET RUN |
+| 4 | Quotations, Credit/Debit Notes | `e2e/tests/quotations-returns.spec.ts` | 80 | WRITTEN — NOT YET RUN |
+| 5 | Payments (customer + supplier) | `e2e/tests/payments.spec.ts` | 60 | WRITTEN — NOT YET RUN |
+| 6 | Accounting (COA, Journals, Cash/Bank, Expenses) | `e2e/tests/accounting.spec.ts` | 120 | WRITTEN — NOT YET RUN |
+| 7 | POS (sessions, checkout, held orders) | `e2e/tests/pos.spec.ts` | 100 | WRITTEN — NOT YET RUN |
+| 8 | Reports (all 30+ reports) | `e2e/tests/reports.spec.ts` | 100 | WRITTEN — NOT YET RUN |
+| 9 | Settings, Branches, Employees, Mobile Devices | `e2e/tests/settings-inventory.spec.ts` | 80 | WRITTEN — NOT YET RUN |
+| 10 | Auth, Permissions, Navigation, Dashboard | `e2e/tests/auth-navigation.spec.ts` | 60 | WRITTEN — NOT YET RUN |
+| 11 | GST vs VAT (India vs Saudi edition) | `e2e/tests/tax-editions.spec.ts` | 80 | WRITTEN — NOT YET RUN |
+| 12 | Edge cases, validation, stress tests | `e2e/tests/edge-cases.spec.ts` | 100 | WRITTEN — NOT YET RUN |
+| **TOTAL** | | **13 files** | **1,165** | |
 
 ---
 
 ## Next Steps
 
-- [ ] Run batch 2-12 tests and fix failures
-- [ ] Fix bugs found during test execution
-- [ ] Test org `e2e-test-india` provisioned and verified
-- [ ] Test org `e2e-test-saudi` provisioned and verified
+- [ ] Run batches 2-12 ONE BY ONE, fix all failures before moving to next batch
+- [ ] Fix any app bugs found during test execution
+- [ ] Update this tracker after each batch passes
+- [ ] Update `e2e/fifo-comprehensive.spec.ts` test 46 (opening stock delete) — bug is now fixed, un-skip it
 - [ ] All 1,165 tests passing
 
 ---
 
 ## Infrastructure
 
-- [x] Playwright config with `comprehensive` project
+- [x] Playwright config with `comprehensive` project (`e2e/tests/**/*.spec.ts`)
 - [x] `e2e/helpers/test-org-setup.ts` — org creation, user auth, warehouse setup
 - [x] `e2e/global-setup.ts` — provisions test orgs before all tests
-- [x] `e2e/helpers/fifo.ts` — shared helpers (purchases, sales, transfers, stock queries, etc.)
+- [x] `e2e/helpers/fifo.ts` — shared helpers (purchases, sales, transfers, stock queries, DB pool)
 - [x] All 13 test files written and TypeScript clean
+- [x] Auth setup: `e2e/auth.setup.ts` → `e2e/.auth/admin.json` + `e2e/.auth/superadmin.json`
+- [x] Superadmin: `superadmin@bizarch.com` / `superadmin123`
+- [x] Admin: `admin@bizarch.com` / `admin123`
 
 ---
 
-## Bugs Found During Testing
+## Bugs Found & Fixed
 
-| # | Description | Severity | Fixed? | Notes |
-|---|-------------|----------|--------|-------|
-| 1 | Cannot edit/reverse completed transfer when destination stock consumed | HIGH | YES | Added `recalculateFromDate()` cascade |
-| 2 | Delete consumed opening stock → server 500 | MEDIUM | NO | Cascade delete conflict in transaction — test skipped |
-| 3 | Edit purchase warehouse doesn't relocate stock lot | LOW | NO | API uses `existingInvoice.warehouseId` — test documents behavior |
-| 4 | Edit sale warehouse not propagated through recalculation | LOW | NO | `invoice.warehouseId` not updated by PUT — test documents behavior |
+| # | Description | Severity | Fixed? | Commit |
+|---|-------------|----------|--------|--------|
+| 1 | Cannot edit/reverse completed transfer when dest stock consumed | HIGH | YES | `027cc0a` |
+| 2 | Delete consumed opening stock → server 500 | MEDIUM | YES | `7a98445` |
+| 3 | Edit purchase warehouse doesn't relocate stock lot | LOW | YES | `7a98445` |
+| 4 | Edit sale warehouse not propagated through recalculation | LOW | YES | `7a98445` |
+
+---
+
+## How to Run Tests
+
+```bash
+# Run a specific batch
+npx playwright test e2e/tests/master-data.spec.ts --reporter=list
+
+# Run all comprehensive tests
+npx playwright test --project=comprehensive --reporter=list
+
+# Run FIFO tests only
+npx playwright test e2e/fifo-comprehensive.spec.ts --reporter=list
+npx playwright test e2e/stock-transfer-fifo.spec.ts --reporter=list
+```
 
 ---
 
@@ -62,10 +81,11 @@
 ### Session 1 — 2026-03-18
 - Analyzed Zoho Books FIFO architecture from Supabase export
 - Implemented stock transfer edit/reverse with FIFO recalculation
-- Wrote 8 stock transfer FIFO tests (all passing)
-- Wrote 107 comprehensive FIFO tests (~105 passing, 2 timeout, 1 skip)
+- Wrote & ran 8 stock transfer FIFO tests (all passing)
+- Wrote & ran 107 comprehensive FIFO tests (~105 passing, 2 timeout, 1 skip)
 - Built test infrastructure (org setup, global setup, helpers)
 - Wrote ALL 12 batches (1,165 tests total) across 11 new test files
+- Fixed 4 app bugs found during testing
 - All files compile clean with zero TypeScript errors
-- Commits: `027cc0a`, `f9c91ec`, `ddc5675`
-- **Next:** Run batches 2-12, fix failures, iterate to 100% pass rate
+- Commits: `027cc0a`, `f9c91ec`, `ddc5675`, `2cee21e`, `7a98445`
+- **Next:** Run batches 2-12 one by one, fix failures, iterate to 100% pass rate
