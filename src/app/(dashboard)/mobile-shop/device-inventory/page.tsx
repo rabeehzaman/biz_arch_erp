@@ -186,7 +186,7 @@ export default function DeviceInventoryPage() {
               <>
                 <div className="space-y-3 p-4 sm:hidden">
                   {devices.map((device) => (
-                    <div key={device.id} className="rounded-xl border bg-card p-4 shadow-sm">
+                    <div key={device.id} onClick={() => { setEditDevice(device); setDialogOpen(true); }} className="cursor-pointer rounded-xl border bg-card p-4 shadow-sm hover:bg-muted/50">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate font-mono text-xs font-medium text-slate-900">{device.imei1}</p>
@@ -229,7 +229,7 @@ export default function DeviceInventoryPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center justify-end gap-1">
+                      <div className="mt-4 flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -272,7 +272,7 @@ export default function DeviceInventoryPage() {
                     </TableHeader>
                     <TableBody>
                       {devices.map((device) => (
-                        <TableRow key={device.id}>
+                        <TableRow key={device.id} onClick={() => { setEditDevice(device); setDialogOpen(true); }} className="cursor-pointer hover:bg-muted/50">
                           <TableCell className="max-w-[120px] truncate font-mono text-xs">
                             {device.imei1}
                             {device.imei2 && (
@@ -307,11 +307,12 @@ export default function DeviceInventoryPage() {
                           <TableCell className="hidden sm:table-cell text-sm">
                             {device.supplier?.name || "-"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-1 justify-end">
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                title={t("common.edit") || "Edit"}
                                 className="h-8 w-8 text-slate-400 hover:text-blue-500"
                                 onClick={() => {
                                   setEditDevice(device);
@@ -324,6 +325,7 @@ export default function DeviceInventoryPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  title={t("common.delete") || "Delete"}
                                   className="h-8 w-8 text-slate-400 hover:text-red-500"
                                   onClick={() => handleDelete(device.id)}
                                 >

@@ -235,6 +235,7 @@
         "generating": "Generating...",
         "sendEmail": "Send Email",
         "print": "Print",
+        "duplicate": "Duplicate",
         "share": "Share",
         "details": "Details",
         "summary": "Summary",
@@ -375,7 +376,9 @@
         "baseUnit": "Base Unit",
         "selectType": "Select type",
         "country": "Country",
-        "gstStateCode": "GST State Code"
+        "gstStateCode": "GST State Code",
+        "deleted": "Deleted",
+        "clearSelection": "Clear selection"
     },
     "sales": {
         "invoices": "Sales Invoices",

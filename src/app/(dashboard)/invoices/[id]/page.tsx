@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, Download, Loader2, Pencil, Printer, CreditCard, Send } from "lucide-react";
+import { ArrowLeft, Building2, Copy, Download, Loader2, Pencil, Printer, CreditCard, Send } from "lucide-react";
 import QRCode from "react-qr-code";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -294,6 +294,10 @@ export default function InvoiceDetailPage({
                 <span className="sm:inline">{t("common.edit")}</span>
               </Button>
             </Link>
+            <Button variant="outline" size="sm" onClick={() => router.push(`/invoices/new?duplicate=${invoice.id}`)} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+              <Copy className="h-4 w-4 sm:mr-2" />
+              <span className="sm:inline">{t("common.duplicate")}</span>
+            </Button>
             {invoice && Number(invoice.balanceDue) > 0 && (
               <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
                 <CreditCard className="h-4 w-4 sm:mr-2" />
@@ -357,7 +361,16 @@ export default function InvoiceDetailPage({
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
-                    <h2 className="text-lg font-bold sm:text-xl">{invoice.invoiceNumber}</h2>
+                    <h2 className="text-lg font-bold sm:text-xl">
+                      {invoice.invoiceNumber}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(invoice.invoiceNumber); toast.success(t("common.copiedToClipboard") || "Copied to clipboard"); }}
+                        className="ml-1 inline-flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                        title={t("common.copyToClipboard") || "Copy to clipboard"}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </h2>
                   </div>
                 </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -61,6 +62,7 @@ const transferStatusLabelKeys: Record<string, string> = {
 };
 
 export default function StockTransfersPage() {
+    const router = useRouter();
     const { t, tt, lang } = useLanguage();
     const [transfers, setTransfers] = useState<StockTransfer[]>([]);
     const [loading, setLoading] = useState(true);
@@ -181,7 +183,7 @@ export default function StockTransfersPage() {
                                     <>
                                         <div className="space-y-3 sm:hidden">
                                             {filteredTransfers.map((transfer) => (
-                                                <div key={transfer.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                <div key={transfer.id} onClick={() => router.push(`/inventory/stock-transfers/${transfer.id}`)} className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50">
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="min-w-0">
                                                             <p className="font-mono text-sm font-semibold text-slate-900">{transfer.transferNumber}</p>
@@ -213,7 +215,7 @@ export default function StockTransfersPage() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="mt-4 grid gap-2">
+                                                    <div className="mt-4 grid gap-2" onClick={(e) => e.stopPropagation()}>
                                                         <div className="grid grid-cols-2 gap-2">
                                                             <Button variant="outline" className="min-h-[44px]" asChild>
                                                                 <Link href={`/inventory/stock-transfers/${transfer.id}`}>
@@ -262,7 +264,7 @@ export default function StockTransfersPage() {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {filteredTransfers.map((transfer) => (
-                                                        <TableRow key={transfer.id}>
+                                                        <TableRow key={transfer.id} onClick={() => router.push(`/inventory/stock-transfers/${transfer.id}`)} className="cursor-pointer hover:bg-muted/50">
                                                             <TableCell className="font-medium font-mono">
                                                                 {transfer.transferNumber}
                                                             </TableCell>
@@ -283,7 +285,7 @@ export default function StockTransfersPage() {
                                                                     {formatTransferStatus(transfer.status)}
                                                                 </Badge>
                                                             </TableCell>
-                                                            <TableCell className="text-right">
+                                                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                                 <div className="flex items-center justify-end gap-2">
                                                                     <Button variant="outline" size="sm" asChild>
                                                                         <Link href={`/inventory/stock-transfers/${transfer.id}`}>

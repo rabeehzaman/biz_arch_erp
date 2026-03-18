@@ -33,7 +33,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, CreditCard, Download, Loader2, Package, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, Building2, Copy, CreditCard, Download, Loader2, Package, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -94,11 +94,11 @@ interface PurchaseInvoice {
 }
 
 const statusColors: Record<string, string> = {
-  DRAFT: "secondary",
-  RECEIVED: "default",
-  PAID: "default",
-  PARTIALLY_PAID: "default",
-  CANCELLED: "secondary",
+  DRAFT: "bg-yellow-100 text-yellow-700",
+  RECEIVED: "bg-blue-100 text-blue-700",
+  PAID: "bg-green-100 text-green-700",
+  PARTIALLY_PAID: "bg-yellow-100 text-yellow-700",
+  CANCELLED: "bg-red-100 text-red-700",
 };
 
 export default function PurchaseInvoiceDetailPage({
@@ -320,6 +320,10 @@ export default function PurchaseInvoiceDetailPage({
                 {t("common.edit")}
               </Button>
             </Link>
+            <Button variant="outline" size="sm" onClick={() => router.push(`/purchase-invoices/new?duplicate=${invoice.id}`)} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+              <Copy className="h-4 w-4 sm:mr-2" />
+              <span className="sm:inline">{t("common.duplicate")}</span>
+            </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isDownloading
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
@@ -359,7 +363,7 @@ export default function PurchaseInvoiceDetailPage({
               </div>
               <div className="text-left sm:text-right">
                 <h2 className="text-lg font-bold sm:text-xl">{invoice.purchaseInvoiceNumber}</h2>
-                <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
+                <Badge className={statusColors[invoice.status]}>
                   {statusLabels[invoice.status]}
                 </Badge>
                 {invoice.supplierInvoiceRef && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +55,8 @@ function getLineAmountKey(itemId: string, ...amounts: number[]) {
 
 export default function NewDebitNotePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const duplicateId = searchParams.get("duplicate");
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -95,6 +97,40 @@ export default function NewDebitNotePage() {
     fetchSuppliers();
     fetchProducts();
   }, []);
+
+  // Pre-fill form when duplicating an existing debit note
+  useEffect(() => {
+    if (!duplicateId) return;
+    const fetchDuplicate = async () => {
+      try {
+        const response = await fetch(`/api/debit-notes/${duplicateId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        setSupplierId(data.supplier?.id || "");
+        setIssueDate(new Date().toISOString().split("T")[0]);
+        setReason(data.reason || "");
+        setNotes(data.notes || "");
+        if (data.items && data.items.length > 0) {
+          setItems(
+            data.items.map((item: any, idx: number) => ({
+              id: `dup-${idx}`,
+              productId: item.product?.id || item.productId || "",
+              description: item.description || "",
+              quantity: Number(item.quantity) || 1,
+              unitId: item.unitId || "",
+              conversionFactor: item.conversionFactor || 1,
+              unitCost: Number(item.unitCost) || 0,
+              discount: Number(item.discount) || 0,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch debit note for duplication:", error);
+      }
+    };
+    fetchDuplicate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duplicateId]);
 
   const fetchSuppliers = async () => {
     try {

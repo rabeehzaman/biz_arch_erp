@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,7 @@ interface BranchOption {
 }
 
 export default function StockSummaryPage() {
+    const router = useRouter();
     const { t, isRTL } = useLanguage();
     const BackArrow = isRTL ? ArrowRight : ArrowLeft;
     const { data: session } = useSession();
@@ -312,7 +314,8 @@ export default function StockSummaryPage() {
                                         return (
                                             <div
                                                 key={`${row.productId}-${row.warehouseId ?? "null"}-${i}`}
-                                                className={`rounded-2xl border p-4 shadow-sm ${isLow ? "border-red-200 bg-red-50/40" : "border-slate-200 bg-white"}`}
+                                                onClick={() => router.push(`/products?highlight=${row.productId}`)}
+                                                className={`cursor-pointer rounded-2xl border p-4 shadow-sm hover:bg-muted/50 ${isLow ? "border-red-200 bg-red-50/40" : "border-slate-200 bg-white"}`}
                                             >
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div className="min-w-0">
@@ -394,7 +397,8 @@ export default function StockSummaryPage() {
                                                 return (
                                                     <TableRow
                                                         key={`${row.productId}-${row.warehouseId ?? "null"}-${i}`}
-                                                        className={isLow ? "bg-red-50/50 hover:bg-red-50" : "hover:bg-slate-50"}
+                                                        onClick={() => router.push(`/products?highlight=${row.productId}`)}
+                                                        className={`cursor-pointer ${isLow ? "bg-red-50/50 hover:bg-red-50" : "hover:bg-muted/50"}`}
                                                     >
                                                         <TableCell>
                                                             <p className="font-medium text-slate-900">{row.productName}</p>

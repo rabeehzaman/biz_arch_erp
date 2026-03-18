@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useCurrency } from "@/hooks/use-currency";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Table,
@@ -42,6 +43,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function ExpensesPage() {
+  const router = useRouter();
   const { fmt } = useCurrency();
   const { t } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -118,7 +120,7 @@ export default function ExpensesPage() {
                 <>
                   <div className="space-y-3 sm:hidden">
                     {filteredExpenses.map((expense) => (
-                      <div key={expense.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div key={expense.id} onClick={() => router.push(`/accounting/expenses/${expense.id}`)} className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.number")}</p>
@@ -174,7 +176,7 @@ export default function ExpensesPage() {
                       </TableHeader>
                       <TableBody>
                         {filteredExpenses.map((expense) => (
-                          <TableRow key={expense.id}>
+                          <TableRow key={expense.id} onClick={() => router.push(`/accounting/expenses/${expense.id}`)} className="cursor-pointer hover:bg-muted/50">
                             <TableCell>
                               <Link
                                 href={`/accounting/expenses/${expense.id}`}

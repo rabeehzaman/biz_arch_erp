@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/hooks/use-currency";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,8 @@ export default function NewJournalEntryPage() {
   const { t } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  useUnsavedChanges(isDirty);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<Line[]>([
@@ -110,6 +113,7 @@ export default function NewJournalEntryPage() {
         throw new Error(err.error || "Failed to create");
       }
 
+      setIsDirty(false);
       toast.success(t("accounting.journalEntryCreated"));
       router.push("/accounting/journal-entries");
     } catch (error) {
@@ -134,7 +138,7 @@ export default function NewJournalEntryPage() {
           </div>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit}>
+        <form ref={formRef} onSubmit={handleSubmit} onChangeCapture={() => setIsDirty(true)}>
           <Card>
             <CardHeader>
               <CardTitle>{t("accounting.entryDetails")}</CardTitle>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import { useRouter } from "next/navigation";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,10 +124,14 @@ function getLineAmountKey(itemId: string, subtotal: number, total: number) {
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const duplicateId = searchParams.get("duplicate");
   const { t } = useLanguage();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  useUnsavedChanges(isDirty);
 
   const getDefaultDueDate = () => {
     const d = new Date();
@@ -227,6 +232,50 @@ export default function NewInvoicePage() {
     // Refresh product options from the selected warehouse.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
+
+  // Pre-fill form when duplicating an existing invoice
+  useEffect(() => {
+    if (!duplicateId) return;
+    const fetchDuplicate = async () => {
+      try {
+        const response = await fetch(`/api/invoices/${duplicateId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        setFormData({
+          customerId: data.customer?.id || "",
+          date: new Date().toISOString().split("T")[0],
+          dueDate: getDefaultDueDate(),
+          notes: data.notes || "",
+          terms: data.terms || "",
+          branchId: data.branch?.id || "",
+          warehouseId: data.warehouse?.id || "",
+          paymentType: data.paymentType || "CASH",
+        });
+        if (data.items && data.items.length > 0) {
+          setLineItems(
+            data.items.map((item: any, idx: number) => ({
+              id: `dup-${idx}`,
+              productId: item.product?.id || item.productId || "",
+              quantity: Number(item.quantity) || 1,
+              unitId: item.unitId || "",
+              conversionFactor: item.conversionFactor || 1,
+              unitPrice: Number(item.unitPrice) || 0,
+              discount: Number(item.discount) || 0,
+              gstRate: Number(item.gstRate) || 0,
+              hsnCode: item.hsnCode || "",
+              vatRate: Number(item.vatRate) ?? 15,
+              selectedImeis: [],
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch invoice for duplication:", error);
+      }
+    };
+    fetchDuplicate();
+    // Only run on mount when duplicateId is present
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duplicateId]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -514,6 +563,7 @@ export default function NewInvoicePage() {
           });
         }
 
+        setIsDirty(false);
         if (saveAndNew.current) {
           saveAndNew.current = false;
           toast.success(t("sales.invoiceCreatedStartingNew"));
@@ -560,7 +610,7 @@ export default function NewInvoicePage() {
           </div>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit}>
+        <form ref={formRef} onSubmit={handleSubmit} onChangeCapture={() => setIsDirty(true)}>
           <div className="space-y-6">
             {/* Customer & Date */}
             <Card>

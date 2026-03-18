@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Plus, ChevronRight, ChevronDown, BookOpen, Search, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCurrency } from "@/hooks/use-currency";
 import {
   AlertDialog,
@@ -204,6 +205,7 @@ function AccountTreeItem({
   onDelete: (node: TreeNode) => void;
   searchQuery: string;
 }) {
+  const router = useRouter();
   const { symbol, locale } = useCurrency();
   const { t } = useLanguage();
   const typeLabels = accountTypeLabels(t);
@@ -230,9 +232,10 @@ function AccountTreeItem({
   return (
     <>
       <div
-        className={`relative flex items-start sm:items-center gap-2 sm:gap-3 py-3 sm:py-2 px-2 sm:px-3 hover:bg-slate-50/80 rounded-lg group transition-colors border-l-4 ${level === 0 ? typeBorderColors[node.accountType] || "border-transparent" : "border-transparent"
+        className={`relative flex items-start sm:items-center gap-2 sm:gap-3 py-3 sm:py-2 px-2 sm:px-3 hover:bg-slate-50/80 rounded-lg group transition-colors border-l-4 cursor-pointer ${level === 0 ? typeBorderColors[node.accountType] || "border-transparent" : "border-transparent"
           } ${!node.isActive ? "opacity-50" : ""}`}
         style={{ paddingLeft: `max(8px, calc(${level} * clamp(12px, 4vw, 32px) + 8px))` }}
+        onClick={() => router.push(`/reports/ledger?accountId=${node.id}`)}
       >
         {/* Hierarchical Connecting Line */}
         {level > 0 && (
@@ -248,7 +251,7 @@ function AccountTreeItem({
         )}
 
         <button
-          onClick={() => hasChildren && onToggle(node.id)}
+          onClick={(e) => { e.stopPropagation(); hasChildren && onToggle(node.id); }}
           className={`shrink-0 mt-0.5 sm:mt-0 w-5 h-5 flex items-center justify-center rounded-sm transition-colors ${hasChildren ? "hover:bg-slate-200" : ""}`}
         >
           {hasChildren ? (
@@ -292,7 +295,7 @@ function AccountTreeItem({
               : "—"}
           </span>
 
-          <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
             <Link href={`/reports/ledger?accountId=${node.id}`}>
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                 <ExternalLink className="mr-1 h-3 w-3" />

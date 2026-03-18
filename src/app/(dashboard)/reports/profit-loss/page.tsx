@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -35,6 +36,7 @@ interface ProfitLoss {
 }
 
 export default function ProfitLossPage() {
+  const router = useRouter();
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
   const [data, setData] = useState<ProfitLoss | null>(null);
@@ -189,7 +191,7 @@ export default function ProfitLossPage() {
                 <CardContent>
                   <div className="space-y-3 sm:hidden">
                     {data.revenue.map((row) => (
-                      <div key={row.account.code} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div key={row.account.code} onClick={() => router.push(`/reports/ledger?accountCode=${row.account.code}`)} className="cursor-pointer hover:bg-muted/50 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
                         <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
                         <div className="mt-4">
@@ -214,7 +216,7 @@ export default function ProfitLossPage() {
                       </TableHeader>
                       <TableBody>
                         {data.revenue.map((row) => (
-                          <TableRow key={row.account.code}>
+                          <TableRow key={row.account.code} onClick={() => router.push(`/reports/ledger?accountCode=${row.account.code}`)} className="cursor-pointer hover:bg-muted/50">
                             <TableCell>
                               <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
                               {row.account.name}
@@ -239,7 +241,7 @@ export default function ProfitLossPage() {
                 <CardContent>
                   <div className="space-y-3 sm:hidden">
                     {data.expenses.map((row) => (
-                      <div key={row.account.code} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div key={row.account.code} onClick={() => router.push(`/reports/ledger?accountCode=${row.account.code}`)} className="cursor-pointer hover:bg-muted/50 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
                         <p className="mt-1 font-semibold text-slate-900">{row.account.name}</p>
                         <div className="mt-4">
@@ -264,7 +266,7 @@ export default function ProfitLossPage() {
                       </TableHeader>
                       <TableBody>
                         {data.expenses.map((row) => (
-                          <TableRow key={row.account.code}>
+                          <TableRow key={row.account.code} onClick={() => router.push(`/reports/ledger?accountCode=${row.account.code}`)} className="cursor-pointer hover:bg-muted/50">
                             <TableCell>
                               <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
                               {row.account.name}

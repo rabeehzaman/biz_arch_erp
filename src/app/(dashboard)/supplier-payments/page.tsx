@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import {
@@ -94,6 +95,7 @@ import { useLanguage } from "@/lib/i18n";
 // methodLabels moved inside component to use t()
 
 export default function SupplierPaymentsPage() {
+  const router = useRouter();
   const { t, lang } = useLanguage();
   const { symbol, locale } = useCurrency();
 
@@ -488,7 +490,7 @@ export default function SupplierPaymentsPage() {
               <>
                 <div className="space-y-3 sm:hidden">
                   {payments.map((payment) => (
-                    <div key={payment.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div key={payment.id} onClick={() => payment.purchaseInvoice?.id && router.push(`/purchase-invoices/${payment.purchaseInvoice.id}`)} className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${payment.purchaseInvoice?.id ? "cursor-pointer hover:bg-muted/50" : ""}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("payments.paymentNo")}</p>
@@ -526,7 +528,7 @@ export default function SupplierPaymentsPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4">
+                      <div className="mt-4" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           className="min-h-[44px] w-full text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -556,7 +558,7 @@ export default function SupplierPaymentsPage() {
                     </TableHeader>
                     <TableBody>
                       {payments.map((payment) => (
-                        <TableRow key={payment.id}>
+                        <TableRow key={payment.id} onClick={() => payment.purchaseInvoice?.id && router.push(`/purchase-invoices/${payment.purchaseInvoice.id}`)} className={payment.purchaseInvoice?.id ? "cursor-pointer hover:bg-muted/50" : ""}>
                           <TableCell className="font-medium">
                             {payment.paymentNumber}
                           </TableCell>
@@ -580,7 +582,7 @@ export default function SupplierPaymentsPage() {
                               ? `${symbol}${Number(payment.discountGiven).toLocaleString(locale)}`
                               : "-"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="ghost"
                               size="icon"

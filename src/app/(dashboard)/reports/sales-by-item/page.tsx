@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -44,6 +45,7 @@ interface SalesByItemReport {
 }
 
 export default function SalesByItemPage() {
+  const router = useRouter();
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
   const [data, setData] = useState<SalesByItemReport | null>(null);
@@ -232,7 +234,8 @@ export default function SalesByItemPage() {
                     {data.rows.map((row) => (
                       <div
                         key={row.productId}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                        onClick={() => router.push(`/products?highlight=${row.productId}`)}
+                        className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50"
                       >
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-900">{row.productName}</p>
@@ -288,7 +291,7 @@ export default function SalesByItemPage() {
                         </TableHeader>
                         <TableBody>
                           {data.rows.map((row) => (
-                            <TableRow key={row.productId}>
+                            <TableRow key={row.productId} onClick={() => router.push(`/products?highlight=${row.productId}`)} className="cursor-pointer hover:bg-muted/50">
                               <TableCell className="font-medium">{row.productName}</TableCell>
                               <TableCell className="text-slate-500">{row.sku || "-"}</TableCell>
                               <TableCell className="text-right">{row.qtySold}</TableCell>

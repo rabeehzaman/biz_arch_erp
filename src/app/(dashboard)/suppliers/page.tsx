@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrency } from "@/hooks/use-currency";
 import {
   Table,
@@ -34,6 +35,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Search, Truck, MoreHorizontal, Wallet } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
@@ -63,6 +65,7 @@ interface Supplier {
 import { useLanguage } from "@/lib/i18n";
 
 export default function SuppliersPage() {
+  const router = useRouter();
   const { t, lang } = useLanguage();
   const { symbol, locale } = useCurrency();
   const {
@@ -79,11 +82,24 @@ export default function SuppliersPage() {
   const [isOpeningBalanceDialogOpen, setIsOpeningBalanceDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedSupplierForBalance, setSelectedSupplierForBalance] = useState<Supplier | null>(null);
   const [openingBalanceData, setOpeningBalanceData] = useState({
     amount: "",
     transactionDate: new Date().toISOString().split("T")[0],
   });
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes((document.activeElement?.tagName || ""))) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleEdit = (supplier: Supplier) => {
     setEditingSupplier(supplier);
@@ -106,6 +122,28 @@ export default function SuppliersPage() {
         } catch (error) {
           toast.error(error instanceof Error ? error.message : t("common.error"));
           console.error("Failed to delete supplier:", error);
+        }
+      },
+    });
+  };
+
+  const handleBulkDelete = () => {
+    setConfirmDialog({
+      title: t("suppliers.deleteSupplier"),
+      description: `${t("suppliers.deleteConfirm")} (${selectedIds.size} ${t("common.selected") || "selected"})`,
+      onConfirm: async () => {
+        try {
+          await Promise.all(
+            Array.from(selectedIds).map((id) =>
+              fetch(`/api/suppliers/${id}`, { method: "DELETE" })
+            )
+          );
+          setSelectedIds(new Set());
+          refresh();
+          toast.success(t("suppliers.supplierDeleted"));
+        } catch (error) {
+          toast.error(t("common.error"));
+          console.error("Failed to bulk delete suppliers:", error);
         }
       },
     });
@@ -251,9 +289,10 @@ export default function SuppliersPage() {
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
+                    ref={searchInputRef}
                     placeholder={t("suppliers.searchSuppliersPlaceholder")}
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setSelectedIds(new Set()); }}
                     className="pl-10"
                   />
                 </div>
@@ -276,7 +315,7 @@ export default function SuppliersPage() {
                 <>
                   <div className="space-y-3 sm:hidden">
                     {suppliers.map((supplier) => (
-                      <div key={supplier.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div key={supplier.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/suppliers/${supplier.id}/statement`)}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-semibold text-slate-900">{supplier.name}</p>
@@ -293,7 +332,7 @@ export default function SuppliersPage() {
                             </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="-mr-2 shrink-0">
+                                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] -mr-2 shrink-0">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -345,10 +384,36 @@ export default function SuppliersPage() {
                   </div>
 
                   <div className="hidden sm:block">
+                    {selectedIds.size > 0 && (
+                      <div className="mb-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                        <span className="text-sm font-medium text-slate-700">
+                          {selectedIds.size} {t("common.selected") || "selected"}
+                        </span>
+                        <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          {t("common.delete")}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                          {t("common.clear") || "Clear"}
+                        </Button>
+                      </div>
+                    )}
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead className="w-10" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={suppliers.length > 0 && selectedIds.size === suppliers.length}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedIds(new Set(suppliers.map((s) => s.id)));
+                                  } else {
+                                    setSelectedIds(new Set());
+                                  }
+                                }}
+                              />
+                            </TableHead>
                             <TableHead>{t("common.name")}</TableHead>
                             <TableHead className="hidden sm:table-cell">{t("suppliers.contactInfo")}</TableHead>
                             <TableHead className="hidden sm:table-cell">{t("common.location")}</TableHead>
@@ -360,7 +425,21 @@ export default function SuppliersPage() {
                         </TableHeader>
                         <TableBody>
                           {suppliers.map((supplier) => (
-                            <TableRow key={supplier.id}>
+                            <TableRow key={supplier.id} onClick={() => router.push(`/suppliers/${supplier.id}/statement`)} className="cursor-pointer hover:bg-muted/50">
+                              <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedIds.has(supplier.id)}
+                                  onCheckedChange={(checked) => {
+                                    const next = new Set(selectedIds);
+                                    if (checked) {
+                                      next.add(supplier.id);
+                                    } else {
+                                      next.delete(supplier.id);
+                                    }
+                                    setSelectedIds(next);
+                                  }}
+                                />
+                              </TableCell>
                               <TableCell>
                                 <div className="font-medium">{supplier.name}</div>
                               </TableCell>
@@ -400,7 +479,7 @@ export default function SuppliersPage() {
                                   {supplier.isActive ? t("common.active") : t("common.inactive")}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon">

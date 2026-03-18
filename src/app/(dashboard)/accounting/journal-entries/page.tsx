@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCurrency } from "@/hooks/use-currency";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Table,
@@ -66,15 +67,28 @@ const sourceLabels = (t: (key: string) => string): Record<string, string> => ({
 });
 
 export default function JournalEntriesPage() {
+  const router = useRouter();
   const { locale } = useCurrency();
   const { t } = useLanguage();
   const srcLabels = sourceLabels(t);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchEntries();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes((document.activeElement?.tagName || ""))) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const fetchEntries = async () => {
@@ -141,6 +155,7 @@ export default function JournalEntriesPage() {
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
+                  ref={searchInputRef}
                   placeholder={t("accounting.searchJournalEntries")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -169,7 +184,7 @@ export default function JournalEntriesPage() {
                     const totals = getTotals(entry.lines);
 
                     return (
-                      <div key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div key={entry.id} onClick={() => router.push(`/accounting/journal-entries/${entry.id}`)} className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <Link
@@ -184,7 +199,7 @@ export default function JournalEntriesPage() {
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-9 w-9 p-0">
+                              <Button variant="ghost" className="min-h-[44px] min-w-[44px] p-0">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -266,7 +281,7 @@ export default function JournalEntriesPage() {
                         {filteredEntries.map((entry) => {
                           const totals = getTotals(entry.lines);
                           return (
-                            <TableRow key={entry.id}>
+                            <TableRow key={entry.id} onClick={() => router.push(`/accounting/journal-entries/${entry.id}`)} className="cursor-pointer hover:bg-muted/50">
                               <TableCell>
                                 <Link
                                   href={`/accounting/journal-entries/${entry.id}`}
@@ -301,7 +316,7 @@ export default function JournalEntriesPage() {
                                   minimumFractionDigits: 2,
                                 })}
                               </TableCell>
-                              <TableCell>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" className="h-8 w-8 p-0">

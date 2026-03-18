@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,8 @@ function getLineAmountKey(itemId: string, ...amounts: number[]) {
 
 export default function NewQuotationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const duplicateId = searchParams.get("duplicate");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,6 +110,46 @@ export default function NewQuotationPage() {
     // Refresh product options from the selected warehouse.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
+
+  // Pre-fill form when duplicating an existing quotation
+  useEffect(() => {
+    if (!duplicateId) return;
+    const fetchDuplicate = async () => {
+      try {
+        const response = await fetch(`/api/quotations/${duplicateId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        setFormData({
+          customerId: data.customer?.id || "",
+          issueDate: new Date().toISOString().split("T")[0],
+          validUntil: getDefaultValidUntil(),
+          notes: data.notes || "",
+          terms: data.terms || "",
+          branchId: data.branch?.id || "",
+          warehouseId: data.warehouse?.id || "",
+        });
+        if (data.items && data.items.length > 0) {
+          setLineItems(
+            data.items.map((item: any, idx: number) => ({
+              id: `dup-${idx}`,
+              productId: item.productId || "",
+              quantity: Number(item.quantity) || 1,
+              unitId: item.unitId || "",
+              conversionFactor: item.conversionFactor || 1,
+              unitPrice: Number(item.unitPrice) || 0,
+              discount: Number(item.discount) || 0,
+              gstRate: Number(item.gstRate) || 0,
+              hsnCode: item.hsnCode || "",
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch quotation for duplication:", error);
+      }
+    };
+    fetchDuplicate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duplicateId]);
 
   // Global keyboard shortcuts
   useEffect(() => {

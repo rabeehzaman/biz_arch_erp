@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -52,18 +53,34 @@ interface PurchaseInvoice {
 }
 
 const statusColors: Record<string, string> = {
-  DRAFT: "secondary",
-  RECEIVED: "default",
-  PAID: "default",
-  PARTIALLY_PAID: "default",
-  CANCELLED: "secondary",
+  DRAFT: "bg-yellow-100 text-yellow-700",
+  RECEIVED: "bg-blue-100 text-blue-700",
+  PAID: "bg-green-100 text-green-700",
+  PARTIALLY_PAID: "bg-yellow-100 text-yellow-700",
+  CANCELLED: "bg-red-100 text-red-700",
 };
 
 export default function PurchaseInvoicesPage() {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("all");
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes((document.activeElement?.tagName || ""))) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const paginationParams = useMemo(
     (): Record<string, string> => (statusFilter !== "all" ? { status: statusFilter } : {}),
@@ -88,6 +105,34 @@ export default function PurchaseInvoicesPage() {
     PARTIALLY_PAID: t("purchases.statusPartial"),
     CANCELLED: t("purchases.statusCancelled"),
   };
+
+  const toggleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
+
+  const sortedInvoices = useMemo(() => {
+    if (!sortField) return invoices;
+    return [...invoices].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortField) {
+        case "invoiceNumber": aVal = a.purchaseInvoiceNumber; bVal = b.purchaseInvoiceNumber; break;
+        case "supplier": aVal = a.supplier.name; bVal = b.supplier.name; break;
+        case "invoiceDate": aVal = new Date(a.invoiceDate).getTime(); bVal = new Date(b.invoiceDate).getTime(); break;
+        case "dueDate": aVal = new Date(a.dueDate).getTime(); bVal = new Date(b.dueDate).getTime(); break;
+        case "total": aVal = Number(a.total); bVal = Number(b.total); break;
+        case "balance": aVal = Number(a.balanceDue); bVal = Number(b.balanceDue); break;
+        default: return 0;
+      }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [invoices, sortField, sortDir]);
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
@@ -129,6 +174,7 @@ export default function PurchaseInvoicesPage() {
               <div className="relative flex-1 min-w-[200px] max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
+                  ref={searchInputRef}
                   placeholder={t("purchases.searchPurchases")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -170,19 +216,77 @@ export default function PurchaseInvoicesPage() {
               </div>
             ) : (
               <>
+                {selectedIds.size > 0 && (
+                  <div className="mb-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                    <span className="text-sm font-medium text-slate-700">
+                      {selectedIds.size} {t("common.selected")}
+                    </span>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        const count = selectedIds.size;
+                        setConfirmDialog({
+                          title: `${t("common.delete")} ${count} ${t("purchases.purchaseInvoices").toLowerCase()}`,
+                          description: t("common.deleteConfirm"),
+                          onConfirm: async () => {
+                            try {
+                              await Promise.all(
+                                Array.from(selectedIds).map(id =>
+                                  fetch(`/api/purchase-invoices/${id}`, { method: "DELETE" })
+                                )
+                              );
+                              toast.success(`${count} ${t("purchases.purchaseInvoices").toLowerCase()} ${t("common.deleted").toLowerCase()}`);
+                              setSelectedIds(new Set());
+                              refresh();
+                            } catch {
+                              toast.error(t("common.error"));
+                            }
+                          },
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      {t("common.delete")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedIds(new Set())}
+                    >
+                      {t("common.clearSelection")}
+                    </Button>
+                  </div>
+                )}
+
                 <div className="space-y-3 sm:hidden">
-                  {invoices.map((invoice) => (
-                    <div key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                            {t("purchases.purchaseInvoiceNumber")}
-                          </p>
-                          <p className="mt-1 font-semibold text-slate-900">{invoice.purchaseInvoiceNumber}</p>
+                  {sortedInvoices.map((invoice) => (
+                    <div key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/purchase-invoices/${invoice.id}`)}>
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(invoice.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const next = new Set(selectedIds);
+                            if (e.target.checked) next.add(invoice.id);
+                            else next.delete(invoice.id);
+                            setSelectedIds(next);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 h-4 w-4 rounded border-slate-300"
+                        />
+                        <div className="flex flex-1 items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                              {t("purchases.purchaseInvoiceNumber")}
+                            </p>
+                            <p className="mt-1 font-semibold text-slate-900">{invoice.purchaseInvoiceNumber}</p>
+                          </div>
+                          <Badge className={statusColors[invoice.status]}>
+                            {statusLabels[invoice.status]}
+                          </Badge>
                         </div>
-                        <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
-                          {statusLabels[invoice.status]}
-                        </Badge>
                       </div>
 
                       <div className="mt-4 min-w-0">
@@ -222,7 +326,7 @@ export default function PurchaseInvoicesPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex gap-2">
+                      <div className="mt-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button asChild variant="outline" className="min-h-[44px] flex-1">
                           <Link href={`/purchase-invoices/${invoice.id}`}>
                             <Eye className="h-4 w-4" />
@@ -246,20 +350,77 @@ export default function PurchaseInvoicesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>
-                        <TableHead>{t("suppliers.supplier")}</TableHead>
+                        <TableHead className="w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.size === invoices.length && invoices.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIds(new Set(invoices.map(inv => inv.id)));
+                              } else {
+                                setSelectedIds(new Set());
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-slate-300"
+                          />
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("invoiceNumber")}>
+                          <span className="inline-flex items-center gap-1">
+                            {t("purchases.purchaseInvoiceNumber")}
+                            {sortField === "invoiceNumber" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                          </span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("supplier")}>
+                          <span className="inline-flex items-center gap-1">
+                            {t("suppliers.supplier")}
+                            {sortField === "supplier" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                          </span>
+                        </TableHead>
                         <TableHead>{t("common.supplierRef")}</TableHead>
-                        <TableHead>{t("common.date")}</TableHead>
-                        <TableHead>{t("sales.dueDate")}</TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("invoiceDate")}>
+                          <span className="inline-flex items-center gap-1">
+                            {t("common.date")}
+                            {sortField === "invoiceDate" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                          </span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("dueDate")}>
+                          <span className="inline-flex items-center gap-1">
+                            {t("sales.dueDate")}
+                            {sortField === "dueDate" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                          </span>
+                        </TableHead>
                         <TableHead>{t("common.status")}</TableHead>
-                        <TableHead className="text-right">{t("common.total")}</TableHead>
-                        <TableHead className="text-right">{t("common.balance")}</TableHead>
+                        <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("total")}>
+                          <span className="inline-flex items-center gap-1 justify-end w-full">
+                            {t("common.total")}
+                            {sortField === "total" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                          </span>
+                        </TableHead>
+                        <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("balance")}>
+                          <span className="inline-flex items-center gap-1 justify-end w-full">
+                            {t("common.balance")}
+                            {sortField === "balance" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                          </span>
+                        </TableHead>
                         <TableHead className="text-right">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.map((invoice) => (
-                        <TableRow key={invoice.id}>
+                      {sortedInvoices.map((invoice) => (
+                        <TableRow key={invoice.id} onClick={() => router.push(`/purchase-invoices/${invoice.id}`)} className="cursor-pointer hover:bg-muted/50">
+                          <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(invoice.id)}
+                              onChange={(e) => {
+                                const next = new Set(selectedIds);
+                                if (e.target.checked) next.add(invoice.id);
+                                else next.delete(invoice.id);
+                                setSelectedIds(next);
+                              }}
+                              className="h-4 w-4 rounded border-slate-300"
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">
                             {invoice.purchaseInvoiceNumber}
                           </TableCell>
@@ -283,7 +444,7 @@ export default function PurchaseInvoicesPage() {
                             {format(new Date(invoice.dueDate), "dd MMM yyyy")}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={statusColors[invoice.status] as "default" | "secondary" | "destructive"}>
+                            <Badge className={statusColors[invoice.status]}>
                               {statusLabels[invoice.status]}
                             </Badge>
                           </TableCell>
@@ -301,15 +462,16 @@ export default function PurchaseInvoicesPage() {
                               {fmt(Number(invoice.balanceDue))}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <Link href={`/purchase-invoices/${invoice.id}`}>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" title={t("common.details") || "Details"}>
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </Link>
                             <Button
                               variant="ghost"
                               size="icon"
+                              title={t("common.delete") || "Delete"}
                               onClick={() => handleDelete(invoice.id)}
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />

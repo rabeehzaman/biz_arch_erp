@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,8 @@ export default function NewStockTransferPage() {
     const [loadingWarehouses, setLoadingWarehouses] = useState(true);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
+    useUnsavedChanges(isDirty);
 
     const [sourceWarehouseId, setSourceWarehouseId] = useState("");
     const [destinationWarehouseId, setDestinationWarehouseId] = useState("");
@@ -168,6 +171,7 @@ export default function NewStockTransferPage() {
             }
 
             const created = await res.json();
+            setIsDirty(false);
             toast.success(t("inventory.stockTransferCompleted"));
             router.push(`/inventory/stock-transfers/${created.id}`);
         } catch (error) {
@@ -182,7 +186,7 @@ export default function NewStockTransferPage() {
 
     return (
         <PageAnimation>
-            <div className="space-y-6">
+            <div className="space-y-6" onChangeCapture={() => setIsDirty(true)}>
                 {/* Header */}
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild className="h-9 w-9 shrink-0 rounded-full">

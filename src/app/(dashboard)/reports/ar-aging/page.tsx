@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -35,6 +36,7 @@ interface ARAgingData {
 }
 
 export default function ARAgingPage() {
+  const router = useRouter();
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
   const [data, setData] = useState<ARAgingData | null>(null);
@@ -145,7 +147,7 @@ export default function ARAgingPage() {
               <CardContent className="p-0 sm:p-6">
                 <div className="space-y-3 p-4 sm:hidden">
                   {data.customers.map((c) => (
-                    <div key={c.customerId} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div key={c.customerId} onClick={() => router.push(`/customers/${c.customerId}/statement`)} className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50">
                       <p className="font-semibold text-slate-900">{c.customerName}</p>
                       <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
                         <div><p className="text-xs text-slate-500">{t("reports.agingCurrent")}</p><p className="mt-1 font-mono text-green-600">{fmt(c.buckets.current)}</p></div>
@@ -173,7 +175,7 @@ export default function ARAgingPage() {
                     </TableHeader>
                     <TableBody>
                       {data.customers.map((c) => (
-                        <TableRow key={c.customerId}>
+                        <TableRow key={c.customerId} onClick={() => router.push(`/customers/${c.customerId}/statement`)} className="cursor-pointer hover:bg-muted/50">
                           <TableCell className="font-medium">{c.customerName}</TableCell>
                           <TableCell className="text-right font-mono text-green-600">{c.buckets.current > 0 ? fmt(c.buckets.current) : "-"}</TableCell>
                           <TableCell className="text-right font-mono text-yellow-600">{c.buckets.days1to30 > 0 ? fmt(c.buckets.days1to30) : "-"}</TableCell>

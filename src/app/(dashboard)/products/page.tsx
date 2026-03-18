@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
@@ -24,6 +24,7 @@ import { Plus, Pencil, Trash2, Search, Package, ArrowRight, AlertTriangle } from
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
 
@@ -97,6 +98,36 @@ function ProductsPageContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
+
+  const sortedProducts = useMemo(() => {
+    if (!sortField) return products;
+    return [...products].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortField) {
+        case "name": aVal = a.name; bVal = b.name; break;
+        case "sku": aVal = a.sku || ""; bVal = b.sku || ""; break;
+        case "price": aVal = Number(a.price); bVal = Number(b.price); break;
+        case "cost": aVal = Number(a.cost); bVal = Number(b.cost); break;
+        default: return 0;
+      }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [products, sortField, sortDir]);
 
   // — Inventory tab state —
   const [inventory, setInventory] = useState<InventoryProduct[]>([]);
@@ -136,6 +167,17 @@ function ProductsPageContent() {
       }
     }
   }, [actionParam, barcodeParam, idParam, isProductsLoading, products]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes((document.activeElement?.tagName || ""))) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const fetchInventory = async () => {
     setIsInventoryLoading(true);
@@ -208,7 +250,27 @@ function ProductsPageContent() {
     });
   };
 
-
+  const handleBulkDelete = () => {
+    setConfirmDialog({
+      title: t("products.deleteProduct"),
+      description: `${t("common.deleteConfirm")} (${selectedIds.size} ${t("common.selected") || "selected"})`,
+      onConfirm: async () => {
+        try {
+          await Promise.all(
+            Array.from(selectedIds).map((id) =>
+              fetch(`/api/products/${id}`, { method: "DELETE" })
+            )
+          );
+          setSelectedIds(new Set());
+          refreshProducts();
+          toast.success(t("products.productDeleted"));
+        } catch (error) {
+          toast.error(t("common.error"));
+          console.error("Failed to bulk delete products:", error);
+        }
+      },
+    });
+  };
 
   const getStockQuantity = (product: InventoryProduct) =>
     product.stockLots?.reduce((sum, lot) => sum + Number(lot.remainingQuantity), 0) || 0;
@@ -314,9 +376,10 @@ function ProductsPageContent() {
                       <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <Input
+                          ref={searchInputRef}
                           placeholder={t("products.searchProducts")}
                           value={productSearch}
-                          onChange={(e) => setProductSearch(e.target.value)}
+                          onChange={(e) => { setProductSearch(e.target.value); setSelectedIds(new Set()); }}
                           className="pl-10"
                         />
                       </div>
@@ -338,10 +401,11 @@ function ProductsPageContent() {
                     ) : (
                       <>
                         <div className="space-y-3 sm:hidden">
-                          {products.map((product) => (
+                          {sortedProducts.map((product) => (
                             <div
                               key={product.id}
-                              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                              onClick={() => handleEdit(product)}
+                              className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 space-y-1">
@@ -387,7 +451,7 @@ function ProductsPageContent() {
                                 </div>
                               </div>
 
-                              <div className="mt-4 flex gap-2">
+                              <div className="mt-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                 <Button
                                   variant="outline"
                                   className="min-h-[44px] flex-1"
@@ -410,21 +474,81 @@ function ProductsPageContent() {
                         </div>
 
                         <div className="hidden sm:block">
+                          {selectedIds.size > 0 && (
+                            <div className="mb-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                              <span className="text-sm font-medium text-slate-700">
+                                {selectedIds.size} {t("common.selected") || "selected"}
+                              </span>
+                              <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                {t("common.delete")}
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                                {t("common.clear") || "Clear"}
+                              </Button>
+                            </div>
+                          )}
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>{t("common.name")}</TableHead>
-                                <TableHead className="hidden sm:table-cell">{t("products.sku")}</TableHead>
-                                <TableHead>{t("common.price")}</TableHead>
-                                <TableHead className="hidden md:table-cell">{t("common.cost")}</TableHead>
+                                <TableHead className="w-10" onClick={(e) => e.stopPropagation()}>
+                                  <Checkbox
+                                    checked={products.length > 0 && selectedIds.size === products.length}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedIds(new Set(products.map((p) => p.id)));
+                                      } else {
+                                        setSelectedIds(new Set());
+                                      }
+                                    }}
+                                  />
+                                </TableHead>
+                                <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("name")}>
+                                  <span className="inline-flex items-center gap-1">
+                                    {t("common.name")}
+                                    {sortField === "name" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                                  </span>
+                                </TableHead>
+                                <TableHead className="hidden sm:table-cell cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("sku")}>
+                                  <span className="inline-flex items-center gap-1">
+                                    {t("products.sku")}
+                                    {sortField === "sku" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                                  </span>
+                                </TableHead>
+                                <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("price")}>
+                                  <span className="inline-flex items-center gap-1">
+                                    {t("common.price")}
+                                    {sortField === "price" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                                  </span>
+                                </TableHead>
+                                <TableHead className="hidden md:table-cell cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("cost")}>
+                                  <span className="inline-flex items-center gap-1">
+                                    {t("common.cost")}
+                                    {sortField === "cost" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                                  </span>
+                                </TableHead>
                                 <TableHead className="hidden sm:table-cell">{t("common.unit")}</TableHead>
                                 <TableHead>{t("common.status")}</TableHead>
                                 <TableHead className="text-right">{t("common.actions")}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {products.map((product) => (
-                                <TableRow key={product.id}>
+                              {sortedProducts.map((product) => (
+                                <TableRow key={product.id} onClick={() => handleEdit(product)} className="cursor-pointer hover:bg-muted/50">
+                                  <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                      checked={selectedIds.has(product.id)}
+                                      onCheckedChange={(checked) => {
+                                        const next = new Set(selectedIds);
+                                        if (checked) {
+                                          next.add(product.id);
+                                        } else {
+                                          next.delete(product.id);
+                                        }
+                                        setSelectedIds(next);
+                                      }}
+                                    />
+                                  </TableCell>
                                   <TableCell>
                                     <div>
                                       <div className="font-medium">{product.name}</div>
@@ -450,10 +574,11 @@ function ProductsPageContent() {
                                       {product.isActive ? t("common.active") : t("common.inactive")}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell className="text-right">
+                                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                     <Button
                                       variant="ghost"
                                       size="icon"
+                                      title={t("common.edit") || "Edit"}
                                       onClick={() => handleEdit(product)}
                                     >
                                       <Pencil className="h-4 w-4" />
@@ -461,6 +586,7 @@ function ProductsPageContent() {
                                     <Button
                                       variant="ghost"
                                       size="icon"
+                                      title={t("common.delete") || "Delete"}
                                       onClick={() => handleDelete(product.id)}
                                     >
                                       <Trash2 className="h-4 w-4 text-red-500" />

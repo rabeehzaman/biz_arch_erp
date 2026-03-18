@@ -9,6 +9,7 @@ import { MobileLayout } from "@/components/mobile-layout";
 import { SWRProvider } from "@/lib/swr-config";
 import { CommandPaletteProvider } from "@/components/command-palette/command-palette-provider";
 import { CommandPalette } from "@/components/command-palette/command-palette";
+import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
 import { LanguageProvider, useLanguage } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
@@ -70,6 +71,7 @@ export default function ClientDashboardLayout({
                     <CommandPaletteProvider>
                         <DashboardInner>{children}</DashboardInner>
                         <CommandPalette />
+                        <KeyboardShortcutsDialog />
                     </CommandPaletteProvider>
                 </LanguageProvider>
             </SWRProvider>

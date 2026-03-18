@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
@@ -53,6 +53,8 @@ function getLineAmountKey(itemId: string, ...amounts: number[]) {
 
 export default function NewCreditNotePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const duplicateId = searchParams.get("duplicate");
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -94,6 +96,42 @@ export default function NewCreditNotePage() {
     // Product options are refreshed from the selected warehouse.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [warehouseId]);
+
+  // Pre-fill form when duplicating an existing credit note
+  useEffect(() => {
+    if (!duplicateId) return;
+    const fetchDuplicate = async () => {
+      try {
+        const response = await fetch(`/api/credit-notes/${duplicateId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        setCustomerId(data.customer?.id || "");
+        setIssueDate(new Date().toISOString().split("T")[0]);
+        setReason(data.reason || "");
+        setNotes(data.notes || "");
+        setBranchId(data.branch?.id || "");
+        setWarehouseId(data.warehouse?.id || "");
+        if (data.items && data.items.length > 0) {
+          setLineItems(
+            data.items.map((item: any, idx: number) => ({
+              id: `dup-${idx}`,
+              productId: item.product?.id || item.productId || "",
+              description: item.description || "",
+              quantity: Number(item.quantity) || 1,
+              unitId: item.unitId || "",
+              conversionFactor: item.conversionFactor || 1,
+              unitPrice: Number(item.unitPrice) || 0,
+              discount: Number(item.discount) || 0,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch credit note for duplication:", error);
+      }
+    };
+    fetchDuplicate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duplicateId]);
 
   const fetchCustomers = async () => {
     try {

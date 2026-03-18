@@ -235,6 +235,7 @@
         "generating": "جاري الإنشاء...",
         "sendEmail": "إرسال بريد إلكتروني",
         "print": "طباعة",
+        "duplicate": "نسخ",
         "share": "مشاركة",
         "details": "التفاصيل",
         "summary": "الملخص",
@@ -375,7 +376,9 @@
         "baseUnit": "الوحدة الأساسية",
         "selectType": "اختر النوع",
         "country": "الدولة",
-        "gstStateCode": "رمز ولاية GST"
+        "gstStateCode": "رمز ولاية GST",
+        "deleted": "تم الحذف",
+        "clearSelection": "مسح التحديد"
     },
     "sales": {
         "invoices": "فواتير المبيعات",

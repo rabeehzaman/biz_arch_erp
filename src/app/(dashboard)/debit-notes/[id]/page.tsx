@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Edit, Trash2, FileText } from "lucide-react";
+import { ArrowLeft, Copy, Edit, Trash2, FileText } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -161,6 +161,10 @@ export default function DebitNoteDetailPage() {
                 {t("common.edit")}
               </Button>
             </Link>
+            <Button variant="outline" size="sm" onClick={() => router.push(`/debit-notes/new?duplicate=${debitNote.id}`)} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+              <Copy className="h-4 w-4 sm:mr-2" />
+              {t("common.duplicate")}
+            </Button>
             <Button variant="destructive" size="sm" onClick={handleDelete} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               <Trash2 className="h-4 w-4 sm:mr-2" />
               {t("common.delete")}

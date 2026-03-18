@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Download, FileCheck, Ban, Info, Loader2, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, Building2, Copy, Download, FileCheck, Ban, Info, Loader2, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -281,6 +281,10 @@ export default function QuotationDetailPage({
                 </Button>
               </Link>
             )}
+            <Button variant="outline" size="sm" onClick={() => router.push(`/quotations/new?duplicate=${quotation.id}`)} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+              <Copy className="h-4 w-4 sm:mr-2" />
+              <span className="sm:inline">{t("common.duplicate")}</span>
+            </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isDownloading
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />

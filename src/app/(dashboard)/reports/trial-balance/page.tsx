@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -35,6 +36,7 @@ interface TrialBalance {
 }
 
 export default function TrialBalancePage() {
+  const router = useRouter();
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
   const [data, setData] = useState<TrialBalance | null>(null);
@@ -144,7 +146,7 @@ export default function TrialBalancePage() {
             {/* Mobile cards */}
             <div className="space-y-3 sm:hidden">
               {data.accounts.map((row) => (
-                <div key={row.account.code} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div key={row.account.code} onClick={() => router.push(`/reports/ledger?accountCode=${row.account.code}`)} className="cursor-pointer hover:bg-muted/50 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-mono text-xs text-slate-500">{row.account.code}</p>
@@ -199,7 +201,7 @@ export default function TrialBalancePage() {
                 </TableHeader>
                 <TableBody>
                   {data.accounts.map((row) => (
-                    <TableRow key={row.account.code}>
+                    <TableRow key={row.account.code} onClick={() => router.push(`/reports/ledger?accountCode=${row.account.code}`)} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="font-mono">
                         {row.account.code}
                       </TableCell>

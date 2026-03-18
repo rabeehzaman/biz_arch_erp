@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -68,6 +69,7 @@ const statusColorClass = (status: string): string => {
 };
 
 export default function SalesRegisterPage() {
+  const router = useRouter();
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
   const [data, setData] = useState<SalesRegisterData | null>(null);
@@ -264,7 +266,7 @@ export default function SalesRegisterPage() {
                 {/* Mobile cards */}
                 <div className="space-y-3 p-4 sm:hidden">
                   {data.rows.map((r) => (
-                    <div key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div key={r.id} onClick={() => router.push(`/invoices/${r.id}`)} className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-slate-900">
                           {new Date(r.date).toLocaleDateString()}
@@ -313,7 +315,7 @@ export default function SalesRegisterPage() {
                     </TableHeader>
                     <TableBody>
                       {data.rows.map((r) => (
-                        <TableRow key={r.id}>
+                        <TableRow key={r.id} onClick={() => router.push(`/invoices/${r.id}`)} className="cursor-pointer hover:bg-muted/50">
                           <TableCell className="whitespace-nowrap">
                             {new Date(r.date).toLocaleDateString()}
                           </TableCell>
