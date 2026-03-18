@@ -11,8 +11,8 @@
 |---|-------|------|-------|--------|
 | 0 | Stock Transfer Fix | `e2e/stock-transfer-fifo.spec.ts` | 8 | PASSING |
 | 1 | FIFO Comprehensive | `e2e/fifo-comprehensive.spec.ts` | 107 | PASSING (~2 timeouts, 1 skip) |
-| 2 | Products, Customers, Suppliers, Units | `e2e/tests/master-data.spec.ts` | 120 | WRITTEN — NOT YET RUN |
-| 3 | Invoices & Purchases (CRUD + tax) | `e2e/tests/invoices-purchases.spec.ts` | 150 | WRITTEN — NOT YET RUN |
+| 2 | Products, Customers, Suppliers, Units | `e2e/tests/master-data.spec.ts` | 120 | ✅ PASSING (122/122) |
+| 3 | Invoices & Purchases (CRUD + tax) | `e2e/tests/invoices-purchases.spec.ts` | 150 | ✅ PASSING (150/150, transient Supabase timeouts) |
 | 4 | Quotations, Credit/Debit Notes | `e2e/tests/quotations-returns.spec.ts` | 80 | WRITTEN — NOT YET RUN |
 | 5 | Payments (customer + supplier) | `e2e/tests/payments.spec.ts` | 60 | WRITTEN — NOT YET RUN |
 | 6 | Accounting (COA, Journals, Cash/Bank, Expenses) | `e2e/tests/accounting.spec.ts` | 120 | WRITTEN — NOT YET RUN |
@@ -57,6 +57,8 @@
 | 2 | Delete consumed opening stock → server 500 | MEDIUM | YES | `7a98445` |
 | 3 | Edit purchase warehouse doesn't relocate stock lot | LOW | YES | `7a98445` |
 | 4 | Edit sale warehouse not propagated through recalculation | LOW | YES | `7a98445` |
+| 5 | Journal auto-number overflow: string sort "999" > "1000" | HIGH | YES | `3192ab8` |
+| 6 | Transaction timeout 30s too low for Supabase latency | MEDIUM | YES | `ac66396` |
 
 ---
 

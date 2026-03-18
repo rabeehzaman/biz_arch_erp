@@ -264,7 +264,7 @@ async function createPurchase(opts: {
 
 async function getJournalLines(sourceType: string, sourceId: string) {
   const result = await pool.query(
-    `SELECT je.id, jel.account_code, jel.debit, jel.credit
+    `SELECT je.id, jel."accountId", jel.debit, jel.credit
      FROM journal_entries je
      JOIN journal_entry_lines jel ON jel."journalEntryId" = je.id
      WHERE je."sourceType" = $1 AND je."sourceId" = $2
@@ -618,7 +618,7 @@ test.describe("GST India Edition", () => {
     const lines = await getJournalLines("INVOICE", gstInvoiceId);
     expect(lines.length).toBeGreaterThan(0);
     // Should have GST liability accounts in the journal
-    const accountCodes = lines.map((l: any) => l.account_code);
+    const accountCodes = lines.map((l: any) => l."accountId");
     // At least revenue and AR accounts
     expect(accountCodes.length).toBeGreaterThanOrEqual(2);
   });

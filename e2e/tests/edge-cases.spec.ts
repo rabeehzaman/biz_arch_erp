@@ -249,7 +249,7 @@ async function getSupplierBalance(): Promise<number> {
 
 async function getJournalLines(sourceType: string, sourceId: string) {
   const result = await pool.query(
-    `SELECT je.id, jel.account_code, jel.debit, jel.credit
+    `SELECT je.id, jel."accountId", jel.debit, jel.credit
      FROM journal_entries je
      JOIN journal_entry_lines jel ON jel."journalEntryId" = je.id
      WHERE je."sourceType" = $1 AND je."sourceId" = $2
