@@ -244,7 +244,7 @@ export async function DELETE(
           organizationId,
         },
       });
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     return NextResponse.json({ success: true });
   } catch (error) {

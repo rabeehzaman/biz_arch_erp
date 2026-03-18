@@ -364,7 +364,7 @@ export async function PUT(
           await recalculateFromDate(productId, recalcDate, tx, "recalculation", undefined, organizationId);
         }
       }
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     const updatedInvoice = await prisma.purchaseInvoice.findUnique({
       where: { id, organizationId },
@@ -518,7 +518,7 @@ export async function DELETE(
           await recalculateFromDate(productId, invoiceDate, tx, "recalculation", undefined, organizationId);
         }
       }
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     return NextResponse.json({ success: true });
   } catch (error) {

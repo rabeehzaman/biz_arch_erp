@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
                     },
                 },
             });
-        }, { timeout: 30000 });
+        }, { timeout: 60000 });
 
         return NextResponse.json(transfer, { status: 201 });
     } catch (error) {

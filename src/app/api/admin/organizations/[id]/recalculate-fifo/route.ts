@@ -45,7 +45,7 @@ export async function POST(
                     session.user?.id,
                     id
                 );
-            }, { timeout: 30000 });
+            }, { timeout: 60000 });
             totalRecalculated++;
         }
 

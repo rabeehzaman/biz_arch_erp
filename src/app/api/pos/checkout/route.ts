@@ -954,7 +954,7 @@ export async function POST(request: NextRequest) {
         warnings,
         transactionStages,
       };
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
     if (includeDebugTimings) {
       requestStages.transactionTotalMs = roundTimingMs(
         performance.now() - transactionStartedAt

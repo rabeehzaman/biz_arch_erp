@@ -1146,7 +1146,7 @@ export async function POST(
             },
             {
                 maxWait: 30000,
-                timeout: 300000, // 5-minute timeout for large orgs with transactions
+                timeout: 600000, // 5-minute timeout for large orgs with transactions
             }
         );
 

@@ -418,7 +418,7 @@ export async function PUT(
       });
 
       return { invoice: finalInvoice, warnings };
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     return NextResponse.json(result);
   } catch (error) {
@@ -607,7 +607,7 @@ export async function DELETE(
       for (const { productId } of productsWithConsumptions) {
         await recalculateFromDate(productId, invoice.issueDate, tx, "recalculation", undefined, organizationId);
       }
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     return NextResponse.json({ success: true });
   } catch (error) {

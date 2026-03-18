@@ -396,13 +396,13 @@ export async function POST(request: NextRequest) {
       }
 
       return invoice;
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("Failed to create purchase invoice:", error);
     return NextResponse.json(
-      { error: "Failed to create purchase invoice" },
+      { error: error instanceof Error ? error.message : "Failed to create purchase invoice" },
       { status: 500 }
     );
   }

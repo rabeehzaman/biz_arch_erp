@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       }
 
       return openingStock;
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

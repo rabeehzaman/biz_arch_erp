@@ -527,7 +527,7 @@ export async function PUT(
       });
 
       return updatedSession;
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     return NextResponse.json(result);
   } catch (error) {

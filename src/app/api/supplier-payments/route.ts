@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
       }
 
       return newPayment;
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     return NextResponse.json(payment, { status: 201 });
   } catch (error) {

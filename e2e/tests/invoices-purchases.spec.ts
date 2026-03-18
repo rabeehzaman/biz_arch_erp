@@ -19,6 +19,21 @@ async function parse(response: Awaited<ReturnType<APIRequestContext["get"]>>) {
   return data;
 }
 
+/** Retry a function up to N times for transient DB connection errors */
+async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      const msg = e?.message ?? "";
+      const isTransient = msg.includes("timeout") || msg.includes("ECONNRESET") || msg.includes("connection");
+      if (!isTransient || i === retries) throw e;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+  throw new Error("unreachable");
+}
+
 async function parseSafe(response: APIResponse) {
   const body = await response.text();
   return {
@@ -42,6 +57,9 @@ function isoDate(offset = 0) {
 /*  Shared state created once per file                                        */
 /* ────────────────────────────────────────────────────────────────────────── */
 
+// File-level timeout: applies to beforeAll/afterAll hooks and tests outside describe blocks
+test.setTimeout(120_000);
+
 let api: APIRequestContext;
 let supplierId: string;
 let customerId: string;
@@ -55,7 +73,11 @@ let warehouseId: string;
 let seedPurchaseId: string;
 
 test.beforeAll(async () => {
-  api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath });
+  api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath, timeout: 60_000 });
+
+  // Warm up the DB connection pool (first request after inactivity can timeout)
+  await api.get("/api/units").catch(() => {});
+  await new Promise((r) => setTimeout(r, 1000));
 
   const run = uid();
 
@@ -191,7 +213,7 @@ async function quickPurchase(opts: {
   gstRate?: number;
   discount?: number;
 }) {
-  return parse(
+  return withRetry(async () => parse(
     await api.post("/api/purchase-invoices", {
       data: {
         supplierId,
@@ -211,7 +233,7 @@ async function quickPurchase(opts: {
           },
         ],
       },
-    }),
+    })),
   );
 }
 
@@ -230,7 +252,7 @@ async function quickSale(opts: {
   isTaxInclusive?: boolean;
   applyRoundOff?: boolean;
 }) {
-  return parse(
+  return withRetry(async () => parse(
     await api.post("/api/invoices", {
       data: {
         customerId,
@@ -255,7 +277,7 @@ async function quickSale(opts: {
         ],
       },
     }),
-  );
+  ));
 }
 
 async function getCustomerBalance() {

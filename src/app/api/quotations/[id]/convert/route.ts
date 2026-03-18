@@ -210,7 +210,7 @@ export async function POST(
       await syncInvoiceCOGSJournal(tx, organizationId, newInvoice.id);
 
       return newInvoice;
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 
     // Fetch complete invoice with relations
     const completeInvoice = await prisma.invoice.findUnique({
