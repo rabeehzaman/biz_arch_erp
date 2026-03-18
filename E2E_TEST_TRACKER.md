@@ -15,8 +15,8 @@
 | 3 | Invoices & Purchases (CRUD + tax) | `e2e/tests/invoices-purchases.spec.ts` | 150 | ✅ PASSING (150/150, transient Supabase timeouts) |
 | 4 | Quotations, Credit/Debit Notes | `e2e/tests/quotations-returns.spec.ts` | 80 | ✅ PASSING (82/82) |
 | 5 | Payments (customer + supplier) | `e2e/tests/payments.spec.ts` | 60 | ✅ PASSING (62/62) |
-| 6 | Accounting (COA, Journals, Cash/Bank, Expenses) | `e2e/tests/accounting.spec.ts` | 120 | WRITTEN — NOT YET RUN |
-| 7 | POS (sessions, checkout, held orders) | `e2e/tests/pos.spec.ts` | 100 | WRITTEN — NOT YET RUN |
+| 6 | Accounting (COA, Journals, Cash/Bank, Expenses) | `e2e/tests/accounting.spec.ts` | 120 | ✅ PASSING (122/122, transient Supabase timeouts) |
+| 7 | POS (sessions, checkout, held orders) | `e2e/tests/pos.spec.ts` | 100 | RUNNING |
 | 8 | Reports (all 30+ reports) | `e2e/tests/reports.spec.ts` | 100 | WRITTEN — NOT YET RUN |
 | 9 | Settings, Branches, Employees, Mobile Devices | `e2e/tests/settings-inventory.spec.ts` | 80 | WRITTEN — NOT YET RUN |
 | 10 | Auth, Permissions, Navigation, Dashboard | `e2e/tests/auth-navigation.spec.ts` | 60 | WRITTEN — NOT YET RUN |

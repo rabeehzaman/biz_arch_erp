@@ -198,6 +198,25 @@ test.beforeAll(async () => {
     }),
   );
 
+  // Set up POS register config with default cash account
+  const cbAccounts = await parse(await api.get("/api/cash-bank-accounts"));
+  const cashAccount = cbAccounts.find((a: any) => a.accountSubType === "CASH" && a.isActive);
+  if (cashAccount) {
+    // Get warehouse branch for register config
+    const wh = warehouses[0];
+    const rcRes = await api.put("/api/pos/register-configs", {
+      data: {
+        warehouseId: wh?.id ?? null,
+        branchId: wh?.branchId ?? null,
+        defaultCashAccountId: cashAccount.id,
+        defaultBankAccountId: null,
+      },
+    });
+    if (!rcRes.ok()) {
+      console.error("[POS setup] Register config creation failed:", rcRes.status(), await rcRes.text());
+    }
+  }
+
   // Seed purchase: 100 units @ cost 100
   await parse(
     await api.post("/api/purchase-invoices", {
