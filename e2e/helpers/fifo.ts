@@ -435,3 +435,239 @@ export async function getStockTransfer(api: APIRequestContext, transferId: strin
   const response = await api.get(`/api/stock-transfers/${transferId}`);
   return parseJson(response);
 }
+
+// ──────────────────────────────────────────────────────────────────
+// Invoice / Purchase CRUD helpers
+// ──────────────────────────────────────────────────────────────────
+
+/** Delete a sales invoice */
+export async function deleteSalesInvoice(api: APIRequestContext, invoiceId: string): Promise<void> {
+  const response = await api.delete(`/api/invoices/${invoiceId}`);
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Delete invoice failed: ${response.status()} ${body}`);
+  }
+}
+
+/** Edit a sales invoice (PUT) */
+export async function editSalesInvoice(
+  api: APIRequestContext,
+  invoiceId: string,
+  input: {
+    customerId: string;
+    issueDate: string;
+    items: Array<{ productId: string; quantity: number; unitPrice: number; unitId: string }>;
+    warehouseId?: string;
+  },
+): Promise<void> {
+  const response = await api.put(`/api/invoices/${invoiceId}`, {
+    data: {
+      customerId: input.customerId,
+      issueDate: input.issueDate,
+      dueDate: input.issueDate,
+      paymentType: "CASH",
+      warehouseId: input.warehouseId,
+      items: input.items.map((i) => ({
+        productId: i.productId,
+        description: "edited",
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        unitId: i.unitId,
+        gstRate: 0,
+        discount: 0,
+      })),
+    },
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Edit invoice failed: ${response.status()} ${body}`);
+  }
+}
+
+/** Delete a purchase invoice */
+export async function deletePurchaseInvoice(api: APIRequestContext, purchaseId: string): Promise<void> {
+  const response = await api.delete(`/api/purchase-invoices/${purchaseId}`);
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Delete purchase invoice failed: ${response.status()} ${body}`);
+  }
+}
+
+/** Edit a purchase invoice (PUT) */
+export async function editPurchaseInvoice(
+  api: APIRequestContext,
+  purchaseId: string,
+  input: {
+    supplierId: string;
+    invoiceDate: string;
+    items: Array<{ productId: string; quantity: number; unitCost: number; unitId: string }>;
+    warehouseId?: string;
+  },
+): Promise<void> {
+  const response = await api.put(`/api/purchase-invoices/${purchaseId}`, {
+    data: {
+      supplierId: input.supplierId,
+      invoiceDate: input.invoiceDate,
+      dueDate: input.invoiceDate,
+      warehouseId: input.warehouseId,
+      items: input.items.map((i) => ({
+        productId: i.productId,
+        description: "edited",
+        quantity: i.quantity,
+        unitCost: i.unitCost,
+        unitId: i.unitId,
+        gstRate: 0,
+        discount: 0,
+      })),
+    },
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Edit purchase invoice failed: ${response.status()} ${body}`);
+  }
+}
+
+/** Create a credit note (sales return) */
+export async function createCreditNote(
+  api: APIRequestContext,
+  input: {
+    customerId: string;
+    invoiceId?: string;
+    issueDate: string;
+    items: Array<{
+      productId: string;
+      quantity: number;
+      unitPrice: number;
+      unitId: string;
+      invoiceItemId?: string;
+    }>;
+    warehouseId?: string;
+  },
+): Promise<{ id: string; creditNoteNumber: string }> {
+  const response = await api.post("/api/credit-notes", {
+    data: {
+      customerId: input.customerId,
+      invoiceId: input.invoiceId,
+      issueDate: input.issueDate,
+      appliedToBalance: true,
+      warehouseId: input.warehouseId,
+      items: input.items.map((i) => ({
+        productId: i.productId,
+        description: "credit note",
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        unitId: i.unitId,
+        invoiceItemId: i.invoiceItemId,
+        gstRate: 0,
+        discount: 0,
+      })),
+    },
+  });
+  const cn = await parseJson(response);
+  return { id: cn.id, creditNoteNumber: cn.creditNoteNumber };
+}
+
+/** Create a debit note (purchase return) */
+export async function createDebitNote(
+  api: APIRequestContext,
+  input: {
+    supplierId: string;
+    purchaseInvoiceId?: string;
+    issueDate: string;
+    items: Array<{ productId: string; quantity: number; unitCost: number; unitId: string }>;
+    warehouseId?: string;
+  },
+): Promise<{ id: string; debitNoteNumber: string }> {
+  const response = await api.post("/api/debit-notes", {
+    data: {
+      supplierId: input.supplierId,
+      purchaseInvoiceId: input.purchaseInvoiceId,
+      issueDate: input.issueDate,
+      appliedToBalance: true,
+      warehouseId: input.warehouseId,
+      items: input.items.map((i) => ({
+        productId: i.productId,
+        description: "debit note",
+        quantity: i.quantity,
+        unitCost: i.unitCost,
+        unitId: i.unitId,
+        gstRate: 0,
+        discount: 0,
+      })),
+    },
+  });
+  const dn = await parseJson(response);
+  return { id: dn.id, debitNoteNumber: dn.debitNoteNumber };
+}
+
+/** Create opening stock */
+export async function createOpeningStock(
+  api: APIRequestContext,
+  input: {
+    productId: string;
+    quantity: number;
+    unitCost: number;
+    stockDate: string;
+    warehouseId?: string;
+  },
+): Promise<{ id: string }> {
+  const response = await api.post("/api/opening-stocks", {
+    data: {
+      productId: input.productId,
+      quantity: input.quantity,
+      unitCost: input.unitCost,
+      stockDate: input.stockDate,
+      warehouseId: input.warehouseId,
+    },
+  });
+  const os = await parseJson(response);
+  return { id: os.id };
+}
+
+/** Delete opening stock */
+export async function deleteOpeningStock(api: APIRequestContext, openingStockId: string): Promise<void> {
+  const response = await api.delete(`/api/opening-stocks/${openingStockId}`);
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Delete opening stock failed: ${response.status()} ${body}`);
+  }
+}
+
+/** Get all COGS details for an invoice (all items) */
+export async function getAllInvoiceItemsCOGS(invoiceId: string) {
+  const result = await pool.query(
+    `SELECT ii.id, ii."productId", ii.quantity, ii."costOfGoodsSold",
+            p.name as "productName"
+     FROM invoice_items ii
+     LEFT JOIN products p ON p.id = ii."productId"
+     WHERE ii."invoiceId" = $1
+     ORDER BY ii."createdAt" ASC`,
+    [invoiceId],
+  );
+  return result.rows;
+}
+
+/** Get CostAuditLog entries for a product */
+export async function getCostAuditLogs(productId: string) {
+  const result = await pool.query(
+    `SELECT "oldCOGS", "newCOGS", "changeAmount", "changeReason"
+     FROM cost_audit_logs
+     WHERE "productId" = $1
+     ORDER BY "createdAt" DESC`,
+    [productId],
+  );
+  return result.rows;
+}
+
+/** Get all stock lots for a product (including depleted ones) */
+export async function getAllProductLots(productId: string) {
+  const result = await pool.query(
+    `SELECT id, "lotDate", "unitCost", "initialQuantity", "remainingQuantity",
+            "sourceType", "warehouseId"
+     FROM stock_lots
+     WHERE "productId" = $1
+     ORDER BY "lotDate" ASC, "createdAt" ASC`,
+    [productId],
+  );
+  return result.rows;
+}
