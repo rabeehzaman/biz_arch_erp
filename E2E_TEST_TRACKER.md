@@ -16,12 +16,12 @@
 | 4 | Quotations, Credit/Debit Notes | `e2e/tests/quotations-returns.spec.ts` | 80 | ✅ PASSING (82/82) |
 | 5 | Payments (customer + supplier) | `e2e/tests/payments.spec.ts` | 60 | ✅ PASSING (62/62) |
 | 6 | Accounting (COA, Journals, Cash/Bank, Expenses) | `e2e/tests/accounting.spec.ts` | 120 | ✅ PASSING (122/122, transient Supabase timeouts) |
-| 7 | POS (sessions, checkout, held orders) | `e2e/tests/pos.spec.ts` | 100 | RUNNING |
-| 8 | Reports (all 30+ reports) | `e2e/tests/reports.spec.ts` | 100 | WRITTEN — NOT YET RUN |
-| 9 | Settings, Branches, Employees, Mobile Devices | `e2e/tests/settings-inventory.spec.ts` | 80 | WRITTEN — NOT YET RUN |
-| 10 | Auth, Permissions, Navigation, Dashboard | `e2e/tests/auth-navigation.spec.ts` | 60 | WRITTEN — NOT YET RUN |
-| 11 | GST vs VAT (India vs Saudi edition) | `e2e/tests/tax-editions.spec.ts` | 80 | WRITTEN — NOT YET RUN |
-| 12 | Edge cases, validation, stress tests | `e2e/tests/edge-cases.spec.ts` | 100 | WRITTEN — NOT YET RUN |
+| 7 | POS (sessions, checkout, held orders) | `e2e/tests/pos.spec.ts` | 100 | NEEDS POS REGISTER CONFIG — blocked by Supabase latency |
+| 8 | Reports (all 30+ reports) | `e2e/tests/reports.spec.ts` | 100 | ✅ ~48 passing, aging column names fixed, some transient |
+| 9 | Settings, Branches, Employees, Mobile Devices | `e2e/tests/settings-inventory.spec.ts` | 80 | ✅ 66/68 passing (2 assertion bugs fixed) |
+| 10 | Auth, Permissions, Navigation, Dashboard | `e2e/tests/auth-navigation.spec.ts` | 60 | ~48/62 passing (auth expects 401, API returns 302) |
+| 11 | GST vs VAT (India vs Saudi edition) | `e2e/tests/tax-editions.spec.ts` | 80 | NOT YET RUN |
+| 12 | Edge cases, validation, stress tests | `e2e/tests/edge-cases.spec.ts` | 100 | NOT YET RUN |
 | **TOTAL** | | **13 files** | **1,165** | |
 
 ---
@@ -90,4 +90,13 @@ npx playwright test e2e/stock-transfer-fifo.spec.ts --reporter=list
 - Fixed 4 app bugs found during testing
 - All files compile clean with zero TypeScript errors
 - Commits: `027cc0a`, `f9c91ec`, `ddc5675`, `2cee21e`, `7a98445`
-- **Next:** Run batches 2-12 one by one, fix failures, iterate to 100% pass rate
+### Session 2 — 2026-03-18
+- Fixed journal auto-number overflow bug (sequence > 999 breaks string sort)
+- Increased all Prisma transaction timeouts from 30s to 60s
+- Fixed `account_code` → `accountId` in 5 test SQL queries
+- Fixed aging report column names (days30 → days1to30, etc.)
+- Fixed roundOffMode enum, products pagination handling, sequential number parsing
+- Added `suid()` helper for unique short IDs across all test files
+- Added DB connection warmup, retry logic, 180s beforeAll timeouts
+- Batches 2-6 fully passing (534 tests), batches 7-12 partially run
+- **Next:** Fix remaining test assertions in batches 7-12
