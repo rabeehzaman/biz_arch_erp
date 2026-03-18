@@ -30,6 +30,11 @@ function uid() {
   return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+/** Short unique ID for unit codes — avoids collisions across runs */
+function suid() {
+  return Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 5);
+}
+
 // ---------------------------------------------------------------------------
 // Shared state
 // ---------------------------------------------------------------------------
@@ -503,7 +508,7 @@ test.describe("Products", () => {
   });
 
   test("36. Create product with very long name (255 chars)", async () => {
-    const longName = `L-${"x".repeat(248)}-${uid().slice(0, 4)}`;
+    const longName = `L-${"x".repeat(248)}-${suid()}`;
     const res = await api.post("/api/products", {
       data: { name: longName.slice(0, 255), price: 10, unitId: defaultUnitId },
     });
@@ -536,7 +541,7 @@ test.describe("Products", () => {
 
   test("40. Product with custom unit assignment", async () => {
     // Create custom unit first
-    const unitCode = `u${uid().slice(0, 6)}`;
+    const unitCode = `u${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `CustomUnit ${uid()}`, code: unitCode } })
     );
@@ -1264,7 +1269,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("102. Create custom unit (name + code)", async () => {
-    const code = `cu${uid().slice(0, 5)}`;
+    const code = `cu${suid()}`;
     const name = `Custom ${uid()}`;
     const res = await api.post("/api/units", { data: { name, code } });
     expect(res.status()).toBe(201);
@@ -1274,7 +1279,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("103. Create unit with duplicate code should fail (409)", async () => {
-    const code = `dc${uid().slice(0, 5)}`;
+    const code = `dc${suid()}`;
     await parse(await api.post("/api/units", { data: { name: `Dup1 ${uid()}`, code } }));
     const res = await api.post("/api/units", { data: { name: `Dup2 ${uid()}`, code } });
     expect(res.status()).toBe(409);
@@ -1283,7 +1288,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("104. Get unit by ID", async () => {
-    const code = `gu${uid().slice(0, 5)}`;
+    const code = `gu${suid()}`;
     const created = await parse(
       await api.post("/api/units", { data: { name: `GetUnit ${uid()}`, code } })
     );
@@ -1294,7 +1299,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("105. Update unit name", async () => {
-    const code = `un${uid().slice(0, 5)}`;
+    const code = `un${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `OldUnit ${uid()}`, code } })
     );
@@ -1305,18 +1310,18 @@ test.describe("Units & Conversions", () => {
   });
 
   test("106. Update unit code", async () => {
-    const oldCode = `oc${uid().slice(0, 5)}`;
+    const oldCode = `oc${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `CodeUpd ${uid()}`, code: oldCode } })
     );
-    const newCode = `nc${uid().slice(0, 5)}`;
+    const newCode = `nc${suid()}`;
     const res = await api.put(`/api/units/${unit.id}`, { data: { code: newCode } });
     expect(res.status()).toBe(200);
     expect((await parse(res)).code).toBe(newCode.toLowerCase());
   });
 
   test("107. Delete custom unit", async () => {
-    const code = `du${uid().slice(0, 5)}`;
+    const code = `du${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `DelUnit ${uid()}`, code } })
     );
@@ -1327,7 +1332,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("108. Delete unit used by products should soft-delete (deactivate)", async () => {
-    const code = `up${uid().slice(0, 5)}`;
+    const code = `up${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `UsedUnit ${uid()}`, code } })
     );
@@ -1348,7 +1353,7 @@ test.describe("Units & Conversions", () => {
   // -- UNIT CONVERSIONS -----------------------------------------------------
 
   test("109. Create unit conversion (e.g. box = 12 pcs)", async () => {
-    const boxCode = `bx${uid().slice(0, 5)}`;
+    const boxCode = `bx${suid()}`;
     const box = await parse(
       await api.post("/api/units", { data: { name: `Box ${uid()}`, code: boxCode } })
     );
@@ -1370,7 +1375,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("111. Update conversion factor", async () => {
-    const code = `uf${uid().slice(0, 5)}`;
+    const code = `uf${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `UpdConv ${uid()}`, code } })
     );
@@ -1387,7 +1392,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("112. Delete unit conversion", async () => {
-    const code = `dc${uid().slice(0, 5)}`;
+    const code = `dc${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `DelConv ${uid()}`, code } })
     );
@@ -1401,7 +1406,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("113. Create reverse conversion", async () => {
-    const code = `rv${uid().slice(0, 5)}`;
+    const code = `rv${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `Reverse ${uid()}`, code } })
     );
@@ -1420,7 +1425,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("114. Unit conversion with decimal factor", async () => {
-    const code = `df${uid().slice(0, 5)}`;
+    const code = `df${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `DecFactor ${uid()}`, code } })
     );
@@ -1432,7 +1437,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("115. Create conversion for same unit should fail", async () => {
-    const code = `su${uid().slice(0, 5)}`;
+    const code = `su${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `SameUnit ${uid()}`, code } })
     );
@@ -1445,7 +1450,7 @@ test.describe("Units & Conversions", () => {
   });
 
   test("116. Multiple conversions for same unit pair should fail", async () => {
-    const code = `mp${uid().slice(0, 5)}`;
+    const code = `mp${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `MultiConv ${uid()}`, code } })
     );
@@ -1474,7 +1479,7 @@ test.describe("Units & Conversions", () => {
 
   test("118. Create unit with special characters in code", async () => {
     // Codes are lowercased; special chars may or may not be accepted
-    const code = `s-${uid().slice(0, 4)}`;
+    const code = `s-${suid()}`;
     const res = await api.post("/api/units", { data: { name: `SpecCode ${uid()}`, code } });
     expect(res.status()).toBe(201);
     expect((await parse(res)).code).toBe(code.toLowerCase());
@@ -1491,7 +1496,7 @@ test.describe("Units & Conversions", () => {
 
   test("120. Unit CRUD full lifecycle: create -> update -> use -> delete", async () => {
     // Create
-    const code = `lc${uid().slice(0, 5)}`;
+    const code = `lc${suid()}`;
     const unit = await parse(
       await api.post("/api/units", { data: { name: `Lifecycle ${uid()}`, code } })
     );

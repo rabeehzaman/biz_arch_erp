@@ -1011,7 +1011,7 @@ test.describe("FIFO Comprehensive", () => {
   // Known issue: deleting a consumed opening stock triggers a cascade delete of
   // the stock lot, but the FIFO recalculation inside the same transaction fails
   // because the lot consumptions reference data that was just deleted.
-  test.skip("46. Delete opening stock that was consumed → COGS recalculated", async () => {
+  test("46. Delete opening stock that was consumed → COGS recalculated", async () => {
     const p = await freshProduct("t46");
     const os = await createOpeningStock(api, {
       productId: p.id,
