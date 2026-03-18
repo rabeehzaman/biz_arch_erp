@@ -207,8 +207,25 @@ export async function DELETE(
     const stockDate = openingStock.stockDate;
 
     await prisma.$transaction(async (tx) => {
-      // Delete the stock lot first (will cascade delete consumptions)
+      // Zero out the stock lot first (keeps it for recalculation reference)
       if (openingStock.stockLot) {
+        await tx.stockLot.update({
+          where: { id: openingStock.stockLot.id },
+          data: { initialQuantity: 0, remainingQuantity: 0 },
+        });
+      }
+
+      // Recalculate FIFO BEFORE deleting — so downstream sales get updated COGS
+      if (hasConsumptions) {
+        await recalculateFromDate(productId, stockDate, tx, "opening_stock_deleted", undefined, organizationId);
+      }
+
+      // Now safe to delete the stock lot (consumptions already cleaned up by recalculate)
+      if (openingStock.stockLot) {
+        // Delete any remaining consumption records first
+        await tx.stockLotConsumption.deleteMany({
+          where: { stockLotId: openingStock.stockLot.id },
+        });
         await tx.stockLot.delete({
           where: { id: openingStock.stockLot.id },
         });
@@ -219,11 +236,6 @@ export async function DELETE(
         where: { id, organizationId },
       });
 
-      // If there were consumptions, recalculate FIFO
-      if (hasConsumptions) {
-        await recalculateFromDate(productId, stockDate, tx, "recalculation", undefined, organizationId);
-      }
-
       // Delete associated journal entry
       await tx.journalEntry.deleteMany({
         where: {
@@ -232,7 +244,7 @@ export async function DELETE(
           organizationId,
         },
       });
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -76,7 +76,7 @@ export async function PUT(
     const saudiEnabled = isSaudiEInvoiceEnabled(session);
     const { id } = await params;
     const body = await request.json();
-    const { status, supplierId, invoiceDate, dueDate, supplierInvoiceRef, notes, items, isTaxInclusive, applyRoundOff } = body;
+    const { status, supplierId, invoiceDate, dueDate, supplierInvoiceRef, notes, items, isTaxInclusive, applyRoundOff, warehouseId: bodyWarehouseId } = body;
 
     const existingInvoice = await prisma.purchaseInvoice.findUnique({
       where: { id, organizationId },
@@ -98,6 +98,9 @@ export async function PUT(
       });
       return NextResponse.json(invoice);
     }
+
+    // Resolve effective warehouseId (allow updating it, fall back to existing)
+    const effectiveWarehouseId = bodyWarehouseId !== undefined ? bodyWarehouseId : existingInvoice.warehouseId;
 
     // If date or items are being updated, we need to recalculate
     const oldDate = existingInvoice.invoiceDate;
@@ -206,6 +209,7 @@ export async function PUT(
             dueDate: dueDate ? toMidnightUTC(dueDate) : existingInvoice.dueDate,
             supplierInvoiceRef: supplierInvoiceRef !== undefined ? supplierInvoiceRef : existingInvoice.supplierInvoiceRef,
             notes: notes !== undefined ? notes : existingInvoice.notes,
+            warehouseId: effectiveWarehouseId || null,
             subtotal,
             total,
             totalCgst: saudiEnabled ? 0 : gstResult.totalCgst,
@@ -317,7 +321,7 @@ export async function PUT(
                 unitCost: baseUnitCost, // Store base unit cost for accurate COGS
                 initialQuantity: baseQuantity,
                 remainingQuantity: baseQuantity,
-                warehouseId: existingInvoice.warehouseId || null,
+                warehouseId: effectiveWarehouseId || null,
               },
             });
 

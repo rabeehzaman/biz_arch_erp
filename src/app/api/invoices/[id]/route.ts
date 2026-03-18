@@ -254,6 +254,7 @@ export async function PUT(
           placeOfSupply: saudiEnabled ? null : gstResult.placeOfSupply,
           isInterState: saudiEnabled ? false : gstResult.isInterState,
           totalVat: saudiEnabled ? totalVat : null,
+          warehouseId: effectiveWarehouseId || null,
           paymentType,
           isTaxInclusive: isTaxInclusive ?? null,
           items: {
