@@ -334,6 +334,7 @@ function POSTerminalContent() {
   const cartItemsContainerRef = useRef<HTMLDivElement | null>(null);
   const previousCartMetricsRef = useRef({ items: 0, quantity: 0 });
   const checkoutInFlightRef = useRef(false);
+  const checkoutCounterRef = useRef(0);
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null }>(
@@ -787,7 +788,6 @@ function POSTerminalContent() {
     if (checkoutInFlightRef.current) return;
     checkoutInFlightRef.current = true;
 
-    const idempotencyKey = crypto.randomUUID();
     const checkoutStartedAt = performance.now();
     setIsProcessing(true);
 
@@ -807,6 +807,18 @@ function POSTerminalContent() {
     setIsPendingReceipt(true); // hide reprint until new receipt data is ready
 
     try {
+      // Content-based idempotency key: same cart + payments + counter = same key.
+      // Counter increments only on success, so retries reuse the same key
+      // but legitimate repeat orders get a new key.
+      const keySource = JSON.stringify({
+        s: posSession?.id,
+        n: checkoutCounterRef.current,
+        i: completedCart.map(item => `${item.productId}:${item.quantity}:${item.price}:${item.discount}`).sort(),
+        p: payments.map(p => `${p.method}:${parseFloat(p.amount)}`).sort(),
+      });
+      const keyHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(keySource));
+      const idempotencyKey = Array.from(new Uint8Array(keyHash)).map(b => b.toString(16).padStart(2, "0")).join("");
+
       const requestStartedAt = performance.now();
       const res = await fetch("/api/pos/checkout", {
         method: "POST",
@@ -841,6 +853,7 @@ function POSTerminalContent() {
       }
 
       const result = await res.json();
+      checkoutCounterRef.current += 1; // New key for next order; retries keep the old key
       const responseParsedAt = performance.now();
       const change = result.change || 0;
       const receiptMeta = result.receiptMeta;
