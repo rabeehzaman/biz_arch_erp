@@ -53,6 +53,8 @@ function randomImei(): string {
 // Shared state
 // ---------------------------------------------------------------------------
 
+test.setTimeout(120_000);
+
 let api: APIRequestContext;
 let existingBranchId: string;
 let existingBranchCode: string;
@@ -69,7 +71,11 @@ let createdEmployeeId: string;
 let originalSettings: Record<string, unknown>;
 
 test.beforeAll(async () => {
-  api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath });
+  api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath, timeout: 60_000 });
+
+  // Warm up DB connection pool
+  await api.get("/api/units").catch(() => {});
+  await new Promise((r) => setTimeout(r, 1000));
 
   // Grab existing branches and warehouses for reference
   const branches = await parse(await api.get("/api/branches"));

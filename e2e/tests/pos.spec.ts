@@ -37,6 +37,8 @@ function isoDate(off = 0) {
 /*  Shared state                                                              */
 /* ────────────────────────────────────────────────────────────────────────── */
 
+test.setTimeout(120_000);
+
 let api: APIRequestContext;
 let productId: string;
 let productName: string;
@@ -107,7 +109,12 @@ test.beforeAll(async () => {
   api = await playwrightRequest.newContext({
     baseURL,
     storageState: authStatePath,
+    timeout: 60_000,
   });
+
+  // Warm up DB connection pool
+  await api.get("/api/units").catch(() => {});
+  await new Promise((r) => setTimeout(r, 1000));
 
   const run = uid();
 

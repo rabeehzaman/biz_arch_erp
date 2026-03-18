@@ -48,6 +48,8 @@ function isoDate(off = 0) {
 // Shared state
 // ---------------------------------------------------------------------------
 
+test.setTimeout(120_000);
+
 let api: APIRequestContext;
 
 // Account IDs (seeded)
@@ -67,7 +69,11 @@ let assetsParentId: string;      // code 1000
 let cashBankAccountId: string;
 
 test.beforeAll(async () => {
-  api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath });
+  api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath, timeout: 60_000 });
+
+  // Warm up DB connection pool
+  await api.get("/api/units").catch(() => {});
+  await new Promise((r) => setTimeout(r, 1000));
 
   // Fetch all accounts and resolve key IDs
   const accounts: any[] = await parse(await api.get("/api/accounts"));

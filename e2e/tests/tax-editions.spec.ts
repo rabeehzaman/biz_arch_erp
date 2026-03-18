@@ -44,6 +44,8 @@ function isoDate(off = 0) {
 // Shared state
 // ---------------------------------------------------------------------------
 
+test.setTimeout(120_000);
+
 let api: APIRequestContext;
 let supplierId: string;
 let customerId: string;
@@ -72,7 +74,11 @@ const FROM = isoDate(-365);
 const TO = isoDate(0);
 
 test.beforeAll(async () => {
-  api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath });
+  api = await playwrightRequest.newContext({ baseURL, storageState: authStatePath, timeout: 60_000 });
+
+  // Warm up DB connection pool
+  await api.get("/api/units").catch(() => {});
+  await new Promise((r) => setTimeout(r, 1000));
 
   const run = uid();
 
