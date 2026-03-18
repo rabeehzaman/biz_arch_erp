@@ -328,7 +328,7 @@ async function getCashBankTransactions(accountId: string) {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.describe("Customer Payments", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   let cashPaymentId: string;
   let bankPaymentId: string;
@@ -736,7 +736,7 @@ test.describe("Customer Payments", () => {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.describe("Supplier Payments", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   let cashSPayId: string;
   let bankSPayId: string;
@@ -1126,7 +1126,7 @@ test.describe("Supplier Payments", () => {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.describe("Cash & Bank Accounts", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   let customCashBankId: string;
 

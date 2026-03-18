@@ -32,6 +32,11 @@ function uid() {
   return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+/** Short unique ID for codes — avoids collisions across runs */
+function suid() {
+  return Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 5);
+}
+
 function isoDate(off = 0) {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + off);
@@ -203,7 +208,7 @@ test.describe("Branches", () => {
   });
 
   test("12 — Create branch with name and code", async () => {
-    const code = `BR${Date.now().toString(36).slice(-4).toUpperCase()}`;
+    const code = `BR${suid()}`;
     const data = await parse(
       await api.post("/api/branches", {
         data: { name: `${run} Branch`, code },
@@ -216,7 +221,7 @@ test.describe("Branches", () => {
   });
 
   test("13 — Create branch with full address", async () => {
-    const code = `FA${Date.now().toString(36).slice(-4).toUpperCase()}`;
+    const code = `FA${suid()}`;
     const data = await parse(
       await api.post("/api/branches", {
         data: {
@@ -327,7 +332,7 @@ test.describe("Warehouses", () => {
 
   test.beforeAll(async () => {
     // Create a branch specifically for warehouse tests
-    const code = `WH${Date.now().toString(36).slice(-4).toUpperCase()}`;
+    const code = `WH${suid()}`;
     const branch = await parse(
       await api.post("/api/branches", {
         data: { name: `${run} WH Branch`, code },
@@ -343,7 +348,7 @@ test.describe("Warehouses", () => {
   });
 
   test("24 — Create warehouse under branch", async () => {
-    const code = `WA${Date.now().toString(36).slice(-4).toUpperCase()}`;
+    const code = `WA${suid()}`;
     const data = await parse(
       await api.post("/api/warehouses", {
         data: { name: `${run} Warehouse`, code, branchId: whBranchId },
@@ -355,7 +360,7 @@ test.describe("Warehouses", () => {
   });
 
   test("25 — Create warehouse with code normalizes to uppercase", async () => {
-    const code = `wc${Date.now().toString(36).slice(-4)}`;
+    const code = `wc${suid()}`;
     const data = await parse(
       await api.post("/api/warehouses", {
         data: { name: `${run} Code WH`, code, branchId: whBranchId },
@@ -365,7 +370,7 @@ test.describe("Warehouses", () => {
   });
 
   test("26 — Create warehouse with address", async () => {
-    const code = `AD${Date.now().toString(36).slice(-4).toUpperCase()}`;
+    const code = `AD${suid()}`;
     const data = await parse(
       await api.post("/api/warehouses", {
         data: {

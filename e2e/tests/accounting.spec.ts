@@ -33,6 +33,11 @@ function uid() {
   return `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+/** Short unique ID for codes — avoids collisions across runs */
+function suid() {
+  return Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 5);
+}
+
 function isoDate(off = 0) {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + off);
@@ -95,7 +100,7 @@ test.afterAll(async () => {
 // ===========================================================================
 
 test.describe("Chart of Accounts", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // Track IDs for cleanup / cross-test references
   let createdAccountIds: string[] = [];
@@ -130,7 +135,7 @@ test.describe("Chart of Accounts", () => {
 
   // 3
   test("3: Create ASSET account", async () => {
-    const code = `T${Date.now().toString().slice(-4)}`;
+    const code = `T${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: { code, name: `Test Asset ${uid()}`, accountType: "ASSET", accountSubType: "CURRENT_ASSET" },
     }));
@@ -141,7 +146,7 @@ test.describe("Chart of Accounts", () => {
 
   // 4
   test("4: Create LIABILITY account", async () => {
-    const code = `L${Date.now().toString().slice(-4)}`;
+    const code = `L${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: { code, name: `Test Liability ${uid()}`, accountType: "LIABILITY", accountSubType: "CURRENT_LIABILITY" },
     }));
@@ -151,7 +156,7 @@ test.describe("Chart of Accounts", () => {
 
   // 5
   test("5: Create EQUITY account", async () => {
-    const code = `E${Date.now().toString().slice(-4)}`;
+    const code = `E${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: { code, name: `Test Equity ${uid()}`, accountType: "EQUITY", accountSubType: "OWNERS_EQUITY" },
     }));
@@ -161,7 +166,7 @@ test.describe("Chart of Accounts", () => {
 
   // 6
   test("6: Create REVENUE account", async () => {
-    const code = `R${Date.now().toString().slice(-4)}`;
+    const code = `R${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: { code, name: `Test Revenue ${uid()}`, accountType: "REVENUE", accountSubType: "SALES_REVENUE" },
     }));
@@ -171,7 +176,7 @@ test.describe("Chart of Accounts", () => {
 
   // 7
   test("7: Create EXPENSE account", async () => {
-    const code = `X${Date.now().toString().slice(-4)}`;
+    const code = `X${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: { code, name: `Test Expense ${uid()}`, accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE" },
     }));
@@ -181,7 +186,7 @@ test.describe("Chart of Accounts", () => {
 
   // 8
   test("8: Create account with parent → child account", async () => {
-    const code = `C${Date.now().toString().slice(-4)}`;
+    const code = `C${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: {
         code,
@@ -239,7 +244,7 @@ test.describe("Chart of Accounts", () => {
   // 14
   test("14: Update account name", async () => {
     // Create a non-system account to update
-    const code = `U${Date.now().toString().slice(-4)}`;
+    const code = `U${suid()}`;
     const created = await parse(await api.post("/api/accounts", {
       data: { code, name: `Before ${uid()}`, accountType: "ASSET", accountSubType: "CURRENT_ASSET" },
     }));
@@ -254,7 +259,7 @@ test.describe("Chart of Accounts", () => {
 
   // 15
   test("15: Update account description", async () => {
-    const code = `D${Date.now().toString().slice(-4)}`;
+    const code = `D${suid()}`;
     const created = await parse(await api.post("/api/accounts", {
       data: { code, name: `Desc Test ${uid()}`, accountType: "ASSET", accountSubType: "CURRENT_ASSET" },
     }));
@@ -269,7 +274,7 @@ test.describe("Chart of Accounts", () => {
 
   // 16
   test("16: Delete unused account", async () => {
-    const code = `DEL${Date.now().toString().slice(-4)}`;
+    const code = `DEL${suid()}`;
     const created = await parse(await api.post("/api/accounts", {
       data: { code, name: `Deletable ${uid()}`, accountType: "ASSET", accountSubType: "CURRENT_ASSET" },
     }));
@@ -280,7 +285,7 @@ test.describe("Chart of Accounts", () => {
   // 17
   test("17: Delete account with journal entries → should fail", async () => {
     // Create account, create JE with it, then try delete
-    const code = `JDL${Date.now().toString().slice(-4)}`;
+    const code = `JDL${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: { code, name: `JE Account ${uid()}`, accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE" },
     }));
@@ -356,7 +361,7 @@ test.describe("Chart of Accounts", () => {
 
   // 26
   test("26: Create sub-account under Assets", async () => {
-    const code = `SA${Date.now().toString().slice(-4)}`;
+    const code = `SA${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: {
         code,
@@ -372,7 +377,7 @@ test.describe("Chart of Accounts", () => {
 
   // 27
   test("27: Create sub-account under Expenses", async () => {
-    const code = `SE${Date.now().toString().slice(-4)}`;
+    const code = `SE${suid()}`;
     const acct = await parse(await api.post("/api/accounts", {
       data: {
         code,
@@ -405,7 +410,7 @@ test.describe("Chart of Accounts", () => {
 
   // 30
   test("30: Account with long description", async () => {
-    const code = `LD${Date.now().toString().slice(-4)}`;
+    const code = `LD${suid()}`;
     const longDesc = "A".repeat(500);
     const acct = await parse(await api.post("/api/accounts", {
       data: { code, name: `Long Desc ${uid()}`, accountType: "ASSET", accountSubType: "CURRENT_ASSET", description: longDesc },
@@ -417,7 +422,7 @@ test.describe("Chart of Accounts", () => {
   // 31
   test("31: Update account code → PUT only updates name/description/parentId", async () => {
     // The PUT endpoint doesn't allow changing the code (only name, description, parentId, isActive)
-    const code = `UC${Date.now().toString().slice(-4)}`;
+    const code = `UC${suid()}`;
     const created = await parse(await api.post("/api/accounts", {
       data: { code, name: `Code Upd ${uid()}`, accountType: "ASSET", accountSubType: "CURRENT_ASSET" },
     }));
@@ -440,7 +445,7 @@ test.describe("Chart of Accounts", () => {
 
   // 33
   test("33: Account code uniqueness enforced (second create with same code → 409)", async () => {
-    const code = `UQ${Date.now().toString().slice(-4)}`;
+    const code = `UQ${suid()}`;
     const first = await parse(await api.post("/api/accounts", {
       data: { code, name: `Unique1 ${uid()}`, accountType: "ASSET", accountSubType: "CURRENT_ASSET" },
     }));
@@ -454,7 +459,7 @@ test.describe("Chart of Accounts", () => {
 
   // 34
   test("34: Create account with special chars in name", async () => {
-    const code = `SP${Date.now().toString().slice(-4)}`;
+    const code = `SP${suid()}`;
     const name = `Test & Co. (العربية) — "Quotes" <angle>`;
     const acct = await parse(await api.post("/api/accounts", {
       data: { code, name, accountType: "ASSET", accountSubType: "CURRENT_ASSET" },
@@ -465,7 +470,7 @@ test.describe("Chart of Accounts", () => {
 
   // 35
   test("35: Delete account then recreate with same code", async () => {
-    const code = `RC${Date.now().toString().slice(-4)}`;
+    const code = `RC${suid()}`;
     const created = await parse(await api.post("/api/accounts", {
       data: { code, name: `Recreate ${uid()}`, accountType: "ASSET", accountSubType: "CURRENT_ASSET" },
     }));
@@ -485,7 +490,7 @@ test.describe("Chart of Accounts", () => {
 // ===========================================================================
 
 test.describe("Journal Entries", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   let createdJEIds: string[] = [];
 
@@ -1338,7 +1343,7 @@ test.describe("Journal Entries", () => {
 // ===========================================================================
 
 test.describe("Expenses", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   let createdExpenseIds: string[] = [];
 

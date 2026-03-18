@@ -46,7 +46,8 @@ export async function POST(
         tx.journalEntry,
         "journalNumber",
         "JV",
-        organizationId
+        organizationId,
+        tx
       );
 
       const reversal = await tx.journalEntry.create({

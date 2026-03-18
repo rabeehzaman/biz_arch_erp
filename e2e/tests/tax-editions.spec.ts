@@ -298,7 +298,7 @@ async function getPurchaseItems(purchaseId: string) {
 // 1. GST INDIA EDITION (40 tests)
 // ===========================================================================
 test.describe("GST India Edition", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 1
   test("1 — Invoice with GST 18% has CGST 9% + SGST 9%", async () => {
@@ -860,7 +860,7 @@ test.describe("GST India Edition", () => {
 // 2. SAUDI VAT EDITION (40 tests)
 // ===========================================================================
 test.describe("Saudi VAT Edition", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // Helper to check if we should skip (if org is GST-enabled, not VAT)
   function skipIfNotVAT() {

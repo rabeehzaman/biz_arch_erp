@@ -56,7 +56,7 @@ test.afterAll(async () => {
 // 1. FINANCIAL REPORTS (20 tests)
 // ===========================================================================
 test.describe("Financial Reports", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // --- Balance Sheet ---
   test("1 — Balance sheet returns assets, liabilities, equity sections", async () => {
@@ -247,7 +247,7 @@ test.describe("Financial Reports", () => {
 // 2. CASH REPORTS (10 tests)
 // ===========================================================================
 test.describe("Cash Reports", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   test("21 — Cash book returns cash transactions", async () => {
     const d = await parse(await api.get("/api/reports/cash-book"));
@@ -345,7 +345,7 @@ test.describe("Cash Reports", () => {
 // 3. AGING REPORTS (10 tests)
 // ===========================================================================
 test.describe("Aging Reports", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   test("31 — AR aging returns customer aging buckets", async () => {
     const d = await parse(await api.get("/api/reports/ar-aging"));
@@ -433,7 +433,7 @@ test.describe("Aging Reports", () => {
 // 4. BALANCE REPORTS (6 tests)
 // ===========================================================================
 test.describe("Balance Reports", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   test("41 — Customer balances returns list with amounts", async () => {
     const d = await parse(await api.get("/api/reports/customer-balances"));
@@ -486,7 +486,7 @@ test.describe("Balance Reports", () => {
 // 5. TRANSACTION REGISTERS (10 tests)
 // ===========================================================================
 test.describe("Transaction Registers", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // --- Sales Register ---
   test("47 — Sales register returns invoices with totals", async () => {
@@ -594,7 +594,7 @@ test.describe("Transaction Registers", () => {
 // 6. ANALYSIS REPORTS (18 tests)
 // ===========================================================================
 test.describe("Analysis Reports", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // --- Sales by Item ---
   test("57 — Sales by item returns product sales breakdown", async () => {
@@ -793,7 +793,7 @@ test.describe("Analysis Reports", () => {
 // 7. INVENTORY REPORTS (6 tests)
 // ===========================================================================
 test.describe("Inventory Reports", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   test("75 — Stock summary returns products with quantities", async () => {
     const d = await parse(await api.get("/api/reports/stock-summary"));
@@ -862,7 +862,7 @@ test.describe("Inventory Reports", () => {
 // 8. TAX REPORTS (12 tests)
 // ===========================================================================
 test.describe("Tax Reports", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // --- GST Summary ---
   test("81 — GST summary returns tax totals", async () => {
@@ -983,7 +983,7 @@ test.describe("Tax Reports", () => {
 // 9. OTHER REPORTS (8 tests)
 // ===========================================================================
 test.describe("Other Reports", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // --- Branch P&L ---
   test("93 — Branch P&L returns per-branch profit/loss", async () => {

@@ -140,7 +140,8 @@ export async function createAutoJournalEntry(
     tx.journalEntry,
     "journalNumber",
     "JV",
-    organizationId
+    organizationId,
+    tx
   );
 
   const journalEntry = await tx.journalEntry.create({

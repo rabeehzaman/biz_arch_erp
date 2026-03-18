@@ -138,7 +138,8 @@ export async function POST(request: NextRequest) {
                 tx.stockTransfer,
                 "transferNumber",
                 "ST",
-                organizationId
+                organizationId,
+                tx
             );
 
             const transfer = await tx.stockTransfer.create({

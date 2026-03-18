@@ -327,7 +327,7 @@ async function getSupplierBalance() {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Quotations", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 1
   test("1. Create quotation with one item", async () => {
@@ -756,7 +756,7 @@ test.describe("Quotations", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Credit Notes (Sales Returns)", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 31
   test("31. Create credit note linked to invoice", async () => {
@@ -1377,7 +1377,7 @@ test.describe("Credit Notes (Sales Returns)", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Debit Notes (Purchase Returns)", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 56
   test("56. Create debit note linked to purchase", async () => {

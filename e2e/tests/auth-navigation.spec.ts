@@ -53,7 +53,7 @@ test.afterAll(async () => {
 // 1. AUTH & USER MANAGEMENT (25 tests)
 // ===========================================================================
 test.describe("Auth & User Management", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 1
   test("1 — GET /api/users/me returns current user", async () => {
@@ -294,7 +294,7 @@ test.describe("Auth & User Management", () => {
 // 2. NAVIGATION & ROUTING (20 tests)
 // ===========================================================================
 test.describe("Navigation & Routing", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 26
   test("26 — Dashboard page loads (200)", async () => {

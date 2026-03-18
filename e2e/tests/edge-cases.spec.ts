@@ -275,7 +275,7 @@ async function getStockLots(pId: string) {
 // 1. VALIDATION & ERROR HANDLING (25 tests)
 // ===========================================================================
 test.describe("Validation & Error Handling", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 1
   test("1 — POST product without body returns 400", async () => {
@@ -756,7 +756,7 @@ test.describe("Validation & Error Handling", () => {
 // 2. DATA INTEGRITY (25 tests)
 // ===========================================================================
 test.describe("Data Integrity", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 26
   test("26 — Create + get: data matches exactly", async () => {

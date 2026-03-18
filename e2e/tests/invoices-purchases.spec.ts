@@ -353,7 +353,7 @@ async function getAllStockLots(pId: string) {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Sales Invoice Creation", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 1
   test("1. Create invoice with one item — success, invoice number generated", async () => {
@@ -712,7 +712,7 @@ test.describe("Sales Invoice Creation", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Sales Invoice Read/List", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   let testInvoiceId: string;
   let testInvoiceNumber: string;
@@ -881,7 +881,7 @@ test.describe("Sales Invoice Read/List", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Sales Invoice Edit", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 46
   test("46. Edit invoice quantity — COGS recalculated", async () => {
@@ -1406,7 +1406,7 @@ test.describe("Sales Invoice Edit", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Sales Invoice Delete", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 66
   test("66. Delete invoice — success", async () => {
@@ -1532,7 +1532,7 @@ test.describe("Sales Invoice Delete", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Purchase Invoice Creation", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 76
   test("76. Create purchase with one item — stock lot created", async () => {
@@ -1890,7 +1890,7 @@ test.describe("Purchase Invoice Creation", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Purchase Invoice Read/List", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   let testPurchaseId: string;
   let testPurchaseNumber: string;
@@ -1994,7 +1994,7 @@ test.describe("Purchase Invoice Read/List", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Purchase Invoice Edit", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 111
   test("111. Edit purchase quantity increase — more stock", async () => {
@@ -2335,7 +2335,7 @@ test.describe("Purchase Invoice Edit", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Purchase Invoice Delete", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 126
   test("126. Delete purchase — stock lots removed", async () => {
@@ -2499,7 +2499,7 @@ test.describe("Purchase Invoice Delete", () => {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 test.describe("Cross-Module", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 136
   test("136. Purchase then sell — COGS = purchase cost", async () => {

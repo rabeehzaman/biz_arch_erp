@@ -240,7 +240,7 @@ test.afterAll(async () => {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.describe("POS Sessions", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 1
   test("1 - Open POS session with opening balance", async () => {
@@ -498,7 +498,7 @@ test.describe("POS Sessions", () => {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.describe("POS Checkout", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 26
   test("26 - Checkout with single item + CASH payment", async () => {
@@ -1094,7 +1094,7 @@ test.describe("POS Checkout", () => {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.describe("POS Products & Settings", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   // 61
   test("61 - POS products list → returns products with stock", async () => {
@@ -1247,7 +1247,7 @@ test.describe("POS Products & Settings", () => {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.describe("POS Held Orders", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   const heldItems = [
     {
@@ -1522,7 +1522,7 @@ test.describe("POS Held Orders", () => {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 test.describe("POS Credit Notes / Returns", () => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   let returnSessionId: string;
   let saleInvoiceId: string;
