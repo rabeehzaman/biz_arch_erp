@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { Decimal } from "@prisma/client/runtime/client";
-import { consumeStockFIFO, restoreStockFromConsumptions } from "@/lib/inventory/fifo";
+import { consumeStockFIFO, restoreStockFromConsumptions, recalculateFromDate } from "@/lib/inventory/fifo";
 
 export async function GET(
     request: NextRequest,
@@ -99,40 +99,25 @@ export async function PUT(
         const parsedDate = transferDate ? new Date(transferDate) : transfer.transferDate;
 
         if (transfer.status === "COMPLETED") {
-            // For COMPLETED transfers: undo the original FIFO + dest lots, then re-apply with new values
+            // For COMPLETED transfers: undo the original FIFO + dest lots, then re-apply
+            // and recalculate all downstream FIFO (handles consumed destination stock)
 
-            // Guard: check destination lots haven't been partially consumed
-            for (const item of transfer.items) {
-                const destLots = await prisma.stockLot.findMany({
-                    where: {
-                        stockTransferId: id,
-                        warehouseId: transfer.destinationWarehouseId,
-                        productId: item.productId,
-                        sourceType: "STOCK_TRANSFER",
-                    },
-                });
-                const totalRemaining = destLots.reduce(
-                    (sum, lot) => sum.add(lot.remainingQuantity), new Decimal(0)
-                );
-                if (totalRemaining.lt(new Decimal(item.quantity))) {
-                    return NextResponse.json(
-                        { error: `Cannot edit: stock for "${item.product.name}" in the destination warehouse has already been consumed` },
-                        { status: 400 }
-                    );
-                }
-            }
+            const oldProductIds = transfer.items.map(i => i.productId);
+            const newProductIds = validItems.map(i => i.productId);
+            const affectedProductIds = [...new Set([...oldProductIds, ...newProductIds])];
+            const earliestDate = parsedDate < transfer.transferDate ? parsedDate : transfer.transferDate;
 
             const updated = await prisma.$transaction(async (tx) => {
-                // 1. Undo destination lots from original transfer
-                await tx.stockLot.updateMany({
-                    where: { stockTransferId: id, warehouseId: transfer.destinationWarehouseId, sourceType: "STOCK_TRANSFER" },
-                    data: { remainingQuantity: 0, initialQuantity: 0 },
-                });
-
-                // 2. Restore source warehouse stock from original FIFO consumptions
+                // 1. Restore source warehouse stock from original FIFO consumptions
                 for (const item of transfer.items) {
                     await restoreStockFromConsumptions(item.id, tx, "STOCK_TRANSFER");
                 }
+
+                // 2. Zero out old destination lots (recalculate will clean up their consumptions)
+                await tx.stockLot.updateMany({
+                    where: { stockTransferId: id, sourceType: "STOCK_TRANSFER" },
+                    data: { remainingQuantity: 0, initialQuantity: 0 },
+                });
 
                 // 3. Delete old items
                 await tx.stockTransferItem.deleteMany({ where: { stockTransferId: id } });
@@ -150,9 +135,9 @@ export async function PUT(
                     },
                 });
 
-                // 5. Create new items with fresh FIFO consumption
+                // 5. Create new items (no FIFO yet — recalculate handles it)
                 for (const item of validItems) {
-                    const newItem = await tx.stockTransferItem.create({
+                    await tx.stockTransferItem.create({
                         data: {
                             productId: item.productId,
                             quantity: new Decimal(item.quantity),
@@ -162,27 +147,10 @@ export async function PUT(
                             notes: item.notes || null,
                         },
                     });
+                }
 
-                    const fifoResult = await consumeStockFIFO(
-                        item.productId,
-                        new Decimal(item.quantity),
-                        newItem.id,
-                        parsedDate,
-                        tx,
-                        organizationId,
-                        sourceWarehouseId,
-                        "STOCK_TRANSFER"
-                    );
-
-                    const qty = new Decimal(item.quantity);
-                    const unitCost = qty.gt(0) ? fifoResult.totalCOGS.div(qty) : new Decimal(0);
-
-                    await tx.stockTransferItem.update({
-                        where: { id: newItem.id },
-                        data: { unitCost },
-                    });
-
-                    // 6. Create destination lot
+                // 6. Create new destination lots (recalculate will set costs)
+                for (const item of validItems) {
                     await tx.stockLot.create({
                         data: {
                             productId: item.productId,
@@ -191,15 +159,29 @@ export async function PUT(
                             stockTransferId: id,
                             warehouseId: destinationWarehouseId,
                             lotDate: parsedDate,
-                            unitCost,
-                            initialQuantity: qty,
-                            remainingQuantity: qty,
+                            unitCost: new Decimal(0),
+                            initialQuantity: new Decimal(item.quantity),
+                            remainingQuantity: new Decimal(item.quantity),
                         },
                     });
                 }
 
+                // 7. Recalculate FIFO for all affected products from the earliest date
+                //    This handles: source consumption, destination lot costs,
+                //    and all downstream sales/transfers that consumed from old destination lots
+                for (const productId of affectedProductIds) {
+                    await recalculateFromDate(
+                        productId,
+                        earliestDate,
+                        tx,
+                        "stock_transfer_edited",
+                        session.user?.id,
+                        organizationId
+                    );
+                }
+
                 return tx.stockTransfer.findUniqueOrThrow({ where: { id } });
-            }, { timeout: 30000 });
+            }, { timeout: 60000 });
 
             return NextResponse.json(updated);
         }
@@ -357,40 +339,18 @@ export async function PATCH(
                     });
 
                 case "reverse":
-                    // Check destination lots haven't been consumed
+                    // Zero out destination lots and restore source stock
+                    // (works even when destination stock has been consumed — recalculate handles downstream)
                     for (const item of transfer.items) {
-                        const destLots = await tx.stockLot.findMany({
-                            where: {
-                                stockTransferId: id,
-                                warehouseId: transfer.destinationWarehouseId,
-                                productId: item.productId,
-                                sourceType: "STOCK_TRANSFER",
-                            },
-                        });
-                        const totalRemaining = destLots.reduce(
-                            (sum, lot) => sum.add(lot.remainingQuantity), new Decimal(0)
-                        );
-                        if (totalRemaining.lt(item.quantity)) {
-                            return NextResponse.json(
-                                { error: `Cannot reverse: some transferred stock for "${item.product.name}" has been consumed` },
-                                { status: 400 }
-                            );
-                        }
-                    }
-
-                    // Remove destination lots and restore source
-                    for (const item of transfer.items) {
-                        // Zero out destination lots
                         await tx.stockLot.updateMany({
                             where: { stockTransferId: id, warehouseId: transfer.destinationWarehouseId, productId: item.productId, sourceType: "STOCK_TRANSFER" },
-                            data: { remainingQuantity: 0 },
+                            data: { remainingQuantity: 0, initialQuantity: 0 },
                         });
 
-                        // Restore exact consumptions back to source original stock lots
                         await restoreStockFromConsumptions(item.id, tx, "STOCK_TRANSFER");
                     }
 
-                    return tx.stockTransfer.update({
+                    const reversed = await tx.stockTransfer.update({
                         where: { id },
                         data: {
                             status: "REVERSED",
@@ -399,15 +359,26 @@ export async function PATCH(
                         },
                     });
 
+                    // Recalculate FIFO for all products — downstream sales that consumed
+                    // from the now-zeroed destination lots will get shortfall/fallback cost
+                    const reverseProductIds = [...new Set(transfer.items.map(i => i.productId))];
+                    for (const productId of reverseProductIds) {
+                        await recalculateFromDate(
+                            productId,
+                            transfer.transferDate,
+                            tx,
+                            "stock_transfer_reversed",
+                            undefined,
+                            organizationId
+                        );
+                    }
+
+                    return reversed;
+
                 default:
                     throw new Error(`Unknown action: ${action}`);
             }
-        });
-
-        // If result is a NextResponse (error case from reversal check), return it directly
-        if (result instanceof NextResponse) {
-            return result;
-        }
+        }, { timeout: 60000 });
 
         return NextResponse.json(result);
     } catch (error) {

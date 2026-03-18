@@ -227,3 +227,211 @@ export async function getProductStock(productId: string) {
   const remaining = lots.reduce((sum, lot) => sum + Number(lot.remainingQuantity), 0);
   return { lots, remaining };
 }
+
+// ──────────────────────────────────────────────────────────────────
+// Multi-warehouse / stock transfer helpers
+// ──────────────────────────────────────────────────────────────────
+
+export type WarehouseFixture = { id: string; name: string; branchId: string };
+export type StockTransferFixture = { id: string; transferNumber: string };
+
+/** Return at least 2 existing warehouses or create branches + warehouses */
+export async function ensureTestWarehouses(api: APIRequestContext, runId: string): Promise<[WarehouseFixture, WarehouseFixture]> {
+  const response = await api.get("/api/warehouses");
+  const warehouses = await parseJson(response);
+
+  if (warehouses.length >= 2) {
+    return [
+      { id: warehouses[0].id, name: warehouses[0].name, branchId: warehouses[0].branchId },
+      { id: warehouses[1].id, name: warehouses[1].name, branchId: warehouses[1].branchId },
+    ];
+  }
+
+  // Need to create — ensure at least 2 branches exist first
+  const branchRes = await api.get("/api/branches");
+  const branches = await parseJson(branchRes);
+  let branchIds: string[] = branches.map((b: any) => b.id);
+
+  const suffix = runId.slice(-6);
+  while (branchIds.length < 2) {
+    const idx = branchIds.length + 1;
+    const res = await api.post("/api/branches", {
+      data: { name: `Test Branch ${idx} ${suffix}`, code: `TB${idx}${suffix}` },
+    });
+    const branch = await parseJson(res);
+    branchIds.push(branch.id);
+  }
+
+  // Create warehouses under first two branches
+  const created: WarehouseFixture[] = [];
+  for (let i = 0; i < 2; i++) {
+    const existing = warehouses.find((w: any) => w.branchId === branchIds[i]);
+    if (existing) {
+      created.push({ id: existing.id, name: existing.name, branchId: existing.branchId });
+    } else {
+      const idx = i + 1;
+      const res = await api.post("/api/warehouses", {
+        data: { name: `Test WH ${idx} ${suffix}`, code: `TW${idx}${suffix}`, branchId: branchIds[i] },
+      });
+      const wh = await parseJson(res);
+      created.push({ id: wh.id, name: wh.name, branchId: branchIds[i] });
+    }
+  }
+
+  return [created[0], created[1]];
+}
+
+/** Create a purchase invoice targeting a specific warehouse */
+export async function createPurchaseInvoiceInWarehouse(
+  api: APIRequestContext,
+  input: {
+    supplierId: string;
+    productId: string;
+    unitId: string;
+    quantity: number;
+    unitCost: number;
+    invoiceDate: string;
+    label: string;
+    warehouseId: string;
+  },
+): Promise<PurchaseInvoiceFixture> {
+  const response = await api.post("/api/purchase-invoices", {
+    data: {
+      supplierId: input.supplierId,
+      invoiceDate: input.invoiceDate,
+      dueDate: input.invoiceDate,
+      supplierInvoiceRef: input.label,
+      warehouseId: input.warehouseId,
+      items: [
+        {
+          productId: input.productId,
+          description: input.label,
+          quantity: input.quantity,
+          unitCost: input.unitCost,
+          unitId: input.unitId,
+          gstRate: 0,
+          discount: 0,
+        },
+      ],
+    },
+  });
+  const invoice = await parseJson(response);
+  return { id: invoice.id, purchaseInvoiceNumber: invoice.purchaseInvoiceNumber };
+}
+
+/** Create a sales invoice targeting a specific warehouse */
+export async function createSalesInvoiceInWarehouse(
+  api: APIRequestContext,
+  input: {
+    customerId: string;
+    productId: string;
+    unitId: string;
+    quantity: number;
+    unitPrice: number;
+    issueDate: string;
+    label: string;
+    warehouseId: string;
+  },
+): Promise<SalesInvoiceFixture> {
+  const response = await api.post("/api/invoices", {
+    data: {
+      customerId: input.customerId,
+      issueDate: input.issueDate,
+      dueDate: input.issueDate,
+      paymentType: "CASH",
+      warehouseId: input.warehouseId,
+      items: [
+        {
+          productId: input.productId,
+          description: input.label,
+          quantity: input.quantity,
+          unitPrice: input.unitPrice,
+          unitId: input.unitId,
+          gstRate: 0,
+          discount: 0,
+        },
+      ],
+    },
+  });
+  const invoice = await parseJson(response);
+  const created = invoice.invoice ?? invoice;
+  return { id: created.id, invoiceNumber: created.invoiceNumber };
+}
+
+/** Create a stock transfer (immediately COMPLETED) */
+export async function createStockTransfer(
+  api: APIRequestContext,
+  input: {
+    sourceWarehouseId: string;
+    destinationWarehouseId: string;
+    items: Array<{ productId: string; quantity: number }>;
+    transferDate?: string;
+  },
+): Promise<StockTransferFixture> {
+  const response = await api.post("/api/stock-transfers", {
+    data: {
+      sourceWarehouseId: input.sourceWarehouseId,
+      destinationWarehouseId: input.destinationWarehouseId,
+      transferDate: input.transferDate ?? isoDate(0),
+      items: input.items,
+    },
+  });
+  const transfer = await parseJson(response);
+  return { id: transfer.id, transferNumber: transfer.transferNumber };
+}
+
+/** Edit a stock transfer (PUT) */
+export async function editStockTransfer(
+  api: APIRequestContext,
+  transferId: string,
+  input: {
+    sourceWarehouseId: string;
+    destinationWarehouseId: string;
+    items: Array<{ productId: string; quantity: number }>;
+    transferDate?: string;
+  },
+): Promise<void> {
+  const response = await api.put(`/api/stock-transfers/${transferId}`, {
+    data: {
+      sourceWarehouseId: input.sourceWarehouseId,
+      destinationWarehouseId: input.destinationWarehouseId,
+      transferDate: input.transferDate,
+      items: input.items,
+    },
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Edit stock transfer failed: ${response.status()} ${body}`);
+  }
+}
+
+/** Reverse a stock transfer (PATCH action=reverse) */
+export async function reverseStockTransfer(api: APIRequestContext, transferId: string): Promise<void> {
+  const response = await api.patch(`/api/stock-transfers/${transferId}`, {
+    data: { action: "reverse" },
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Reverse stock transfer failed: ${response.status()} ${body}`);
+  }
+}
+
+/** Get stock lots for a product in a specific warehouse (only lots with remaining > 0) */
+export async function getProductStockInWarehouse(productId: string, warehouseId: string) {
+  const result = await pool.query(
+    `SELECT id, "lotDate", "unitCost", "initialQuantity", "remainingQuantity", "sourceType"
+     FROM stock_lots
+     WHERE "productId" = $1 AND "warehouseId" = $2 AND "remainingQuantity" > 0
+     ORDER BY "lotDate" ASC, "createdAt" ASC`,
+    [productId, warehouseId],
+  );
+  const lots = result.rows;
+  const remaining = lots.reduce((sum: number, lot: any) => sum + Number(lot.remainingQuantity), 0);
+  return { lots, remaining };
+}
+
+/** Get the stock transfer detail from API */
+export async function getStockTransfer(api: APIRequestContext, transferId: string) {
+  const response = await api.get(`/api/stock-transfers/${transferId}`);
+  return parseJson(response);
+}
