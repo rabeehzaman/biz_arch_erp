@@ -16,7 +16,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
 const PURITY_LABELS: Record<string, string> = {
   K24: "24K", K22: "22K", K21: "21K", K18: "18K", K14: "14K", K9: "9K",
@@ -45,6 +45,7 @@ export default function JewelleryInventoryPage() {
   if (purityFilter !== "ALL") queryParams.set("purity", purityFilter);
 
   const { data, mutate, isLoading } = useSWR(`/api/jewellery/items?${queryParams}`, fetcher);
+  const { data: categories } = useSWR("/api/jewellery/categories", fetcher);
   const items = data?.items || [];
   const total = data?.total || 0;
 
@@ -117,6 +118,19 @@ export default function JewelleryInventoryPage() {
                     <Input value={form.tagNumber} onChange={(e) => setForm({ ...form, tagNumber: e.target.value })} placeholder="JW-001" />
                   </div>
                   <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        {Array.isArray(categories) && categories.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
                     <Label>Metal Type</Label>
                     <Select value={form.metalType} onValueChange={(v) => setForm({ ...form, metalType: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -126,6 +140,10 @@ export default function JewelleryInventoryPage() {
                         <SelectItem value="PLATINUM">Platinum</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>HUID Number</Label>
+                    <Input value={form.huidNumber} onChange={(e) => setForm({ ...form, huidNumber: e.target.value })} placeholder="6-digit HUID" maxLength={6} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -139,10 +157,6 @@ export default function JewelleryInventoryPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>HUID Number</Label>
-                    <Input value={form.huidNumber} onChange={(e) => setForm({ ...form, huidNumber: e.target.value })} placeholder="6-digit HUID" maxLength={6} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
@@ -269,7 +283,7 @@ export default function JewelleryInventoryPage() {
                         <TableCell className="font-mono text-xs">{item.huidNumber || "—"}</TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[item.status] || "bg-gray-100"}`}>
-                            {item.status.replace(/_/g, " ")}
+                            {(item.status || "UNKNOWN").replace(/_/g, " ")}
                           </span>
                         </TableCell>
                       </TableRow>

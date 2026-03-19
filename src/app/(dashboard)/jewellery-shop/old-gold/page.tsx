@@ -16,7 +16,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
 export default function OldGoldPage() {
   const { t } = useLanguage();
@@ -41,8 +41,9 @@ export default function OldGoldPage() {
   };
 
   const handleAvgReadings = () => {
+    if (form.reading1 === "" || form.reading2 === "" || form.reading3 === "") return;
     const r1 = Number(form.reading1), r2 = Number(form.reading2), r3 = Number(form.reading3);
-    if (r1 && r2 && r3) {
+    if (!isNaN(r1) && !isNaN(r2) && !isNaN(r3)) {
       setForm({ ...form, purityPercentage: ((r1 + r2 + r3) / 3).toFixed(2) });
     }
   };
@@ -51,7 +52,9 @@ export default function OldGoldPage() {
     if (!form.weight || !form.rate) { toast.error("Weight and rate are required"); return; }
     setSaving(true);
     try {
-      const testReadings = [Number(form.reading1), Number(form.reading2), Number(form.reading3)].filter(Boolean);
+      const testReadings = [form.reading1, form.reading2, form.reading3]
+        .filter(v => v !== "")
+        .map(Number);
       const res = await fetch("/api/jewellery/old-gold", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,6 +74,7 @@ export default function OldGoldPage() {
       if (res.ok) {
         toast.success("Old gold purchase recorded");
         setDialogOpen(false);
+        setForm({ customerName: "", weight: "", testedPurity: "K22", purityPercentage: "91.67", reading1: "", reading2: "", reading3: "", testMethod: "XRF", meltingLossPercent: "2", rate: "", panNumber: "", notes: "" });
         mutate();
       } else {
         const d = await res.json();

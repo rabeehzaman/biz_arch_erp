@@ -69,6 +69,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate customer belongs to this org
+    const customer = await prisma.customer.findFirst({
+      where: { id: customerId, organizationId },
+      select: { id: true },
+    });
+    if (!customer) {
+      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    }
+
     // Fetch org settings
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },

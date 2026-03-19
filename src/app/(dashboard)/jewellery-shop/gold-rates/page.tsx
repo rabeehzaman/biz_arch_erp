@@ -10,12 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
 const PURITY_LABELS: Record<string, string> = {
   K24: "24K (999)", K22: "22K (916)", K21: "21K (875)",
@@ -66,7 +66,7 @@ export default function GoldRatesPage() {
   }, [sellRate, purity, mutateTodayRates, mutateHistory]);
 
   const rates = Array.isArray(todayRates) ? todayRates : [];
-  const history = Array.isArray(rateHistory) ? rateHistory : rateHistory?.rates || [];
+  const history = Array.isArray(rateHistory) ? rateHistory : [];
 
   return (
     <PageAnimation>
@@ -87,7 +87,6 @@ export default function GoldRatesPage() {
                   <Badge variant="outline" className="text-sm font-semibold">
                     {PURITY_LABELS[rate.purity] || rate.purity}
                   </Badge>
-                  <TrendingUp className="h-4 w-4 text-green-500" />
                 </div>
                 <div className="mt-3">
                   <p className="text-2xl font-bold">{fmt(Number(rate.sellRate))}</p>

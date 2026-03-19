@@ -7,12 +7,16 @@ import { calculateJewelleryTax, type JewelleryTaxBreakdown } from "@/lib/jewelle
 import { getJewelleryConfig } from "@/lib/jewellery/config";
 
 // Generate jewellery sale invoice number: JINV-YYYYMMDD-XXX
-async function generateJewelleryInvoiceNumber(organizationId: string): Promise<string> {
+// Accepts a Prisma transaction client to avoid race conditions
+async function generateJewelleryInvoiceNumber(
+  organizationId: string,
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+): Promise<string> {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
   const prefix = `JINV-${dateStr}`;
 
-  const lastInvoice = await prisma.invoice.findFirst({
+  const lastInvoice = await tx.invoice.findFirst({
     where: { invoiceNumber: { startsWith: prefix }, organizationId },
     orderBy: { invoiceNumber: "desc" },
   });
@@ -128,11 +132,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get gold rates: use locked rate or fetch today's rates
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Get gold rates: use locked rate or fetch today's rates (UTC midnight)
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 
     // Collect distinct purity+metalType combos needed
     const rateCombos = [...new Set(items.map((i) => `${i.purity}|${i.metalType}`))];
@@ -231,16 +234,23 @@ export async function POST(request: NextRequest) {
       const oldGold = await prisma.oldGoldPurchase.findFirst({
         where: { id: oldGoldAdjustmentId, organizationId },
       });
-      if (oldGold) {
-        oldGoldDeduction = Number(oldGold.totalValue);
-        grandTotal = round2(grandTotal - oldGoldDeduction);
-        if (grandTotal < 0) grandTotal = 0;
+      if (!oldGold) {
+        return NextResponse.json({ error: "Old gold purchase not found" }, { status: 404 });
       }
+      if (oldGold.adjustedAgainstInvoiceId) {
+        return NextResponse.json(
+          { error: "This old gold purchase has already been adjusted against another invoice" },
+          { status: 400 }
+        );
+      }
+      oldGoldDeduction = Number(oldGold.totalValue);
+      grandTotal = round2(grandTotal - oldGoldDeduction);
+      if (grandTotal < 0) grandTotal = 0;
     }
 
     // Create invoice + items + mark as SOLD in a single transaction
     const invoice = await prisma.$transaction(async (tx) => {
-      const invoiceNumber = await generateJewelleryInvoiceNumber(organizationId);
+      const invoiceNumber = await generateJewelleryInvoiceNumber(organizationId, tx);
       const now = new Date();
 
       const inv = await tx.invoice.create({

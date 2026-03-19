@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSession } from "next-auth/react";
@@ -25,6 +25,7 @@ interface BranchWarehouseSelectorProps {
     onBranchChange: (branchId: string) => void;
     onWarehouseChange: (warehouseId: string) => void;
     disabled?: boolean;
+    focusNextFocusable?: (el: HTMLElement | null) => void;
 }
 
 export function BranchWarehouseSelector({
@@ -33,6 +34,7 @@ export function BranchWarehouseSelector({
     onBranchChange,
     onWarehouseChange,
     disabled = false,
+    focusNextFocusable,
 }: BranchWarehouseSelectorProps) {
     const { data: session } = useSession();
     const { t } = useLanguage();
@@ -109,6 +111,9 @@ export function BranchWarehouseSelector({
         }
     }, [branchId, availableWarehouses, warehouseId, onWarehouseChange, disabled]);
 
+    const branchTriggerRef = useRef<HTMLButtonElement>(null);
+    const warehouseTriggerRef = useRef<HTMLButtonElement>(null);
+
     if (!multiBranchEnabled) return null;
 
     return (
@@ -122,8 +127,13 @@ export function BranchWarehouseSelector({
                         onBranchChange(val);
                         onWarehouseChange(""); // Reset warehouse when branch changes
                     }}
+                    onOpenChange={(open) => {
+                        if (!open && focusNextFocusable) {
+                            setTimeout(() => focusNextFocusable(branchTriggerRef.current), 10);
+                        }
+                    }}
                 >
-                    <SelectTrigger>
+                    <SelectTrigger ref={branchTriggerRef}>
                         <SelectValue placeholder={t("inventory.selectBranch")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -140,8 +150,13 @@ export function BranchWarehouseSelector({
                     disabled={loading || disabled || !branchId || availableWarehouses.length === 0}
                     value={warehouseId || ""}
                     onValueChange={onWarehouseChange}
+                    onOpenChange={(open) => {
+                        if (!open && focusNextFocusable) {
+                            setTimeout(() => focusNextFocusable(warehouseTriggerRef.current), 10);
+                        }
+                    }}
                 >
-                    <SelectTrigger>
+                    <SelectTrigger ref={warehouseTriggerRef}>
                         <SelectValue placeholder={t("inventory.selectWarehouse")} />
                     </SelectTrigger>
                     <SelectContent>

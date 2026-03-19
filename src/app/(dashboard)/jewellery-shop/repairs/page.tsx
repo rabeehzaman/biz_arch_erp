@@ -16,7 +16,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
 const STATUS_COLORS: Record<string, string> = {
   RECEIVED: "bg-blue-100 text-blue-800", IN_PROGRESS: "bg-yellow-100 text-yellow-800",
@@ -30,7 +30,9 @@ export default function RepairsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const queryParams = statusFilter !== "ALL" ? `?status=${statusFilter}` : "";
   const { data, mutate, isLoading } = useSWR(`/api/jewellery/repairs${queryParams}`, fetcher);
+  const { data: customers } = useSWR("/api/customers?limit=200", fetcher);
   const repairs = Array.isArray(data) ? data : [];
+  const customerList = Array.isArray(customers) ? customers : customers?.customers || [];
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -46,7 +48,7 @@ export default function RepairsPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, estimatedCost: Number(form.estimatedCost) || null }),
       });
-      if (res.ok) { toast.success("Repair created"); setDialogOpen(false); mutate(); }
+      if (res.ok) { toast.success("Repair created"); setDialogOpen(false); setForm({ customerId: "", itemDescription: "", repairType: "", estimatedCost: "", notes: "" }); mutate(); }
       else { const d = await res.json(); toast.error(d.error || "Failed"); }
     } catch { toast.error("Failed"); } finally { setSaving(false); }
   }, [form, mutate]);
@@ -75,7 +77,17 @@ export default function RepairsPage() {
             <DialogContent>
               <DialogHeader><DialogTitle>New Repair Order</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="space-y-2"><Label>Customer ID *</Label><Input value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} placeholder="Enter customer ID" /></div>
+                <div className="space-y-2">
+                  <Label>Customer *</Label>
+                  <Select value={form.customerId} onValueChange={(v) => setForm({ ...form, customerId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectContent>
+                      {customerList.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` (${c.phone})` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2"><Label>Item Description *</Label><Input value={form.itemDescription} onChange={(e) => setForm({ ...form, itemDescription: e.target.value })} placeholder="e.g., Gold chain repair, ring resizing" /></div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><Label>Repair Type</Label><Input value={form.repairType} onChange={(e) => setForm({ ...form, repairType: e.target.value })} placeholder="e.g., Soldering, Resizing" /></div>
@@ -125,8 +137,8 @@ export default function RepairsPage() {
                         <TableCell>{r.repairType || "—"}</TableCell>
                         <TableCell className="text-right">{r.estimatedCost ? fmt(Number(r.estimatedCost)) : "—"}</TableCell>
                         <TableCell>
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status]}`}>
-                            {r.status.replace(/_/g, " ")}
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status] || "bg-gray-100"}`}>
+                            {(r.status || "UNKNOWN").replace(/_/g, " ")}
                           </span>
                         </TableCell>
                         <TableCell>{new Date(r.receivedDate).toLocaleDateString()}</TableCell>

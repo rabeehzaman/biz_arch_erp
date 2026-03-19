@@ -83,7 +83,7 @@ async function getDialogMetrics(page: Page) {
     const body = dialog?.querySelector('[data-testid="product-form-body"]');
     const footer = dialog?.querySelector('[data-slot="dialog-footer"]');
     const category = document.getElementById("category");
-    const toRect = (element: Element | null) => {
+    const toRect = (element: Element | null | undefined) => {
       if (!element) return null;
       const rect = element.getBoundingClientRect();
       return {

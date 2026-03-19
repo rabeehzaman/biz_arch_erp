@@ -366,6 +366,7 @@ export default function EditCreditNotePage({
                                 warehouseId={warehouseId}
                                 onBranchChange={setBranchId}
                                 onWarehouseChange={setWarehouseId}
+                                focusNextFocusable={focusNextFocusable}
                             />
                             <div className="mt-4 grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">

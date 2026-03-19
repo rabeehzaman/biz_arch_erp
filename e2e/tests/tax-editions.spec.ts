@@ -625,7 +625,7 @@ test.describe("GST India Edition", () => {
     const lines = await getJournalLines("INVOICE", gstInvoiceId);
     expect(lines.length).toBeGreaterThan(0);
     // Should have GST liability accounts in the journal
-    const accountCodes = lines.map((l: any) => l."accountId");
+    const accountCodes = lines.map((l: any) => l.accountId);
     // At least revenue and AR accounts
     expect(accountCodes.length).toBeGreaterThanOrEqual(2);
   });

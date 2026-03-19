@@ -350,6 +350,7 @@ export default function NewCreditNotePage() {
                 warehouseId={warehouseId}
                 onBranchChange={setBranchId}
                 onWarehouseChange={setWarehouseId}
+                focusNextFocusable={focusNextFocusable}
               />
               <div className="grid gap-4 sm:grid-cols-2 mt-4">
                 <div className="space-y-2">

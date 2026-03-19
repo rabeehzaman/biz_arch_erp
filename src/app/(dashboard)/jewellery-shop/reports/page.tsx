@@ -3,17 +3,16 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, BarChart3, Package, Users, Clock } from "lucide-react";
+import { Loader2, Package, Users, Clock } from "lucide-react";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
 export default function JewelleryReportsPage() {
   const { t } = useLanguage();

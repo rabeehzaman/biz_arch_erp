@@ -107,6 +107,26 @@ export async function PUT(
         Math.round(newWeight * (newPurity / 100) * newRate * (1 - newMelting / 100) * 100) / 100;
     }
 
+    // Re-validate PAN requirement if totalValue changed
+    if (updateData.totalValue !== undefined) {
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { jewelleryPanRequired: true, jewelleryPanThreshold: true },
+      });
+
+      const finalTotalValue = Number(updateData.totalValue);
+      const finalPan = body.panNumber !== undefined ? body.panNumber : existing.panNumber;
+
+      if (org?.jewelleryPanRequired && finalTotalValue > Number(org.jewelleryPanThreshold)) {
+        if (!finalPan || finalPan.trim() === "") {
+          return NextResponse.json(
+            { error: `PAN number is required for old gold purchases exceeding ${org.jewelleryPanThreshold}` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const purchase = await prisma.oldGoldPurchase.update({
       where: { id },
       data: updateData,

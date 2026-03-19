@@ -68,8 +68,9 @@ export function calculateJewelleryTax(
     result.totalTax = result.vatAmount;
     result.grandTotal = round2(pricing.subtotal + result.totalTax);
   } else {
-    // India: Separate tax rates for gold value+wastage+stones vs making charges
-    const goldTaxableAmount = pricing.goldValue + pricing.wastageValue + pricing.stoneValue;
+    // India: Separate tax rates for gold value+wastage vs making charges
+    // Stones taxed separately at jewelleryStoneTaxRate (typically same as gold: 3%)
+    const goldTaxableAmount = pricing.goldValue + pricing.wastageValue;
     const goldTaxRate = config.jewelleryGoldTaxRate;
     const makingTaxRate = config.jewelleryMakingChargeTaxRate;
 
@@ -81,7 +82,7 @@ export function calculateJewelleryTax(
 
     result.stoneTaxAmount = round2(pricing.stoneValue * (config.jewelleryStoneTaxRate / 100));
 
-    result.totalTax = round2(result.goldTaxAmount + result.makingChargeTaxAmount);
+    result.totalTax = round2(result.goldTaxAmount + result.makingChargeTaxAmount + result.stoneTaxAmount);
 
     // Split CGST/SGST for intra-state, IGST for inter-state
     if (options.isInterState) {

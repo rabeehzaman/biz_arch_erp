@@ -3,13 +3,13 @@
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingUp, TrendingDown, Package, Scale, Wrench, CreditCard, AlertTriangle, Gem } from "lucide-react";
+import { Loader2, Minus, Package, Scale, Wrench, CreditCard, AlertTriangle, Gem } from "lucide-react";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
 export default function JewelleryDashboardPage() {
   const { t } = useLanguage();
@@ -49,7 +49,7 @@ export default function JewelleryDashboardPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-amber-800">24K Gold Rate</p>
-                <TrendingUp className="h-4 w-4 text-amber-600" />
+                <Minus className="h-4 w-4 text-amber-600" />
               </div>
               <p className="mt-2 text-3xl font-bold text-amber-900">
                 {rate24K ? fmt(Number(rate24K.sellRate)) : "—"}
@@ -62,7 +62,7 @@ export default function JewelleryDashboardPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-amber-800">22K Gold Rate</p>
-                <TrendingUp className="h-4 w-4 text-amber-600" />
+                <Minus className="h-4 w-4 text-amber-600" />
               </div>
               <p className="mt-2 text-3xl font-bold text-amber-900">
                 {rate22K ? fmt(Number(rate22K.sellRate)) : "—"}

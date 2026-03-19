@@ -59,6 +59,10 @@ export async function POST(
 
       const monthNumber = scheme._count.payments + 1;
 
+      if (monthNumber > scheme.durationMonths) {
+        throw new Error("SCHEME_FULLY_PAID");
+      }
+
       // Create payment
       const payment = await tx.schemePayment.create({
         data: {
@@ -92,6 +96,12 @@ export async function POST(
       if (error.message === "SCHEME_NOT_ACTIVE") {
         return NextResponse.json(
           { error: "Payments can only be recorded for ACTIVE schemes" },
+          { status: 400 }
+        );
+      }
+      if (error.message === "SCHEME_FULLY_PAID") {
+        return NextResponse.json(
+          { error: "All monthly payments have been completed for this scheme" },
           { status: 400 }
         );
       }

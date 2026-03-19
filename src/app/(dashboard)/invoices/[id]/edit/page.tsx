@@ -493,6 +493,7 @@ export default function EditInvoicePage({
                   warehouseId={formData.warehouseId}
                   onBranchChange={(id) => setFormData(prev => ({ ...prev, branchId: id }))}
                   onWarehouseChange={(id) => setFormData(prev => ({ ...prev, warehouseId: id }))}
+                  focusNextFocusable={focusNextFocusable}
                 />
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="grid gap-2">

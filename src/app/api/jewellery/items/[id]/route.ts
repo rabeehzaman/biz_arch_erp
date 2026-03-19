@@ -33,10 +33,9 @@ export async function GET(
     // Calculate live price from today's gold rate if available
     let livePrice: PricingBreakdown | null = null;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 
     const todayRate = await prisma.goldRate.findFirst({
       where: {

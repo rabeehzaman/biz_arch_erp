@@ -16,7 +16,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: "bg-green-100 text-green-800", COMPLETED: "bg-blue-100 text-blue-800",
@@ -27,7 +27,9 @@ export default function SchemesPage() {
   const { t } = useLanguage();
   const { fmt } = useCurrency();
   const { data, mutate, isLoading } = useSWR("/api/jewellery/schemes", fetcher);
+  const { data: customers } = useSWR("/api/customers?limit=200", fetcher);
   const schemes = Array.isArray(data) ? data : [];
+  const customerList = Array.isArray(customers) ? customers : customers?.customers || [];
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -47,7 +49,7 @@ export default function SchemesPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, monthlyAmount: Number(form.monthlyAmount), durationMonths: Number(form.durationMonths) }),
       });
-      if (res.ok) { toast.success("Scheme created"); setDialogOpen(false); mutate(); }
+      if (res.ok) { toast.success("Scheme created"); setDialogOpen(false); setForm({ schemeName: "", customerId: "", monthlyAmount: "", durationMonths: "11", startDate: new Date().toISOString().split("T")[0] }); mutate(); }
       else { const d = await res.json(); toast.error(d.error || "Failed"); }
     } catch { toast.error("Failed"); } finally { setSaving(false); }
   }, [form, mutate]);
@@ -79,7 +81,17 @@ export default function SchemesPage() {
               <DialogHeader><DialogTitle>Create Customer Scheme</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2"><Label>Scheme Name *</Label><Input value={form.schemeName} onChange={(e) => setForm({ ...form, schemeName: e.target.value })} placeholder="e.g., Gold Savings Plan 2024" /></div>
-                <div className="space-y-2"><Label>Customer ID *</Label><Input value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} placeholder="Enter customer ID" /></div>
+                <div className="space-y-2">
+                  <Label>Customer *</Label>
+                  <Select value={form.customerId} onValueChange={(v) => setForm({ ...form, customerId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectContent>
+                      {customerList.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` (${c.phone})` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2"><Label>Monthly Amount *</Label><Input type="number" step="0.01" value={form.monthlyAmount} onChange={(e) => setForm({ ...form, monthlyAmount: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Duration (months)</Label><Input type="number" min="1" max="24" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} /></div>

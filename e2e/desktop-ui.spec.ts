@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-async function fixedNavCount(page: Parameters<typeof test>[0]["page"]) {
+async function fixedNavCount(page: import("@playwright/test").Page) {
   return page.evaluate(() => {
     return Array.from(document.querySelectorAll("nav")).filter((element) => {
       const style = getComputedStyle(element);

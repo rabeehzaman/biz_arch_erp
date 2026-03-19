@@ -79,44 +79,66 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Auto-generate repairNumber: find max existing for org, increment
-    const lastRepair = await prisma.jewelleryRepair.findFirst({
-      where: { organizationId },
-      orderBy: { repairNumber: "desc" },
-      select: { repairNumber: true },
+    // Validate customer belongs to this org
+    const customer = await prisma.customer.findFirst({
+      where: { id: customerId, organizationId },
+      select: { id: true },
     });
+    if (!customer) {
+      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    }
 
-    let nextNumber = 1;
-    if (lastRepair?.repairNumber) {
-      const match = lastRepair.repairNumber.match(/RPR-(\d+)/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
+    // Validate karigar belongs to this org if provided
+    if (karigarId) {
+      const karigar = await prisma.karigar.findFirst({
+        where: { id: karigarId, organizationId },
+        select: { id: true },
+      });
+      if (!karigar) {
+        return NextResponse.json({ error: "Karigar not found" }, { status: 404 });
       }
     }
-    const repairNumber = `RPR-${String(nextNumber).padStart(4, "0")}`;
 
-    const repair = await prisma.jewelleryRepair.create({
-      data: {
-        organizationId,
-        repairNumber,
-        customerId,
-        itemDescription,
-        repairType: repairType || null,
-        estimatedWeight: estimatedWeight !== undefined ? Number(estimatedWeight) : null,
-        materialPurity: materialPurity || null,
-        karigarId: karigarId || null,
-        estimatedCost: estimatedCost !== undefined ? Number(estimatedCost) : null,
-        notes: notes || null,
-        photoUrls: photoUrls || [],
-      },
-      include: {
-        customer: {
-          select: { id: true, name: true, phone: true },
+    // Use transaction to avoid repair number race condition
+    const repair = await prisma.$transaction(async (tx) => {
+      const lastRepair = await tx.jewelleryRepair.findFirst({
+        where: { organizationId },
+        orderBy: { repairNumber: "desc" },
+        select: { repairNumber: true },
+      });
+
+      let nextNumber = 1;
+      if (lastRepair?.repairNumber) {
+        const match = lastRepair.repairNumber.match(/RPR-(\d+)/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const repairNumber = `RPR-${String(nextNumber).padStart(4, "0")}`;
+
+      return tx.jewelleryRepair.create({
+        data: {
+          organizationId,
+          repairNumber,
+          customerId,
+          itemDescription,
+          repairType: repairType || null,
+          estimatedWeight: estimatedWeight !== undefined ? Number(estimatedWeight) : null,
+          materialPurity: materialPurity || null,
+          karigarId: karigarId || null,
+          estimatedCost: estimatedCost !== undefined ? Number(estimatedCost) : null,
+          notes: notes || null,
+          photoUrls: photoUrls || [],
         },
-        karigar: {
-          select: { id: true, name: true, phone: true },
+        include: {
+          customer: {
+            select: { id: true, name: true, phone: true },
+          },
+          karigar: {
+            select: { id: true, name: true, phone: true },
+          },
         },
-      },
+      });
     });
 
     return NextResponse.json(repair, { status: 201 });

@@ -17,11 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "purity is required" }, { status: 400 });
     }
 
-    // Find today's rate for the given purity and metal type
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Find today's rate for the given purity and metal type (UTC midnight)
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 
     const rate = await prisma.goldRate.findFirst({
       where: {
