@@ -99,7 +99,8 @@ export async function POST(request: NextRequest) {
     const buyRate = numericSellRate * (1 - spread / 100);
 
     // Determine which purities to upsert
-    const puritiesToUpsert: { purity: string; sellRate: number; buyRate: number }[] = [];
+    type GoldPurityEnum = "K24" | "K22" | "K21" | "K18" | "K14" | "K9";
+    const puritiesToUpsert: { purity: GoldPurityEnum; sellRate: number; buyRate: number }[] = [];
 
     if (org.jewelleryAutoDerivePurities && purity === "K24") {
       // Auto-derive rates for all enabled purities from the K24 rate
@@ -108,10 +109,10 @@ export async function POST(request: NextRequest) {
         const multiplier = PURITY_MULTIPLIERS[p] ?? 1.0;
         const derivedSell = Math.round(numericSellRate * multiplier * 100) / 100;
         const derivedBuy = Math.round(derivedSell * (1 - spread / 100) * 100) / 100;
-        puritiesToUpsert.push({ purity: p, sellRate: derivedSell, buyRate: derivedBuy });
+        puritiesToUpsert.push({ purity: p as GoldPurityEnum, sellRate: derivedSell, buyRate: derivedBuy });
       }
     } else {
-      puritiesToUpsert.push({ purity, sellRate: numericSellRate, buyRate: Math.round(buyRate * 100) / 100 });
+      puritiesToUpsert.push({ purity: purity as GoldPurityEnum, sellRate: numericSellRate, buyRate: Math.round(buyRate * 100) / 100 });
     }
 
     // Upsert all rates

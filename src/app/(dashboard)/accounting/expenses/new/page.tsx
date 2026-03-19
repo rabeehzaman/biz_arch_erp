@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/hooks/use-currency";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
@@ -44,7 +44,9 @@ interface ExpenseLine {
 export default function NewExpensePage() {
   const router = useRouter();
   const { locale } = useCurrency();
-  const { containerRef: formRef } = useEnterToTab();
+  const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
+  const supplierSelectRef = useRef<HTMLButtonElement>(null);
+  const accountSelectRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
   const { t } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -173,8 +175,16 @@ export default function NewExpensePage() {
                 </div>
                 <div className="grid gap-2">
                   <Label>{t("accounting.supplierOptional")}</Label>
-                  <Select value={supplierId} onValueChange={setSupplierId}>
-                    <SelectTrigger>
+                  <Select
+                    value={supplierId}
+                    onValueChange={setSupplierId}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setTimeout(() => focusNextFocusable(supplierSelectRef), 10);
+                      }
+                    }}
+                  >
+                    <SelectTrigger ref={supplierSelectRef}>
                       <SelectValue placeholder={t("accounting.noSupplier")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -228,8 +238,17 @@ export default function NewExpensePage() {
                           onValueChange={(v) =>
                             updateLine(index, "accountId", v)
                           }
+                          onOpenChange={(open) => {
+                            if (!open) {
+                              const ref = accountSelectRefs.current.get(index);
+                              if (ref) setTimeout(() => focusNextFocusable(ref), 10);
+                            }
+                          }}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger ref={(el) => {
+                            if (el) accountSelectRefs.current.set(index, el);
+                            else accountSelectRefs.current.delete(index);
+                          }}>
                             <SelectValue placeholder={t("accounting.selectAccount")} />
                           </SelectTrigger>
                           <SelectContent>
@@ -294,8 +313,17 @@ export default function NewExpensePage() {
                             <Select
                               value={line.accountId}
                               onValueChange={(v) => updateLine(index, "accountId", v)}
+                              onOpenChange={(open) => {
+                                if (!open) {
+                                  const ref = accountSelectRefs.current.get(index);
+                                  if (ref) setTimeout(() => focusNextFocusable(ref), 10);
+                                }
+                              }}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger ref={(el) => {
+                                if (el) accountSelectRefs.current.set(index, el);
+                                else accountSelectRefs.current.delete(index);
+                              }}>
                                 <SelectValue placeholder={t("accounting.selectAccount")} />
                               </SelectTrigger>
                               <SelectContent>

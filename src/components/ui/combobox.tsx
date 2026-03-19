@@ -121,8 +121,14 @@ export function Combobox<T>({
         // Return focus to trigger button
         triggerRef.current?.focus();
       } else if (e.key === "Tab") {
-        // Close the combobox and let Tab naturally move focus
-        setOpen(false);
+        e.preventDefault();
+        if (filteredItems[highlightedIndex]) {
+          handleSelect(getId(filteredItems[highlightedIndex]));
+        } else {
+          setOpen(false);
+          setSearchQuery("");
+          triggerRef.current?.focus();
+        }
       }
     };
 

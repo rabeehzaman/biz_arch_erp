@@ -34,7 +34,7 @@ interface Line {
 export default function NewJournalEntryPage() {
   const router = useRouter();
   const { locale } = useCurrency();
-  const { containerRef: formRef } = useEnterToTab();
+  const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const { t } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -197,6 +197,7 @@ export default function NewJournalEntryPage() {
                             a.name.toLowerCase().includes(query.toLowerCase())
                           }
                           placeholder={t("accounting.selectAccount")}
+                          onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
                         />
 
                         <Input
@@ -272,6 +273,7 @@ export default function NewJournalEntryPage() {
                                 a.name.toLowerCase().includes(query.toLowerCase())
                               }
                               placeholder={t("accounting.selectAccount")}
+                              onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
                             />
                           </div>
 

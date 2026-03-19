@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // Verify customer exists
     const customer = await prisma.customer.findFirst({
       where: { id: customerId, organizationId },
-      select: { id: true, name: true, stateCode: true },
+      select: { id: true, name: true, gstStateCode: true },
     });
 
     if (!customer) {
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         where: { id: organizationId },
         select: { gstStateCode: true },
       });
-      if (org?.gstStateCode && customer.stateCode && org.gstStateCode !== customer.stateCode) {
+      if (org?.gstStateCode && customer.gstStateCode && org.gstStateCode !== customer.gstStateCode) {
         isInterState = true;
       }
     }
@@ -154,19 +154,19 @@ export async function POST(request: NextRequest) {
     // Fetch today's rates for any combos not covered by locked rate
     for (const combo of rateCombos) {
       if (!rateMap.has(combo)) {
-        const [purity, metalType] = combo.split("|");
+        const [purStr, mtStr] = combo.split("|");
         const rate = await prisma.goldRate.findFirst({
           where: {
             organizationId,
-            purity,
-            metalType,
+            purity: purStr as any,
+            metalType: mtStr as any,
             date: { gte: today, lt: tomorrow },
           },
           orderBy: { date: "desc" },
         });
         if (!rate) {
           return NextResponse.json(
-            { error: `No gold rate set for today for ${purity} ${metalType}. Please set a rate first.` },
+            { error: `No gold rate set for today for ${purStr} ${mtStr}. Please set a rate first.` },
             { status: 400 }
           );
         }

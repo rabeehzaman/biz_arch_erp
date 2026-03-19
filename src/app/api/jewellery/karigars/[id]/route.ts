@@ -28,7 +28,7 @@ export async function GET(
           take: 50,
           include: {
             jewelleryItem: {
-              select: { id: true, tagNumber: true, itemName: true },
+              select: { id: true, tagNumber: true, purity: true },
             },
           },
         },

@@ -38,7 +38,7 @@ export function useEnterToTab<T extends HTMLElement = HTMLFormElement>() {
 
                 // Find all focusable fields that we'd want to tab to
                 const focusableElements = container.querySelectorAll(
-                    'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button[role="combobox"]:not([disabled]), button[type="submit"]:not([disabled])'
+                    'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button[role="combobox"]:not([disabled]), button[type="submit"]:not([disabled]), button[data-slot="select-trigger"]:not([disabled])'
                 );
 
                 const focusable = Array.from(focusableElements) as HTMLElement[];
@@ -72,7 +72,7 @@ export function useEnterToTab<T extends HTMLElement = HTMLFormElement>() {
         }
 
         const focusableElements = container.querySelectorAll(
-            'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button[role="combobox"]:not([disabled]), button[type="submit"]:not([disabled])'
+            'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button[role="combobox"]:not([disabled]), button[type="submit"]:not([disabled]), button[data-slot="select-trigger"]:not([disabled])'
         );
 
         const focusable = Array.from(focusableElements) as HTMLElement[];

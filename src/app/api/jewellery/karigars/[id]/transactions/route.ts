@@ -44,7 +44,7 @@ export async function GET(
       orderBy: { date: "desc" },
       include: {
         jewelleryItem: {
-          select: { id: true, tagNumber: true, itemName: true },
+          select: { id: true, tagNumber: true, purity: true },
         },
       },
     });
@@ -129,7 +129,7 @@ export async function POST(
         },
         include: {
           jewelleryItem: {
-            select: { id: true, tagNumber: true, itemName: true },
+            select: { id: true, tagNumber: true, purity: true },
           },
         },
       });

@@ -98,6 +98,7 @@ export default function EditInvoicePage({
 
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const paymentTypeRef = useRef<HTMLButtonElement>(null);
+  const taxInclusiveRef = useRef<HTMLButtonElement>(null);
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const focusQuantity = useCallback((itemId: string) => {
@@ -535,7 +536,11 @@ export default function EditInvoicePage({
                       value={formData.paymentType}
                       onValueChange={(value) => {
                         setFormData({ ...formData, paymentType: value });
-                        setTimeout(() => focusNextFocusable(paymentTypeRef), 10);
+                      }}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          setTimeout(() => focusNextFocusable(paymentTypeRef), 10);
+                        }
                       }}
                     >
                       <SelectTrigger id="paymentType" ref={paymentTypeRef}>
@@ -554,8 +559,16 @@ export default function EditInvoicePage({
                   {taxEnabled && (
                     <div className="grid gap-2">
                       <Label>{t("common.pricing")}</Label>
-                      <Select value={taxInclusive ? "inclusive" : "exclusive"} onValueChange={(v) => setTaxInclusive(v === "inclusive")}>
-                        <SelectTrigger>
+                      <Select
+                        value={taxInclusive ? "inclusive" : "exclusive"}
+                        onValueChange={(v) => setTaxInclusive(v === "inclusive")}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            setTimeout(() => focusNextFocusable(taxInclusiveRef), 10);
+                          }
+                        }}
+                      >
+                        <SelectTrigger ref={taxInclusiveRef}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

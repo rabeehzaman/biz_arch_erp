@@ -1,5 +1,4 @@
 import prisma from "@/lib/prisma";
-import type { Decimal } from "@/generated/prisma/runtime/library";
 
 export interface JewelleryConfig {
   // Core toggles
@@ -54,7 +53,7 @@ export interface JewelleryConfig {
   edition: string;
 }
 
-function decimalToNumber(val: Decimal | number | null | undefined, fallback: number = 0): number {
+function decimalToNumber(val: unknown, fallback: number = 0): number {
   if (val === null || val === undefined) return fallback;
   return typeof val === "number" ? val : Number(val);
 }

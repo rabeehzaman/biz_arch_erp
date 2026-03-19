@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,8 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
     const router = useRouter();
     const { id } = use(params);
     const { locale } = useCurrency();
-    const { containerRef: formRef } = useEnterToTab();
+    const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
+    const accountSelectRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
     const { t } = useLanguage();
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -207,8 +208,17 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                                 <Select
                                                     value={line.accountId}
                                                     onValueChange={(v) => updateLine(index, "accountId", v)}
+                                                    onOpenChange={(open) => {
+                                                        if (!open) {
+                                                            const ref = accountSelectRefs.current.get(index);
+                                                            if (ref) setTimeout(() => focusNextFocusable(ref), 10);
+                                                        }
+                                                    }}
                                                 >
-                                                    <SelectTrigger className="w-full min-w-0">
+                                                    <SelectTrigger className="w-full min-w-0" ref={(el) => {
+                                                        if (el) accountSelectRefs.current.set(index, el);
+                                                        else accountSelectRefs.current.delete(index);
+                                                    }}>
                                                         <SelectValue placeholder={t("accounting.selectAccount")} />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -285,8 +295,17 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                                                         <Select
                                                             value={line.accountId}
                                                             onValueChange={(v) => updateLine(index, "accountId", v)}
+                                                            onOpenChange={(open) => {
+                                                                if (!open) {
+                                                                    const ref = accountSelectRefs.current.get(index);
+                                                                    if (ref) setTimeout(() => focusNextFocusable(ref), 10);
+                                                                }
+                                                            }}
                                                         >
-                                                            <SelectTrigger className="w-full min-w-0">
+                                                            <SelectTrigger className="w-full min-w-0" ref={(el) => {
+                                                                if (el) accountSelectRefs.current.set(index, el);
+                                                                else accountSelectRefs.current.delete(index);
+                                                            }}>
                                                                 <SelectValue placeholder={t("accounting.selectAccount")} />
                                                             </SelectTrigger>
                                                             <SelectContent>

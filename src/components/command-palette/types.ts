@@ -26,6 +26,7 @@ export interface CommandItem {
   requiresFeature?: (
     | "multiBranchEnabled"
     | "isMobileShopModuleEnabled"
+    | "isJewelleryModuleEnabled"
     | "gstEnabled"
   )[];
 }

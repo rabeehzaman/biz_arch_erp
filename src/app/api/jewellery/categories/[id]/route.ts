@@ -32,14 +32,14 @@ export async function PUT(
     }
 
     // If name is changing, re-derive slug and check for conflicts
-    let newSlug: string | undefined;
+    let newSlug: string | null = null;
     if (name && name !== existing.name) {
       newSlug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
       if (newSlug !== existing.slug) {
         const slugExists = await prisma.jewelleryCategory.findUnique({
           where: {
-            organizationId_slug: { organizationId, slug: newSlug },
+            organizationId_slug: { organizationId, slug: newSlug! },
           },
         });
 
@@ -54,7 +54,7 @@ export async function PUT(
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
-    if (newSlug !== undefined) updateData.slug = newSlug;
+    if (newSlug !== null) updateData.slug = newSlug;
     if (arabicName !== undefined) updateData.arabicName = arabicName || null;
     if (metalType !== undefined) updateData.metalType = metalType;
     if (description !== undefined) updateData.description = description || null;
