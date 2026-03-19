@@ -32,6 +32,10 @@ export function isMobileShopModuleEnabled(session: Session): boolean {
   return (session.user as { isMobileShopModuleEnabled?: boolean }).isMobileShopModuleEnabled === true;
 }
 
+export function isJewelleryModuleEnabled(session: Session): boolean {
+  return (session.user as { isJewelleryModuleEnabled?: boolean }).isJewelleryModuleEnabled === true;
+}
+
 export function isSaudiEInvoiceEnabled(session: Session): boolean {
   return (session.user as { saudiEInvoiceEnabled?: boolean }).saudiEInvoiceEnabled === true;
 }

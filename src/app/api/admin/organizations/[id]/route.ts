@@ -112,6 +112,42 @@ export async function PUT(
       posDefaultCashAccountId,
       posDefaultBankAccountId,
       isTaxInclusivePrice,
+      isJewelleryModuleEnabled,
+      jewelleryHuidMandatory,
+      jewellerySasoMandatory,
+      jewelleryConsignmentEnabled,
+      jewellerySchemesEnabled,
+      jewelleryOldGoldEnabled,
+      jewelleryRepairsEnabled,
+      jewelleryKarigarsEnabled,
+      jewelleryGoldTaxRate,
+      jewelleryMakingChargeTaxRate,
+      jewelleryStoneTaxRate,
+      jewelleryInvestmentGoldTaxRate,
+      jewelleryPanRequired,
+      jewelleryPanThreshold,
+      jewelleryCashLimitEnabled,
+      jewelleryCashLimitAmount,
+      jewelleryTcsEnabled,
+      jewelleryTcsRate,
+      jewelleryTcsThreshold,
+      jewelleryDefaultWastagePercent,
+      jewelleryKarigarWastageTolerance,
+      jewelleryWeightTolerance,
+      jewelleryBuyRateSpread,
+      jewelleryAutoDerivePurities,
+      jewelleryAgingAlertDays,
+      jewelleryReconciliationTolerance,
+      jewelleryDefaultMakingChargeType,
+      jewellerySchemeMaxDuration,
+      jewellerySchemeBonusMonths,
+      jewellerySchemeEnforce365Days,
+      jewellerySchemeRedemptionDiscount,
+      jewelleryThemeEnabled,
+      jewelleryThemeColor,
+      jewelleryThemePreset,
+      jewelleryEnabledPurities,
+      jewelleryEnabledMetals,
     } = body;
 
     // Validate edition
@@ -300,6 +336,44 @@ export async function PUT(
     if (posDefaultBankAccountId !== undefined) updateData.posDefaultBankAccountId = posDefaultBankAccountId || null;
     if (isTaxInclusivePrice !== undefined) updateData.isTaxInclusivePrice = isTaxInclusivePrice;
 
+    // Jewellery module settings
+    if (isJewelleryModuleEnabled !== undefined) updateData.isJewelleryModuleEnabled = isJewelleryModuleEnabled;
+    if (jewelleryHuidMandatory !== undefined) updateData.jewelleryHuidMandatory = jewelleryHuidMandatory;
+    if (jewellerySasoMandatory !== undefined) updateData.jewellerySasoMandatory = jewellerySasoMandatory;
+    if (jewelleryConsignmentEnabled !== undefined) updateData.jewelleryConsignmentEnabled = jewelleryConsignmentEnabled;
+    if (jewellerySchemesEnabled !== undefined) updateData.jewellerySchemesEnabled = jewellerySchemesEnabled;
+    if (jewelleryOldGoldEnabled !== undefined) updateData.jewelleryOldGoldEnabled = jewelleryOldGoldEnabled;
+    if (jewelleryRepairsEnabled !== undefined) updateData.jewelleryRepairsEnabled = jewelleryRepairsEnabled;
+    if (jewelleryKarigarsEnabled !== undefined) updateData.jewelleryKarigarsEnabled = jewelleryKarigarsEnabled;
+    if (jewelleryGoldTaxRate !== undefined) updateData.jewelleryGoldTaxRate = Number(jewelleryGoldTaxRate);
+    if (jewelleryMakingChargeTaxRate !== undefined) updateData.jewelleryMakingChargeTaxRate = Number(jewelleryMakingChargeTaxRate);
+    if (jewelleryStoneTaxRate !== undefined) updateData.jewelleryStoneTaxRate = Number(jewelleryStoneTaxRate);
+    if (jewelleryInvestmentGoldTaxRate !== undefined) updateData.jewelleryInvestmentGoldTaxRate = Number(jewelleryInvestmentGoldTaxRate);
+    if (jewelleryPanRequired !== undefined) updateData.jewelleryPanRequired = jewelleryPanRequired;
+    if (jewelleryPanThreshold !== undefined) updateData.jewelleryPanThreshold = Number(jewelleryPanThreshold);
+    if (jewelleryCashLimitEnabled !== undefined) updateData.jewelleryCashLimitEnabled = jewelleryCashLimitEnabled;
+    if (jewelleryCashLimitAmount !== undefined) updateData.jewelleryCashLimitAmount = Number(jewelleryCashLimitAmount);
+    if (jewelleryTcsEnabled !== undefined) updateData.jewelleryTcsEnabled = jewelleryTcsEnabled;
+    if (jewelleryTcsRate !== undefined) updateData.jewelleryTcsRate = Number(jewelleryTcsRate);
+    if (jewelleryTcsThreshold !== undefined) updateData.jewelleryTcsThreshold = Number(jewelleryTcsThreshold);
+    if (jewelleryDefaultWastagePercent !== undefined) updateData.jewelleryDefaultWastagePercent = Number(jewelleryDefaultWastagePercent);
+    if (jewelleryKarigarWastageTolerance !== undefined) updateData.jewelleryKarigarWastageTolerance = Number(jewelleryKarigarWastageTolerance);
+    if (jewelleryWeightTolerance !== undefined) updateData.jewelleryWeightTolerance = Number(jewelleryWeightTolerance);
+    if (jewelleryBuyRateSpread !== undefined) updateData.jewelleryBuyRateSpread = Number(jewelleryBuyRateSpread);
+    if (jewelleryAutoDerivePurities !== undefined) updateData.jewelleryAutoDerivePurities = jewelleryAutoDerivePurities;
+    if (jewelleryAgingAlertDays !== undefined) updateData.jewelleryAgingAlertDays = Number(jewelleryAgingAlertDays);
+    if (jewelleryReconciliationTolerance !== undefined) updateData.jewelleryReconciliationTolerance = Number(jewelleryReconciliationTolerance);
+    if (jewelleryDefaultMakingChargeType !== undefined) updateData.jewelleryDefaultMakingChargeType = jewelleryDefaultMakingChargeType;
+    if (jewellerySchemeMaxDuration !== undefined) updateData.jewellerySchemeMaxDuration = Number(jewellerySchemeMaxDuration);
+    if (jewellerySchemeBonusMonths !== undefined) updateData.jewellerySchemeBonusMonths = Number(jewellerySchemeBonusMonths);
+    if (jewellerySchemeEnforce365Days !== undefined) updateData.jewellerySchemeEnforce365Days = jewellerySchemeEnforce365Days;
+    if (jewellerySchemeRedemptionDiscount !== undefined) updateData.jewellerySchemeRedemptionDiscount = Number(jewellerySchemeRedemptionDiscount);
+    if (jewelleryThemeEnabled !== undefined) updateData.jewelleryThemeEnabled = jewelleryThemeEnabled;
+    if (jewelleryThemeColor !== undefined) updateData.jewelleryThemeColor = jewelleryThemeColor || null;
+    if (jewelleryThemePreset !== undefined) updateData.jewelleryThemePreset = jewelleryThemePreset || null;
+    if (jewelleryEnabledPurities !== undefined) updateData.jewelleryEnabledPurities = jewelleryEnabledPurities;
+    if (jewelleryEnabledMetals !== undefined) updateData.jewelleryEnabledMetals = jewelleryEnabledMetals;
+
     const organization = await prisma.$transaction(
       async (tx) => {
         const org = await tx.organization.update({
@@ -482,6 +556,18 @@ export async function DELETE(
     }
 
     // Cascade-delete all associated data in dependency order
+
+    // Jewellery module data
+    await prisma.schemePayment.deleteMany({ where: { organizationId: id } });
+    await prisma.customerScheme.deleteMany({ where: { organizationId: id } });
+    await prisma.karigarTransaction.deleteMany({ where: { organizationId: id } });
+    await prisma.oldGoldPurchase.deleteMany({ where: { organizationId: id } });
+    await prisma.jewelleryRepair.deleteMany({ where: { organizationId: id } });
+    await prisma.stoneDetail.deleteMany({ where: { organizationId: id } });
+    await prisma.jewelleryItem.deleteMany({ where: { organizationId: id } });
+    await prisma.karigar.deleteMany({ where: { organizationId: id } });
+    await prisma.jewelleryCategory.deleteMany({ where: { organizationId: id } });
+    await prisma.goldRate.deleteMany({ where: { organizationId: id } });
 
     // 0. Dependent auxiliary models
     await prisma.mobileDevice.deleteMany({ where: { organizationId: id } });

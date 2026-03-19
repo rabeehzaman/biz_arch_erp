@@ -38,6 +38,8 @@ import {
   RefreshCw,
   Loader2,
   Sparkles,
+  Gem,
+  Wrench,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -107,6 +109,17 @@ const mobileShopNavigation = [
   { nameKey: "nav.deviceInventory", href: "/mobile-shop/device-inventory", icon: Smartphone },
 ];
 
+const jewelleryShopNavigation = [
+  { nameKey: "nav.jewelleryDashboard", href: "/jewellery-shop/dashboard", icon: LayoutDashboard },
+  { nameKey: "nav.goldRates", href: "/jewellery-shop/gold-rates", icon: BarChart3 },
+  { nameKey: "nav.jewelleryInventory", href: "/jewellery-shop/inventory", icon: Package },
+  { nameKey: "nav.oldGoldExchange", href: "/jewellery-shop/old-gold", icon: ArrowRightLeft },
+  { nameKey: "nav.karigars", href: "/jewellery-shop/karigars", icon: Users },
+  { nameKey: "nav.jewelleryRepairs", href: "/jewellery-shop/repairs", icon: Wrench },
+  { nameKey: "nav.customerSchemes", href: "/jewellery-shop/schemes", icon: CreditCard },
+  { nameKey: "nav.jewelleryReports", href: "/jewellery-shop/reports", icon: BarChart3 },
+];
+
 const superadminNavigation = [
   { nameKey: "nav.organizations", href: "/admin/organizations", icon: Building2 },
   { nameKey: "nav.whatsNew", href: "/admin/whats-new", icon: Sparkles },
@@ -135,6 +148,14 @@ const NAME_TO_KEY: Record<string, string> = {
   "Opening Stock": "nav.openingStock",
   "IMEI Lookup": "nav.imeiLookup",
   "Device Inventory": "nav.deviceInventory",
+  "Jewellery Dashboard": "nav.jewelleryDashboard",
+  "Gold Rates": "nav.goldRates",
+  "Jewellery Inventory": "nav.jewelleryInventory",
+  "Old Gold Exchange": "nav.oldGoldExchange",
+  "Karigars": "nav.karigars",
+  "Jewellery Repairs": "nav.jewelleryRepairs",
+  "Customer Schemes": "nav.customerSchemes",
+  "Jewellery Reports": "nav.jewelleryReports",
   "Profit by Items": "nav.profitByItems",
   "Sales by Customer": "nav.salesByCustomer",
   "Sales by Item": "nav.salesByItem",
@@ -260,8 +281,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const visibleBottom = filterItems(bottomNavigation);
   const visibleInventory = filterItems(inventoryNavigation);
   const visibleMobileShop = filterItems(mobileShopNavigation);
+  const visibleJewellery = filterItems(jewelleryShopNavigation);
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
   const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
+  const isJewelleryEnabled = session?.user?.isJewelleryModuleEnabled;
 
   return (
     <>
@@ -339,6 +362,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 title="nav.mobileShop"
                 icon={Smartphone}
                 items={visibleMobileShop}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            )}
+
+            {isJewelleryEnabled && visibleJewellery.length > 0 && (
+              <CollapsibleSection
+                title="nav.jewelleryShop"
+                icon={Gem}
+                items={visibleJewellery}
                 pathname={pathname}
                 onNavigate={onNavigate}
               />

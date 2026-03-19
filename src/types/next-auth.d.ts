@@ -12,6 +12,7 @@ declare module "next-auth" {
       multiUnitEnabled?: boolean;
       multiBranchEnabled?: boolean;
       isMobileShopModuleEnabled?: boolean;
+      isJewelleryModuleEnabled?: boolean;
       gstStateCode?: string | null;
       saudiEInvoiceEnabled?: boolean;
       language?: string;
@@ -28,6 +29,7 @@ declare module "next-auth" {
     multiUnitEnabled?: boolean;
     multiBranchEnabled?: boolean;
     isMobileShopModuleEnabled?: boolean;
+    isJewelleryModuleEnabled?: boolean;
     gstStateCode?: string | null;
     saudiEInvoiceEnabled?: boolean;
     language?: string;
@@ -46,6 +48,7 @@ declare module "next-auth/jwt" {
     multiUnitEnabled?: boolean;
     multiBranchEnabled?: boolean;
     isMobileShopModuleEnabled?: boolean;
+    isJewelleryModuleEnabled?: boolean;
     gstStateCode?: string | null;
     saudiEInvoiceEnabled?: boolean;
     language?: string;

@@ -22,6 +22,54 @@ model Organization {
   multiBranchEnabled         Boolean  @default(false)
   isMobileShopModuleEnabled  Boolean  @default(false)
   isWeighMachineEnabled        Boolean  @default(false)
+
+  // Jewellery Module
+  isJewelleryModuleEnabled     Boolean  @default(false)
+  jewelleryHuidMandatory       Boolean  @default(true)
+  jewellerySasoMandatory       Boolean  @default(true)
+  jewelleryConsignmentEnabled  Boolean  @default(false)
+  jewellerySchemesEnabled      Boolean  @default(true)
+  jewelleryOldGoldEnabled      Boolean  @default(true)
+  jewelleryRepairsEnabled      Boolean  @default(true)
+  jewelleryKarigarsEnabled     Boolean  @default(true)
+
+  // Jewellery Tax & Compliance
+  jewelleryGoldTaxRate              Decimal  @default(3.00) @db.Decimal(5, 2)
+  jewelleryMakingChargeTaxRate      Decimal  @default(5.00) @db.Decimal(5, 2)
+  jewelleryStoneTaxRate             Decimal  @default(3.00) @db.Decimal(5, 2)
+  jewelleryInvestmentGoldTaxRate    Decimal  @default(3.00) @db.Decimal(5, 2)
+  jewelleryPanRequired              Boolean  @default(true)
+  jewelleryPanThreshold             Decimal  @default(200000) @db.Decimal(15, 2)
+  jewelleryCashLimitEnabled         Boolean  @default(true)
+  jewelleryCashLimitAmount          Decimal  @default(200000) @db.Decimal(15, 2)
+  jewelleryTcsEnabled               Boolean  @default(false)
+  jewelleryTcsRate                  Decimal  @default(1.00) @db.Decimal(5, 2)
+  jewelleryTcsThreshold             Decimal  @default(500000) @db.Decimal(15, 2)
+
+  // Jewellery Business Rules
+  jewelleryDefaultWastagePercent    Decimal  @default(5.00) @db.Decimal(5, 2)
+  jewelleryKarigarWastageTolerance  Decimal  @default(3.00) @db.Decimal(5, 2)
+  jewelleryWeightTolerance          Decimal  @default(0.050) @db.Decimal(5, 3)
+  jewelleryBuyRateSpread            Decimal  @default(5.00) @db.Decimal(5, 2)
+  jewelleryAutoDerivePurities       Boolean  @default(true)
+  jewelleryAgingAlertDays           Int      @default(180)
+  jewelleryReconciliationTolerance  Decimal  @default(1.00) @db.Decimal(5, 2)
+  jewelleryDefaultMakingChargeType  MakingChargeType @default(PER_GRAM)
+
+  // Jewellery Scheme Settings (India)
+  jewellerySchemeMaxDuration        Int      @default(11)
+  jewellerySchemeBonusMonths        Int      @default(1)
+  jewellerySchemeEnforce365Days     Boolean  @default(true)
+  jewellerySchemeRedemptionDiscount Decimal  @default(0) @db.Decimal(5, 2)
+
+  // Jewellery Theme & Branding
+  jewelleryThemeEnabled             Boolean  @default(true)
+  jewelleryThemeColor               String?  @default("#b8860b")
+  jewelleryThemePreset              String?  @default("gold")
+
+  // Jewellery Enabled Purities & Metals
+  jewelleryEnabledPurities          String[] @default(["K24", "K22", "K21", "K18", "K14", "K9"])
+  jewelleryEnabledMetals            String[] @default(["GOLD", "SILVER", "PLATINUM"])
   weighMachineBarcodePrefix    String?  @default("77")
   weighMachineProductCodeLen   Int?     @default(5)
   weighMachineWeightDigits     Int?     @default(5)
@@ -113,6 +161,18 @@ model Organization {
   userWarehouseAccess        UserWarehouseAccess[]
   mobileDevices              MobileDevice[]
   productBundleItems         ProductBundleItem[]
+
+  // Jewellery Module Relations
+  goldRates                  GoldRate[]
+  jewelleryCategories        JewelleryCategory[]
+  jewelleryItems             JewelleryItem[]
+  stoneDetails               StoneDetail[]
+  karigars                   Karigar[]
+  karigarTransactions        KarigarTransaction[]
+  oldGoldPurchases           OldGoldPurchase[]
+  jewelleryRepairs           JewelleryRepair[]
+  customerSchemes            CustomerScheme[]
+  schemePayments             SchemePayment[]
 
   @@map("organizations")
 }
@@ -229,6 +289,9 @@ model Product {
   bundleItems          ProductBundleItem[]  @relation("BundleParent")
   bundleParents        ProductBundleItem[]  @relation("BundleComponent")
 
+  // Jewellery relation (1:1)
+  jewelleryItem        JewelleryItem?
+
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])
   @@unique([organizationId, weighMachineCode])
@@ -317,6 +380,11 @@ model Customer {
   posHeldOrders POSHeldOrder[]
   mobileDevices MobileDevice[]
 
+  // Jewellery relations
+  jewelleryRepairs   JewelleryRepair[]
+  oldGoldPurchases   OldGoldPurchase[]
+  customerSchemes    CustomerScheme[]
+
   @@index([organizationId])
   @@index([organizationId, name])
   @@map("customers")
@@ -369,6 +437,9 @@ model Supplier {
   debitNotes       DebitNote[]
   expenses         Expense[]
   mobileDevices    MobileDevice[]
+
+  // Jewellery relations
+  jewelleryItems   JewelleryItem[]
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -447,6 +518,9 @@ model Invoice {
   quotation          Quotation?
   creditNotes        CreditNote[]
   mobileDevices      MobileDevice[]
+
+  // Jewellery relations
+  oldGoldAdjustments OldGoldPurchase[]
 
   @@unique([organizationId, invoiceNumber])
   @@unique([organizationId, idempotencyKey])
@@ -1965,4 +2039,401 @@ model MobileDevice {
   @@index([customerId])
   @@index([purchaseInvoiceId])
   @@map("mobile_devices")
+}
+
+// ==================== JEWELLERY MODULE ====================
+
+enum MetalType {
+  GOLD
+  SILVER
+  PLATINUM
+}
+
+enum GoldPurity {
+  K24
+  K22
+  K21
+  K18
+  K14
+  K9
+}
+
+enum MakingChargeType {
+  PER_GRAM
+  PERCENTAGE
+  FIXED
+}
+
+enum JewelleryItemStatus {
+  IN_STOCK
+  SOLD
+  IN_REPAIR
+  ON_APPROVAL
+  MELTED
+  IN_DISPLAY
+  CONSIGNMENT
+}
+
+enum StoneType {
+  DIAMOND
+  RUBY
+  EMERALD
+  SAPPHIRE
+  PEARL
+  ZIRCON
+  OTHER
+}
+
+enum KarigarTransactionType {
+  ISSUE
+  RETURN
+  WASTAGE
+  SCRAP
+}
+
+enum PurityTestMethod {
+  XRF
+  FIRE_ASSAY
+  TOUCHSTONE
+  OTHER
+}
+
+enum RepairStatus {
+  RECEIVED
+  IN_PROGRESS
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum SchemeStatus {
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+  DEFAULTED
+}
+
+model GoldRate {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  date       DateTime
+  metalType  MetalType    @default(GOLD)
+  purity     GoldPurity
+  buyRate    Decimal      @db.Decimal(12, 2)
+  sellRate   Decimal      @db.Decimal(12, 2)
+  rateLocked Boolean      @default(false)
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([organizationId, date, purity, metalType])
+  @@index([organizationId])
+  @@index([organizationId, date(sort: Desc)])
+  @@map("gold_rates")
+}
+
+model JewelleryCategory {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name        String
+  arabicName  String?
+  slug        String
+  metalType   MetalType    @default(GOLD)
+  description String?
+  sortOrder   Int          @default(0)
+  isActive    Boolean      @default(true)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  items       JewelleryItem[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("jewellery_categories")
+}
+
+model JewelleryItem {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // Identification
+  tagNumber      String
+  rfidTag        String?
+  categoryId     String?
+  category       JewelleryCategory? @relation(fields: [categoryId], references: [id])
+
+  // Metal properties
+  metalType      MetalType    @default(GOLD)
+  purity         GoldPurity   @default(K22)
+  grossWeight    Decimal      @db.Decimal(10, 3)
+  stoneWeight    Decimal      @default(0) @db.Decimal(10, 3)
+  netWeight      Decimal      @db.Decimal(10, 3)   // auto: grossWeight - stoneWeight
+  fineWeight     Decimal      @db.Decimal(10, 3)   // auto: netWeight * purity/24
+
+  // Making charges
+  makingChargeType  MakingChargeType @default(PER_GRAM)
+  makingChargeValue Decimal      @default(0) @db.Decimal(12, 2)
+
+  // Wastage
+  wastagePercent    Decimal      @default(0) @db.Decimal(5, 2)
+  wastageWeight     Decimal      @default(0) @db.Decimal(10, 3)
+
+  // Hallmarking (India)
+  huidNumber        String?
+  hallmarkNumber    String?
+
+  // SASO (Saudi)
+  sasoMark          String?
+  sasoAssayerCode   String?
+  sasoYear          String?
+
+  // Status & tracking
+  status            JewelleryItemStatus @default(IN_STOCK)
+  isConsignment     Boolean      @default(false)
+  consignmentSupplierId   String?
+  consignmentReturnDeadline DateTime?
+
+  // Cost
+  costPrice            Decimal   @default(0) @db.Decimal(15, 2)
+  goldRateAtPurchase   Decimal   @default(0) @db.Decimal(12, 2)
+  stoneValue           Decimal   @default(0) @db.Decimal(15, 2)
+
+  // Relations to existing models
+  productId     String?  @unique
+  product       Product? @relation(fields: [productId], references: [id])
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+  karigarId     String?
+  karigar       Karigar?  @relation(fields: [karigarId], references: [id])
+
+  branchId      String?
+  warehouseId   String?
+
+  photoUrls     String[]
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  stoneDetails       StoneDetail[]
+  karigarTransactions KarigarTransaction[]
+
+  @@unique([organizationId, tagNumber])
+  @@unique([organizationId, huidNumber])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, categoryId])
+  @@index([organizationId, purity])
+  @@index([organizationId, metalType])
+  @@index([productId])
+  @@index([supplierId])
+  @@index([karigarId])
+  @@map("jewellery_items")
+}
+
+model StoneDetail {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  jewelleryItemId String
+  jewelleryItem   JewelleryItem @relation(fields: [jewelleryItemId], references: [id], onDelete: Cascade)
+
+  stoneType           StoneType    @default(DIAMOND)
+  carat               Decimal      @default(0) @db.Decimal(8, 3)
+  cut                 String?
+  color               String?
+  clarity             String?
+  weight              Decimal      @default(0) @db.Decimal(8, 3)  // in carats (1ct = 0.2g)
+  value               Decimal      @default(0) @db.Decimal(15, 2)
+  certificationNumber String?
+  certBody            String?      // GIA, IGI, etc.
+  serialNumber        String?      // for stones > 0.5ct
+  isLot               Boolean      @default(false)
+  lotCount            Int?
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([jewelleryItemId])
+  @@index([organizationId])
+  @@map("stone_details")
+}
+
+model Karigar {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name                    String
+  phone                   String
+  specialization          String?
+  address                 String?
+  goldIssuedWeight        Decimal  @default(0) @db.Decimal(12, 3)
+  goldReturnedWeight      Decimal  @default(0) @db.Decimal(12, 3)
+  scrapReturnedWeight     Decimal  @default(0) @db.Decimal(12, 3)
+  wastageAllowancePercent Decimal  @default(3.00) @db.Decimal(5, 2)
+  isActive                Boolean  @default(true)
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  transactions            KarigarTransaction[]
+  jewelleryItems          JewelleryItem[]
+  repairs                 JewelleryRepair[]
+
+  @@unique([organizationId, phone])
+  @@index([organizationId])
+  @@map("karigars")
+}
+
+model KarigarTransaction {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  karigarId       String
+  karigar         Karigar    @relation(fields: [karigarId], references: [id])
+  type            KarigarTransactionType
+  weight          Decimal    @db.Decimal(10, 3)
+  purity          GoldPurity @default(K22)
+  fineWeight      Decimal    @db.Decimal(10, 3)  // auto: weight * purity/24
+  jewelleryItemId String?
+  jewelleryItem   JewelleryItem? @relation(fields: [jewelleryItemId], references: [id])
+  date            DateTime   @default(now())
+  notes           String?
+
+  createdAt       DateTime   @default(now())
+
+  @@index([karigarId])
+  @@index([organizationId])
+  @@index([organizationId, date(sort: Desc)])
+  @@map("karigar_transactions")
+}
+
+model OldGoldPurchase {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  customerId          String?
+  customer            Customer? @relation(fields: [customerId], references: [id])
+  customerName        String?   // for walk-in
+
+  weight              Decimal   @db.Decimal(10, 3)
+  testedPurity        GoldPurity @default(K22)
+  purityPercentage    Decimal   @db.Decimal(5, 2)
+  testReadings        Json?     // array of 3 XRF readings
+  testMethod          PurityTestMethod @default(XRF)
+  meltingLossPercent  Decimal   @default(0) @db.Decimal(5, 2)
+  rate                Decimal   @db.Decimal(12, 2)
+  totalValue          Decimal   @db.Decimal(15, 2)
+
+  adjustedAgainstInvoiceId String?
+  adjustedAgainstInvoice   Invoice? @relation(fields: [adjustedAgainstInvoiceId], references: [id])
+
+  panNumber           String?
+  notes               String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@index([customerId])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@map("old_gold_purchases")
+}
+
+model JewelleryRepair {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  repairNumber        String
+  customerId          String
+  customer            Customer @relation(fields: [customerId], references: [id])
+  itemDescription     String
+  repairType          String?
+
+  estimatedWeight     Decimal?  @db.Decimal(10, 3)
+  materialUsedWeight  Decimal?  @db.Decimal(10, 3)
+  materialPurity      GoldPurity?
+
+  karigarId           String?
+  karigar             Karigar?  @relation(fields: [karigarId], references: [id])
+
+  status              RepairStatus @default(RECEIVED)
+  estimatedCost       Decimal?  @db.Decimal(15, 2)
+  actualCost          Decimal?  @db.Decimal(15, 2)
+
+  receivedDate        DateTime  @default(now())
+  completedDate       DateTime?
+  deliveredDate       DateTime?
+
+  photoUrls           String[]
+  notes               String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([organizationId, repairNumber])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([customerId])
+  @@index([karigarId])
+  @@map("jewellery_repairs")
+}
+
+model CustomerScheme {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  schemeName      String
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id])
+  monthlyAmount   Decimal  @db.Decimal(12, 2)
+  durationMonths  Int
+  bonusMonths     Int      @default(1)
+  startDate       DateTime
+  endDate         DateTime   // MUST be within 365 days of start
+  status          SchemeStatus @default(ACTIVE)
+  totalPaid       Decimal  @default(0) @db.Decimal(12, 2)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  payments        SchemePayment[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([customerId])
+  @@map("customer_schemes")
+}
+
+model SchemePayment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  schemeId        String
+  scheme          CustomerScheme @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  amount          Decimal  @db.Decimal(12, 2)
+  paymentDate     DateTime @default(now())
+  paymentMethod   PaymentMethod @default(CASH)
+  monthNumber     Int
+  reference       String?
+  notes           String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([schemeId])
+  @@index([organizationId])
+  @@map("scheme_payments")
 }

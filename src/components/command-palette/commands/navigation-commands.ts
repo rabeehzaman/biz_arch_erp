@@ -29,6 +29,8 @@ import {
   Warehouse,
   Clock,
   Percent,
+  Gem,
+  Wrench,
 } from "lucide-react";
 import type { CommandItem } from "../types";
 
@@ -87,6 +89,18 @@ export const mobileShopNav: NavDef[] = [
   { name: "Device Inventory", href: "/mobile-shop/device-inventory", icon: Smartphone, keywords: ["phones", "mobile stock", "devices"], requiresFeature: ["isMobileShopModuleEnabled"] },
 ];
 
+// Jewellery Shop (requires isJewelleryModuleEnabled)
+export const jewelleryShopNav: NavDef[] = [
+  { name: "Jewellery Dashboard", href: "/jewellery-shop/dashboard", icon: Gem, keywords: ["gold", "jewellery", "overview"], requiresFeature: ["isJewelleryModuleEnabled"] },
+  { name: "Gold Rates", href: "/jewellery-shop/gold-rates", icon: BarChart3, keywords: ["gold price", "rate", "today rate"], requiresFeature: ["isJewelleryModuleEnabled"] },
+  { name: "Jewellery Inventory", href: "/jewellery-shop/inventory", icon: Package, keywords: ["items", "stock", "gold items", "necklace", "ring"], requiresFeature: ["isJewelleryModuleEnabled"] },
+  { name: "Old Gold Exchange", href: "/jewellery-shop/old-gold", icon: ArrowRightLeft, keywords: ["buyback", "exchange", "old gold", "purchase"], requiresFeature: ["isJewelleryModuleEnabled"] },
+  { name: "Karigars", href: "/jewellery-shop/karigars", icon: Users, keywords: ["artisan", "goldsmith", "karigar", "craftsman"], requiresFeature: ["isJewelleryModuleEnabled"] },
+  { name: "Jewellery Repairs", href: "/jewellery-shop/repairs", icon: Wrench, keywords: ["repair", "fix", "service"], requiresFeature: ["isJewelleryModuleEnabled"] },
+  { name: "Customer Schemes", href: "/jewellery-shop/schemes", icon: CreditCard, keywords: ["savings", "monthly", "scheme", "plan"], requiresFeature: ["isJewelleryModuleEnabled"] },
+  { name: "Jewellery Reports", href: "/jewellery-shop/reports", icon: BarChart3, keywords: ["gold report", "stock valuation"], requiresFeature: ["isJewelleryModuleEnabled"] },
+];
+
 // Reports
 export const reportsNav: NavDef[] = [
   { name: "Profit by Items", href: "/reports/profit-by-items", icon: BarChart3, keywords: ["item profitability", "margin"] },
@@ -132,5 +146,6 @@ export const navSections = [
   { title: "Accounting", icon: BookOpen, items: accountingNav },
   { title: "Inventory", icon: Warehouse, items: inventoryNav, requiresFeature: "multiBranchEnabled" as const },
   { title: "Mobile Shop", icon: Smartphone, items: mobileShopNav, requiresFeature: "isMobileShopModuleEnabled" as const },
+  { title: "Jewellery Shop", icon: Gem, items: jewelleryShopNav, requiresFeature: "isJewelleryModuleEnabled" as const },
   { title: "Reports", icon: BarChart3, items: reportsNav },
 ];

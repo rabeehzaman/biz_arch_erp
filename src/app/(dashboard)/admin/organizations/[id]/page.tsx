@@ -19,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { SidebarConfigDialog } from "../sidebar-config-dialog";
@@ -39,6 +39,42 @@ interface OrganizationDetails {
     multiBranchEnabled: boolean;
     isMobileShopModuleEnabled: boolean;
     isWeighMachineEnabled: boolean;
+    isJewelleryModuleEnabled: boolean;
+    jewelleryHuidMandatory: boolean;
+    jewellerySasoMandatory: boolean;
+    jewelleryConsignmentEnabled: boolean;
+    jewellerySchemesEnabled: boolean;
+    jewelleryOldGoldEnabled: boolean;
+    jewelleryRepairsEnabled: boolean;
+    jewelleryKarigarsEnabled: boolean;
+    jewelleryGoldTaxRate: number;
+    jewelleryMakingChargeTaxRate: number;
+    jewelleryStoneTaxRate: number;
+    jewelleryInvestmentGoldTaxRate: number;
+    jewelleryPanRequired: boolean;
+    jewelleryPanThreshold: number;
+    jewelleryCashLimitEnabled: boolean;
+    jewelleryCashLimitAmount: number;
+    jewelleryTcsEnabled: boolean;
+    jewelleryTcsRate: number;
+    jewelleryTcsThreshold: number;
+    jewelleryDefaultWastagePercent: number;
+    jewelleryKarigarWastageTolerance: number;
+    jewelleryWeightTolerance: number;
+    jewelleryBuyRateSpread: number;
+    jewelleryAutoDerivePurities: boolean;
+    jewelleryAgingAlertDays: number;
+    jewelleryReconciliationTolerance: number;
+    jewelleryDefaultMakingChargeType: string;
+    jewellerySchemeMaxDuration: number;
+    jewellerySchemeBonusMonths: number;
+    jewellerySchemeEnforce365Days: boolean;
+    jewellerySchemeRedemptionDiscount: number;
+    jewelleryThemeEnabled: boolean;
+    jewelleryThemeColor: string | null;
+    jewelleryThemePreset: string | null;
+    jewelleryEnabledPurities: string[];
+    jewelleryEnabledMetals: string[];
     weighMachineBarcodePrefix: string;
     weighMachineProductCodeLen: number;
     weighMachineWeightDigits: number;
@@ -102,6 +138,42 @@ export default function OrganizationDetailsPage() {
     const [multiBranchEnabled, setMultiBranchEnabled] = useState(false);
     const [isMobileShopModuleEnabled, setIsMobileShopModuleEnabled] = useState(false);
     const [isWeighMachineEnabled, setIsWeighMachineEnabled] = useState(false);
+    const [isJewelleryModuleEnabled, setIsJewelleryModuleEnabled] = useState(false);
+    const [jewelleryHuidMandatory, setJewelleryHuidMandatory] = useState(true);
+    const [jewellerySasoMandatory, setJewellerySasoMandatory] = useState(true);
+    const [jewelleryConsignmentEnabled, setJewelleryConsignmentEnabled] = useState(false);
+    const [jewellerySchemesEnabled, setJewellerySchemesEnabled] = useState(true);
+    const [jewelleryOldGoldEnabled, setJewelleryOldGoldEnabled] = useState(true);
+    const [jewelleryRepairsEnabled, setJewelleryRepairsEnabled] = useState(true);
+    const [jewelleryKarigarsEnabled, setJewelleryKarigarsEnabled] = useState(true);
+    const [jewelleryGoldTaxRate, setJewelleryGoldTaxRate] = useState(3);
+    const [jewelleryMakingChargeTaxRate, setJewelleryMakingChargeTaxRate] = useState(5);
+    const [jewelleryStoneTaxRate, setJewelleryStoneTaxRate] = useState(3);
+    const [jewelleryInvestmentGoldTaxRate, setJewelleryInvestmentGoldTaxRate] = useState(3);
+    const [jewelleryPanRequired, setJewelleryPanRequired] = useState(true);
+    const [jewelleryPanThreshold, setJewelleryPanThreshold] = useState(200000);
+    const [jewelleryCashLimitEnabled, setJewelleryCashLimitEnabled] = useState(true);
+    const [jewelleryCashLimitAmount, setJewelleryCashLimitAmount] = useState(200000);
+    const [jewelleryTcsEnabled, setJewelleryTcsEnabled] = useState(false);
+    const [jewelleryTcsRate, setJewelleryTcsRate] = useState(1);
+    const [jewelleryTcsThreshold, setJewelleryTcsThreshold] = useState(500000);
+    const [jewelleryDefaultWastagePercent, setJewelleryDefaultWastagePercent] = useState(5);
+    const [jewelleryKarigarWastageTolerance, setJewelleryKarigarWastageTolerance] = useState(3);
+    const [jewelleryWeightTolerance, setJewelleryWeightTolerance] = useState(0.05);
+    const [jewelleryBuyRateSpread, setJewelleryBuyRateSpread] = useState(5);
+    const [jewelleryAutoDerivePurities, setJewelleryAutoDerivePurities] = useState(true);
+    const [jewelleryAgingAlertDays, setJewelleryAgingAlertDays] = useState(180);
+    const [jewelleryReconciliationTolerance, setJewelleryReconciliationTolerance] = useState(1);
+    const [jewelleryDefaultMakingChargeType, setJewelleryDefaultMakingChargeType] = useState("PER_GRAM");
+    const [jewellerySchemeMaxDuration, setJewellerySchemeMaxDuration] = useState(11);
+    const [jewellerySchemeBonusMonths, setJewellerySchemeBonusMonths] = useState(1);
+    const [jewellerySchemeEnforce365Days, setJewellerySchemeEnforce365Days] = useState(true);
+    const [jewellerySchemeRedemptionDiscount, setJewellerySchemeRedemptionDiscount] = useState(0);
+    const [jewelleryThemeEnabled, setJewelleryThemeEnabled] = useState(true);
+    const [jewelleryThemeColor, setJewelleryThemeColor] = useState("#b8860b");
+    const [jewelleryThemePreset, setJewelleryThemePreset] = useState("gold");
+    const [jewelleryEnabledPurities, setJewelleryEnabledPurities] = useState<string[]>(["K24", "K22", "K21", "K18", "K14", "K9"]);
+    const [jewelleryEnabledMetals, setJewelleryEnabledMetals] = useState<string[]>(["GOLD", "SILVER", "PLATINUM"]);
     const [weighMachineBarcodePrefix, setWeighMachineBarcodePrefix] = useState("77");
     const [weighMachineProductCodeLen, setWeighMachineProductCodeLen] = useState(5);
     const [weighMachineWeightDigits, setWeighMachineWeightDigits] = useState(5);
@@ -177,6 +249,42 @@ export default function OrganizationDetailsPage() {
         setMultiBranchEnabled(data.multiBranchEnabled || false);
         setIsMobileShopModuleEnabled(data.isMobileShopModuleEnabled || false);
         setIsWeighMachineEnabled(data.isWeighMachineEnabled || false);
+        setIsJewelleryModuleEnabled(data.isJewelleryModuleEnabled || false);
+        setJewelleryHuidMandatory(data.jewelleryHuidMandatory ?? true);
+        setJewellerySasoMandatory(data.jewellerySasoMandatory ?? true);
+        setJewelleryConsignmentEnabled(data.jewelleryConsignmentEnabled || false);
+        setJewellerySchemesEnabled(data.jewellerySchemesEnabled ?? true);
+        setJewelleryOldGoldEnabled(data.jewelleryOldGoldEnabled ?? true);
+        setJewelleryRepairsEnabled(data.jewelleryRepairsEnabled ?? true);
+        setJewelleryKarigarsEnabled(data.jewelleryKarigarsEnabled ?? true);
+        setJewelleryGoldTaxRate(Number(data.jewelleryGoldTaxRate) || 3);
+        setJewelleryMakingChargeTaxRate(Number(data.jewelleryMakingChargeTaxRate) || 5);
+        setJewelleryStoneTaxRate(Number(data.jewelleryStoneTaxRate) || 3);
+        setJewelleryInvestmentGoldTaxRate(Number(data.jewelleryInvestmentGoldTaxRate) || 3);
+        setJewelleryPanRequired(data.jewelleryPanRequired ?? true);
+        setJewelleryPanThreshold(Number(data.jewelleryPanThreshold) || 200000);
+        setJewelleryCashLimitEnabled(data.jewelleryCashLimitEnabled ?? true);
+        setJewelleryCashLimitAmount(Number(data.jewelleryCashLimitAmount) || 200000);
+        setJewelleryTcsEnabled(data.jewelleryTcsEnabled || false);
+        setJewelleryTcsRate(Number(data.jewelleryTcsRate) || 1);
+        setJewelleryTcsThreshold(Number(data.jewelleryTcsThreshold) || 500000);
+        setJewelleryDefaultWastagePercent(Number(data.jewelleryDefaultWastagePercent) || 5);
+        setJewelleryKarigarWastageTolerance(Number(data.jewelleryKarigarWastageTolerance) || 3);
+        setJewelleryWeightTolerance(Number(data.jewelleryWeightTolerance) || 0.05);
+        setJewelleryBuyRateSpread(Number(data.jewelleryBuyRateSpread) || 5);
+        setJewelleryAutoDerivePurities(data.jewelleryAutoDerivePurities ?? true);
+        setJewelleryAgingAlertDays(data.jewelleryAgingAlertDays || 180);
+        setJewelleryReconciliationTolerance(Number(data.jewelleryReconciliationTolerance) || 1);
+        setJewelleryDefaultMakingChargeType(data.jewelleryDefaultMakingChargeType || "PER_GRAM");
+        setJewellerySchemeMaxDuration(data.jewellerySchemeMaxDuration || 11);
+        setJewellerySchemeBonusMonths(data.jewellerySchemeBonusMonths || 1);
+        setJewellerySchemeEnforce365Days(data.jewellerySchemeEnforce365Days ?? true);
+        setJewellerySchemeRedemptionDiscount(Number(data.jewellerySchemeRedemptionDiscount) || 0);
+        setJewelleryThemeEnabled(data.jewelleryThemeEnabled ?? true);
+        setJewelleryThemeColor(data.jewelleryThemeColor || "#b8860b");
+        setJewelleryThemePreset(data.jewelleryThemePreset || "gold");
+        setJewelleryEnabledPurities(data.jewelleryEnabledPurities || ["K24", "K22", "K21", "K18", "K14", "K9"]);
+        setJewelleryEnabledMetals(data.jewelleryEnabledMetals || ["GOLD", "SILVER", "PLATINUM"]);
         setWeighMachineBarcodePrefix(data.weighMachineBarcodePrefix || "77");
         setWeighMachineProductCodeLen(data.weighMachineProductCodeLen || 5);
         setWeighMachineWeightDigits(data.weighMachineWeightDigits || 5);
@@ -304,6 +412,42 @@ export default function OrganizationDetailsPage() {
                     multiBranchEnabled,
                     isMobileShopModuleEnabled,
                     isWeighMachineEnabled,
+                    isJewelleryModuleEnabled,
+                    jewelleryHuidMandatory,
+                    jewellerySasoMandatory,
+                    jewelleryConsignmentEnabled,
+                    jewellerySchemesEnabled,
+                    jewelleryOldGoldEnabled,
+                    jewelleryRepairsEnabled,
+                    jewelleryKarigarsEnabled,
+                    jewelleryGoldTaxRate,
+                    jewelleryMakingChargeTaxRate,
+                    jewelleryStoneTaxRate,
+                    jewelleryInvestmentGoldTaxRate,
+                    jewelleryPanRequired,
+                    jewelleryPanThreshold,
+                    jewelleryCashLimitEnabled,
+                    jewelleryCashLimitAmount,
+                    jewelleryTcsEnabled,
+                    jewelleryTcsRate,
+                    jewelleryTcsThreshold,
+                    jewelleryDefaultWastagePercent,
+                    jewelleryKarigarWastageTolerance,
+                    jewelleryWeightTolerance,
+                    jewelleryBuyRateSpread,
+                    jewelleryAutoDerivePurities,
+                    jewelleryAgingAlertDays,
+                    jewelleryReconciliationTolerance,
+                    jewelleryDefaultMakingChargeType,
+                    jewellerySchemeMaxDuration,
+                    jewellerySchemeBonusMonths,
+                    jewellerySchemeEnforce365Days,
+                    jewellerySchemeRedemptionDiscount,
+                    jewelleryThemeEnabled,
+                    jewelleryThemeColor: jewelleryThemeColor || null,
+                    jewelleryThemePreset: jewelleryThemePreset || null,
+                    jewelleryEnabledPurities,
+                    jewelleryEnabledMetals,
                     weighMachineBarcodePrefix,
                     weighMachineProductCodeLen,
                     weighMachineWeightDigits,
@@ -654,6 +798,13 @@ export default function OrganizationDetailsPage() {
                                         >
                                             {t("admin.tabInvoicePdf")}
                                         </TabsTrigger>
+                                        <TabsTrigger
+                                            value="jewellery"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            <Gem className="mr-1.5 h-4 w-4" />
+                                            {t("admin.jewelleryTab")}
+                                        </TabsTrigger>
                                     </TabsList>
                                 </div>
 
@@ -947,6 +1098,24 @@ export default function OrganizationDetailsPage() {
                                             id="isMobileShopModuleEnabled"
                                             checked={isMobileShopModuleEnabled}
                                             onCheckedChange={setIsMobileShopModuleEnabled}
+                                        />
+                                    </div>
+
+                                    {/* Jewellery Shop */}
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="isJewelleryModuleEnabled" className="flex items-center gap-2">
+                                                <Gem className="h-4 w-4" />
+                                                {t("admin.enableJewelleryShop")}
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("admin.enableJewelleryShopDesc")}
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isJewelleryModuleEnabled"
+                                            checked={isJewelleryModuleEnabled}
+                                            onCheckedChange={setIsJewelleryModuleEnabled}
                                         />
                                     </div>
 
@@ -1286,6 +1455,297 @@ export default function OrganizationDetailsPage() {
                                             <p className="text-xs text-muted-foreground">{t("admin.posLogoHeightDesc")}</p>
                                         </div>
                                     </div>
+                                </TabsContent>
+
+                                {/* JEWELLERY TAB */}
+                                <TabsContent value="jewellery" className="space-y-6 mt-0">
+                                    {/* Master Toggle */}
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="isJewelleryModuleEnabled" className="flex items-center gap-2">
+                                                <Gem className="h-4 w-4" />
+                                                {t("admin.enableJewelleryShop")}
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("admin.enableJewelleryShopDesc")}
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isJewelleryModuleEnabled"
+                                            checked={isJewelleryModuleEnabled}
+                                            onCheckedChange={setIsJewelleryModuleEnabled}
+                                        />
+                                    </div>
+
+                                    {isJewelleryModuleEnabled && (
+                                        <div className="space-y-8 pl-4 border-l-2 border-muted mt-4">
+                                            {/* Theme & Branding */}
+                                            <div className="space-y-4">
+                                                <h4 className="text-sm font-semibold text-foreground">{t("admin.jewelleryThemeBranding")}</h4>
+                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="space-y-0.5">
+                                                        <Label>{t("admin.jewelleryEnableTheme")}</Label>
+                                                        <p className="text-xs text-muted-foreground">{t("admin.jewelleryEnableThemeDesc")}</p>
+                                                    </div>
+                                                    <Switch checked={jewelleryThemeEnabled} onCheckedChange={setJewelleryThemeEnabled} />
+                                                </div>
+                                                {jewelleryThemeEnabled && (
+                                                    <div className="grid max-w-sm grid-cols-1 gap-3 sm:grid-cols-2">
+                                                        <div className="space-y-2">
+                                                            <Label>{t("admin.jewelleryThemePreset")}</Label>
+                                                            <Select value={jewelleryThemePreset} onValueChange={setJewelleryThemePreset}>
+                                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="gold">Gold</SelectItem>
+                                                                    <SelectItem value="rose-gold">Rose Gold</SelectItem>
+                                                                    <SelectItem value="platinum">Platinum</SelectItem>
+                                                                    <SelectItem value="emerald">Emerald</SelectItem>
+                                                                    <SelectItem value="custom">Custom</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        {jewelleryThemePreset === "custom" && (
+                                                            <div className="space-y-2">
+                                                                <Label>{t("admin.jewelleryCustomColor")}</Label>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Input value={jewelleryThemeColor} onChange={(e) => setJewelleryThemeColor(e.target.value)} placeholder="#b8860b" className="flex-1" />
+                                                                    <input type="color" value={jewelleryThemeColor || "#b8860b"} onChange={(e) => setJewelleryThemeColor(e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-input p-0.5" />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Module Features */}
+                                            <div className="space-y-4 border-t border-border pt-6">
+                                                <h4 className="text-sm font-semibold text-foreground">{t("admin.jewelleryModuleFeatures")}</h4>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>{t("admin.jewelleryOldGoldExchange")}</Label>
+                                                        <Switch checked={jewelleryOldGoldEnabled} onCheckedChange={setJewelleryOldGoldEnabled} />
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>{t("admin.jewelleryRepairs")}</Label>
+                                                        <Switch checked={jewelleryRepairsEnabled} onCheckedChange={setJewelleryRepairsEnabled} />
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>{t("admin.jewelleryKarigars")}</Label>
+                                                        <Switch checked={jewelleryKarigarsEnabled} onCheckedChange={setJewelleryKarigarsEnabled} />
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>{t("admin.jewelleryConsignment")}</Label>
+                                                        <Switch checked={jewelleryConsignmentEnabled} onCheckedChange={setJewelleryConsignmentEnabled} />
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>{t("admin.jewellerySchemes")}</Label>
+                                                        <Switch checked={jewellerySchemesEnabled} onCheckedChange={setJewellerySchemesEnabled} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Tax & Compliance */}
+                                            <div className="space-y-4 border-t border-border pt-6">
+                                                <h4 className="text-sm font-semibold text-foreground">{t("admin.jewelleryTaxCompliance")}</h4>
+                                                <div className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryGoldTaxRate")}</Label>
+                                                        <Input type="number" step="0.01" min="0" max="100" value={jewelleryGoldTaxRate} onChange={(e) => setJewelleryGoldTaxRate(Number(e.target.value))} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryMakingChargeTaxRate")}</Label>
+                                                        <Input type="number" step="0.01" min="0" max="100" value={jewelleryMakingChargeTaxRate} onChange={(e) => setJewelleryMakingChargeTaxRate(Number(e.target.value))} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryStoneTaxRate")}</Label>
+                                                        <Input type="number" step="0.01" min="0" max="100" value={jewelleryStoneTaxRate} onChange={(e) => setJewelleryStoneTaxRate(Number(e.target.value))} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryInvestmentGoldTaxRate")}</Label>
+                                                        <Input type="number" step="0.01" min="0" max="100" value={jewelleryInvestmentGoldTaxRate} onChange={(e) => setJewelleryInvestmentGoldTaxRate(Number(e.target.value))} />
+                                                    </div>
+                                                </div>
+                                                <div className="grid gap-4 sm:grid-cols-2 mt-4">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>{t("admin.jewelleryPanRequired")}</Label>
+                                                        <Switch checked={jewelleryPanRequired} onCheckedChange={setJewelleryPanRequired} />
+                                                    </div>
+                                                    {jewelleryPanRequired && (
+                                                        <div className="space-y-2">
+                                                            <Label>{t("admin.jewelleryPanThreshold")}</Label>
+                                                            <Input type="number" min="0" value={jewelleryPanThreshold} onChange={(e) => setJewelleryPanThreshold(Number(e.target.value))} />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>{t("admin.jewelleryCashLimit")}</Label>
+                                                        <Switch checked={jewelleryCashLimitEnabled} onCheckedChange={setJewelleryCashLimitEnabled} />
+                                                    </div>
+                                                    {jewelleryCashLimitEnabled && (
+                                                        <div className="space-y-2">
+                                                            <Label>{t("admin.jewelleryCashLimitAmount")}</Label>
+                                                            <Input type="number" min="0" value={jewelleryCashLimitAmount} onChange={(e) => setJewelleryCashLimitAmount(Number(e.target.value))} />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>{t("admin.jewelleryTcs")}</Label>
+                                                        <Switch checked={jewelleryTcsEnabled} onCheckedChange={setJewelleryTcsEnabled} />
+                                                    </div>
+                                                    {jewelleryTcsEnabled && (
+                                                        <>
+                                                        <div className="space-y-2">
+                                                            <Label>{t("admin.jewelleryTcsRate")}</Label>
+                                                            <Input type="number" step="0.01" min="0" max="100" value={jewelleryTcsRate} onChange={(e) => setJewelleryTcsRate(Number(e.target.value))} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>{t("admin.jewelleryTcsThreshold")}</Label>
+                                                            <Input type="number" min="0" value={jewelleryTcsThreshold} onChange={(e) => setJewelleryTcsThreshold(Number(e.target.value))} />
+                                                        </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Hallmarking */}
+                                            <div className="space-y-4 border-t border-border pt-6">
+                                                <h4 className="text-sm font-semibold text-foreground">{t("admin.jewelleryHallmarking")}</h4>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <Label>{t("admin.jewelleryHuidMandatory")}</Label>
+                                                            <Switch checked={jewelleryHuidMandatory} onCheckedChange={setJewelleryHuidMandatory} />
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">{t("admin.jewelleryHuidMandatoryDesc")}</p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <Label>{t("admin.jewellerySasoMandatory")}</Label>
+                                                            <Switch checked={jewellerySasoMandatory} onCheckedChange={setJewellerySasoMandatory} />
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">{t("admin.jewellerySasoMandatoryDesc")}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Pricing & Rates */}
+                                            <div className="space-y-4 border-t border-border pt-6">
+                                                <h4 className="text-sm font-semibold text-foreground">{t("admin.jewelleryPricingRates")}</h4>
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="space-y-0.5">
+                                                        <Label>{t("admin.jewelleryAutoDerivePurities")}</Label>
+                                                        <p className="text-xs text-muted-foreground">{t("admin.jewelleryAutoDerivePuritiesDesc")}</p>
+                                                    </div>
+                                                    <Switch checked={jewelleryAutoDerivePurities} onCheckedChange={setJewelleryAutoDerivePurities} />
+                                                </div>
+                                                <div className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-3">
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryBuyRateSpread")}</Label>
+                                                        <Input type="number" step="0.01" min="0" max="50" value={jewelleryBuyRateSpread} onChange={(e) => setJewelleryBuyRateSpread(Number(e.target.value))} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryDefaultWastage")}</Label>
+                                                        <Input type="number" step="0.01" min="0" max="50" value={jewelleryDefaultWastagePercent} onChange={(e) => setJewelleryDefaultWastagePercent(Number(e.target.value))} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryDefaultMakingChargeType")}</Label>
+                                                        <Select value={jewelleryDefaultMakingChargeType} onValueChange={setJewelleryDefaultMakingChargeType}>
+                                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="PER_GRAM">Per Gram</SelectItem>
+                                                                <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                                                                <SelectItem value="FIXED">Fixed</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Inventory */}
+                                            <div className="space-y-4 border-t border-border pt-6">
+                                                <h4 className="text-sm font-semibold text-foreground">{t("admin.jewelleryInventorySettings")}</h4>
+                                                <div className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-3">
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryWeightTolerance")}</Label>
+                                                        <Input type="number" step="0.001" min="0" value={jewelleryWeightTolerance} onChange={(e) => setJewelleryWeightTolerance(Number(e.target.value))} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryAgingAlertDays")}</Label>
+                                                        <Input type="number" min="1" value={jewelleryAgingAlertDays} onChange={(e) => setJewelleryAgingAlertDays(Number(e.target.value))} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>{t("admin.jewelleryReconciliationTolerance")}</Label>
+                                                        <Input type="number" step="0.01" min="0" max="10" value={jewelleryReconciliationTolerance} onChange={(e) => setJewelleryReconciliationTolerance(Number(e.target.value))} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Enabled Purities */}
+                                                <div className="space-y-2">
+                                                    <Label>{t("admin.jewelleryEnabledPurities")}</Label>
+                                                    <div className="flex flex-wrap gap-3">
+                                                        {["K24", "K22", "K21", "K18", "K14", "K9"].map((p) => (
+                                                            <label key={p} className="flex items-center gap-1.5 text-sm">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={jewelleryEnabledPurities.includes(p)}
+                                                                    onChange={(e) => {
+                                                                        if (e.target.checked) setJewelleryEnabledPurities([...jewelleryEnabledPurities, p]);
+                                                                        else setJewelleryEnabledPurities(jewelleryEnabledPurities.filter((x) => x !== p));
+                                                                    }}
+                                                                    className="rounded"
+                                                                />
+                                                                {p}
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Enabled Metals */}
+                                                <div className="space-y-2">
+                                                    <Label>{t("admin.jewelleryEnabledMetals")}</Label>
+                                                    <div className="flex flex-wrap gap-3">
+                                                        {["GOLD", "SILVER", "PLATINUM"].map((m) => (
+                                                            <label key={m} className="flex items-center gap-1.5 text-sm">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={jewelleryEnabledMetals.includes(m)}
+                                                                    onChange={(e) => {
+                                                                        if (e.target.checked) setJewelleryEnabledMetals([...jewelleryEnabledMetals, m]);
+                                                                        else setJewelleryEnabledMetals(jewelleryEnabledMetals.filter((x) => x !== m));
+                                                                    }}
+                                                                    className="rounded"
+                                                                />
+                                                                {m.charAt(0) + m.slice(1).toLowerCase()}
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Schemes (India) */}
+                                            {jewellerySchemesEnabled && (
+                                                <div className="space-y-4 border-t border-border pt-6">
+                                                    <h4 className="text-sm font-semibold text-foreground">{t("admin.jewellerySchemeSettings")}</h4>
+                                                    <div className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
+                                                        <div className="space-y-2">
+                                                            <Label>{t("admin.jewellerySchemeMaxDuration")}</Label>
+                                                            <Input type="number" min="1" max="24" value={jewellerySchemeMaxDuration} onChange={(e) => setJewellerySchemeMaxDuration(Number(e.target.value))} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>{t("admin.jewellerySchemeBonusMonths")}</Label>
+                                                            <Input type="number" min="0" max="6" value={jewellerySchemeBonusMonths} onChange={(e) => setJewellerySchemeBonusMonths(Number(e.target.value))} />
+                                                        </div>
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <Label>{t("admin.jewellerySchemeEnforce365Days")}</Label>
+                                                            <Switch checked={jewellerySchemeEnforce365Days} onCheckedChange={setJewellerySchemeEnforce365Days} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>{t("admin.jewellerySchemeRedemptionDiscount")}</Label>
+                                                            <Input type="number" step="0.01" min="0" max="100" value={jewellerySchemeRedemptionDiscount} onChange={(e) => setJewellerySchemeRedemptionDiscount(Number(e.target.value))} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </TabsContent>
 
                             </Tabs>
