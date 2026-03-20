@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, ArrowLeft, Scale } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Scale, History } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
@@ -28,6 +28,7 @@ import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
 import { createClientId } from "@/lib/client-id";
 import { useLanguage } from "@/lib/i18n";
+import { PriceHistoryDialog } from "@/components/invoices/price-history-dialog";
 
 interface Customer {
   id: string;
@@ -39,6 +40,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  cost?: number;
   unitId: string | null;
   unit: { id: string; name: string; code: string } | null;
   isService?: boolean;
@@ -74,7 +76,7 @@ export default function EditInvoicePage({
   const router = useRouter();
   const { t } = useLanguage();
   const { data: session } = useSession();
-  const { symbol, locale } = useCurrency();
+  const { symbol, locale, fmt } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -93,6 +95,7 @@ export default function EditInvoicePage({
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [priceHistoryItem, setPriceHistoryItem] = useState<{ productId: string; productName: string } | null>(null);
   const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
   const [applyRoundOff, setApplyRoundOff] = useState(false);
 
@@ -637,14 +640,28 @@ export default function EditInvoicePage({
                         return (
                           <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                              <ProductCombobox
-                                products={products}
-                                value={item.productId}
-                                onValueChange={(value) =>
-                                  updateLineItem(item.id, "productId", value)
-                                }
-                                onSelect={() => focusQuantity(item.id)}
-                              />
+                              <div className="flex items-start gap-1">
+                                <div className="flex-1">
+                                  <ProductCombobox
+                                    products={products}
+                                    value={item.productId}
+                                    onValueChange={(value) =>
+                                      updateLineItem(item.id, "productId", value)
+                                    }
+                                    onSelect={() => focusQuantity(item.id)}
+                                  />
+                                </div>
+                                {item.productId && (
+                                  <button
+                                    type="button"
+                                    className="mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-slate-100"
+                                    onClick={() => setPriceHistoryItem({ productId: item.productId, productName: product?.name || "" })}
+                                    title={t("sales.priceHistory")}
+                                  >
+                                    <History className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0 relative">
                               <Input
@@ -718,6 +735,9 @@ export default function EditInvoicePage({
                                 className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
                                 required
                               />
+                              {item.productId && product?.cost !== undefined && Number(product.cost) > 0 && (
+                                <p className="text-[10px] text-slate-400 mt-0.5 px-1">{t("common.cost")}: {fmt(Number(product.cost))}</p>
+                              )}
                             </TableCell>
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                               <Input
@@ -842,16 +862,29 @@ export default function EditInvoicePage({
                               onSelect={() => focusQuantity(item.id)}
                             />
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-red-500 mt-5"
-                            onClick={() => removeLineItem(item.id)}
-                            disabled={lineItems.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1 mt-5">
+                            {item.productId && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400 hover:text-blue-600"
+                                onClick={() => setPriceHistoryItem({ productId: item.productId, productName: product?.name || "" })}
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-400 hover:text-red-500"
+                              onClick={() => removeLineItem(item.id)}
+                              disabled={lineItems.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
@@ -888,6 +921,9 @@ export default function EditInvoicePage({
                               }
                               required
                             />
+                            {item.productId && product?.cost !== undefined && Number(product.cost) > 0 && (
+                              <p className="text-[10px] text-slate-400 mt-0.5">{t("common.cost")}: {fmt(Number(product.cost))}</p>
+                            )}
                           </div>
                           <div>
                             <Label className="text-xs text-slate-500">{t("common.discountPercent")}</Label>
@@ -1065,6 +1101,15 @@ export default function EditInvoicePage({
             </Card>
           </div>
         </form>
+
+        <PriceHistoryDialog
+          productId={priceHistoryItem?.productId || ""}
+          productName={priceHistoryItem?.productName || ""}
+          customerId={formData.customerId || undefined}
+          customerName={customers.find((c) => c.id === formData.customerId)?.name}
+          open={!!priceHistoryItem}
+          onOpenChange={(open) => { if (!open) setPriceHistoryItem(null); }}
+        />
       </div>
     </PageAnimation>
   );
