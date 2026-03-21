@@ -24,8 +24,9 @@ const tabs = [
 export function POSShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { bottomOffset, hideFixedUi } = useMobileFixedUi();
+  const { bottomOffset, hideFixedUi, scrolledDown } = useMobileFixedUi();
   const showBottomNav = pathname === "/pos";
+  const navHidden = hideFixedUi || scrolledDown;
   const bottomNavClassName =
     "fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white shadow-[0_-10px_24px_-22px_rgba(15,23,42,0.18)] md:hidden";
   const shellClassName = pathname.startsWith("/pos/terminal")
@@ -44,19 +45,24 @@ export function POSShell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
 
-      {showBottomNav && !hideFixedUi && (
+      {showBottomNav && (
         <>
           <div
             data-testid="mobile-nav-underlay"
             aria-hidden="true"
-            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-white"
-            style={{ height: "calc(var(--app-safe-area-bottom) + 2.5rem)" }}
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-white transition-transform duration-300 ease-out md:hidden"
+            style={{
+              height: "calc(var(--app-safe-area-bottom) + 2.5rem)",
+              transform: navHidden ? "translateY(100%)" : `translateY(${bottomOffset}px)`,
+            }}
           />
           <nav
-            className={bottomNavClassName}
+            className={`${bottomNavClassName} transition-transform duration-300 ease-out`}
             style={{
-              transform: bottomOffset > 0 ? `translateY(${bottomOffset}px)` : undefined,
+              transform: navHidden ? "translateY(100%)" : `translateY(${bottomOffset}px)`,
+              pointerEvents: navHidden ? "none" : undefined,
             }}
+            aria-hidden={navHidden}
           >
             <div className="grid grid-cols-5 gap-1 px-2 pb-[calc(0.35rem+var(--app-safe-area-bottom))] pt-1">
               {tabs.map((tab) => {

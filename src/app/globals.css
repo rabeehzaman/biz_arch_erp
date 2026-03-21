@@ -283,12 +283,82 @@
   }
 }
 
+/* Page transition animations */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stagger-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-in {
+  animation: page-fade-in 0.3s ease-out both;
+}
+
+.stagger-children > *:nth-child(1) { animation: stagger-fade-in 0.35s ease-out 0s both; }
+.stagger-children > *:nth-child(2) { animation: stagger-fade-in 0.35s ease-out 0.08s both; }
+.stagger-children > *:nth-child(3) { animation: stagger-fade-in 0.35s ease-out 0.16s both; }
+.stagger-children > *:nth-child(4) { animation: stagger-fade-in 0.35s ease-out 0.24s both; }
+.stagger-children > *:nth-child(5) { animation: stagger-fade-in 0.35s ease-out 0.32s both; }
+.stagger-children > *:nth-child(6) { animation: stagger-fade-in 0.35s ease-out 0.4s both; }
+
+/* Tab icon bounce animation */
+@keyframes tab-icon-bounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.tab-icon-active {
+  animation: tab-icon-bounce 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in,
+  .stagger-children > *,
+  .tab-icon-active {
+    animation: none !important;
+  }
+}
+
 /* Mobile native-feel overrides (Capacitor / phone browsers) */
 @media (max-width: 767px) {
   body {
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
-    overscroll-behavior-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Prevent rubber-band inside dialogs/sheets */
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"] {
+    overscroll-behavior: contain;
+  }
+
+  /* Prevent text selection on interactive elements */
+  button, nav, label, a[role="tab"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Minimum 44px touch targets */
+  button, a[role="button"], [role="tab"] {
+    min-height: 44px;
   }
 
   /* Hide scrollbars on mobile for native feel */

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isCapacitorEnvironment } from "@/lib/capacitor-plugins";
 
 const MOBILE_FIXED_UI_RECOVERY_DELAYS = [0, 80, 180, 320, 500, 720, 960, 1200, 1500];
 
@@ -49,9 +50,10 @@ export function useMobileFixedUi() {
   const [hasBlockingOverlay, setHasBlockingOverlay] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [bottomOffset, setBottomOffset] = useState(0);
-  const [recovering, setRecovering] = useState(false);
+  const [scrolledDown, setScrolledDown] = useState(false);
   const previousBusyRef = useRef(false);
   const recoveryTimeoutsRef = useRef<number[]>([]);
+  const lastScrollYRef = useRef(0);
 
   useEffect(() => {
     if (!isMobileViewport()) {
@@ -82,10 +84,9 @@ export function useMobileFixedUi() {
     };
 
     const scheduleRecoveryPasses = () => {
-      setRecovering(true);
       clearRecoveryTimeouts();
 
-      recoveryTimeoutsRef.current = MOBILE_FIXED_UI_RECOVERY_DELAYS.map((delay, index) =>
+      recoveryTimeoutsRef.current = MOBILE_FIXED_UI_RECOVERY_DELAYS.map((delay) =>
         window.setTimeout(() => {
           // Nudge iOS Safari into recalculating window.innerHeight by
           // doing a micro-scroll. Without this, Safari can leave
@@ -98,10 +99,6 @@ export function useMobileFixedUi() {
 
           setHasBlockingOverlay(overlayOpen);
           applyViewportState(viewportState, { allowBottomOffset: true });
-
-          if (index === MOBILE_FIXED_UI_RECOVERY_DELAYS.length - 1) {
-            setRecovering(false);
-          }
         }, delay)
       );
     };
@@ -115,7 +112,6 @@ export function useMobileFixedUi() {
       applyViewportState(viewportState);
 
       if (isBusy) {
-        setRecovering(false);
         clearRecoveryTimeouts();
       } else if (previousBusyRef.current) {
         scheduleRecoveryPasses();
@@ -129,8 +125,36 @@ export function useMobileFixedUi() {
       sync();
     };
 
+    // RAF-debounced sync for MutationObserver
+    let mutationRafId = 0;
+    const debouncedSync = () => {
+      if (mutationRafId) return;
+      mutationRafId = requestAnimationFrame(() => {
+        mutationRafId = 0;
+        sync();
+      });
+    };
+
+    // Scroll-direction detection for hide-on-scroll
+    let scrollRafId = 0;
+    const handleScrollDirection = () => {
+      if (scrollRafId) return;
+      scrollRafId = requestAnimationFrame(() => {
+        scrollRafId = 0;
+        const currentY = window.scrollY;
+        const delta = currentY - lastScrollYRef.current;
+        if (Math.abs(delta) < 10) return;
+        if (currentY < 80) {
+          setScrolledDown(false);
+        } else {
+          setScrolledDown(delta > 0);
+        }
+        lastScrollYRef.current = currentY;
+      });
+    };
+
     const viewport = window.visualViewport;
-    const observer = new MutationObserver(sync);
+    const observer = new MutationObserver(debouncedSync);
 
     sync();
 
@@ -145,19 +169,47 @@ export function useMobileFixedUi() {
     viewport?.addEventListener("scroll", sync);
     window.addEventListener("resize", sync);
     window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("scroll", handleScrollDirection, { passive: true });
     window.addEventListener("orientationchange", sync);
     window.addEventListener("focus", sync);
     window.addEventListener("mobile-dialog-viewport-reset", handleDialogViewportReset);
 
+    // Capacitor Keyboard plugin: more reliable keyboard height on native
+    let keyboardCleanup: (() => void) | undefined;
+    if (isCapacitorEnvironment()) {
+      import("@capacitor/keyboard").then(({ Keyboard }) => {
+        const showHandle = Keyboard.addListener("keyboardWillShow", () => {
+          setKeyboardOpen(true);
+          // Auto-scroll focused input into view
+          const el = document.activeElement;
+          if (el && "scrollIntoView" in el) {
+            setTimeout(() => (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+          }
+        });
+        const hideHandle = Keyboard.addListener("keyboardWillHide", () => {
+          previousBusyRef.current = true;
+          sync();
+        });
+        keyboardCleanup = () => {
+          showHandle.then((h) => h.remove());
+          hideHandle.then((h) => h.remove());
+        };
+      }).catch(() => {});
+    }
+
     return () => {
       observer.disconnect();
+      if (mutationRafId) cancelAnimationFrame(mutationRafId);
+      if (scrollRafId) cancelAnimationFrame(scrollRafId);
       viewport?.removeEventListener("resize", sync);
       viewport?.removeEventListener("scroll", sync);
       window.removeEventListener("resize", sync);
       window.removeEventListener("scroll", sync);
+      window.removeEventListener("scroll", handleScrollDirection);
       window.removeEventListener("orientationchange", sync);
       window.removeEventListener("focus", sync);
       window.removeEventListener("mobile-dialog-viewport-reset", handleDialogViewportReset);
+      keyboardCleanup?.();
 
       clearRecoveryTimeouts();
 
@@ -167,6 +219,7 @@ export function useMobileFixedUi() {
 
   return {
     bottomOffset,
-    hideFixedUi: hasBlockingOverlay || keyboardOpen || recovering,
+    hideFixedUi: hasBlockingOverlay || keyboardOpen,
+    scrolledDown,
   };
 }
