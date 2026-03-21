@@ -395,7 +395,12 @@
         "country": "الدولة",
         "gstStateCode": "رمز ولاية GST",
         "deleted": "تم الحذف",
-        "clearSelection": "مسح التحديد"
+        "clearSelection": "مسح التحديد",
+        "offline": "أنت غير متصل",
+        "backOnline": "متصل مرة أخرى",
+        "pullToRefresh": "اسحب للتحديث",
+        "refreshing": "جاري التحديث...",
+        "copiedToClipboard": "تم النسخ إلى الحافظة"
     },
     "sales": {
         "invoices": "فواتير المبيعات",

@@ -44,6 +44,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
+import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 
 interface User {
   id: string;
@@ -110,6 +113,7 @@ export default function CustomersPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
+  const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
 
   const formatAmount = (amount: number) => fmt(amount);
 
@@ -294,6 +298,7 @@ export default function CustomersPage() {
 
   return (
     <PageAnimation>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <StaggerContainer className="space-y-6">
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -444,7 +449,7 @@ export default function CustomersPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
+                <div className="relative flex-1 sm:max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
                     ref={searchInputRef}
@@ -729,6 +734,7 @@ export default function CustomersPage() {
           onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
         />
       )}
+      <FloatingActionButton onClick={() => setIsDialogOpen(true)} label={t("customers.addCustomer")} />
     </PageAnimation>
   );
 }

@@ -395,7 +395,12 @@
         "country": "Country",
         "gstStateCode": "GST State Code",
         "deleted": "Deleted",
-        "clearSelection": "Clear selection"
+        "clearSelection": "Clear selection",
+        "offline": "You are offline",
+        "backOnline": "Back online",
+        "pullToRefresh": "Pull to refresh",
+        "refreshing": "Refreshing...",
+        "copiedToClipboard": "Copied to clipboard"
     },
     "sales": {
         "invoices": "Sales Invoices",

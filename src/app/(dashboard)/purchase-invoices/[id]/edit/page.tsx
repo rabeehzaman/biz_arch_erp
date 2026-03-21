@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
@@ -919,7 +920,7 @@ export default function EditPurchaseInvoicePage({
                     <span key={`summary-total:${roundedTotal.toFixed(2)}`}>{symbol}{roundedTotal.toLocaleString(locale)}</span>
                   </div>
                 </div>
-                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <div className="mt-6 hidden gap-3 sm:flex sm:justify-end">
                   <Button
                     type="submit"
                     className="w-full sm:w-auto"
@@ -928,6 +929,15 @@ export default function EditPurchaseInvoicePage({
                     {isSubmitting ? t("common.updating") : t("purchases.updatePurchaseInvoice")}
                   </Button>
                 </div>
+                <StickyBottomBar>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={isSubmitting || !formData.supplierId || !formData.dueDate}
+                  >
+                    {isSubmitting ? t("common.updating") : t("purchases.updatePurchaseInvoice")}
+                  </Button>
+                </StickyBottomBar>
               </CardContent>
             </Card>
           </div>

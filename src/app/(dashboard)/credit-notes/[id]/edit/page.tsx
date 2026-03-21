@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
@@ -626,7 +627,7 @@ export default function EditCreditNotePage({
                         </CardContent>
                     </Card>
 
-                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <div className="hidden gap-3 sm:flex sm:justify-end">
                         <Link href={`/credit-notes/${id}`} className="w-full sm:w-auto">
                             <Button type="button" variant="outline" className="w-full sm:w-auto">
                                 {t("common.cancel")}
@@ -636,6 +637,16 @@ export default function EditCreditNotePage({
                             {isSubmitting ? t("common.saving") : t("common.saveChanges")}
                         </Button>
                     </div>
+                    <StickyBottomBar>
+                        <Link href={`/credit-notes/${id}`} className="flex-1">
+                            <Button type="button" variant="outline" className="w-full">
+                                {t("common.cancel")}
+                            </Button>
+                        </Link>
+                        <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                            {isSubmitting ? t("common.saving") : t("common.saveChanges")}
+                        </Button>
+                    </StickyBottomBar>
                 </form>
             </div>
         </PageAnimation>

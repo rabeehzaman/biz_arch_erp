@@ -32,6 +32,10 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
+import { FloatingActionButton } from "@/components/mobile/floating-action-button";
+import { SwipeableCard } from "@/components/mobile/swipeable-card";
 
 interface PurchaseInvoice {
   id: string;
@@ -97,6 +101,7 @@ export default function PurchaseInvoicesPage() {
     loadMore,
     refresh,
   } = useInfiniteList<PurchaseInvoice>({ url: "/api/purchase-invoices", params: paginationParams });
+  const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
 
   const statusLabels: Record<string, string> = {
     DRAFT: t("purchases.statusDraft"),
@@ -154,13 +159,14 @@ export default function PurchaseInvoicesPage() {
 
   return (
     <PageAnimation>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("purchases.purchaseInvoices")}</h2>
             <p className="text-slate-500">{t("purchases.subtitle")}</p>
           </div>
-          <Link href="/purchase-invoices/new" className="w-full sm:w-auto">
+          <Link href="/purchase-invoices/new" className="hidden sm:inline-flex">
             <Button className="w-full">
               <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
               {t("purchases.newPurchase")}
@@ -171,7 +177,7 @@ export default function PurchaseInvoicesPage() {
         <Card>
           <CardHeader>
             <div className="flex flex-wrap items-center gap-4">
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <div className="relative flex-1 min-w-[200px] sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   ref={searchInputRef}
@@ -261,7 +267,27 @@ export default function PurchaseInvoicesPage() {
 
                 <div className="space-y-3 sm:hidden">
                   {sortedInvoices.map((invoice) => (
-                    <div key={invoice.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/purchase-invoices/${invoice.id}`)}>
+                    <SwipeableCard
+                      key={invoice.id}
+                      actions={
+                        <div className="flex h-full flex-col">
+                          <Link
+                            href={`/purchase-invoices/${invoice.id}`}
+                            className="flex flex-1 items-center justify-center bg-slate-600 px-4 text-sm font-medium text-white"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                          <button
+                            type="button"
+                            className="flex flex-1 items-center justify-center bg-red-500 px-4 text-sm font-medium text-white"
+                            onClick={() => handleDelete(invoice.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      }
+                    >
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/purchase-invoices/${invoice.id}`)}>
                       <div className="flex items-start gap-3">
                         <input
                           type="checkbox"
@@ -326,23 +352,8 @@ export default function PurchaseInvoicesPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button asChild variant="outline" className="min-h-[44px] flex-1">
-                          <Link href={`/purchase-invoices/${invoice.id}`}>
-                            <Eye className="h-4 w-4" />
-                            {t("common.details")}
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="min-h-[44px] flex-1 text-red-600 hover:text-red-700"
-                          onClick={() => handleDelete(invoice.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          {t("common.delete")}
-                        </Button>
                       </div>
-                    </div>
+                    </SwipeableCard>
                   ))}
                 </div>
 
@@ -497,6 +508,7 @@ export default function PurchaseInvoicesPage() {
           />
         )}
       </div>
+      <FloatingActionButton href="/purchase-invoices/new" label={t("purchases.newPurchase")} />
     </PageAnimation>
   );
 }

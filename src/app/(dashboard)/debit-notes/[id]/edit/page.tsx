@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
@@ -785,7 +786,7 @@ export default function EditDebitNotePage({
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-4">
+          <div className="hidden gap-4 sm:flex sm:justify-end">
             <Link href={`/debit-notes/${id}`}>
               <Button type="button" variant="outline">
                 {t("common.cancel")}
@@ -795,6 +796,16 @@ export default function EditDebitNotePage({
               {isSubmitting ? t("common.updating") : t("debitNotes.updateDebitNote")}
             </Button>
           </div>
+          <StickyBottomBar>
+            <Link href={`/debit-notes/${id}`} className="flex-1">
+              <Button type="button" variant="outline" className="w-full">
+                {t("common.cancel")}
+              </Button>
+            </Link>
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? t("common.updating") : t("debitNotes.updateDebitNote")}
+            </Button>
+          </StickyBottomBar>
         </form>
       </div>
     </PageAnimation>

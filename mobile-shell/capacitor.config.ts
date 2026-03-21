@@ -22,6 +22,14 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: ERP_URL.startsWith("http://"),
   },
+  plugins: {
+    SplashScreen: {
+      launchAutoHide: false,
+    },
+    Keyboard: {
+      resize: "body",
+    },
+  },
 };
 
 export default config;

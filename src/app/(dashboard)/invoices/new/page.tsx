@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
@@ -1325,11 +1326,11 @@ export default function NewInvoicePage() {
                     <span key={`summary-total:${totals.grandTotal}`}>{fmt(totals.grandTotal)}</span>
                   </div>
                 </div>
-                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <div className="mt-6 hidden gap-3 sm:flex sm:justify-end">
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full sm:w-auto"
+                    className="w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
                     onClick={() => {
                       saveAndNew.current = true;
@@ -1340,12 +1341,33 @@ export default function NewInvoicePage() {
                   </Button>
                   <Button
                     type="submit"
-                    className="w-full sm:w-auto"
+                    className="w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
                   >
                     {isSubmitting ? t("common.creating") : t("sales.createInvoice")}
                   </Button>
                 </div>
+                <StickyBottomBar>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
+                    onClick={() => {
+                      saveAndNew.current = true;
+                      formRef.current?.requestSubmit();
+                    }}
+                  >
+                    {isSubmitting ? t("common.saving") : t("common.saveAndNew")}
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
+                  >
+                    {isSubmitting ? t("common.creating") : t("sales.createInvoice")}
+                  </Button>
+                </StickyBottomBar>
               </CardContent>
             </Card>
           </div>

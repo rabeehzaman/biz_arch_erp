@@ -26,6 +26,10 @@ import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { LoadMoreTrigger } from "@/components/load-more-trigger";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
+import { FloatingActionButton } from "@/components/mobile/floating-action-button";
+import { SwipeableCard } from "@/components/mobile/swipeable-card";
 
 interface Invoice {
   id: string;
@@ -69,6 +73,7 @@ export default function InvoicesPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
+  const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
 
   const toggleSort = (field: string) => {
     if (sortField === field) {
@@ -129,13 +134,14 @@ export default function InvoicesPage() {
 
   return (
     <PageAnimation>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <StaggerContainer className="space-y-6">
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("sales.invoices")}</h2>
             <p className="text-slate-500">{t("dashboard.createInvoiceDesc")}</p>
           </div>
-          <Link href="/invoices/new" className="w-full sm:w-auto">
+          <Link href="/invoices/new" className="hidden sm:inline-flex">
             <Button className="w-full">
               <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
               {t("sales.newInvoice")}
@@ -146,7 +152,7 @@ export default function InvoicesPage() {
         <StaggerItem>
           <Card>
             <CardHeader>
-              <div className="relative max-w-sm">
+              <div className="relative w-full sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   ref={searchInputRef}
@@ -225,98 +231,99 @@ export default function InvoicesPage() {
                       const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
 
                       return (
-                        <div
+                        <SwipeableCard
                           key={invoice.id}
-                          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                        >
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(invoice.id)}
-                              onChange={(e) => {
-                                const next = new Set(selectedIds);
-                                if (e.target.checked) next.add(invoice.id);
-                                else next.delete(invoice.id);
-                                setSelectedIds(next);
-                              }}
-                              className="mt-1 h-4 w-4 rounded border-slate-300"
-                            />
-                            <div className="flex flex-1 items-start justify-between gap-3">
-                              <div className="min-w-0 space-y-1">
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {invoice.invoiceNumber}
-                                </p>
-                                <p className="truncate text-sm text-slate-700">
-                                  {invoice.customer.name}
-                                </p>
-                                {invoice.customer.email && (
-                                  <p className="truncate text-xs text-slate-500">
-                                    {invoice.customer.email}
-                                  </p>
-                                )}
-                              </div>
-                              <Badge variant="outline" className={status.className}>
-                                {status.label}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                                {t("sales.issueDate")}
-                              </p>
-                              <p className="mt-1 font-medium text-slate-900">
-                                {format(new Date(invoice.issueDate), "dd MMM yyyy")}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                                {t("sales.dueDate")}
-                              </p>
-                              <p className="mt-1 font-medium text-slate-900">
-                                {format(new Date(invoice.dueDate), "dd MMM yyyy")}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                                {t("common.total")}
-                              </p>
-                              <p className="mt-1 font-medium text-slate-900">
-                                {fmt(Number(invoice.total))}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                                {t("common.balance")}
-                              </p>
-                              <p
-                                className={`mt-1 font-semibold ${
-                                  Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"
-                                }`}
+                          actions={
+                            <div className="flex h-full flex-col">
+                              <Link
+                                href={`/invoices/${invoice.id}`}
+                                className="flex flex-1 items-center justify-center bg-slate-600 px-4 text-sm font-medium text-white"
                               >
-                                {fmt(Number(invoice.balanceDue))}
-                              </p>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                              <button
+                                type="button"
+                                className="flex flex-1 items-center justify-center bg-red-500 px-4 text-sm font-medium text-white"
+                                onClick={() => handleDelete(invoice.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          }
+                        >
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(invoice.id)}
+                                onChange={(e) => {
+                                  const next = new Set(selectedIds);
+                                  if (e.target.checked) next.add(invoice.id);
+                                  else next.delete(invoice.id);
+                                  setSelectedIds(next);
+                                }}
+                                className="mt-1 h-4 w-4 rounded border-slate-300"
+                              />
+                              <div className="flex flex-1 items-start justify-between gap-3">
+                                <div className="min-w-0 space-y-1">
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {invoice.invoiceNumber}
+                                  </p>
+                                  <p className="truncate text-sm text-slate-700">
+                                    {invoice.customer.name}
+                                  </p>
+                                  {invoice.customer.email && (
+                                    <p className="truncate text-xs text-slate-500">
+                                      {invoice.customer.email}
+                                    </p>
+                                  )}
+                                </div>
+                                <Badge variant="outline" className={status.className}>
+                                  {status.label}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                  {t("sales.issueDate")}
+                                </p>
+                                <p className="mt-1 font-medium text-slate-900">
+                                  {format(new Date(invoice.issueDate), "dd MMM yyyy")}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                  {t("sales.dueDate")}
+                                </p>
+                                <p className="mt-1 font-medium text-slate-900">
+                                  {format(new Date(invoice.dueDate), "dd MMM yyyy")}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                  {t("common.total")}
+                                </p>
+                                <p className="mt-1 font-medium text-slate-900">
+                                  {fmt(Number(invoice.total))}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                                  {t("common.balance")}
+                                </p>
+                                <p
+                                  className={`mt-1 font-semibold ${
+                                    Number(invoice.balanceDue) > 0 ? "text-red-600" : "text-green-600"
+                                  }`}
+                                >
+                                  {fmt(Number(invoice.balanceDue))}
+                                </p>
+                              </div>
                             </div>
                           </div>
-
-                          <div className="mt-4 flex gap-2">
-                            <Button asChild variant="outline" className="min-h-[44px] flex-1">
-                              <Link href={`/invoices/${invoice.id}`}>
-                                <Eye className="h-4 w-4" />
-                                {t("common.details")}
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="min-h-[44px] flex-1 text-red-600 hover:text-red-700"
-                              onClick={() => handleDelete(invoice.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              {t("common.delete")}
-                            </Button>
-                          </div>
-                        </div>
+                        </SwipeableCard>
                       );
                     })}
                   </div>
@@ -485,6 +492,7 @@ export default function InvoicesPage() {
           onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
         />
       )}
+      <FloatingActionButton href="/invoices/new" label={t("sales.newInvoice")} />
     </PageAnimation>
   );
 }

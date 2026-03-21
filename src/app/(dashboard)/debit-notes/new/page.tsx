@@ -11,6 +11,7 @@ import { ArrowLeft, Plus, Trash2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
@@ -660,7 +661,7 @@ export default function NewDebitNotePage() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-4">
+          <div className="hidden gap-4 sm:flex sm:justify-end">
             <Link href="/debit-notes">
               <Button type="button" variant="outline">
                 {t("common.cancel")}
@@ -670,6 +671,16 @@ export default function NewDebitNotePage() {
               {isSubmitting ? t("common.creating") : t("debitNotes.createDebitNote")}
             </Button>
           </div>
+          <StickyBottomBar>
+            <Link href="/debit-notes" className="flex-1">
+              <Button type="button" variant="outline" className="w-full">
+                {t("common.cancel")}
+              </Button>
+            </Link>
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? t("common.creating") : t("debitNotes.createDebitNote")}
+            </Button>
+          </StickyBottomBar>
         </form>
       </div>
     </PageAnimation>

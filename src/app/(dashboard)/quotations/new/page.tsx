@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
@@ -894,7 +895,7 @@ export default function NewQuotationPage() {
                     <span key={`summary-total:${total.toFixed(2)}`}>{symbol}{total.toLocaleString(locale)}</span>
                   </div>
                 </div>
-                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <div className="mt-6 hidden gap-3 sm:flex sm:justify-end">
                   <Button
                     type="submit"
                     className="w-full sm:w-auto"
@@ -903,6 +904,15 @@ export default function NewQuotationPage() {
                     {isSubmitting ? t("common.creating") : t("quotations.createQuotation")}
                   </Button>
                 </div>
+                <StickyBottomBar>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={isSubmitting || !formData.customerId || !formData.issueDate || !lineItems.some(item => item.productId)}
+                  >
+                    {isSubmitting ? t("common.creating") : t("quotations.createQuotation")}
+                  </Button>
+                </StickyBottomBar>
               </CardContent>
             </Card>
           </div>

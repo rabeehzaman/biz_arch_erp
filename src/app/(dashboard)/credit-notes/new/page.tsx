@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
@@ -597,7 +598,7 @@ export default function NewCreditNotePage() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-4">
+          <div className="hidden gap-4 sm:flex sm:justify-end">
             <Link href="/credit-notes">
               <Button type="button" variant="outline">
                 {t("common.cancel")}
@@ -607,6 +608,16 @@ export default function NewCreditNotePage() {
               {isSubmitting ? t("common.creating") : t("creditNotes.createCreditNote")}
             </Button>
           </div>
+          <StickyBottomBar>
+            <Link href="/credit-notes" className="flex-1">
+              <Button type="button" variant="outline" className="w-full">
+                {t("common.cancel")}
+              </Button>
+            </Link>
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? t("common.creating") : t("creditNotes.createCreditNote")}
+            </Button>
+          </StickyBottomBar>
         </form>
       </div>
     </PageAnimation>

@@ -32,13 +32,14 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, Copy, Download, Loader2, Pencil, Printer, CreditCard, Send } from "lucide-react";
+import { ArrowLeft, Building2, Copy, Download, Loader2, Pencil, Printer, CreditCard, Send, Share2 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { shareContent } from "@/lib/capacitor-share";
 
 interface InvoiceItem {
   id: string;
@@ -335,6 +336,23 @@ export default function InvoiceDetailPage({
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
                 : <Printer className="h-4 w-4 sm:mr-2" />}
               <span>{isPrinting ? "..." : t("common.print")}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="col-span-1 h-9 w-full sm:h-10 sm:w-auto"
+              onClick={async () => {
+                const shared = await shareContent({
+                  title: `${t("sales.invoice")} ${invoice?.invoiceNumber}`,
+                  text: `${t("sales.invoice")} ${invoice?.invoiceNumber} — ${symbol}${Number(invoice?.total ?? 0).toLocaleString(locale)}`,
+                  url: typeof window !== "undefined" ? window.location.href : undefined,
+                });
+                if (shared) toast.success(t("common.share"));
+                else toast.info(t("common.copiedToClipboard"));
+              }}
+            >
+              <Share2 className="h-4 w-4 sm:mr-2" />
+              <span className="sm:inline">{t("common.share")}</span>
             </Button>
           </div>
         </div>

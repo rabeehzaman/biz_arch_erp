@@ -25,6 +25,10 @@ import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/pa
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
+import { FloatingActionButton } from "@/components/mobile/floating-action-button";
+import { SwipeableCard } from "@/components/mobile/swipeable-card";
 
 interface Quotation {
   id: string;
@@ -58,6 +62,7 @@ export default function QuotationsPage() {
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
+  const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
 
   const handleDelete = async (id: string) => {
     setConfirmDialog({
@@ -111,13 +116,14 @@ export default function QuotationsPage() {
 
   return (
     <PageAnimation>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <StaggerContainer className="space-y-6">
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("quotations.title")}</h2>
             <p className="text-slate-500">{t("quotations.manageQuotations")}</p>
           </div>
-          <Link href="/quotations/new" className="w-full sm:w-auto">
+          <Link href="/quotations/new" className="hidden sm:inline-flex">
             <Button className="w-full">
               <Plus className={`h-4 w-4 ${lang === "ar" ? "ml-2" : "mr-2"}`} />
               {t("quotations.newQuotation")}
@@ -128,7 +134,7 @@ export default function QuotationsPage() {
         <StaggerItem>
           <Card>
             <CardHeader>
-              <div className="relative max-w-sm">
+              <div className="relative w-full sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   placeholder={t("quotations.searchQuotations")}
@@ -160,7 +166,28 @@ export default function QuotationsPage() {
                 <>
                   <div className="space-y-3 sm:hidden">
                     {quotations.map((quotation) => (
-                      <div key={quotation.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <SwipeableCard
+                        key={quotation.id}
+                        actions={
+                          <div className="flex h-full flex-col">
+                            <Link
+                              href={`/quotations/${quotation.id}`}
+                              className="flex flex-1 items-center justify-center bg-slate-600 px-4 text-sm font-medium text-white"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                            <button
+                              type="button"
+                              className="flex flex-1 items-center justify-center bg-red-500 px-4 text-sm font-medium text-white disabled:opacity-50"
+                              onClick={() => handleDelete(quotation.id)}
+                              disabled={quotation.status === "CONVERTED"}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        }
+                      >
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
@@ -207,24 +234,8 @@ export default function QuotationsPage() {
                           </div>
                         </div>
 
-                        <div className="mt-4 flex gap-2">
-                          <Button asChild variant="outline" className="min-h-[44px] flex-1">
-                            <Link href={`/quotations/${quotation.id}`}>
-                              <Eye className="h-4 w-4" />
-                              {t("common.details")}
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="min-h-[44px] flex-1 text-red-600 hover:text-red-700"
-                            onClick={() => handleDelete(quotation.id)}
-                            disabled={quotation.status === "CONVERTED"}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            {t("common.delete")}
-                          </Button>
                         </div>
-                      </div>
+                      </SwipeableCard>
                     ))}
                   </div>
 
@@ -307,6 +318,7 @@ export default function QuotationsPage() {
           onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
         />
       )}
+      <FloatingActionButton href="/quotations/new" label={t("quotations.newQuotation")} />
     </PageAnimation>
   );
 }

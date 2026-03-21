@@ -91,6 +91,10 @@ interface Account {
 }
 
 import { useLanguage } from "@/lib/i18n";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
+import { FloatingActionButton } from "@/components/mobile/floating-action-button";
+import { SwipeableCard } from "@/components/mobile/swipeable-card";
 
 // methodLabels moved inside component to use t()
 
@@ -119,6 +123,7 @@ export default function SupplierPaymentsPage() {
     loadMore,
     refresh,
   } = useInfiniteList<SupplierPayment>({ url: "/api/supplier-payments" });
+  const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
@@ -257,6 +262,7 @@ export default function SupplierPaymentsPage() {
 
   return (
     <PageAnimation>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -462,7 +468,7 @@ export default function SupplierPaymentsPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-4">
-              <div className="relative flex-1 max-w-sm">
+              <div className="relative flex-1 sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   placeholder={t("payments.searchPaymentsPlaceholder")}
@@ -490,7 +496,20 @@ export default function SupplierPaymentsPage() {
               <>
                 <div className="space-y-3 sm:hidden">
                   {payments.map((payment) => (
-                    <div key={payment.id} onClick={() => payment.purchaseInvoice?.id && router.push(`/purchase-invoices/${payment.purchaseInvoice.id}`)} className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${payment.purchaseInvoice?.id ? "cursor-pointer hover:bg-muted/50" : ""}`}>
+                    <SwipeableCard
+                      key={payment.id}
+                      actionWidth={70}
+                      actions={
+                        <button
+                          type="button"
+                          className="flex h-full w-full items-center justify-center bg-red-500 text-sm font-medium text-white"
+                          onClick={() => setDeletePayment(payment)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      }
+                    >
+                      <div onClick={() => payment.purchaseInvoice?.id && router.push(`/purchase-invoices/${payment.purchaseInvoice.id}`)} className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${payment.purchaseInvoice?.id ? "cursor-pointer hover:bg-muted/50" : ""}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("payments.paymentNo")}</p>
@@ -528,17 +547,8 @@ export default function SupplierPaymentsPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          className="min-h-[44px] w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => setDeletePayment(payment)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          {t("common.delete")}
-                        </Button>
                       </div>
-                    </div>
+                    </SwipeableCard>
                   ))}
                 </div>
 
@@ -624,6 +634,7 @@ export default function SupplierPaymentsPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      <FloatingActionButton onClick={() => setIsDialogOpen(true)} label={t("payments.recordSupplierPayment")} />
     </PageAnimation>
   );
 }

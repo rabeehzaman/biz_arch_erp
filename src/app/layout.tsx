@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { Inter, Outfit, Noto_Naskh_Arabic } from "next/font/google";
 import Script from "next/script";
 import { StandaloneShellGuard } from "@/components/pwa/standalone-shell-guard";
+import { CapacitorBootstrap } from "@/components/capacitor-bootstrap";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -27,6 +28,7 @@ export const metadata: Metadata = {
   applicationName: "BizArch ERP",
   title: "BizArch ERP",
   description: "Simple invoicing and customer management",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -94,10 +96,14 @@ export default async function RootLayout({
         <Script id="standalone-shell-bootstrap" strategy="beforeInteractive">
           {standaloneShellBootstrap}
         </Script>
+        <Script id="sw-register" strategy="afterInteractive">
+          {`if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}`}
+        </Script>
         <ThemeProvider>
           <StandaloneShellGuard />
+          <CapacitorBootstrap />
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster richColors />
         </ThemeProvider>
       </body>
     </html>

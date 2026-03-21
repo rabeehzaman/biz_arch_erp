@@ -63,6 +63,9 @@ interface Supplier {
   };
 }
 import { useLanguage } from "@/lib/i18n";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
+import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 
 export default function SuppliersPage() {
   const router = useRouter();
@@ -78,6 +81,7 @@ export default function SuppliersPage() {
     loadMore,
     refresh,
   } = useInfiniteList<Supplier>({ url: "/api/suppliers" });
+  const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isOpeningBalanceDialogOpen, setIsOpeningBalanceDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -203,6 +207,7 @@ export default function SuppliersPage() {
 
   return (
     <PageAnimation>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <StaggerContainer className="space-y-6">
         <StaggerItem className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -286,7 +291,7 @@ export default function SuppliersPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
+                <div className="relative flex-1 sm:max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
                     ref={searchInputRef}
@@ -528,6 +533,7 @@ export default function SuppliersPage() {
           onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
         />
       )}
+      <FloatingActionButton onClick={() => { setEditingSupplier(null); setIsDialogOpen(true); }} label={t("suppliers.addSupplier")} />
     </PageAnimation>
   );
 }
