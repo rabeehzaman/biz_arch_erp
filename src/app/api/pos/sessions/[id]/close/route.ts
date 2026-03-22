@@ -153,7 +153,52 @@ export async function PUT(
       });
       const cashRefundsGiven = roundCurrency(Number(returnAggregates._sum.total || 0));
 
-      const expectedCash = roundCurrency(Number(posSession.openingCash) + cashReceived - cashRefundsGiven);
+      // Subtract cash paid out during session: supplier payments, expenses, transfers, other cash movements
+      const sessionSupplierPayments = await tx.supplierPayment.aggregate({
+        where: { organizationId, posSessionId: id, paymentMethod: "CASH" },
+        _sum: { amount: true },
+      });
+      const supplierPaymentsCashOut = roundCurrency(Number(sessionSupplierPayments._sum.amount || 0));
+
+      const sessionExpenses = await tx.expense.aggregate({
+        where: { organizationId, posSessionId: id, status: "PAID" },
+        _sum: { total: true },
+      });
+      const expensesCashOut = roundCurrency(Number(sessionExpenses._sum.total || 0));
+
+      // Cash movements (CASH_OUT and CASH_IN) recorded during the session
+      const sessionCashOutMovements = await tx.pOSCashMovement.aggregate({
+        where: { organizationId, sessionId: id, type: "CASH_OUT" },
+        _sum: { amount: true },
+      });
+      const otherCashOut = roundCurrency(Number(sessionCashOutMovements._sum.amount || 0));
+
+      const sessionCashInMovements = await tx.pOSCashMovement.aggregate({
+        where: { organizationId, sessionId: id, type: "CASH_IN" },
+        _sum: { amount: true },
+      });
+      const otherCashIn = roundCurrency(Number(sessionCashInMovements._sum.amount || 0));
+
+      // Transfers out from POS register during this session
+      const sessionTransfersOut = await tx.cashBankTransaction.aggregate({
+        where: { organizationId, posSessionId: id, transactionType: "TRANSFER_OUT" },
+        _sum: { amount: true },
+      });
+      const transfersCashOut = roundCurrency(Math.abs(Number(sessionTransfersOut._sum.amount || 0)));
+
+      // Transfers in to POS register during this session
+      const sessionTransfersIn = await tx.cashBankTransaction.aggregate({
+        where: { organizationId, posSessionId: id, transactionType: "TRANSFER_IN" },
+        _sum: { amount: true },
+      });
+      const transfersCashIn = roundCurrency(Number(sessionTransfersIn._sum.amount || 0));
+
+      const totalCashOut = roundCurrency(supplierPaymentsCashOut + expensesCashOut + otherCashOut + transfersCashOut);
+      const totalCashIn = roundCurrency(otherCashIn + transfersCashIn);
+
+      const expectedCash = roundCurrency(
+        Number(posSession.openingCash) + cashReceived - cashRefundsGiven - totalCashOut + totalCashIn
+      );
       const cashDifference = roundCurrency(Number(closingCash) - expectedCash);
 
       // Aggregate non-cash payments
@@ -507,6 +552,10 @@ export async function PUT(
       }
 
       // ── Update session ──────────────────────────────────────────────────
+      const returnCount = await tx.creditNote.count({
+        where: { organizationId, posSessionId: id },
+      });
+
       const updatedSession = await tx.pOSSession.update({
         where: { id, organizationId },
         data: {
@@ -517,6 +566,8 @@ export async function PUT(
           cashDifference,
           totalSales,
           totalTransactions,
+          totalReturns: cashRefundsGiven,
+          totalReturnTransactions: returnCount,
           notes: notes || posSession.notes,
         },
         include: {

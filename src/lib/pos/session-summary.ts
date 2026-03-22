@@ -58,6 +58,28 @@ export interface POSSessionPaymentBreakdown {
   count: number;
 }
 
+export interface POSSessionCashOutEntry {
+  id: string;
+  type: "SUPPLIER_PAYMENT" | "EXPENSE" | "TRANSFER" | "OTHER";
+  description: string;
+  amount: number;
+  createdAt: Date;
+  referenceId: string | null;
+  referenceName: string | null;
+}
+
+export interface POSSessionCashMovementSummary {
+  supplierPaymentsTotal: number;
+  expensesTotal: number;
+  transfersOutTotal: number;
+  transfersInTotal: number;
+  otherCashOutTotal: number;
+  otherCashInTotal: number;
+  totalCashOut: number;
+  totalCashIn: number;
+  entries: POSSessionCashOutEntry[];
+}
+
 export interface POSSessionReportData {
   session: {
     id: string;
@@ -97,6 +119,7 @@ export interface POSSessionReportData {
   invoices: POSSessionReportInvoice[];
   paymentBreakdown: POSSessionPaymentBreakdown[];
   soldProducts: POSSessionSoldProduct[];
+  cashMovements: POSSessionCashMovementSummary;
   totals: {
     invoiceCount: number;
     soldProductCount: number;
@@ -292,6 +315,117 @@ export async function getPOSSessionReportData(
     }))
     .sort((a, b) => b.total - a.total);
 
+  // ── Cash movements during session ──────────────────────────────────
+  const cashOutEntries: POSSessionCashOutEntry[] = [];
+
+  // Supplier payments made during this session
+  const sessionSupplierPayments = await prisma.supplierPayment.findMany({
+    where: { organizationId, posSessionId: id },
+    include: { supplier: { select: { name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  let supplierPaymentsTotal = 0;
+  for (const sp of sessionSupplierPayments) {
+    const amt = Number(sp.amount);
+    supplierPaymentsTotal += amt;
+    cashOutEntries.push({
+      id: sp.id,
+      type: "SUPPLIER_PAYMENT",
+      description: `Vendor Payment - ${sp.supplier.name} (${sp.paymentNumber})`,
+      amount: amt,
+      createdAt: sp.createdAt,
+      referenceId: sp.supplierId,
+      referenceName: sp.supplier.name,
+    });
+  }
+
+  // Expenses paid during this session
+  const sessionExpenses = await prisma.expense.findMany({
+    where: { organizationId, posSessionId: id, status: "PAID" },
+    orderBy: { createdAt: "asc" },
+  });
+  let expensesTotal = 0;
+  for (const exp of sessionExpenses) {
+    const amt = Number(exp.total);
+    expensesTotal += amt;
+    cashOutEntries.push({
+      id: exp.id,
+      type: "EXPENSE",
+      description: `Expense - ${exp.expenseNumber}${exp.description ? `: ${exp.description}` : ""}`,
+      amount: amt,
+      createdAt: exp.createdAt,
+      referenceId: exp.id,
+      referenceName: exp.expenseNumber,
+    });
+  }
+
+  // Transfers during this session
+  const sessionTransfersOut = await prisma.cashBankTransaction.findMany({
+    where: { organizationId, posSessionId: id, transactionType: "TRANSFER_OUT" },
+    include: { cashBankAccount: { select: { name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  let transfersOutTotal = 0;
+  for (const tx of sessionTransfersOut) {
+    const amt = Math.abs(Number(tx.amount));
+    transfersOutTotal += amt;
+    cashOutEntries.push({
+      id: tx.id,
+      type: "TRANSFER",
+      description: `Transfer Out - ${tx.description}`,
+      amount: amt,
+      createdAt: tx.createdAt,
+      referenceId: tx.referenceId,
+      referenceName: tx.cashBankAccount.name,
+    });
+  }
+
+  const sessionTransfersInAgg = await prisma.cashBankTransaction.aggregate({
+    where: { organizationId, posSessionId: id, transactionType: "TRANSFER_IN" },
+    _sum: { amount: true },
+  });
+  const transfersInTotal = Number(sessionTransfersInAgg._sum.amount || 0);
+
+  // Other cash movements (POSCashMovement)
+  const sessionCashMovements = await prisma.pOSCashMovement.findMany({
+    where: { organizationId, sessionId: id },
+    orderBy: { createdAt: "asc" },
+  });
+  let otherCashOutTotal = 0;
+  let otherCashInTotal = 0;
+  for (const cm of sessionCashMovements) {
+    const amt = Number(cm.amount);
+    if (cm.type === "CASH_OUT") {
+      otherCashOutTotal += amt;
+      cashOutEntries.push({
+        id: cm.id,
+        type: "OTHER",
+        description: `Cash Out - ${cm.reason}`,
+        amount: amt,
+        createdAt: cm.createdAt,
+        referenceId: null,
+        referenceName: null,
+      });
+    } else {
+      otherCashInTotal += amt;
+    }
+  }
+
+  const totalCashOut = supplierPaymentsTotal + expensesTotal + transfersOutTotal + otherCashOutTotal;
+  const totalCashIn = transfersInTotal + otherCashInTotal;
+
+  const cashMovements: POSSessionCashMovementSummary = {
+    supplierPaymentsTotal,
+    expensesTotal,
+    transfersOutTotal,
+    transfersInTotal,
+    otherCashOutTotal,
+    otherCashInTotal,
+    totalCashOut,
+    totalCashIn,
+    entries: cashOutEntries.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+  };
+
   return {
     session: {
       id: posSession.id,
@@ -325,6 +459,7 @@ export async function getPOSSessionReportData(
     invoices: normalizedInvoices,
     paymentBreakdown,
     soldProducts,
+    cashMovements,
     totals: {
       invoiceCount: normalizedInvoices.length,
       soldProductCount: soldProducts.length,
