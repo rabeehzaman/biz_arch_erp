@@ -10,6 +10,15 @@ datasource db {
   provider = "postgresql"
 }
 
+// ==================== ENUMS ====================
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
 // ==================== ORGANIZATIONS ====================
 
 model Organization {
@@ -110,6 +119,12 @@ model Organization {
   language              String   @default("en")  // "en" or "ar" — org-wide UI language
   currency              String   @default("INR") // "INR" or "SAR" — org-wide currency
 
+  // Subscription Management
+  subscriptionStatus    SubscriptionStatus @default(TRIAL)
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  subscriptionNotes     String?
+
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -173,8 +188,27 @@ model Organization {
   jewelleryRepairs           JewelleryRepair[]
   customerSchemes            CustomerScheme[]
   schemePayments             SchemePayment[]
+  subscriptionLogs           SubscriptionLog[]
 
   @@map("organizations")
+}
+
+// ==================== SUBSCRIPTION ====================
+
+model SubscriptionLog {
+  id              String              @id @default(cuid())
+  organizationId  String
+  organization    Organization        @relation(fields: [organizationId], references: [id])
+  previousStatus  SubscriptionStatus?
+  newStatus       SubscriptionStatus
+  previousEndDate DateTime?
+  newEndDate      DateTime?
+  changedBy       String              // superadmin user id
+  note            String?
+  createdAt       DateTime            @default(now())
+
+  @@index([organizationId])
+  @@map("subscription_logs")
 }
 
 // ==================== AUTH ====================

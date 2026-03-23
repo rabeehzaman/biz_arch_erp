@@ -66,6 +66,7 @@ import { useLanguage } from "@/lib/i18n";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
+import { SwipeableCard } from "@/components/mobile/swipeable-card";
 
 export default function SuppliersPage() {
   const router = useRouter();
@@ -320,71 +321,66 @@ export default function SuppliersPage() {
                 <>
                   <div className="space-y-3 sm:hidden">
                     {suppliers.map((supplier) => (
-                      <div key={supplier.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/suppliers/${supplier.id}/statement`)}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-900">{supplier.name}</p>
-                            {(supplier.email || supplier.phone) && (
-                              <div className="mt-1 space-y-1 text-sm text-slate-500">
-                                {supplier.email && <p className="break-all">{supplier.email}</p>}
-                                {supplier.phone && <p>{supplier.phone}</p>}
-                              </div>
-                            )}
+                      <SwipeableCard
+                        key={supplier.id}
+                        actions={
+                          <div className="flex h-full flex-col">
+                            <button
+                              type="button"
+                              className="flex flex-1 items-center justify-center bg-slate-600 px-4 text-sm font-medium text-white"
+                              onClick={() => handleEdit(supplier)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className="flex flex-1 items-center justify-center bg-red-500 px-4 text-sm font-medium text-white"
+                              onClick={() => handleDelete(supplier.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
-                          <div className="flex items-center gap-2">
+                        }
+                      >
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer" onClick={() => router.push(`/suppliers/${supplier.id}/statement`)}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-900">{supplier.name}</p>
+                              {(supplier.email || supplier.phone) && (
+                                <div className="mt-1 space-y-1 text-sm text-slate-500">
+                                  {supplier.email && <p className="break-all">{supplier.email}</p>}
+                                  {supplier.phone && <p>{supplier.phone}</p>}
+                                </div>
+                              )}
+                            </div>
                             <Badge variant={supplier.isActive ? "default" : "secondary"}>
                               {supplier.isActive ? t("common.active") : t("common.inactive")}
                             </Badge>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] -mr-2 shrink-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(supplier)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  {t("common.edit")}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(supplier)}>
-                                  <Wallet className="mr-2 h-4 w-4" />
-                                  {t("common.openingBalance")}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => handleDelete(supplier.id)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  {t("common.delete")}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
-                        </div>
 
-                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.balance")}</p>
-                            <p className={`mt-1 font-semibold ${Number(supplier.balance) > 0 ? "text-red-600" : Number(supplier.balance) < 0 ? "text-green-600" : "text-slate-900"}`}>
-                              {symbol}{Math.abs(Number(supplier.balance)).toLocaleString(locale)}
+                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.balance")}</p>
+                              <p className={`mt-1 font-semibold ${Number(supplier.balance) > 0 ? "text-red-600" : Number(supplier.balance) < 0 ? "text-green-600" : "text-slate-900"}`}>
+                                {symbol}{Math.abs(Number(supplier.balance)).toLocaleString(locale)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.invoices")}</p>
+                              <p className="mt-1 font-medium text-slate-900">{supplier._count?.purchaseInvoices || 0}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.location")}</p>
+                            <p className="mt-1 text-sm text-slate-600">
+                              {supplier.city && supplier.state
+                                ? `${supplier.city}, ${supplier.state}`
+                                : supplier.city || supplier.state || "-"}
                             </p>
                           </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.invoices")}</p>
-                            <p className="mt-1 font-medium text-slate-900">{supplier._count?.purchaseInvoices || 0}</p>
-                          </div>
                         </div>
-
-                        <div className="mt-4">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.location")}</p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            {supplier.city && supplier.state
-                              ? `${supplier.city}, ${supplier.state}`
-                              : supplier.city || supplier.state || "-"}
-                          </p>
-                        </div>
-                      </div>
+                      </SwipeableCard>
                     ))}
                   </div>
 

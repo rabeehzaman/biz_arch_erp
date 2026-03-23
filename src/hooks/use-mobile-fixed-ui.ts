@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { isCapacitorEnvironment } from "@/lib/capacitor-plugins";
+import { getPreserveScrollY, clearPreserveScrollY } from "@/lib/mobile-viewport";
 
 const MOBILE_FIXED_UI_RECOVERY_DELAYS = [0, 80, 180, 320, 500, 720, 960, 1200, 1500];
 
@@ -86,19 +87,32 @@ export function useMobileFixedUi() {
     const scheduleRecoveryPasses = () => {
       clearRecoveryTimeouts();
 
+      // Check if a combobox/select requested scroll preservation.
+      // Read on every call (don't consume) so re-triggered recovery
+      // passes still use the correct target.
+      const targetScrollY = getPreserveScrollY();
+
+      const lastDelay = MOBILE_FIXED_UI_RECOVERY_DELAYS[MOBILE_FIXED_UI_RECOVERY_DELAYS.length - 1];
+
       recoveryTimeoutsRef.current = MOBILE_FIXED_UI_RECOVERY_DELAYS.map((delay) =>
         window.setTimeout(() => {
           // Nudge iOS Safari into recalculating window.innerHeight by
           // doing a micro-scroll. Without this, Safari can leave
           // innerHeight at the keyboard-shrunk value after modal close,
           // causing the bottom nav to float above a gap.
-          window.scrollTo(0, 0);
+          // When preserveScroll was requested, restore to that position instead.
+          window.scrollTo(0, targetScrollY ?? 0);
 
           const overlayOpen = hasBlockingOverlayOpen();
           const viewportState = measureViewportState();
 
           setHasBlockingOverlay(overlayOpen);
           applyViewportState(viewportState, { allowBottomOffset: true });
+
+          // Clear the preserve-scroll target after the last recovery pass
+          if (delay === lastDelay && targetScrollY != null) {
+            clearPreserveScrollY();
+          }
         }, delay)
       );
     };
@@ -124,6 +138,7 @@ export function useMobileFixedUi() {
       previousBusyRef.current = true;
       sync();
     };
+
 
     // RAF-debounced sync for MutationObserver
     let mutationRafId = 0;

@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { SidebarConfigDialog } from "../sidebar-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { SubscriptionTab } from "./subscription-tab";
 import { INDIAN_STATES } from "@/lib/gst/constants";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n";
@@ -804,6 +805,13 @@ export default function OrganizationDetailsPage() {
                                         >
                                             <Gem className="mr-1.5 h-4 w-4" />
                                             {t("admin.jewelleryTab")}
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="subscription"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            <Shield className="mr-1.5 h-4 w-4" />
+                                            {t("admin.tabSubscription")}
                                         </TabsTrigger>
                                     </TabsList>
                                 </div>
@@ -1746,6 +1754,11 @@ export default function OrganizationDetailsPage() {
                                             )}
                                         </div>
                                     )}
+                                </TabsContent>
+
+                                {/* SUBSCRIPTION TAB */}
+                                <TabsContent value="subscription" className="space-y-6 mt-0">
+                                    <SubscriptionTab organizationId={id} />
                                 </TabsContent>
 
                             </Tabs>

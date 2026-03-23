@@ -12,6 +12,7 @@ import { CommandPalette } from "@/components/command-palette/command-palette";
 import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
 import { LanguageProvider, useLanguage } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { SubscriptionBanner } from "@/components/subscription-banner";
 
 function DesktopLayout({ children }: { children: React.ReactNode }) {
     const { dir } = useLanguage();
@@ -69,6 +70,7 @@ export default function ClientDashboardLayout({
             <SWRProvider fallback={swrFallback}>
                 <LanguageProvider initialLang={initialLang}>
                     <CommandPaletteProvider>
+                        <SubscriptionBanner />
                         <DashboardInner>{children}</DashboardInner>
                         <CommandPalette />
                         <KeyboardShortcutsDialog />

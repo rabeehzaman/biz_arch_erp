@@ -21,10 +21,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       position={isMobile ? "top-center" : props.position ?? "top-right"}
       icons={{
-        success: <CircleCheckIcon className="size-4" />,
+        success: <span className="animate-success-pop inline-flex"><CircleCheckIcon className="size-4" /></span>,
         info: <InfoIcon className="size-4" />,
         warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
+        error: <span className="animate-error-shake inline-flex"><OctagonXIcon className="size-4" /></span>,
         loading: <Loader2Icon className="size-4 animate-spin" />,
       }}
       style={

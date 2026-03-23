@@ -25,6 +25,8 @@ interface UseInfiniteListReturn<T> {
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
+  /** True when displaying cached data after a fetch failure (e.g. offline) */
+  isStale: boolean;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   loadMore: () => void;
@@ -42,6 +44,7 @@ export function useInfiniteList<T>(
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [isStale, setIsStale] = useState(false);
   const [searchQuery, setSearchQueryState] = useState("");
 
   // Use ref to track the latest search for debouncing
@@ -87,10 +90,16 @@ export function useInfiniteList<T>(
         }
         setTotal(json.total);
         setHasMore(json.hasMore);
+        setIsStale(false);
         offsetRef.current = offset + json.data.length;
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
         console.error("Failed to fetch list:", err);
+        // Mark data as stale if we have cached items but fetch failed
+        setItems((prev) => {
+          if (prev.length > 0) setIsStale(true);
+          return prev;
+        });
       }
     },
     [buildUrl]
@@ -140,6 +149,7 @@ export function useInfiniteList<T>(
     isLoading,
     isLoadingMore,
     hasMore,
+    isStale,
     searchQuery,
     setSearchQuery,
     loadMore,

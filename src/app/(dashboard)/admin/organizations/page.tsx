@@ -49,12 +49,34 @@ interface Organization {
   edition: string;
   gstEnabled: boolean;
   gstin: string | null;
+  subscriptionStatus: string;
+  subscriptionEndDate: string | null;
   createdAt: string;
   _count: {
     users: number;
     customers: number;
     invoices: number;
   };
+}
+
+function subscriptionBadge(status: string, endDate: string | null) {
+  const isDateExpired = endDate && new Date(endDate) < new Date();
+  const effectivelyExpired = status === "EXPIRED" || status === "SUSPENDED" || (isDateExpired && (status === "TRIAL" || status === "ACTIVE"));
+
+  if (effectivelyExpired) {
+    return <Badge variant="destructive" className="text-[10px]">Expired</Badge>;
+  }
+
+  switch (status) {
+    case "TRIAL":
+      return <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px]">Trial</Badge>;
+    case "ACTIVE":
+      return <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px]">Active</Badge>;
+    case "SUSPENDED":
+      return <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-[10px]">Suspended</Badge>;
+    default:
+      return <Badge variant="outline" className="text-[10px]">{status}</Badge>;
+  }
 }
 
 export default function OrganizationsPage() {
@@ -436,6 +458,7 @@ export default function OrganizationsPage() {
                             <div className="mt-2 flex flex-wrap gap-2">
                               <Badge variant="secondary">{org.slug}</Badge>
                               <Badge variant="outline" className="text-xs">{org.edition === "SAUDI" ? t("edition.saudi") : t("edition.india")}</Badge>
+                              {subscriptionBadge(org.subscriptionStatus, org.subscriptionEndDate)}
                             </div>
                           </div>
 
@@ -499,6 +522,7 @@ export default function OrganizationsPage() {
                         <TableHead className="text-center">{t("admin.invoices")}</TableHead>
                         <TableHead>{t("admin.created")}</TableHead>
                         <TableHead>{t("edition.edition")}</TableHead>
+                        <TableHead>{t("admin.tabSubscription")}</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -547,6 +571,9 @@ export default function OrganizationsPage() {
                             <Badge variant="outline" className="text-xs">
                               {org.edition === "SAUDI" ? t("edition.saudi") : t("edition.india")}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {subscriptionBadge(org.subscriptionStatus, org.subscriptionEndDate)}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>

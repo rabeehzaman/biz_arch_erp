@@ -400,6 +400,69 @@ test.describe("mobile UI stability", () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test("selecting a product from invoice combobox preserves scroll position", async ({ page, request }) => {
+    test.setTimeout(60000);
+
+    // Ensure we have products and customers
+    const [prodRes, custRes] = await Promise.all([
+      request.get("/api/products"),
+      request.get("/api/customers"),
+    ]);
+    const products = prodRes.ok() ? await prodRes.json() : [];
+    const customers = custRes.ok() ? ((await custRes.json()) as { data?: Array<{ id: string }> }) : { data: [] };
+    const customerList = Array.isArray(customers) ? customers : (customers.data ?? []);
+    test.skip(!products.length || !customerList.length, "No products or customers for combobox scroll test");
+
+    await page.goto("/invoices/new");
+    await expect(page.getByRole("heading", { name: /new.*invoice/i })).toBeVisible();
+
+    // Select a customer first — click the customer combobox trigger
+    const customerTrigger = page.getByRole("combobox").first();
+    await customerTrigger.click();
+    await page.waitForTimeout(300);
+
+    // Pick first customer from bottom-sheet dialog
+    const customerDialog = page.locator('[data-slot="dialog-content"]');
+    await expect(customerDialog).toBeVisible({ timeout: 5000 });
+    const firstCustomer = customerDialog.locator('[role="option"]').first();
+    await expect(firstCustomer).toBeVisible();
+    await firstCustomer.click();
+    await expect(customerDialog).toHaveCount(0, { timeout: 3000 });
+    await page.waitForTimeout(500);
+
+    // Now scroll down to the line items section
+    await page.evaluate(() => window.scrollTo(0, 400));
+    await page.waitForTimeout(200);
+
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+    expect(scrollBefore, "page should be scrolled down before opening product combobox").toBeGreaterThanOrEqual(200);
+
+    // Open the product combobox — find the button with "Search products..." placeholder text
+    const productTrigger = page.getByRole("combobox", { name: /search products/i });
+    await productTrigger.click();
+    await page.waitForTimeout(300);
+
+    // Wait for the bottom-sheet dialog to appear
+    const productDialog = page.locator('[data-slot="dialog-content"]');
+    await expect(productDialog).toBeVisible({ timeout: 5000 });
+
+    // Select the first product
+    const firstProduct = productDialog.locator('[role="option"]').first();
+    await expect(firstProduct).toBeVisible();
+    await firstProduct.click();
+
+    // Dialog should close
+    await expect(productDialog).toHaveCount(0, { timeout: 3000 });
+    await page.waitForTimeout(400);
+
+    // Scroll position should be preserved (not reset to 0)
+    const scrollAfter = await page.evaluate(() => window.scrollY);
+    expect(
+      scrollAfter,
+      "scroll position should be preserved after selecting product from combobox"
+    ).toBeGreaterThanOrEqual(scrollBefore - 100);
+  });
+
   test("pos landing shows mobile nav but terminal stays immersive", async ({ page }) => {
     await page.goto("/pos");
     await expect(page).toHaveURL(/\/pos$/);

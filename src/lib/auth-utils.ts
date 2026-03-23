@@ -1,5 +1,8 @@
 import { Session } from "next-auth";
+import { NextResponse } from "next/server";
 import { getEditionConfig as getEditionConfigFromRegistry, type EditionConfig, type EditionId } from "./edition";
+import prisma from "./prisma";
+import { isSubscriptionExpired } from "./subscription";
 
 export function getOrgId(session: Session): string {
   const orgId = session.user.organizationId;
@@ -46,4 +49,36 @@ export function isWeighMachineEnabled(session: Session): boolean {
 
 export function isTaxInclusivePrice(session: Session): boolean {
   return (session.user as { isTaxInclusivePrice?: boolean }).isTaxInclusivePrice === true;
+}
+
+/**
+ * Check subscription status for API routes. Returns a 402 response if expired, or null if OK.
+ * Superadmin is always exempt.
+ */
+export async function checkSubscriptionForApi(
+  session: Session
+): Promise<NextResponse | null> {
+  const role = (session.user as { role?: string }).role;
+  if (role === "superadmin") return null;
+
+  try {
+    const orgId = (session.user as { organizationId?: string }).organizationId;
+    if (!orgId) return null;
+
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { subscriptionStatus: true, subscriptionEndDate: true },
+    });
+
+    if (org && isSubscriptionExpired(org)) {
+      return NextResponse.json(
+        { error: "Subscription expired. Please contact your administrator." },
+        { status: 402 }
+      );
+    }
+  } catch {
+    // Don't block on check failure
+  }
+
+  return null;
 }

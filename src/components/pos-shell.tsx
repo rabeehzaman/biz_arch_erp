@@ -12,6 +12,7 @@ import {
   Package,
   MoreHorizontal,
 } from "lucide-react";
+import { SubscriptionBanner } from "@/components/subscription-banner";
 
 const tabs = [
   { key: "home", href: "/", icon: LayoutDashboard, labelKey: "nav.dashboard" },
@@ -41,6 +42,7 @@ export function POSShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={shellClassName}>
+      <SubscriptionBanner />
       <div className={showBottomNav ? "pb-[calc(4.75rem+var(--app-safe-area-bottom))] md:pb-0" : ""}>
         {children}
       </div>

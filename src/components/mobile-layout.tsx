@@ -18,6 +18,7 @@ import { GlobalScanner } from "@/components/scanner/global-scanner";
 import { MobileLanguageSwitcher } from "@/components/mobile-language-switcher";
 import { NetworkStatusBanner } from "@/components/mobile/network-status-banner";
 import { useHaptics } from "@/hooks/use-haptics";
+import { NavigationDirectionProvider } from "@/components/mobile/navigation-direction-provider";
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -97,6 +98,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   }
 
   return (
+    <NavigationDirectionProvider>
     <div className="relative min-h-[100dvh] bg-slate-50">
       <NetworkStatusBanner />
       <div className={contentClassName}>
@@ -168,5 +170,6 @@ export function MobileLayout({ children }: MobileLayoutProps) {
 
       <GlobalScanner />
     </div>
+    </NavigationDirectionProvider>
   );
 }

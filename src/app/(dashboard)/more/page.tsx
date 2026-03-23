@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { useLanguage } from "@/lib/i18n";
+import { useState, useCallback } from "react";
 import useSWR from "swr";
 import {
   Users,
@@ -31,6 +32,7 @@ import {
   LogOut,
   Package,
   ChevronRight,
+  ChevronDown,
   Building2,
 } from "lucide-react";
 
@@ -125,14 +127,43 @@ const superadminSection: NavItem[] = [
   { nameKey: "nav.organizations", href: "/admin/organizations", icon: Building2 },
 ];
 
+const COLLAPSED_STORAGE_KEY = "more-page-collapsed";
+
+function useCollapsedSections() {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const stored = localStorage.getItem(COLLAPSED_STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {};
+  });
+
+  const toggle = useCallback((key: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  return { collapsed, toggle };
+}
+
 function MenuSection({
   title,
+  sectionKey,
   items,
   disabledItems,
+  isCollapsed,
+  onToggle,
 }: {
   title: string;
+  sectionKey: string;
   items: NavItem[];
   disabledItems: string[];
+  isCollapsed: boolean;
+  onToggle: () => void;
 }) {
   const { t } = useLanguage();
   const visible = items.filter((item) => {
@@ -144,25 +175,45 @@ function MenuSection({
 
   return (
     <div className="mb-6">
-      <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        {title}
-      </h3>
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-        {visible.map((item, idx) => (
-          <Link
-            key={item.nameKey}
-            href={item.href}
-            className={`flex items-center gap-3.5 px-4 py-3.5 text-sm font-medium text-slate-700 active:bg-slate-50 ${
-              idx < visible.length - 1 ? "border-b border-slate-100" : ""
-            }`}
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50">
-              <item.icon className="h-[18px] w-[18px] text-slate-500" />
-            </div>
-            <span className="flex-1">{t(item.nameKey)}</span>
-            <ChevronRight className="h-4 w-4 text-slate-300" />
-          </Link>
-        ))}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="mb-2 flex w-full items-center gap-1 px-1"
+      >
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          {title}
+        </h3>
+        <ChevronDown
+          className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
+            isCollapsed ? "ltr:-rotate-90 rtl:rotate-90" : ""
+          }`}
+        />
+        {isCollapsed && (
+          <span className="text-xs text-slate-300">{visible.length}</span>
+        )}
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-200 ease-out ${
+          isCollapsed ? "max-h-0 opacity-0" : "max-h-[2000px] opacity-100"
+        }`}
+      >
+        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+          {visible.map((item, idx) => (
+            <Link
+              key={item.nameKey}
+              href={item.href}
+              className={`touch-ripple flex items-center gap-3.5 px-4 py-3.5 text-sm font-medium text-slate-700 active:bg-slate-50 ${
+                idx < visible.length - 1 ? "border-b border-slate-100" : ""
+              }`}
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50">
+                <item.icon className="h-[18px] w-[18px] text-slate-500" />
+              </div>
+              <span className="flex-1">{t(item.nameKey)}</span>
+              <ChevronRight className="h-4 w-4 text-slate-300" />
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -174,6 +225,7 @@ export default function MorePage() {
   const isSuperadmin = session?.user?.role === "superadmin";
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
   const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
+  const { collapsed, toggle } = useCollapsedSections();
 
   const { data: disabledItems = [] } = useSWR<string[]>(
     !isSuperadmin && session?.user ? "/api/sidebar" : null,
@@ -188,8 +240,11 @@ export default function MorePage() {
         <>
           <MenuSection
             title={t("nav.organizations")}
+            sectionKey="admin"
             items={superadminSection}
             disabledItems={[]}
+            isCollapsed={!!collapsed["admin"]}
+            onToggle={() => toggle("admin")}
           />
 
           <div className="mb-6">
@@ -210,26 +265,26 @@ export default function MorePage() {
 
       {!isSuperadmin && (
         <>
-          <MenuSection title={t("nav.sales")} items={salesSection} disabledItems={disabledItems} />
-          <MenuSection title={t("nav.purchases")} items={purchasesSection} disabledItems={disabledItems} />
-          <MenuSection title={t("nav.accounting")} items={accountingSection} disabledItems={disabledItems} />
+          <MenuSection title={t("nav.sales")} sectionKey="sales" items={salesSection} disabledItems={disabledItems} isCollapsed={!!collapsed["sales"]} onToggle={() => toggle("sales")} />
+          <MenuSection title={t("nav.purchases")} sectionKey="purchases" items={purchasesSection} disabledItems={disabledItems} isCollapsed={!!collapsed["purchases"]} onToggle={() => toggle("purchases")} />
+          <MenuSection title={t("nav.accounting")} sectionKey="accounting" items={accountingSection} disabledItems={disabledItems} isCollapsed={!!collapsed["accounting"]} onToggle={() => toggle("accounting")} />
 
           {multiBranchEnabled && (
-            <MenuSection title={t("nav.inventory")} items={inventorySection} disabledItems={disabledItems} />
+            <MenuSection title={t("nav.inventory")} sectionKey="inventory" items={inventorySection} disabledItems={disabledItems} isCollapsed={!!collapsed["inventory"]} onToggle={() => toggle("inventory")} />
           )}
 
           {isMobileShopEnabled && (
-            <MenuSection title={t("nav.mobileShop")} items={mobileShopSection} disabledItems={disabledItems} />
+            <MenuSection title={t("nav.mobileShop")} sectionKey="mobileShop" items={mobileShopSection} disabledItems={disabledItems} isCollapsed={!!collapsed["mobileShop"]} onToggle={() => toggle("mobileShop")} />
           )}
 
-          <MenuSection title={t("nav.reports")} items={reportsSection} disabledItems={disabledItems} />
+          <MenuSection title={t("nav.reports")} sectionKey="reports" items={reportsSection} disabledItems={disabledItems} isCollapsed={!!collapsed["reports"]} onToggle={() => toggle("reports")} />
 
           {/* Settings & Sign Out */}
           <div className="mb-6">
             <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
               <Link
                 href="/settings"
-                className="flex items-center gap-3.5 border-b border-slate-100 px-4 py-3.5 text-sm font-medium text-slate-700 active:bg-slate-50"
+                className="touch-ripple flex items-center gap-3.5 border-b border-slate-100 px-4 py-3.5 text-sm font-medium text-slate-700 active:bg-slate-50"
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50">
                   <Settings className="h-[18px] w-[18px] text-slate-500" />

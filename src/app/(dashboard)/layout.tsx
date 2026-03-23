@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ClientDashboardLayout from "./client-layout";
 import { getOrgId } from "@/lib/auth-utils";
+import { isSubscriptionExpired } from "@/lib/subscription";
 
 export default async function DashboardLayout({
   children,
@@ -20,6 +21,24 @@ export default async function DashboardLayout({
   // POS users shouldn't be in the dashboard layout at all
   if (session.user && (session.user as any).role === "pos") {
     redirect("/pos");
+  }
+
+  // Check subscription status (superadmin is exempt)
+  if (session.user && session.user.role !== "superadmin") {
+    try {
+      const organizationId = getOrgId(session);
+      if (organizationId) {
+        const org = await prisma.organization.findUnique({
+          where: { id: organizationId },
+          select: { subscriptionStatus: true, subscriptionEndDate: true },
+        });
+        if (org && isSubscriptionExpired(org)) {
+          redirect("/subscription-expired");
+        }
+      }
+    } catch (_error) {
+      // Don't block access if subscription check fails
+    }
   }
 
   // Pre-fetch disabled sidebar items to prevent flicker

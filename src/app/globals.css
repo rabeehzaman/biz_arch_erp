@@ -317,6 +317,55 @@
 .stagger-children > *:nth-child(5) { animation: stagger-fade-in 0.35s ease-out 0.32s both; }
 .stagger-children > *:nth-child(6) { animation: stagger-fade-in 0.35s ease-out 0.4s both; }
 
+/* Directional page transitions (RTL-safe via logical properties) */
+@keyframes slide-in-from-end {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-from-start {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* RTL overrides — flip slide directions */
+[dir="rtl"] .animate-nav-forward {
+  animation: slide-in-from-start 0.2s ease-out both;
+}
+[dir="rtl"] .animate-nav-back {
+  animation: slide-in-from-end 0.2s ease-out both;
+}
+
+[dir="ltr"] .animate-nav-forward,
+:not([dir="rtl"]) .animate-nav-forward {
+  animation: slide-in-from-end 0.2s ease-out both;
+}
+[dir="ltr"] .animate-nav-back,
+:not([dir="rtl"]) .animate-nav-back {
+  animation: slide-in-from-start 0.2s ease-out both;
+}
+
+.animate-nav-tab {
+  animation: fade-in 0.15s ease-out both;
+}
+
 /* Tab icon bounce animation */
 @keyframes tab-icon-bounce {
   0%   { transform: scale(1); }
@@ -331,7 +380,78 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-page-in,
   .stagger-children > *,
-  .tab-icon-active {
+  .tab-icon-active,
+  .animate-nav-forward,
+  .animate-nav-back,
+  .animate-nav-tab {
+    animation: none !important;
+  }
+}
+
+/* ── Touch Ripple (mobile only) ─────────────────────────────── */
+@keyframes ripple-touch {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* ── Toast micro-animations ──────────────────────────────────── */
+@keyframes success-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-4px); }
+  30% { transform: translateX(4px); }
+  45% { transform: translateX(-3px); }
+  60% { transform: translateX(3px); }
+  75% { transform: translateX(-1px); }
+}
+
+.animate-success-pop {
+  animation: success-pop 0.35s ease-out both;
+}
+
+.animate-error-shake {
+  animation: error-shake 0.4s ease-out both;
+}
+
+/* ── Shimmer skeleton ────────────────────────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-success-pop,
+  .animate-error-shake,
+  .animate-shimmer {
     animation: none !important;
   }
 }
@@ -368,6 +488,30 @@
 
   * {
     scrollbar-width: none;
+  }
+
+  /* Touch ripple effect on interactive elements */
+  .touch-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .touch-ripple::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    background: radial-gradient(circle, var(--ripple-color, rgba(15,23,42,0.08)) 0%, transparent 70%);
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .touch-ripple:active::after {
+    animation: ripple-touch 0.4s ease-out forwards;
   }
 
   /* Safe area padding for notched devices */

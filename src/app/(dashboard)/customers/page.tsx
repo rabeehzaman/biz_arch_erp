@@ -47,6 +47,7 @@ import { useLanguage } from "@/lib/i18n";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
+import { SwipeableCard } from "@/components/mobile/swipeable-card";
 
 interface User {
   id: string;
@@ -478,98 +479,81 @@ export default function CustomersPage() {
                 <>
                   <div className="space-y-3 sm:hidden">
                     {customers.map((customer) => (
-                      <div key={customer.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/customers/${customer.id}/statement`)}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-900">{customer.name}</p>
-                            {(customer.email || customer.phone) && (
-                              <div className="mt-1 space-y-1 text-sm text-slate-500">
-                                {customer.email && <p className="break-all">{customer.email}</p>}
-                                {customer.phone && <p>{customer.phone}</p>}
-                              </div>
-                            )}
+                      <SwipeableCard
+                        key={customer.id}
+                        actions={
+                          <div className="flex h-full flex-col">
+                            <button
+                              type="button"
+                              className="flex flex-1 items-center justify-center bg-slate-600 px-4 text-sm font-medium text-white"
+                              onClick={() => handleEdit(customer)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className="flex flex-1 items-center justify-center bg-red-500 px-4 text-sm font-medium text-white"
+                              onClick={() => handleDelete(customer.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
-                          <div className="flex items-center gap-2">
+                        }
+                      >
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer" onClick={() => router.push(`/customers/${customer.id}/statement`)}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-900">{customer.name}</p>
+                              {(customer.email || customer.phone) && (
+                                <div className="mt-1 space-y-1 text-sm text-slate-500">
+                                  {customer.email && <p className="break-all">{customer.email}</p>}
+                                  {customer.phone && <p>{customer.phone}</p>}
+                                </div>
+                              )}
+                            </div>
                             <Badge variant={customer.isActive ? "default" : "secondary"}>
                               {customer.isActive ? t("common.active") : t("common.inactive")}
                             </Badge>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] -mr-2 shrink-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(customer)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  {t("common.edit")}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenOpeningBalanceDialog(customer)}>
-                                  <Wallet className="mr-2 h-4 w-4" />
-                                  {t("common.openingBalance")}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/customers/${customer.id}/statement`}>
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    {t("customers.viewStatement")}
-                                  </Link>
-                                </DropdownMenuItem>
-                                {isAdmin && (
-                                  <DropdownMenuItem onClick={() => handleOpenAssignDialog(customer)}>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    {t("customers.assign")}
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => handleDelete(customer.id)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  {t("common.delete")}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
-                        </div>
 
-                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.balance")}</p>
-                            <p className={`mt-1 font-semibold ${Number(customer.balance) > 0 ? "text-green-600" : Number(customer.balance) < 0 ? "text-red-600" : "text-slate-900"}`}>
-                              {formatAmount(Math.abs(Number(customer.balance)))}
-                            </p>
+                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.balance")}</p>
+                              <p className={`mt-1 font-semibold ${Number(customer.balance) > 0 ? "text-green-600" : Number(customer.balance) < 0 ? "text-red-600" : "text-slate-900"}`}>
+                                {formatAmount(Math.abs(Number(customer.balance)))}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("customers.totalInvoices")}</p>
+                              <p className="mt-1 font-medium text-slate-900">{customer._count?.invoices || 0}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("customers.totalInvoices")}</p>
-                            <p className="mt-1 font-medium text-slate-900">{customer._count?.invoices || 0}</p>
-                          </div>
-                        </div>
 
-                        <div className="mt-4">
-                          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.assigned")}</p>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {customer.assignments && customer.assignments.length > 0 ? (
-                              customer.assignments.map((assignment) => (
-                                <Badge key={assignment.id} variant="outline" className="text-xs">
-                                  {assignment.user.name}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-sm text-slate-400">{t("common.unassigned")}</span>
-                            )}
+                          <div className="mt-4">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.assigned")}</p>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {customer.assignments && customer.assignments.length > 0 ? (
+                                customer.assignments.map((assignment) => (
+                                  <Badge key={assignment.id} variant="outline" className="text-xs">
+                                    {assignment.user.name}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-sm text-slate-400">{t("common.unassigned")}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-4">
+                            <Button asChild variant="outline" className="min-h-[44px] w-full">
+                              <Link href={`/customers/${customer.id}/statement`}>
+                                <FileText className="h-4 w-4" />
+                                {t("customers.viewStatement")}
+                              </Link>
+                            </Button>
                           </div>
                         </div>
-
-                        <div className="mt-4">
-                          <Button asChild variant="outline" className="min-h-[44px] w-full">
-                            <Link href={`/customers/${customer.id}/statement`}>
-                              <FileText className="h-4 w-4" />
-                              {t("customers.viewStatement")}
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
+                      </SwipeableCard>
                     ))}
                   </div>
 

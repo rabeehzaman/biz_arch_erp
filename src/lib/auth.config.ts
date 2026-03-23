@@ -40,6 +40,13 @@ export const authConfig: NextAuthConfig = {
 
       const role = (auth?.user as { role?: string })?.role;
       const isApi = nextUrl.pathname.startsWith("/api");
+      const isSubscriptionExpiredPage = nextUrl.pathname === "/subscription-expired";
+
+      // Allow any logged-in user to access the subscription-expired page
+      // (superadmin will be redirected away by the page itself)
+      if (isSubscriptionExpiredPage) {
+        return true;
+      }
 
       // Superadmin should only access /admin/* paths (API routes are always allowed)
       if (role === "superadmin" && !isApi && !nextUrl.pathname.startsWith("/admin")) {

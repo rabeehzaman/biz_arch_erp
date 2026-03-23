@@ -5,51 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-
-function isMobileDialogViewport() {
-  if (typeof window === "undefined") return false
-
-  return (
-    window.matchMedia("(max-width: 767px)").matches ||
-    window.matchMedia("(pointer: coarse)").matches
-  )
-}
-
-function resetMobileDialogViewport() {
-  if (!isMobileDialogViewport()) return
-
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur()
-  }
-
-  document.body.style.removeProperty("pointer-events")
-  document.documentElement.style.setProperty("--mobile-fixed-ui-offset", "0px")
-
-  // Force Safari to recalculate viewport after keyboard dismissal.
-  // Scrolling to (0,0) nudges iOS into settling window.innerHeight back to
-  // its true value so the bottom nav doesn't get stranded above a gap.
-  window.scrollTo(0, 0);
-  window.scrollTo(0, 1);
-  window.scrollTo(0, 0);
-
-  // Multiple rAF+timeout passes are needed because iOS Safari settles the
-  // visual viewport asynchronously over several frames after blur.
-  const RESET_DELAYS = [0, 50, 150, 300, 500, 800];
-
-  const fireReset = () => {
-    window.scrollTo(0, 0);
-    window.dispatchEvent(new Event("resize"));
-    window.dispatchEvent(new Event("mobile-dialog-viewport-reset"));
-  };
-
-  requestAnimationFrame(() => {
-    fireReset();
-
-    RESET_DELAYS.forEach((delay) => {
-      setTimeout(fireReset, delay);
-    });
-  });
-}
+import { isMobileDialogViewport, resetMobileDialogViewport } from "@/lib/mobile-viewport"
 
 function Dialog({
   onOpenChange,
