@@ -557,7 +557,7 @@ export default function CustomersPage() {
                     ))}
                   </div>
 
-                  <div className="hidden sm:block">
+                  <div className="hidden sm:block overflow-x-auto">
                     {selectedIds.size > 0 && (
                       <div className="mb-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
                         <span className="text-sm font-medium text-slate-700">

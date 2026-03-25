@@ -23,6 +23,9 @@ import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
 import { useLanguage } from "@/lib/i18n";
+import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
+import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
+import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
 
 interface Supplier {
   id: string;
@@ -37,6 +40,7 @@ interface Product {
   sku: string | null;
   unitId: string | null;
   unit: { id: string; name: string; code: string } | null;
+  jewelleryItem?: JewelleryItemData | null;
 }
 
 interface LineItem {
@@ -48,6 +52,7 @@ interface LineItem {
   conversionFactor: number;
   unitCost: number;
   discount: number;
+  jewellery?: JewelleryLineState | null;
 }
 
 function getLineAmountKey(itemId: string, ...amounts: number[]) {
@@ -89,6 +94,8 @@ export default function NewDebitNotePage() {
   const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
   const [applyRoundOff, setApplyRoundOff] = useState(false);
   const { t } = useLanguage();
+  const jewelleryEnabled = !!(session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled;
+  const { getRate: getGoldRate } = useJewelleryRates(jewelleryEnabled);
 
   useEffect(() => {
     setApplyRoundOff(roundOffEnabled);
@@ -168,6 +175,28 @@ export default function NewDebitNotePage() {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
 
+    // Check if this product is jewellery-linked
+    let jewellery: JewelleryLineState | null = null;
+    let unitCost = product.cost;
+
+    if (jewelleryEnabled && product.jewelleryItem) {
+      const ji = product.jewelleryItem;
+      const rate = getGoldRate(ji.purity, ji.metalType);
+      jewellery = createJewelleryLineState(ji, rate);
+      const pricing = calculateJewelleryLinePrice({
+        grossWeight: Number(ji.grossWeight),
+        stoneWeight: Number(ji.stoneWeight) || 0,
+        purity: ji.purity,
+        metalType: ji.metalType,
+        goldRate: rate,
+        wastagePercent: Number(ji.wastagePercent),
+        makingChargeType: ji.makingChargeType as "PER_GRAM" | "PERCENTAGE" | "FIXED",
+        makingChargeValue: Number(ji.makingChargeValue),
+        stoneValue: Number(ji.stoneValue),
+      });
+      unitCost = pricing.subtotal;
+    }
+
     setItems((prevItems) =>
       prevItems.map((item) =>
         item.id === itemId
@@ -177,9 +206,10 @@ export default function NewDebitNotePage() {
             description: product.name,
             unitId: product.unitId || "",
             conversionFactor: 1,
-            unitCost: product.cost,
+            unitCost,
             gstRate: (product as any).gstRate || 0,
-            hsnCode: (product as any).hsnCode || "",
+            hsnCode: (product as any).hsnCode || (jewellery ? "7113" : ""),
+            jewellery,
           }
           : item
       )
@@ -284,6 +314,29 @@ export default function NewDebitNotePage() {
     return calculateSubtotal() + calculateTax();
   };
 
+  const updateJewelleryField = (lineItemId: string, field: keyof JewelleryLineState, value: string | number) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== lineItemId || !item.jewellery) return item;
+        const updated = { ...item.jewellery, [field]: value };
+        const pricing = calculateJewelleryLinePrice({
+          grossWeight: updated.grossWeight,
+          stoneWeight: updated.stoneWeight || 0,
+          purity: updated.purity,
+          metalType: updated.metalType,
+          goldRate: updated.goldRate,
+          wastagePercent: updated.wastagePercent,
+          makingChargeType: updated.makingChargeType,
+          makingChargeValue: updated.makingChargeValue,
+          stoneValue: updated.stoneValue,
+        });
+        return { ...item, jewellery: updated, unitCost: pricing.subtotal };
+      })
+    );
+  };
+
+  const fmt = (n: number) => `${symbol}${n.toFixed(2)}`;
+
   const subtotal = calculateSubtotal();
   const tax = calculateTax();
   const total = calculateTotal();
@@ -327,6 +380,22 @@ export default function NewDebitNotePage() {
             discount: item.discount,
             gstRate: (item as any).gstRate || 0,
             hsnCode: (item as any).hsnCode || null,
+            ...(item.jewellery && {
+              jewellery: {
+                jewelleryItemId: item.jewellery.jewelleryItemId,
+                goldRate: item.jewellery.goldRate,
+                purity: item.jewellery.purity,
+                metalType: item.jewellery.metalType,
+                grossWeight: item.jewellery.grossWeight,
+                stoneWeight: item.jewellery.stoneWeight,
+                wastagePercent: item.jewellery.wastagePercent,
+                makingChargeType: item.jewellery.makingChargeType,
+                makingChargeValue: item.jewellery.makingChargeValue,
+                stoneValue: item.jewellery.stoneValue,
+                tagNumber: item.jewellery.tagNumber,
+                huidNumber: item.jewellery.huidNumber,
+              },
+            }),
           })),
           reason: reason || null,
           notes: notes || null,
@@ -446,7 +515,8 @@ export default function NewDebitNotePage() {
                   const lineTotal = item.quantity * item.unitCost * (1 - item.discount / 100);
                   const lineAmountKey = getLineAmountKey(item.id, lineTotal);
                   return (
-                  <div key={item.id} className="flex gap-2 items-start">
+                  <div key={item.id} className="space-y-2">
+                  <div className="flex gap-2 items-start">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-2">
                       <div className="sm:col-span-5">
                         <Label>{t("common.product")} *</Label>
@@ -589,6 +659,15 @@ export default function NewDebitNotePage() {
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     )}
+                  </div>
+                  {item.jewellery && (
+                    <JewelleryLineFields
+                      jewelleryData={item.jewellery}
+                      goldRate={getGoldRate(item.jewellery.purity, item.jewellery.metalType)}
+                      onUpdate={(field, value) => updateJewelleryField(item.id, field, value)}
+                      fmt={fmt}
+                    />
+                  )}
                   </div>
                 )})}
               </div>

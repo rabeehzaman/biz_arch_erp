@@ -189,8 +189,9 @@ function ProductsPageContent() {
     try {
       const response = await fetch("/api/products/stock");
       if (!response.ok) {
-        const fallbackResponse = await fetch("/api/products");
-        const fallbackData = await fallbackResponse.json();
+        const fallbackResponse = await fetch("/api/products?limit=200");
+        const fallbackJson = await fallbackResponse.json();
+        const fallbackData = Array.isArray(fallbackJson) ? fallbackJson : fallbackJson.data ?? [];
         const mapped = fallbackData.map((p: InventoryProduct) => ({ ...p, stockLots: [] }));
         setInventory(mapped);
         calculateSummary(mapped);

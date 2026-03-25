@@ -156,9 +156,10 @@ export default function SupplierPaymentsPage() {
   };
 
   const fetchInvoices = async () => {
-    const response = await fetch("/api/purchase-invoices");
-    const data = await response.json();
-    setInvoices(data.filter((inv: PurchaseInvoice) => Number(inv.balanceDue) > 0));
+    const response = await fetch("/api/purchase-invoices?limit=200");
+    const json = await response.json();
+    const items = Array.isArray(json) ? json : json.data ?? [];
+    setInvoices(items.filter((inv: PurchaseInvoice) => Number(inv.balanceDue) > 0));
   };
 
   const fetchAccounts = async () => {

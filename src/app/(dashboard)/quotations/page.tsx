@@ -239,8 +239,8 @@ export default function QuotationsPage() {
                     ))}
                   </div>
 
-                  <div className="hidden sm:block">
-                    <Table>
+                  <div className="hidden sm:block overflow-x-auto">
+                    <Table className="min-w-[800px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t("quotations.quotationNumber")}</TableHead>

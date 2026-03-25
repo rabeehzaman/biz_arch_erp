@@ -19,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { SidebarConfigDialog } from "../sidebar-config-dialog";
@@ -76,6 +76,12 @@ interface OrganizationDetails {
     jewelleryThemePreset: string | null;
     jewelleryEnabledPurities: string[];
     jewelleryEnabledMetals: string[];
+    isRestaurantModuleEnabled: boolean;
+    restaurantTablesEnabled: boolean;
+    restaurantKotPrintingEnabled: boolean;
+    restaurantThemeEnabled: boolean;
+    restaurantThemeColor: string | null;
+    restaurantThemePreset: string | null;
     weighMachineBarcodePrefix: string;
     weighMachineProductCodeLen: number;
     weighMachineWeightDigits: number;
@@ -175,6 +181,12 @@ export default function OrganizationDetailsPage() {
     const [jewelleryThemePreset, setJewelleryThemePreset] = useState("gold");
     const [jewelleryEnabledPurities, setJewelleryEnabledPurities] = useState<string[]>(["K24", "K22", "K21", "K18", "K14", "K9"]);
     const [jewelleryEnabledMetals, setJewelleryEnabledMetals] = useState<string[]>(["GOLD", "SILVER", "PLATINUM"]);
+    const [isRestaurantModuleEnabled, setIsRestaurantModuleEnabled] = useState(false);
+    const [restaurantTablesEnabled, setRestaurantTablesEnabled] = useState(true);
+    const [restaurantKotPrintingEnabled, setRestaurantKotPrintingEnabled] = useState(true);
+    const [restaurantThemeEnabled, setRestaurantThemeEnabled] = useState(true);
+    const [restaurantThemeColor, setRestaurantThemeColor] = useState("#c0392b");
+    const [restaurantThemePreset, setRestaurantThemePreset] = useState("bistro");
     const [weighMachineBarcodePrefix, setWeighMachineBarcodePrefix] = useState("77");
     const [weighMachineProductCodeLen, setWeighMachineProductCodeLen] = useState(5);
     const [weighMachineWeightDigits, setWeighMachineWeightDigits] = useState(5);
@@ -286,6 +298,12 @@ export default function OrganizationDetailsPage() {
         setJewelleryThemePreset(data.jewelleryThemePreset || "gold");
         setJewelleryEnabledPurities(data.jewelleryEnabledPurities || ["K24", "K22", "K21", "K18", "K14", "K9"]);
         setJewelleryEnabledMetals(data.jewelleryEnabledMetals || ["GOLD", "SILVER", "PLATINUM"]);
+        setIsRestaurantModuleEnabled(data.isRestaurantModuleEnabled || false);
+        setRestaurantTablesEnabled(data.restaurantTablesEnabled ?? true);
+        setRestaurantKotPrintingEnabled(data.restaurantKotPrintingEnabled ?? true);
+        setRestaurantThemeEnabled(data.restaurantThemeEnabled ?? true);
+        setRestaurantThemeColor(data.restaurantThemeColor || "#c0392b");
+        setRestaurantThemePreset(data.restaurantThemePreset || "bistro");
         setWeighMachineBarcodePrefix(data.weighMachineBarcodePrefix || "77");
         setWeighMachineProductCodeLen(data.weighMachineProductCodeLen || 5);
         setWeighMachineWeightDigits(data.weighMachineWeightDigits || 5);
@@ -449,6 +467,12 @@ export default function OrganizationDetailsPage() {
                     jewelleryThemePreset: jewelleryThemePreset || null,
                     jewelleryEnabledPurities,
                     jewelleryEnabledMetals,
+                    isRestaurantModuleEnabled,
+                    restaurantTablesEnabled,
+                    restaurantKotPrintingEnabled,
+                    restaurantThemeEnabled,
+                    restaurantThemeColor: restaurantThemeColor || null,
+                    restaurantThemePreset: restaurantThemePreset || null,
                     weighMachineBarcodePrefix,
                     weighMachineProductCodeLen,
                     weighMachineWeightDigits,
@@ -805,6 +829,13 @@ export default function OrganizationDetailsPage() {
                                         >
                                             <Gem className="mr-1.5 h-4 w-4" />
                                             {t("admin.jewelleryTab")}
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="restaurant"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            <UtensilsCrossed className="mr-1.5 h-4 w-4" />
+                                            Restaurant
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="subscription"
@@ -1752,6 +1783,90 @@ export default function OrganizationDetailsPage() {
                                                     </div>
                                                 </div>
                                             )}
+                                        </div>
+                                    )}
+                                </TabsContent>
+
+                                {/* RESTAURANT TAB */}
+                                <TabsContent value="restaurant" className="space-y-6 mt-0">
+                                    {/* Master Toggle */}
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="isRestaurantModuleEnabled" className="flex items-center gap-2">
+                                                <UtensilsCrossed className="h-4 w-4" />
+                                                Enable Restaurant Module
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Activate restaurant features including table management, KOT printing, and themed POS interface
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isRestaurantModuleEnabled"
+                                            checked={isRestaurantModuleEnabled}
+                                            onCheckedChange={setIsRestaurantModuleEnabled}
+                                        />
+                                    </div>
+
+                                    {isRestaurantModuleEnabled && (
+                                        <div className="space-y-8 pl-4 border-l-2 border-muted mt-4">
+                                            {/* Theme & Branding */}
+                                            <div className="space-y-4">
+                                                <h4 className="text-sm font-semibold text-foreground">Theme & Branding</h4>
+                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="space-y-0.5">
+                                                        <Label>Enable Restaurant Theme</Label>
+                                                        <p className="text-xs text-muted-foreground">Apply a restaurant-specific color theme to the POS and dashboard</p>
+                                                    </div>
+                                                    <Switch checked={restaurantThemeEnabled} onCheckedChange={setRestaurantThemeEnabled} />
+                                                </div>
+                                                {restaurantThemeEnabled && (
+                                                    <div className="grid max-w-sm grid-cols-1 gap-3 sm:grid-cols-2">
+                                                        <div className="space-y-2">
+                                                            <Label>Theme Preset</Label>
+                                                            <Select value={restaurantThemePreset} onValueChange={setRestaurantThemePreset}>
+                                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="bistro">Bistro</SelectItem>
+                                                                    <SelectItem value="olive-garden">Olive Garden</SelectItem>
+                                                                    <SelectItem value="midnight-diner">Midnight Diner</SelectItem>
+                                                                    <SelectItem value="terracotta">Terracotta</SelectItem>
+                                                                    <SelectItem value="custom">Custom</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        {restaurantThemePreset === "custom" && (
+                                                            <div className="space-y-2">
+                                                                <Label>Custom Color</Label>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Input value={restaurantThemeColor} onChange={(e) => setRestaurantThemeColor(e.target.value)} placeholder="#c0392b" className="flex-1" />
+                                                                    <input type="color" value={restaurantThemeColor || "#c0392b"} onChange={(e) => setRestaurantThemeColor(e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-input p-0.5" />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Sub-features */}
+                                            <div className="space-y-4 border-t border-border pt-6">
+                                                <h4 className="text-sm font-semibold text-foreground">Module Features</h4>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <Label>Table Management</Label>
+                                                            <Switch checked={restaurantTablesEnabled} onCheckedChange={setRestaurantTablesEnabled} />
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">Enable table selection in POS</p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <Label>KOT Printing</Label>
+                                                            <Switch checked={restaurantKotPrintingEnabled} onCheckedChange={setRestaurantKotPrintingEnabled} />
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">Enable kitchen order token printing</p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </TabsContent>

@@ -16,6 +16,7 @@ const {
 const ERP_URL = process.env.ERP_URL || 'https://erp.bizarch.in';
 const CONFIG_DIR = path.join(app.getPath('userData'));
 const CONFIG_FILE = path.join(CONFIG_DIR, 'printer-config.json');
+const KOT_CONFIG_FILE = path.join(CONFIG_DIR, 'kot-printer-config.json');
 
 let mainWindow;
 let splashWindow;
@@ -736,6 +737,32 @@ ipcMain.handle('get-printer-config', async () => {
 
 ipcMain.handle('save-printer-config', async (_event, config) => {
   return savePrinterConfig(config);
+});
+
+// KOT Printer config management
+ipcMain.handle('get-kot-printer-config', async () => {
+  try {
+    if (fs.existsSync(KOT_CONFIG_FILE)) {
+      return { success: true, config: PrinterService.normalizeConfig(
+        JSON.parse(fs.readFileSync(KOT_CONFIG_FILE, 'utf-8'))
+      )};
+    }
+  } catch (err) {
+    console.error('Failed to load KOT printer config:', err.message);
+  }
+  return { success: true, config: PrinterService.normalizeConfig({}) };
+});
+
+ipcMain.handle('save-kot-printer-config', async (_event, config) => {
+  try {
+    const normalized = PrinterService.normalizeConfig(config);
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    fs.writeFileSync(KOT_CONFIG_FILE, JSON.stringify(normalized, null, 2), 'utf-8');
+    return { success: true, config: normalized };
+  } catch (err) {
+    console.error('Failed to save KOT printer config:', err.message);
+    return { success: false };
+  }
 });
 
 // ─── Auto Updater ───────────────────────────────────────────────

@@ -40,6 +40,9 @@ import {
   Sparkles,
   Gem,
   Wrench,
+  UtensilsCrossed,
+  Grid3X3,
+  ClipboardList,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -120,6 +123,12 @@ const jewelleryShopNavigation = [
   { nameKey: "nav.jewelleryReports", href: "/jewellery-shop/reports", icon: BarChart3 },
 ];
 
+const restaurantNavigation = [
+  { nameKey: "nav.restaurantDashboard", href: "/restaurant/dashboard", icon: LayoutDashboard },
+  { nameKey: "nav.restaurantTables", href: "/restaurant/tables", icon: Grid3X3 },
+  { nameKey: "nav.restaurantKotHistory", href: "/restaurant/kot-history", icon: ClipboardList },
+];
+
 const superadminNavigation = [
   { nameKey: "nav.organizations", href: "/admin/organizations", icon: Building2 },
   { nameKey: "nav.whatsNew", href: "/admin/whats-new", icon: Sparkles },
@@ -156,6 +165,9 @@ const NAME_TO_KEY: Record<string, string> = {
   "Jewellery Repairs": "nav.jewelleryRepairs",
   "Customer Schemes": "nav.customerSchemes",
   "Jewellery Reports": "nav.jewelleryReports",
+  "Restaurant Dashboard": "nav.restaurantDashboard",
+  "Tables": "nav.restaurantTables",
+  "KOT History": "nav.restaurantKotHistory",
   "Profit by Items": "nav.profitByItems",
   "Sales by Customer": "nav.salesByCustomer",
   "Sales by Item": "nav.salesByItem",
@@ -282,9 +294,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const visibleInventory = filterItems(inventoryNavigation);
   const visibleMobileShop = filterItems(mobileShopNavigation);
   const visibleJewellery = filterItems(jewelleryShopNavigation);
+  const visibleRestaurant = filterItems(restaurantNavigation);
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
   const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
   const isJewelleryEnabled = session?.user?.isJewelleryModuleEnabled;
+  const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
 
   return (
     <>
@@ -372,6 +386,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 title="nav.jewelleryShop"
                 icon={Gem}
                 items={visibleJewellery}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            )}
+
+            {isRestaurantEnabled && visibleRestaurant.length > 0 && (
+              <CollapsibleSection
+                title="nav.restaurant"
+                icon={UtensilsCrossed}
+                items={visibleRestaurant}
                 pathname={pathname}
                 onNavigate={onNavigate}
               />

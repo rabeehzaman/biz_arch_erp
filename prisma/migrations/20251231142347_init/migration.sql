@@ -53,6 +53,19 @@ CREATE TABLE "customers" (
 );
 
 -- CreateTable
+CREATE TABLE "customer_assignments" (
+    "id" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "customer_assignments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "customer_assignments_customerId_userId_key" ON "customer_assignments"("customerId", "userId");
+
+-- CreateTable
 CREATE TABLE "invoices" (
     "id" TEXT NOT NULL,
     "invoiceNumber" TEXT NOT NULL,
@@ -147,3 +160,9 @@ ALTER TABLE "payments" ADD CONSTRAINT "payments_customerId_fkey" FOREIGN KEY ("c
 
 -- AddForeignKey
 ALTER TABLE "payments" ADD CONSTRAINT "payments_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "customer_assignments" ADD CONSTRAINT "customer_assignments_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "customer_assignments" ADD CONSTRAINT "customer_assignments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

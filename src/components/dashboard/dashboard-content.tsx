@@ -118,7 +118,7 @@ export function DashboardContent() {
       <StaggerItem>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <span className="section-chip">{today}</span>
+            <span className="section-chip md:hidden">{today}</span>
             <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
               {t("dashboard.title")}
             </h2>
@@ -244,7 +244,9 @@ export function DashboardContent() {
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <CardTitle className="text-slate-900">{t("dashboard.recentInvoices")}</CardTitle>
-                <p className="mt-1 text-sm text-slate-500">{t("dashboard.startByCreating")}</p>
+                {!isLoading && !dashboardStats?.recentInvoices?.length && (
+                  <p className="mt-1 text-sm text-slate-500">{t("dashboard.startByCreating")}</p>
+                )}
               </div>
               <Link href="/invoices">
                 <Button variant="outline">

@@ -79,6 +79,17 @@ model Organization {
   // Jewellery Enabled Purities & Metals
   jewelleryEnabledPurities          String[] @default(["K24", "K22", "K21", "K18", "K14", "K9"])
   jewelleryEnabledMetals            String[] @default(["GOLD", "SILVER", "PLATINUM"])
+
+  // Restaurant Module
+  isRestaurantModuleEnabled         Boolean  @default(false)
+  restaurantTablesEnabled           Boolean  @default(true)
+  restaurantKotPrintingEnabled      Boolean  @default(true)
+
+  // Restaurant Theme & Branding
+  restaurantThemeEnabled            Boolean  @default(true)
+  restaurantThemeColor              String?  @default("#c0392b")
+  restaurantThemePreset             String?  @default("bistro")
+
   weighMachineBarcodePrefix    String?  @default("77")
   weighMachineProductCodeLen   Int?     @default(5)
   weighMachineWeightDigits     Int?     @default(5)
@@ -190,6 +201,10 @@ model Organization {
   schemePayments             SchemePayment[]
   subscriptionLogs           SubscriptionLog[]
 
+  // Restaurant Module Relations
+  restaurantTables           RestaurantTable[]
+  kotOrders                  KOTOrder[]
+
   @@map("organizations")
 }
 
@@ -231,6 +246,7 @@ model User {
   posSessions         POSSession[]
   warehouseAccess     UserWarehouseAccess[]
   soldDevices         MobileDevice[]     @relation("SoldDevices")
+  kotOrders           KOTOrder[]
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -325,6 +341,9 @@ model Product {
 
   // Jewellery relation (1:1)
   jewelleryItem        JewelleryItem?
+
+  // Restaurant KOT relation
+  kotOrderItems        KOTOrderItem[]
 
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])
@@ -553,7 +572,9 @@ model Invoice {
   creditNotes        CreditNote[]
   mobileDevices      MobileDevice[]
 
-  // Jewellery relations
+  // Jewellery fields
+  isJewellerySale    Boolean  @default(false)
+  oldGoldDeduction   Decimal  @default(0) @db.Decimal(15, 2)
   oldGoldAdjustments OldGoldPurchase[]
 
   @@unique([organizationId, invoiceNumber])
@@ -601,6 +622,22 @@ model InvoiceItem {
 
   costOfGoodsSold Decimal @default(0) @db.Decimal(12, 2)
 
+  // Jewellery fields (only populated when item is jewellery-linked)
+  jewelleryItemId    String?
+  jewelleryItem      JewelleryItem? @relation("InvoiceJewelleryItems", fields: [jewelleryItemId], references: [id])
+  goldRate           Decimal?       @db.Decimal(12, 2)
+  purity             String?
+  metalType          String?
+  grossWeight        Decimal?       @db.Decimal(10, 3)
+  netWeight          Decimal?       @db.Decimal(10, 3)
+  fineWeight         Decimal?       @db.Decimal(10, 3)
+  wastagePercent     Decimal?       @db.Decimal(5, 2)
+  makingChargeType   String?
+  makingChargeValue  Decimal?       @db.Decimal(12, 2)
+  stoneValue         Decimal?       @db.Decimal(15, 2)
+  tagNumber          String?
+  huidNumber         String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -610,6 +647,7 @@ model InvoiceItem {
   @@index([organizationId])
   @@index([invoiceId])
   @@index([productId])
+  @@index([jewelleryItemId])
   @@map("invoice_items")
 }
 
@@ -703,12 +741,29 @@ model QuotationItem {
   sgstAmount Decimal @default(0) @db.Decimal(12, 2)
   igstAmount Decimal @default(0) @db.Decimal(12, 2)
 
+  // Jewellery fields (only populated when item is jewellery-linked)
+  jewelleryItemId    String?
+  jewelleryItem      JewelleryItem? @relation("QuotationJewelleryItems", fields: [jewelleryItemId], references: [id])
+  goldRate           Decimal?       @db.Decimal(12, 2)
+  purity             String?
+  metalType          String?
+  grossWeight        Decimal?       @db.Decimal(10, 3)
+  netWeight          Decimal?       @db.Decimal(10, 3)
+  fineWeight         Decimal?       @db.Decimal(10, 3)
+  wastagePercent     Decimal?       @db.Decimal(5, 2)
+  makingChargeType   String?
+  makingChargeValue  Decimal?       @db.Decimal(12, 2)
+  stoneValue         Decimal?       @db.Decimal(15, 2)
+  tagNumber          String?
+  huidNumber         String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
   @@index([quotationId])
   @@index([productId])
+  @@index([jewelleryItemId])
   @@map("quotation_items")
 }
 
@@ -818,6 +873,23 @@ model PurchaseInvoiceItem {
   vatAmount   Decimal? @db.Decimal(12, 2)
   vatCategory String?
 
+  // Jewellery fields (only populated when item is jewellery-linked)
+  jewelleryItemId    String?
+  jewelleryItem      JewelleryItem? @relation("PurchaseJewelleryItems", fields: [jewelleryItemId], references: [id])
+  goldRate           Decimal?       @db.Decimal(12, 2)
+  purity             String?
+  metalType          String?
+  grossWeight        Decimal?       @db.Decimal(10, 3)
+  netWeight          Decimal?       @db.Decimal(10, 3)
+  fineWeight         Decimal?       @db.Decimal(10, 3)
+  wastagePercent     Decimal?       @db.Decimal(5, 2)
+  makingChargeType   String?
+  makingChargeValue  Decimal?       @db.Decimal(12, 2)
+  stoneValue         Decimal?       @db.Decimal(15, 2)
+  tagNumber          String?
+  huidNumber         String?
+  karigarId          String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -826,6 +898,7 @@ model PurchaseInvoiceItem {
   @@index([organizationId])
   @@index([purchaseInvoiceId])
   @@index([productId])
+  @@index([jewelleryItemId])
   @@map("purchase_invoice_items")
 }
 
@@ -933,12 +1006,29 @@ model CreditNoteItem {
   stockLotId String?   @unique
   stockLot   StockLot?
 
+  // Jewellery fields (only populated when item is jewellery-linked)
+  jewelleryItemId    String?
+  jewelleryItem      JewelleryItem? @relation("CreditNoteJewelleryItems", fields: [jewelleryItemId], references: [id])
+  goldRate           Decimal?       @db.Decimal(12, 2)
+  purity             String?
+  metalType          String?
+  grossWeight        Decimal?       @db.Decimal(10, 3)
+  netWeight          Decimal?       @db.Decimal(10, 3)
+  fineWeight         Decimal?       @db.Decimal(10, 3)
+  wastagePercent     Decimal?       @db.Decimal(5, 2)
+  makingChargeType   String?
+  makingChargeValue  Decimal?       @db.Decimal(12, 2)
+  stoneValue         Decimal?       @db.Decimal(15, 2)
+  tagNumber          String?
+  huidNumber         String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
   @@index([creditNoteId])
   @@index([productId])
+  @@index([jewelleryItemId])
   @@map("credit_note_items")
 }
 
@@ -1034,6 +1124,22 @@ model DebitNoteItem {
   vatAmount   Decimal? @db.Decimal(12, 2)
   vatCategory String?
 
+  // Jewellery fields (only populated when item is jewellery-linked)
+  jewelleryItemId    String?
+  jewelleryItem      JewelleryItem? @relation("DebitNoteJewelleryItems", fields: [jewelleryItemId], references: [id])
+  goldRate           Decimal?       @db.Decimal(12, 2)
+  purity             String?
+  metalType          String?
+  grossWeight        Decimal?       @db.Decimal(10, 3)
+  netWeight          Decimal?       @db.Decimal(10, 3)
+  fineWeight         Decimal?       @db.Decimal(10, 3)
+  wastagePercent     Decimal?       @db.Decimal(5, 2)
+  makingChargeType   String?
+  makingChargeValue  Decimal?       @db.Decimal(12, 2)
+  stoneValue         Decimal?       @db.Decimal(15, 2)
+  tagNumber          String?
+  huidNumber         String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1042,6 +1148,7 @@ model DebitNoteItem {
   @@index([organizationId])
   @@index([debitNoteId])
   @@index([productId])
+  @@index([jewelleryItemId])
   @@map("debit_note_items")
 }
 
@@ -1465,6 +1572,7 @@ model POSSession {
   invoices    Invoice[]
   creditNotes CreditNote[]
   heldOrders  POSHeldOrder[]
+  kotOrders   KOTOrder[]
 
   @@unique([organizationId, sessionNumber])
   @@index([organizationId])
@@ -2258,6 +2366,13 @@ model JewelleryItem {
   stoneDetails       StoneDetail[]
   karigarTransactions KarigarTransaction[]
 
+  // Reverse relations for transaction items
+  invoiceItems          InvoiceItem[]          @relation("InvoiceJewelleryItems")
+  quotationItems        QuotationItem[]        @relation("QuotationJewelleryItems")
+  purchaseInvoiceItems  PurchaseInvoiceItem[]  @relation("PurchaseJewelleryItems")
+  creditNoteItems       CreditNoteItem[]       @relation("CreditNoteJewelleryItems")
+  debitNoteItems        DebitNoteItem[]         @relation("DebitNoteJewelleryItems")
+
   @@unique([organizationId, tagNumber])
   @@unique([organizationId, huidNumber])
   @@index([organizationId])
@@ -2470,4 +2585,107 @@ model SchemePayment {
   @@index([schemeId])
   @@index([organizationId])
   @@map("scheme_payments")
+}
+
+// ==================== RESTAURANT MODULE ====================
+
+enum RestaurantTableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  CLEANING
+}
+
+enum KOTStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum KOTType {
+  STANDARD
+  FOLLOWUP
+  VOID
+}
+
+enum RestaurantOrderType {
+  DINE_IN
+  TAKEAWAY
+}
+
+model RestaurantTable {
+  id              String                @id @default(cuid())
+  organizationId  String
+  organization    Organization          @relation(fields: [organizationId], references: [id])
+  number          Int
+  name            String
+  capacity        Int                   @default(4)
+  floor           String?
+  section         String?
+  status          RestaurantTableStatus @default(AVAILABLE)
+  isActive        Boolean               @default(true)
+  sortOrder       Int                   @default(0)
+  guestCount      Int?
+  currentOrderId  String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  kotOrders       KOTOrder[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("restaurant_tables")
+}
+
+model KOTOrder {
+  id                  String              @id @default(cuid())
+  kotNumber           String
+  organizationId      String
+  organization        Organization        @relation(fields: [organizationId], references: [id])
+  tableId             String?
+  table               RestaurantTable?    @relation(fields: [tableId], references: [id])
+  posSessionId        String?
+  posSession          POSSession?         @relation(fields: [posSessionId], references: [id])
+  kotType             KOTType             @default(STANDARD)
+  orderType           RestaurantOrderType @default(DINE_IN)
+  status              KOTStatus           @default(PENDING)
+  serverName          String?
+  specialInstructions String?             @db.Text
+  guestCount          Int?
+  createdById         String?
+  createdBy           User?               @relation(fields: [createdById], references: [id])
+  printedAt           DateTime?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  items               KOTOrderItem[]
+
+  @@unique([organizationId, kotNumber])
+  @@index([organizationId])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([tableId])
+  @@index([posSessionId])
+  @@map("kot_orders")
+}
+
+model KOTOrderItem {
+  id           String    @id @default(cuid())
+  kotOrderId   String
+  kotOrder     KOTOrder  @relation(fields: [kotOrderId], references: [id], onDelete: Cascade)
+  productId    String?
+  product      Product?  @relation(fields: [productId], references: [id])
+  name         String
+  nameAr       String?
+  quantity     Decimal   @db.Decimal(10, 2)
+  modifiers    Json?
+  notes        String?
+  isNew        Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+
+  @@index([kotOrderId])
+  @@map("kot_order_items")
 }

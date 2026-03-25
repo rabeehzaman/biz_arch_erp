@@ -19,7 +19,7 @@ interface CategoryTabsProps {
 export function CategoryTabs({ categories, selected, onSelect }: CategoryTabsProps) {
   const { t } = useLanguage();
   return (
-    <div className="flex flex-wrap gap-2 pb-1">
+    <div className="flex gap-2 pb-1 overflow-x-auto sm:flex-wrap" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
       <button
         onClick={() => onSelect(null)}
         className={cn(

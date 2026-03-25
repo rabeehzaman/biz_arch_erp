@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId, paymentType, isTaxInclusive, applyRoundOff } = body;
+    const { customerId, issueDate, dueDate, items, notes, terms, branchId, warehouseId, paymentType, isTaxInclusive, applyRoundOff, oldGoldAdjustmentId } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -260,7 +260,19 @@ export async function POST(request: NextRequest) {
         roundOffMode,
         shouldApplyRoundOff
       );
-      const total = roundedTotal;
+
+      // Handle old gold adjustment
+      let oldGoldDeductionAmount = 0;
+      if (oldGoldAdjustmentId) {
+        const oldGold = await tx.oldGoldPurchase.findFirst({
+          where: { id: oldGoldAdjustmentId, organizationId, adjustedAgainstInvoiceId: null },
+        });
+        if (oldGold) {
+          oldGoldDeductionAmount = Number(oldGold.totalValue);
+        }
+      }
+
+      const total = Math.max(0, roundedTotal - oldGoldDeductionAmount);
       const balanceDue = total;
 
       // Create the invoice
@@ -296,6 +308,9 @@ export async function POST(request: NextRequest) {
           notes: notes || null,
           terms: terms || null,
           isTaxInclusive: isTaxInclusive ?? null,
+          oldGoldDeduction: oldGoldDeductionAmount,
+          // Flag if any items are jewellery
+          isJewellerySale: items.some((item: { jewellery?: unknown }) => !!item.jewellery),
           items: {
             create: items.map((item: {
               productId?: string;
@@ -309,30 +324,65 @@ export async function POST(request: NextRequest) {
               conversionFactor?: number;
               vatRate?: number;
               vatCategory?: string;
-            }, idx: number) => ({
-              organizationId,
-              productId: item.productId || null,
-              description: item.description,
-              quantity: item.quantity,
-              unitId: item.unitId || null,
-              conversionFactor: item.conversionFactor || 1,
-              unitPrice: item.unitPrice,
-              discount: item.discount || 0,
-              total: lineAmounts[idx].taxableAmount,
-              hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
-              gstRate: gstResult.lineGST[idx]?.gstRate || 0,
-              cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
-              sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
-              igstRate: gstResult.lineGST[idx]?.igstRate || 0,
-              cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
-              sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
-              igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
-              // Saudi VAT per line
-              vatRate: lineVATResults[idx]?.vatRate ?? null,
-              vatAmount: lineVATResults[idx]?.vatAmount ?? null,
-              vatCategory: lineVATResults[idx]?.vatCategory ?? null,
-              costOfGoodsSold: 0, // Will be updated below
-            })),
+              jewellery?: {
+                jewelleryItemId: string;
+                goldRate: number;
+                purity: string;
+                metalType: string;
+                grossWeight: number;
+                stoneWeight: number;
+                wastagePercent: number;
+                makingChargeType: string;
+                makingChargeValue: number;
+                stoneValue: number;
+                tagNumber: string;
+                huidNumber: string;
+              };
+            }, idx: number) => {
+              const jw = item.jewellery;
+              const netWeight = jw ? Math.max(0, jw.grossWeight - (jw.stoneWeight || 0)) : undefined;
+              const PURITY_MULT: Record<string, number> = { K24: 1, K22: 22/24, K21: 21/24, K18: 18/24, K14: 14/24, K9: 9/24 };
+              const fineWeight = jw && netWeight ? netWeight * (PURITY_MULT[jw.purity] ?? 1) : undefined;
+
+              return {
+                organizationId,
+                productId: item.productId || null,
+                description: item.description,
+                quantity: item.quantity,
+                unitId: item.unitId || null,
+                conversionFactor: item.conversionFactor || 1,
+                unitPrice: item.unitPrice,
+                discount: item.discount || 0,
+                total: lineAmounts[idx].taxableAmount,
+                hsnCode: gstResult.lineGST[idx]?.hsnCode || item.hsnCode || null,
+                gstRate: gstResult.lineGST[idx]?.gstRate || 0,
+                cgstRate: gstResult.lineGST[idx]?.cgstRate || 0,
+                sgstRate: gstResult.lineGST[idx]?.sgstRate || 0,
+                igstRate: gstResult.lineGST[idx]?.igstRate || 0,
+                cgstAmount: gstResult.lineGST[idx]?.cgstAmount || 0,
+                sgstAmount: gstResult.lineGST[idx]?.sgstAmount || 0,
+                igstAmount: gstResult.lineGST[idx]?.igstAmount || 0,
+                // Saudi VAT per line
+                vatRate: lineVATResults[idx]?.vatRate ?? null,
+                vatAmount: lineVATResults[idx]?.vatAmount ?? null,
+                vatCategory: lineVATResults[idx]?.vatCategory ?? null,
+                costOfGoodsSold: 0, // Will be updated below
+                // Jewellery fields (null when not jewellery)
+                jewelleryItemId: jw?.jewelleryItemId ?? null,
+                goldRate: jw?.goldRate ?? null,
+                purity: jw?.purity ?? null,
+                metalType: jw?.metalType ?? null,
+                grossWeight: jw?.grossWeight ?? null,
+                netWeight: netWeight ?? null,
+                fineWeight: fineWeight ?? null,
+                wastagePercent: jw?.wastagePercent ?? null,
+                makingChargeType: jw?.makingChargeType ?? null,
+                makingChargeValue: jw?.makingChargeValue ?? null,
+                stoneValue: jw?.stoneValue ?? null,
+                tagNumber: jw?.tagNumber ?? null,
+                huidNumber: jw?.huidNumber ?? null,
+              };
+            }),
           },
         },
         include: {
@@ -340,6 +390,25 @@ export async function POST(request: NextRequest) {
           items: true,
         },
       });
+
+      // Mark jewellery items as SOLD
+      const jewelleryItemIds = items
+        .filter((item: { jewellery?: { jewelleryItemId: string } }) => item.jewellery?.jewelleryItemId)
+        .map((item: { jewellery: { jewelleryItemId: string } }) => item.jewellery.jewelleryItemId);
+      if (jewelleryItemIds.length > 0) {
+        await tx.jewelleryItem.updateMany({
+          where: { id: { in: jewelleryItemIds }, organizationId },
+          data: { status: "SOLD" },
+        });
+      }
+
+      // Link old gold adjustment to this invoice
+      if (oldGoldAdjustmentId && oldGoldDeductionAmount > 0) {
+        await tx.oldGoldPurchase.update({
+          where: { id: oldGoldAdjustmentId },
+          data: { adjustedAgainstInvoiceId: invoice.id },
+        });
+      }
 
       // Collect warnings from FIFO consumption
       const warnings: string[] = [];

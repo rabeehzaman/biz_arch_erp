@@ -19,10 +19,12 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get("customerId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const unadjusted = searchParams.get("unadjusted") === "true";
 
     const where: Record<string, unknown> = { organizationId };
 
     if (customerId) where.customerId = customerId;
+    if (unadjusted) where.adjustedAgainstInvoiceId = null;
 
     if (from || to) {
       const dateFilter: Record<string, Date> = {};

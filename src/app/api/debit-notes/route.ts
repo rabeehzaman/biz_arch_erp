@@ -278,7 +278,27 @@ export async function POST(request: NextRequest) {
                 conversionFactor?: number;
                 vatRate?: number;
                 vatCategory?: string;
-              }, idx: number) => ({
+                jewellery?: {
+                  jewelleryItemId: string;
+                  goldRate: number;
+                  purity: string;
+                  metalType: string;
+                  grossWeight: number;
+                  stoneWeight: number;
+                  wastagePercent: number;
+                  makingChargeType: string;
+                  makingChargeValue: number;
+                  stoneValue: number;
+                  tagNumber: string;
+                  huidNumber: string;
+                };
+              }, idx: number) => {
+                const jw = item.jewellery;
+                const netWeight = jw ? Math.max(0, jw.grossWeight - (jw.stoneWeight || 0)) : undefined;
+                const PURITY_MULT: Record<string, number> = { K24: 1, K22: 22/24, K21: 21/24, K18: 18/24, K14: 14/24, K9: 9/24 };
+                const fineWeight = jw && netWeight ? netWeight * (PURITY_MULT[jw.purity] ?? 1) : undefined;
+
+                return {
                 organizationId,
                 purchaseInvoiceItemId: item.purchaseInvoiceItemId || null,
                 productId: item.productId,
@@ -300,7 +320,22 @@ export async function POST(request: NextRequest) {
                 vatRate: lineVATResults[idx]?.vatRate ?? null,
                 vatAmount: lineVATResults[idx]?.vatAmount ?? null,
                 vatCategory: lineVATResults[idx]?.vatCategory ?? null,
-              })
+                // Jewellery fields (null when not jewellery)
+                jewelleryItemId: jw?.jewelleryItemId ?? null,
+                goldRate: jw?.goldRate ?? null,
+                purity: jw?.purity ?? null,
+                metalType: jw?.metalType ?? null,
+                grossWeight: jw?.grossWeight ?? null,
+                netWeight: netWeight ?? null,
+                fineWeight: fineWeight ?? null,
+                wastagePercent: jw?.wastagePercent ?? null,
+                makingChargeType: jw?.makingChargeType ?? null,
+                makingChargeValue: jw?.makingChargeValue ?? null,
+                stoneValue: jw?.stoneValue ?? null,
+                tagNumber: jw?.tagNumber ?? null,
+                huidNumber: jw?.huidNumber ?? null,
+              };
+              }
             ),
           },
         },
@@ -309,6 +344,17 @@ export async function POST(request: NextRequest) {
           items: true,
         },
       });
+
+      // Revert jewellery items to IN_STOCK (returned to supplier)
+      const jewelleryItemIds = items
+        .filter((item: { jewellery?: { jewelleryItemId: string } }) => item.jewellery?.jewelleryItemId)
+        .map((item: { jewellery: { jewelleryItemId: string } }) => item.jewellery.jewelleryItemId);
+      if (jewelleryItemIds.length > 0) {
+        await tx.jewelleryItem.updateMany({
+          where: { id: { in: jewelleryItemIds }, organizationId },
+          data: { status: "IN_STOCK" },
+        });
+      }
 
       // Consume stock for each item (reduces inventory)
       const productsToRecalculate = new Set<string>();

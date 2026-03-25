@@ -220,7 +220,7 @@ export function GlobalScanner() {
     return (
         <>
             {!open && !hasBlockingOverlay && (
-                <div className="fixed bottom-24 right-4 z-[60]">
+                <div className="fixed bottom-[7.5rem] right-4 z-[60]">
                     <button
                         onClick={() => setOpen(true)}
                         className={`flex h-14 w-14 items-center justify-center rounded-full border-2 border-white text-white shadow-lg transition-transform active:scale-95 ${

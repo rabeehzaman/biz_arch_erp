@@ -239,28 +239,63 @@ export async function POST(request: NextRequest) {
               hsnCode?: string;
               unitId?: string;
               conversionFactor?: number;
-            }, index: number) => ({
-              organizationId,
-              productId: item.productId,
-              description: item.description,
-              quantity: item.quantity,
-              unitId: item.unitId || null,
-              conversionFactor: item.conversionFactor || 1,
-              unitCost: item.unitCost,
-              discount: item.discount || 0,
-              total: lineAmounts[index].taxableAmount,
-              hsnCode: saudiEnabled ? null : (gstResult.lineGST[index]?.hsnCode || null),
-              gstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.gstRate || 0),
-              cgstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.cgstRate || 0),
-              sgstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.sgstRate || 0),
-              igstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.igstRate || 0),
-              cgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.cgstAmount || 0),
-              sgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.sgstAmount || 0),
-              igstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.igstAmount || 0),
-              vatRate: lineVATResults[index]?.vatRate ?? null,
-              vatAmount: lineVATResults[index]?.vatAmount ?? null,
-              vatCategory: lineVATResults[index]?.vatCategory ?? null,
-            })),
+              jewellery?: {
+                jewelleryItemId: string;
+                goldRate: number;
+                purity: string;
+                metalType: string;
+                grossWeight: number;
+                stoneWeight: number;
+                wastagePercent: number;
+                makingChargeType: string;
+                makingChargeValue: number;
+                stoneValue: number;
+                tagNumber: string;
+                huidNumber: string;
+              };
+            }, index: number) => {
+              const jw = item.jewellery;
+              const netWeight = jw ? Math.max(0, jw.grossWeight - (jw.stoneWeight || 0)) : undefined;
+              const PURITY_MULT: Record<string, number> = { K24: 1, K22: 22/24, K21: 21/24, K18: 18/24, K14: 14/24, K9: 9/24 };
+              const fineWeight = jw && netWeight ? netWeight * (PURITY_MULT[jw.purity] ?? 1) : undefined;
+
+              return {
+                organizationId,
+                productId: item.productId,
+                description: item.description,
+                quantity: item.quantity,
+                unitId: item.unitId || null,
+                conversionFactor: item.conversionFactor || 1,
+                unitCost: item.unitCost,
+                discount: item.discount || 0,
+                total: lineAmounts[index].taxableAmount,
+                hsnCode: saudiEnabled ? null : (gstResult.lineGST[index]?.hsnCode || null),
+                gstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.gstRate || 0),
+                cgstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.cgstRate || 0),
+                sgstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.sgstRate || 0),
+                igstRate: saudiEnabled ? 0 : (gstResult.lineGST[index]?.igstRate || 0),
+                cgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.cgstAmount || 0),
+                sgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.sgstAmount || 0),
+                igstAmount: saudiEnabled ? 0 : (gstResult.lineGST[index]?.igstAmount || 0),
+                vatRate: lineVATResults[index]?.vatRate ?? null,
+                vatAmount: lineVATResults[index]?.vatAmount ?? null,
+                vatCategory: lineVATResults[index]?.vatCategory ?? null,
+                // Jewellery fields
+                jewelleryItemId: jw?.jewelleryItemId ?? null,
+                goldRate: jw?.goldRate ?? null,
+                purity: jw?.purity ?? null,
+                metalType: jw?.metalType ?? null,
+                grossWeight: jw?.grossWeight ?? null,
+                netWeight: netWeight ?? null,
+                fineWeight: fineWeight ?? null,
+                wastagePercent: jw?.wastagePercent ?? null,
+                makingChargeType: jw?.makingChargeType ?? null,
+                makingChargeValue: jw?.makingChargeValue ?? null,
+                stoneValue: jw?.stoneValue ?? null,
+                tagNumber: jw?.tagNumber ?? null,
+                huidNumber: jw?.huidNumber ?? null,
+              };
+            }),
           },
         },
         include: {

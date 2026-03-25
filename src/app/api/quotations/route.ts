@@ -194,7 +194,27 @@ export async function POST(request: NextRequest) {
             hsnCode?: string;
             unitId?: string;
             conversionFactor?: number;
-          }, idx: number) => ({
+            jewellery?: {
+              jewelleryItemId: string;
+              goldRate: number;
+              purity: string;
+              metalType: string;
+              grossWeight: number;
+              stoneWeight: number;
+              wastagePercent: number;
+              makingChargeType: string;
+              makingChargeValue: number;
+              stoneValue: number;
+              tagNumber: string;
+              huidNumber: string;
+            };
+          }, idx: number) => {
+            const jw = item.jewellery;
+            const netWeight = jw ? Math.max(0, jw.grossWeight - (jw.stoneWeight || 0)) : undefined;
+            const PURITY_MULT: Record<string, number> = { K24: 1, K22: 22/24, K21: 21/24, K18: 18/24, K14: 14/24, K9: 9/24 };
+            const fineWeight = jw && netWeight ? netWeight * (PURITY_MULT[jw.purity] ?? 1) : undefined;
+
+            return {
             organizationId,
             productId: item.productId || null,
             description: item.description,
@@ -212,7 +232,22 @@ export async function POST(request: NextRequest) {
             cgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.cgstAmount || 0),
             sgstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.sgstAmount || 0),
             igstAmount: saudiEnabled ? 0 : (gstResult.lineGST[idx]?.igstAmount || 0),
-          })),
+            // Jewellery fields
+            jewelleryItemId: jw?.jewelleryItemId ?? null,
+            goldRate: jw?.goldRate ?? null,
+            purity: jw?.purity ?? null,
+            metalType: jw?.metalType ?? null,
+            grossWeight: jw?.grossWeight ?? null,
+            netWeight: netWeight ?? null,
+            fineWeight: fineWeight ?? null,
+            wastagePercent: jw?.wastagePercent ?? null,
+            makingChargeType: jw?.makingChargeType ?? null,
+            makingChargeValue: jw?.makingChargeValue ?? null,
+            stoneValue: jw?.stoneValue ?? null,
+            tagNumber: jw?.tagNumber ?? null,
+            huidNumber: jw?.huidNumber ?? null,
+            };
+          }),
         },
       },
       include: {

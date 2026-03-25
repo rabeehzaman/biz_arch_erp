@@ -6,7 +6,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw } from "lucide-react";
+import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw, UtensilsCrossed } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { Badge } from "@/components/ui/badge";
 
 import { cn } from "@/lib/utils";
 import { POSHeader } from "@/components/pos/pos-header";
@@ -41,6 +42,9 @@ import type { PaymentEntry } from "@/components/pos/split-payment-form";
 import type { ReceiptData } from "@/components/pos/receipt";
 import { ReturnPanel } from "@/components/pos/return-panel";
 import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
+import { TableSelect } from "@/components/pos/table-select";
+import { printKOT } from "@/lib/restaurant/kot-print";
+import type { KOTReceiptData } from "@/components/restaurant/kot-receipt";
 import {
   cacheReceiptArtifactWithConfig,
   isElectronEnvironment,
@@ -80,6 +84,25 @@ interface CurrentSessionResponse {
   session: POSSessionData | null;
 }
 
+interface POSJewelleryItem {
+  id: string;
+  tagNumber: string;
+  huidNumber: string | null;
+  metalType: string;
+  purity: string;
+  grossWeight: number;
+  stoneWeight: number;
+  netWeight: number;
+  fineWeight: number;
+  makingChargeType: string;
+  makingChargeValue: number;
+  wastagePercent: number;
+  stoneValue: number;
+  costPrice: number;
+  status: string;
+  categoryName: string | null;
+}
+
 interface POSProduct {
   id: string;
   name: string;
@@ -94,6 +117,7 @@ interface POSProduct {
   weighMachineCode: string | null;
   isService?: boolean;
   isBundle?: boolean;
+  jewelleryItem?: POSJewelleryItem | null;
 }
 
 interface Category {
@@ -223,6 +247,25 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         };
         return buildCartState(newItems, state.revision);
       }
+      // Build jewellery data if product is jewellery-linked
+      const ji = product.jewelleryItem;
+      const jewelleryData = ji ? {
+        jewelleryItemId: ji.id,
+        goldRate: 0, // Will be set from live rate
+        purity: ji.purity,
+        metalType: ji.metalType,
+        grossWeight: ji.grossWeight,
+        stoneWeight: ji.stoneWeight,
+        netWeight: ji.netWeight,
+        fineWeight: ji.fineWeight,
+        wastagePercent: ji.wastagePercent,
+        makingChargeType: ji.makingChargeType,
+        makingChargeValue: ji.makingChargeValue,
+        stoneValue: ji.stoneValue,
+        tagNumber: ji.tagNumber,
+        huidNumber: ji.huidNumber,
+      } : null;
+
       const newItems = [
         ...state.items,
         {
@@ -233,7 +276,8 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           discount: 0,
           stockQuantity: product.stockQuantity ?? 0,
           gstRate: Number(product.gstRate) || 0,
-          hsnCode: product.hsnCode || undefined,
+          hsnCode: product.hsnCode || (ji ? "7113" : undefined),
+          jewellery: jewelleryData,
         },
       ];
       return buildCartState(newItems, state.revision);
@@ -335,6 +379,25 @@ function POSTerminalContent() {
   const previousCartMetricsRef = useRef({ items: 0, quantity: 0 });
   const checkoutInFlightRef = useRef(false);
   const checkoutCounterRef = useRef(0);
+
+  // Restaurant state
+  const isRestaurantEnabled = !!(authSession?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
+  const [selectedTable, setSelectedTable] = useState<{ id: string; number: number; name: string; section?: string; capacity: number } | null>(null);
+  const [showTableSelect, setShowTableSelect] = useState(false);
+  const [orderType, setOrderType] = useState<"DINE_IN" | "TAKEAWAY">("DINE_IN");
+  const [guestCount, setGuestCount] = useState<number>(1);
+  const [kotSentItems, setKotSentItems] = useState<Set<string>>(new Set());
+  const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
+
+  // Listen for guest count from table selection
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const count = (e as CustomEvent).detail;
+      if (typeof count === "number") setGuestCount(count);
+    };
+    window.addEventListener("restaurant-guest-count", handler);
+    return () => window.removeEventListener("restaurant-guest-count", handler);
+  }, []);
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null }>(
@@ -782,6 +845,86 @@ function POSTerminalContent() {
     setShowCloseDialog(true);
   };
 
+  // ── Send to Kitchen (KOT) ─────────────────────────────────────────
+
+  const handleSendToKitchen = async () => {
+    // Get only unsent items
+    const unsentItems = cartState.items.filter(item => !kotSentItems.has(item.productId));
+    if (unsentItems.length === 0) {
+      toast.info("No new items to send to kitchen");
+      return;
+    }
+
+    try {
+      const kotType = kotOrderIds.length === 0 ? "STANDARD" : "FOLLOWUP";
+      const res = await fetch("/api/restaurant/kot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tableId: selectedTable?.id || null,
+          posSessionId: posSession?.id || null,
+          kotType,
+          orderType,
+          serverName: authSession?.user?.name || undefined,
+          guestCount: guestCount || undefined,
+          items: unsentItems.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            isNew: kotType === "FOLLOWUP",
+          })),
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create KOT");
+      const kot = await res.json();
+
+      // Mark items as sent
+      const newSentItems = new Set(kotSentItems);
+      unsentItems.forEach(item => newSentItems.add(item.productId));
+      setKotSentItems(newSentItems);
+      setKotOrderIds(prev => [...prev, kot.id]);
+
+      // Print KOT
+      try {
+        const kotReceiptData: KOTReceiptData = {
+          kotNumber: kot.kotNumber,
+          kotType: kot.kotType,
+          orderType: kot.orderType,
+          tableName: selectedTable?.name,
+          tableNumber: selectedTable?.number,
+          section: selectedTable?.section || undefined,
+          serverName: authSession?.user?.name || undefined,
+          guestCount: guestCount || undefined,
+          timestamp: new Date(),
+          items: unsentItems.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            isNew: kotType === "FOLLOWUP",
+          })),
+        };
+        await printKOT(kotReceiptData);
+      } catch (printErr) {
+        console.error("KOT print failed:", printErr);
+        // Don't fail the KOT creation just because printing failed
+      }
+
+      toast.success(`KOT ${kot.kotNumber} sent to kitchen`);
+
+      // Update table status to OCCUPIED if it was AVAILABLE
+      if (selectedTable?.id) {
+        fetch(`/api/restaurant/tables/${selectedTable.id}/status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "OCCUPIED", guestCount }),
+        }).catch(() => {});
+      }
+    } catch (error) {
+      console.error("Failed to send KOT:", error);
+      toast.error("Failed to send order to kitchen");
+    }
+  };
+
   // ── Checkout ───────────────────────────────────────────────────────
 
   const handleCheckout = async (payments: PaymentEntry[]) => {
@@ -843,6 +986,8 @@ function POSTerminalContent() {
           heldOrderId: completedHeldOrderId || undefined,
           notes: undefined,
           idempotencyKey,
+          tableId: selectedTable?.id || undefined,
+          kotOrderIds: kotOrderIds.length > 0 ? kotOrderIds : undefined,
         }),
       });
       const responseReceivedAt = performance.now();
@@ -931,6 +1076,13 @@ function POSTerminalContent() {
 
       applyOptimisticCheckoutUpdates(completedCart, completedTotal, completedHeldOrderId);
       revalidateCheckoutDataInBackground();
+
+      // Reset restaurant state
+      setSelectedTable(null);
+      setOrderType("DINE_IN");
+      setGuestCount(1);
+      setKotSentItems(new Set());
+      setKotOrderIds([]);
 
       const syncSuccessWorkMs = roundTimingMs(performance.now() - responseParsedAt);
       const clientTimings = {
@@ -1125,6 +1277,8 @@ function POSTerminalContent() {
         onReturn={toggleReturnMode}
         isReturnMode={isReturnMode}
         onPreviousOrders={openPreviousOrders}
+        selectedTable={selectedTable}
+        isRestaurantMode={isRestaurantEnabled}
       />
 
       {/* Main Content */}
@@ -1190,6 +1344,23 @@ function POSTerminalContent() {
                 />
               </div>
 
+              {/* Restaurant Table Selection */}
+              {isRestaurantEnabled && (
+                <div className="border-b p-3 flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowTableSelect(true)}>
+                    {selectedTable ? `Table ${selectedTable.number}` : t("restaurant.selectTable")}
+                  </Button>
+                  {selectedTable && (
+                    <Badge variant="secondary">{guestCount} guests</Badge>
+                  )}
+                  {orderType === "TAKEAWAY" && (
+                    <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200">
+                      {t("restaurant.takeaway")}
+                    </Badge>
+                  )}
+                </div>
+              )}
+
               {/* Return Mode Banner */}
               {isReturnMode && (
                 <div className="mx-3 mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 flex items-center gap-2">
@@ -1228,6 +1399,22 @@ function POSTerminalContent() {
                   className="border-t p-3 space-y-3"
                 >
                   <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
+                  {isRestaurantEnabled && (
+                    <Button
+                      variant="default"
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                      onClick={handleSendToKitchen}
+                      disabled={cartState.items.length === 0}
+                    >
+                      <UtensilsCrossed className="h-4 w-4 mr-2" />
+                      {t("restaurant.sendToKitchen")}
+                      {kotSentItems.size > 0 && cartState.items.some(i => !kotSentItems.has(i.productId)) && (
+                        <Badge variant="secondary" className="ml-2">
+                          {cartState.items.filter(i => !kotSentItems.has(i.productId)).length} new
+                        </Badge>
+                      )}
+                    </Button>
+                  )}
                   <div className="flex gap-2">
                     {!isReturnMode && (
                       <Button
@@ -1533,6 +1720,23 @@ function POSTerminalContent() {
         sessionId={posSession?.id ?? null}
         companySettings={companySettings}
       />
+
+      {isRestaurantEnabled && (
+        <TableSelect
+          open={showTableSelect}
+          onOpenChange={setShowTableSelect}
+          onSelectTable={(table) => {
+            setSelectedTable(table);
+            setOrderType("DINE_IN");
+            setShowTableSelect(false);
+          }}
+          onTakeaway={() => {
+            setSelectedTable(null);
+            setOrderType("TAKEAWAY");
+            setShowTableSelect(false);
+          }}
+        />
+      )}
     </PageAnimation>
   );
 }

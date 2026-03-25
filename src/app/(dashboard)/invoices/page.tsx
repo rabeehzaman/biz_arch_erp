@@ -328,8 +328,8 @@ export default function InvoicesPage() {
                     })}
                   </div>
 
-                  <div className="hidden sm:block">
-                    <Table>
+                  <div className="hidden sm:block overflow-x-auto">
+                    <Table className="min-w-[900px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-10">

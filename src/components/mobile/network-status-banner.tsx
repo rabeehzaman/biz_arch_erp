@@ -11,6 +11,7 @@ export function NetworkStatusBanner() {
   const [isOnline, setIsOnline] = useState(true);
   const [showBackOnline, setShowBackOnline] = useState(false);
   const wasOfflineRef = useRef(false);
+  const mountedAtRef = useRef(Date.now());
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -18,7 +19,10 @@ export function NetworkStatusBanner() {
 
     const handleOnline = () => {
       setIsOnline(true);
-      if (wasOfflineRef.current) {
+      // Suppress false "Back online" during initial page load (first 3s).
+      // Service workers / HMR can trigger spurious online events on mount.
+      const timeSinceMount = Date.now() - mountedAtRef.current;
+      if (wasOfflineRef.current && timeSinceMount > 3000) {
         setShowBackOnline(true);
         setTimeout(() => setShowBackOnline(false), 2000);
       }

@@ -45,6 +45,26 @@ export async function GET() {
             },
           },
         },
+        jewelleryItem: {
+          select: {
+            id: true,
+            tagNumber: true,
+            huidNumber: true,
+            metalType: true,
+            purity: true,
+            grossWeight: true,
+            stoneWeight: true,
+            netWeight: true,
+            fineWeight: true,
+            makingChargeType: true,
+            makingChargeValue: true,
+            wastagePercent: true,
+            stoneValue: true,
+            costPrice: true,
+            status: true,
+            category: { select: { name: true } },
+          },
+        },
       },
     });
 
@@ -80,6 +100,24 @@ export async function GET() {
           ),
         }))
         : [],
+      jewelleryItem: p.jewelleryItem ? {
+        id: p.jewelleryItem.id,
+        tagNumber: p.jewelleryItem.tagNumber,
+        huidNumber: p.jewelleryItem.huidNumber,
+        metalType: p.jewelleryItem.metalType,
+        purity: p.jewelleryItem.purity,
+        grossWeight: Number(p.jewelleryItem.grossWeight),
+        stoneWeight: Number(p.jewelleryItem.stoneWeight),
+        netWeight: Number(p.jewelleryItem.netWeight),
+        fineWeight: Number(p.jewelleryItem.fineWeight),
+        makingChargeType: p.jewelleryItem.makingChargeType,
+        makingChargeValue: Number(p.jewelleryItem.makingChargeValue),
+        wastagePercent: Number(p.jewelleryItem.wastagePercent),
+        stoneValue: Number(p.jewelleryItem.stoneValue),
+        costPrice: Number(p.jewelleryItem.costPrice),
+        status: p.jewelleryItem.status,
+        categoryName: p.jewelleryItem.category?.name || null,
+      } : null,
     }));
 
     return NextResponse.json(result);

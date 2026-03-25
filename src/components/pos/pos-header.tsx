@@ -28,6 +28,8 @@ interface POSHeaderProps {
   onReturn?: () => void;
   isReturnMode?: boolean;
   onPreviousOrders?: () => void;
+  selectedTable?: { number: number; name: string } | null;
+  isRestaurantMode?: boolean;
 }
 
 function POSClock() {
@@ -55,6 +57,8 @@ export function POSHeader({
   onReturn,
   isReturnMode,
   onPreviousOrders,
+  selectedTable,
+  isRestaurantMode,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
@@ -92,6 +96,11 @@ export function POSHeader({
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">{locationLabel}</span>
           </div>
+        )}
+        {selectedTable && (
+          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+            Table {selectedTable.number}
+          </Badge>
         )}
       </div>
 

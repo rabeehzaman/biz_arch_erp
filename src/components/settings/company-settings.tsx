@@ -180,7 +180,7 @@ export function CompanySettings() {
                   name="companyPhone"
                   value={formData.companyPhone}
                   onChange={handleChange}
-                  placeholder="+966 5X XXX XXXX"
+                  placeholder={formData.companyCountry?.toLowerCase() === "india" ? "+91 XXXXX XXXXX" : "+966 5X XXX XXXX"}
                 />
               </div>
               <div className="grid gap-2">

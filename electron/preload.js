@@ -59,6 +59,10 @@ contextBridge.exposeInMainWorld('electronPOS', {
   getPrinterConfig: () => ipcRenderer.invoke('get-printer-config'),
   savePrinterConfig: (config) => ipcRenderer.invoke('save-printer-config', config),
 
+  // ─── KOT Printer Config ────────────────────────────
+  getKotPrinterConfig: () => ipcRenderer.invoke('get-kot-printer-config'),
+  saveKotPrinterConfig: (config) => ipcRenderer.invoke('save-kot-printer-config', config),
+
   // ─── Cache Management ────────────────────────────
   clearCache: () => ipcRenderer.invoke('clear-cache'),
 

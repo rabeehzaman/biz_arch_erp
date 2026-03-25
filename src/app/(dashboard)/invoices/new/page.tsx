@@ -31,6 +31,10 @@ import { calculateRoundOff } from "@/lib/round-off";
 import { createClientId } from "@/lib/client-id";
 import { useLanguage } from "@/lib/i18n";
 import { PriceHistoryDialog } from "@/components/invoices/price-history-dialog";
+import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
+import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
+import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
+import { OldGoldAdjustment } from "@/components/jewellery-shop/old-gold-adjustment";
 
 interface Customer {
   id: string;
@@ -51,6 +55,7 @@ interface Product {
   gstRate?: number;
   hsnCode?: string;
   weighMachineCode?: string | null;
+  jewelleryItem?: JewelleryItemData | null;
 }
 
 interface MobileDeviceOption {
@@ -75,6 +80,7 @@ interface LineItem {
   hsnCode: string;
   vatRate: number; // Saudi VAT rate (15 or 0)
   selectedImeis: string[];
+  jewellery?: JewelleryLineState | null;
 }
 
 type InvoiceTaxMode = "none" | "gst" | "vat";
@@ -158,6 +164,8 @@ export default function NewInvoicePage() {
   ]);
   const [availableDevices, setAvailableDevices] = useState<Record<string, MobileDeviceOption[]>>({});
   const [priceHistoryItem, setPriceHistoryItem] = useState<{ productId: string; productName: string } | null>(null);
+  const [oldGoldAdjustmentId, setOldGoldAdjustmentId] = useState<string | null>(null);
+  const [oldGoldDeduction, setOldGoldDeduction] = useState(0);
 
   const { data: session, status: sessionStatus } = useSession();
   const { fmt } = useCurrency();
@@ -168,6 +176,9 @@ export default function NewInvoicePage() {
   const taxInclusiveRef = useRef<HTMLButtonElement>(null);
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  const jewelleryEnabled = !!(session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled;
+  const { getRate: getGoldRate } = useJewelleryRates(jewelleryEnabled);
 
   const weighMachineEnabled = !!(session?.user as { isWeighMachineEnabled?: boolean })?.isWeighMachineEnabled;
   const weighMachineConfig = useMemo<WeighMachineConfig>(() => ({
@@ -370,14 +381,39 @@ export default function NewInvoicePage() {
           if (isLastItem) {
             shouldAddNewLine = true;
           }
+
+          // Check if this product is jewellery-linked
+          let jewellery: JewelleryLineState | null = null;
+          let unitPrice = Number(product.price);
+
+          if (jewelleryEnabled && product.jewelleryItem && product.jewelleryItem.status === "IN_STOCK") {
+            const ji = product.jewelleryItem;
+            const rate = getGoldRate(ji.purity, ji.metalType);
+            jewellery = createJewelleryLineState(ji, rate);
+            // Calculate live price from jewellery pricing engine
+            const pricing = calculateJewelleryLinePrice({
+              grossWeight: Number(ji.grossWeight),
+              stoneWeight: Number(ji.stoneWeight) || 0,
+              purity: ji.purity,
+              metalType: ji.metalType,
+              goldRate: rate,
+              wastagePercent: Number(ji.wastagePercent),
+              makingChargeType: ji.makingChargeType as "PER_GRAM" | "PERCENTAGE" | "FIXED",
+              makingChargeValue: Number(ji.makingChargeValue),
+              stoneValue: Number(ji.stoneValue),
+            });
+            unitPrice = pricing.subtotal;
+          }
+
           return {
             ...item,
             productId: value as string,
             unitId: product.unitId || "",
             conversionFactor: 1,
-            unitPrice: Number(product.price),
+            unitPrice,
             gstRate: Number(product.gstRate) || 0,
-            hsnCode: product.hsnCode || "",
+            hsnCode: product.hsnCode || (jewellery ? "7113" : ""),
+            jewellery,
           };
         }
       }
@@ -439,6 +475,28 @@ export default function NewInvoicePage() {
         ]);
       }, 0);
     }
+  };
+
+  const updateJewelleryField = (lineItemId: string, field: keyof JewelleryLineState, value: string | number) => {
+    setLineItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== lineItemId || !item.jewellery) return item;
+        const updated = { ...item.jewellery, [field]: value };
+        // Recalculate unitPrice from jewellery pricing
+        const pricing = calculateJewelleryLinePrice({
+          grossWeight: updated.grossWeight,
+          stoneWeight: updated.stoneWeight || 0,
+          purity: updated.purity,
+          metalType: updated.metalType,
+          goldRate: updated.goldRate,
+          wastagePercent: updated.wastagePercent,
+          makingChargeType: updated.makingChargeType,
+          makingChargeValue: updated.makingChargeValue,
+          stoneValue: updated.stoneValue,
+        });
+        return { ...item, jewellery: updated, unitPrice: pricing.subtotal };
+      })
+    );
   };
 
   const fetchDevicesForProduct = async (productId: string) => {
@@ -537,6 +595,7 @@ export default function NewInvoicePage() {
           paymentType: formData.paymentType,
           isTaxInclusive: taxInclusive,
           applyRoundOff,
+          ...(oldGoldAdjustmentId && { oldGoldAdjustmentId }),
           items: validItems.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             return {
@@ -551,6 +610,22 @@ export default function NewInvoicePage() {
               hsnCode: item.hsnCode,
               ...(saudiEnabled && { vatRate: item.vatRate ?? 15 }),
               ...(product?.isImeiTracked && item.selectedImeis.length > 0 && { selectedImeis: item.selectedImeis }),
+              ...(item.jewellery && {
+                jewellery: {
+                  jewelleryItemId: item.jewellery.jewelleryItemId,
+                  goldRate: item.jewellery.goldRate,
+                  purity: item.jewellery.purity,
+                  metalType: item.jewellery.metalType,
+                  grossWeight: item.jewellery.grossWeight,
+                  stoneWeight: item.jewellery.stoneWeight,
+                  wastagePercent: item.jewellery.wastagePercent,
+                  makingChargeType: item.jewellery.makingChargeType,
+                  makingChargeValue: item.jewellery.makingChargeValue,
+                  stoneValue: item.jewellery.stoneValue,
+                  tagNumber: item.jewellery.tagNumber,
+                  huidNumber: item.jewellery.huidNumber,
+                },
+              }),
             };
           }),
         }),
@@ -615,7 +690,7 @@ export default function NewInvoicePage() {
           </div>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit} onChangeCapture={() => setIsDirty(true)}>
+        <form ref={formRef} onSubmit={handleSubmit} onChangeCapture={() => setIsDirty(true)} className="sm:pb-0 pb-16">
           <div className="space-y-6">
             {/* Customer & Date */}
             <Card>
@@ -1032,6 +1107,18 @@ export default function NewInvoicePage() {
                                 </TableCell>
                               </TableRow>
                             )}
+                            {item.jewellery && (
+                              <TableRow>
+                                <TableCell colSpan={99} className="p-2">
+                                  <JewelleryLineFields
+                                    jewelleryData={item.jewellery}
+                                    goldRate={getGoldRate(item.jewellery.purity, item.jewellery.metalType)}
+                                    onUpdate={(field, value) => updateJewelleryField(item.id, field, value)}
+                                    fmt={fmt}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            )}
                           </Fragment>
                         );
                       })}
@@ -1236,12 +1323,33 @@ export default function NewInvoicePage() {
                         {isImeiTracked && devices.length === 0 && item.productId && (
                           <p className="text-xs text-yellow-700 bg-yellow-50 rounded p-2">{t("sales.noDevicesInStockShort")}</p>
                         )}
+                        {item.jewellery && (
+                          <JewelleryLineFields
+                            jewelleryData={item.jewellery}
+                            goldRate={getGoldRate(item.jewellery.purity, item.jewellery.metalType)}
+                            onUpdate={(field, value) => updateJewelleryField(item.id, field, value)}
+                            fmt={fmt}
+                          />
+                        )}
                       </div>
                     );
                   })}
                 </div>
               </CardContent>
             </Card>
+
+            {/* Old Gold Adjustment (jewellery only) */}
+            {jewelleryEnabled && formData.customerId && lineItems.some((i) => i.jewellery) && (
+              <OldGoldAdjustment
+                customerId={formData.customerId}
+                selectedId={oldGoldAdjustmentId}
+                onSelect={(id, amount) => {
+                  setOldGoldAdjustmentId(id);
+                  setOldGoldDeduction(amount);
+                }}
+                fmt={fmt}
+              />
+            )}
 
             {/* Notes */}
             <Card>
@@ -1319,6 +1427,12 @@ export default function NewInvoicePage() {
                         {totals.roundOffAmount >= 0 ? "+" : ""}
                         {fmt(totals.roundOffAmount)}
                       </span>
+                    </div>
+                  )}
+                  {oldGoldDeduction > 0 && (
+                    <div className="flex justify-between text-sm text-amber-700">
+                      <span>Old Gold Adjustment</span>
+                      <span>-{fmt(oldGoldDeduction)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">

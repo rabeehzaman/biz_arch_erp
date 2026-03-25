@@ -148,6 +148,12 @@ export async function PUT(
       jewelleryThemePreset,
       jewelleryEnabledPurities,
       jewelleryEnabledMetals,
+      isRestaurantModuleEnabled,
+      restaurantTablesEnabled,
+      restaurantKotPrintingEnabled,
+      restaurantThemeEnabled,
+      restaurantThemeColor,
+      restaurantThemePreset,
     } = body;
 
     // Validate edition
@@ -373,6 +379,14 @@ export async function PUT(
     if (jewelleryThemePreset !== undefined) updateData.jewelleryThemePreset = jewelleryThemePreset || null;
     if (jewelleryEnabledPurities !== undefined) updateData.jewelleryEnabledPurities = jewelleryEnabledPurities;
     if (jewelleryEnabledMetals !== undefined) updateData.jewelleryEnabledMetals = jewelleryEnabledMetals;
+
+    // Restaurant module settings
+    if (isRestaurantModuleEnabled !== undefined) updateData.isRestaurantModuleEnabled = isRestaurantModuleEnabled;
+    if (restaurantTablesEnabled !== undefined) updateData.restaurantTablesEnabled = restaurantTablesEnabled;
+    if (restaurantKotPrintingEnabled !== undefined) updateData.restaurantKotPrintingEnabled = restaurantKotPrintingEnabled;
+    if (restaurantThemeEnabled !== undefined) updateData.restaurantThemeEnabled = restaurantThemeEnabled;
+    if (restaurantThemeColor !== undefined) updateData.restaurantThemeColor = restaurantThemeColor || null;
+    if (restaurantThemePreset !== undefined) updateData.restaurantThemePreset = restaurantThemePreset || null;
 
     const organization = await prisma.$transaction(
       async (tx) => {

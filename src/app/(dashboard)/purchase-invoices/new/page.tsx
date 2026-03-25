@@ -27,6 +27,9 @@ import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
 import { calculateRoundOff } from "@/lib/round-off";
 import { useLanguage } from "@/lib/i18n";
+import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
+import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
+import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
 
 interface Supplier {
   id: string;
@@ -44,6 +47,7 @@ interface Product {
   gstRate?: number;
   hsnCode?: string;
   isImeiTracked?: boolean;
+  jewelleryItem?: JewelleryItemData | null;
 }
 
 interface ImeiEntry {
@@ -69,6 +73,7 @@ interface LineItem {
   hsnCode: string;
   vatRate: number;
   imeiNumbers: ImeiEntry[];
+  jewellery?: JewelleryLineState | null;
 }
 
 function getLineAmountKey(itemId: string, ...amounts: number[]) {
@@ -106,6 +111,8 @@ export default function NewPurchaseInvoicePage() {
   ]);
 
   const { data: session } = useSession();
+  const jewelleryEnabled = !!(session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled;
+  const { getRate: getGoldRate } = useJewelleryRates(jewelleryEnabled);
   const { symbol, locale } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const { t } = useLanguage();
@@ -260,15 +267,38 @@ export default function NewPurchaseInvoicePage() {
           if (isLastItem) {
             shouldAddNewLine = true;
           }
+
+          // Check if this product is jewellery-linked
+          let jewellery: JewelleryLineState | null = null;
+          let unitCost = Number(product.cost) || Number(product.price);
+
+          if (jewelleryEnabled && product.jewelleryItem) {
+            const ji = product.jewelleryItem;
+            const rate = getGoldRate(ji.purity, ji.metalType);
+            jewellery = createJewelleryLineState(ji, rate);
+            const pricing = calculateJewelleryLinePrice({
+              grossWeight: Number(ji.grossWeight),
+              stoneWeight: Number(ji.stoneWeight) || 0,
+              purity: ji.purity,
+              metalType: ji.metalType,
+              goldRate: rate,
+              wastagePercent: Number(ji.wastagePercent),
+              makingChargeType: ji.makingChargeType as "PER_GRAM" | "PERCENTAGE" | "FIXED",
+              makingChargeValue: Number(ji.makingChargeValue),
+              stoneValue: Number(ji.stoneValue),
+            });
+            unitCost = pricing.subtotal;
+          }
+
           return {
             ...item,
             productId: value as string,
             unitId: product.unitId || "",
             conversionFactor: 1,
-            // Use product cost if available, otherwise use selling price
-            unitCost: Number(product.cost) || Number(product.price),
+            unitCost,
             gstRate: Number(product.gstRate) || 0,
-            hsnCode: product.hsnCode || "",
+            hsnCode: product.hsnCode || (jewellery ? "7113" : ""),
+            jewellery,
           };
         }
       }
@@ -353,6 +383,27 @@ export default function NewPurchaseInvoicePage() {
       }
       return { ...item, imeiNumbers: current.slice(0, count) };
     }));
+  };
+
+  const updateJewelleryField = (lineItemId: string, field: keyof JewelleryLineState, value: string | number) => {
+    setLineItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== lineItemId || !item.jewellery) return item;
+        const updated = { ...item.jewellery, [field]: value };
+        const pricing = calculateJewelleryLinePrice({
+          grossWeight: updated.grossWeight,
+          stoneWeight: updated.stoneWeight || 0,
+          purity: updated.purity,
+          metalType: updated.metalType,
+          goldRate: updated.goldRate,
+          wastagePercent: updated.wastagePercent,
+          makingChargeType: updated.makingChargeType,
+          makingChargeValue: updated.makingChargeValue,
+          stoneValue: updated.stoneValue,
+        });
+        return { ...item, jewellery: updated, unitCost: pricing.subtotal };
+      })
+    );
   };
 
   const updateImeiField = (itemId: string, imeiIndex: number, field: keyof ImeiEntry, value: string) => {
@@ -443,6 +494,22 @@ export default function NewPurchaseInvoicePage() {
               hsnCode: item.hsnCode,
               ...(saudiEnabled && { vatRate: item.vatRate ?? 15 }),
               ...(product?.isImeiTracked && item.imeiNumbers.length > 0 && { imeiNumbers: item.imeiNumbers }),
+              ...(item.jewellery && {
+                jewellery: {
+                  jewelleryItemId: item.jewellery.jewelleryItemId,
+                  goldRate: item.jewellery.goldRate,
+                  purity: item.jewellery.purity,
+                  metalType: item.jewellery.metalType,
+                  grossWeight: item.jewellery.grossWeight,
+                  stoneWeight: item.jewellery.stoneWeight,
+                  wastagePercent: item.jewellery.wastagePercent,
+                  makingChargeType: item.jewellery.makingChargeType,
+                  makingChargeValue: item.jewellery.makingChargeValue,
+                  stoneValue: item.jewellery.stoneValue,
+                  tagNumber: item.jewellery.tagNumber,
+                  huidNumber: item.jewellery.huidNumber,
+                },
+              }),
             };
           }),
         }),
@@ -893,6 +960,18 @@ export default function NewPurchaseInvoicePage() {
                                 </TableCell>
                               </TableRow>
                             )}
+                            {item.jewellery && (
+                              <TableRow>
+                                <TableCell colSpan={99} className="p-2">
+                                  <JewelleryLineFields
+                                    jewelleryData={item.jewellery}
+                                    goldRate={getGoldRate(item.jewellery.purity, item.jewellery.metalType)}
+                                    onUpdate={(field, value) => updateJewelleryField(item.id, field, value)}
+                                    fmt={(n) => n.toLocaleString(locale, { style: "currency", currency: symbol === "₹" ? "INR" : symbol === "﷼" ? "SAR" : "USD" })}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            )}
                           </Fragment>
                         );
                       })}
@@ -1137,6 +1216,14 @@ export default function NewPurchaseInvoicePage() {
                               </div>
                             ))}
                           </div>
+                        )}
+                        {item.jewellery && (
+                          <JewelleryLineFields
+                            jewelleryData={item.jewellery}
+                            goldRate={getGoldRate(item.jewellery.purity, item.jewellery.metalType)}
+                            onUpdate={(field, value) => updateJewelleryField(item.id, field, value)}
+                            fmt={(n) => n.toLocaleString(locale, { style: "currency", currency: symbol === "₹" ? "INR" : symbol === "﷼" ? "SAR" : "USD" })}
+                          />
                         )}
                       </div>
                     );

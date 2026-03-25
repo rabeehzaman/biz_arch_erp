@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
+import useSWR from "swr";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { MobileLayout } from "@/components/mobile-layout";
@@ -13,6 +14,7 @@ import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog"
 import { LanguageProvider, useLanguage } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { SubscriptionBanner } from "@/components/subscription-banner";
+import { RestaurantThemeProvider } from "@/components/restaurant/restaurant-theme-provider";
 
 function DesktopLayout({ children }: { children: React.ReactNode }) {
     const { dir } = useLanguage();
@@ -36,6 +38,31 @@ function DesktopLayout({ children }: { children: React.ReactNode }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+function RestaurantThemeWrapper({ children }: { children: React.ReactNode }) {
+    const { data: session } = useSession();
+    const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled ?? false;
+
+    // Fetch restaurant theme settings from org config
+    const { data: themeConfig } = useSWR(
+        isRestaurantEnabled ? "/api/settings/restaurant-theme" : null,
+        fetcher,
+    );
+
+    if (!isRestaurantEnabled) return <>{children}</>;
+
+    const themeEnabled = themeConfig?.restaurantThemeEnabled ?? true;
+    const preset = themeConfig?.restaurantThemePreset ?? "bistro";
+    const customColor = themeConfig?.restaurantThemeColor ?? null;
+
+    return (
+        <RestaurantThemeProvider enabled={themeEnabled} preset={preset} customColor={customColor}>
+            {children}
+        </RestaurantThemeProvider>
     );
 }
 
@@ -71,7 +98,9 @@ export default function ClientDashboardLayout({
                 <LanguageProvider initialLang={initialLang}>
                     <CommandPaletteProvider>
                         <SubscriptionBanner />
-                        <DashboardInner>{children}</DashboardInner>
+                        <RestaurantThemeWrapper>
+                            <DashboardInner>{children}</DashboardInner>
+                        </RestaurantThemeWrapper>
                         <CommandPalette />
                         <KeyboardShortcutsDialog />
                     </CommandPaletteProvider>

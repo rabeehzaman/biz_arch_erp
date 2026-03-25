@@ -4,6 +4,23 @@ import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 
+export interface CartItemJewelleryData {
+  jewelleryItemId: string;
+  goldRate: number;
+  purity: string;
+  metalType: string;
+  grossWeight: number;
+  stoneWeight: number;
+  netWeight: number;
+  fineWeight: number;
+  wastagePercent: number;
+  makingChargeType: string;
+  makingChargeValue: number;
+  stoneValue: number;
+  tagNumber: string;
+  huidNumber: string | null;
+}
+
 export interface CartItemData {
   productId: string;
   name: string;
@@ -13,6 +30,7 @@ export interface CartItemData {
   stockQuantity: number;
   gstRate?: number;
   hsnCode?: string;
+  jewellery?: CartItemJewelleryData | null;
 }
 
 interface CartItemProps {
@@ -36,6 +54,11 @@ export function CartItem({
           </p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span>{fmt(Number(item.price))}</span>
+            {item.jewellery && (
+              <span className="text-amber-600">
+                · #{item.jewellery.tagNumber} · {item.jewellery.purity} · {item.jewellery.grossWeight}g
+              </span>
+            )}
           </div>
         </div>
         <div className="flex min-w-[3rem] shrink-0 items-center justify-center self-center">

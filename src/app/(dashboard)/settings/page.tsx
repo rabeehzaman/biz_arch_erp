@@ -3,11 +3,12 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 
-type SettingsTab = "company" | "units" | "accounting" | "pos" | "users" | "employees";
+type SettingsTab = "company" | "units" | "accounting" | "pos" | "users" | "employees" | "restaurant";
 
 function SettingsPanelFallback() {
   return (
@@ -41,9 +42,15 @@ const EmployeesSettings = dynamic(
   () => import("@/components/settings/employees-settings").then((mod) => mod.EmployeesSettings),
   { loading: () => <SettingsPanelFallback /> }
 );
+const RestaurantSettings = dynamic(
+  () => import("@/components/settings/restaurant-settings").then((mod) => mod.RestaurantSettings),
+  { loading: () => <SettingsPanelFallback /> }
+);
 
 export default function SettingsPage() {
   const { t } = useLanguage();
+  const { data: session } = useSession();
+  const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled ?? false;
   const [activeTab, setActiveTab] = useState<SettingsTab>("company");
   const [loadedTabs, setLoadedTabs] = useState<SettingsTab[]>(["company"]);
 
@@ -75,6 +82,9 @@ export default function SettingsPage() {
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="pos">{t("settings.tabPOS")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="users">{t("settings.tabUsers")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="employees">{t("settings.tabEmployees")}</TabsTrigger>
+              {isRestaurantEnabled && (
+                <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="restaurant">{t("settings.tabRestaurant")}</TabsTrigger>
+              )}
             </TabsList>
           </div>
           <TabsContent value="company" {...getForceMountProps("company")} className="mt-6 data-[state=inactive]:hidden">
@@ -95,6 +105,11 @@ export default function SettingsPage() {
           <TabsContent value="employees" {...getForceMountProps("employees")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("employees") ? <EmployeesSettings /> : null}
           </TabsContent>
+          {isRestaurantEnabled && (
+            <TabsContent value="restaurant" {...getForceMountProps("restaurant")} className="mt-6 data-[state=inactive]:hidden">
+              {loadedTabs.includes("restaurant") ? <RestaurantSettings /> : null}
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </PageAnimation>

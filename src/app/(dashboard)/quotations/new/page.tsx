@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,9 @@ import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
 import { useUnitConversions } from "@/hooks/use-unit-conversions";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { useLanguage } from "@/lib/i18n";
+import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
+import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
+import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
 
 interface Customer {
   id: string;
@@ -38,6 +41,7 @@ interface Product {
   unit: { id: string; name: string; code: string } | null;
   gstRate?: number;
   hsnCode?: string;
+  jewelleryItem?: JewelleryItemData | null;
 }
 
 interface LineItem {
@@ -50,6 +54,7 @@ interface LineItem {
   discount: number;
   gstRate: number;
   hsnCode: string;
+  jewellery?: JewelleryLineState | null;
 }
 
 function getLineAmountKey(itemId: string, ...amounts: number[]) {
@@ -86,8 +91,10 @@ export default function NewQuotationPage() {
   ]);
 
   const { data: session } = useSession();
-  const { symbol, locale } = useCurrency();
+  const { symbol, locale, fmt } = useCurrency();
   const { t } = useLanguage();
+  const jewelleryEnabled = !!(session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled;
+  const { getRate: getGoldRate } = useJewelleryRates(jewelleryEnabled);
   const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const taxInclusiveRef = useRef<HTMLButtonElement>(null);
@@ -236,14 +243,38 @@ export default function NewQuotationPage() {
           if (isLastItem) {
             shouldAddNewLine = true;
           }
+
+          // Check if this product is jewellery-linked
+          let jewellery: JewelleryLineState | null = null;
+          let unitPrice = Number(product.price);
+
+          if (jewelleryEnabled && product.jewelleryItem && product.jewelleryItem.status === "IN_STOCK") {
+            const ji = product.jewelleryItem;
+            const rate = getGoldRate(ji.purity, ji.metalType);
+            jewellery = createJewelleryLineState(ji, rate);
+            const pricing = calculateJewelleryLinePrice({
+              grossWeight: Number(ji.grossWeight),
+              stoneWeight: Number(ji.stoneWeight) || 0,
+              purity: ji.purity,
+              metalType: ji.metalType,
+              goldRate: rate,
+              wastagePercent: Number(ji.wastagePercent),
+              makingChargeType: ji.makingChargeType as "PER_GRAM" | "PERCENTAGE" | "FIXED",
+              makingChargeValue: Number(ji.makingChargeValue),
+              stoneValue: Number(ji.stoneValue),
+            });
+            unitPrice = pricing.subtotal;
+          }
+
           return {
             ...item,
             productId: value as string,
             unitId: product.unitId || "",
             conversionFactor: 1,
-            unitPrice: Number(product.price),
+            unitPrice,
             gstRate: Number(product.gstRate) || 0,
-            hsnCode: product.hsnCode || "",
+            hsnCode: product.hsnCode || (jewellery ? "7113" : ""),
+            jewellery,
           };
         }
       }
@@ -295,6 +326,27 @@ export default function NewQuotationPage() {
         ]);
       }, 0);
     }
+  };
+
+  const updateJewelleryField = (lineItemId: string, field: keyof JewelleryLineState, value: string | number) => {
+    setLineItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== lineItemId || !item.jewellery) return item;
+        const updated = { ...item.jewellery, [field]: value };
+        const pricing = calculateJewelleryLinePrice({
+          grossWeight: updated.grossWeight,
+          stoneWeight: updated.stoneWeight || 0,
+          purity: updated.purity,
+          metalType: updated.metalType,
+          goldRate: updated.goldRate,
+          wastagePercent: updated.wastagePercent,
+          makingChargeType: updated.makingChargeType,
+          makingChargeValue: updated.makingChargeValue,
+          stoneValue: updated.stoneValue,
+        });
+        return { ...item, jewellery: updated, unitPrice: pricing.subtotal };
+      })
+    );
   };
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
@@ -365,6 +417,22 @@ export default function NewQuotationPage() {
                 discount: item.discount,
                 gstRate: item.gstRate,
                 hsnCode: item.hsnCode,
+                ...(item.jewellery && {
+                  jewellery: {
+                    jewelleryItemId: item.jewellery.jewelleryItemId,
+                    goldRate: item.jewellery.goldRate,
+                    purity: item.jewellery.purity,
+                    metalType: item.jewellery.metalType,
+                    grossWeight: item.jewellery.grossWeight,
+                    stoneWeight: item.jewellery.stoneWeight,
+                    wastagePercent: item.jewellery.wastagePercent,
+                    makingChargeType: item.jewellery.makingChargeType,
+                    makingChargeValue: item.jewellery.makingChargeValue,
+                    stoneValue: item.jewellery.stoneValue,
+                    tagNumber: item.jewellery.tagNumber,
+                    huidNumber: item.jewellery.huidNumber,
+                  },
+                }),
               };
             }),
         }),
@@ -515,7 +583,8 @@ export default function NewQuotationPage() {
                         const lineNet = lineGross * (1 + (item.gstRate || 0) / 100);
                         const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
                         return (
-                          <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
+                          <Fragment key={item.id}>
+                          <TableRow className="group hover:bg-slate-50 border-b">
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                               <div ref={(el) => {
                                 if (el) {
@@ -694,6 +763,19 @@ export default function NewQuotationPage() {
                               </Button>
                             </TableCell>
                           </TableRow>
+                          {item.jewellery && (
+                            <TableRow>
+                              <TableCell colSpan={99} className="p-2">
+                                <JewelleryLineFields
+                                  jewelleryData={item.jewellery}
+                                  goldRate={getGoldRate(item.jewellery.purity, item.jewellery.metalType)}
+                                  onUpdate={(field, value) => updateJewelleryField(item.id, field, value)}
+                                  fmt={fmt}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          </Fragment>
                         );
                       })}
                     </TableBody>
@@ -824,6 +906,15 @@ export default function NewQuotationPage() {
                             </div>
                           )}
                         </div>
+
+                        {item.jewellery && (
+                          <JewelleryLineFields
+                            jewelleryData={item.jewellery}
+                            goldRate={getGoldRate(item.jewellery.purity, item.jewellery.metalType)}
+                            onUpdate={(field, value) => updateJewelleryField(item.id, field, value)}
+                            fmt={fmt}
+                          />
+                        )}
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">

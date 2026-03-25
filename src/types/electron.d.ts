@@ -90,6 +90,9 @@ interface ElectronPOS {
   getPrinterConfig: () => Promise<{ success: boolean; config: ElectronPrinterConfig }>;
   savePrinterConfig: (config: ElectronPrinterConfig) => Promise<{ success: boolean; config?: ElectronPrinterConfig }>;
   clearCache: () => Promise<{ success: boolean; error?: string }>;
+  // KOT Printer (separate from receipt printer)
+  getKotPrinterConfig: () => Promise<{ success: boolean; config: ElectronPrinterConfig }>;
+  saveKotPrinterConfig: (config: ElectronPrinterConfig) => Promise<{ success: boolean; config?: ElectronPrinterConfig }>;
   onUpdateStatus: (callback: (message: string) => void) => void;
   checkForUpdates: () => Promise<{ updateAvailable?: boolean; error?: string }>;
   getAppVersion: () => Promise<string>;

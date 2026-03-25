@@ -75,6 +75,22 @@ interface CheckoutItem {
   discount?: number;
   gstRate?: number;
   hsnCode?: string;
+  jewellery?: {
+    jewelleryItemId: string;
+    goldRate: number;
+    purity: string;
+    metalType: string;
+    grossWeight: number;
+    stoneWeight: number;
+    netWeight: number;
+    fineWeight: number;
+    wastagePercent: number;
+    makingChargeType: string;
+    makingChargeValue: number;
+    stoneValue: number;
+    tagNumber: string;
+    huidNumber: string | null;
+  } | null;
 }
 
 interface CheckoutPayment {
@@ -91,6 +107,8 @@ interface CheckoutBody {
   notes?: string;
   sessionId?: string;
   idempotencyKey?: string;
+  tableId?: string;
+  kotOrderIds?: string[];
 }
 
 function roundTimingMs(value: number) {
@@ -122,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     const body: CheckoutBody = await request.json();
     markRequestStage("request_body");
-    const { customerId, items, payments, heldOrderId, notes, sessionId, idempotencyKey } = body;
+    const { customerId, items, payments, heldOrderId, notes, sessionId, idempotencyKey, tableId, kotOrderIds } = body;
 
     // Validate required fields
     if (!items || items.length === 0) {
@@ -441,6 +459,7 @@ export async function POST(request: NextRequest) {
         applyRoundOff: shouldApplyRoundOff,
         notes: notes || null,
         idempotencyKey: idempotencyKey || null,
+        isJewellerySale: items.some((item) => !!item.jewellery),
       };
 
       if (saudiEnabled) {
@@ -468,6 +487,7 @@ export async function POST(request: NextRequest) {
 
       // Build line items
       const lineItemsData = items.map((item, idx) => {
+        const jw = item.jewellery;
         const base: Record<string, unknown> = {
           organizationId,
           productId: item.productId || null,
@@ -477,6 +497,20 @@ export async function POST(request: NextRequest) {
           discount: item.discount || 0,
           total: lineAmounts[idx].taxableAmount,
           costOfGoodsSold: 0,
+          // Jewellery fields
+          jewelleryItemId: jw?.jewelleryItemId ?? null,
+          goldRate: jw?.goldRate ?? null,
+          purity: jw?.purity ?? null,
+          metalType: jw?.metalType ?? null,
+          grossWeight: jw?.grossWeight ?? null,
+          netWeight: jw?.netWeight ?? null,
+          fineWeight: jw?.fineWeight ?? null,
+          wastagePercent: jw?.wastagePercent ?? null,
+          makingChargeType: jw?.makingChargeType ?? null,
+          makingChargeValue: jw?.makingChargeValue ?? null,
+          stoneValue: jw?.stoneValue ?? null,
+          tagNumber: jw?.tagNumber ?? null,
+          huidNumber: jw?.huidNumber ?? null,
         };
 
         if (saudiEnabled && lineVATResults[idx]) {
@@ -517,6 +551,17 @@ export async function POST(request: NextRequest) {
         },
       });
       markTransactionStage("invoice_create");
+
+      // Mark jewellery items as SOLD
+      const jewelleryItemIds = items
+        .filter((item) => item.jewellery?.jewelleryItemId)
+        .map((item) => item.jewellery!.jewelleryItemId);
+      if (jewelleryItemIds.length > 0) {
+        await tx.jewelleryItem.updateMany({
+          where: { id: { in: jewelleryItemIds }, organizationId },
+          data: { status: "SOLD" },
+        });
+      }
 
       // ── 6. FIFO stock consumption ────────────────────────────────────
       const warnings: string[] = [...stockWarnings];
@@ -950,6 +995,20 @@ export async function POST(request: NextRequest) {
       if (heldOrderId) {
         await tx.pOSHeldOrder.delete({
           where: { id: heldOrderId },
+        });
+      }
+
+      // ── 11b. Update restaurant table and KOTs if applicable ────────
+      if (tableId) {
+        await tx.restaurantTable.update({
+          where: { id: tableId },
+          data: { status: "AVAILABLE", guestCount: null, currentOrderId: null },
+        });
+      }
+      if (kotOrderIds && kotOrderIds.length > 0) {
+        await tx.kOTOrder.updateMany({
+          where: { id: { in: kotOrderIds }, organizationId },
+          data: { status: "COMPLETED", completedAt: new Date() },
         });
       }
 
