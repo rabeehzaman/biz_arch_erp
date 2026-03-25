@@ -251,17 +251,19 @@ export default function InvoicesPage() {
                             </div>
                           }
                         >
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/invoices/${invoice.id}`)}>
                             <div className="flex items-start gap-3">
                               <input
                                 type="checkbox"
                                 checked={selectedIds.has(invoice.id)}
                                 onChange={(e) => {
+                                  e.stopPropagation();
                                   const next = new Set(selectedIds);
                                   if (e.target.checked) next.add(invoice.id);
                                   else next.delete(invoice.id);
                                   setSelectedIds(next);
                                 }}
+                                onClick={(e) => e.stopPropagation()}
                                 className="mt-1 h-4 w-4 rounded border-slate-300"
                               />
                               <div className="flex flex-1 items-start justify-between gap-3">
