@@ -2,7 +2,7 @@
 
 import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChefHat } from "lucide-react";
 
 export interface CartItemJewelleryData {
   jewelleryItemId: string;
@@ -36,11 +36,13 @@ export interface CartItemData {
 interface CartItemProps {
   item: CartItemData;
   onRemove: (productId: string) => void;
+  kotSentQty?: number;
 }
 
 export function CartItem({
   item,
   onRemove,
+  kotSentQty,
 }: CartItemProps) {
   const { fmt } = useCurrency();
   const lineTotal = item.quantity * item.price * (1 - item.discount / 100);
@@ -61,8 +63,14 @@ export function CartItem({
             )}
           </div>
         </div>
-        <div className="flex min-w-[3rem] shrink-0 items-center justify-center self-center">
+        <div className="flex min-w-[3rem] shrink-0 flex-col items-center justify-center self-center gap-0.5">
           <span className="text-sm font-medium">x{item.quantity}</span>
+          {kotSentQty != null && kotSentQty > 0 && (
+            <span className="flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0 text-[10px] font-medium text-green-700">
+              <ChefHat className="h-2.5 w-2.5" />
+              {kotSentQty}
+            </span>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1 self-center">
           <span className="w-16 text-right text-sm font-semibold sm:w-20">

@@ -386,7 +386,7 @@ function POSTerminalContent() {
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [orderType, setOrderType] = useState<"DINE_IN" | "TAKEAWAY">("DINE_IN");
   const [guestCount, setGuestCount] = useState<number>(1);
-  const [kotSentItems, setKotSentItems] = useState<Set<string>>(new Set());
+  const [kotSentQuantities, setKotSentQuantities] = useState<Map<string, number>>(new Map());
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
 
   // Listen for guest count from table selection
@@ -848,9 +848,16 @@ function POSTerminalContent() {
   // ── Send to Kitchen (KOT) ─────────────────────────────────────────
 
   const handleSendToKitchen = async () => {
-    // Get only unsent items
-    const unsentItems = cartState.items.filter(item => !kotSentItems.has(item.productId));
-    if (unsentItems.length === 0) {
+    // Build list of unsent items (new items or quantity increases)
+    const itemsToSend: { productId: string; name: string; quantity: number }[] = [];
+    for (const item of cartState.items) {
+      const sentQty = kotSentQuantities.get(item.productId) ?? 0;
+      const diff = item.quantity - sentQty;
+      if (diff > 0) {
+        itemsToSend.push({ productId: item.productId, name: item.name, quantity: diff });
+      }
+    }
+    if (itemsToSend.length === 0) {
       toast.info("No new items to send to kitchen");
       return;
     }
@@ -867,7 +874,7 @@ function POSTerminalContent() {
           orderType,
           serverName: authSession?.user?.name || undefined,
           guestCount: guestCount || undefined,
-          items: unsentItems.map(item => ({
+          items: itemsToSend.map(item => ({
             productId: item.productId,
             name: item.name,
             quantity: item.quantity,
@@ -879,10 +886,12 @@ function POSTerminalContent() {
       if (!res.ok) throw new Error("Failed to create KOT");
       const kot = await res.json();
 
-      // Mark items as sent
-      const newSentItems = new Set(kotSentItems);
-      unsentItems.forEach(item => newSentItems.add(item.productId));
-      setKotSentItems(newSentItems);
+      // Update sent quantities to current cart quantities
+      const newSentQtys = new Map(kotSentQuantities);
+      for (const item of cartState.items) {
+        newSentQtys.set(item.productId, item.quantity);
+      }
+      setKotSentQuantities(newSentQtys);
       setKotOrderIds(prev => [...prev, kot.id]);
 
       // Print KOT
@@ -897,7 +906,7 @@ function POSTerminalContent() {
           serverName: authSession?.user?.name || undefined,
           guestCount: guestCount || undefined,
           timestamp: new Date(),
-          items: unsentItems.map(item => ({
+          items: itemsToSend.map(item => ({
             name: item.name,
             quantity: item.quantity,
             isNew: kotType === "FOLLOWUP",
@@ -922,6 +931,84 @@ function POSTerminalContent() {
     } catch (error) {
       console.error("Failed to send KOT:", error);
       toast.error("Failed to send order to kitchen");
+    }
+  };
+
+  // ── Cancel Sent Kitchen Item (Void KOT) ────────────────────────────
+
+  const [pendingCancelProductId, setPendingCancelProductId] = useState<string | null>(null);
+
+  const handleCartItemRemove = (productId: string) => {
+    const sentQty = kotSentQuantities.get(productId) ?? 0;
+    if (sentQty > 0) {
+      // Item was sent to kitchen — need confirmation + void KOT
+      setPendingCancelProductId(productId);
+    } else {
+      // Not sent to kitchen — remove normally
+      removeFromCart(productId);
+    }
+  };
+
+  const confirmCancelKitchenItem = async () => {
+    if (!pendingCancelProductId) return;
+    const productId = pendingCancelProductId;
+    const sentQty = kotSentQuantities.get(productId) ?? 0;
+    const item = cartState.items.find((i) => i.productId === productId);
+    if (!item || sentQty <= 0) {
+      removeFromCart(productId);
+      setPendingCancelProductId(null);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/restaurant/kot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tableId: selectedTable?.id || null,
+          posSessionId: posSession?.id || null,
+          kotType: "VOID",
+          orderType,
+          serverName: authSession?.user?.name || undefined,
+          items: [{ productId: item.productId, name: item.name, quantity: sentQty }],
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create void KOT");
+      const kot = await res.json();
+      setKotOrderIds((prev) => [...prev, kot.id]);
+
+      // Print void KOT to kitchen
+      try {
+        const kotReceiptData: KOTReceiptData = {
+          kotNumber: kot.kotNumber,
+          kotType: "VOID",
+          orderType,
+          tableName: selectedTable?.name,
+          tableNumber: selectedTable?.number,
+          section: selectedTable?.section || undefined,
+          serverName: authSession?.user?.name || undefined,
+          timestamp: new Date(),
+          items: [{ name: item.name, quantity: sentQty }],
+        };
+        await printKOT(kotReceiptData);
+      } catch (printErr) {
+        console.error("Void KOT print failed:", printErr);
+      }
+
+      // Update sent quantities
+      const newSentQtys = new Map(kotSentQuantities);
+      newSentQtys.delete(productId);
+      setKotSentQuantities(newSentQtys);
+
+      // Remove from cart
+      removeFromCart(productId);
+      toast.success(`Cancelled: ${item.name} (void KOT sent to kitchen)`);
+    } catch (error) {
+      console.error("Failed to cancel kitchen item:", error);
+      toast.error("Failed to cancel kitchen item");
+    } finally {
+      setPendingCancelProductId(null);
     }
   };
 
@@ -1081,7 +1168,7 @@ function POSTerminalContent() {
       setSelectedTable(null);
       setOrderType("DINE_IN");
       setGuestCount(1);
-      setKotSentItems(new Set());
+      setKotSentQuantities(new Map());
       setKotOrderIds([]);
 
       const syncSuccessWorkMs = roundTimingMs(performance.now() - responseParsedAt);
@@ -1386,7 +1473,8 @@ function POSTerminalContent() {
                     <CartItem
                       key={`${item.productId}:${item.quantity}:${item.discount}`}
                       item={item}
-                      onRemove={removeFromCart}
+                      onRemove={isRestaurantEnabled ? handleCartItemRemove : removeFromCart}
+                      kotSentQty={isRestaurantEnabled ? (kotSentQuantities.get(item.productId) ?? 0) : undefined}
                     />
                   ))
                 )}
@@ -1408,9 +1496,12 @@ function POSTerminalContent() {
                     >
                       <UtensilsCrossed className="h-4 w-4 mr-2" />
                       {t("restaurant.sendToKitchen")}
-                      {kotSentItems.size > 0 && cartState.items.some(i => !kotSentItems.has(i.productId)) && (
+                      {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(i.productId) ?? 0)) > 0) && (
                         <Badge variant="secondary" className="ml-2">
-                          {cartState.items.filter(i => !kotSentItems.has(i.productId)).length} new
+                          {cartState.items.reduce((count, i) => {
+                            const diff = i.quantity - (kotSentQuantities.get(i.productId) ?? 0);
+                            return diff > 0 ? count + 1 : count;
+                          }, 0)} new
                         </Badge>
                       )}
                     </Button>
@@ -1737,6 +1828,26 @@ function POSTerminalContent() {
           }}
         />
       )}
+
+      {/* Cancel Kitchen Item Confirmation Dialog */}
+      <Dialog open={!!pendingCancelProductId} onOpenChange={(open) => { if (!open) setPendingCancelProductId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("restaurant.cancelKitchenOrder") || "Cancel Kitchen Order?"}</DialogTitle>
+            <DialogDescription>
+              {t("restaurant.cancelKitchenOrderDesc") || "This item was already sent to the kitchen. A cancellation ticket will be printed."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setPendingCancelProductId(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="destructive" onClick={confirmCancelKitchenItem}>
+              {t("restaurant.confirmCancel") || "Cancel & Notify Kitchen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageAnimation>
   );
 }
