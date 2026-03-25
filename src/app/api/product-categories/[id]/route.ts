@@ -98,14 +98,18 @@ export async function DELETE(
     }
 
     if (category._count.products > 0) {
-      return NextResponse.json(
-        {
-          error: `Cannot delete category. ${category._count.products} product(s) are assigned to it.`,
-        },
-        { status: 400 }
-      );
+      // Soft delete - just deactivate
+      const updated = await prisma.productCategory.update({
+        where: { id, organizationId },
+        data: { isActive: false },
+      });
+      return NextResponse.json({
+        message: "Category deactivated (has associated products)",
+        category: updated,
+      });
     }
 
+    // Hard delete if no products
     await prisma.productCategory.delete({
       where: { id, organizationId },
     });

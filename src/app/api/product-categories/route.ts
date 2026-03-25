@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -11,9 +11,14 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const { searchParams } = new URL(request.url);
+    const includeInactive = searchParams.get("includeInactive") === "true";
 
     const categories = await prisma.productCategory.findMany({
-      where: { organizationId },
+      where: {
+        organizationId,
+        ...(includeInactive ? {} : { isActive: true }),
+      },
       orderBy: { sortOrder: "asc" },
       include: {
         _count: {
@@ -22,9 +27,7 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(categories, {
-      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
-    });
+    return NextResponse.json(categories);
   } catch (error) {
     console.error("Failed to fetch product categories:", error);
     return NextResponse.json(
