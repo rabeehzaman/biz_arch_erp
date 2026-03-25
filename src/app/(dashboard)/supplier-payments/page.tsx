@@ -95,6 +95,7 @@ import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 import { SwipeableCard } from "@/components/mobile/swipeable-card";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 // methodLabels moved inside component to use t()
 
@@ -131,15 +132,16 @@ export default function SupplierPaymentsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletePayment, setDeletePayment] = useState<SupplierPayment | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const { isFieldHidden, getDefault } = useFormConfig("supplierPayment");
   const [formData, setFormData] = useState({
     supplierId: "",
     purchaseInvoiceId: "",
     amount: "",
     discountGiven: "",
     paymentDate: new Date().toISOString().split("T")[0],
-    paymentMethod: "CASH",
-    reference: "",
-    notes: "",
+    paymentMethod: getDefault("method", "CASH"),
+    reference: getDefault("reference", ""),
+    notes: getDefault("notes", ""),
     adjustmentAccountId: "",
   });
 
@@ -404,7 +406,7 @@ export default function SupplierPaymentsPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {formData.paymentMethod !== "ADJUSTMENT" && (
+                    {formData.paymentMethod !== "ADJUSTMENT" && !isFieldHidden("reference") && (
                       <div className="grid gap-2">
                         <Label htmlFor="reference">{t("common.reference")}</Label>
                         <Input
@@ -447,6 +449,7 @@ export default function SupplierPaymentsPage() {
                     </div>
                   )}
 
+                  {!isFieldHidden("notes") && (
                   <div className="grid gap-2">
                     <Label htmlFor="notes">{t("common.notes")}</Label>
                     <Textarea
@@ -457,6 +460,7 @@ export default function SupplierPaymentsPage() {
                       }
                     />
                   </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button type="submit">{t("payments.recordPayment")}</Button>

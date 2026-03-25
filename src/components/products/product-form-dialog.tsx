@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n";
+import { useFormConfig } from "@/hooks/use-form-config";
 import { UnitSelect } from "@/components/units/unit-select";
 import { CategorySelect } from "@/components/products/category-select";
 import { Plus, Trash2, Package } from "lucide-react";
@@ -92,6 +93,7 @@ export function ProductFormDialog({
 }: ProductFormDialogProps) {
     const { data: session } = useSession();
     const { t } = useLanguage();
+    const { isFieldHidden, getDefault } = useFormConfig("product", { isEdit: !!productToEdit });
     const sessionUser = session?.user as ({ gstEnabled?: boolean } & { saudiEInvoiceEnabled?: boolean } & { isMobileShopModuleEnabled?: boolean } & { isWeighMachineEnabled?: boolean } & { weighMachineProductCodeLen?: number }) | undefined;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -99,15 +101,15 @@ export function ProductFormDialog({
     const [bundleItems, setBundleItems] = useState<BundleItemEntry[]>([]);
     const [formData, setFormData] = useState({
         name: "",
-        description: "",
+        description: getDefault("description", ""),
         price: "",
-        cost: "",
-        unitId: "",
-        categoryId: "",
-        sku: "",
-        barcode: "",
-        hsnCode: "",
-        gstRate: "0",
+        cost: getDefault("cost", ""),
+        unitId: getDefault("unitId", ""),
+        categoryId: getDefault("categoryId", ""),
+        sku: getDefault("sku", ""),
+        barcode: getDefault("barcode", ""),
+        hsnCode: getDefault("hsnCode", ""),
+        gstRate: getDefault("gstRate", "0"),
         isService: false,
         isImeiTracked: false,
         isBundle: false,
@@ -273,15 +275,15 @@ export function ProductFormDialog({
         setBundleItems([]);
         setFormData({
             name: "",
-            description: "",
+            description: getDefault("description", ""),
             price: "",
-            cost: "",
-            unitId: "",
-            categoryId: "",
-            sku: "",
-            barcode: "",
-            hsnCode: "",
-            gstRate: "0",
+            cost: getDefault("cost", ""),
+            unitId: getDefault("unitId", ""),
+            categoryId: getDefault("categoryId", ""),
+            sku: getDefault("sku", ""),
+            barcode: getDefault("barcode", ""),
+            hsnCode: getDefault("hsnCode", ""),
+            gstRate: getDefault("gstRate", "0"),
             isService: false,
             isImeiTracked: false,
             isBundle: false,
@@ -359,6 +361,7 @@ export function ProductFormDialog({
                                 <p className="text-sm text-red-500">{formErrors.name}</p>
                             )}
                         </div>
+                        {!isFieldHidden("description") && (
                         <div className="grid gap-2">
                             <Label htmlFor="prod-description">{t("products.description")}</Label>
                             <Textarea
@@ -369,6 +372,7 @@ export function ProductFormDialog({
                                 }
                             />
                         </div>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-price">{t("common.price")} *</Label>
@@ -387,6 +391,7 @@ export function ProductFormDialog({
                                     <p className="text-sm text-red-500">{formErrors.price}</p>
                                 )}
                             </div>
+                            {!isFieldHidden("cost") && (
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-cost">{t("products.cost")}</Label>
                                 <Input
@@ -410,8 +415,10 @@ export function ProductFormDialog({
                                     </p>
                                 )}
                             </div>
+                            )}
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {!isFieldHidden("unitId") && (
                             <div>
                                 <UnitSelect
                                     value={formData.unitId}
@@ -423,13 +430,17 @@ export function ProductFormDialog({
                                     error={formErrors.unitId}
                                 />
                             </div>
+                            )}
+                            {!isFieldHidden("categoryId") && (
                             <div>
                                 <CategorySelect
                                     value={formData.categoryId}
                                     onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
                                 />
                             </div>
+                            )}
                         </div>
+                        {!isFieldHidden("sku") && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-sku">{t("products.sku")}</Label>
@@ -441,6 +452,8 @@ export function ProductFormDialog({
                                 />
                             </div>
                         </div>
+                        )}
+                        {!isFieldHidden("barcode") && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-barcode">{t("products.barcode")}</Label>
@@ -452,8 +465,10 @@ export function ProductFormDialog({
                                 />
                             </div>
                         </div>
-                        {sessionUser?.gstEnabled && !sessionUser.saudiEInvoiceEnabled && (
+                        )}
+                        {sessionUser?.gstEnabled && !sessionUser.saudiEInvoiceEnabled && (!isFieldHidden("hsnCode") || !isFieldHidden("gstRate")) && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {!isFieldHidden("hsnCode") && (
                                 <div className="grid gap-2">
                                     <Label htmlFor="prod-hsnCode">{t("products.hsnCode")}</Label>
                                     <Input
@@ -463,6 +478,8 @@ export function ProductFormDialog({
                                         placeholder="e.g. 8471"
                                     />
                                 </div>
+                                )}
+                                {!isFieldHidden("gstRate") && (
                                 <div className="grid gap-2">
                                     <Label htmlFor="prod-gstRate">{t("products.gstRate")}</Label>
                                     <Select
@@ -479,6 +496,7 @@ export function ProductFormDialog({
                                         </SelectContent>
                                     </Select>
                                 </div>
+                                )}
                             </div>
                         )}
                         <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">

@@ -24,6 +24,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
 import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
 import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 interface Customer {
   id: string;
@@ -61,6 +62,7 @@ export default function NewCreditNotePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
+  const { isFieldHidden, getDefault } = useFormConfig("creditNote");
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -72,10 +74,10 @@ export default function NewCreditNotePage() {
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [reason, setReason] = useState("");
-  const [notes, setNotes] = useState("");
-  const [branchId, setBranchId] = useState("");
-  const [warehouseId, setWarehouseId] = useState("");
+  const [reason, setReason] = useState(getDefault("reason", ""));
+  const [notes, setNotes] = useState(getDefault("notes", ""));
+  const [branchId, setBranchId] = useState(getDefault("branchId", ""));
+  const [warehouseId, setWarehouseId] = useState(getDefault("warehouseId", ""));
   const [lineItems, setLineItems] = useState<LineItem[]>([
     {
       id: Date.now().toString(),
@@ -449,6 +451,7 @@ export default function NewCreditNotePage() {
                   />
                 </div>
 
+                {!isFieldHidden("invoiceId") && (
                 <div className="space-y-2">
                   <Label htmlFor="invoiceId">{t("creditNotes.originalInvoice")} ({t("common.optional")})</Label>
                   <Input
@@ -458,7 +461,9 @@ export default function NewCreditNotePage() {
                     onChange={(e) => setInvoiceId(e.target.value)}
                   />
                 </div>
+                )}
 
+                {!isFieldHidden("reason") && (
                 <div className="space-y-2">
                   <Label htmlFor="reason">{t("creditNotes.reasonForReturn")}</Label>
                   <Input
@@ -468,6 +473,7 @@ export default function NewCreditNotePage() {
                     onChange={(e) => setReason(e.target.value)}
                   />
                 </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -645,6 +651,7 @@ export default function NewCreditNotePage() {
             </CardContent>
           </Card>
 
+          {!isFieldHidden("notes") && (
           <Card>
             <CardHeader>
               <CardTitle>{t("common.additionalInformation")}</CardTitle>
@@ -662,6 +669,7 @@ export default function NewCreditNotePage() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           <Card>
             <CardHeader>

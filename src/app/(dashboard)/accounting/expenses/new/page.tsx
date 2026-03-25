@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useLanguage } from "@/lib/i18n";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 interface Account {
   id: string;
@@ -48,6 +49,7 @@ export default function NewExpensePage() {
   const supplierSelectRef = useRef<HTMLButtonElement>(null);
   const accountSelectRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
   const { t } = useLanguage();
+  const { isFieldHidden, getDefault } = useFormConfig("expense");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,9 +58,9 @@ export default function NewExpensePage() {
   const [expenseDate, setExpenseDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(getDefault("description", ""));
   const [supplierId, setSupplierId] = useState("");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(getDefault("notes", ""));
   const [lines, setLines] = useState<ExpenseLine[]>([
     { accountId: "", description: "", amount: "" },
   ]);
@@ -173,6 +175,7 @@ export default function NewExpensePage() {
                     required
                   />
                 </div>
+                {!isFieldHidden("supplierId") && (
                 <div className="grid gap-2">
                   <Label>{t("accounting.supplierOptional")}</Label>
                   <Select
@@ -196,8 +199,10 @@ export default function NewExpensePage() {
                     </SelectContent>
                   </Select>
                 </div>
+                )}
               </div>
 
+              {!isFieldHidden("description") && (
               <div className="grid gap-2">
                 <Label>{t("common.description")}</Label>
                 <Textarea
@@ -206,6 +211,7 @@ export default function NewExpensePage() {
                   placeholder={t("accounting.expenseDescPlaceholder")}
                 />
               </div>
+              )}
 
               <div>
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -375,6 +381,7 @@ export default function NewExpensePage() {
                 </div>
               </div>
 
+              {!isFieldHidden("notes") && (
               <div className="grid gap-2">
                 <Label>{t("common.notes")}</Label>
                 <Textarea
@@ -383,6 +390,7 @@ export default function NewExpensePage() {
                   placeholder={t("common.additionalNotesPlaceholder")}
                 />
               </div>
+              )}
 
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <Link href="/accounting/expenses">

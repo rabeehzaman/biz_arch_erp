@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { SidebarConfigDialog } from "../sidebar-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { SubscriptionTab } from "./subscription-tab";
+import { FormConfigTab } from "./form-config-tab";
 import { INDIAN_STATES } from "@/lib/gst/constants";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n";
@@ -836,6 +837,13 @@ export default function OrganizationDetailsPage() {
                                         >
                                             <UtensilsCrossed className="mr-1.5 h-4 w-4" />
                                             Restaurant
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="formConfig"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            <Settings className="mr-1.5 h-4 w-4" />
+                                            Form Config
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="subscription"
@@ -1869,6 +1877,11 @@ export default function OrganizationDetailsPage() {
                                             </div>
                                         </div>
                                     )}
+                                </TabsContent>
+
+                                {/* FORM CONFIG TAB */}
+                                <TabsContent value="formConfig" className="mt-0">
+                                    <FormConfigTab orgId={id} />
                                 </TabsContent>
 
                                 {/* SUBSCRIPTION TAB */}

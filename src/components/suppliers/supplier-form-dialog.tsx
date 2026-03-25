@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 export interface Supplier {
     id: string;
@@ -50,38 +51,39 @@ export function SupplierFormDialog({
 }: SupplierFormDialogProps) {
     const { data: session } = useSession();
     const { t } = useLanguage();
+    const { isFieldHidden, getDefault } = useFormConfig("supplier", { isEdit: !!supplierToEdit });
     const isSaudi = !!(session?.user as any)?.saudiEInvoiceEnabled;
     const defaultCountry = isSaudi ? "Saudi Arabia" : "India";
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
-        email: "",
-        phone: "",
-        address: "",
-        city: "",
-        state: "",
-        zipCode: "",
-        country: defaultCountry,
-        gstin: "",
+        email: getDefault("email", ""),
+        phone: getDefault("phone", ""),
+        address: getDefault("address", ""),
+        city: getDefault("city", ""),
+        state: getDefault("state", ""),
+        zipCode: getDefault("zipCode", ""),
+        country: getDefault("country", defaultCountry),
+        gstin: getDefault("gstin", ""),
         gstStateCode: "",
-        notes: "",
+        notes: getDefault("notes", ""),
     });
 
     const resetForm = useCallback(() => {
         setFormData({
             name: "",
-            email: "",
-            phone: "",
-            address: "",
-            city: "",
-            state: "",
-            zipCode: "",
+            email: getDefault("email", ""),
+            phone: getDefault("phone", ""),
+            address: getDefault("address", ""),
+            city: getDefault("city", ""),
+            state: getDefault("state", ""),
+            zipCode: getDefault("zipCode", ""),
             country: defaultCountry,
-            gstin: "",
+            gstin: getDefault("gstin", ""),
             gstStateCode: "",
-            notes: "",
+            notes: getDefault("notes", ""),
         });
-    }, [defaultCountry]);
+    }, [defaultCountry, getDefault]);
 
     useEffect(() => {
         if (supplierToEdit && open) {
@@ -193,6 +195,7 @@ export function SupplierFormDialog({
                                     required
                                 />
                             </div>
+                            {!isFieldHidden("email") && (
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-email">{t("common.email")}</Label>
                                 <Input
@@ -204,8 +207,11 @@ export function SupplierFormDialog({
                                     }
                                 />
                             </div>
+                            )}
                         </div>
+                        {(!isFieldHidden("phone") || !isFieldHidden("country")) && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {!isFieldHidden("phone") && (
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-phone">{t("common.phone")}</Label>
                                 <Input
@@ -216,6 +222,8 @@ export function SupplierFormDialog({
                                     }
                                 />
                             </div>
+                            )}
+                            {!isFieldHidden("country") && (
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-country">{t("common.country")}</Label>
                                 <Input
@@ -226,8 +234,10 @@ export function SupplierFormDialog({
                                     }
                                 />
                             </div>
+                            )}
                         </div>
-                        {session?.user?.gstEnabled && !(session?.user as any)?.saudiEInvoiceEnabled && (
+                        )}
+                        {session?.user?.gstEnabled && !(session?.user as any)?.saudiEInvoiceEnabled && !isFieldHidden("gstin") && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="grid gap-2">
                                     <Label htmlFor="sup-gstin">{t("suppliers.gstin")}</Label>
@@ -259,6 +269,7 @@ export function SupplierFormDialog({
                                 </div>
                             </div>
                         )}
+                        {!isFieldHidden("address") && (
                         <div className="grid gap-2">
                             <Label htmlFor="sup-address">{t("common.address")}</Label>
                             <Input
@@ -269,7 +280,10 @@ export function SupplierFormDialog({
                                 }
                             />
                         </div>
+                        )}
+                        {(!isFieldHidden("city") || !isFieldHidden("state") || !isFieldHidden("zipCode")) && (
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {!isFieldHidden("city") && (
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-city">{t("common.city")}</Label>
                                 <Input
@@ -280,6 +294,8 @@ export function SupplierFormDialog({
                                     }
                                 />
                             </div>
+                            )}
+                            {!isFieldHidden("state") && (
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-state">{t("customers.state")}</Label>
                                 <Input
@@ -290,6 +306,8 @@ export function SupplierFormDialog({
                                     }
                                 />
                             </div>
+                            )}
+                            {!isFieldHidden("zipCode") && (
                             <div className="grid gap-2">
                                 <Label htmlFor="sup-zipCode">{t("settings.zipCode")}</Label>
                                 <Input
@@ -300,7 +318,10 @@ export function SupplierFormDialog({
                                     }
                                 />
                             </div>
+                            )}
                         </div>
+                        )}
+                        {!isFieldHidden("notes") && (
                         <div className="grid gap-2">
                             <Label htmlFor="sup-notes">{t("common.notes")}</Label>
                             <Textarea
@@ -312,6 +333,7 @@ export function SupplierFormDialog({
                                 placeholder={t("common.notesPlaceholder")}
                             />
                         </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>

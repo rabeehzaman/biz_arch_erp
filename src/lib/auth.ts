@@ -89,6 +89,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           isTaxInclusivePrice: user.organization?.isTaxInclusivePrice ?? false,
           language: user.language ?? user.organization?.language ?? "en",
           currency: user.organization?.currency ?? "INR",
+          landingPage: user.landingPage ?? null,
         };
       },
     }),

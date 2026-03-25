@@ -35,6 +35,7 @@ import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
 import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
 import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
 import { OldGoldAdjustment } from "@/components/jewellery-shop/old-gold-adjustment";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 interface Customer {
   id: string;
@@ -136,6 +137,7 @@ export default function NewInvoicePage() {
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
   const { t } = useLanguage();
+  const { isFieldHidden, getDefault } = useFormConfig("salesInvoice");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -151,12 +153,12 @@ export default function NewInvoicePage() {
   const [formData, setFormData] = useState({
     customerId: "",
     date: new Date().toISOString().split("T")[0],
-    dueDate: getDefaultDueDate(),
-    notes: "",
-    terms: "",
-    branchId: "",
-    warehouseId: "",
-    paymentType: "CASH",
+    dueDate: getDefault("dueDate", getDefaultDueDate()),
+    notes: getDefault("notes", ""),
+    terms: getDefault("terms", ""),
+    branchId: getDefault("branchId", ""),
+    warehouseId: getDefault("warehouseId", ""),
+    paymentType: getDefault("paymentType", "CASH"),
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
@@ -525,7 +527,7 @@ export default function NewInvoicePage() {
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
-  const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
+  const [taxInclusive, setTaxInclusive] = useState(getDefault("taxInclusive", orgTaxInclusive));
   const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
   const [applyRoundOff, setApplyRoundOff] = useState(false);
   useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
@@ -733,6 +735,7 @@ export default function NewInvoicePage() {
                       suppressHydrationWarning
                     />
                   </div>
+                  {!isFieldHidden("dueDate") && (
                   <div className="grid gap-2">
                     <Label htmlFor="dueDate">{t("sales.dueDate")} *</Label>
                     <Input
@@ -746,6 +749,8 @@ export default function NewInvoicePage() {
                       suppressHydrationWarning
                     />
                   </div>
+                  )}
+                  {!isFieldHidden("paymentType") && (
                   <div className="grid gap-2">
                     <Label htmlFor="paymentType">{t("sales.paymentType")} *</Label>
                     <Select
@@ -772,7 +777,8 @@ export default function NewInvoicePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {taxEnabled && (
+                  )}
+                  {taxEnabled && !isFieldHidden("taxInclusive") && (
                     <div className="grid gap-2">
                       <Label>{t("common.pricing")}</Label>
                       <Select
@@ -1352,11 +1358,13 @@ export default function NewInvoicePage() {
             )}
 
             {/* Notes */}
+            {(!isFieldHidden("notes") || !isFieldHidden("terms")) && (
             <Card>
               <CardHeader>
                 <CardTitle>{t("common.additionalInformation")}</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4">
+                {!isFieldHidden("notes") && (
                 <div className="grid gap-2">
                   <Label htmlFor="notes">{t("common.notes")}</Label>
                   <Textarea
@@ -1368,6 +1376,8 @@ export default function NewInvoicePage() {
                     placeholder={t("sales.notesPlaceholder")}
                   />
                 </div>
+                )}
+                {!isFieldHidden("terms") && (
                 <div className="grid gap-2">
                   <Label htmlFor="terms">{t("common.termsAndConditions")}</Label>
                   <Textarea
@@ -1379,8 +1389,10 @@ export default function NewInvoicePage() {
                     placeholder={t("sales.termsPlaceholder")}
                   />
                 </div>
+                )}
               </CardContent>
             </Card>
+            )}
 
             {/* Summary */}
             <Card>

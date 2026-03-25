@@ -30,6 +30,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
 import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
 import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 interface Supplier {
   id: string;
@@ -84,6 +85,7 @@ export default function NewPurchaseInvoicePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
+  const { isFieldHidden, getDefault } = useFormConfig("purchaseInvoice");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,11 +101,11 @@ export default function NewPurchaseInvoicePage() {
   const [formData, setFormData] = useState({
     supplierId: "",
     invoiceDate: new Date().toISOString().split("T")[0],
-    dueDate: getDefaultDueDate(),
+    dueDate: getDefault("dueDate", getDefaultDueDate()),
     supplierInvoiceRef: "",
-    notes: "",
-    branchId: "",
-    warehouseId: "",
+    notes: getDefault("notes", ""),
+    branchId: getDefault("branchId", ""),
+    warehouseId: getDefault("warehouseId", ""),
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
@@ -577,6 +579,7 @@ export default function NewPurchaseInvoicePage() {
                       autoFocus={true}
                     />
                   </div>
+                  {!isFieldHidden("supplierInvoiceRef") && (
                   <div className="grid gap-2">
                     <Label htmlFor="supplierInvoiceRef">{t("purchases.supplierInvoiceRef")}</Label>
                     <Input
@@ -588,6 +591,7 @@ export default function NewPurchaseInvoicePage() {
                       placeholder={t("purchases.supplierInvoiceRefPlaceholder")}
                     />
                   </div>
+                  )}
                   <div className="grid gap-2">
                     <Label htmlFor="invoiceDate">{t("purchases.purchaseDate")} *</Label>
                     <Input
@@ -600,6 +604,7 @@ export default function NewPurchaseInvoicePage() {
                       required
                     />
                   </div>
+                  {!isFieldHidden("dueDate") && (
                   <div className="grid gap-2">
                     <Label htmlFor="dueDate">{t("purchases.paymentDueDate")} *</Label>
                     <Input
@@ -612,6 +617,7 @@ export default function NewPurchaseInvoicePage() {
                       required
                     />
                   </div>
+                  )}
                   {taxEnabled && (
                     <div className="grid gap-2">
                       <Label>{t("common.pricing")}</Label>
@@ -1233,6 +1239,7 @@ export default function NewPurchaseInvoicePage() {
             </Card>
 
             {/* Notes */}
+            {!isFieldHidden("notes") && (
             <Card>
               <CardHeader>
                 <CardTitle>{t("common.additionalInformation")}</CardTitle>
@@ -1251,6 +1258,7 @@ export default function NewPurchaseInvoicePage() {
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {/* Summary */}
             <Card>

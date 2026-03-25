@@ -61,10 +61,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment, useMemo } from "react";
 import useSWR from "swr";
 import { useLanguage } from "@/lib/i18n";
 import { useEdition } from "@/hooks/use-edition";
+import { useSidebarSectionOrder } from "@/hooks/use-form-config";
+import { SIDEBAR_SECTIONS } from "@/lib/form-config/types";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -299,6 +301,50 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
   const isJewelleryEnabled = session?.user?.isJewelleryModuleEnabled;
   const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
+  const sidebarOrder = useSidebarSectionOrder();
+
+  // Data-driven section rendering — allows configurable order
+  const sectionRenderers = useMemo(() => {
+    const map: Record<string, () => React.ReactNode> = {
+      general: () =>
+        visibleNav.length > 0
+          ? visibleNav.map((item) => (
+              <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} />
+            ))
+          : null,
+      sales: () =>
+        visibleSales.length > 0 ? (
+          <CollapsibleSection title="nav.sales" icon={ShoppingCart} items={visibleSales} pathname={pathname} onNavigate={onNavigate} />
+        ) : null,
+      purchases: () =>
+        visiblePurchases.length > 0 ? (
+          <CollapsibleSection title="nav.purchases" icon={Truck} items={visiblePurchases} pathname={pathname} onNavigate={onNavigate} />
+        ) : null,
+      accounting: () =>
+        visibleAccounting.length > 0 ? (
+          <CollapsibleSection title="nav.accounting" icon={BookOpen} items={visibleAccounting} pathname={pathname} onNavigate={onNavigate} />
+        ) : null,
+      inventory: () =>
+        multiBranchEnabled && visibleInventory.length > 0 ? (
+          <CollapsibleSection title="nav.inventory" icon={Warehouse} items={visibleInventory} pathname={pathname} onNavigate={onNavigate} />
+        ) : null,
+      mobileShop: () =>
+        isMobileShopEnabled && visibleMobileShop.length > 0 ? (
+          <CollapsibleSection title="nav.mobileShop" icon={Smartphone} items={visibleMobileShop} pathname={pathname} onNavigate={onNavigate} />
+        ) : null,
+      jewellery: () =>
+        isJewelleryEnabled && visibleJewellery.length > 0 ? (
+          <CollapsibleSection title="nav.jewelleryShop" icon={Gem} items={visibleJewellery} pathname={pathname} onNavigate={onNavigate} />
+        ) : null,
+      restaurant: () =>
+        isRestaurantEnabled && visibleRestaurant.length > 0 ? (
+          <CollapsibleSection title="nav.restaurant" icon={UtensilsCrossed} items={visibleRestaurant} pathname={pathname} onNavigate={onNavigate} />
+        ) : null,
+    };
+    return map;
+  }, [visibleNav, visibleSales, visiblePurchases, visibleAccounting, visibleInventory, visibleMobileShop, visibleJewellery, visibleRestaurant, multiBranchEnabled, isMobileShopEnabled, isJewelleryEnabled, isRestaurantEnabled, pathname, onNavigate]);
+
+  const orderedSections = sidebarOrder ?? [...SIDEBAR_SECTIONS];
 
   return (
     <>
@@ -327,79 +373,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           ))
         ) : (
           <>
-            {visibleNav.map((item) => (
-              <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} />
-            ))}
-
-            {visibleSales.length > 0 && (
-              <CollapsibleSection
-                title="nav.sales"
-                icon={ShoppingCart}
-                items={visibleSales}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            )}
-
-            {visiblePurchases.length > 0 && (
-              <CollapsibleSection
-                title="nav.purchases"
-                icon={Truck}
-                items={visiblePurchases}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            )}
-
-            {visibleAccounting.length > 0 && (
-              <CollapsibleSection
-                title="nav.accounting"
-                icon={BookOpen}
-                items={visibleAccounting}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            )}
-
-            {multiBranchEnabled && visibleInventory.length > 0 && (
-              <CollapsibleSection
-                title="nav.inventory"
-                icon={Warehouse}
-                items={visibleInventory}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            )}
-
-            {isMobileShopEnabled && visibleMobileShop.length > 0 && (
-              <CollapsibleSection
-                title="nav.mobileShop"
-                icon={Smartphone}
-                items={visibleMobileShop}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            )}
-
-            {isJewelleryEnabled && visibleJewellery.length > 0 && (
-              <CollapsibleSection
-                title="nav.jewelleryShop"
-                icon={Gem}
-                items={visibleJewellery}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            )}
-
-            {isRestaurantEnabled && visibleRestaurant.length > 0 && (
-              <CollapsibleSection
-                title="nav.restaurant"
-                icon={UtensilsCrossed}
-                items={visibleRestaurant}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            )}
+            {orderedSections.map((sectionKey) => {
+              const renderer = sectionRenderers[sectionKey];
+              const content = renderer?.();
+              return content ? <Fragment key={sectionKey}>{content}</Fragment> : null;
+            })}
 
             <NavItemComponent
               item={{ nameKey: "nav.reports", href: "/reports", icon: BarChart3 }}

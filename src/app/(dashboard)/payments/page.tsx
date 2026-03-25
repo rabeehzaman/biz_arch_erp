@@ -56,6 +56,7 @@ import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 import { SwipeableCard } from "@/components/mobile/swipeable-card";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 interface Payment {
   id: string;
@@ -128,15 +129,16 @@ export default function PaymentsPage() {
   const { t, lang } = useLanguage();
   const { symbol, locale, fmt } = useCurrency();
   const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
+  const { isFieldHidden, getDefault } = useFormConfig("payment");
   const [formData, setFormData] = useState({
     customerId: "",
     invoiceId: "",
     amount: "",
     discountReceived: "",
     paymentDate: new Date().toISOString().split("T")[0],
-    paymentMethod: "CASH",
-    reference: "",
-    notes: "",
+    paymentMethod: getDefault("method", "CASH"),
+    reference: getDefault("reference", ""),
+    notes: getDefault("notes", ""),
     adjustmentAccountId: "",
   });
 
@@ -413,7 +415,7 @@ export default function PaymentsPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {formData.paymentMethod !== "ADJUSTMENT" && (
+                    {formData.paymentMethod !== "ADJUSTMENT" && !isFieldHidden("reference") && (
                       <div className="grid gap-2">
                         <Label htmlFor="reference">{t("common.reference")}</Label>
                         <Input
@@ -456,6 +458,7 @@ export default function PaymentsPage() {
                     </div>
                   )}
 
+                  {!isFieldHidden("notes") && (
                   <div className="grid gap-2">
                     <Label htmlFor="notes">{t("common.notes")}</Label>
                     <Textarea
@@ -466,6 +469,7 @@ export default function PaymentsPage() {
                       }
                     />
                   </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>

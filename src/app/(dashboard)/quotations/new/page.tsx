@@ -26,6 +26,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
 import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
 import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 interface Customer {
   id: string;
@@ -65,6 +66,7 @@ export default function NewQuotationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
+  const { isFieldHidden, getDefault } = useFormConfig("quotation");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,10 +82,10 @@ export default function NewQuotationPage() {
     customerId: "",
     issueDate: new Date().toISOString().split("T")[0],
     validUntil: getDefaultValidUntil(),
-    notes: "",
-    terms: "",
-    branchId: "",
-    warehouseId: "",
+    notes: getDefault("notes", ""),
+    terms: getDefault("terms", ""),
+    branchId: getDefault("branchId", ""),
+    warehouseId: getDefault("warehouseId", ""),
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
@@ -510,6 +512,7 @@ export default function NewQuotationPage() {
                       required
                     />
                   </div>
+                  {!isFieldHidden("expiryDate") && (
                   <div className="grid gap-2">
                     <Label htmlFor="validUntil">{t("quotations.validUntil")} *</Label>
                     <Input
@@ -523,6 +526,7 @@ export default function NewQuotationPage() {
                       required
                     />
                   </div>
+                  )}
                   {taxEnabled && (
                     <div className="grid gap-2">
                       <Label>{t("common.pricing")}</Label>
@@ -931,11 +935,13 @@ export default function NewQuotationPage() {
             </Card>
 
             {/* Notes */}
+            {(!isFieldHidden("notes") || !isFieldHidden("terms")) && (
             <Card>
               <CardHeader>
                 <CardTitle>{t("common.additionalInformation")}</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4">
+                {!isFieldHidden("notes") && (
                 <div className="grid gap-2">
                   <Label htmlFor="notes">{t("common.notes")}</Label>
                   <Textarea
@@ -947,6 +953,8 @@ export default function NewQuotationPage() {
                     placeholder={t("sales.notesPlaceholder")}
                   />
                 </div>
+                )}
+                {!isFieldHidden("terms") && (
                 <div className="grid gap-2">
                   <Label htmlFor="terms">{t("common.termsAndConditions")}</Label>
                   <Textarea
@@ -958,8 +966,10 @@ export default function NewQuotationPage() {
                     placeholder={t("sales.termsPlaceholder")}
                   />
                 </div>
+                )}
               </CardContent>
             </Card>
+            )}
 
             {/* Summary */}
             <Card>

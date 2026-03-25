@@ -28,6 +28,7 @@ import { ImeiCameraScanner } from "./imei-camera-scanner";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/lib/i18n";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 interface Supplier {
   id: string;
@@ -51,6 +52,7 @@ interface DeviceFormDialogProps {
 export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: DeviceFormDialogProps) {
   const { data: session } = useSession();
   const { t } = useLanguage();
+  const { isFieldHidden, getDefault } = useFormConfig("mobileDevice", { isEdit: !!editDevice });
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
   const [saving, setSaving] = useState(false);
@@ -252,6 +254,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     <ImeiCameraScanner onScan={(imei) => setFormData((prev) => ({ ...prev, imei1: imei }))} />
                   </div>
                 </div>
+                {!isFieldHidden("imei2") && (
                 <div className="grid gap-1.5">
                   <Label>{t("devices.imei2")}</Label>
                   <div className="flex gap-1">
@@ -266,7 +269,9 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     <ImeiCameraScanner onScan={(imei) => setFormData((prev) => ({ ...prev, imei2: imei }))} />
                   </div>
                 </div>
+                )}
               </div>
+              {!isFieldHidden("serialNumber") && (
               <div className="grid gap-1.5">
                 <Label>{t("devices.serialNumber")}</Label>
                 <Input
@@ -275,12 +280,14 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   placeholder="Optional"
                 />
               </div>
+              )}
             </fieldset>
 
             {/* Specifications — 2 cols on mobile, 3 on sm+ */}
             <fieldset className="space-y-3">
               <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("devices.specifications")}</legend>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {!isFieldHidden("color") && (
                 <div className="grid gap-1.5">
                   <Label>{t("devices.color")}</Label>
                   <Input
@@ -289,6 +296,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     placeholder={t("devices.colorPlaceholder")}
                   />
                 </div>
+                )}
+                {!isFieldHidden("storageCapacity") && (
                 <div className="grid gap-1.5">
                   <Label>{t("devices.storage")}</Label>
                   <Select value={formData.storageCapacity} onValueChange={(value) => setFormData({ ...formData, storageCapacity: value })}>
@@ -302,6 +311,8 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     </SelectContent>
                   </Select>
                 </div>
+                )}
+                {!isFieldHidden("ram") && (
                 <div className="grid gap-1.5">
                   <Label>{t("devices.ram")}</Label>
                   <Select value={formData.ram} onValueChange={(value) => setFormData({ ...formData, ram: value })}>
@@ -315,6 +326,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                     </SelectContent>
                   </Select>
                 </div>
+                )}
                 <div className="grid gap-1.5">
                   <Label>{t("devices.network")}</Label>
                   <Select value={formData.networkStatus} onValueChange={(value) => setFormData({ ...formData, networkStatus: value })}>
@@ -514,6 +526,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
             </fieldset>
 
             {/* Notes */}
+            {!isFieldHidden("notes") && (
             <div className="grid gap-1.5">
               <Label>{t("common.notes")}</Label>
               <Textarea
@@ -523,6 +536,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                 rows={3}
               />
             </div>
+            )}
 
           </div>
 

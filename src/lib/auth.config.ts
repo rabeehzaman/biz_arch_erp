@@ -28,7 +28,9 @@ export const authConfig: NextAuthConfig = {
           const role = (auth?.user as { role?: string })?.role;
           if (role === "superadmin") return Response.redirect(new URL("/admin/organizations", nextUrl));
           if (role === "pos") return Response.redirect(new URL("/pos", nextUrl));
-          return Response.redirect(new URL("/", nextUrl));
+          // Use per-user landing page if set, otherwise dashboard
+          const userLandingPage = (auth?.user as { landingPage?: string | null })?.landingPage;
+          return Response.redirect(new URL(userLandingPage || "/", nextUrl));
         }
         return true; // Allow access to login page when not logged in
       }
@@ -83,6 +85,7 @@ export const authConfig: NextAuthConfig = {
         token.isTaxInclusivePrice = (user as { isTaxInclusivePrice?: boolean }).isTaxInclusivePrice ?? false;
         token.language = (user as { language?: string }).language ?? "en";
         token.currency = (user as { currency?: string }).currency ?? "INR";
+        token.landingPage = (user as { landingPage?: string | null }).landingPage ?? null;
       }
       // Handle client-side session updates (e.g. language switch)
       if (trigger === "update" && sessionUpdate) {

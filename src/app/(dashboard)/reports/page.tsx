@@ -28,6 +28,7 @@ import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDisabledReports } from "@/hooks/use-form-config";
 
 interface ReportLink {
   titleKey: string;
@@ -138,6 +139,7 @@ export default function ReportsPage() {
   const { data: session } = useSession();
   const [search, setSearch] = useState("");
   const multiBranch = !!(session?.user as any)?.multiBranchEnabled;
+  const disabledReports = useDisabledReports();
 
   const filteredCategories = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -147,6 +149,9 @@ export default function ReportsPage() {
         const filtered = cat.reports.filter((r) => {
           if (r.edition && r.edition !== edition) return false;
           if (r.requiresFeature === "multiBranchEnabled" && !multiBranch) return false;
+          // Check if report is disabled by org config
+          const slug = r.href.replace("/reports/", "");
+          if (disabledReports.includes(slug)) return false;
           if (!query) return true;
           const title = t(r.titleKey).toLowerCase();
           const desc = t(r.descKey).toLowerCase();
@@ -155,7 +160,7 @@ export default function ReportsPage() {
         return { ...cat, reports: filtered };
       })
       .filter((cat) => cat.reports.length > 0);
-  }, [search, edition, multiBranch, t]);
+  }, [search, edition, multiBranch, disabledReports, t]);
 
   return (
     <PageAnimation>

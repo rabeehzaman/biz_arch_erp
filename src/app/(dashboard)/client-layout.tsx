@@ -15,14 +15,29 @@ import { LanguageProvider, useLanguage } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { RestaurantThemeProvider } from "@/components/restaurant/restaurant-theme-provider";
+import { FormConfigProvider } from "@/lib/form-config/context";
+import { useSidebarMode } from "@/hooks/use-form-config";
 
 function DesktopLayout({ children }: { children: React.ReactNode }) {
     const { dir } = useLanguage();
     const pathname = usePathname();
+    const sidebarMode = useSidebarMode();
 
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }, [pathname]);
+
+    if (sidebarMode === "hidden") {
+        return (
+            <div className="min-h-screen bg-slate-50" dir={dir}>
+                <main className="px-4 pt-4 pb-8 md:px-6 md:pt-5 md:pb-10">
+                    <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-6">
+                        {children}
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-100" dir={dir}>
@@ -95,16 +110,18 @@ export default function ClientDashboardLayout({
     return (
         <SessionProvider session={session}>
             <SWRProvider fallback={swrFallback}>
-                <LanguageProvider initialLang={initialLang}>
-                    <CommandPaletteProvider>
-                        <SubscriptionBanner />
-                        <RestaurantThemeWrapper>
-                            <DashboardInner>{children}</DashboardInner>
-                        </RestaurantThemeWrapper>
-                        <CommandPalette />
-                        <KeyboardShortcutsDialog />
-                    </CommandPaletteProvider>
-                </LanguageProvider>
+                <FormConfigProvider>
+                    <LanguageProvider initialLang={initialLang}>
+                        <CommandPaletteProvider>
+                            <SubscriptionBanner />
+                            <RestaurantThemeWrapper>
+                                <DashboardInner>{children}</DashboardInner>
+                            </RestaurantThemeWrapper>
+                            <CommandPalette />
+                            <KeyboardShortcutsDialog />
+                        </CommandPaletteProvider>
+                    </LanguageProvider>
+                </FormConfigProvider>
             </SWRProvider>
         </SessionProvider>
     );

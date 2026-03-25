@@ -26,6 +26,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
 import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState, type JewelleryItemData } from "@/components/jewellery-shop/jewellery-line-fields";
 import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
+import { useFormConfig } from "@/hooks/use-form-config";
 
 interface Supplier {
   id: string;
@@ -63,6 +64,7 @@ export default function NewDebitNotePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
+  const { isFieldHidden, getDefault } = useFormConfig("debitNote");
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -74,8 +76,8 @@ export default function NewDebitNotePage() {
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [reason, setReason] = useState("");
-  const [notes, setNotes] = useState("");
+  const [reason, setReason] = useState(getDefault("reason", ""));
+  const [notes, setNotes] = useState(getDefault("notes", ""));
   const [items, setItems] = useState<LineItem[]>([
     {
       id: crypto.randomUUID(),
@@ -474,6 +476,7 @@ export default function NewDebitNotePage() {
                   />
                 </div>
 
+                {!isFieldHidden("purchaseInvoiceId") && (
                 <div className="space-y-2">
                   <Label htmlFor="purchaseInvoiceId">
                     {t("debitNotes.originalPurchaseInvoice")} ({t("common.optional")})
@@ -485,7 +488,9 @@ export default function NewDebitNotePage() {
                     onChange={(e) => setPurchaseInvoiceId(e.target.value)}
                   />
                 </div>
+                )}
 
+                {!isFieldHidden("reason") && (
                 <div className="space-y-2">
                   <Label htmlFor="reason">{t("debitNotes.reasonForReturn")}</Label>
                   <Input
@@ -495,6 +500,7 @@ export default function NewDebitNotePage() {
                     onChange={(e) => setReason(e.target.value)}
                   />
                 </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -674,6 +680,7 @@ export default function NewDebitNotePage() {
             </CardContent>
           </Card>
 
+          {!isFieldHidden("notes") && (
           <Card>
             <CardHeader>
               <CardTitle>{t("common.additionalInformation")}</CardTitle>
@@ -691,6 +698,7 @@ export default function NewDebitNotePage() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           <Card>
             <CardHeader>

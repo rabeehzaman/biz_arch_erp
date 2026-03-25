@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useLanguage } from "@/lib/i18n";
 import { useMobileFixedUi } from "@/hooks/use-mobile-fixed-ui";
 import {
@@ -13,7 +13,14 @@ import {
   Package,
   MoreHorizontal,
   LogOut,
+  Truck,
+  Users,
+  Receipt,
+  BarChart3,
+  Settings,
+  type LucideIcon,
 } from "lucide-react";
+import { useMobileNavConfig, useSidebarMode } from "@/hooks/use-form-config";
 import { GlobalScanner } from "@/components/scanner/global-scanner";
 import { MobileLanguageSwitcher } from "@/components/mobile-language-switcher";
 import { NetworkStatusBanner } from "@/components/mobile/network-status-banner";
@@ -24,7 +31,28 @@ interface MobileLayoutProps {
   children: React.ReactNode;
 }
 
-const tabs = [
+const ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  ShoppingCart,
+  Monitor,
+  Package,
+  MoreHorizontal,
+  Truck,
+  Users,
+  Receipt,
+  BarChart3,
+  Settings,
+};
+
+interface TabDef {
+  key: string;
+  href: string;
+  icon: LucideIcon;
+  labelKey: string;
+  mobileLabelKey?: string;
+}
+
+const DEFAULT_TABS: TabDef[] = [
   { key: "home", href: "/", icon: LayoutDashboard, labelKey: "nav.dashboard" },
   { key: "sales", href: "/invoices", icon: ShoppingCart, labelKey: "nav.sales" },
   { key: "pos", href: "/pos", icon: Monitor, labelKey: "nav.posTerminal", mobileLabelKey: "nav.posShort" },
@@ -32,25 +60,49 @@ const tabs = [
   { key: "more", href: "/more", icon: MoreHorizontal, labelKey: "nav.more" },
 ];
 
-function getActiveTab(pathname: string): string {
-  if (pathname === "/") return "home";
-  if (pathname === "/pos") return "pos";
-  if (pathname === "/products" || pathname.startsWith("/products/")) return "products";
-  if (pathname === "/more") return "more";
+// Route groups for tab matching
+const ROUTE_GROUPS: Record<string, string[]> = {
+  sales: ["/invoices", "/customers", "/quotations", "/credit-notes", "/payments"],
+  purchases: ["/purchase-invoices", "/suppliers", "/debit-notes", "/supplier-payments"],
+};
 
-  // Sales-related routes
-  const salesRoutes = ["/invoices", "/customers", "/quotations", "/credit-notes", "/payments"];
-  if (salesRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "sales";
+function getActiveTab(pathname: string, configuredTabs: TabDef[]): string {
+  const configuredKeys = new Set(configuredTabs.map((t) => t.key));
 
-  // Everything else is under "more"
-  return "more";
+  // Direct path match
+  for (const tab of configuredTabs) {
+    if (pathname === tab.href) return tab.key;
+    if (tab.href !== "/" && pathname.startsWith(tab.href + "/")) return tab.key;
+  }
+
+  // Route group matching
+  for (const [groupKey, routes] of Object.entries(ROUTE_GROUPS)) {
+    if (configuredKeys.has(groupKey) && routes.some((r) => pathname === r || pathname.startsWith(r + "/"))) {
+      return groupKey;
+    }
+  }
+
+  // Fallback
+  return configuredKeys.has("more") ? "more" : configuredTabs[configuredTabs.length - 1]?.key ?? "home";
 }
 
 export function MobileLayout({ children }: MobileLayoutProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { t } = useLanguage();
-  const activeTab = getActiveTab(pathname);
+  const mobileNavConfig = useMobileNavConfig();
+  const sidebarMode = useSidebarMode();
+
+  // Resolve configured tabs (with icon components) or use defaults
+  const tabs: TabDef[] = useMemo(() => {
+    if (!mobileNavConfig) return DEFAULT_TABS;
+    return mobileNavConfig.map((tab) => ({
+      ...tab,
+      icon: ICON_MAP[tab.icon] || MoreHorizontal,
+    }));
+  }, [mobileNavConfig]);
+
+  const activeTab = getActiveTab(pathname, tabs);
   const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
   const isSuperadmin = session?.user?.role === "superadmin";
   const showLanguageSwitcher = pathname === "/";
@@ -74,6 +126,17 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     const el = tabRefs.current[activeIndex];
     if (el) setPillStyle({ left: el.offsetLeft + el.offsetWidth / 2 - 16, width: 32 });
   }, [activeIndex]);
+
+  // Hidden sidebar mode (POS-only) — no bottom nav, full-width content
+  if (sidebarMode === "hidden" && !isSuperadmin) {
+    return (
+      <div className={`${baseContentClassName} pb-6`}>
+        <div className="mx-auto w-full max-w-[1680px]">
+          <div className="flex flex-col gap-6">{children}</div>
+        </div>
+      </div>
+    );
+  }
 
   // Superadmin only sees organizations, skip tabbar
   if (isSuperadmin) {
@@ -129,7 +192,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
         }}
         aria-hidden={navHidden}
       >
-        <div className="relative grid grid-cols-5 gap-1 px-2 pb-[calc(0.35rem+var(--app-safe-area-bottom))] pt-1">
+        <div className={`relative grid gap-1 px-2 pb-[calc(0.35rem+var(--app-safe-area-bottom))] pt-1`} style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
           {tabs.map((tab, index) => {
             const isActive = activeTab === tab.key;
 
