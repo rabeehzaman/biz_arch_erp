@@ -26,9 +26,7 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-    return NextResponse.json(units, {
-      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
-    });
+    return NextResponse.json(units);
   } catch (error) {
     console.error("Failed to fetch units:", error);
     return NextResponse.json(
