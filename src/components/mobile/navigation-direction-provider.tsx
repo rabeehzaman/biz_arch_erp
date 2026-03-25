@@ -12,7 +12,7 @@ export function useNavigationDirection() {
 }
 
 // Root tab paths — switching between these is a "tab" transition
-const ROOT_TABS = new Set(["/", "/invoices", "/pos", "/products", "/more"])
+const ROOT_TABS = new Set(["/", "/invoices", "/products", "/more"])
 
 function getDepth(pathname: string) {
   return pathname === "/" ? 0 : pathname.split("/").filter(Boolean).length

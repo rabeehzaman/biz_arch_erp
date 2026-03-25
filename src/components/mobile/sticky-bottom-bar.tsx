@@ -13,7 +13,7 @@ export function StickyBottomBar({ children }: StickyBottomBarProps) {
 
   const bottomValue = scrolledDown
     ? "var(--app-safe-area-bottom)"
-    : "calc(4.75rem + var(--app-safe-area-bottom))";
+    : "calc(5.25rem + var(--app-safe-area-bottom))";
 
   return (
     <div

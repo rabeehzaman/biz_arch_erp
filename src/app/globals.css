@@ -377,10 +377,22 @@
   animation: tab-icon-bounce 0.25s ease-out;
 }
 
+/* Plus button tap animation */
+@keyframes plus-btn-press {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+.plus-btn-tap {
+  animation: plus-btn-press 0.2s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-page-in,
   .stagger-children > *,
   .tab-icon-active,
+  .plus-btn-tap,
   .animate-nav-forward,
   .animate-nav-back,
   .animate-nav-tab {

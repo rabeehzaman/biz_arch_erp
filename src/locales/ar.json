@@ -73,7 +73,15 @@
         "gstDetail": "تفاصيل ضريبة السلع والخدمات",
         "signOut": "تسجيل الخروج",
         "whatsNew": "ما الجديد",
-        "more": "المزيد"
+        "more": "المزيد",
+        "create": "إنشاء",
+        "quickActions": "إجراءات سريعة",
+        "newInvoice": "فاتورة جديدة",
+        "newQuotation": "عرض سعر جديد",
+        "newCustomer": "عميل جديد",
+        "newProduct": "منتج جديد",
+        "openPOS": "فتح نقطة البيع",
+        "newExpense": "مصروف جديد"
     },
     "whatsNew": {
         "title": "ما الجديد",

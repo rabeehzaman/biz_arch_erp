@@ -73,7 +73,15 @@
         "gstDetail": "GST Detail",
         "signOut": "Sign Out",
         "whatsNew": "What's New",
-        "more": "More"
+        "more": "More",
+        "create": "Create",
+        "quickActions": "Quick Actions",
+        "newInvoice": "New Invoice",
+        "newQuotation": "New Quotation",
+        "newCustomer": "New Customer",
+        "newProduct": "New Product",
+        "openPOS": "Open POS",
+        "newExpense": "New Expense"
     },
     "whatsNew": {
         "title": "What's New",
