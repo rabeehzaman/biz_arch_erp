@@ -92,6 +92,7 @@ interface OpenSession {
 interface DashboardData {
   locations: Location[];
   openSessions: OpenSession[];
+  posEmployeePinRequired: boolean;
 }
 
 interface CashBankAccountOption {
@@ -175,6 +176,7 @@ export default function POSDashboardPage() {
 
   const locations = useMemo(() => data?.locations ?? [], [data?.locations]);
   const openSessions = useMemo(() => data?.openSessions ?? [], [data?.openSessions]);
+  const pinRequired = data?.posEmployeePinRequired ?? false;
   const selectedConfigLocation = useMemo(
     () => locations.find((loc) => getLocationKey(loc) === configLocationKey) ?? null,
     [locations, configLocationKey]
@@ -202,7 +204,7 @@ export default function POSDashboardPage() {
     const cash = openingState?.locationKey === key ? parseFloat(openingState.openingCash) || 0 : 0;
     const pin = openingState?.locationKey === key ? openingState.pinCode : "";
 
-    if (!pin) {
+    if (pinRequired && !pin) {
       toast.error(t("pos.pinCodeRequired"));
       return;
     }
@@ -217,7 +219,7 @@ export default function POSDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           openingCash: cash,
-          pinCode: pin,
+          pinCode: pin || undefined,
           branchId: loc.branchId || undefined,
           warehouseId: loc.warehouseId || undefined,
         }),
@@ -565,32 +567,34 @@ export default function POSDashboardPage() {
                                 }}
                               />
                             </div>
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground mt-2 block">
-                                {t("pos.employeePin")}
-                              </label>
-                              <Input
-                                type="password"
-                                inputMode="numeric"
-                                placeholder={t("pos.enterFourDigitPin")}
-                                value={openingState?.pinCode ?? ""}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/\D/g, "");
-                                  setOpeningState((prev) =>
-                                    prev ? { ...prev, pinCode: val } : prev
-                                  );
-                                }}
-                                className="mt-1 font-mono"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    openRegister(loc);
-                                  }
-                                  if (e.key === "Escape") {
-                                    setOpeningState(null);
-                                  }
-                                }}
-                              />
-                            </div>
+                            {pinRequired && (
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground mt-2 block">
+                                  {t("pos.employeePin")}
+                                </label>
+                                <Input
+                                  type="password"
+                                  inputMode="numeric"
+                                  placeholder={t("pos.enterFourDigitPin")}
+                                  value={openingState?.pinCode ?? ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "");
+                                    setOpeningState((prev) =>
+                                      prev ? { ...prev, pinCode: val } : prev
+                                    );
+                                  }}
+                                  className="mt-1 font-mono"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      openRegister(loc);
+                                    }
+                                    if (e.key === "Escape") {
+                                      setOpeningState(null);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            )}
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"

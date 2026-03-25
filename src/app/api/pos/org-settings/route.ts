@@ -16,7 +16,7 @@ export async function GET() {
         const [org, roundOffMode] = await Promise.all([
             prisma.organization.findUnique({
                 where: { id: organizationId },
-                select: { posAccountingMode: true, saudiEInvoiceEnabled: true, posDefaultCashAccountId: true, posDefaultBankAccountId: true },
+                select: { posAccountingMode: true, saudiEInvoiceEnabled: true, posDefaultCashAccountId: true, posDefaultBankAccountId: true, posEmployeePinRequired: true },
             }),
             getOrganizationRoundOffMode(prisma, organizationId),
         ]);
@@ -26,6 +26,7 @@ export async function GET() {
             saudiEInvoiceEnabled: org?.saudiEInvoiceEnabled || false,
             posDefaultCashAccountId: org?.posDefaultCashAccountId || null,
             posDefaultBankAccountId: org?.posDefaultBankAccountId || null,
+            posEmployeePinRequired: org?.posEmployeePinRequired ?? false,
             roundOffMode,
         });
     } catch (error) {

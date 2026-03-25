@@ -28,7 +28,7 @@ import { useLanguage } from "@/lib/i18n";
 interface Employee {
   id: string;
   name: string;
-  pinCode: string;
+  pinCode: string | null;
   isActive: boolean;
 }
 
@@ -40,6 +40,8 @@ export function EmployeesSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ id: string } | null>(null);
+  const [pinRequired, setPinRequired] = useState(false);
+  const [isTogglingPin, setIsTogglingPin] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -56,11 +58,30 @@ export function EmployeesSettings() {
       const res = await fetch("/api/employees");
       if (!res.ok) throw new Error("Failed to fetch employees");
       const data = await res.json();
-      setEmployees(data);
+      setEmployees(data.employees);
+      setPinRequired(data.posEmployeePinRequired ?? false);
     } catch (_error) {
       toast.error(t("employees.loadFailed"));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const togglePinRequired = async (checked: boolean) => {
+    setIsTogglingPin(true);
+    try {
+      const res = await fetch("/api/employees", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ posEmployeePinRequired: checked }),
+      });
+      if (!res.ok) throw new Error("Failed to update setting");
+      setPinRequired(checked);
+      toast.success(checked ? t("employees.pinEnabled") : t("employees.pinDisabled"));
+    } catch (_error) {
+      toast.error(t("employees.settingUpdateFailed"));
+    } finally {
+      setIsTogglingPin(false);
     }
   };
 
@@ -69,7 +90,7 @@ export function EmployeesSettings() {
       setEditingEmployee(employee);
       setFormData({
         name: employee.name,
-        pinCode: employee.pinCode,
+        pinCode: employee.pinCode || "",
         isActive: employee.isActive,
       });
     } else {
@@ -85,11 +106,15 @@ export function EmployeesSettings() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.pinCode) {
+    if (!formData.name) {
+      toast.error(t("employees.nameRequired"));
+      return;
+    }
+    if (pinRequired && !formData.pinCode) {
       toast.error(t("employees.nameAndPinRequired"));
       return;
     }
-    if (formData.pinCode.length < 4) {
+    if (formData.pinCode && formData.pinCode.length < 4) {
       toast.error(t("employees.pinMinLength"));
       return;
     }
@@ -171,12 +196,27 @@ export function EmployeesSettings() {
         </Button>
       </div>
 
+      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <div>
+          <Label htmlFor="pinRequired" className="text-sm font-medium text-slate-900">
+            {t("employees.requirePinForPos")}
+          </Label>
+          <p className="text-xs text-slate-500">{t("employees.requirePinForPosDesc")}</p>
+        </div>
+        <Switch
+          id="pinRequired"
+          checked={pinRequired}
+          onCheckedChange={togglePinRequired}
+          disabled={isTogglingPin}
+        />
+      </div>
+
       <div className="p-6">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>{t("common.name")}</TableHead>
-              <TableHead>{t("employees.pinCode")}</TableHead>
+              {pinRequired && <TableHead>{t("employees.pinCode")}</TableHead>}
               <TableHead>{t("employees.activeStatus")}</TableHead>
               <TableHead className="text-right">{t("common.actions")}</TableHead>
             </TableRow>
@@ -184,7 +224,7 @@ export function EmployeesSettings() {
           <TableBody>
             {employees.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-slate-500">
+                <TableCell colSpan={pinRequired ? 4 : 3} className="h-24 text-center text-slate-500">
                   {t("employees.noEmployeesFound")}
                 </TableCell>
               </TableRow>
@@ -192,11 +232,17 @@ export function EmployeesSettings() {
               employees.map((emp) => (
                 <TableRow key={emp.id}>
                   <TableCell className="font-medium">{emp.name}</TableCell>
-                  <TableCell>
-                    <span className="font-mono bg-slate-100 px-2 py-1 flex items-center justify-center w-16 text-center rounded text-sm text-slate-600">
-                      {emp.pinCode.replace(/./g, '•')}
-                    </span>
-                  </TableCell>
+                  {pinRequired && (
+                    <TableCell>
+                      {emp.pinCode ? (
+                        <span className="font-mono bg-slate-100 px-2 py-1 flex items-center justify-center w-16 text-center rounded text-sm text-slate-600">
+                          {emp.pinCode.replace(/./g, '•')}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-slate-400">—</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Switch
                       checked={emp.isActive}
@@ -238,22 +284,24 @@ export function EmployeesSettings() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="pinCode">{t("employees.pinCode")}</Label>
-                <Input
-                  id="pinCode"
-                  type="password"
-                  inputMode="numeric"
-                  placeholder="e.g. 1234"
-                  value={formData.pinCode}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\\D/g, "");
-                    setFormData({ ...formData, pinCode: val });
-                  }}
-                  required
-                />
-                <p className="text-xs text-slate-500">{t("employees.pinCodeHint")}</p>
-              </div>
+              {pinRequired && (
+                <div className="space-y-2">
+                  <Label htmlFor="pinCode">{t("employees.pinCode")}</Label>
+                  <Input
+                    id="pinCode"
+                    type="password"
+                    inputMode="numeric"
+                    placeholder="e.g. 1234"
+                    value={formData.pinCode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\\D/g, "");
+                      setFormData({ ...formData, pinCode: val });
+                    }}
+                    required={pinRequired}
+                  />
+                  <p className="text-xs text-slate-500">{t("employees.pinCodeHint")}</p>
+                </div>
+              )}
               <div className="flex items-center justify-between mt-4">
                 <Label htmlFor="isActive">{t("common.active")}</Label>
                 <Switch

@@ -116,6 +116,9 @@ model Organization {
   posReceiptLogoUrl     String?  // Separate logo URL for POS receipts (falls back to pdfHeaderImageUrl)
   posReceiptLogoHeight  Int?     @default(80)   // Logo height (px) on POS receipt
 
+  // POS Employee PIN
+  posEmployeePinRequired     Boolean  @default(false)
+
   // POS Accounting
   posAccountingMode          String   @default("DIRECT")  // "DIRECT" or "CLEARING_ACCOUNT"
   posDefaultCashAccountId    String?
@@ -258,7 +261,7 @@ model User {
 model Employee {
   id             String       @id @default(cuid())
   name           String
-  pinCode        String
+  pinCode        String?
   isActive       Boolean      @default(true)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])

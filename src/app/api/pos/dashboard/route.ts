@@ -17,6 +17,12 @@ export async function GET() {
       prisma, organizationId, session.user.id!, (session.user as any).role || "user"
     );
 
+    // Fetch org settings for PIN requirement
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { posEmployeePinRequired: true },
+    });
+
     // Fetch all active branches with their warehouses
     const branches = await prisma.branch.findMany({
       where: { organizationId, isActive: true },
@@ -144,7 +150,11 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ locations: locationsWithConfig, openSessions: filteredSessions });
+    return NextResponse.json({
+      locations: locationsWithConfig,
+      openSessions: filteredSessions,
+      posEmployeePinRequired: org?.posEmployeePinRequired ?? false,
+    });
   } catch (error) {
     console.error("Failed to fetch POS dashboard:", error);
     return NextResponse.json(

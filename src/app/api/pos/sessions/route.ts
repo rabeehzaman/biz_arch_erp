@@ -127,12 +127,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { openingCash = 0, branchId, warehouseId, pinCode } = body;
 
-    // Fetch org accounting mode before the transaction
+    // Fetch org settings before the transaction
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { posAccountingMode: true },
+      select: { posAccountingMode: true, posEmployeePinRequired: true },
     });
     const isClearingMode = org?.posAccountingMode === "CLEARING_ACCOUNT";
+    const isPinRequired = org?.posEmployeePinRequired ?? false;
 
     // Wrap in transaction to prevent race conditions (duplicate sessions/numbers)
     const posSession = await prisma.$transaction(async (tx) => {
@@ -191,16 +192,33 @@ export async function POST(request: NextRequest) {
         throw new Error("ALREADY_OPEN");
       }
 
-      if (!pinCode) {
-        throw new Error("PIN_REQUIRED");
-      }
+      let employeeId: string | null = null;
 
-      const employee = await tx.employee.findFirst({
-        where: { organizationId, pinCode, isActive: true },
-      });
+      if (isPinRequired) {
+        if (!pinCode) {
+          throw new Error("PIN_REQUIRED");
+        }
 
-      if (!employee) {
-        throw new Error("INVALID_PIN");
+        const employee = await tx.employee.findFirst({
+          where: { organizationId, pinCode, isActive: true },
+        });
+
+        if (!employee) {
+          throw new Error("INVALID_PIN");
+        }
+
+        employeeId = employee.id;
+      } else if (pinCode) {
+        // PIN not required but provided — still validate it
+        const employee = await tx.employee.findFirst({
+          where: { organizationId, pinCode, isActive: true },
+        });
+
+        if (!employee) {
+          throw new Error("INVALID_PIN");
+        }
+
+        employeeId = employee.id;
       }
 
       const sessionNumber = await generateSessionNumber(organizationId, tx);
@@ -210,7 +228,7 @@ export async function POST(request: NextRequest) {
           organizationId,
           sessionNumber,
           userId,
-          employeeId: employee.id,
+          employeeId,
           status: "OPEN",
           openingCash,
           branchId: branchId || null,

@@ -64,6 +64,19 @@ export async function PUT(
       return NextResponse.json({ error: "Employee not found" }, { status: 404 });
     }
 
+    // Check if PIN is required by org settings
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { posEmployeePinRequired: true },
+    });
+
+    if (org?.posEmployeePinRequired && !body.pinCode) {
+      return NextResponse.json(
+        { error: "PIN code is required when employee PIN is enabled" },
+        { status: 400 }
+      );
+    }
+
     if (body.pinCode && body.pinCode !== employee.pinCode) {
       const existing = await prisma.employee.findFirst({
         where: { organizationId, pinCode: body.pinCode },
@@ -81,7 +94,7 @@ export async function PUT(
       where: { id },
       data: {
         name: body.name,
-        pinCode: body.pinCode,
+        pinCode: body.pinCode || null,
         isActive: body.isActive,
       },
     });
