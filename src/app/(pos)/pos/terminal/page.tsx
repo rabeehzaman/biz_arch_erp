@@ -1029,11 +1029,6 @@ function POSTerminalContent() {
     // Open cash drawer immediately on checkout (no delay)
     openCashDrawerIfEnabled();
 
-    // Optimistic UI: clear cart and return to products screen immediately
-    clearCart();
-    setView("cart");
-    setMobileView("products");
-    setIsProcessing(false); // allow next order immediately; server runs in background
     setIsPendingReceipt(true); // hide reprint until new receipt data is ready
 
     try {
@@ -1092,7 +1087,7 @@ function POSTerminalContent() {
       const serverTimings = result.timings as CheckoutTimingPayload | undefined;
       const completedTotal = Number(result.invoice?.total) || snapshotTotals.total;
 
-      // Build receipt data from pre-captured snapshots (cart is already cleared)
+      // Build receipt data from pre-captured snapshots
       const receiptData: ReceiptData = {
         storeName: companySettings?.companyName || "Store",
         storeAddress: companySettings?.companyAddress,
@@ -1163,6 +1158,11 @@ function POSTerminalContent() {
 
       applyOptimisticCheckoutUpdates(completedCart, completedTotal, completedHeldOrderId);
       revalidateCheckoutDataInBackground();
+
+      // Server confirmed — now clear cart and navigate to products
+      clearCart();
+      setView("cart");
+      setMobileView("products");
 
       // Reset restaurant state
       setSelectedTable(null);
