@@ -8,18 +8,23 @@ import {
   TriangleAlertIcon,
 } from "lucide-react"
 import { useTheme } from "next-themes"
+import { usePathname } from "next/navigation"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { useIsMobile } from "@/hooks/use-is-mobile"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
   const isMobile = useIsMobile()
+  const pathname = usePathname()
+  const isPOS = pathname?.startsWith("/pos")
+
+  const defaultPosition = isPOS ? "bottom-left" : "top-right"
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      position={isMobile ? "top-center" : props.position ?? "top-right"}
+      position={isMobile ? "top-center" : props.position ?? defaultPosition}
       icons={{
         success: <span className="animate-success-pop inline-flex"><CircleCheckIcon className="size-4" /></span>,
         info: <InfoIcon className="size-4" />,
