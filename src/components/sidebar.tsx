@@ -114,6 +114,7 @@ const mobileShopNavigation = [
 
 const jewelleryShopNavigation = [
   { nameKey: "nav.jewelleryDashboard", href: "/jewellery-shop/dashboard", icon: LayoutDashboard },
+  { nameKey: "nav.jewellerySale", href: "/jewellery-shop/sale", icon: ShoppingCart },
   { nameKey: "nav.goldRates", href: "/jewellery-shop/gold-rates", icon: BarChart3 },
   { nameKey: "nav.jewelleryInventory", href: "/jewellery-shop/inventory", icon: Package },
   { nameKey: "nav.oldGoldExchange", href: "/jewellery-shop/old-gold", icon: ArrowRightLeft },
