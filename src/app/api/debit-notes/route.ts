@@ -12,6 +12,7 @@ import {
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { createAutoJournalEntry, ensureRoundOffAccount, getSystemAccount } from "@/lib/accounting/journal";
+import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
@@ -170,8 +171,10 @@ export async function POST(request: NextRequest) {
     // Calculate subtotal (sum of tax-exclusive base amounts)
     const subtotal = lineAmounts.reduce((sum: number, la: { taxableAmount: number }) => sum + la.taxableAmount, 0);
 
-    // Check stock availability for all items before proceeding
+    // Check stock availability for all items before proceeding (skip jewellery — status-tracked)
     for (const item of items) {
+      if (item.jewellery?.jewelleryItemId) continue; // Jewellery items don't use stock lots
+
       // Calculate base quantity to return based on conversionFactor
       const baseQuantity = Number(item.quantity) * Number(item.conversionFactor || 1);
 
@@ -356,10 +359,35 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Consume stock for each item (reduces inventory)
+      // Consume stock for each item (reduces inventory) — skip jewellery items
       const productsToRecalculate = new Set<string>();
 
       for (const debitNoteItem of debitNote.items) {
+        // Skip FIFO consumption for jewellery items (status-tracked, no stock lots)
+        if (debitNoteItem.jewelleryItemId) {
+          // Metal ledger OUTFLOW (returned to supplier)
+          const jewelleryItem = await tx.jewelleryItem.findUnique({
+            where: { id: debitNoteItem.jewelleryItemId },
+            select: { fineWeight: true, grossWeight: true, purity: true, metalType: true, tagNumber: true },
+          });
+          if (jewelleryItem) {
+            await createMetalLedgerEntry(tx, organizationId, {
+              date: debitNoteDate,
+              metalType: jewelleryItem.metalType,
+              purity: jewelleryItem.purity,
+              grossWeight: Number(jewelleryItem.grossWeight),
+              fineWeight: Number(jewelleryItem.fineWeight),
+              direction: "OUTFLOW",
+              description: `Purchase Return - Tag #${jewelleryItem.tagNumber} (${debitNoteNumber})`,
+              sourceType: "PURCHASE_RETURN",
+              sourceId: debitNote.id,
+              jewelleryItemId: debitNoteItem.jewelleryItemId,
+              supplierId,
+            });
+          }
+          continue;
+        }
+
         // Calculate base quantity to return based on conversionFactor
         const baseQuantity = Number(debitNoteItem.quantity) * Number(debitNoteItem.conversionFactor);
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isJewelleryModuleEnabled } from "@/lib/auth-utils";
+import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -120,28 +121,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const purchase = await prisma.oldGoldPurchase.create({
-      data: {
-        organizationId,
-        customerId: customerId || null,
-        customerName: customerName || null,
-        weight: numWeight,
-        testedPurity: testedPurity || "K22",
-        purityPercentage: numPurity,
-        testReadings: testReadings ?? null,
-        testMethod: testMethod || "XRF",
-        meltingLossPercent: numMelting,
-        rate: numRate,
-        totalValue,
-        adjustedAgainstInvoiceId: adjustedAgainstInvoiceId || null,
-        panNumber: panNumber || null,
-        notes: notes || null,
-      },
-      include: {
-        customer: {
-          select: { id: true, name: true, phone: true },
+    const purchase = await prisma.$transaction(async (tx) => {
+      const record = await tx.oldGoldPurchase.create({
+        data: {
+          organizationId,
+          customerId: customerId || null,
+          customerName: customerName || null,
+          weight: numWeight,
+          testedPurity: testedPurity || "K22",
+          purityPercentage: numPurity,
+          testReadings: testReadings ?? null,
+          testMethod: testMethod || "XRF",
+          meltingLossPercent: numMelting,
+          rate: numRate,
+          totalValue,
+          adjustedAgainstInvoiceId: adjustedAgainstInvoiceId || null,
+          panNumber: panNumber || null,
+          notes: notes || null,
         },
-      },
+        include: {
+          customer: {
+            select: { id: true, name: true, phone: true },
+          },
+        },
+      });
+
+      // Metal ledger INFLOW for old gold received
+      const ogPurity = testedPurity || "K22";
+      const ogFineWeight = numWeight * (numPurity / 100);
+      await createMetalLedgerEntry(tx, organizationId, {
+        date: new Date(),
+        metalType: "GOLD",
+        purity: ogPurity,
+        grossWeight: numWeight,
+        fineWeight: Math.round(ogFineWeight * 1000) / 1000,
+        direction: "INFLOW",
+        description: `Old Gold Purchase - ${record.customerName || record.customer?.name || "Walk-in"} (${numWeight}g)`,
+        sourceType: "OLD_GOLD_IN",
+        sourceId: record.id,
+        customerId: customerId || null,
+        oldGoldPurchaseId: record.id,
+      });
+
+      return record;
     });
 
     return NextResponse.json(purchase, { status: 201 });

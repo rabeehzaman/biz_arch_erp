@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isJewelleryModuleEnabled } from "@/lib/auth-utils";
+import { createAutoJournalEntry, ensureJewelleryAccounts } from "@/lib/accounting/journal";
+import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
 
 const PURITY_KARAT_VALUES: Record<string, number> = {
   K24: 24,
@@ -150,6 +152,78 @@ export async function POST(
           where: { id: karigarId },
           data: updateData,
         });
+      }
+
+      // Metal ledger entry
+      const metalDirection = (type === "ISSUE" || type === "WASTAGE") ? "OUTFLOW" as const : "INFLOW" as const;
+      const metalSourceType = type === "ISSUE" ? "KARIGAR_ISSUE"
+        : type === "RETURN" ? "KARIGAR_RETURN"
+        : type === "WASTAGE" ? "WASTAGE"
+        : "SCRAP";
+
+      await createMetalLedgerEntry(tx, organizationId, {
+        date: new Date(),
+        metalType: "GOLD",
+        purity,
+        grossWeight: numWeight,
+        fineWeight,
+        direction: metalDirection,
+        description: `Karigar ${type.toLowerCase()} - ${karigar.name} (${numWeight}g ${purity})`,
+        sourceType: metalSourceType,
+        sourceId: transaction.id,
+        jewelleryItemId: jewelleryItemId || null,
+        karigarId,
+      });
+
+      // GL journal entry for karigar gold movement
+      const jwAccounts = await ensureJewelleryAccounts(tx, organizationId);
+      if (jwAccounts) {
+        // Calculate monetary value for GL (use a nominal rate based on fine weight)
+        // For karigar tracking, we use fine weight as the GL value proxy
+        // since the actual monetary value depends on gold rate at time of sale
+        const goldRate = await tx.goldRate.findFirst({
+          where: { organizationId, purity: purity as any, metalType: "GOLD" },
+          orderBy: { date: "desc" },
+          select: { sellRate: true },
+        });
+        const rate = goldRate ? Number(goldRate.sellRate) : 0;
+        const monetaryValue = Math.round(numWeight * rate * 100) / 100;
+
+        if (monetaryValue > 0) {
+          let debitAccountId: string;
+          let creditAccountId: string;
+          let description: string;
+
+          if (type === "ISSUE") {
+            debitAccountId = jwAccounts.goldWithKarigars.id;
+            creditAccountId = jwAccounts.goldInventory.id;
+            description = `Gold issued to ${karigar.name}`;
+          } else if (type === "RETURN") {
+            debitAccountId = jwAccounts.goldInventory.id;
+            creditAccountId = jwAccounts.goldWithKarigars.id;
+            description = `Gold returned by ${karigar.name}`;
+          } else if (type === "WASTAGE") {
+            debitAccountId = jwAccounts.makingCOGS.id;
+            creditAccountId = jwAccounts.goldWithKarigars.id;
+            description = `Karigar wastage - ${karigar.name}`;
+          } else {
+            // SCRAP — returns to inventory
+            debitAccountId = jwAccounts.goldInventory.id;
+            creditAccountId = jwAccounts.goldWithKarigars.id;
+            description = `Scrap returned by ${karigar.name}`;
+          }
+
+          await createAutoJournalEntry(tx, organizationId, {
+            date: new Date(),
+            description,
+            sourceType: "KARIGAR_TRANSACTION",
+            sourceId: transaction.id,
+            lines: [
+              { accountId: debitAccountId, debit: monetaryValue, credit: 0 },
+              { accountId: creditAccountId, debit: 0, credit: monetaryValue },
+            ],
+          });
+        }
       }
 
       return transaction;

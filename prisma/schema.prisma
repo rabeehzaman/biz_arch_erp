@@ -216,6 +216,7 @@ model Organization {
   jewelleryRepairs           JewelleryRepair[]
   customerSchemes            CustomerScheme[]
   schemePayments             SchemePayment[]
+  metalLedgerEntries         MetalLedgerEntry[]
   subscriptionLogs           SubscriptionLog[]
 
   // Restaurant Module Relations
@@ -456,6 +457,7 @@ model Customer {
   jewelleryRepairs   JewelleryRepair[]
   oldGoldPurchases   OldGoldPurchase[]
   customerSchemes    CustomerScheme[]
+  metalLedgerEntries MetalLedgerEntry[] @relation("customerMetalLedger")
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -515,7 +517,8 @@ model Supplier {
   mobileDevices    MobileDevice[]
 
   // Jewellery relations
-  jewelleryItems   JewelleryItem[]
+  jewelleryItems         JewelleryItem[]
+  metalLedgerEntries     MetalLedgerEntry[] @relation("supplierMetalLedger")
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -2395,6 +2398,7 @@ model JewelleryItem {
   purchaseInvoiceItems  PurchaseInvoiceItem[]  @relation("PurchaseJewelleryItems")
   creditNoteItems       CreditNoteItem[]       @relation("CreditNoteJewelleryItems")
   debitNoteItems        DebitNoteItem[]         @relation("DebitNoteJewelleryItems")
+  metalLedgerEntries    MetalLedgerEntry[]
 
   @@unique([organizationId, tagNumber])
   @@unique([organizationId, huidNumber])
@@ -2459,6 +2463,7 @@ model Karigar {
   transactions            KarigarTransaction[]
   jewelleryItems          JewelleryItem[]
   repairs                 JewelleryRepair[]
+  metalLedgerEntries      MetalLedgerEntry[] @relation("karigarMetalLedger")
 
   @@unique([organizationId, phone])
   @@index([organizationId])
@@ -2608,6 +2613,51 @@ model SchemePayment {
   @@index([schemeId])
   @@index([organizationId])
   @@map("scheme_payments")
+}
+
+enum MetalDirection {
+  INFLOW
+  OUTFLOW
+}
+
+model MetalLedgerEntry {
+  id              String         @id @default(cuid())
+  organizationId  String
+  organization    Organization   @relation(fields: [organizationId], references: [id])
+
+  date            DateTime
+  metalType       MetalType      @default(GOLD)
+  purity          GoldPurity
+  grossWeight     Decimal        @db.Decimal(10, 3)
+  fineWeight      Decimal        @db.Decimal(10, 3)
+  direction       MetalDirection
+  description     String
+
+  // Source tracking (polymorphic, like JournalEntry)
+  sourceType      String   // PURCHASE, SALE, KARIGAR_ISSUE, KARIGAR_RETURN, OLD_GOLD_IN, CREDIT_NOTE_RETURN, WASTAGE, SCRAP, PURCHASE_RETURN, ADJUSTMENT
+  sourceId        String
+
+  // Optional FK references for querying
+  jewelleryItemId     String?
+  jewelleryItem       JewelleryItem? @relation(fields: [jewelleryItemId], references: [id])
+  karigarId           String?
+  karigar             Karigar?       @relation("karigarMetalLedger", fields: [karigarId], references: [id])
+  customerId          String?
+  customer            Customer?      @relation("customerMetalLedger", fields: [customerId], references: [id])
+  supplierId          String?
+  supplier            Supplier?      @relation("supplierMetalLedger", fields: [supplierId], references: [id])
+  invoiceId           String?
+  purchaseInvoiceId   String?
+  oldGoldPurchaseId   String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([organizationId, date(sort: Desc)])
+  @@index([organizationId, sourceType])
+  @@index([karigarId])
+  @@index([jewelleryItemId])
+  @@map("metal_ledger_entries")
 }
 
 // ==================== RESTAURANT MODULE ====================

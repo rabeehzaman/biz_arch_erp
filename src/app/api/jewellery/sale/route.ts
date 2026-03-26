@@ -5,6 +5,9 @@ import { getOrgId, getEdition, isJewelleryModuleEnabled } from "@/lib/auth-utils
 import { calculatePricing, type PricingBreakdown } from "@/lib/jewellery/pricing-engine";
 import { calculateJewelleryTax, type JewelleryTaxBreakdown } from "@/lib/jewellery/tax-calculator";
 import { getJewelleryConfig } from "@/lib/jewellery/config";
+import { syncJewellerySaleJournal } from "@/lib/accounting/journal";
+import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
+import { calculateFineWeight } from "@/lib/jewellery/purity-rates";
 
 // Generate jewellery sale invoice number: JINV-YYYYMMDD-XXX
 // Accepts a Prisma transaction client to avoid race conditions
@@ -319,6 +322,52 @@ export async function POST(request: NextRequest) {
           where: { id: oldGoldAdjustmentId },
           data: { adjustedAgainstInvoiceId: inv.id },
         });
+      }
+
+      // Post GL journal entries (split revenue: metal vs making)
+      await syncJewellerySaleJournal(tx, organizationId, inv.id);
+
+      // Create metal ledger OUTFLOW entries for each sold item
+      for (const item of items) {
+        await createMetalLedgerEntry(tx, organizationId, {
+          date: now,
+          metalType: item.metalType,
+          purity: item.purity,
+          grossWeight: Number(item.grossWeight),
+          fineWeight: Number(item.fineWeight),
+          direction: "OUTFLOW",
+          description: `Sale - Tag #${item.tagNumber} (${inv.invoiceNumber})`,
+          sourceType: "SALE",
+          sourceId: inv.id,
+          jewelleryItemId: item.id,
+          customerId,
+          invoiceId: inv.id,
+        });
+      }
+
+      // Create metal ledger INFLOW entry for old gold adjustment
+      if (oldGoldAdjustmentId) {
+        const oldGold = await tx.oldGoldPurchase.findUnique({
+          where: { id: oldGoldAdjustmentId },
+          select: { weight: true, purityPercentage: true, testedPurity: true },
+        });
+        if (oldGold) {
+          const ogFineWeight = Number(oldGold.weight) * (Number(oldGold.purityPercentage) / 100);
+          await createMetalLedgerEntry(tx, organizationId, {
+            date: now,
+            metalType: "GOLD",
+            purity: oldGold.testedPurity,
+            grossWeight: Number(oldGold.weight),
+            fineWeight: ogFineWeight,
+            direction: "INFLOW",
+            description: `Old Gold Adjustment (${inv.invoiceNumber})`,
+            sourceType: "OLD_GOLD_IN",
+            sourceId: oldGoldAdjustmentId,
+            customerId,
+            invoiceId: inv.id,
+            oldGoldPurchaseId: oldGoldAdjustmentId,
+          });
+        }
       }
 
       return inv;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedPOSClearingAccounts } from "@/lib/accounting/seed-coa";
+import { seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedPOSClearingAccounts, seedJewelleryAccounts } from "@/lib/accounting/seed-coa";
 import { validateTRN } from "@/lib/saudi-vat/calculator";
 import { provisionPOSRegisterSetup } from "@/lib/pos/store-safe";
 
@@ -438,6 +438,11 @@ export async function PUT(
         if (seedVATAccounts) {
           await seedSaudiVATAccounts(tx as never, id);
           await seedSaudiStandardAccounts(tx as never, id);
+        }
+
+        // Seed Jewellery GL accounts if enabling jewellery module
+        if (isJewelleryModuleEnabled === true) {
+          await seedJewelleryAccounts(tx as never, id);
         }
 
         // Keep POS clearing accounts aligned with the Cash subtree whenever clearing mode is active.

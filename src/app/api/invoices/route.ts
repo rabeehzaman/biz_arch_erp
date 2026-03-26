@@ -4,7 +4,8 @@ import { auth } from "@/lib/auth";
 import { getOrgId, isSaudiEInvoiceEnabled, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
 import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { consumeStockFIFO, recalculateFromDate, isBackdated } from "@/lib/inventory/fifo";
-import { syncInvoiceRevenueJournal, syncInvoiceCOGSJournal } from "@/lib/accounting/journal";
+import { syncInvoiceRevenueJournal, syncInvoiceCOGSJournal, syncJewellerySaleJournal } from "@/lib/accounting/journal";
+import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { calculateLineVAT, calculateDocumentVAT, determineSaudiInvoiceType, LineVATResult } from "@/lib/saudi-vat/calculator";
 import { generateTLVQRCode } from "@/lib/saudi-vat/qr-code";
@@ -432,6 +433,35 @@ export async function POST(request: NextRequest) {
       // If product is backdated, skip individual consumption (will be handled by recalculation)
       for (const invoiceItem of invoice.items) {
         if (invoiceItem.productId) {
+          // Skip FIFO for jewellery items — they use status-based tracking, not lot-based
+          if (invoiceItem.jewelleryItemId) {
+            const jewelleryItem = await tx.jewelleryItem.findUnique({
+              where: { id: invoiceItem.jewelleryItemId },
+              select: { costPrice: true, fineWeight: true, grossWeight: true, purity: true, metalType: true, tagNumber: true },
+            });
+            if (jewelleryItem) {
+              await tx.invoiceItem.update({
+                where: { id: invoiceItem.id },
+                data: { costOfGoodsSold: Number(jewelleryItem.costPrice) },
+              });
+              // Metal ledger OUTFLOW
+              await createMetalLedgerEntry(tx, organizationId, {
+                date: invoiceDate,
+                metalType: jewelleryItem.metalType,
+                purity: jewelleryItem.purity,
+                grossWeight: Number(jewelleryItem.grossWeight),
+                fineWeight: Number(jewelleryItem.fineWeight),
+                direction: "OUTFLOW",
+                description: `Sale - Tag #${jewelleryItem.tagNumber} (${invoice.invoiceNumber})`,
+                sourceType: "SALE",
+                sourceId: invoice.id,
+                jewelleryItemId: invoiceItem.jewelleryItemId,
+                customerId,
+                invoiceId: invoice.id,
+              });
+            }
+            continue;
+          }
           if (!backdatedProducts.has(invoiceItem.productId)) {
             // Check if this is a bundle product
             const product = await tx.product.findUnique({
@@ -560,9 +590,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Create journal entries using shared helpers
-      await syncInvoiceRevenueJournal(tx, organizationId, invoice.id);
-      await syncInvoiceCOGSJournal(tx, organizationId, invoice.id);
+      // Create journal entries — use split journals for jewellery sales
+      const isJewellerySale = items.some((item: { jewellery?: unknown }) => !!item.jewellery);
+      if (isJewellerySale) {
+        await syncJewellerySaleJournal(tx, organizationId, invoice.id);
+      } else {
+        await syncInvoiceRevenueJournal(tx, organizationId, invoice.id);
+        await syncInvoiceCOGSJournal(tx, organizationId, invoice.id);
+      }
 
       // Fetch the updated invoice with COGS
       const updatedInvoice = await tx.invoice.findUnique({

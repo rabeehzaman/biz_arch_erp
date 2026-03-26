@@ -614,6 +614,8 @@ export async function recalculateFromDate(
 
     if (event.type === "INVOICE") {
       const saleItem = item as typeof salesItems[0];
+      // Skip jewellery items — they use status-based tracking, not FIFO lots
+      if (saleItem.jewelleryItemId) continue;
       const oldCOGS = saleItem.costOfGoodsSold;
       const baseQty = new Decimal(saleItem.quantity).mul(new Decimal(saleItem.conversionFactor || 1));
 

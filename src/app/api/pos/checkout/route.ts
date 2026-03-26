@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId, isSaudiEInvoiceEnabled, isTaxInclusivePrice as isTaxInclusivePriceSession } from "@/lib/auth-utils";
 import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { consumeStockFIFO } from "@/lib/inventory/fifo";
+import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
 import {
   AutoJournalEntryCreationError,
   createRequiredAutoJournalEntry,
@@ -568,6 +569,33 @@ export async function POST(request: NextRequest) {
 
       for (const invoiceItem of invoice.items) {
         if (invoiceItem.productId) {
+          // Skip FIFO for jewellery items — they use status-based tracking
+          if (invoiceItem.jewelleryItemId) {
+            const jewelleryItem = await tx.jewelleryItem.findUnique({
+              where: { id: invoiceItem.jewelleryItemId },
+              select: { costPrice: true, fineWeight: true, grossWeight: true, purity: true, metalType: true, tagNumber: true },
+            });
+            if (jewelleryItem) {
+              await tx.invoiceItem.update({
+                where: { id: invoiceItem.id },
+                data: { costOfGoodsSold: Number(jewelleryItem.costPrice) },
+              });
+              await createMetalLedgerEntry(tx, organizationId, {
+                date: now,
+                metalType: jewelleryItem.metalType,
+                purity: jewelleryItem.purity,
+                grossWeight: Number(jewelleryItem.grossWeight),
+                fineWeight: Number(jewelleryItem.fineWeight),
+                direction: "OUTFLOW",
+                description: `POS Sale - Tag #${jewelleryItem.tagNumber} (${invoice.invoiceNumber})`,
+                sourceType: "SALE",
+                sourceId: invoice.id,
+                jewelleryItemId: invoiceItem.jewelleryItemId,
+                invoiceId: invoice.id,
+              });
+            }
+            continue;
+          }
           // Check if this is a bundle product
           const product = await tx.product.findUnique({
             where: { id: invoiceItem.productId },

@@ -6,6 +6,8 @@ import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { createStockLotFromPurchase, recalculateFromDate, isBackdated, hasZeroCOGSItems } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { syncPurchaseJournal } from "@/lib/accounting/journal";
+import { calculateNetWeight, calculateFineWeight } from "@/lib/jewellery/purity-rates";
+import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { calculateLineVAT, LineVATResult } from "@/lib/saudi-vat/calculator";
@@ -308,33 +310,100 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create stock lots for each item
+      // Create stock lots for each item (or JewelleryItem for jewellery purchases)
       for (let index = 0; index < invoice.items.length; index++) {
         const item = invoice.items[index];
+        const originalItem = items[index];
+        const jw = originalItem.jewellery;
+
         // Inventory valuation must use the tax-exclusive amount when purchase prices include tax.
         const lineTaxableAmount = new Decimal(lineAmounts[index].taxableAmount);
         const netUnitCost = new Decimal(item.quantity).gt(0)
           ? lineTaxableAmount.div(new Decimal(item.quantity))
           : new Decimal(0);
 
-        // Calculate base unit cost (purchase price / conversion factor)
-        const baseUnitCost = netUnitCost.div(new Decimal(item.conversionFactor));
+        if (jw?.tagNumber && jw?.purity && jw?.metalType && jw?.grossWeight) {
+          // Jewellery item: auto-create JewelleryItem, skip StockLot
+          const numGrossWeight = Number(jw.grossWeight);
+          const numStoneWeight = Number(jw.stoneWeight || 0);
+          const numWastagePercent = Number(jw.wastagePercent || 0);
+          const netWt = calculateNetWeight(numGrossWeight, numStoneWeight);
+          const fineWt = calculateFineWeight(netWt, jw.purity);
+          const wastageWt = Math.round(netWt * (numWastagePercent / 100) * 1000) / 1000;
+          const costPrice = Number(netUnitCost);
 
-        // Create stock lot with base quantity
-        const baseQuantity = Number(item.quantity) * Number(item.conversionFactor);
+          const jewelleryItem = await tx.jewelleryItem.create({
+            data: {
+              organizationId,
+              tagNumber: jw.tagNumber,
+              metalType: jw.metalType,
+              purity: jw.purity,
+              grossWeight: numGrossWeight,
+              stoneWeight: numStoneWeight,
+              netWeight: netWt,
+              fineWeight: fineWt,
+              makingChargeType: jw.makingChargeType || "PER_GRAM",
+              makingChargeValue: Number(jw.makingChargeValue || 0),
+              wastagePercent: numWastagePercent,
+              wastageWeight: wastageWt,
+              huidNumber: jw.huidNumber || null,
+              costPrice,
+              goldRateAtPurchase: Number(jw.goldRate || 0),
+              stoneValue: Number(jw.stoneValue || 0),
+              productId: item.productId,
+              supplierId,
+              branchId: branchId || null,
+              warehouseId: warehouseId || null,
+              karigarId: jw.karigarId || null,
+              status: "IN_STOCK",
+            },
+          });
 
-        await createStockLotFromPurchase(
-          item.id,
-          invoice.id,
-          item.productId,
-          baseQuantity,
-          baseUnitCost, // Store base unit cost for accurate COGS
-          purchaseDate,
-          tx,
-          Number(baseUnitCost), // Original gross base unit cost equivalent (less important but passing down)
-          organizationId,
-          warehouseId || null
-        );
+          // Link jewellery item to purchase invoice item
+          await tx.purchaseInvoiceItem.update({
+            where: { id: item.id },
+            data: { jewelleryItemId: jewelleryItem.id },
+          });
+
+          // Update product cost
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { cost: costPrice },
+          });
+
+          // Metal ledger INFLOW
+          await createMetalLedgerEntry(tx, organizationId, {
+            date: purchaseDate,
+            metalType: jw.metalType,
+            purity: jw.purity,
+            grossWeight: numGrossWeight,
+            fineWeight: fineWt,
+            direction: "INFLOW",
+            description: `Purchase - Tag #${jw.tagNumber} (${invoice.purchaseInvoiceNumber})`,
+            sourceType: "PURCHASE",
+            sourceId: invoice.id,
+            jewelleryItemId: jewelleryItem.id,
+            supplierId,
+            purchaseInvoiceId: invoice.id,
+          });
+        } else {
+          // Regular item: create stock lot
+          const baseUnitCost = netUnitCost.div(new Decimal(item.conversionFactor));
+          const baseQuantity = Number(item.quantity) * Number(item.conversionFactor);
+
+          await createStockLotFromPurchase(
+            item.id,
+            invoice.id,
+            item.productId,
+            baseQuantity,
+            baseUnitCost,
+            purchaseDate,
+            tx,
+            Number(baseUnitCost),
+            organizationId,
+            warehouseId || null
+          );
+        }
       }
 
       // Create MobileDevice records for IMEI-tracked items
@@ -399,7 +468,14 @@ export async function POST(request: NextRequest) {
       await syncPurchaseJournal(tx, organizationId, invoice.id);
 
       // Check if this is a backdated purchase OR if there are zero-COGS items that need fixing
-      const productIds = [...new Set(items.map((item: { productId: string }) => item.productId))];
+      // Skip jewellery products (they don't use FIFO lots)
+      const jewelleryProductIds = new Set(
+        items
+          .filter((item: { jewellery?: { tagNumber?: string } }) => item.jewellery?.tagNumber)
+          .map((item: { productId: string }) => item.productId)
+      );
+      const productIds = [...new Set(items.map((item: { productId: string }) => item.productId))]
+        .filter((pid) => !jewelleryProductIds.has(pid as string));
       for (const productId of productIds) {
         // Check if backdated (purchase before existing sales)
         const backdated = await isBackdated(productId as string, purchaseDate, tx);

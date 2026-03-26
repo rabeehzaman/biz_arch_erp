@@ -89,6 +89,50 @@ export async function ensureRoundOffAccount(
   return account;
 }
 
+export async function ensureJewelleryAccounts(
+  tx: Tx,
+  organizationId: string
+): Promise<{
+  goldInventory: { id: string; code: string; name: string };
+  goldWithKarigars: { id: string; code: string; name: string };
+  metalRevenue: { id: string; code: string; name: string };
+  makingRevenue: { id: string; code: string; name: string };
+  metalCOGS: { id: string; code: string; name: string };
+  makingCOGS: { id: string; code: string; name: string };
+} | null> {
+  const codes = ["1460", "1465", "4110", "4120", "5110", "5120"];
+  const accounts = await Promise.all(
+    codes.map((code) => getSystemAccount(tx, organizationId, code))
+  );
+
+  // If any account is missing, try to seed them
+  if (accounts.some((a) => !a)) {
+    const { seedJewelleryAccounts } = await import("./seed-coa");
+    await seedJewelleryAccounts(tx, organizationId);
+    const retried = await Promise.all(
+      codes.map((code) => getSystemAccount(tx, organizationId, code))
+    );
+    if (retried.some((a) => !a)) return null;
+    return {
+      goldInventory: retried[0]!,
+      goldWithKarigars: retried[1]!,
+      metalRevenue: retried[2]!,
+      makingRevenue: retried[3]!,
+      metalCOGS: retried[4]!,
+      makingCOGS: retried[5]!,
+    };
+  }
+
+  return {
+    goldInventory: accounts[0]!,
+    goldWithKarigars: accounts[1]!,
+    metalRevenue: accounts[2]!,
+    makingRevenue: accounts[3]!,
+    metalCOGS: accounts[4]!,
+    makingCOGS: accounts[5]!,
+  };
+}
+
 export function validateJournalBalance(
   lines: Array<{ debit: number; credit: number }>
 ): boolean {
@@ -448,6 +492,207 @@ export async function syncPurchaseJournal(
       sourceId: purchaseInvoiceId,
       branchId: invoice.branchId,
       lines: purchaseLines,
+    });
+  }
+}
+
+/**
+ * Sync journal entries for a jewellery sale invoice with split revenue and COGS.
+ * Revenue split: Metal Value (4110) vs Making Charges (4120)
+ * COGS split: Metal Cost (5110) vs Making/Wastage Cost (5120)
+ * Falls back to standard journals if jewellery accounts aren't available.
+ */
+export async function syncJewellerySaleJournal(
+  tx: Tx,
+  organizationId: string,
+  invoiceId: string
+): Promise<void> {
+  const invoice = await tx.invoice.findUnique({
+    where: { id: invoiceId },
+    select: {
+      invoiceNumber: true,
+      issueDate: true,
+      subtotal: true,
+      total: true,
+      totalCgst: true,
+      totalSgst: true,
+      totalIgst: true,
+      totalVat: true,
+      roundOffAmount: true,
+      branchId: true,
+      items: {
+        select: {
+          jewelleryItemId: true,
+          costOfGoodsSold: true,
+          goldRate: true,
+          netWeight: true,
+          wastagePercent: true,
+          makingChargeType: true,
+          makingChargeValue: true,
+          stoneValue: true,
+          unitPrice: true,
+          quantity: true,
+        },
+      },
+    },
+  });
+
+  if (!invoice) return;
+
+  const jwAccounts = await ensureJewelleryAccounts(tx, organizationId);
+  if (!jwAccounts) {
+    // Fallback to standard journals if jewellery accounts unavailable
+    await syncInvoiceRevenueJournal(tx, organizationId, invoiceId);
+    await syncInvoiceCOGSJournal(tx, organizationId, invoiceId);
+    return;
+  }
+
+  // Calculate revenue split from invoice items
+  let metalRevenue = 0;   // goldValue + wastageValue
+  let makingRevenue = 0;   // makingCharges + stoneValue
+  let metalCOGS = 0;
+  let makingCOGS = 0;
+
+  for (const item of invoice.items) {
+    if (item.jewelleryItemId && item.goldRate && item.netWeight) {
+      const nw = Number(item.netWeight);
+      const gr = Number(item.goldRate);
+      const wp = Number(item.wastagePercent || 0);
+      const sv = Number(item.stoneValue || 0);
+      const mcv = Number(item.makingChargeValue || 0);
+      const mct = item.makingChargeType as string;
+
+      const goldValue = nw * gr;
+      const wastageValue = nw * (wp / 100) * gr;
+      let makingCharges = 0;
+      if (mct === "PER_GRAM") makingCharges = mcv * nw;
+      else if (mct === "PERCENTAGE") makingCharges = goldValue * (mcv / 100);
+      else if (mct === "FIXED") makingCharges = mcv;
+
+      metalRevenue += goldValue + wastageValue;
+      makingRevenue += makingCharges + sv;
+
+      // Split COGS proportionally based on revenue split
+      const totalItemCOGS = Number(item.costOfGoodsSold);
+      const itemSubtotal = goldValue + wastageValue + makingCharges + sv;
+      if (itemSubtotal > 0 && totalItemCOGS > 0) {
+        const metalRatio = (goldValue + wastageValue) / itemSubtotal;
+        metalCOGS += totalItemCOGS * metalRatio;
+        makingCOGS += totalItemCOGS * (1 - metalRatio);
+      }
+    } else {
+      // Non-jewellery item in a jewellery invoice — treat as making revenue
+      makingRevenue += Number(item.unitPrice) * Number(item.quantity);
+      makingCOGS += Number(item.costOfGoodsSold);
+    }
+  }
+
+  metalRevenue = Math.round(metalRevenue * 100) / 100;
+  makingRevenue = Math.round(makingRevenue * 100) / 100;
+  metalCOGS = Math.round(metalCOGS * 100) / 100;
+  makingCOGS = Math.round(makingCOGS * 100) / 100;
+
+  const total = Number(invoice.total);
+  const totalCgst = Number(invoice.totalCgst);
+  const totalSgst = Number(invoice.totalSgst);
+  const totalIgst = Number(invoice.totalIgst);
+  const totalVat = Number(invoice.totalVat || 0);
+  const roundOffAmount = Number(invoice.roundOffAmount || 0);
+
+  // ── Revenue Journal ──
+  // Delete existing
+  await tx.journalEntry.deleteMany({
+    where: {
+      sourceType: "INVOICE",
+      sourceId: invoiceId,
+      description: { startsWith: "Sales Invoice" },
+      organizationId,
+    },
+  });
+
+  const arAccount = await getSystemAccount(tx, organizationId, "1300");
+  if (arAccount) {
+    const revenueLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
+      { accountId: arAccount.id, description: "Accounts Receivable", debit: total, credit: 0 },
+    ];
+
+    if (metalRevenue > 0) {
+      revenueLines.push({ accountId: jwAccounts.metalRevenue.id, description: "Jewellery Metal Revenue", debit: 0, credit: metalRevenue });
+    }
+    if (makingRevenue > 0) {
+      revenueLines.push({ accountId: jwAccounts.makingRevenue.id, description: "Making Charge Revenue", debit: 0, credit: makingRevenue });
+    }
+
+    // Tax lines
+    if (totalVat > 0) {
+      const vatAccount = await getSystemAccount(tx, organizationId, "2240");
+      if (vatAccount) revenueLines.push({ accountId: vatAccount.id, description: "VAT Output", debit: 0, credit: totalVat });
+    } else {
+      if (totalCgst > 0) {
+        const cgstAccount = await getSystemAccount(tx, organizationId, "2210");
+        if (cgstAccount) revenueLines.push({ accountId: cgstAccount.id, description: "CGST Output", debit: 0, credit: totalCgst });
+      }
+      if (totalSgst > 0) {
+        const sgstAccount = await getSystemAccount(tx, organizationId, "2220");
+        if (sgstAccount) revenueLines.push({ accountId: sgstAccount.id, description: "SGST Output", debit: 0, credit: totalSgst });
+      }
+      if (totalIgst > 0) {
+        const igstAccount = await getSystemAccount(tx, organizationId, "2230");
+        if (igstAccount) revenueLines.push({ accountId: igstAccount.id, description: "IGST Output", debit: 0, credit: totalIgst });
+      }
+    }
+
+    if (Math.abs(roundOffAmount) > 0.0001) {
+      const roundOffAccount = await ensureRoundOffAccount(tx, organizationId);
+      if (roundOffAccount) {
+        revenueLines.push({
+          accountId: roundOffAccount.id,
+          description: "Round Off Adjustment",
+          debit: roundOffAmount < 0 ? Math.abs(roundOffAmount) : 0,
+          credit: roundOffAmount > 0 ? roundOffAmount : 0,
+        });
+      }
+    }
+
+    await createAutoJournalEntry(tx, organizationId, {
+      date: invoice.issueDate,
+      description: `Sales Invoice ${invoice.invoiceNumber}`,
+      sourceType: "INVOICE",
+      sourceId: invoiceId,
+      branchId: invoice.branchId,
+      lines: revenueLines,
+    });
+  }
+
+  // ── COGS Journal (split) ──
+  await tx.journalEntry.deleteMany({
+    where: {
+      sourceType: "INVOICE",
+      sourceId: invoiceId,
+      description: { startsWith: "COGS" },
+      organizationId,
+    },
+  });
+
+  const totalCOGS = metalCOGS + makingCOGS;
+  if (totalCOGS > 0) {
+    const cogsLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [];
+
+    if (metalCOGS > 0) {
+      cogsLines.push({ accountId: jwAccounts.metalCOGS.id, description: "Metal Cost of Goods Sold", debit: metalCOGS, credit: 0 });
+    }
+    if (makingCOGS > 0) {
+      cogsLines.push({ accountId: jwAccounts.makingCOGS.id, description: "Making & Wastage Cost", debit: makingCOGS, credit: 0 });
+    }
+    cogsLines.push({ accountId: jwAccounts.goldInventory.id, description: "Gold Inventory", debit: 0, credit: totalCOGS });
+
+    await createAutoJournalEntry(tx, organizationId, {
+      date: invoice.issueDate,
+      description: `COGS - ${invoice.invoiceNumber}`,
+      sourceType: "INVOICE",
+      sourceId: invoiceId,
+      branchId: invoice.branchId,
+      lines: cogsLines,
     });
   }
 }

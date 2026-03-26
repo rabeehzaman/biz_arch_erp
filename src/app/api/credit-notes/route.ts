@@ -12,6 +12,7 @@ import {
 import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { createAutoJournalEntry, ensureRoundOffAccount, getSystemAccount } from "@/lib/accounting/journal";
+import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
@@ -350,12 +351,38 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create stock lots for each item with a productId
+      // Create stock lots for each item with a productId (skip jewellery — status-tracked)
       const productsToRecalculate = new Set<string>();
       let totalReturnedCOGS = 0;
 
       for (const creditNoteItem of creditNote.items) {
         if (creditNoteItem.productId) {
+          // Skip stock lot creation for jewellery items (already reverted to IN_STOCK above)
+          if (creditNoteItem.jewelleryItemId) {
+            const jewelleryItem = await tx.jewelleryItem.findUnique({
+              where: { id: creditNoteItem.jewelleryItemId },
+              select: { costPrice: true, fineWeight: true, grossWeight: true, purity: true, metalType: true, tagNumber: true },
+            });
+            if (jewelleryItem) {
+              const baseQuantity = Number(creditNoteItem.quantity) * Number(creditNoteItem.conversionFactor);
+              totalReturnedCOGS += Number(jewelleryItem.costPrice) * baseQuantity;
+              // Metal ledger INFLOW (item returned to stock)
+              await createMetalLedgerEntry(tx, organizationId, {
+                date: creditNoteDate,
+                metalType: jewelleryItem.metalType,
+                purity: jewelleryItem.purity,
+                grossWeight: Number(jewelleryItem.grossWeight),
+                fineWeight: Number(jewelleryItem.fineWeight),
+                direction: "INFLOW",
+                description: `Credit Note Return - Tag #${jewelleryItem.tagNumber} (${creditNoteNumber})`,
+                sourceType: "CREDIT_NOTE_RETURN",
+                sourceId: creditNote.id,
+                jewelleryItemId: creditNoteItem.jewelleryItemId,
+              });
+            }
+            continue; // Skip stock lot creation
+          }
+
           // Determine unit cost for the stock lot
           let unitCost = new Decimal(0);
 

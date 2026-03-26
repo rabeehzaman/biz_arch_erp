@@ -196,6 +196,50 @@ export async function seedSaudiVATAccounts(
   }
 }
 
+// ─── Jewellery Module Accounts ──────────────────────────────────────────────
+// Call this when isJewelleryModuleEnabled is toggled ON for an org
+
+const JEWELLERY_ACCOUNTS: AccountDef[] = [
+  // Assets
+  { code: "1460", name: "Gold Inventory (مخزون الذهب)", accountType: "ASSET", accountSubType: "INVENTORY", parentCode: "1000", isSystem: true },
+  { code: "1465", name: "Gold with Karigars (ذهب لدى الصاغة)", accountType: "ASSET", accountSubType: "OTHER_ASSET", parentCode: "1000", isSystem: true },
+  // Revenue
+  { code: "4110", name: "Jewellery Sales - Metal Value (مبيعات المعادن)", accountType: "REVENUE", accountSubType: "SALES_REVENUE", parentCode: "4000", isSystem: true },
+  { code: "4120", name: "Jewellery Sales - Making Charges (أجور التصنيع)", accountType: "REVENUE", accountSubType: "SALES_REVENUE", parentCode: "4000", isSystem: true },
+  // COGS
+  { code: "5110", name: "Jewellery COGS - Metal Cost (تكلفة المعادن المباعة)", accountType: "EXPENSE", accountSubType: "COST_OF_GOODS_SOLD", parentCode: "5000", isSystem: true },
+  { code: "5120", name: "Jewellery COGS - Making & Wastage (تكلفة التصنيع والهالك)", accountType: "EXPENSE", accountSubType: "COST_OF_GOODS_SOLD", parentCode: "5000", isSystem: true },
+];
+
+export async function seedJewelleryAccounts(
+  tx: PrismaTransactionClient,
+  organizationId: string
+) {
+  const sorted = [...JEWELLERY_ACCOUNTS].sort((a, b) => a.code.localeCompare(b.code));
+
+  for (const acct of sorted) {
+    let parentId: string | null = null;
+    if (acct.parentCode) {
+      const parent = await tx.account.findFirst({ where: { organizationId, code: acct.parentCode } });
+      parentId = parent?.id ?? null;
+    }
+
+    await tx.account.upsert({
+      where: { organizationId_code: { organizationId, code: acct.code } },
+      update: {},
+      create: {
+        code: acct.code,
+        name: acct.name,
+        accountType: acct.accountType,
+        accountSubType: acct.accountSubType,
+        parentId,
+        isSystem: acct.isSystem,
+        organizationId,
+      },
+    });
+  }
+}
+
 // ─── Saudi Standard Chart of Accounts (SOCPA/IFRS) ─────────────────────────
 // Full SOCPA-aligned COA for Saudi ZATCA orgs: fixed assets, GOSI, EOS,
 // zakat, government fees, payroll allowances, etc.
