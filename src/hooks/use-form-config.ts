@@ -55,6 +55,12 @@ export function useDisabledReports(): string[] {
   return ctx?.disabledReports ?? [];
 }
 
+/** Returns the list of disabled sidebar item names for the current org */
+export function useDisabledSidebarItems(): string[] {
+  const ctx = useContext(FormConfigContext);
+  return ctx?.disabledSidebarItems ?? [];
+}
+
 /** Returns the sidebar display mode: "full" or "hidden" */
 export function useSidebarMode(): "full" | "hidden" {
   const ctx = useContext(FormConfigContext);

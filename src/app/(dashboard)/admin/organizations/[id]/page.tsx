@@ -22,7 +22,6 @@ import {
 import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { SidebarConfigDialog } from "../sidebar-config-dialog";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { SubscriptionTab } from "./subscription-tab";
 import { FormConfigTab } from "./form-config-tab";
@@ -136,7 +135,6 @@ export default function OrganizationDetailsPage() {
     const [error, setError] = useState("");
 
     // Dialog states
-    const [sidebarConfigOpen, setSidebarConfigOpen] = useState(false);
 
     // Inline settings state
     const [edition, setEditionState] = useState("INDIA");
@@ -758,31 +756,6 @@ export default function OrganizationDetailsPage() {
                                     <p className="text-sm font-medium text-muted-foreground">{t("admin.invoices")}</p>
                                     <p className="text-sm">{organization._count.invoices}</p>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Sidebar Features */}
-                    <Card className="min-w-0">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Shield className="h-5 w-5" />
-                                {t("admin.sidebarFeatures")}
-                            </CardTitle>
-                            <CardDescription>{t("admin.sidebarFeaturesDesc")}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
-                                    <div className="p-2 bg-primary/10 rounded-full text-primary">
-                                        <Settings className="h-5 w-5" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h4 className="text-sm font-semibold">{t("admin.menuConfiguration")}</h4>
-                                        <p className="break-words text-sm text-muted-foreground">{t("admin.menuConfigDesc")}</p>
-                                    </div>
-                                </div>
-                                <Button variant="outline" onClick={() => setSidebarConfigOpen(true)} className="w-full sm:w-auto">{t("admin.configure")}</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -2090,15 +2063,6 @@ export default function OrganizationDetailsPage() {
                         </CardContent>
                     </Card>
                 </div>
-
-                {sidebarConfigOpen && (
-                    <SidebarConfigDialog
-                        open={sidebarConfigOpen}
-                        onOpenChange={setSidebarConfigOpen}
-                        orgId={organization.id}
-                        orgName={organization.name}
-                    />
-                )}
 
                 <AlertDialog open={deleteOpen} onOpenChange={(open) => !open && !isDeleting && setDeleteOpen(false)}>
                     <AlertDialogContent>

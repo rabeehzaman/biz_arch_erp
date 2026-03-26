@@ -62,13 +62,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState, useEffect, useCallback, Fragment, useMemo } from "react";
-import useSWR from "swr";
 import { useLanguage } from "@/lib/i18n";
 import { useEdition } from "@/hooks/use-edition";
-import { useSidebarSectionOrder } from "@/hooks/use-form-config";
+import { useSidebarSectionOrder, useDisabledSidebarItems } from "@/hooks/use-form-config";
 import { SIDEBAR_SECTIONS } from "@/lib/form-config/types";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // Navigation items with translation keys
 const navigation = [
@@ -275,10 +273,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { edition } = useEdition();
   const isSuperadmin = session?.user?.role === "superadmin";
 
-  const { data: disabledItems = [] } = useSWR<string[]>(
-    !isSuperadmin && session?.user ? "/api/sidebar" : null,
-    fetcher
-  );
+  const disabledItems = useDisabledSidebarItems();
 
   // disabledItems come from API as English names; filter by matching English name + edition
   const filterItems = (items: NavItem[]) =>

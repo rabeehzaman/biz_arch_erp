@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import {
   FORM_REGISTRY,
   SIDEBAR_SECTIONS,
+  SIDEBAR_ITEMS,
   MOBILE_NAV_TAB_POOL,
   LANDING_PAGE_OPTIONS,
   ALL_REPORT_SLUGS,
@@ -196,6 +197,7 @@ function defaultConfig(): OrgFormConfig {
   return {
     fields: {},
     disabledReports: [],
+    disabledSidebarItems: [],
     sidebarMode: "full",
     sidebarSectionOrder: null,
     mobileNavTabs: null,
@@ -225,6 +227,7 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
         setConfig({
           fields: data.fields ?? {},
           disabledReports: data.disabledReports ?? [],
+          disabledSidebarItems: data.disabledSidebarItems ?? [],
           sidebarMode: data.sidebarMode ?? "full",
           sidebarSectionOrder: data.sidebarSectionOrder ?? null,
           mobileNavTabs: data.mobileNavTabs ?? null,
@@ -335,6 +338,20 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
           [formName]: { ...formConfig, hiddenColumns: updated },
         },
       };
+    });
+  };
+
+  // ── Sidebar item helpers ────────────────────────────────────
+  const isSidebarItemDisabled = (item: string): boolean => {
+    return config.disabledSidebarItems.includes(item);
+  };
+
+  const toggleSidebarItem = (item: string) => {
+    setConfig((prev) => {
+      const disabled = prev.disabledSidebarItems.includes(item)
+        ? prev.disabledSidebarItems.filter((i) => i !== item)
+        : [...prev.disabledSidebarItems, item];
+      return { ...prev, disabledSidebarItems: disabled };
     });
   };
 
@@ -832,6 +849,54 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
                     >
                       <ArrowDown className="h-3.5 w-3.5" />
                     </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Menu item visibility */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">
+              Menu Item Visibility
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Disabled items will be hidden from the sidebar for all users in this organization.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {SIDEBAR_ITEMS.map((group) => (
+                <div key={group.group} className="space-y-2">
+                  <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide border-b pb-1">
+                    {group.group}
+                  </h4>
+                  <div className="space-y-1.5">
+                    {group.items.map((item) => {
+                      const disabled = isSidebarItemDisabled(item);
+                      return (
+                        <div
+                          key={item}
+                          className="flex items-center justify-between rounded-lg border px-3 py-2"
+                        >
+                          <Label
+                            htmlFor={`sidebar-${item}`}
+                            className={`text-sm cursor-pointer ${
+                              disabled
+                                ? "text-muted-foreground line-through"
+                                : ""
+                            }`}
+                          >
+                            {item}
+                          </Label>
+                          <Switch
+                            id={`sidebar-${item}`}
+                            checked={!disabled}
+                            onCheckedChange={() => toggleSidebarItem(item)}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

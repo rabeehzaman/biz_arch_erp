@@ -6,6 +6,7 @@ import {
   SETTING_KEYS,
   SIDEBAR_SECTIONS,
   ALL_REPORT_SLUGS,
+  ALL_SIDEBAR_ITEM_NAMES,
   type FormFieldConfig,
   type MobileNavTab,
   type OrgFormConfig,
@@ -40,6 +41,7 @@ export async function GET(
           in: [
             SETTING_KEYS.FORM_FIELD_CONFIG,
             SETTING_KEYS.DISABLED_REPORTS,
+            SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
             SETTING_KEYS.SIDEBAR_MODE,
             SETTING_KEYS.SIDEBAR_SECTION_ORDER,
             SETTING_KEYS.MOBILE_NAV_CONFIG,
@@ -58,6 +60,10 @@ export async function GET(
       ),
       disabledReports: parseSettingJSON<string[]>(
         settingMap.get(SETTING_KEYS.DISABLED_REPORTS),
+        []
+      ),
+      disabledSidebarItems: parseSettingJSON<string[]>(
+        settingMap.get(SETTING_KEYS.DISABLED_SIDEBAR_ITEMS),
         []
       ),
       sidebarMode: parseSettingJSON<"full" | "hidden">(
@@ -209,6 +215,24 @@ export async function PUT(
       }
     }
 
+    // Validate disabled sidebar items
+    if (body.disabledSidebarItems) {
+      if (!Array.isArray(body.disabledSidebarItems)) {
+        return NextResponse.json(
+          { error: "disabledSidebarItems must be an array" },
+          { status: 400 }
+        );
+      }
+      for (const item of body.disabledSidebarItems) {
+        if (!ALL_SIDEBAR_ITEM_NAMES.includes(item as typeof ALL_SIDEBAR_ITEM_NAMES[number])) {
+          return NextResponse.json(
+            { error: `Unknown sidebar item: ${item}` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Validate sidebar mode
     if (body.sidebarMode && !["full", "hidden"].includes(body.sidebarMode)) {
       return NextResponse.json(
@@ -264,6 +288,12 @@ export async function PUT(
       upserts.push({
         key: SETTING_KEYS.DISABLED_REPORTS,
         value: JSON.stringify(body.disabledReports),
+      });
+    }
+    if (body.disabledSidebarItems !== undefined) {
+      upserts.push({
+        key: SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
+        value: JSON.stringify(body.disabledSidebarItems),
       });
     }
     if (body.sidebarMode !== undefined) {

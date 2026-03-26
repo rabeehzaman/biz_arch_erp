@@ -78,6 +78,7 @@ export default async function DashboardLayout({
   let formConfig: OrgFormConfig = {
     fields: {},
     disabledReports: [],
+    disabledSidebarItems: [],
     sidebarMode: "full",
     sidebarSectionOrder: null,
     mobileNavTabs: null,
@@ -100,6 +101,7 @@ export default async function DashboardLayout({
               in: [
                 SETTING_KEYS.FORM_FIELD_CONFIG,
                 SETTING_KEYS.DISABLED_REPORTS,
+                SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
                 SETTING_KEYS.SIDEBAR_MODE,
                 SETTING_KEYS.SIDEBAR_SECTION_ORDER,
                 SETTING_KEYS.MOBILE_NAV_CONFIG,
@@ -118,6 +120,7 @@ export default async function DashboardLayout({
         formConfig = {
           fields: p(map.get(SETTING_KEYS.FORM_FIELD_CONFIG), {}),
           disabledReports: p(map.get(SETTING_KEYS.DISABLED_REPORTS), []),
+          disabledSidebarItems: p(map.get(SETTING_KEYS.DISABLED_SIDEBAR_ITEMS), []),
           sidebarMode: p(map.get(SETTING_KEYS.SIDEBAR_MODE), "full"),
           sidebarSectionOrder: p(map.get(SETTING_KEYS.SIDEBAR_SECTION_ORDER), null),
           mobileNavTabs: p(map.get(SETTING_KEYS.MOBILE_NAV_CONFIG), null),

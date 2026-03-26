@@ -21,6 +21,7 @@ function parseJSON<T>(value: string | null | undefined, fallback: T): T {
 const EMPTY_CONFIG: OrgFormConfig = {
   fields: {},
   disabledReports: [],
+  disabledSidebarItems: [],
   sidebarMode: "full",
   sidebarSectionOrder: null,
   mobileNavTabs: null,
@@ -60,6 +61,7 @@ export async function GET() {
           in: [
             SETTING_KEYS.FORM_FIELD_CONFIG,
             SETTING_KEYS.DISABLED_REPORTS,
+            SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
             SETTING_KEYS.SIDEBAR_MODE,
             SETTING_KEYS.SIDEBAR_SECTION_ORDER,
             SETTING_KEYS.MOBILE_NAV_CONFIG,
@@ -107,6 +109,10 @@ export async function GET() {
       fields: orgFields,
       disabledReports: parseJSON<string[]>(
         settingMap.get(SETTING_KEYS.DISABLED_REPORTS),
+        []
+      ),
+      disabledSidebarItems: parseJSON<string[]>(
+        settingMap.get(SETTING_KEYS.DISABLED_SIDEBAR_ITEMS),
         []
       ),
       sidebarMode: parseJSON<"full" | "hidden">(

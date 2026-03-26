@@ -55,6 +55,7 @@ export interface MobileNavTab {
 export interface OrgFormConfig {
   fields: FormFieldConfig;
   disabledReports: string[];
+  disabledSidebarItems: string[];
   sidebarMode: "full" | "hidden";
   sidebarSectionOrder: string[] | null;
   mobileNavTabs: MobileNavTab[] | null;
@@ -315,10 +316,22 @@ export const ALL_REPORT_SLUGS = [
   "branch-pl",
 ] as const;
 
+// ── Sidebar menu items (for visibility config) ──────────────────
+export const SIDEBAR_ITEMS = [
+  { group: "General", items: ["Dashboard", "POS Terminal", "Products", "Inventory"] },
+  { group: "Sales", items: ["Customers", "Quotations", "Sales Invoices", "Credit Notes", "Customer Payments"] },
+  { group: "Purchases", items: ["Suppliers", "Purchase Invoices", "Debit Notes", "Supplier Payments"] },
+  { group: "Accounting", items: ["Expenses", "Cash & Bank", "Journal Entries", "Chart of Accounts"] },
+  { group: "Reports", items: ["Profit by Items", "Customer Balances", "Supplier Balances", "Trial Balance", "Profit & Loss", "Balance Sheet", "Cash Flow", "Expense Report"] },
+] as const;
+
+export const ALL_SIDEBAR_ITEM_NAMES = SIDEBAR_ITEMS.flatMap((g) => g.items);
+
 // ── Setting keys used in the Setting table ─────────────────────
 export const SETTING_KEYS = {
   FORM_FIELD_CONFIG: "form_field_config",
   DISABLED_REPORTS: "disabled_reports",
+  DISABLED_SIDEBAR_ITEMS: "disabledSidebarItems",
   SIDEBAR_MODE: "sidebar_mode",
   SIDEBAR_SECTION_ORDER: "sidebar_section_order",
   MOBILE_NAV_CONFIG: "mobile_nav_config",
