@@ -137,7 +137,7 @@ export default function JewellerySalePage() {
                 <div className="flex items-center justify-between gap-4">
                   <CardTitle className="text-base">Select Items to Sell</CardTitle>
                   <div className="relative w-64">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <Input
                       placeholder="Search tag, HUID, purity..."
                       value={search}
