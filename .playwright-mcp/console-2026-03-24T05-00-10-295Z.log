@@ -1,2 +1,0 @@
-[    6497ms] TypeError: data.filter is not a function
-    at fetchInvoices (http://localhost:3000/_next/static/chunks/src_0vx4sr7._.js:2631:26)
