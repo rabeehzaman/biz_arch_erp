@@ -66,7 +66,7 @@ export default function NewQuotationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
-  const { isFieldHidden, getDefault } = useFormConfig("quotation");
+  const { isFieldHidden, isColumnHidden, getDefault } = useFormConfig("quotation");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -564,11 +564,11 @@ export default function NewQuotationPage() {
                       <TableRow>
                         <TableHead className="w-[30%] font-semibold">{t("common.product")} *</TableHead>
                         <TableHead className="w-[10%] font-semibold">{t("common.quantity")} *</TableHead>
-                        {session?.user?.multiUnitEnabled && (
+                        {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                           <TableHead className="w-[12%] font-semibold">{t("common.unit")}</TableHead>
                         )}
                         <TableHead className="w-[12%] font-semibold">{t("common.unitPrice")} *</TableHead>
-                        <TableHead className="w-[10%] font-semibold">{t("common.discountPercent")}</TableHead>
+                        {!isColumnHidden("discount") && <TableHead className="w-[10%] font-semibold">{t("common.discountPercent")}</TableHead>}
                         {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">{t("common.gstPercent")}</TableHead>}
                         {session?.user?.gstEnabled ? (
                           <>
@@ -635,7 +635,7 @@ export default function NewQuotationPage() {
                                 required
                               />
                             </TableCell>
-                            {session?.user?.multiUnitEnabled && (
+                            {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                               <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                 <ItemUnitSelect
                                   value={item.unitId}
@@ -676,6 +676,7 @@ export default function NewQuotationPage() {
                                 required
                               />
                             </TableCell>
+                            {!isColumnHidden("discount") && (
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                               <Input
                                 type="number"
@@ -711,6 +712,7 @@ export default function NewQuotationPage() {
                                 placeholder="0"
                               />
                             </TableCell>
+                            )}
                             {session?.user?.gstEnabled && (
                               <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                 <Input
@@ -857,6 +859,7 @@ export default function NewQuotationPage() {
                               required
                             />
                           </div>
+                          {!isColumnHidden("discount") && (
                           <div>
                             <Label className="text-xs text-slate-500">{t("common.discount")} %</Label>
                             <Input
@@ -872,6 +875,7 @@ export default function NewQuotationPage() {
                               placeholder="0"
                             />
                           </div>
+                          )}
                           {session?.user?.gstEnabled && (
                             <div>
                               <Label className="text-xs text-slate-500">{t("common.gstPercent")}</Label>
@@ -889,7 +893,7 @@ export default function NewQuotationPage() {
                               />
                             </div>
                           )}
-                          {session?.user?.multiUnitEnabled && (
+                          {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                             <div>
                               <Label className="text-xs text-slate-500">{t("common.unit")}</Label>
                               <ItemUnitSelect

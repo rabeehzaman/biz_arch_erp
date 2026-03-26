@@ -19,6 +19,7 @@ export function useFormConfig(formName: FormName, opts?: { isEdit?: boolean }) {
   return useMemo(() => {
     const formConfig = ctx?.fields?.[formName];
     const hiddenSet = new Set(formConfig?.hidden ?? []);
+    const hiddenColumnSet = new Set(formConfig?.hiddenColumns ?? []);
     const defaults = formConfig?.defaults ?? {};
 
     return {
@@ -30,12 +31,19 @@ export function useFormConfig(formName: FormName, opts?: { isEdit?: boolean }) {
         if (opts?.isEdit) return false;
         return hiddenSet.has(fieldName);
       },
+      /** Returns true if the line item column should be hidden */
+      isColumnHidden: (columnName: string): boolean => {
+        if (isSuperadmin) return false;
+        if (opts?.isEdit) return false;
+        return hiddenColumnSet.has(columnName);
+      },
       /** Returns the configured default or the provided fallback */
       getDefault: <T,>(fieldName: string, fallback: T): T => {
         const val = defaults[fieldName];
         return val !== undefined ? (val as T) : fallback;
       },
       hiddenFields: formConfig?.hidden ?? [],
+      hiddenColumns: formConfig?.hiddenColumns ?? [],
       defaults,
     };
   }, [ctx, formName, isSuperadmin, opts?.isEdit]);

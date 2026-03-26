@@ -56,6 +56,7 @@ import {
   type FormName,
   type OrgFormConfig,
   type MobileNavTab,
+  type ColumnDef,
 } from "@/lib/form-config/types";
 
 // ── Report categories for grouping ─────────────────────────────
@@ -315,6 +316,28 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
     });
   };
 
+  // ── Column helpers ─────────────────────────────────────────
+  const isColumnHiddenAdmin = (formName: FormName, colKey: string): boolean => {
+    return config.fields[formName]?.hiddenColumns?.includes(colKey) ?? false;
+  };
+
+  const toggleColumnHidden = (formName: FormName, colKey: string) => {
+    setConfig((prev) => {
+      const formConfig = prev.fields[formName] ?? { hidden: [], defaults: {}, hiddenColumns: [] };
+      const hiddenColumns = formConfig.hiddenColumns ?? [];
+      const updated = hiddenColumns.includes(colKey)
+        ? hiddenColumns.filter((k) => k !== colKey)
+        : [...hiddenColumns, colKey];
+      return {
+        ...prev,
+        fields: {
+          ...prev.fields,
+          [formName]: { ...formConfig, hiddenColumns: updated },
+        },
+      };
+    });
+  };
+
   // ── Report helpers ──────────────────────────────────────────
   const isReportDisabled = (slug: string): boolean => {
     return config.disabledReports.includes(slug);
@@ -427,10 +450,11 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
       >
         <div className="space-y-3">
           {(Object.keys(FORM_REGISTRY) as FormName[]).map((formName) => {
-            const formDef = FORM_REGISTRY[formName];
+            const formDef = FORM_REGISTRY[formName] as { label: string; fields: Record<string, { label: string; type: string; required: boolean; canHide: boolean; perUser?: boolean; options?: readonly string[] }>; columns?: Record<string, ColumnDef> };
             const isExpanded = expandedForms.has(formName);
             const hiddenCount =
-              config.fields[formName]?.hidden?.length ?? 0;
+              (config.fields[formName]?.hidden?.length ?? 0) +
+              (config.fields[formName]?.hiddenColumns?.length ?? 0);
 
             return (
               <div
@@ -636,6 +660,39 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
                         </TableBody>
                       </Table>
                     </div>
+
+                    {/* Line Item Column Configuration */}
+                    {formDef.columns && Object.keys(formDef.columns).length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                          Line Item Columns
+                        </h4>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[180px]">Column</TableHead>
+                              <TableHead className="w-[80px]">Hidden</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {Object.entries(formDef.columns).map(([colKey, colDef]) => (
+                              <TableRow key={colKey}>
+                                <TableCell>
+                                  <span className="text-sm">{colDef.label}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <Switch
+                                    checked={isColumnHiddenAdmin(formName, colKey)}
+                                    onCheckedChange={() => toggleColumnHidden(formName, colKey)}
+                                    disabled={!colDef.canHide}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

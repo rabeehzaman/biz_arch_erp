@@ -137,7 +137,7 @@ export default function NewInvoicePage() {
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
   const { t } = useLanguage();
-  const { isFieldHidden, getDefault } = useFormConfig("salesInvoice");
+  const { isFieldHidden, isColumnHidden, getDefault } = useFormConfig("salesInvoice");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -829,11 +829,11 @@ export default function NewInvoicePage() {
                       <TableRow>
                         <TableHead className="font-semibold" style={{ width: '30%' }}>{t("common.product")} *</TableHead>
                         <TableHead className="font-semibold">{t("common.quantity")} *</TableHead>
-                        {session?.user?.multiUnitEnabled && (
+                        {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                           <TableHead className="font-semibold">{t("common.unit")}</TableHead>
                         )}
                         <TableHead className="font-semibold">{t("common.unitPrice")} *</TableHead>
-                        <TableHead className="font-semibold">{t("common.discountPercent")}</TableHead>
+                        {!isColumnHidden("discount") && <TableHead className="font-semibold">{t("common.discountPercent")}</TableHead>}
                         {taxMode === "gst" && <TableHead className="font-semibold">{t("common.gstPercent")}</TableHead>}
                         {taxMode === "vat" && <TableHead className="font-semibold">{t("common.vatPercent")}</TableHead>}
                         {taxMode !== "none" ? (
@@ -924,7 +924,7 @@ export default function NewInvoicePage() {
                                   </p>
                                 )}
                               </TableCell>
-                              {session?.user?.multiUnitEnabled && (
+                              {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                                 <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                   <ItemUnitSelect
                                     value={item.unitId}
@@ -968,42 +968,43 @@ export default function NewInvoicePage() {
                                   <p className="text-[10px] text-slate-400 mt-0.5 px-1">{t("common.cost")}: {fmt(product.cost)}</p>
                                 )}
                               </TableCell>
-                              <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
-                                <Input
-                                  type="number"
-                                  onFocus={(e) => e.target.select()}
-                                  min="0"
-                                  max="100"
-                                  step="0.01"
-                                  value={item.discount || ""}
-                                  onChange={(e) =>
-                                    updateLineItem(
-                                      item.id,
-                                      "discount",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-                                      e.preventDefault();
-                                      e.stopPropagation(); // Prevent useEnterToTab from also moving focus
-                                      const isLastItem = index === lineItems.length - 1;
-                                      if (isLastItem) {
-                                        addLineItem(true);
-                                      } else {
-                                        // Manually force focus to the next product row
-                                        const nextItemId = lineItems[index + 1].id;
-                                        const nextProductTrigger = productComboRefs.current.get(nextItemId);
-                                        if (nextProductTrigger) {
-                                          nextProductTrigger.focus();
+                              {!isColumnHidden("discount") && (
+                                <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
+                                  <Input
+                                    type="number"
+                                    onFocus={(e) => e.target.select()}
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    value={item.discount || ""}
+                                    onChange={(e) =>
+                                      updateLineItem(
+                                        item.id,
+                                        "discount",
+                                        parseFloat(e.target.value) || 0
+                                      )
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        const isLastItem = index === lineItems.length - 1;
+                                        if (isLastItem) {
+                                          addLineItem(true);
+                                        } else {
+                                          const nextItemId = lineItems[index + 1].id;
+                                          const nextProductTrigger = productComboRefs.current.get(nextItemId);
+                                          if (nextProductTrigger) {
+                                            nextProductTrigger.focus();
+                                          }
                                         }
                                       }
-                                    }
-                                  }}
-                                  className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
-                                  placeholder="0"
-                                />
-                              </TableCell>
+                                    }}
+                                    className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
+                                    placeholder="0"
+                                  />
+                                </TableCell>
+                              )}
                               {taxMode === "gst" && (
                                 <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                   <Input
@@ -1228,21 +1229,23 @@ export default function NewInvoicePage() {
                               <p className="text-[10px] text-slate-400 mt-0.5">{t("common.cost")}: {fmt(product.cost)}</p>
                             )}
                           </div>
-                          <div>
-                            <Label className="text-xs text-slate-500">{t("common.discountPercent")}</Label>
-                            <Input
-                              type="number"
-                              onFocus={(e) => e.target.select()}
-                              min="0"
-                              max="100"
-                              step="0.01"
-                              value={item.discount || ""}
-                              onChange={(e) =>
-                                updateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)
-                              }
-                              placeholder="0"
-                            />
-                          </div>
+                          {!isColumnHidden("discount") && (
+                            <div>
+                              <Label className="text-xs text-slate-500">{t("common.discountPercent")}</Label>
+                              <Input
+                                type="number"
+                                onFocus={(e) => e.target.select()}
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={item.discount || ""}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                          )}
                           {taxMode === "gst" && (
                             <div>
                               <Label className="text-xs text-slate-500">{t("common.gstPercent")}</Label>
@@ -1277,7 +1280,7 @@ export default function NewInvoicePage() {
                               />
                             </div>
                           )}
-                          {session?.user?.multiUnitEnabled && (
+                          {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                             <div>
                               <Label className="text-xs text-slate-500">{t("common.unit")}</Label>
                               <ItemUnitSelect

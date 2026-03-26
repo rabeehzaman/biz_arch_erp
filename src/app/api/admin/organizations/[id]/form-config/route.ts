@@ -111,7 +111,7 @@ export async function PUT(
           );
         }
 
-        const formDef = FORM_REGISTRY[formName as FormName] as { label: string; fields: Record<string, { canHide: boolean; required: boolean }> };
+        const formDef = FORM_REGISTRY[formName as FormName] as { label: string; fields: Record<string, { canHide: boolean; required: boolean }>; columns?: Record<string, { canHide: boolean }> };
 
         // Validate hidden fields
         if (fieldConfig.hidden) {
@@ -152,6 +152,37 @@ export async function PUT(
             if (!(fieldName in formDef.fields)) {
               return NextResponse.json(
                 { error: `Unknown default field "${fieldName}" in form "${formName}"` },
+                { status: 400 }
+              );
+            }
+          }
+        }
+
+        // Validate hidden columns
+        if (fieldConfig.hiddenColumns) {
+          if (!Array.isArray(fieldConfig.hiddenColumns)) {
+            return NextResponse.json(
+              { error: `hiddenColumns must be an array in form "${formName}"` },
+              { status: 400 }
+            );
+          }
+          if (!formDef.columns) {
+            return NextResponse.json(
+              { error: `Form "${formName}" does not have configurable columns` },
+              { status: 400 }
+            );
+          }
+          for (const colName of fieldConfig.hiddenColumns) {
+            const colDef = formDef.columns[colName];
+            if (!colDef) {
+              return NextResponse.json(
+                { error: `Unknown column "${colName}" in form "${formName}"` },
+                { status: 400 }
+              );
+            }
+            if (!colDef.canHide) {
+              return NextResponse.json(
+                { error: `Column "${colName}" in "${formName}" cannot be hidden` },
                 { status: 400 }
               );
             }

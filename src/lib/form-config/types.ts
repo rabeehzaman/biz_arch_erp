@@ -17,15 +17,27 @@ export interface FieldDef {
   options?: readonly string[];
 }
 
+export interface ColumnDef {
+  label: string;
+  /** If false, super admin cannot hide this column */
+  canHide: boolean;
+  /** Default value when column is hidden (e.g., 0 for discount) */
+  hiddenDefault: string | number;
+}
+
 export interface FormDef {
   label: string;
   fields: Record<string, FieldDef>;
+  /** Line item table columns that can be hidden (only for forms with line items) */
+  columns?: Record<string, ColumnDef>;
 }
 
 // ── Per-form field config stored in Setting table ──────────────
 export interface FieldConfig {
   hidden: string[];
   defaults: Record<string, string | number | boolean>;
+  /** Line item column keys to hide (e.g., ["discount", "hsnCode"]) */
+  hiddenColumns?: string[];
 }
 
 export type FormFieldConfig = Partial<Record<FormName, FieldConfig>>;
@@ -67,6 +79,11 @@ export const FORM_REGISTRY = {
       notes:        { label: "Notes",          type: "textarea" as const, required: false, canHide: true },
       terms:        { label: "Terms",          type: "textarea" as const, required: false, canHide: true },
     },
+    columns: {
+      discount: { label: "Discount %", canHide: true, hiddenDefault: 0 },
+      unit:     { label: "Unit",       canHide: true, hiddenDefault: "" },
+      hsnCode:  { label: "HSN Code",   canHide: true, hiddenDefault: "" },
+    },
   },
   purchaseInvoice: {
     label: "Purchase Invoice",
@@ -78,6 +95,11 @@ export const FORM_REGISTRY = {
       branchId:           { label: "Branch",        type: "entity"   as const, required: false, canHide: true,  perUser: true },
       warehouseId:        { label: "Warehouse",     type: "entity"   as const, required: false, canHide: true,  perUser: true },
       notes:              { label: "Notes",         type: "textarea" as const, required: false, canHide: true },
+    },
+    columns: {
+      discount: { label: "Discount %", canHide: true, hiddenDefault: 0 },
+      unit:     { label: "Unit",       canHide: true, hiddenDefault: "" },
+      hsnCode:  { label: "HSN Code",   canHide: true, hiddenDefault: "" },
     },
   },
   creditNote: {
@@ -91,6 +113,10 @@ export const FORM_REGISTRY = {
       branchId:    { label: "Branch",      type: "entity"   as const, required: false, canHide: true,  perUser: true },
       warehouseId: { label: "Warehouse",   type: "entity"   as const, required: false, canHide: true,  perUser: true },
     },
+    columns: {
+      discount: { label: "Discount %", canHide: true, hiddenDefault: 0 },
+      unit:     { label: "Unit",       canHide: true, hiddenDefault: "" },
+    },
   },
   debitNote: {
     label: "Debit Note",
@@ -100,6 +126,10 @@ export const FORM_REGISTRY = {
       issueDate:         { label: "Issue Date",   type: "date"     as const, required: true,  canHide: false },
       reason:            { label: "Reason",       type: "text"     as const, required: false, canHide: true },
       notes:             { label: "Notes",        type: "textarea" as const, required: false, canHide: true },
+    },
+    columns: {
+      discount: { label: "Discount %", canHide: true, hiddenDefault: 0 },
+      unit:     { label: "Unit",       canHide: true, hiddenDefault: "" },
     },
   },
   quotation: {
@@ -112,6 +142,11 @@ export const FORM_REGISTRY = {
       warehouseId: { label: "Warehouse",   type: "entity"   as const, required: false, canHide: true,  perUser: true },
       notes:       { label: "Notes",       type: "textarea" as const, required: false, canHide: true },
       terms:       { label: "Terms",       type: "textarea" as const, required: false, canHide: true },
+    },
+    columns: {
+      discount: { label: "Discount %", canHide: true, hiddenDefault: 0 },
+      unit:     { label: "Unit",       canHide: true, hiddenDefault: "" },
+      hsnCode:  { label: "HSN Code",   canHide: true, hiddenDefault: "" },
     },
   },
   customer: {

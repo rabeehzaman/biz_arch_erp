@@ -85,7 +85,7 @@ export default function NewPurchaseInvoicePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
-  const { isFieldHidden, getDefault } = useFormConfig("purchaseInvoice");
+  const { isFieldHidden, isColumnHidden, getDefault } = useFormConfig("purchaseInvoice");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -655,11 +655,11 @@ export default function NewPurchaseInvoicePage() {
                       <TableRow>
                         <TableHead className="font-semibold" style={{ width: '30%' }}>{t("common.product")} *</TableHead>
                         <TableHead className="font-semibold">{t("common.quantity")} *</TableHead>
-                        {session?.user?.multiUnitEnabled && (
+                        {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                           <TableHead className="font-semibold">{t("common.unit")}</TableHead>
                         )}
                         <TableHead className="font-semibold">{t("common.unitCost")} *</TableHead>
-                        <TableHead className="font-semibold">{t("common.discountPercent")}</TableHead>
+                        {!isColumnHidden("discount") && <TableHead className="font-semibold">{t("common.discountPercent")}</TableHead>}
                         {saudiEnabled && <TableHead className="font-semibold">{t("common.vatPercent")}</TableHead>}
                         {session?.user?.gstEnabled && !saudiEnabled && <TableHead className="font-semibold">{t("common.gstPercent")}</TableHead>}
                         {taxEnabled ? (
@@ -729,7 +729,7 @@ export default function NewPurchaseInvoicePage() {
                                 required
                               />
                             </TableCell>
-                            {session?.user?.multiUnitEnabled && (
+                            {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                               <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                 <ItemUnitSelect
                                   value={item.unitId}
@@ -770,6 +770,7 @@ export default function NewPurchaseInvoicePage() {
                                 required
                               />
                             </TableCell>
+                            {!isColumnHidden("discount") && (
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                               <Input
                                 type="number"
@@ -805,6 +806,7 @@ export default function NewPurchaseInvoicePage() {
                                 placeholder="0"
                               />
                             </TableCell>
+                            )}
                             {saudiEnabled && (
                               <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
                                 <Input
@@ -1059,6 +1061,7 @@ export default function NewPurchaseInvoicePage() {
                               required
                             />
                           </div>
+                          {!isColumnHidden("discount") && (
                           <div>
                             <Label className="text-xs text-slate-500">{t("common.discountPercent")}</Label>
                             <Input
@@ -1074,6 +1077,7 @@ export default function NewPurchaseInvoicePage() {
                               placeholder="0"
                             />
                           </div>
+                          )}
                           {saudiEnabled && (
                             <div>
                               <Label className="text-xs text-slate-500">{t("common.vatPercent")}</Label>
@@ -1108,7 +1112,7 @@ export default function NewPurchaseInvoicePage() {
                               />
                             </div>
                           )}
-                          {session?.user?.multiUnitEnabled && (
+                          {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                             <div>
                               <Label className="text-xs text-slate-500">{t("common.unit")}</Label>
                               <ItemUnitSelect

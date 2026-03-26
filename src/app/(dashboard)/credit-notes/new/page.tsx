@@ -62,7 +62,7 @@ export default function NewCreditNotePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const duplicateId = searchParams.get("duplicate");
-  const { isFieldHidden, getDefault } = useFormConfig("creditNote");
+  const { isFieldHidden, isColumnHidden, getDefault } = useFormConfig("creditNote");
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -540,7 +540,7 @@ export default function NewCreditNotePage() {
                           />
                         </div>
 
-                        {session?.user?.multiUnitEnabled && (
+                        {session?.user?.multiUnitEnabled && !isColumnHidden("unit") && (
                           <div className="space-y-1">
                             <Label className="sm:hidden text-xs text-slate-500">{t("common.unit")}</Label>
                             <ItemUnitSelect
@@ -580,6 +580,7 @@ export default function NewCreditNotePage() {
                           />
                         </div>
 
+                        {!isColumnHidden("discount") && (
                         <div className="space-y-1">
                           <Label className="sm:hidden text-xs text-slate-500">{t("common.discount")} %</Label>
                           <Input
@@ -615,6 +616,7 @@ export default function NewCreditNotePage() {
                             step="0.01"
                           />
                         </div>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-end">
