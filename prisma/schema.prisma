@@ -1696,6 +1696,7 @@ enum JournalSourceType {
   OPENING_BALANCE
   POS_SESSION_CLOSE
   POS_SESSION_OPEN
+  KARIGAR_TRANSACTION
 }
 
 enum ExpenseStatus {

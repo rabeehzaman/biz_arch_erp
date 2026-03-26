@@ -227,7 +227,7 @@ export async function POST(
       }
 
       return transaction;
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
