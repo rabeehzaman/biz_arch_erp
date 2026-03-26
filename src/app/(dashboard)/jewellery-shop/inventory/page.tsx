@@ -105,11 +105,12 @@ export default function JewelleryInventoryPage() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" /> Add Item</Button>
+              <Button><Plus className="mr-2 h-4 w-4" /> Add Opening Stock</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Add Jewellery Item</DialogTitle>
+                <DialogTitle>Add Opening Stock</DialogTitle>
+                <p className="text-xs text-muted-foreground">For supplier purchases, use <a href="/purchase-invoices/new" className="underline text-primary">Purchase Stock</a> instead.</p>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">

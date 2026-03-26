@@ -95,6 +95,7 @@ export const jewelleryShopNav: NavDef[] = [
   { name: "New Jewellery Sale", href: "/jewellery-shop/sale", icon: ShoppingCart, keywords: ["sell", "sale", "invoice", "billing", "jewellery sale"], requiresFeature: ["isJewelleryModuleEnabled"] },
   { name: "Gold Rates", href: "/jewellery-shop/gold-rates", icon: BarChart3, keywords: ["gold price", "rate", "today rate"], requiresFeature: ["isJewelleryModuleEnabled"] },
   { name: "Jewellery Inventory", href: "/jewellery-shop/inventory", icon: Package, keywords: ["items", "stock", "gold items", "necklace", "ring"], requiresFeature: ["isJewelleryModuleEnabled"] },
+  { name: "Purchase Jewellery Stock", href: "/purchase-invoices/new", icon: Truck, keywords: ["buy", "purchase", "supplier", "stock in", "receive"], requiresFeature: ["isJewelleryModuleEnabled"] },
   { name: "Old Gold Exchange", href: "/jewellery-shop/old-gold", icon: ArrowRightLeft, keywords: ["buyback", "exchange", "old gold", "purchase"], requiresFeature: ["isJewelleryModuleEnabled"] },
   { name: "Karigars", href: "/jewellery-shop/karigars", icon: Users, keywords: ["artisan", "goldsmith", "karigar", "craftsman"], requiresFeature: ["isJewelleryModuleEnabled"] },
   { name: "Jewellery Repairs", href: "/jewellery-shop/repairs", icon: Wrench, keywords: ["repair", "fix", "service"], requiresFeature: ["isJewelleryModuleEnabled"] },
