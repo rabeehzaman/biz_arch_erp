@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 
-type SettingsTab = "company" | "units" | "categories" | "accounting" | "pos" | "users" | "employees" | "restaurant";
+type SettingsTab = "units" | "categories" | "accounting" | "pos" | "users" | "employees" | "restaurant";
 
 function SettingsPanelFallback() {
   return (
@@ -18,10 +18,6 @@ function SettingsPanelFallback() {
   );
 }
 
-const CompanySettings = dynamic(
-  () => import("@/components/settings/company-settings").then((mod) => mod.CompanySettings),
-  { loading: () => <SettingsPanelFallback /> }
-);
 const UnitsSettings = dynamic(
   () => import("@/components/settings/units-settings").then((mod) => mod.UnitsSettings),
   { loading: () => <SettingsPanelFallback /> }
@@ -55,8 +51,8 @@ export default function SettingsPage() {
   const { t } = useLanguage();
   const { data: session } = useSession();
   const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled ?? false;
-  const [activeTab, setActiveTab] = useState<SettingsTab>("company");
-  const [loadedTabs, setLoadedTabs] = useState<SettingsTab[]>(["company"]);
+  const [activeTab, setActiveTab] = useState<SettingsTab>("units");
+  const [loadedTabs, setLoadedTabs] = useState<SettingsTab[]>(["units"]);
 
   const getForceMountProps = (tab: SettingsTab) =>
     loadedTabs.includes(tab) ? { forceMount: true as const } : {};
@@ -80,7 +76,6 @@ export default function SettingsPage() {
         <Tabs value={activeTab} onValueChange={handleTabChange} className="gap-4">
           <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
             <TabsList className="h-auto w-max min-w-max justify-start gap-1 rounded-xl p-1 sm:w-fit sm:min-w-0">
-              <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="company">{t("settings.tabCompany")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="units">{t("settings.tabUnits")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="categories">{t("settings.tabCategories")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="accounting">{t("settings.tabAccounting")}</TabsTrigger>
@@ -92,9 +87,6 @@ export default function SettingsPage() {
               )}
             </TabsList>
           </div>
-          <TabsContent value="company" {...getForceMountProps("company")} className="mt-6 data-[state=inactive]:hidden">
-            {loadedTabs.includes("company") ? <CompanySettings /> : null}
-          </TabsContent>
           <TabsContent value="units" {...getForceMountProps("units")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("units") ? <UnitsSettings /> : null}
           </TabsContent>

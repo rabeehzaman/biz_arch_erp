@@ -56,23 +56,6 @@ export function getCompanySettingsSchema(edition?: string) {
 
 export type CompanySettingsFormData = z.infer<typeof companySettingsSchema>;
 
-export const SETTINGS_KEY_MAP: Record<keyof CompanySettingsFormData, string> = {
-  companyName: "company_name",
-  companyAddress: "company_address",
-  companyCity: "company_city",
-  companyState: "company_state",
-  companyZipCode: "company_zipCode",
-  companyCountry: "company_country",
-  companyPhone: "company_phone",
-  companyEmail: "company_email",
-  companyGstNumber: "company_gstNumber",
-  bankName: "company_bankName",
-  bankAccountNumber: "company_bankAccountNumber",
-  bankIfscCode: "company_bankIfscCode",
-  bankBranch: "company_bankBranch",
-  roundOffMode: "company_roundOffMode",
-};
-
 export const POS_RECEIPT_PRINTING_KEY = "pos_receipt_printing";
 export const POS_SESSION_REPORT_LANGUAGE_KEY = "pos_session_report_language";
 

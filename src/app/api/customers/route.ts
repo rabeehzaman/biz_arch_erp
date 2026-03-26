@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, email, phone, address, city, state, zipCode, country, notes, gstin, gstStateCode, ccNo, buildingNo, addNo, district } = body;
+    const { name, email, phone, address, city, state, zipCode, country, notes, gstin, gstStateCode, ccNo, buildingNo, addNo, district, vatNumber, arabicName } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -106,6 +106,13 @@ export async function POST(request: NextRequest) {
     if (gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
       return NextResponse.json(
         { error: "Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5" },
+        { status: 400 }
+      );
+    }
+
+    if (vatNumber && !/^3\d{14}$/.test(vatNumber)) {
+      return NextResponse.json(
+        { error: "Invalid VAT Number. Must be 15 digits starting with 3." },
         { status: 400 }
       );
     }
@@ -129,6 +136,8 @@ export async function POST(request: NextRequest) {
         buildingNo: buildingNo || null,
         addNo: addNo || null,
         district: district || null,
+        vatNumber: vatNumber || null,
+        arabicName: arabicName || null,
         assignments: {
           create: {
             userId: session.user.id,

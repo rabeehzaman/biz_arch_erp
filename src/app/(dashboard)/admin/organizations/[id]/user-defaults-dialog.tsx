@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { LANDING_PAGE_OPTIONS } from "@/lib/form-config/types";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface UserDefaultsDialogProps {
   orgId: string;
@@ -31,6 +31,19 @@ interface UserDefaultsDialogProps {
 
 const NONE_VALUE = "__none__";
 
+interface BranchOption {
+  id: string;
+  name: string;
+  code: string | null;
+}
+
+interface WarehouseOption {
+  id: string;
+  name: string;
+  code: string | null;
+  branchId: string;
+}
+
 export function UserDefaultsDialog({
   orgId,
   userId,
@@ -41,11 +54,13 @@ export function UserDefaultsDialog({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [branchId, setBranchId] = useState("");
-  const [warehouseId, setWarehouseId] = useState("");
+  const [branchId, setBranchId] = useState<string>(NONE_VALUE);
+  const [warehouseId, setWarehouseId] = useState<string>(NONE_VALUE);
   const [landingPage, setLandingPage] = useState<string>(NONE_VALUE);
 
-  // Fetch current user defaults when the dialog opens
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -55,16 +70,15 @@ export function UserDefaultsDialog({
         const res = await fetch(
           `/api/admin/organizations/${orgId}/user-defaults/${userId}`
         );
-        if (!res.ok) {
-          throw new Error("Failed to fetch user defaults");
-        }
+        if (!res.ok) throw new Error("Failed to fetch user defaults");
         const data = await res.json();
 
-        // Extract branchId and warehouseId from formDefaults
         const salesDefaults = data.formDefaults?.salesInvoice ?? {};
-        setBranchId(salesDefaults.branchId ?? "");
-        setWarehouseId(salesDefaults.warehouseId ?? "");
+        setBranchId(salesDefaults.branchId || NONE_VALUE);
+        setWarehouseId(salesDefaults.warehouseId || NONE_VALUE);
         setLandingPage(data.landingPage ?? NONE_VALUE);
+        setBranches(data.branches ?? []);
+        setWarehouses(data.warehouses ?? []);
       } catch {
         toast.error("Failed to load user defaults");
       } finally {
@@ -78,10 +92,9 @@ export function UserDefaultsDialog({
   async function handleSave() {
     setSaving(true);
     try {
-      // Build formDefaults — apply branchId/warehouseId to all transaction forms
       const sharedDefaults: Record<string, string> = {};
-      if (branchId.trim()) sharedDefaults.branchId = branchId.trim();
-      if (warehouseId.trim()) sharedDefaults.warehouseId = warehouseId.trim();
+      if (branchId !== NONE_VALUE) sharedDefaults.branchId = branchId;
+      if (warehouseId !== NONE_VALUE) sharedDefaults.warehouseId = warehouseId;
 
       const formDefaults: Record<string, Record<string, string>> = {};
       const transactionForms = [
@@ -102,7 +115,7 @@ export function UserDefaultsDialog({
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            formDefaults,
+            formDefaults: Object.keys(formDefaults).length > 0 ? formDefaults : null,
             landingPage: landingPage === NONE_VALUE ? null : landingPage,
           }),
         }
@@ -132,42 +145,67 @@ export function UserDefaultsDialog({
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            Loading...
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <div className="grid gap-4 py-2">
-            {/* Default Branch ID */}
+            {/* Default Branch */}
             <div className="grid gap-2">
-              <Label htmlFor="branchId">Default Branch ID</Label>
-              <Input
-                id="branchId"
-                placeholder="Paste branch ID"
-                value={branchId}
-                onChange={(e) => setBranchId(e.target.value)}
-              />
+              <Label>Default Branch</Label>
+              {branches.length > 0 ? (
+                <Select value={branchId} onValueChange={setBranchId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No default" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>None</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}{b.code ? ` (${b.code})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No branches configured for this organization
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
-                Applied to sales invoices, purchases, credit notes, and
-                quotations.
+                Applied to invoices, purchases, credit notes, and quotations.
               </p>
             </div>
 
-            {/* Default Warehouse ID */}
+            {/* Default Warehouse */}
             <div className="grid gap-2">
-              <Label htmlFor="warehouseId">Default Warehouse ID</Label>
-              <Input
-                id="warehouseId"
-                placeholder="Paste warehouse ID"
-                value={warehouseId}
-                onChange={(e) => setWarehouseId(e.target.value)}
-              />
+              <Label>Default Warehouse</Label>
+              {warehouses.length > 0 ? (
+                <Select value={warehouseId} onValueChange={setWarehouseId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No default" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>None</SelectItem>
+                    {warehouses.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}{w.code ? ` (${w.code})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No warehouses configured for this organization
+                </p>
+              )}
             </div>
 
             {/* Default Landing Page */}
             <div className="grid gap-2">
-              <Label htmlFor="landingPage">Default Landing Page</Label>
+              <Label>Default Landing Page</Label>
               <Select value={landingPage} onValueChange={setLandingPage}>
-                <SelectTrigger id="landingPage">
+                <SelectTrigger>
                   <SelectValue placeholder="Use org default" />
                 </SelectTrigger>
                 <SelectContent>
@@ -192,7 +230,8 @@ export function UserDefaultsDialog({
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={loading || saving}>
-            {saving ? "Saving..." : "Save Defaults"}
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Defaults
           </Button>
         </DialogFooter>
       </DialogContent>

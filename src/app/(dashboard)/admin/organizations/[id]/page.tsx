@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { SubscriptionTab } from "./subscription-tab";
 import { FormConfigTab } from "./form-config-tab";
+import { UserDefaultsDialog } from "./user-defaults-dialog";
 import { INDIAN_STATES } from "@/lib/gst/constants";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n";
@@ -86,6 +87,18 @@ interface OrganizationDetails {
     weighMachineProductCodeLen: number;
     weighMachineWeightDigits: number;
     weighMachineDecimalPlaces: number;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    zipCode: string | null;
+    country: string | null;
+    phone: string | null;
+    email: string | null;
+    bankName: string | null;
+    bankAccountNumber: string | null;
+    bankIfscCode: string | null;
+    bankBranch: string | null;
+    roundOffMode: string;
     gstin: string | null;
     gstStateCode: string | null;
     saudiEInvoiceEnabled: boolean;
@@ -213,6 +226,18 @@ export default function OrganizationDetailsPage() {
     const [posDefaultCashAccountId, setPosDefaultCashAccountId] = useState("");
     const [posDefaultBankAccountId, setPosDefaultBankAccountId] = useState("");
     const [isTaxInclusivePrice, setIsTaxInclusivePrice] = useState(false);
+    const [companyAddress, setCompanyAddress] = useState("");
+    const [companyCity, setCompanyCity] = useState("");
+    const [companyState, setCompanyState] = useState("");
+    const [zipCode, setZipCode] = useState("");
+    const [country, setCountry] = useState("");
+    const [companyPhone, setCompanyPhone] = useState("");
+    const [companyEmail, setCompanyEmail] = useState("");
+    const [bankName, setBankName] = useState("");
+    const [bankAccountNumber, setBankAccountNumber] = useState("");
+    const [bankIfscCode, setBankIfscCode] = useState("");
+    const [bankBranch, setBankBranch] = useState("");
+    const [roundOffMode, setRoundOffMode] = useState("NONE");
     const [saving, setSaving] = useState(false);
 
     // Delete state
@@ -242,6 +267,9 @@ export default function OrganizationDetailsPage() {
     const [isResettingPw, setIsResettingPw] = useState(false);
     const [resetPwError, setResetPwError] = useState("");
     const [resetPwSuccess, setResetPwSuccess] = useState("");
+
+    // User defaults state
+    const [userDefaultsTarget, setUserDefaultsTarget] = useState<{ id: string; name: string } | null>(null);
 
     // Change role state
     const [changeRoleOpen, setChangeRoleOpen] = useState(false);
@@ -330,6 +358,18 @@ export default function OrganizationDetailsPage() {
         setPosDefaultCashAccountId(data.posDefaultCashAccountId || "");
         setPosDefaultBankAccountId(data.posDefaultBankAccountId || "");
         setIsTaxInclusivePrice(data.isTaxInclusivePrice || false);
+        setCompanyAddress(data.address || "");
+        setCompanyCity(data.city || "");
+        setCompanyState(data.state || "");
+        setZipCode(data.zipCode || "");
+        setCountry(data.country || "");
+        setCompanyPhone(data.phone || "");
+        setCompanyEmail(data.email || "");
+        setBankName(data.bankName || "");
+        setBankAccountNumber(data.bankAccountNumber || "");
+        setBankIfscCode(data.bankIfscCode || "");
+        setBankBranch(data.bankBranch || "");
+        setRoundOffMode(data.roundOffMode || "NONE");
     };
 
     const fetchOrganization = useCallback(async () => {
@@ -499,6 +539,18 @@ export default function OrganizationDetailsPage() {
                     posDefaultCashAccountId: posAccountingMode === "CLEARING_ACCOUNT" ? posDefaultCashAccountId || null : null,
                     posDefaultBankAccountId: posAccountingMode === "CLEARING_ACCOUNT" ? posDefaultBankAccountId || null : null,
                     isTaxInclusivePrice,
+                    address: companyAddress || null,
+                    city: companyCity || null,
+                    state: companyState || null,
+                    zipCode: zipCode || null,
+                    country: country || null,
+                    phone: companyPhone || null,
+                    email: companyEmail || null,
+                    bankName: bankName || null,
+                    bankAccountNumber: bankAccountNumber || null,
+                    bankIfscCode: bankIfscCode || null,
+                    bankBranch: bankBranch || null,
+                    roundOffMode,
                 }),
             });
 
@@ -770,9 +822,16 @@ export default function OrganizationDetailsPage() {
                             <CardDescription>{t("admin.configureSettingsDesc")}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Tabs defaultValue="general" className="min-w-0 w-full">
+                            <Tabs defaultValue="company" className="min-w-0 w-full">
                                 <div className="mb-6 max-w-full overflow-x-auto border-b">
                                     <TabsList className="h-auto min-w-max w-max justify-start gap-1 rounded-xl border-b-0 bg-transparent p-1 sm:w-fit">
+                                        <TabsTrigger
+                                            value="company"
+                                            className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                                        >
+                                            <Building2 className="mr-1.5 h-4 w-4" />
+                                            {t("settings.tabCompany")}
+                                        </TabsTrigger>
                                         <TabsTrigger
                                             value="general"
                                             className="relative h-10 shrink-0 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-3 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
@@ -827,6 +886,154 @@ export default function OrganizationDetailsPage() {
                                         </TabsTrigger>
                                     </TabsList>
                                 </div>
+
+                                {/* COMPANY DETAILS TAB */}
+                                <TabsContent value="company" className="space-y-6 mt-0">
+                                    <div className="grid gap-6 lg:grid-cols-2">
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <Building2 className="h-5 w-5" />
+                                                    {t("settings.companyInfo")}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="grid gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label>{t("settings.companyName")} <span className="text-red-500">*</span></Label>
+                                                    <Input
+                                                        value={organization?.name || ""}
+                                                        disabled
+                                                        className="bg-muted"
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">{t("admin.orgNameManagedAbove")}</p>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>{t("settings.address")}</Label>
+                                                    <Input
+                                                        value={companyAddress}
+                                                        onChange={(e) => setCompanyAddress(e.target.value)}
+                                                        placeholder={t("settings.address")}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="grid gap-2">
+                                                        <Label>{t("settings.city")}</Label>
+                                                        <Input
+                                                            value={companyCity}
+                                                            onChange={(e) => setCompanyCity(e.target.value)}
+                                                            placeholder={t("settings.city")}
+                                                        />
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label>{t("settings.state")}</Label>
+                                                        <Input
+                                                            value={companyState}
+                                                            onChange={(e) => setCompanyState(e.target.value)}
+                                                            placeholder={t("settings.state")}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="grid gap-2">
+                                                        <Label>{t("settings.zipCode")}</Label>
+                                                        <Input
+                                                            value={zipCode}
+                                                            onChange={(e) => setZipCode(e.target.value)}
+                                                            placeholder={t("settings.zipCode")}
+                                                        />
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label>{t("settings.country")}</Label>
+                                                        <Input
+                                                            value={country}
+                                                            onChange={(e) => setCountry(e.target.value)}
+                                                            placeholder={t("settings.country")}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="grid gap-2">
+                                                        <Label>{t("settings.phone")}</Label>
+                                                        <Input
+                                                            value={companyPhone}
+                                                            onChange={(e) => setCompanyPhone(e.target.value)}
+                                                            placeholder={edition === "SAUDI" ? "+966 5X XXX XXXX" : "+91 XXXXX XXXXX"}
+                                                        />
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label>{t("settings.email")}</Label>
+                                                        <Input
+                                                            type="email"
+                                                            value={companyEmail}
+                                                            onChange={(e) => setCompanyEmail(e.target.value)}
+                                                            placeholder="contact@company.com"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <Receipt className="h-5 w-5" />
+                                                    {t("settings.taxBanking")}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="grid gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label>{t("settings.bankName")}</Label>
+                                                    <Input
+                                                        value={bankName}
+                                                        onChange={(e) => setBankName(e.target.value)}
+                                                        placeholder={t("settings.bankName")}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>{t("settings.accountNumber")}</Label>
+                                                    <Input
+                                                        value={bankAccountNumber}
+                                                        onChange={(e) => setBankAccountNumber(e.target.value)}
+                                                        placeholder={t("settings.accountNumber")}
+                                                    />
+                                                </div>
+                                                {edition === "INDIA" && (
+                                                    <div className="grid gap-2">
+                                                        <Label>{t("settings.ifscCode")}</Label>
+                                                        <Input
+                                                            value={bankIfscCode}
+                                                            onChange={(e) => setBankIfscCode(e.target.value)}
+                                                            placeholder="SBIN0001234"
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className="grid gap-2">
+                                                    <Label>{t("settings.branch")}</Label>
+                                                    <Input
+                                                        value={bankBranch}
+                                                        onChange={(e) => setBankBranch(e.target.value)}
+                                                        placeholder={t("settings.branch")}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>{t("settingsExtra.documentRoundOff")}</Label>
+                                                    <Select value={roundOffMode} onValueChange={setRoundOffMode}>
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="NONE">{t("settingsExtra.roundOffDisabled")}</SelectItem>
+                                                            <SelectItem value="NEAREST">{t("settingsExtra.roundOffNearest")}</SelectItem>
+                                                            <SelectItem value="UP">{t("settingsExtra.roundOffUp")}</SelectItem>
+                                                            <SelectItem value="DOWN">{t("settingsExtra.roundOffDown")}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <p className="text-xs text-muted-foreground">{t("settingsExtra.roundOffDescription")}</p>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                </TabsContent>
 
                                 {/* GENERAL TAB */}
                                 <TabsContent value="general" className="space-y-6 mt-0">
@@ -1854,7 +2061,7 @@ export default function OrganizationDetailsPage() {
 
                                 {/* FORM CONFIG TAB */}
                                 <TabsContent value="formConfig" className="mt-0">
-                                    <FormConfigTab orgId={id} />
+                                    <FormConfigTab orgId={id} edition={organization?.edition} />
                                 </TabsContent>
 
                                 {/* SUBSCRIPTION TAB */}
@@ -1936,6 +2143,15 @@ export default function OrganizationDetailsPage() {
                                                             variant="outline"
                                                             size="sm"
                                                             className="h-8 px-3"
+                                                            onClick={() => setUserDefaultsTarget({ id: user.id, name: user.name || user.email })}
+                                                        >
+                                                            <Settings className="mr-1.5 h-3.5 w-3.5" />
+                                                            Defaults
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-3"
                                                             onClick={() => openChangeRoleDialog(user)}
                                                         >
                                                             <UserCog className="mr-1.5 h-3.5 w-3.5" />
@@ -1980,6 +2196,14 @@ export default function OrganizationDetailsPage() {
                                                         <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex items-center justify-end gap-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => setUserDefaultsTarget({ id: user.id, name: user.name || user.email })}
+                                                                >
+                                                                    <Settings className="mr-1.5 h-3.5 w-3.5" />
+                                                                    Defaults
+                                                                </Button>
                                                                 <Button
                                                                     variant="outline"
                                                                     size="sm"
@@ -2063,6 +2287,16 @@ export default function OrganizationDetailsPage() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {userDefaultsTarget && (
+                    <UserDefaultsDialog
+                        orgId={organization.id}
+                        userId={userDefaultsTarget.id}
+                        userName={userDefaultsTarget.name}
+                        open={!!userDefaultsTarget}
+                        onOpenChange={(open) => !open && setUserDefaultsTarget(null)}
+                    />
+                )}
 
                 <AlertDialog open={deleteOpen} onOpenChange={(open) => !open && !isDeleting && setDeleteOpen(false)}>
                     <AlertDialogContent>

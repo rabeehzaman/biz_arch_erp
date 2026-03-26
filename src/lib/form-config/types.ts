@@ -15,6 +15,8 @@ export interface FieldDef {
   perUser?: boolean;
   /** Fixed options for select fields */
   options?: readonly string[];
+  /** If set, field only applies to this edition (omit for universal fields) */
+  edition?: "INDIA" | "SAUDI";
 }
 
 export interface ColumnDef {
@@ -153,31 +155,43 @@ export const FORM_REGISTRY = {
   customer: {
     label: "Customer",
     fields: {
-      name:    { label: "Name",     type: "text"     as const, required: true,  canHide: false },
-      email:   { label: "Email",    type: "text"     as const, required: false, canHide: true },
-      phone:   { label: "Phone",    type: "text"     as const, required: false, canHide: true },
-      address: { label: "Address",  type: "textarea" as const, required: false, canHide: true },
-      city:    { label: "City",     type: "text"     as const, required: false, canHide: true },
-      state:   { label: "State",    type: "text"     as const, required: false, canHide: true },
-      zipCode: { label: "Zip Code", type: "text"     as const, required: false, canHide: true },
-      country: { label: "Country",  type: "text"     as const, required: false, canHide: true },
-      gstin:   { label: "GSTIN",    type: "text"     as const, required: false, canHide: true },
-      notes:   { label: "Notes",    type: "textarea" as const, required: false, canHide: true },
+      name:       { label: "Name",              type: "text"     as const, required: true,  canHide: false },
+      email:      { label: "Email",             type: "text"     as const, required: false, canHide: true },
+      phone:      { label: "Phone",             type: "text"     as const, required: false, canHide: true },
+      address:    { label: "Address",           type: "textarea" as const, required: false, canHide: true },
+      city:       { label: "City",              type: "text"     as const, required: false, canHide: true },
+      state:      { label: "State",             type: "text"     as const, required: false, canHide: true },
+      zipCode:    { label: "Zip Code",          type: "text"     as const, required: false, canHide: true },
+      country:    { label: "Country",           type: "text"     as const, required: false, canHide: true },
+      gstin:      { label: "GSTIN",             type: "text"     as const, required: false, canHide: true, edition: "INDIA" },
+      vatNumber:  { label: "VAT Number (TRN)",  type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      arabicName: { label: "Arabic Name",       type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      ccNo:       { label: "C.R No",            type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      buildingNo: { label: "Building No",       type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      addNo:      { label: "Additional No",     type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      district:   { label: "District",          type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      notes:      { label: "Notes",             type: "textarea" as const, required: false, canHide: true },
     },
   },
   supplier: {
     label: "Supplier",
     fields: {
-      name:    { label: "Name",     type: "text"     as const, required: true,  canHide: false },
-      email:   { label: "Email",    type: "text"     as const, required: false, canHide: true },
-      phone:   { label: "Phone",    type: "text"     as const, required: false, canHide: true },
-      address: { label: "Address",  type: "textarea" as const, required: false, canHide: true },
-      city:    { label: "City",     type: "text"     as const, required: false, canHide: true },
-      state:   { label: "State",    type: "text"     as const, required: false, canHide: true },
-      zipCode: { label: "Zip Code", type: "text"     as const, required: false, canHide: true },
-      country: { label: "Country",  type: "text"     as const, required: false, canHide: true },
-      gstin:   { label: "GSTIN",    type: "text"     as const, required: false, canHide: true },
-      notes:   { label: "Notes",    type: "textarea" as const, required: false, canHide: true },
+      name:       { label: "Name",              type: "text"     as const, required: true,  canHide: false },
+      email:      { label: "Email",             type: "text"     as const, required: false, canHide: true },
+      phone:      { label: "Phone",             type: "text"     as const, required: false, canHide: true },
+      address:    { label: "Address",           type: "textarea" as const, required: false, canHide: true },
+      city:       { label: "City",              type: "text"     as const, required: false, canHide: true },
+      state:      { label: "State",             type: "text"     as const, required: false, canHide: true },
+      zipCode:    { label: "Zip Code",          type: "text"     as const, required: false, canHide: true },
+      country:    { label: "Country",           type: "text"     as const, required: false, canHide: true },
+      gstin:      { label: "GSTIN",             type: "text"     as const, required: false, canHide: true, edition: "INDIA" },
+      vatNumber:  { label: "VAT Number (TRN)",  type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      arabicName: { label: "Arabic Name",       type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      ccNo:       { label: "C.R No",            type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      buildingNo: { label: "Building No",       type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      addNo:      { label: "Additional No",     type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      district:   { label: "District",          type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
+      notes:      { label: "Notes",             type: "textarea" as const, required: false, canHide: true },
     },
   },
   product: {
@@ -191,8 +205,8 @@ export const FORM_REGISTRY = {
       barcode:     { label: "Barcode",     type: "text"     as const, required: false, canHide: true },
       categoryId:  { label: "Category",    type: "entity"   as const, required: false, canHide: true },
       unitId:      { label: "Unit",        type: "entity"   as const, required: false, canHide: true },
-      hsnCode:     { label: "HSN Code",    type: "text"     as const, required: false, canHide: true },
-      gstRate:     { label: "GST Rate",    type: "number"   as const, required: false, canHide: true },
+      hsnCode:     { label: "HSN Code",    type: "text"     as const, required: false, canHide: true, edition: "INDIA" },
+      gstRate:     { label: "GST Rate",    type: "number"   as const, required: false, canHide: true, edition: "INDIA" },
     },
   },
   expense: {

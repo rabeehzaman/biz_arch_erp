@@ -154,6 +154,18 @@ export async function PUT(
       restaurantThemeEnabled,
       restaurantThemeColor,
       restaurantThemePreset,
+      address,
+      city,
+      state,
+      zipCode,
+      country,
+      phone,
+      email: companyEmail,
+      bankName,
+      bankAccountNumber,
+      bankIfscCode,
+      bankBranch,
+      roundOffMode,
     } = body;
 
     // Validate edition
@@ -214,6 +226,14 @@ export async function PUT(
     if (posAccountingMode !== undefined && !["DIRECT", "CLEARING_ACCOUNT"].includes(posAccountingMode)) {
       return NextResponse.json(
         { error: "POS accounting mode must be 'DIRECT' or 'CLEARING_ACCOUNT'" },
+        { status: 400 }
+      );
+    }
+
+    // Validate round-off mode
+    if (roundOffMode !== undefined && !["NONE", "NEAREST", "UP", "DOWN"].includes(roundOffMode)) {
+      return NextResponse.json(
+        { error: "Round-off mode must be 'NONE', 'NEAREST', 'UP', or 'DOWN'" },
         { status: 400 }
       );
     }
@@ -341,6 +361,20 @@ export async function PUT(
     if (posDefaultCashAccountId !== undefined) updateData.posDefaultCashAccountId = posDefaultCashAccountId || null;
     if (posDefaultBankAccountId !== undefined) updateData.posDefaultBankAccountId = posDefaultBankAccountId || null;
     if (isTaxInclusivePrice !== undefined) updateData.isTaxInclusivePrice = isTaxInclusivePrice;
+
+    // Company details
+    if (address !== undefined) updateData.address = address || null;
+    if (city !== undefined) updateData.city = city || null;
+    if (state !== undefined) updateData.state = state || null;
+    if (zipCode !== undefined) updateData.zipCode = zipCode || null;
+    if (country !== undefined) updateData.country = country || null;
+    if (phone !== undefined) updateData.phone = phone || null;
+    if (companyEmail !== undefined) updateData.email = companyEmail || null;
+    if (bankName !== undefined) updateData.bankName = bankName || null;
+    if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber || null;
+    if (bankIfscCode !== undefined) updateData.bankIfscCode = bankIfscCode || null;
+    if (bankBranch !== undefined) updateData.bankBranch = bankBranch || null;
+    if (roundOffMode !== undefined) updateData.roundOffMode = roundOffMode;
 
     // Jewellery module settings
     if (isJewelleryModuleEnabled !== undefined) updateData.isJewelleryModuleEnabled = isJewelleryModuleEnabled;

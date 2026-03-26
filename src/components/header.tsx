@@ -78,10 +78,9 @@ export function Header() {
     if (session?.user?.organizationId) {
       fetch("/api/settings")
         .then((res) => res.json())
-        .then((settings) => {
-          const companyName = settings.find?.((s: { key: string }) => s.key === "company_name");
-          if (companyName) {
-            setOrgName(companyName.value);
+        .then((data) => {
+          if (data?.companyName) {
+            setOrgName(data.companyName);
           }
         })
         .catch(() => { });

@@ -58,6 +58,12 @@ interface Supplier {
   notes: string | null;
   isActive: boolean;
   createdAt: string;
+  vatNumber?: string | null;
+  arabicName?: string | null;
+  ccNo?: string | null;
+  buildingNo?: string | null;
+  addNo?: string | null;
+  district?: string | null;
   _count?: {
     purchaseInvoices: number;
   };

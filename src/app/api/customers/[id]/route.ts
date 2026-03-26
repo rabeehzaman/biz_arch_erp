@@ -93,11 +93,18 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, email, phone, address, city, state, zipCode, country, notes, isActive, gstin, gstStateCode, ccNo, buildingNo, addNo, district } = body;
+    const { name, email, phone, address, city, state, zipCode, country, notes, isActive, gstin, gstStateCode, ccNo, buildingNo, addNo, district, vatNumber, arabicName } = body;
 
     if (gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
       return NextResponse.json(
         { error: "Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5" },
+        { status: 400 }
+      );
+    }
+
+    if (vatNumber && !/^3\d{14}$/.test(vatNumber)) {
+      return NextResponse.json(
+        { error: "Invalid VAT Number. Must be 15 digits starting with 3." },
         { status: 400 }
       );
     }
@@ -121,6 +128,8 @@ export async function PUT(
         buildingNo: buildingNo !== undefined ? buildingNo : undefined,
         addNo: addNo !== undefined ? addNo : undefined,
         district: district !== undefined ? district : undefined,
+        vatNumber: vatNumber !== undefined ? vatNumber : undefined,
+        arabicName: arabicName !== undefined ? arabicName : undefined,
       },
       include: {
         assignments: {

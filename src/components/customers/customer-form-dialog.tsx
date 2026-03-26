@@ -31,6 +31,8 @@ interface Customer {
     gstin: string | null;
     gstStateCode: string | null;
     notes: string | null;
+    vatNumber?: string | null;
+    arabicName?: string | null;
     ccNo?: string | null;
     buildingNo?: string | null;
     addNo?: string | null;
@@ -67,6 +69,8 @@ export function CustomerFormDialog({
         gstin: getDefault("gstin", ""),
         gstStateCode: "",
         notes: getDefault("notes", ""),
+        vatNumber: "",
+        arabicName: "",
         ccNo: "",
         buildingNo: "",
         addNo: "",
@@ -86,6 +90,8 @@ export function CustomerFormDialog({
             gstin: getDefault("gstin", ""),
             gstStateCode: "",
             notes: getDefault("notes", ""),
+            vatNumber: "",
+            arabicName: "",
             ccNo: "",
             buildingNo: "",
             addNo: "",
@@ -107,6 +113,8 @@ export function CustomerFormDialog({
                 gstin: customerToEdit.gstin || "",
                 gstStateCode: customerToEdit.gstStateCode || "",
                 notes: customerToEdit.notes || "",
+                vatNumber: customerToEdit.vatNumber || "",
+                arabicName: customerToEdit.arabicName || "",
                 ccNo: customerToEdit.ccNo || "",
                 buildingNo: customerToEdit.buildingNo || "",
                 addNo: customerToEdit.addNo || "",
@@ -139,6 +147,8 @@ export function CustomerFormDialog({
             gstin: formData.gstin || null,
             gstStateCode: formData.gstStateCode || null,
             notes: formData.notes || null,
+            vatNumber: formData.vatNumber || null,
+            arabicName: formData.arabicName || null,
             ccNo: formData.ccNo || null,
             buildingNo: formData.buildingNo || null,
             addNo: formData.addNo || null,
@@ -299,6 +309,27 @@ export function CustomerFormDialog({
                         )}
                         {(session?.user as any)?.saudiEInvoiceEnabled && (
                             <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="cust-vatNumber">{t("customers.vatNumber")}</Label>
+                                        <Input
+                                            id="cust-vatNumber"
+                                            value={formData.vatNumber}
+                                            onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value })}
+                                            placeholder="3XXXXXXXXXXXXXX"
+                                            maxLength={15}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="cust-arabicName">{t("customers.arabicName")}</Label>
+                                        <Input
+                                            id="cust-arabicName"
+                                            value={formData.arabicName}
+                                            onChange={(e) => setFormData({ ...formData, arabicName: e.target.value })}
+                                            dir="rtl"
+                                        />
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                                     <div className="grid gap-2">
                                         <Label htmlFor="cust-district">{t("customers.district")}</Label>

@@ -209,7 +209,7 @@ function defaultConfig(): OrgFormConfig {
 const DEFAULT_MOBILE_TABS: MobileNavTab[] = MOBILE_NAV_TAB_POOL.slice(0, 5);
 
 // ── Main component ──────────────────────────────────────────────
-export function FormConfigTab({ orgId }: { orgId: string }) {
+export function FormConfigTab({ orgId, edition }: { orgId: string; edition?: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<OrgFormConfig>(defaultConfig());
@@ -467,7 +467,10 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
       >
         <div className="space-y-3">
           {(Object.keys(FORM_REGISTRY) as FormName[]).map((formName) => {
-            const formDef = FORM_REGISTRY[formName] as { label: string; fields: Record<string, { label: string; type: string; required: boolean; canHide: boolean; perUser?: boolean; options?: readonly string[] }>; columns?: Record<string, ColumnDef> };
+            const formDef = FORM_REGISTRY[formName] as { label: string; fields: Record<string, { label: string; type: string; required: boolean; canHide: boolean; perUser?: boolean; options?: readonly string[]; edition?: string }>; columns?: Record<string, ColumnDef> };
+            const filteredFields = Object.entries(formDef.fields).filter(
+              ([, fd]) => !fd.edition || fd.edition === edition
+            );
             const isExpanded = expandedForms.has(formName);
             const hiddenCount =
               (config.fields[formName]?.hidden?.length ?? 0) +
@@ -494,7 +497,7 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
                       {formDef.label}
                     </span>
                     <Badge variant="secondary" className="text-xs">
-                      {Object.keys(formDef.fields).length} fields
+                      {filteredFields.length} fields
                     </Badge>
                     {hiddenCount > 0 && (
                       <Badge
@@ -523,7 +526,7 @@ export function FormConfigTab({ orgId }: { orgId: string }) {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {Object.entries(formDef.fields).map(
+                          {filteredFields.map(
                             ([fieldKey, fieldDef]) => {
                               const hidden = isFieldHidden(formName, fieldKey);
                               const needsDefault =

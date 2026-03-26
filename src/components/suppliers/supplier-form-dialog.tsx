@@ -34,6 +34,12 @@ export interface Supplier {
     notes: string | null;
     isActive?: boolean;
     createdAt?: string;
+    vatNumber?: string | null;
+    arabicName?: string | null;
+    ccNo?: string | null;
+    buildingNo?: string | null;
+    addNo?: string | null;
+    district?: string | null;
 }
 
 interface SupplierFormDialogProps {
@@ -67,6 +73,12 @@ export function SupplierFormDialog({
         gstin: getDefault("gstin", ""),
         gstStateCode: "",
         notes: getDefault("notes", ""),
+        vatNumber: "",
+        arabicName: "",
+        ccNo: "",
+        buildingNo: "",
+        addNo: "",
+        district: "",
     });
 
     const resetForm = useCallback(() => {
@@ -82,6 +94,12 @@ export function SupplierFormDialog({
             gstin: getDefault("gstin", ""),
             gstStateCode: "",
             notes: getDefault("notes", ""),
+            vatNumber: "",
+            arabicName: "",
+            ccNo: "",
+            buildingNo: "",
+            addNo: "",
+            district: "",
         });
     }, [defaultCountry, getDefault]);
 
@@ -99,6 +117,12 @@ export function SupplierFormDialog({
                 gstin: supplierToEdit.gstin || "",
                 gstStateCode: supplierToEdit.gstStateCode || "",
                 notes: supplierToEdit.notes || "",
+                vatNumber: supplierToEdit.vatNumber || "",
+                arabicName: supplierToEdit.arabicName || "",
+                ccNo: supplierToEdit.ccNo || "",
+                buildingNo: supplierToEdit.buildingNo || "",
+                addNo: supplierToEdit.addNo || "",
+                district: supplierToEdit.district || "",
             });
         } else if (open && !supplierToEdit) {
             setFormData(prev => ({
@@ -127,6 +151,12 @@ export function SupplierFormDialog({
             gstin: formData.gstin || null,
             gstStateCode: formData.gstStateCode || null,
             notes: formData.notes || null,
+            vatNumber: formData.vatNumber || null,
+            arabicName: formData.arabicName || null,
+            ccNo: formData.ccNo || null,
+            buildingNo: formData.buildingNo || null,
+            addNo: formData.addNo || null,
+            district: formData.district || null,
         };
 
         try {
@@ -280,6 +310,67 @@ export function SupplierFormDialog({
                                 }
                             />
                         </div>
+                        )}
+                        {isSaudi && (
+                            <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="sup-vatNumber">{t("suppliers.vatNumber")}</Label>
+                                        <Input
+                                            id="sup-vatNumber"
+                                            value={formData.vatNumber}
+                                            onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value })}
+                                            placeholder="3XXXXXXXXXXXXXX"
+                                            maxLength={15}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="sup-arabicName">{t("suppliers.arabicName")}</Label>
+                                        <Input
+                                            id="sup-arabicName"
+                                            value={formData.arabicName}
+                                            onChange={(e) => setFormData({ ...formData, arabicName: e.target.value })}
+                                            dir="rtl"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="sup-district">{t("suppliers.district")}</Label>
+                                        <Input
+                                            id="sup-district"
+                                            value={formData.district}
+                                            onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="sup-buildingNo">{t("suppliers.buildingNo")}</Label>
+                                        <Input
+                                            id="sup-buildingNo"
+                                            value={formData.buildingNo}
+                                            onChange={(e) => setFormData({ ...formData, buildingNo: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="sup-addNo">{t("suppliers.addNo")}</Label>
+                                        <Input
+                                            id="sup-addNo"
+                                            value={formData.addNo}
+                                            onChange={(e) => setFormData({ ...formData, addNo: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="sup-ccNo">{t("suppliers.crNo")}</Label>
+                                        <Input
+                                            id="sup-ccNo"
+                                            value={formData.ccNo}
+                                            onChange={(e) => setFormData({ ...formData, ccNo: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </>
                         )}
                         {(!isFieldHidden("city") || !isFieldHidden("state") || !isFieldHidden("zipCode")) && (
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

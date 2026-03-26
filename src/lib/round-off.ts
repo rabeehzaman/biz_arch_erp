@@ -1,5 +1,3 @@
-export const ROUND_OFF_MODE_KEY = "company_roundOffMode";
-
 export const ROUND_OFF_MODES = ["NONE", "NEAREST", "UP", "DOWN"] as const;
 
 export type RoundOffMode = (typeof ROUND_OFF_MODES)[number];
@@ -57,29 +55,19 @@ export function calculateRoundOff(
 
 export async function getOrganizationRoundOffMode(
   tx: {
-    setting: {
+    organization: {
       findUnique: (args: {
-        where: {
-          organizationId_key: {
-            organizationId: string;
-            key: string;
-          };
-        };
-        select: { value: true };
-      }) => Promise<{ value: string } | null>;
+        where: { id: string };
+        select: { roundOffMode: true };
+      }) => Promise<{ roundOffMode: string } | null>;
     };
   },
   organizationId: string
 ): Promise<RoundOffMode> {
-  const setting = await tx.setting.findUnique({
-    where: {
-      organizationId_key: {
-        organizationId,
-        key: ROUND_OFF_MODE_KEY,
-      },
-    },
-    select: { value: true },
+  const org = await tx.organization.findUnique({
+    where: { id: organizationId },
+    select: { roundOffMode: true },
   });
 
-  return normalizeRoundOffMode(setting?.value);
+  return normalizeRoundOffMode(org?.roundOffMode);
 }

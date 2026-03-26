@@ -33,10 +33,26 @@ export async function GET(
       }
     }
 
+    // Also return org branches/warehouses for the dialog dropdowns
+    const [branches, warehouses] = await Promise.all([
+      prisma.branch.findMany({
+        where: { organizationId: id },
+        select: { id: true, name: true, code: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.warehouse.findMany({
+        where: { organizationId: id },
+        select: { id: true, name: true, code: true, branchId: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+
     return NextResponse.json({
       name: user.name,
       formDefaults,
       landingPage: user.landingPage || null,
+      branches,
+      warehouses,
     });
   } catch (error) {
     console.error("Failed to fetch user defaults:", error);
