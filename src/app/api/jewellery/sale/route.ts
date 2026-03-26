@@ -274,6 +274,7 @@ export async function POST(request: NextRequest) {
           totalVat: edition === "SAUDI" ? totalVat : null,
           isInterState,
           paymentType,
+          isJewellerySale: true,
           sourceType: "MANUAL",
           notes: notes
             ? `${notes}\n\n[Jewellery Sale]${oldGoldDeduction > 0 ? ` Old Gold Adjustment: -${oldGoldDeduction}` : ""}`
@@ -301,6 +302,20 @@ export async function POST(request: NextRequest) {
               costOfGoodsSold: Number(
                 items.find((i) => i.id === p.itemId)?.costPrice ?? 0
               ),
+              // Jewellery fields for PDF
+              jewelleryItemId: p.itemId,
+              tagNumber: p.tagNumber,
+              huidNumber: p.huidNumber,
+              purity: p.purity,
+              metalType: p.metalType,
+              goldRate: p.goldRate,
+              grossWeight: p.grossWeight,
+              netWeight: p.netWeight,
+              fineWeight: items.find((i) => i.id === p.itemId)?.fineWeight ?? null,
+              wastagePercent: p.wastagePercent,
+              makingChargeType: p.makingChargeType,
+              makingChargeValue: p.makingChargeValue,
+              stoneValue: items.find((i) => i.id === p.itemId)?.stoneValue ?? 0,
             })),
           },
         },
