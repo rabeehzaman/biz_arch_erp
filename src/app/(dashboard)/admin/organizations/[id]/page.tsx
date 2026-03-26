@@ -521,9 +521,9 @@ export default function OrganizationDetailsPage() {
                     saudiEInvoiceEnabled,
                     vatNumber: saudiEInvoiceEnabled ? vatNumber || null : null,
                     commercialRegNumber: saudiEInvoiceEnabled ? commercialRegNumber || null : null,
-                    arabicName: saudiEInvoiceEnabled ? arabicName || null : null,
-                    arabicAddress: saudiEInvoiceEnabled ? arabicAddress || null : null,
-                    arabicCity: saudiEInvoiceEnabled ? arabicCity || null : null,
+                    arabicName: edition === "SAUDI" ? arabicName || null : null,
+                    arabicAddress: edition === "SAUDI" ? arabicAddress || null : null,
+                    arabicCity: edition === "SAUDI" ? arabicCity || null : null,
                     invoicePdfFormat,
                     transferPdfFormat,
                     transferPdfHideCost,
@@ -907,6 +907,20 @@ export default function OrganizationDetailsPage() {
                                                     />
                                                     <p className="text-xs text-muted-foreground">{t("admin.orgNameManagedAbove")}</p>
                                                 </div>
+                                                {edition === "SAUDI" && (
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="arabicName">
+                                                            {t("admin.arabicCompanyName")} <span className="text-xs text-muted-foreground">(اسم الشركة)</span>
+                                                        </Label>
+                                                        <Input
+                                                            id="arabicName"
+                                                            value={arabicName}
+                                                            onChange={(e) => setArabicName(e.target.value)}
+                                                            placeholder="اسم الشركة بالعربية"
+                                                            dir="rtl"
+                                                        />
+                                                    </div>
+                                                )}
                                                 <div className="grid gap-2">
                                                     <Label>{t("settings.address")}</Label>
                                                     <Input
@@ -915,6 +929,20 @@ export default function OrganizationDetailsPage() {
                                                         placeholder={t("settings.address")}
                                                     />
                                                 </div>
+                                                {edition === "SAUDI" && (
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="arabicAddress">
+                                                            {t("admin.arabicAddress")} <span className="text-xs text-muted-foreground">(العنوان)</span>
+                                                        </Label>
+                                                        <Input
+                                                            id="arabicAddress"
+                                                            value={arabicAddress}
+                                                            onChange={(e) => setArabicAddress(e.target.value)}
+                                                            placeholder="العنوان بالكامل"
+                                                            dir="rtl"
+                                                        />
+                                                    </div>
+                                                )}
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                     <div className="grid gap-2">
                                                         <Label>{t("settings.city")}</Label>
@@ -933,6 +961,20 @@ export default function OrganizationDetailsPage() {
                                                         />
                                                     </div>
                                                 </div>
+                                                {edition === "SAUDI" && (
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="arabicCity">
+                                                            {t("admin.arabicCity")} <span className="text-xs text-muted-foreground">(المدينة)</span>
+                                                        </Label>
+                                                        <Input
+                                                            id="arabicCity"
+                                                            value={arabicCity}
+                                                            onChange={(e) => setArabicCity(e.target.value)}
+                                                            placeholder="المدينة"
+                                                            dir="rtl"
+                                                        />
+                                                    </div>
+                                                )}
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                     <div className="grid gap-2">
                                                         <Label>{t("settings.zipCode")}</Label>
@@ -1226,36 +1268,6 @@ export default function OrganizationDetailsPage() {
                                                     value={commercialRegNumber}
                                                     onChange={(e) => setCommercialRegNumber(e.target.value)}
                                                     placeholder="1010XXXXXX"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="arabicName">{t("admin.arabicCompanyName")} <span className="text-xs text-muted-foreground">(اسم الشركة)</span></Label>
-                                                <Input
-                                                    id="arabicName"
-                                                    value={arabicName}
-                                                    onChange={(e) => setArabicName(e.target.value)}
-                                                    placeholder="اسم الشركة بالعربية"
-                                                    dir="rtl"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="arabicAddress">{t("admin.arabicAddress")} <span className="text-xs text-muted-foreground">(العنوان)</span></Label>
-                                                <Input
-                                                    id="arabicAddress"
-                                                    value={arabicAddress}
-                                                    onChange={(e) => setArabicAddress(e.target.value)}
-                                                    placeholder="العنوان بالكامل"
-                                                    dir="rtl"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="arabicCity">{t("admin.arabicCity")} <span className="text-xs text-muted-foreground">(المدينة)</span></Label>
-                                                <Input
-                                                    id="arabicCity"
-                                                    value={arabicCity}
-                                                    onChange={(e) => setArabicCity(e.target.value)}
-                                                    placeholder="المدينة"
-                                                    dir="rtl"
                                                 />
                                             </div>
                                         </div>
