@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Gem } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
@@ -868,16 +868,56 @@ export default function NewPurchaseInvoicePage() {
                               </TableCell>
                             )}
                             <TableCell className="align-middle p-2 text-center">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
-                                onClick={() => removeLineItem(item.id)}
-                                disabled={lineItems.length === 1}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                {jewelleryEnabled && !isImeiTracked && (
+                                  <Button
+                                    type="button"
+                                    variant={item.jewellery ? "default" : "ghost"}
+                                    size="icon"
+                                    className={`h-8 w-8 ${item.jewellery ? "bg-amber-500 hover:bg-amber-600 text-white" : "opacity-0 group-hover:opacity-100 text-amber-500 hover:text-amber-600"}`}
+                                    title={item.jewellery ? "Jewellery item (click to remove)" : "Mark as jewellery item"}
+                                    onClick={() => {
+                                      setLineItems((prev) =>
+                                        prev.map((li) => {
+                                          if (li.id !== item.id) return li;
+                                          if (li.jewellery) return { ...li, jewellery: null };
+                                          return {
+                                            ...li,
+                                            jewellery: {
+                                              jewelleryItemId: "",
+                                              tagNumber: "",
+                                              huidNumber: "",
+                                              purity: "K22",
+                                              metalType: "GOLD",
+                                              goldRate: getGoldRate("K22", "GOLD"),
+                                              grossWeight: 0,
+                                              stoneWeight: 0,
+                                              netWeight: 0,
+                                              fineWeight: 0,
+                                              wastagePercent: 5,
+                                              makingChargeType: "PER_GRAM" as const,
+                                              makingChargeValue: 0,
+                                              stoneValue: 0,
+                                            },
+                                          };
+                                        })
+                                      );
+                                    }}
+                                  >
+                                    <Gem className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-slate-400 hover:text-red-500"
+                                  onClick={() => removeLineItem(item.id)}
+                                  disabled={lineItems.length === 1}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                             {isImeiTracked && item.imeiNumbers.length > 0 && (
@@ -1020,6 +1060,34 @@ export default function NewPurchaseInvoicePage() {
                               onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
                             />
                           </div>
+                          {jewelleryEnabled && !isImeiTracked && (
+                            <Button
+                              type="button"
+                              variant={item.jewellery ? "default" : "ghost"}
+                              size="icon"
+                              className={`h-8 w-8 mt-5 ${item.jewellery ? "bg-amber-500 hover:bg-amber-600 text-white" : "text-amber-500 hover:text-amber-600"}`}
+                              title={item.jewellery ? "Jewellery item" : "Mark as jewellery"}
+                              onClick={() => {
+                                setLineItems((prev) =>
+                                  prev.map((li) => {
+                                    if (li.id !== item.id) return li;
+                                    if (li.jewellery) return { ...li, jewellery: null };
+                                    return {
+                                      ...li,
+                                      jewellery: {
+                                        jewelleryItemId: "", tagNumber: "", huidNumber: "",
+                                        purity: "K22", metalType: "GOLD", goldRate: getGoldRate("K22", "GOLD"),
+                                        grossWeight: 0, stoneWeight: 0, netWeight: 0, fineWeight: 0,
+                                        wastagePercent: 5, makingChargeType: "PER_GRAM" as const, makingChargeValue: 0, stoneValue: 0,
+                                      },
+                                    };
+                                  })
+                                );
+                              }}
+                            >
+                              <Gem className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             variant="ghost"

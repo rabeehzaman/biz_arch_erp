@@ -117,7 +117,6 @@ const jewelleryShopNavigation = [
   { nameKey: "nav.jewellerySale", href: "/jewellery-shop/sale", icon: ShoppingCart },
   { nameKey: "nav.goldRates", href: "/jewellery-shop/gold-rates", icon: BarChart3 },
   { nameKey: "nav.jewelleryInventory", href: "/jewellery-shop/inventory", icon: Package },
-  { nameKey: "nav.jewelleryPurchase", href: "/purchase-invoices/new", icon: Truck },
   { nameKey: "nav.oldGoldExchange", href: "/jewellery-shop/old-gold", icon: ArrowRightLeft },
   { nameKey: "nav.karigars", href: "/jewellery-shop/karigars", icon: Users },
   { nameKey: "nav.jewelleryRepairs", href: "/jewellery-shop/repairs", icon: Wrench },
