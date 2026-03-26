@@ -16,6 +16,7 @@ export default function JewelleryDashboardPage() {
   const { fmt } = useCurrency();
 
   const { data: todayRates } = useSWR("/api/jewellery/gold-rates/today", fetcher);
+  const { data: marketData } = useSWR("/api/jewellery/gold-rates/market", fetcher, { refreshInterval: 5 * 60 * 1000, revalidateOnFocus: false });
   const { data: stockData } = useSWR("/api/jewellery/reports/stock-valuation", fetcher);
   const { data: agingData } = useSWR("/api/jewellery/reports/inventory-aging", fetcher);
   const { data: repairs } = useSWR("/api/jewellery/repairs?status=RECEIVED", fetcher);
@@ -55,6 +56,16 @@ export default function JewelleryDashboardPage() {
                 {rate24K ? fmt(Number(rate24K.sellRate)) : "—"}
               </p>
               <p className="text-xs text-amber-600 mt-1">per gram (sell)</p>
+              {(() => {
+                const mkt = marketData?.rates?.find((r: { karat: string }) => r.karat === "K24");
+                if (!mkt || !rate24K) return null;
+                const diff = ((Number(rate24K.sellRate) - mkt.perGram) / mkt.perGram) * 100;
+                return (
+                  <p className={`text-[10px] mt-1 ${Math.abs(diff) <= 2 ? "text-green-600" : "text-orange-500"}`}>
+                    Market: {fmt(mkt.perGram)} ({diff > 0 ? "+" : ""}{diff.toFixed(1)}%)
+                  </p>
+                );
+              })()}
             </CardContent>
           </Card>
 
@@ -68,6 +79,16 @@ export default function JewelleryDashboardPage() {
                 {rate22K ? fmt(Number(rate22K.sellRate)) : "—"}
               </p>
               <p className="text-xs text-amber-600 mt-1">per gram (sell)</p>
+              {(() => {
+                const mkt = marketData?.rates?.find((r: { karat: string }) => r.karat === "K22");
+                if (!mkt || !rate22K) return null;
+                const diff = ((Number(rate22K.sellRate) - mkt.perGram) / mkt.perGram) * 100;
+                return (
+                  <p className={`text-[10px] mt-1 ${Math.abs(diff) <= 2 ? "text-green-600" : "text-orange-500"}`}>
+                    Market: {fmt(mkt.perGram)} ({diff > 0 ? "+" : ""}{diff.toFixed(1)}%)
+                  </p>
+                );
+              })()}
             </CardContent>
           </Card>
 

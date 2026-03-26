@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, TrendingUp, RefreshCw } from "lucide-react";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
@@ -27,6 +27,11 @@ export default function GoldRatesPage() {
   const { fmt } = useCurrency();
   const { data: todayRates, mutate: mutateTodayRates } = useSWR("/api/jewellery/gold-rates/today", fetcher);
   const { data: rateHistory, mutate: mutateHistory } = useSWR("/api/jewellery/gold-rates?limit=50", fetcher);
+  const { data: marketData, isLoading: marketLoading, mutate: mutateMarket } = useSWR(
+    "/api/jewellery/gold-rates/market",
+    fetcher,
+    { refreshInterval: 5 * 60 * 1000, revalidateOnFocus: false }
+  );
 
   const [sellRate, setSellRate] = useState("");
   const [purity, setPurity] = useState("K24");
@@ -77,6 +82,84 @@ export default function GoldRatesPage() {
             <p className="text-muted-foreground">Set daily gold rates and view history</p>
           </div>
         </div>
+
+        {/* Live Market Rates Reference */}
+        {marketData?.rates ? (() => {
+          const k24 = marketData.rates.find((r: { karat: string }) => r.karat === "K24");
+          const k22 = marketData.rates.find((r: { karat: string }) => r.karat === "K22");
+          const k18 = marketData.rates.find((r: { karat: string }) => r.karat === "K18");
+          const updatedAt = marketData.lastUpdated ? new Date(marketData.lastUpdated) : null;
+          const minutesAgo = updatedAt ? Math.round((Date.now() - updatedAt.getTime()) / 60000) : null;
+          return (
+            <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Live Market Rates</span>
+                    <span className="text-[10px] text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded">{marketData.source}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {minutesAgo !== null && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {minutesAgo < 1 ? "Just now" : `${minutesAgo}m ago`}
+                      </span>
+                    )}
+                    <button onClick={() => mutateMarket()} className="text-muted-foreground hover:text-foreground">
+                      <RefreshCw className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {[
+                    { label: "24K /g", value: k24?.perGram },
+                    { label: "22K /g", value: k22?.perGram },
+                    { label: "18K /g", value: k18?.perGram },
+                    { label: "24K /Pavan", value: k24?.perPavan },
+                    { label: "22K /Pavan", value: k22?.perPavan },
+                    { label: "18K /Pavan", value: k18?.perPavan },
+                  ].map((item) => (
+                    <div key={item.label} className="text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{item.label}</p>
+                      <p className="text-sm font-bold">{item.value ? fmt(item.value) : "—"}</p>
+                    </div>
+                  ))}
+                </div>
+                {k24 && (
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-amber-300 hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40"
+                      onClick={() => { setPurity("K24"); setSellRate(String(k24.perGram)); }}
+                    >
+                      Use 24K Rate ({fmt(k24.perGram)})
+                    </Button>
+                    {k22 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-amber-300 hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40"
+                        onClick={() => { setPurity("K22"); setSellRate(String(k22.perGram)); }}
+                      >
+                        Use 22K Rate ({fmt(k22.perGram)})
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })() : marketLoading ? (
+          <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                <span className="text-sm text-muted-foreground">Fetching live market rates...</span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* Today's Rates Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
