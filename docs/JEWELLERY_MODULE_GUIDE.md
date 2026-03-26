@@ -479,3 +479,64 @@ Configure via `jewelleryThemePreset` in organization settings.
 - Metal ledger parallel to financial ledger
 - Karigar accounts tracked in both weight AND money
 - Jewellery-specific GL accounts for proper financial reporting
+
+---
+
+## 12. Industry Standard Features We Don't Have Yet (Gap Analysis)
+
+Based on research across 15+ dedicated jewellery ERPs (WinGold Next, Karat ERP, GehnaERP, PIRO, Marg, J-Soft, SEA ERP, ABHUSHAN), these are standard features we should consider adding:
+
+### High Priority (Common in all jewellery ERPs)
+
+| Feature | What It Is | Why It Matters |
+|---------|-----------|----------------|
+| **Girvi (Gold Loan/Pawn)** | Customers pledge gold jewellery as collateral for cash loans. Track KYC, interest calculations, loan maturity, locker allocation. | Standard revenue stream for Indian jewellers. Legally regulated. |
+| **Approval/Memo (Home Trial)** | Customer takes items home on approval without payment. Track item, recipient, expected return date. Convert to sale or process return. | Very common in high-value jewellery sales. No other ERP module handles this. |
+| **Barcode/RFID Tag Printing** | Print labels with tag number, weight, purity, HUID, barcode for each item. | Essential for retail operations — customers expect printed tags. |
+| **Jewellery Invoice PDF** | Invoice showing weight breakdown, gold rate, making charges, stone details, HUID, old gold adjustment. | Current invoice template is generic. Jewellery customers expect weight details. |
+| **Daily Gold Rate Auto-Fetch** | Pull live rates from IBJA (India Bullion Jewellers Association) or international feeds. | Saves 5 minutes daily, eliminates human error in rate entry. |
+| **Counter/Tray Management** | Assign items to display counters/trays. Quick reconciliation via scanning. | Standard for shops with multiple display counters. |
+
+### Medium Priority (Common in most jewellery ERPs)
+
+| Feature | What It Is |
+|---------|-----------|
+| **Wholesale Billing Mode** | Different pricing for B2B (bullion dealers, other jewellers) vs retail |
+| **Salesman Commission Tracking** | Track which salesman sold what, calculate commission |
+| **Customer Birthday/Anniversary Alerts** | Automated greetings and offers for customer retention |
+| **WhatsApp Integration** | Send invoices, repair status, scheme reminders via WhatsApp |
+| **Tola/Pavan Weight Units** | Support regional weight units (Tola = 11.66g, Pavan = 8g in Kerala) |
+| **Inventory Revaluation** | Daily mark-to-market for accurate balance sheet |
+| **Photo Gallery per Item** | Multiple photos with zoom for customer browsing |
+
+### Low Priority (Nice to have)
+
+| Feature | What It Is |
+|---------|-----------|
+| **E-commerce Sync** | Online catalogue with inventory sync |
+| **Virtual Try-On** | AR-based try-on for online customers |
+| **Loyalty Points** | Points accumulation and redemption system |
+| **Gift Vouchers** | Manage gift cards and voucher codes |
+| **Payroll** | Employee salary, attendance, leave management |
+| **RFID Smart Display** | RFID readers in display cases for real-time presence detection |
+
+### Weight Units Reference (India)
+
+| Unit | Grams | Region |
+|------|-------|--------|
+| Gram | 1 | Universal |
+| Tola | 11.66g | North India |
+| Pavan (Sovereign) | 8g | South India (Kerala) |
+| Troy Ounce | 31.1035g | International bullion |
+| Ratti | 0.1215g | Traditional (stones) |
+| Bhori | 11.66g | East India, Bangladesh |
+
+### Standard Wastage Rates (Industry Benchmark)
+
+| Metal/Purity | Wastage Range | Notes |
+|-------------|--------------|-------|
+| 22K Gold (simple design) | 3-5% | Rings, chains |
+| 22K Gold (complex design) | 5-8% | Necklaces with stone setting |
+| 18K Gold | 6-12% | Higher alloy content = more loss |
+| 24K Gold | 2-5% | Soft metal, minimal processing |
+| Silver | 5-10% | Higher oxidation loss |
