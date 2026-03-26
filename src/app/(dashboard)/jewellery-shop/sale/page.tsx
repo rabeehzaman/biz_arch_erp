@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Using native <select> to avoid Radix Select hydration crash with next-themes
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -38,21 +38,24 @@ interface JewelleryItem {
 }
 
 export default function JewellerySalePage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const { fmt } = useCurrency();
-  const { data: stockData, mutate: mutateStock } = useSWR("/api/jewellery/items?status=IN_STOCK", fetcher);
-  const { data: customerData } = useSWR("/api/customers", fetcher);
-  const { data: oldGoldData, mutate: mutateOldGold } = useSWR("/api/jewellery/old-gold?unadjusted=true", fetcher);
+  const { data: stockData, mutate: mutateStock } = useSWR(mounted ? "/api/jewellery/items?status=IN_STOCK" : null, fetcher);
+  const { data: customerData } = useSWR(mounted ? "/api/customers" : null, fetcher);
+  const { data: oldGoldData, mutate: mutateOldGold } = useSWR(mounted ? "/api/jewellery/old-gold?unadjusted=true" : null, fetcher);
 
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [paymentType, setPaymentType] = useState("CASH");
-  const [oldGoldId, setOldGoldId] = useState("");
+  const [oldGoldId, setOldGoldId] = useState("none");
   const [processing, setProcessing] = useState(false);
   const [lastInvoice, setLastInvoice] = useState<any>(null);
 
   const items: JewelleryItem[] = (stockData?.items || stockData || []);
-  const customers = (customerData?.customers || customerData || []);
-  const oldGoldPurchases = (oldGoldData?.purchases || oldGoldData || []);
+  const customers = (customerData?.data || customerData?.customers || (Array.isArray(customerData) ? customerData : []));
+  const oldGoldPurchases = (oldGoldData?.purchases || oldGoldData?.data || (Array.isArray(oldGoldData) ? oldGoldData : []));
 
   const toggleItem = useCallback((id: string) => {
     setSelectedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -65,7 +68,7 @@ export default function JewellerySalePage() {
     setProcessing(true);
     try {
       const body: any = { customerId, itemIds: selectedItems, paymentType };
-      if (oldGoldId) body.oldGoldAdjustmentId = oldGoldId;
+      if (oldGoldId && oldGoldId !== "none") body.oldGoldAdjustmentId = oldGoldId;
 
       const res = await fetch("/api/jewellery/sale", {
         method: "POST",
@@ -77,7 +80,7 @@ export default function JewellerySalePage() {
         const data = await res.json();
         setLastInvoice(data);
         setSelectedItems([]);
-        setOldGoldId("");
+        setOldGoldId("none");
         mutateStock();
         mutateOldGold();
         toast.success(`Invoice ${data.invoice.invoiceNumber} created`);
@@ -93,6 +96,16 @@ export default function JewellerySalePage() {
   }, [customerId, selectedItems, paymentType, oldGoldId, mutateStock, mutateOldGold]);
 
   const selectedItemDetails = items.filter((i: JewelleryItem) => selectedItems.includes(i.id));
+
+  if (!mounted) {
+    return (
+      <PageAnimation>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+        </div>
+      </PageAnimation>
+    );
+  }
 
   return (
     <PageAnimation>
@@ -184,40 +197,44 @@ export default function JewellerySalePage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Customer</Label>
-                  <Select value={customerId} onValueChange={setCustomerId}>
-                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                    <SelectContent>
-                      {customers.map((c: { id: string; name: string; phone?: string }) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` (${c.phone})` : ""}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={customerId}
+                    onChange={(e) => setCustomerId(e.target.value)}
+                  >
+                    <option value="">Select customer</option>
+                    {customers.map((c: { id: string; name: string; phone?: string }) => (
+                      <option key={c.id} value={c.id}>{c.name}{c.phone ? ` (${c.phone})` : ""}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Payment Type</Label>
-                  <Select value={paymentType} onValueChange={setPaymentType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CASH">Cash</SelectItem>
-                      <SelectItem value="CREDIT">Credit (On Account)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={paymentType}
+                    onChange={(e) => setPaymentType(e.target.value)}
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="CREDIT">Credit (On Account)</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Old Gold Adjustment (Optional)</Label>
-                  <Select value={oldGoldId} onValueChange={setOldGoldId}>
-                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {oldGoldPurchases.map((og: { id: string; weight: string; testedPurity: string; totalValue: string; customerName?: string; customer?: { name: string } }) => (
-                        <SelectItem key={og.id} value={og.id}>
-                          {og.customer?.name || og.customerName || "Walk-in"} — {Number(og.weight).toFixed(1)}g {og.testedPurity} ({fmt(Number(og.totalValue))})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={oldGoldId}
+                    onChange={(e) => setOldGoldId(e.target.value)}
+                  >
+                    <option value="none">None</option>
+                    {oldGoldPurchases.map((og: { id: string; weight: string; testedPurity: string; totalValue: string; customerName?: string; customer?: { name: string } }) => (
+                      <option key={og.id} value={og.id}>
+                        {og.customer?.name || og.customerName || "Walk-in"} — {Number(og.weight).toFixed(1)}g {og.testedPurity} ({fmt(Number(og.totalValue))})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Selected Items Summary */}

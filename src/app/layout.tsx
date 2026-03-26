@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Inter, Outfit, Noto_Naskh_Arabic } from "next/font/google";
-import Script from "next/script";
+import { ClientScripts } from "@/components/client-scripts";
 import { StandaloneShellGuard } from "@/components/pwa/standalone-shell-guard";
 import { CapacitorBootstrap } from "@/components/capacitor-bootstrap";
 import { Toaster } from "@/components/ui/sonner";
@@ -90,20 +90,14 @@ export default async function RootLayout({
 
   return (
     <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
-      <head>
-        <Script id="standalone-shell-bootstrap" strategy="beforeInteractive">
-          {standaloneShellBootstrap}
-        </Script>
-        <Script id="sw-register" strategy="afterInteractive">
-          {`if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}`}
-        </Script>
-      </head>
       <body
         className={`${inter.variable} ${outfit.variable} ${notoNaskhArabic.variable} min-h-screen antialiased font-sans`}
+        suppressHydrationWarning
       >
         <ThemeProvider>
           <StandaloneShellGuard />
           <CapacitorBootstrap />
+          <ClientScripts standaloneBootstrap={standaloneShellBootstrap} />
           {children}
           <Toaster richColors />
         </ThemeProvider>
