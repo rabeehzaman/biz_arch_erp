@@ -104,6 +104,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (Number(grossWeight) <= 0) {
+      return NextResponse.json(
+        { error: "grossWeight must be greater than 0" },
+        { status: 400 }
+      );
+    }
+
     const numGrossWeight = Number(grossWeight);
     const numStoneWeight = Number(stoneWeight);
     const numWastagePercent = Number(wastagePercent);

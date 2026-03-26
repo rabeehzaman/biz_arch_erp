@@ -95,6 +95,13 @@ export async function POST(
       );
     }
 
+    if (Number(weight) <= 0) {
+      return NextResponse.json(
+        { error: "weight must be greater than 0" },
+        { status: 400 }
+      );
+    }
+
     const karatValue = PURITY_KARAT_VALUES[purity];
     if (karatValue === undefined) {
       return NextResponse.json(

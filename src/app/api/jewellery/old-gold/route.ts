@@ -94,6 +94,19 @@ export async function POST(request: NextRequest) {
     const numRate = Number(rate);
     const numMelting = Number(meltingLossPercent ?? 0);
 
+    if (numWeight <= 0) {
+      return NextResponse.json({ error: "weight must be greater than 0" }, { status: 400 });
+    }
+    if (numPurity <= 0 || numPurity > 100) {
+      return NextResponse.json({ error: "purityPercentage must be between 0 and 100" }, { status: 400 });
+    }
+    if (numRate <= 0) {
+      return NextResponse.json({ error: "rate must be greater than 0" }, { status: 400 });
+    }
+    if (numMelting < 0 || numMelting > 100) {
+      return NextResponse.json({ error: "meltingLossPercent must be between 0 and 100" }, { status: 400 });
+    }
+
     const totalValue =
       Math.round(numWeight * (numPurity / 100) * numRate * (1 - numMelting / 100) * 100) / 100;
 
