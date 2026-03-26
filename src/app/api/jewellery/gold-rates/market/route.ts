@@ -4,7 +4,7 @@ import { isJewelleryModuleEnabled } from "@/lib/auth-utils";
 
 // In-memory cache (5 minutes)
 let cachedRates: MarketRateResponse | null = null;
-let cacheTimestamp = 0;
+let cacheTimestamp = 0; // Reset on code change (hot reload)
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 interface MarketRate {
@@ -65,7 +65,10 @@ async function fetchMarketRates(): Promise<MarketRateResponse> {
 
   // Convert: USD/troy oz → INR/gram
   // 1 troy ounce = 31.1035 grams
-  const gold24kPerGram = round2((goldUsdPerOz * usdInrRate) / 31.1035);
+  // Apply Indian import premium: 6% customs duty + 3% IGST on import = ~9% over spot
+  // Plus ~1-2% dealer/refining margin → total ~10.5% premium
+  const INDIA_IMPORT_PREMIUM = 1.105;
+  const gold24kPerGram = round2((goldUsdPerOz * usdInrRate * INDIA_IMPORT_PREMIUM) / 31.1035);
 
   const rates: MarketRate[] = Object.entries(KARAT_FACTORS).map(([karat, { label, factor }]) => {
     const perGram = round2(gold24kPerGram * factor);
