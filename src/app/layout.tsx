@@ -90,15 +90,17 @@ export default async function RootLayout({
 
   return (
     <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
-      <body
-        className={`${inter.variable} ${outfit.variable} ${notoNaskhArabic.variable} min-h-screen antialiased font-sans`}
-      >
+      <head>
         <Script id="standalone-shell-bootstrap" strategy="beforeInteractive">
           {standaloneShellBootstrap}
         </Script>
         <Script id="sw-register" strategy="afterInteractive">
           {`if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}`}
         </Script>
+      </head>
+      <body
+        className={`${inter.variable} ${outfit.variable} ${notoNaskhArabic.variable} min-h-screen antialiased font-sans`}
+      >
         <ThemeProvider>
           <StandaloneShellGuard />
           <CapacitorBootstrap />
