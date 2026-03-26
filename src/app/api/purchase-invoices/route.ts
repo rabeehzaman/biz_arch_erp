@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
               return {
                 organizationId,
                 productId: item.productId,
-                description: item.description,
+                description: item.description || "",
                 quantity: item.quantity,
                 unitId: item.unitId || null,
                 conversionFactor: item.conversionFactor || 1,
