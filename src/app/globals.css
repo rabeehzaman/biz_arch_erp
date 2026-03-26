@@ -262,8 +262,25 @@
     @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
   }
 
+  .glass-panel-interactive {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md;
+  }
+
   .glass-panel-strong {
     @apply rounded-2xl border border-slate-200 bg-white shadow-md;
+  }
+
+  .financial-positive {
+    @apply font-medium text-emerald-600;
+  }
+
+  .financial-negative {
+    @apply font-medium text-red-600;
+  }
+
+  .financial-value {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
 
   .surface-pill {

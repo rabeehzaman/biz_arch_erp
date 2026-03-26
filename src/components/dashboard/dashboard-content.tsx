@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
 import {
@@ -18,9 +20,27 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { useDashboardStats, type DashboardStats } from "@/hooks/use-dashboard";
+import { useDashboardCharts } from "@/hooks/use-dashboard-charts";
 import { getLocale, useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
 import { cn } from "@/lib/utils";
+import { ReceivablesPayablesBar } from "./charts/receivables-payables-bar";
+import { BankAccountsList } from "./charts/bank-accounts-list";
+import { ChartCardSkeleton } from "./charts/chart-card";
+
+// Dynamic imports for chart components (recharts is client-only)
+const CashFlowChart = dynamic(
+  () => import("./charts/cash-flow-chart").then((m) => ({ default: m.CashFlowChart })),
+  { ssr: false, loading: () => <ChartCardSkeleton /> }
+);
+const IncomeExpenseChart = dynamic(
+  () => import("./charts/income-expense-chart").then((m) => ({ default: m.IncomeExpenseChart })),
+  { ssr: false, loading: () => <ChartCardSkeleton /> }
+);
+const TopExpensesDonut = dynamic(
+  () => import("./charts/top-expenses-donut").then((m) => ({ default: m.TopExpensesDonut })),
+  { ssr: false, loading: () => <ChartCardSkeleton /> }
+);
 
 type ExtendedDashboardStats = DashboardStats & {
   totalBranches?: number;
@@ -58,6 +78,29 @@ function getStatValueClass(value: string | number) {
   return "text-[clamp(2rem,6vw,3rem)]";
 }
 
+function getDateRange(period: string) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  switch (period) {
+    case "thisMonth": {
+      const from = new Date(year, month, 1);
+      const to = new Date(year, month + 1, 0);
+      return { fromDate: format(from, "yyyy-MM-dd"), toDate: format(to, "yyyy-MM-dd") };
+    }
+    case "thisQuarter": {
+      const qStart = Math.floor(month / 3) * 3;
+      const from = new Date(year, qStart, 1);
+      const to = new Date(year, qStart + 3, 0);
+      return { fromDate: format(from, "yyyy-MM-dd"), toDate: format(to, "yyyy-MM-dd") };
+    }
+    case "thisYear":
+    default:
+      return { fromDate: `${year}-01-01`, toDate: `${year}-12-31` };
+  }
+}
+
 export function DashboardContent() {
   const { stats, isLoading, isError } = useDashboardStats();
   const { data: session } = useSession();
@@ -70,6 +113,10 @@ export function DashboardContent() {
     month: "long",
     day: "numeric",
   }).format(new Date());
+
+  const [chartPeriod, setChartPeriod] = useState("thisYear");
+  const { fromDate, toDate } = getDateRange(chartPeriod);
+  const { charts, isLoading: chartsLoading } = useDashboardCharts(fromDate, toDate);
 
   if (isError) {
     return (
@@ -115,6 +162,7 @@ export function DashboardContent() {
 
   return (
     <StaggerContainer className="space-y-4">
+      {/* Header */}
       <StaggerItem>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
@@ -149,6 +197,7 @@ export function DashboardContent() {
         </div>
       </StaggerItem>
 
+      {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {isLoading ? (
           <>
@@ -188,6 +237,7 @@ export function DashboardContent() {
         )}
       </div>
 
+      {/* Multi-branch stats (inline with stat cards area) */}
       {multiBranchEnabled && (
         <div className="grid gap-4 lg:grid-cols-3">
           <StaggerItem>
@@ -238,6 +288,73 @@ export function DashboardContent() {
         </div>
       )}
 
+      {/* Receivables & Payables */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <StaggerItem>
+          <ReceivablesPayablesBar
+            title={t("dashboard.totalReceivables")}
+            subtitle={t("dashboard.unpaidInvoices")}
+            data={charts?.receivables}
+            isLoading={chartsLoading}
+            colorCurrent="hsl(198 92% 53%)"
+            colorOverdue="hsl(39 96% 56%)"
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <ReceivablesPayablesBar
+            title={t("dashboard.totalPayables")}
+            subtitle={t("dashboard.unpaidBills")}
+            data={charts?.payables}
+            isLoading={chartsLoading}
+            colorCurrent="hsl(198 92% 53%)"
+            colorOverdue="hsl(344 83% 60%)"
+          />
+        </StaggerItem>
+      </div>
+
+      {/* Cash Flow Chart */}
+      <StaggerItem>
+        <CashFlowChart
+          data={charts?.cashFlow.monthly}
+          totalIncoming={charts?.cashFlow.totalIncoming ?? 0}
+          totalOutgoing={charts?.cashFlow.totalOutgoing ?? 0}
+          isLoading={chartsLoading}
+          period={chartPeriod}
+          onPeriodChange={setChartPeriod}
+        />
+      </StaggerItem>
+
+      {/* Income vs Expense Chart */}
+      <StaggerItem>
+        <IncomeExpenseChart
+          data={charts?.incomeExpense.monthly}
+          totalIncome={charts?.incomeExpense.totalIncome ?? 0}
+          totalExpense={charts?.incomeExpense.totalExpense ?? 0}
+          isLoading={chartsLoading}
+          period={chartPeriod}
+          onPeriodChange={setChartPeriod}
+        />
+      </StaggerItem>
+
+      {/* Top Expenses + Bank Accounts */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <StaggerItem>
+          <TopExpensesDonut
+            data={charts?.topExpenses}
+            isLoading={chartsLoading}
+            period={chartPeriod}
+            onPeriodChange={setChartPeriod}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <BankAccountsList
+            data={charts?.bankAccounts}
+            isLoading={chartsLoading}
+          />
+        </StaggerItem>
+      </div>
+
+      {/* Recent Invoices */}
       <StaggerItem>
         <Card>
           <CardHeader className="pb-0">

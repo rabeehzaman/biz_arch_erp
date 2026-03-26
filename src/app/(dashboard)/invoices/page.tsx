@@ -30,6 +30,9 @@ import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 import { SwipeableCard } from "@/components/mobile/swipeable-card";
+import { ListFilters } from "@/components/list-page/list-filters";
+import { ListSummaryBar } from "@/components/list-page/list-summary-bar";
+import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -70,10 +73,18 @@ export default function InvoicesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [statusFilter, setStatusFilter] = useState("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
   const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
+
+  const statusFilterOptions = [
+    { value: "all", label: t("common.allStatuses") },
+    { value: "paid", label: t("common.paid") },
+    { value: "unpaid", label: t("common.unpaid") },
+    { value: "overdue", label: t("common.overdue") },
+  ];
 
   const toggleSort = (field: string) => {
     if (sortField === field) {
@@ -84,9 +95,21 @@ export default function InvoicesPage() {
     }
   };
 
+  const filteredInvoices = useMemo(() => {
+    if (statusFilter === "all") return invoices;
+    return invoices.filter((inv) => {
+      const balance = Number(inv.balanceDue);
+      const overdue = new Date(inv.dueDate) < new Date();
+      if (statusFilter === "paid") return balance <= 0;
+      if (statusFilter === "overdue") return balance > 0 && overdue;
+      if (statusFilter === "unpaid") return balance > 0;
+      return true;
+    });
+  }, [invoices, statusFilter]);
+
   const sortedInvoices = useMemo(() => {
-    if (!sortField) return invoices;
-    return [...invoices].sort((a, b) => {
+    if (!sortField) return filteredInvoices;
+    return [...filteredInvoices].sort((a, b) => {
       let aVal: any, bVal: any;
       switch (sortField) {
         case "invoiceNumber": aVal = a.invoiceNumber; bVal = b.invoiceNumber; break;
@@ -101,7 +124,25 @@ export default function InvoicesPage() {
       if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
       return 0;
     });
-  }, [invoices, sortField, sortDir]);
+  }, [filteredInvoices, sortField, sortDir]);
+
+  // Summary stats for the filtered list
+  const summaryStats = useMemo(() => {
+    const totalAmount = invoices.reduce((s, inv) => s + Number(inv.total), 0);
+    const totalBalance = invoices.reduce((s, inv) => s + Number(inv.balanceDue), 0);
+    const totalPaid = totalAmount - totalBalance;
+    const overdueAmount = invoices
+      .filter((inv) => Number(inv.balanceDue) > 0 && new Date(inv.dueDate) < new Date())
+      .reduce((s, inv) => s + Number(inv.balanceDue), 0);
+    return { totalAmount, totalPaid, totalBalance, overdueAmount };
+  }, [invoices]);
+
+  function SortIcon({ field }: { field: string }) {
+    if (sortField !== field) return <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="h-3.5 w-3.5 text-primary" />
+      : <ArrowDown className="h-3.5 w-3.5 text-primary" />;
+  }
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -152,16 +193,36 @@ export default function InvoicesPage() {
         <StaggerItem>
           <Card>
             <CardHeader>
-              <div className="relative w-full sm:max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  ref={searchInputRef}
-                  placeholder={t("sales.searchInvoices")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative w-full sm:max-w-sm">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder={t("sales.searchInvoices")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <ListFilters
+                  statusFilter={statusFilter}
+                  onStatusFilterChange={setStatusFilter}
+                  statusOptions={statusFilterOptions}
                 />
               </div>
+              {invoices.length > 0 && (
+                <ListSummaryBar
+                  className="mt-3"
+                  stats={[
+                    { label: t("common.total"), value: fmt(summaryStats.totalAmount) },
+                    { label: t("common.paid"), value: fmt(summaryStats.totalPaid), color: "success" },
+                    { label: t("common.balance"), value: fmt(summaryStats.totalBalance), color: summaryStats.totalBalance > 0 ? "danger" : "default" },
+                    ...(summaryStats.overdueAmount > 0
+                      ? [{ label: t("common.overdue"), value: fmt(summaryStats.overdueAmount), color: "danger" as const }]
+                      : []),
+                  ]}
+                />
+              )}
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -349,40 +410,40 @@ export default function InvoicesPage() {
                             />
                           </TableHead>
                           <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("invoiceNumber")}>
-                            <span className="inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1.5">
                               {t("sales.invoiceNumber")}
-                              {sortField === "invoiceNumber" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                              <SortIcon field="invoiceNumber" />
                             </span>
                           </TableHead>
                           <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("customer")}>
-                            <span className="inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1.5">
                               {t("sales.customer")}
-                              {sortField === "customer" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                              <SortIcon field="customer" />
                             </span>
                           </TableHead>
                           <TableHead>{t("common.status")}</TableHead>
                           <TableHead className="hidden sm:table-cell cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("issueDate")}>
-                            <span className="inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1.5">
                               {t("sales.issueDate")}
-                              {sortField === "issueDate" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                              <SortIcon field="issueDate" />
                             </span>
                           </TableHead>
                           <TableHead className="hidden sm:table-cell cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("dueDate")}>
-                            <span className="inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1.5">
                               {t("sales.dueDate")}
-                              {sortField === "dueDate" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                              <SortIcon field="dueDate" />
                             </span>
                           </TableHead>
                           <TableHead className="hidden sm:table-cell text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("total")}>
-                            <span className="inline-flex items-center gap-1 justify-end w-full">
+                            <span className="inline-flex items-center gap-1.5 justify-end w-full">
                               {t("common.total")}
-                              {sortField === "total" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                              <SortIcon field="total" />
                             </span>
                           </TableHead>
                           <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("balance")}>
-                            <span className="inline-flex items-center gap-1 justify-end w-full">
+                            <span className="inline-flex items-center gap-1.5 justify-end w-full">
                               {t("common.balance")}
-                              {sortField === "balance" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
+                              <SortIcon field="balance" />
                             </span>
                           </TableHead>
                           <TableHead className="text-right">{t("common.actions")}</TableHead>

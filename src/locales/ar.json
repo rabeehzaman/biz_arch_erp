@@ -319,6 +319,7 @@
         "count": "العدد",
         "due": "مستحق",
         "overdue": "متأخر",
+        "allStatuses": "جميع الحالات",
         "assigned": "مُسند إلى",
         "today": "اليوم",
         "yesterday": "أمس",
@@ -2249,7 +2250,28 @@
         "recordPayment": "تسجيل دفعة",
         "recordPaymentDesc": "تسجيل دفعة من عميل",
         "createInvoice": "إنشاء فاتورة",
-        "createInvoiceDesc": "إنشاء فاتورة جديدة لعميل"
+        "createInvoiceDesc": "إنشاء فاتورة جديدة لعميل",
+        "totalReceivables": "إجمالي المستحقات",
+        "totalPayables": "إجمالي المطلوبات",
+        "current": "حالية",
+        "overdue": "متأخرة",
+        "unpaidInvoices": "إجمالي الفواتير غير المدفوعة",
+        "unpaidBills": "إجمالي الفواتير المستحقة",
+        "cashFlow": "التدفق النقدي",
+        "incomeAndExpense": "الإيرادات والمصروفات",
+        "income": "الإيرادات",
+        "expense": "المصروفات",
+        "totalIncome": "إجمالي الإيرادات",
+        "totalExpenseAmount": "إجمالي المصروفات",
+        "topExpenses": "أعلى المصروفات",
+        "total": "الإجمالي",
+        "bankAndCash": "حسابات البنك والنقد",
+        "noBankAccounts": "لا توجد حسابات بنك أو نقد",
+        "noExpensesYet": "لم يتم تسجيل مصروفات بعد",
+        "incoming": "وارد",
+        "outgoing": "صادر",
+        "netCashFlow": "صافي",
+        "thisQuarter": "هذا الربع"
     },
     "products": {
         "title": "المنتجات",
@@ -2721,7 +2743,9 @@
         "copyright": "BizArch. جميع الحقوق محفوظة.",
         "toggleMenu": "تبديل القائمة",
         "navigationMenu": "قائمة التنقل",
-        "navigationMenuDesc": "تصفح أقسام BizArch ERP وافتح صفحة."
+        "navigationMenuDesc": "تصفح أقسام BizArch ERP وافتح صفحة.",
+        "collapseSidebar": "طي الشريط الجانبي",
+        "expandSidebar": "توسيع الشريط الجانبي"
     },
     "pdf": {
         "transferOrder": "أمر تحويل",

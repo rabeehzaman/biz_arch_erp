@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,6 +53,7 @@ interface Account {
 export default function CashBankPage() {
   const { fmt, locale } = useCurrency();
   const { t, tt } = useLanguage();
+  const router = useRouter();
   const [accounts, setAccounts] = useState<CashBankAccount[]>([]);
   const [coaAccounts, setCoaAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -315,8 +317,12 @@ export default function CashBankPage() {
           ) : (
             <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {accounts.map((account) => (
-                <Link key={account.id} href={`/accounting/cash-bank/${account.id}`} className="flex min-w-0">
-                  <Card className="w-full cursor-pointer transition-shadow hover:shadow-md">
+                <div
+                  key={account.id}
+                  className="flex min-w-0 cursor-pointer"
+                  onClick={() => router.push(`/accounting/cash-bank/${account.id}`)}
+                >
+                  <Card className="w-full transition-shadow hover:shadow-md">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="min-w-0 break-words font-semibold">{account.name}</h3>
@@ -347,7 +353,7 @@ export default function CashBankPage() {
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
+                </div>
               ))}
             </div>
           )}

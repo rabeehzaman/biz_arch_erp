@@ -319,6 +319,7 @@
         "count": "Count",
         "due": "Due",
         "overdue": "Overdue",
+        "allStatuses": "All Statuses",
         "assigned": "Assigned To",
         "today": "Today",
         "yesterday": "Yesterday",
@@ -2362,7 +2363,28 @@
         "recordPayment": "Record Payment",
         "recordPaymentDesc": "Record a payment from a customer",
         "createInvoice": "Create Invoice",
-        "createInvoiceDesc": "Generate a new invoice for a customer"
+        "createInvoiceDesc": "Generate a new invoice for a customer",
+        "totalReceivables": "Total Receivables",
+        "totalPayables": "Total Payables",
+        "current": "Current",
+        "overdue": "Overdue",
+        "unpaidInvoices": "Total Unpaid Invoices",
+        "unpaidBills": "Total Unpaid Bills",
+        "cashFlow": "Cash Flow",
+        "incomeAndExpense": "Income & Expense",
+        "income": "Income",
+        "expense": "Expense",
+        "totalIncome": "Total Income",
+        "totalExpenseAmount": "Total Expenses",
+        "topExpenses": "Top Expenses",
+        "total": "Total",
+        "bankAndCash": "Bank & Cash Accounts",
+        "noBankAccounts": "No bank or cash accounts",
+        "noExpensesYet": "No expenses recorded yet",
+        "incoming": "Incoming",
+        "outgoing": "Outgoing",
+        "netCashFlow": "Net",
+        "thisQuarter": "This Quarter"
     },
     "products": {
         "title": "Products",
@@ -2721,7 +2743,9 @@
         "copyright": "BizArch. All rights reserved.",
         "toggleMenu": "Toggle menu",
         "navigationMenu": "Navigation menu",
-        "navigationMenuDesc": "Browse the BizArch ERP sections and open a page."
+        "navigationMenuDesc": "Browse the BizArch ERP sections and open a page.",
+        "collapseSidebar": "Collapse sidebar",
+        "expandSidebar": "Expand sidebar"
     },
     "pdf": {
         "transferOrder": "TRANSFER ORDER",

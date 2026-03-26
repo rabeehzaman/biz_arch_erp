@@ -66,6 +66,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useEdition } from "@/hooks/use-edition";
 import { useSidebarSectionOrder, useDisabledSidebarItems } from "@/hooks/use-form-config";
 import { SIDEBAR_SECTIONS } from "@/lib/form-config/types";
+import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 
 
 // Navigation items with translation keys
@@ -207,10 +208,11 @@ const KEY_TO_NAME: Record<string, string> = Object.fromEntries(
 
 type NavItem = { nameKey: string; href: string; icon: React.ElementType; edition?: "INDIA" | "SAUDI" };
 
-function NavItemComponent({ item, pathname, onNavigate }: {
+function NavItemComponent({ item, pathname, onNavigate, collapsed }: {
   item: NavItem;
   pathname: string;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   const { t } = useLanguage();
   const isActive = pathname === item.href ||
@@ -219,32 +221,62 @@ function NavItemComponent({ item, pathname, onNavigate }: {
     <Link
       href={item.href}
       onClick={onNavigate}
+      title={collapsed ? t(item.nameKey) : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-xl border px-3.5 py-3 text-sm font-medium transition-colors",
+        "flex items-center rounded-xl border text-sm font-medium transition-colors",
+        collapsed ? "justify-center px-0 py-3" : "gap-3 px-3.5 py-3",
         isActive
           ? "border-slate-700 bg-slate-800 text-white"
           : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
       )}
     >
-      <item.icon className="h-5 w-5" />
-      {t(item.nameKey)}
+      <item.icon className="h-5 w-5 shrink-0" />
+      {!collapsed && <span className="truncate">{t(item.nameKey)}</span>}
     </Link>
   );
 }
 
-function CollapsibleSection({ title, icon: Icon, items, pathname, onNavigate, defaultOpen = false }: {
+function CollapsibleSection({ title, icon: Icon, items, pathname, onNavigate, defaultOpen = false, collapsed }: {
   title: string;
   icon: React.ElementType;
   items: NavItem[];
   pathname: string;
   onNavigate?: () => void;
   defaultOpen?: boolean;
+  collapsed?: boolean;
 }) {
   const { t, isRTL } = useLanguage();
   const hasActive = items.some(
     (item) => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
   );
   const [isOpen, setIsOpen] = useState(defaultOpen || hasActive);
+
+  // In collapsed mode, show just the section icon. Click toggles expansion.
+  if (collapsed) {
+    return (
+      <div>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          title={t(title)}
+          className={cn(
+            "flex w-full items-center justify-center rounded-xl border py-3 text-sm font-medium transition-colors",
+            hasActive
+              ? "border-slate-700 bg-slate-800 text-white"
+              : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </button>
+        {isOpen && (
+          <div className="mt-1 space-y-1">
+            {items.map((item) => (
+              <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} collapsed />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -267,7 +299,7 @@ function CollapsibleSection({ title, icon: Icon, items, pathname, onNavigate, de
   );
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { t } = useLanguage();
@@ -305,67 +337,78 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       general: () =>
         visibleNav.length > 0
           ? visibleNav.map((item) => (
-              <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} />
+              <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
             ))
           : null,
       sales: () =>
         visibleSales.length > 0 ? (
-          <CollapsibleSection title="nav.sales" icon={ShoppingCart} items={visibleSales} pathname={pathname} onNavigate={onNavigate} />
+          <CollapsibleSection title="nav.sales" icon={ShoppingCart} items={visibleSales} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
       purchases: () =>
         visiblePurchases.length > 0 ? (
-          <CollapsibleSection title="nav.purchases" icon={Truck} items={visiblePurchases} pathname={pathname} onNavigate={onNavigate} />
+          <CollapsibleSection title="nav.purchases" icon={Truck} items={visiblePurchases} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
       accounting: () =>
         visibleAccounting.length > 0 ? (
-          <CollapsibleSection title="nav.accounting" icon={BookOpen} items={visibleAccounting} pathname={pathname} onNavigate={onNavigate} />
+          <CollapsibleSection title="nav.accounting" icon={BookOpen} items={visibleAccounting} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
       inventory: () =>
         multiBranchEnabled && visibleInventory.length > 0 ? (
-          <CollapsibleSection title="nav.inventory" icon={Warehouse} items={visibleInventory} pathname={pathname} onNavigate={onNavigate} />
+          <CollapsibleSection title="nav.inventory" icon={Warehouse} items={visibleInventory} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
       mobileShop: () =>
         isMobileShopEnabled && visibleMobileShop.length > 0 ? (
-          <CollapsibleSection title="nav.mobileShop" icon={Smartphone} items={visibleMobileShop} pathname={pathname} onNavigate={onNavigate} />
+          <CollapsibleSection title="nav.mobileShop" icon={Smartphone} items={visibleMobileShop} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
       jewellery: () =>
         isJewelleryEnabled && visibleJewellery.length > 0 ? (
-          <CollapsibleSection title="nav.jewelleryShop" icon={Gem} items={visibleJewellery} pathname={pathname} onNavigate={onNavigate} />
+          <CollapsibleSection title="nav.jewelleryShop" icon={Gem} items={visibleJewellery} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
       restaurant: () =>
         isRestaurantEnabled && visibleRestaurant.length > 0 ? (
-          <CollapsibleSection title="nav.restaurant" icon={UtensilsCrossed} items={visibleRestaurant} pathname={pathname} onNavigate={onNavigate} />
+          <CollapsibleSection title="nav.restaurant" icon={UtensilsCrossed} items={visibleRestaurant} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
     };
     return map;
-  }, [visibleNav, visibleSales, visiblePurchases, visibleAccounting, visibleInventory, visibleMobileShop, visibleJewellery, visibleRestaurant, multiBranchEnabled, isMobileShopEnabled, isJewelleryEnabled, isRestaurantEnabled, pathname, onNavigate]);
+  }, [visibleNav, visibleSales, visiblePurchases, visibleAccounting, visibleInventory, visibleMobileShop, visibleJewellery, visibleRestaurant, multiBranchEnabled, isMobileShopEnabled, isJewelleryEnabled, isRestaurantEnabled, pathname, onNavigate, collapsed]);
 
   const orderedSections = sidebarOrder ?? [...SIDEBAR_SECTIONS];
 
   return (
     <>
       {/* Logo */}
-      <div className="mx-3 mt-3 flex h-[4.5rem] shrink-0 items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 px-4">
-        <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-white p-1.5">
+      <div className={cn(
+        "mx-3 mt-3 flex shrink-0 items-center rounded-2xl border border-slate-800 bg-slate-900",
+        collapsed ? "h-14 justify-center px-2" : "h-[4.5rem] gap-3 px-4"
+      )}>
+        <div className={cn(
+          "relative flex items-center justify-center overflow-hidden rounded-xl border border-slate-700 bg-white",
+          collapsed ? "h-8 w-8 p-1" : "h-10 w-10 p-1.5"
+        )}>
           <Image src="/bizarch-mark.svg" alt="BizArch Logo" fill sizes="36px" className="object-contain" priority />
         </div>
-        <div className="min-w-0">
-          <span className="block truncate text-lg font-bold text-white">
-            {t("nav2.appName")}
-          </span>
-          <span className="block text-[11px] uppercase tracking-[0.18em] text-slate-400">
-            {t("nav2.workspace")}
-          </span>
-        </div>
+        {!collapsed && (
+          <div className="min-w-0">
+            <span className="block truncate text-lg font-bold text-white">
+              {t("nav2.appName")}
+            </span>
+            <span className="block text-[11px] uppercase tracking-[0.18em] text-slate-400">
+              {t("nav2.workspace")}
+            </span>
+          </div>
+        )}
       </div>
 
       <Separator className="mt-4 shrink-0 bg-white/10" />
 
       {/* Main Navigation */}
-      <nav className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-4 overscroll-contain">
+      <nav className={cn(
+        "min-h-0 flex-1 space-y-1.5 overflow-y-auto py-4 overscroll-contain",
+        collapsed ? "px-2" : "px-3"
+      )}>
         {isSuperadmin ? (
           superadminNavigation.map((item) => (
-            <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} />
+            <NavItemComponent key={item.nameKey} item={item} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
           ))
         ) : (
           <>
@@ -379,13 +422,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               item={{ nameKey: "nav.reports", href: "/reports", icon: BarChart3 }}
               pathname={pathname}
               onNavigate={onNavigate}
+              collapsed={collapsed}
             />
           </>
         )}
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="shrink-0 px-3 py-4">
+      <div className={cn("shrink-0 py-4", collapsed ? "px-2" : "px-3")}>
         <Separator className="mb-4 bg-white/10" />
         {!isSuperadmin && visibleBottom.map((item) => {
           const isActive = pathname === item.href;
@@ -394,26 +438,32 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               key={item.nameKey}
               href={item.href}
               onClick={onNavigate}
+              title={collapsed ? t(item.nameKey) : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-xl border px-3.5 py-3 text-sm font-medium transition-colors",
+                "flex items-center rounded-xl border text-sm font-medium transition-colors",
+                collapsed ? "justify-center px-0 py-3" : "gap-3 px-3.5 py-3",
                 isActive
                   ? "border-slate-700 bg-slate-800 text-white"
                   : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
               )}
             >
               <item.icon className="h-5 w-5" />
-              {t(item.nameKey)}
+              {!collapsed && t(item.nameKey)}
             </Link>
           );
         })}
-        <AboutDialog />
+        {!collapsed && <AboutDialog />}
         <Button
           variant="ghost"
-          className="mt-1 h-11 w-full justify-start gap-3 rounded-xl border border-transparent px-3.5 text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"
+          title={collapsed ? t("nav.signOut") : undefined}
+          className={cn(
+            "mt-1 h-11 w-full rounded-xl border border-transparent text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white",
+            collapsed ? "justify-center px-0" : "justify-start gap-3 px-3.5"
+          )}
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           <LogOut className="h-5 w-5" />
-          {t("nav.signOut")}
+          {!collapsed && t("nav.signOut")}
         </Button>
       </div>
     </>
@@ -512,13 +562,34 @@ function AboutDialog() {
 }
 
 export function Sidebar() {
-  const { isRTL } = useLanguage();
+  const { isRTL, t } = useLanguage();
+  const { collapsed, toggle } = useSidebarCollapsed();
   return (
     <div
-      className={`hidden h-screen min-h-0 w-72 shrink-0 self-stretch overflow-hidden border-slate-800 bg-slate-950 text-white ${isRTL ? "border-l" : "border-r"} md:sticky md:top-0 md:flex`}
+      className={cn(
+        "hidden h-screen min-h-0 shrink-0 self-stretch overflow-hidden border-slate-800 bg-slate-950 text-white transition-[width] duration-200 ease-in-out md:sticky md:top-0 md:flex",
+        collapsed ? "w-[4.5rem]" : "w-72",
+        isRTL ? "border-l" : "border-r"
+      )}
     >
-      <div className="flex h-full min-h-0 flex-col">
-        <SidebarContent />
+      <div className="relative flex h-full min-h-0 w-full flex-col">
+        <SidebarContent collapsed={collapsed} />
+        {/* Collapse toggle button */}
+        <button
+          onClick={toggle}
+          title={collapsed ? t("nav2.expandSidebar") : t("nav2.collapseSidebar")}
+          className={cn(
+            "absolute top-[5.5rem] z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white",
+            isRTL ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2"
+          )}
+        >
+          <ChevronRight className={cn(
+            "h-3.5 w-3.5 transition-transform",
+            collapsed ? "" : "rotate-180",
+            isRTL && !collapsed ? "rotate-0" : "",
+            isRTL && collapsed ? "rotate-180" : ""
+          )} />
+        </button>
       </div>
     </div>
   );
