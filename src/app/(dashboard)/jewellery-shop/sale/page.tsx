@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, ShoppingCart, Trash2, Gem, Receipt } from "lucide-react";
+import { Loader2, ShoppingCart, Trash2, Gem, Receipt, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
 
@@ -52,8 +53,18 @@ export default function JewellerySalePage() {
   const [oldGoldId, setOldGoldId] = useState("none");
   const [processing, setProcessing] = useState(false);
   const [lastInvoice, setLastInvoice] = useState<any>(null);
+  const [search, setSearch] = useState("");
 
-  const items: JewelleryItem[] = (stockData?.items || stockData || []);
+  const allItems: JewelleryItem[] = (stockData?.items || stockData || []);
+  const items = search
+    ? allItems.filter((i: JewelleryItem) =>
+        i.tagNumber.toLowerCase().includes(search.toLowerCase()) ||
+        i.purity.toLowerCase().includes(search.toLowerCase()) ||
+        i.metalType.toLowerCase().includes(search.toLowerCase()) ||
+        (i.huidNumber && i.huidNumber.toLowerCase().includes(search.toLowerCase())) ||
+        (i.category?.name && i.category.name.toLowerCase().includes(search.toLowerCase()))
+      )
+    : allItems;
   const customers = (customerData?.data || customerData?.customers || (Array.isArray(customerData) ? customerData : []));
   const oldGoldPurchases = (oldGoldData?.purchases || oldGoldData?.data || (Array.isArray(oldGoldData) ? oldGoldData : []));
 
@@ -95,7 +106,7 @@ export default function JewellerySalePage() {
     }
   }, [customerId, selectedItems, paymentType, oldGoldId, mutateStock, mutateOldGold]);
 
-  const selectedItemDetails = items.filter((i: JewelleryItem) => selectedItems.includes(i.id));
+  const selectedItemDetails = allItems.filter((i: JewelleryItem) => selectedItems.includes(i.id));
 
   if (!mounted) {
     return (
@@ -123,7 +134,18 @@ export default function JewellerySalePage() {
           <div className="lg:col-span-2 space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Select Items to Sell</CardTitle>
+                <div className="flex items-center justify-between gap-4">
+                  <CardTitle className="text-base">Select Items to Sell</CardTitle>
+                  <div className="relative w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search tag, HUID, purity..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9 h-9"
+                    />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {items.length > 0 ? (
@@ -179,7 +201,9 @@ export default function JewellerySalePage() {
                     </Table>
                   </div>
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">No items in stock</p>
+                  <p className="text-center text-muted-foreground py-8">
+                    {search ? `No items matching "${search}"` : "No items in stock"}
+                  </p>
                 )}
               </CardContent>
             </Card>
