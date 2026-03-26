@@ -9,6 +9,7 @@ import { InvoiceA4GST2PDF } from "@/components/pdf/invoice-pdf-a4-gst2";
 import { InvoiceA4VATPDF } from "@/components/pdf/invoice-pdf-a4-vat";
 import { InvoiceBilingualPDF } from "@/components/pdf/invoice-pdf-bilingual";
 import { InvoiceModernGSTPDF } from "@/components/pdf/invoice-pdf-modern-gst";
+import { JewelleryInvoicePDF } from "@/components/pdf/invoice-pdf-jewellery";
 import { createElement } from "react";
 import { format } from "date-fns";
 import { generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
@@ -30,7 +31,7 @@ export async function GET(
     const [org, pdfFormatSetting] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: organizationId },
-        select: { name: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true, brandColor: true },
+        select: { name: true, address: true, phone: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true, brandColor: true },
       }),
       prisma.setting.findFirst({
         where: { organizationId, key: "invoice_pdf_format" },
@@ -61,6 +62,7 @@ export async function GET(
             buildingNo: true,
             addNo: true,
             district: true,
+            phone: true,
           },
         },
         createdBy: {
@@ -152,7 +154,67 @@ export async function GET(
     // Generate PDF — use A4 portrait template when configured
     let pdfBuffer: Buffer;
 
-    if (invoicePdfFormat === "A4_VAT") {
+    // Auto-use jewellery template for jewellery sales
+    if (invoice.isJewellerySale) {
+      const jwItems = invoice.items.map((item) => ({
+        tagNumber: item.tagNumber,
+        huidNumber: item.huidNumber,
+        purity: item.purity,
+        metalType: item.metalType,
+        grossWeight: Number(item.grossWeight || 0),
+        netWeight: Number(item.netWeight || 0),
+        fineWeight: Number(item.fineWeight || 0),
+        goldRate: Number(item.goldRate || 0),
+        wastagePercent: Number(item.wastagePercent || 0),
+        makingChargeType: item.makingChargeType,
+        makingChargeValue: Number(item.makingChargeValue || 0),
+        stoneValue: Number(item.stoneValue || 0),
+        unitPrice: Number(item.unitPrice),
+        total: Number(item.total),
+        description: item.description,
+      }));
+
+      const jwInvoice = {
+        invoiceNumber: invoice.invoiceNumber,
+        issueDate: invoice.issueDate,
+        customer: {
+          name: invoice.customer.name,
+          address: invoice.customer.address,
+          city: invoice.customer.city,
+          state: invoice.customer.state,
+          gstin: invoice.customer.gstin,
+          phone: invoice.customer.phone,
+        },
+        organization: {
+          name: org?.name ?? "",
+          address: org?.address ?? null,
+          gstin: org?.gstin ?? null,
+          vatNumber: org?.vatNumber ?? null,
+          phone: org?.phone ?? null,
+        },
+        items: jwItems,
+        subtotal: Number(invoice.subtotal),
+        totalCgst: Number(invoice.totalCgst),
+        totalSgst: Number(invoice.totalSgst),
+        totalIgst: Number(invoice.totalIgst),
+        totalVat: invoice.totalVat ? Number(invoice.totalVat) : undefined,
+        roundOffAmount: Number(invoice.roundOffAmount),
+        total: Number(invoice.total),
+        amountPaid: Number(invoice.amountPaid),
+        balanceDue: Number(invoice.balanceDue),
+        notes: invoice.notes,
+        paymentType: invoice.paymentType,
+      };
+
+      pdfBuffer = await renderToBuffer(
+        createElement(JewelleryInvoicePDF, {
+          invoice: jwInvoice,
+          currencySymbol: org?.currency === "SAR" ? "﷼" : "₹",
+          currency: org?.currency ?? "INR",
+          headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
+        }) as any
+      );
+    } else if (invoicePdfFormat === "A4_VAT") {
       const vatItems = invoice.items.map((item) => ({
         description: item.description,
         arabicName: item.product?.arabicName ?? null,

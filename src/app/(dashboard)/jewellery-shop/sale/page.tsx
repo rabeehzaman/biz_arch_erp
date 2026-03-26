@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, ShoppingCart, Trash2, Gem, Receipt, Search } from "lucide-react";
+import { Loader2, ShoppingCart, Trash2, Gem, Receipt, Search, Download, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
@@ -364,6 +364,47 @@ export default function JewellerySalePage() {
                       <div className="flex justify-between text-amber-700"><span>Old Gold Deduction</span><span>-{fmt(lastInvoice.breakdown.oldGoldDeduction)}</span></div>
                     )}
                     <div className="flex justify-between font-bold border-t pt-1 mt-1"><span>Total</span><span>{fmt(Number(lastInvoice.invoice.total))}</span></div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 h-8 text-xs"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/invoices/${lastInvoice.invoice.id}/pdf`);
+                          if (!res.ok) { toast.error("Failed to generate PDF"); return; }
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `${lastInvoice.invoice.invoiceNumber}.pdf`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        } catch { toast.error("Download failed"); }
+                      }}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download PDF
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 h-8 text-xs"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/invoices/${lastInvoice.invoice.id}/pdf`);
+                          if (!res.ok) { toast.error("Failed to generate PDF"); return; }
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          const win = window.open(url, "_blank");
+                          if (win) setTimeout(() => win.print(), 500);
+                        } catch { toast.error("Print failed"); }
+                      }}
+                    >
+                      <Printer className="h-3 w-3 mr-1" />
+                      Print
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
