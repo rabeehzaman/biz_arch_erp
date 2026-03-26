@@ -118,7 +118,9 @@ export interface JewelleryInvoicePDFProps {
 
 export function JewelleryInvoicePDF({ invoice, currencySymbol = "₹", currency, headerImageUrl }: JewelleryInvoicePDFProps) {
   const locale = getLocaleForCurrency(currency || "INR");
-  const f = (n: number) => `${currencySymbol}${fmt(n, locale)}`;
+  // Helvetica doesn't support ₹ — use "Rs." for PDF rendering
+  const pdfSymbol = currencySymbol === "₹" ? "Rs." : currencySymbol === "﷼" ? "SAR " : currencySymbol;
+  const f = (n: number) => `${pdfSymbol}${fmt(n, locale)}`;
   const dateStr = format(new Date(invoice.issueDate), "dd MMM yyyy");
 
   const totalCgst = invoice.totalCgst || 0;
