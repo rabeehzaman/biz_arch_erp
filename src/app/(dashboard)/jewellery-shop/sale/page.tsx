@@ -14,6 +14,8 @@ import { Loader2, ShoppingCart, Trash2, Gem, Receipt, Search } from "lucide-reac
 import { Input } from "@/components/ui/input";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
+import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
+import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
 
 const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
@@ -27,6 +29,7 @@ interface JewelleryItem {
   purity: string;
   metalType: string;
   grossWeight: string;
+  stoneWeight: string;
   netWeight: string;
   fineWeight: string;
   makingChargeType: string;
@@ -46,6 +49,7 @@ export default function JewellerySalePage() {
   const { data: stockData, mutate: mutateStock } = useSWR(mounted ? "/api/jewellery/items?status=IN_STOCK" : null, fetcher);
   const { data: customerData } = useSWR(mounted ? "/api/customers" : null, fetcher);
   const { data: oldGoldData, mutate: mutateOldGold } = useSWR(mounted ? "/api/jewellery/old-gold?unadjusted=true" : null, fetcher);
+  const { getRate } = useJewelleryRates(mounted);
 
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [customerId, setCustomerId] = useState("");
@@ -261,28 +265,77 @@ export default function JewellerySalePage() {
                   </select>
                 </div>
 
-                {/* Selected Items Summary */}
-                {selectedItemDetails.length > 0 && (
-                  <div className="border rounded-lg p-3 space-y-2 bg-amber-50/50 dark:bg-amber-950/10">
-                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                      {selectedItemDetails.length} item(s) selected
-                    </p>
-                    {selectedItemDetails.map((item: JewelleryItem) => (
-                      <div key={item.id} className="flex items-center justify-between text-xs">
-                        <span>{item.tagNumber} ({PURITY_LABELS[item.purity]}, {Number(item.grossWeight).toFixed(1)}g)</span>
-                        <button onClick={(e) => { e.stopPropagation(); toggleItem(item.id); }}>
-                          <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                        </button>
+                {/* Invoice Preview with Pricing */}
+                {selectedItemDetails.length > 0 && (() => {
+                  const oldGoldValue = oldGoldId !== "none" ? Number(oldGoldPurchases.find((o: { id: string }) => o.id === oldGoldId)?.totalValue || 0) : 0;
+                  let totalGoldValue = 0, totalWastage = 0, totalMaking = 0, totalStones = 0, totalSubtotal = 0, totalFineWeight = 0, totalGrossWeight = 0;
+
+                  const itemPricings = selectedItemDetails.map((item: JewelleryItem) => {
+                    const rate = getRate(item.purity, item.metalType);
+                    const pricing = calculateJewelleryLinePrice({
+                      grossWeight: Number(item.grossWeight), stoneWeight: Number(item.stoneWeight || 0),
+                      purity: item.purity, metalType: item.metalType, goldRate: rate,
+                      wastagePercent: Number(item.wastagePercent), makingChargeType: item.makingChargeType as "PER_GRAM" | "PERCENTAGE" | "FIXED",
+                      makingChargeValue: Number(item.makingChargeValue), stoneValue: Number(item.stoneValue),
+                    });
+                    totalGoldValue += pricing.goldValue; totalWastage += pricing.wastageValue;
+                    totalMaking += pricing.makingCharges; totalStones += pricing.stoneValue;
+                    totalSubtotal += pricing.subtotal; totalFineWeight += pricing.fineWeight;
+                    totalGrossWeight += Number(item.grossWeight);
+                    return { item, pricing, rate };
+                  });
+
+                  const estimatedTax = Math.round(totalSubtotal * 0.03 * 100) / 100;
+                  const estimatedTotal = Math.round((totalSubtotal + estimatedTax - oldGoldValue) * 100) / 100;
+
+                  return (
+                    <div className="border rounded-lg overflow-hidden bg-amber-50/50 dark:bg-amber-950/10">
+                      <div className="px-3 py-2 bg-amber-100/50 dark:bg-amber-900/20 border-b">
+                        <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                          Invoice Preview — {selectedItemDetails.length} item(s)
+                        </p>
                       </div>
-                    ))}
-                    <div className="border-t pt-2 mt-2">
-                      <div className="flex justify-between text-xs">
-                        <span>Total Fine Weight</span>
-                        <span className="font-semibold">{selectedItemDetails.reduce((s: number, i: JewelleryItem) => s + Number(i.fineWeight), 0).toFixed(3)}g</span>
+                      <div className="p-3 space-y-2">
+                        {/* Per-item breakdown */}
+                        {itemPricings.map(({ item, pricing, rate }) => (
+                          <div key={item.id} className="text-xs border-b pb-2 last:border-0">
+                            <div className="flex items-center justify-between font-medium">
+                              <span>{item.tagNumber} <span className="text-muted-foreground">({PURITY_LABELS[item.purity]}, {Number(item.grossWeight).toFixed(1)}g)</span></span>
+                              <button onClick={(e) => { e.stopPropagation(); toggleItem(item.id); }}>
+                                <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-4 mt-1 text-muted-foreground">
+                              <span>Gold ({fmt(rate)}/g)</span><span className="text-right">{fmt(pricing.goldValue)}</span>
+                              {pricing.wastageValue > 0 && <><span>Wastage ({item.wastagePercent}%)</span><span className="text-right">{fmt(pricing.wastageValue)}</span></>}
+                              {pricing.makingCharges > 0 && <><span>Making</span><span className="text-right">{fmt(pricing.makingCharges)}</span></>}
+                              {pricing.stoneValue > 0 && <><span>Stones</span><span className="text-right">{fmt(pricing.stoneValue)}</span></>}
+                            </div>
+                            <div className="flex justify-between mt-1 font-medium">
+                              <span>Item Total</span><span>{fmt(pricing.subtotal)}</span>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Totals */}
+                        <div className="border-t pt-2 space-y-1 text-xs">
+                          <div className="flex justify-between"><span>Gross Weight</span><span>{totalGrossWeight.toFixed(2)}g</span></div>
+                          <div className="flex justify-between"><span>Fine Weight</span><span>{totalFineWeight.toFixed(3)}g</span></div>
+                          <div className="flex justify-between"><span>Gold Value</span><span>{fmt(totalGoldValue)}</span></div>
+                          {totalWastage > 0 && <div className="flex justify-between"><span>Wastage</span><span>{fmt(totalWastage)}</span></div>}
+                          {totalMaking > 0 && <div className="flex justify-between"><span>Making Charges</span><span>{fmt(totalMaking)}</span></div>}
+                          {totalStones > 0 && <div className="flex justify-between"><span>Stone Value</span><span>{fmt(totalStones)}</span></div>}
+                          <div className="flex justify-between font-semibold border-t pt-1"><span>Subtotal</span><span>{fmt(totalSubtotal)}</span></div>
+                          <div className="flex justify-between text-muted-foreground"><span>Est. GST (~3%)</span><span>{fmt(estimatedTax)}</span></div>
+                          {oldGoldValue > 0 && <div className="flex justify-between text-amber-700"><span>Old Gold Deduction</span><span>-{fmt(oldGoldValue)}</span></div>}
+                          <div className="flex justify-between font-bold text-sm border-t pt-1 mt-1">
+                            <span>Estimated Total</span><span>{fmt(Math.max(0, estimatedTotal))}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 <Button
                   className="w-full"
