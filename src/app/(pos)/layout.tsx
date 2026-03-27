@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isSubscriptionExpired } from "@/lib/subscription";
 import { POSRestaurantThemeWrapper } from "@/components/restaurant/pos-restaurant-theme-wrapper";
+import { POSJewelleryThemeWrapper } from "@/components/jewellery-shop/pos-jewellery-theme-wrapper";
 
 export default async function POSLayout({
   children,
@@ -41,9 +42,11 @@ export default async function POSLayout({
       <SWRProvider>
         <LanguageProvider initialLang={initialLang}>
           <POSRestaurantThemeWrapper>
-            <POSShell>
-              {children}
-            </POSShell>
+            <POSJewelleryThemeWrapper>
+              <POSShell>
+                {children}
+              </POSShell>
+            </POSJewelleryThemeWrapper>
           </POSRestaurantThemeWrapper>
         </LanguageProvider>
       </SWRProvider>

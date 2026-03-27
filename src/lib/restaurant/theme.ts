@@ -65,6 +65,26 @@ function hexToHSL(hex: string): string {
 }
 
 /**
+ * Build full set of global CSS variable overrides from theme colors.
+ */
+function buildGlobalVars(colors: ThemeColors): Record<string, string> {
+  return {
+    "--primary": `hsl(${colors.primary})`,
+    "--primary-foreground": `hsl(0 0% 100%)`,
+    "--ring": `hsl(${colors.primary})`,
+    "--accent": `hsl(${colors.accent})`,
+    "--accent-foreground": `hsl(0 0% 100%)`,
+    "--sidebar": `hsl(${colors.sidebarTint})`,
+    "--sidebar-primary": `hsl(${colors.accent})`,
+    "--sidebar-primary-foreground": `hsl(${colors.foreground})`,
+    "--sidebar-accent": `hsl(${colors.sidebarTint})`,
+    "--sidebar-accent-foreground": `hsl(${colors.foreground})`,
+    "--sidebar-border": `hsl(${colors.sidebarTint})`,
+    "--sidebar-ring": `hsl(${colors.accent})`,
+  };
+}
+
+/**
  * Get theme CSS variable overrides for a given preset or custom color.
  */
 export function getRestaurantThemeVars(
@@ -74,20 +94,18 @@ export function getRestaurantThemeVars(
   // Custom color
   if (preset === "custom" && customColor && /^#[0-9a-fA-F]{6}$/.test(customColor)) {
     const hsl = hexToHSL(customColor);
-    return {
-      "--restaurant-primary": hsl,
-      "--restaurant-accent": hsl,
-      "--restaurant-sidebar-tint": hsl,
+    const colors: ThemeColors = {
+      primary: hsl,
+      accent: hsl,
+      sidebarTint: hsl,
+      foreground: "0 0% 95%",
     };
+    return buildGlobalVars(colors);
   }
 
   // Preset
   const colors = PRESETS[preset || "bistro"] || PRESETS.bistro;
-  return {
-    "--restaurant-primary": colors.primary,
-    "--restaurant-accent": colors.accent,
-    "--restaurant-sidebar-tint": colors.sidebarTint,
-  };
+  return buildGlobalVars(colors);
 }
 
 export { PRESETS };

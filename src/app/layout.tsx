@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Inter, Outfit, Noto_Naskh_Arabic } from "next/font/google";
+import { Inter, Outfit, Noto_Naskh_Arabic, Playfair_Display } from "next/font/google";
 import { ClientScripts } from "@/components/client-scripts";
 import { StandaloneShellGuard } from "@/components/pwa/standalone-shell-guard";
 import { CapacitorBootstrap } from "@/components/capacitor-bootstrap";
@@ -15,6 +15,11 @@ const inter = Inter({
 
 const outfit = Outfit({
   variable: "--font-outfit",
+  subsets: ["latin"],
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
 });
 
@@ -91,7 +96,7 @@ export default async function RootLayout({
   return (
     <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${outfit.variable} ${notoNaskhArabic.variable} min-h-screen antialiased font-sans`}
+        className={`${inter.variable} ${outfit.variable} ${playfairDisplay.variable} ${notoNaskhArabic.variable} min-h-screen antialiased font-sans`}
         suppressHydrationWarning
       >
         <ThemeProvider>

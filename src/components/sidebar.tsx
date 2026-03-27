@@ -131,6 +131,27 @@ const restaurantNavigation = [
   { nameKey: "nav.restaurantKotHistory", href: "/restaurant/kot-history", icon: ClipboardList },
 ];
 
+// When jewellery module is enabled, items integrate into existing sections
+const jewelleryGeneralNav: NavItem[] = [
+  { nameKey: "nav.jewelleryDashboard", href: "/jewellery-shop/dashboard", icon: LayoutDashboard },
+  { nameKey: "nav.jewelleryInventory", href: "/jewellery-shop/inventory", icon: Package },
+  { nameKey: "nav.goldRates", href: "/jewellery-shop/gold-rates", icon: BarChart3 },
+];
+
+const jewellerySalesNav: NavItem[] = [
+  { nameKey: "nav.customers", href: "/customers", icon: Users },
+  { nameKey: "nav.jewellerySale", href: "/jewellery-shop/sale", icon: ShoppingCart },
+  { nameKey: "nav.customerPayments", href: "/payments", icon: CreditCard },
+  { nameKey: "nav.oldGoldExchange", href: "/jewellery-shop/old-gold", icon: ArrowRightLeft },
+  { nameKey: "nav.customerSchemes", href: "/jewellery-shop/schemes", icon: CreditCard },
+];
+
+const jewelleryPurchasesNav: NavItem[] = [
+  ...purchasesNavigation,
+  { nameKey: "nav.karigars", href: "/jewellery-shop/karigars", icon: Users },
+  { nameKey: "nav.jewelleryRepairs", href: "/jewellery-shop/repairs", icon: Wrench },
+];
+
 const superadminNavigation = [
   { nameKey: "nav.organizations", href: "/admin/organizations", icon: Building2 },
   { nameKey: "nav.whatsNew", href: "/admin/whats-new", icon: Sparkles },
@@ -165,6 +186,7 @@ const NAME_TO_KEY: Record<string, string> = {
   "Old Gold Exchange": "nav.oldGoldExchange",
   "Karigars": "nav.karigars",
   "Jewellery Repairs": "nav.jewelleryRepairs",
+  "Jewellery Sale": "nav.jewellerySale",
   "Customer Schemes": "nav.customerSchemes",
   "Jewellery Reports": "nav.jewelleryReports",
   "Restaurant Dashboard": "nav.restaurantDashboard",
@@ -316,19 +338,20 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
       return !disabledItems.includes(englishName || "");
     });
 
-  const visibleNav = filterItems(navigation);
-  const visibleSales = filterItems(salesNavigation);
-  const visiblePurchases = filterItems(purchasesNavigation);
-  const visibleAccounting = filterItems(accountingNavigation);
-  const visibleBottom = filterItems(bottomNavigation);
-  const visibleInventory = filterItems(inventoryNavigation);
-  const visibleMobileShop = filterItems(mobileShopNavigation);
-  const visibleJewellery = filterItems(jewelleryShopNavigation);
-  const visibleRestaurant = filterItems(restaurantNavigation);
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
   const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
   const isJewelleryEnabled = session?.user?.isJewelleryModuleEnabled;
   const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
+
+  // When jewellery is enabled, integrate jewellery items into existing sections
+  const visibleNav = filterItems(isJewelleryEnabled ? jewelleryGeneralNav : navigation);
+  const visibleSales = filterItems(isJewelleryEnabled ? jewellerySalesNav : salesNavigation);
+  const visiblePurchases = filterItems(isJewelleryEnabled ? jewelleryPurchasesNav : purchasesNavigation);
+  const visibleAccounting = filterItems(accountingNavigation);
+  const visibleBottom = filterItems(bottomNavigation);
+  const visibleInventory = filterItems(inventoryNavigation);
+  const visibleMobileShop = filterItems(mobileShopNavigation);
+  const visibleRestaurant = filterItems(restaurantNavigation);
   const sidebarOrder = useSidebarSectionOrder();
 
   // Data-driven section rendering — allows configurable order
@@ -360,17 +383,15 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
         isMobileShopEnabled && visibleMobileShop.length > 0 ? (
           <CollapsibleSection title="nav.mobileShop" icon={Smartphone} items={visibleMobileShop} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
-      jewellery: () =>
-        isJewelleryEnabled && visibleJewellery.length > 0 ? (
-          <CollapsibleSection title="nav.jewelleryShop" icon={Gem} items={visibleJewellery} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
-        ) : null,
+      // When jewellery enabled, items are integrated into General/Sales/Purchases
+      jewellery: () => null,
       restaurant: () =>
         isRestaurantEnabled && visibleRestaurant.length > 0 ? (
           <CollapsibleSection title="nav.restaurant" icon={UtensilsCrossed} items={visibleRestaurant} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
     };
     return map;
-  }, [visibleNav, visibleSales, visiblePurchases, visibleAccounting, visibleInventory, visibleMobileShop, visibleJewellery, visibleRestaurant, multiBranchEnabled, isMobileShopEnabled, isJewelleryEnabled, isRestaurantEnabled, pathname, onNavigate, collapsed]);
+  }, [visibleNav, visibleSales, visiblePurchases, visibleAccounting, visibleInventory, visibleMobileShop, visibleRestaurant, multiBranchEnabled, isMobileShopEnabled, isJewelleryEnabled, isRestaurantEnabled, pathname, onNavigate, collapsed]);
 
   const orderedSections = sidebarOrder ?? [...SIDEBAR_SECTIONS];
 

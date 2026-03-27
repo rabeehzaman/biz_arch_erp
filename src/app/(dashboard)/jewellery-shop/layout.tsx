@@ -3,13 +3,10 @@
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Gem } from "lucide-react";
-import { JewelleryThemeProvider } from "@/components/jewellery-shop/jewellery-theme-provider";
 
 export default function JewelleryShopLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
 
-  // Theme settings would ideally come from org config, but we use session-available defaults
-  // The actual theme preset/color could be fetched via SWR if needed
   const isEnabled = (session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled ?? false;
 
   if (!isEnabled) {
@@ -29,9 +26,5 @@ export default function JewelleryShopLayout({ children }: { children: React.Reac
     );
   }
 
-  return (
-    <JewelleryThemeProvider enabled={true} preset="gold" customColor={null}>
-      {children}
-    </JewelleryThemeProvider>
-  );
+  return <>{children}</>;
 }

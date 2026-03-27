@@ -10,32 +10,69 @@ export interface ThemeColors {
   accent: string;
   sidebarTint: string;   // subtle background tint for sidebar section
   foreground: string;    // text color for contrast
+  
+  // Luxury background overrides
+  background?: string;
+  backgroundForeground?: string;
+  card?: string;
+  cardForeground?: string;
+  muted?: string;
+  mutedForeground?: string;
+  border?: string;
 }
 
 const PRESETS: Record<string, ThemeColors> = {
   gold: {
-    primary: "43 76% 38%",        // dark goldenrod #b8860b
-    accent: "43 58% 55%",         // #d4a843
-    sidebarTint: "43 30% 15%",    // warm gold tint
-    foreground: "43 10% 95%",
+    primary: "43 74% 49%",        // Classic Gold
+    accent: "43 60% 65%",         // Soft Champagne
+    sidebarTint: "43 20% 10%",    // Obsidian with gold tint
+    foreground: "43 20% 95%",
+    background: "43 20% 98%",     // Soft Pearl/Cream
+    backgroundForeground: "43 30% 15%", // Deep Charcoal
+    card: "0 0% 100%",            // Pure White
+    cardForeground: "43 30% 15%",
+    muted: "43 20% 94%",
+    mutedForeground: "43 10% 40%",
+    border: "43 20% 88%",
   },
   "rose-gold": {
     primary: "350 30% 59%",       // #b76e79
-    accent: "0 55% 77%",          // #e8a0a0
-    sidebarTint: "350 20% 15%",   // pink-copper tint
-    foreground: "350 10% 95%",
+    accent: "0 40% 75%",          // softer pink
+    sidebarTint: "350 20% 12%",   // dark rose tint
+    foreground: "350 10% 98%",
+    background: "350 15% 98%",    // soft blush white
+    backgroundForeground: "350 30% 15%",
+    card: "0 0% 100%",
+    cardForeground: "350 30% 15%",
+    muted: "350 15% 94%",
+    mutedForeground: "350 10% 45%",
+    border: "350 15% 88%",
   },
   platinum: {
     primary: "213 13% 49%",       // #6b7b8d
-    accent: "210 30% 70%",        // #9fb3c8
-    sidebarTint: "213 15% 15%",   // cool silver tint
-    foreground: "213 10% 95%",
+    accent: "210 20% 70%",        // light silver
+    sidebarTint: "213 15% 12%",   // cool dark steel
+    foreground: "213 10% 98%",
+    background: "210 10% 98%",    // cool white
+    backgroundForeground: "213 30% 15%",
+    card: "0 0% 100%",
+    cardForeground: "213 30% 15%",
+    muted: "210 10% 94%",
+    mutedForeground: "213 10% 45%",
+    border: "210 10% 88%",
   },
   emerald: {
     primary: "155 46% 33%",       // #2e7d5b
-    accent: "140 50% 55%",        // #50c878
-    sidebarTint: "155 30% 12%",   // deep green tint
-    foreground: "155 10% 95%",
+    accent: "140 40% 55%",        // soft emerald
+    sidebarTint: "155 30% 10%",   // deep forest
+    foreground: "155 10% 98%",
+    background: "155 10% 98%",    // soft mint white
+    backgroundForeground: "155 30% 15%",
+    card: "0 0% 100%",
+    cardForeground: "155 30% 15%",
+    muted: "155 10% 94%",
+    mutedForeground: "155 10% 40%",
+    border: "155 10% 88%",
   },
 };
 
@@ -65,6 +102,47 @@ function hexToHSL(hex: string): string {
 }
 
 /**
+ * Build full set of global CSS variable overrides from theme colors.
+ */
+function buildGlobalVars(colors: ThemeColors): Record<string, string> {
+  const vars: Record<string, string> = {
+    "--primary": `hsl(${colors.primary})`,
+    "--primary-foreground": `hsl(0 0% 100%)`,
+    "--ring": `hsl(${colors.primary})`,
+    "--accent": `hsl(${colors.accent})`,
+    "--accent-foreground": `hsl(${colors.backgroundForeground || "0 0% 15%"})`,
+    "--sidebar": `hsl(${colors.sidebarTint})`,
+    "--sidebar-primary": `hsl(${colors.accent})`,
+    "--sidebar-primary-foreground": `hsl(${colors.foreground})`,
+    "--sidebar-accent": `hsl(${colors.sidebarTint})`,
+    "--sidebar-accent-foreground": `hsl(${colors.foreground})`,
+    "--sidebar-border": `hsl(${colors.border || colors.sidebarTint})`,
+    "--sidebar-ring": `hsl(${colors.accent})`,
+    
+    // Luxury Structural Overrides
+    "--font-heading": `var(--font-playfair), "SaudiRiyal", var(--font-arabic), serif`,
+    "--radius": `0.3rem`, // Sharper, more elegant corners
+    "--shadow-soft": `0 10px 40px -4px hsla(${colors.primary}, 0.15)`, // Ambient tinted shadow
+  };
+
+  if (colors.background) vars["--background"] = `hsl(${colors.background})`;
+  if (colors.backgroundForeground) vars["--foreground"] = `hsl(${colors.backgroundForeground})`;
+  
+  if (colors.card) vars["--card"] = `hsl(${colors.card})`;
+  if (colors.card) vars["--popover"] = `hsl(${colors.card})`;
+  
+  if (colors.cardForeground) vars["--card-foreground"] = `hsl(${colors.cardForeground})`;
+  if (colors.cardForeground) vars["--popover-foreground"] = `hsl(${colors.cardForeground})`;
+  
+  if (colors.muted) vars["--muted"] = `hsl(${colors.muted})`;
+  if (colors.mutedForeground) vars["--muted-foreground"] = `hsl(${colors.mutedForeground})`;
+  if (colors.border) vars["--border"] = `hsl(${colors.border})`;
+  if (colors.border) vars["--input"] = `hsl(${colors.border})`;
+
+  return vars;
+}
+
+/**
  * Get theme CSS variable overrides for a given preset or custom color.
  */
 export function getJewelleryThemeVars(
@@ -74,20 +152,25 @@ export function getJewelleryThemeVars(
   // Custom color
   if (preset === "custom" && customColor && /^#[0-9a-fA-F]{6}$/.test(customColor)) {
     const hsl = hexToHSL(customColor);
-    return {
-      "--jewellery-primary": hsl,
-      "--jewellery-accent": hsl,
-      "--jewellery-sidebar-tint": hsl,
+    const colors: ThemeColors = {
+      primary: hsl,
+      accent: hsl,
+      sidebarTint: hsl,
+      foreground: "0 0% 95%",
+      background: "43 15% 98%",
+      backgroundForeground: "0 0% 15%",
+      card: "0 0% 100%",
+      cardForeground: "0 0% 15%",
+      muted: "0 0% 96%",
+      mutedForeground: "0 0% 45%",
+      border: "0 0% 90%",
     };
+    return buildGlobalVars(colors);
   }
 
   // Preset
   const colors = PRESETS[preset || "gold"] || PRESETS.gold;
-  return {
-    "--jewellery-primary": colors.primary,
-    "--jewellery-accent": colors.accent,
-    "--jewellery-sidebar-tint": colors.sidebarTint,
-  };
+  return buildGlobalVars(colors);
 }
 
 export { PRESETS };

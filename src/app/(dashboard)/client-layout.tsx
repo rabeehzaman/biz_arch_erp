@@ -15,6 +15,7 @@ import { LanguageProvider, useLanguage } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { RestaurantThemeProvider } from "@/components/restaurant/restaurant-theme-provider";
+import { JewelleryThemeProvider } from "@/components/jewellery-shop/jewellery-theme-provider";
 import { FormConfigProvider } from "@/lib/form-config/context";
 import { useSidebarMode } from "@/hooks/use-form-config";
 
@@ -81,6 +82,28 @@ function RestaurantThemeWrapper({ children }: { children: React.ReactNode }) {
     );
 }
 
+function JewelleryThemeWrapper({ children }: { children: React.ReactNode }) {
+    const { data: session } = useSession();
+    const isJewelleryEnabled = (session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled ?? false;
+
+    const { data: themeConfig } = useSWR(
+        isJewelleryEnabled ? "/api/settings/jewellery-theme" : null,
+        fetcher,
+    );
+
+    if (!isJewelleryEnabled) return <>{children}</>;
+
+    const themeEnabled = themeConfig?.jewelleryThemeEnabled ?? true;
+    const preset = themeConfig?.jewelleryThemePreset ?? "gold";
+    const customColor = themeConfig?.jewelleryThemeColor ?? null;
+
+    return (
+        <JewelleryThemeProvider enabled={themeEnabled} preset={preset} customColor={customColor}>
+            {children}
+        </JewelleryThemeProvider>
+    );
+}
+
 function DashboardInner({ children }: { children: React.ReactNode }) {
     const isMobile = useIsMobile();
     const { dir } = useLanguage();
@@ -115,7 +138,9 @@ export default function ClientDashboardLayout({
                         <CommandPaletteProvider>
                             <SubscriptionBanner />
                             <RestaurantThemeWrapper>
-                                <DashboardInner>{children}</DashboardInner>
+                                <JewelleryThemeWrapper>
+                                    <DashboardInner>{children}</DashboardInner>
+                                </JewelleryThemeWrapper>
                             </RestaurantThemeWrapper>
                             <CommandPalette />
                             <KeyboardShortcutsDialog />

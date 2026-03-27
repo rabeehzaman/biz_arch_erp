@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,10 +18,17 @@ const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Err
 export default function JewelleryReportsPage() {
   const { t } = useLanguage();
   const { fmt } = useCurrency();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  const [activeReport, setActiveReport] = useState<string | null>(null);
+  // Auto-select report from ?report= query param (e.g. from main reports page)
+  const initialReport = useMemo(() => {
+    const param = searchParams.get("report");
+    const validIds = ["profit", "stock", "metal", "movement", "aging", "karigar"];
+    return param && validIds.includes(param) ? param : null;
+  }, [searchParams]);
+  const [activeReport, setActiveReport] = useState<string | null>(initialReport);
   const today = new Date().toISOString().split("T")[0];
   const monthStart = `${today.substring(0, 7)}-01`;
   const [fromDate, setFromDate] = useState(monthStart);

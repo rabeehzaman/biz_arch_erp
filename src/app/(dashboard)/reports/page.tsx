@@ -19,6 +19,7 @@ import {
   Percent,
   FileText,
   ChevronRight,
+  Gem,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -37,6 +38,8 @@ interface ReportLink {
   icon: React.ElementType;
   edition?: "INDIA" | "SAUDI";
   requiresFeature?: "multiBranchEnabled";
+  requiresModule?: "jewellery";
+  hideWhenModule?: "jewellery";
 }
 
 interface ReportCategory {
@@ -54,9 +57,9 @@ const categories: ReportCategory[] = [
     color: "text-green-600",
     bgColor: "bg-green-50",
     reports: [
-      { titleKey: "reports.profitByItems", descKey: "reports.profitByItemsDesc", href: "/reports/profit-by-items", icon: BarChart3 },
+      { titleKey: "reports.profitByItems", descKey: "reports.profitByItemsDesc", href: "/reports/profit-by-items", icon: BarChart3, hideWhenModule: "jewellery" },
       { titleKey: "reports.salesByCustomer", descKey: "reports.salesByCustomerDesc", href: "/reports/sales-by-customer", icon: BarChart3 },
-      { titleKey: "reports.salesByItem", descKey: "reports.salesByItemDesc", href: "/reports/sales-by-item", icon: BarChart3 },
+      { titleKey: "reports.salesByItem", descKey: "reports.salesByItemDesc", href: "/reports/sales-by-item", icon: BarChart3, hideWhenModule: "jewellery" },
       { titleKey: "reports.salesBySalesperson", descKey: "reports.salesBySalespersonDesc", href: "/reports/sales-by-salesperson", icon: BarChart3 },
       { titleKey: "reports.salesRegister", descKey: "reports.salesRegisterDesc", href: "/reports/sales-register", icon: FileText },
     ],
@@ -69,7 +72,7 @@ const categories: ReportCategory[] = [
     reports: [
       { titleKey: "reports.purchaseRegister", descKey: "reports.purchaseRegisterDesc", href: "/reports/purchase-register", icon: FileText },
       { titleKey: "reports.purchasesBySupplier", descKey: "reports.purchasesBySupplierDesc", href: "/reports/purchases-by-supplier", icon: BarChart3 },
-      { titleKey: "reports.purchasesByItem", descKey: "reports.purchasesByItemDesc", href: "/reports/purchases-by-item", icon: BarChart3 },
+      { titleKey: "reports.purchasesByItem", descKey: "reports.purchasesByItemDesc", href: "/reports/purchases-by-item", icon: BarChart3, hideWhenModule: "jewellery" },
     ],
   },
   {
@@ -127,11 +130,26 @@ const categories: ReportCategory[] = [
     bgColor: "bg-slate-50",
     reports: [
       { titleKey: "reports.expenseReport", descKey: "reports.expenseReportDesc", href: "/reports/expense-report", icon: DollarSign },
-      { titleKey: "reports.stockSummary", descKey: "reports.stockSummaryDesc", href: "/reports/stock-summary", icon: Package },
+      { titleKey: "reports.stockSummary", descKey: "reports.stockSummaryDesc", href: "/reports/stock-summary", icon: Package, hideWhenModule: "jewellery" },
       { titleKey: "reports.branchPL", descKey: "reports.branchPlDesc", href: "/reports/branch-pl", icon: GitBranch, requiresFeature: "multiBranchEnabled" },
     ],
   },
 ];
+
+const jewelleryCategory: ReportCategory = {
+  titleKey: "reports.categoryJewellery",
+  icon: Gem,
+  color: "text-amber-600",
+  bgColor: "bg-amber-50",
+  reports: [
+    { titleKey: "reports.jewelleryProfit", descKey: "reports.jewelleryProfitDesc", href: "/jewellery-shop/reports?report=profit", icon: TrendingUp, requiresModule: "jewellery" },
+    { titleKey: "reports.jewelleryStock", descKey: "reports.jewelleryStockDesc", href: "/jewellery-shop/reports?report=stock", icon: Package, requiresModule: "jewellery" },
+    { titleKey: "reports.jewelleryMetal", descKey: "reports.jewelleryMetalDesc", href: "/jewellery-shop/reports?report=metal", icon: Scale, requiresModule: "jewellery" },
+    { titleKey: "reports.jewelleryMovement", descKey: "reports.jewelleryMovementDesc", href: "/jewellery-shop/reports?report=movement", icon: ArrowRightLeft, requiresModule: "jewellery" },
+    { titleKey: "reports.jewelleryAging", descKey: "reports.jewelleryAgingDesc", href: "/jewellery-shop/reports?report=aging", icon: Clock, requiresModule: "jewellery" },
+    { titleKey: "reports.jewelleryKarigar", descKey: "reports.jewelleryKarigarDesc", href: "/jewellery-shop/reports?report=karigar", icon: Users, requiresModule: "jewellery" },
+  ],
+};
 
 export default function ReportsPage() {
   const { t } = useLanguage();
@@ -139,16 +157,25 @@ export default function ReportsPage() {
   const { data: session } = useSession();
   const [search, setSearch] = useState("");
   const multiBranch = !!(session?.user as any)?.multiBranchEnabled;
+  const isJewelleryEnabled = !!(session?.user as any)?.isJewelleryModuleEnabled;
   const disabledReports = useDisabledReports();
+
+  // Include jewellery category when module is enabled
+  const allCategories = useMemo(
+    () => isJewelleryEnabled ? [jewelleryCategory, ...categories] : categories,
+    [isJewelleryEnabled]
+  );
 
   const filteredCategories = useMemo(() => {
     const query = search.toLowerCase().trim();
 
-    return categories
+    return allCategories
       .map((cat) => {
         const filtered = cat.reports.filter((r) => {
           if (r.edition && r.edition !== edition) return false;
           if (r.requiresFeature === "multiBranchEnabled" && !multiBranch) return false;
+          if (r.requiresModule === "jewellery" && !isJewelleryEnabled) return false;
+          if (r.hideWhenModule === "jewellery" && isJewelleryEnabled) return false;
           // Check if report is disabled by org config
           const slug = r.href.replace("/reports/", "");
           if (disabledReports.includes(slug)) return false;
@@ -160,7 +187,7 @@ export default function ReportsPage() {
         return { ...cat, reports: filtered };
       })
       .filter((cat) => cat.reports.length > 0);
-  }, [search, edition, multiBranch, disabledReports, t]);
+  }, [search, edition, multiBranch, isJewelleryEnabled, disabledReports, allCategories, t]);
 
   return (
     <PageAnimation>
