@@ -49,4 +49,5 @@ next-env.d.ts
 # Playwright
 /e2e/.auth/
 /playwright-report/
+.playwright-mcp/
 /test-results/

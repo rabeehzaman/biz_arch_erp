@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, TrendingDown, DollarSign, FileText } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, FileText, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
@@ -23,6 +23,7 @@ import { ReportExportButton } from "@/components/reports/report-export-button";
 interface AccountRow {
   account: { code: string; name: string };
   amount: number;
+  goldAnnotation?: { fineWeightGrams: number; label: string };
 }
 
 interface ProfitLoss {
@@ -33,6 +34,12 @@ interface ProfitLoss {
   totalRevenue: number;
   totalExpenses: number;
   netIncome: number;
+  goldMovement?: {
+    goldSold: number;
+    oldGoldReceived: number;
+    goldPurchased: number;
+    netMovement: number;
+  };
 }
 
 export default function ProfitLossPage() {
@@ -197,6 +204,9 @@ export default function ProfitLossPage() {
                         <div className="mt-4">
                           <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.amount")}</p>
                           <p className="mt-1 font-mono font-semibold text-green-600">{fmt(row.amount)}</p>
+                          {row.goldAnnotation && (
+                            <p className="mt-1 text-xs font-mono text-amber-600">{row.goldAnnotation.label}</p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -220,6 +230,9 @@ export default function ProfitLossPage() {
                             <TableCell>
                               <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
                               {row.account.name}
+                              {row.goldAnnotation && (
+                                <span className="ml-2 text-xs font-mono text-amber-600">({row.goldAnnotation.label})</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-right font-mono text-green-600">{fmt(row.amount)}</TableCell>
                           </TableRow>
@@ -247,6 +260,9 @@ export default function ProfitLossPage() {
                         <div className="mt-4">
                           <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("common.amount")}</p>
                           <p className="mt-1 font-mono font-semibold text-red-600">{fmt(row.amount)}</p>
+                          {row.goldAnnotation && (
+                            <p className="mt-1 text-xs font-mono text-amber-600">{row.goldAnnotation.label}</p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -270,6 +286,9 @@ export default function ProfitLossPage() {
                             <TableCell>
                               <span className="font-mono text-slate-500 mr-2">{row.account.code}</span>
                               {row.account.name}
+                              {row.goldAnnotation && (
+                                <span className="ml-2 text-xs font-mono text-amber-600">({row.goldAnnotation.label})</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-right font-mono text-red-600">{fmt(row.amount)}</TableCell>
                           </TableRow>
@@ -294,6 +313,39 @@ export default function ProfitLossPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {data.goldMovement && (data.goldMovement.goldSold > 0 || data.goldMovement.goldPurchased > 0 || data.goldMovement.oldGoldReceived > 0) && (
+                <Card className="lg:col-span-2 border-amber-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-amber-700">
+                      <Scale className="h-5 w-5" />
+                      {t("reports.goldMovementSummary")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-4">
+                      <div className="rounded-lg bg-red-50 p-3">
+                        <p className="text-xs text-slate-500">{t("reports.goldSold")}</p>
+                        <p className="mt-1 font-mono font-bold text-red-600">{data.goldMovement.goldSold.toFixed(3)}g</p>
+                      </div>
+                      <div className="rounded-lg bg-green-50 p-3">
+                        <p className="text-xs text-slate-500">{t("reports.oldGoldReceived")}</p>
+                        <p className="mt-1 font-mono font-bold text-green-600">{data.goldMovement.oldGoldReceived.toFixed(3)}g</p>
+                      </div>
+                      <div className="rounded-lg bg-green-50 p-3">
+                        <p className="text-xs text-slate-500">{t("reports.goldPurchased")}</p>
+                        <p className="mt-1 font-mono font-bold text-green-600">{data.goldMovement.goldPurchased.toFixed(3)}g</p>
+                      </div>
+                      <div className={`rounded-lg p-3 ${data.goldMovement.netMovement >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                        <p className="text-xs text-slate-500">{t("reports.netGoldMovement")}</p>
+                        <p className={`mt-1 font-mono font-bold ${data.goldMovement.netMovement >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {data.goldMovement.netMovement >= 0 ? "+" : ""}{data.goldMovement.netMovement.toFixed(3)}g
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </>

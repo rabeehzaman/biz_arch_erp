@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 export interface ProfitLossAccountRow {
   account: { id: string; code: string; name: string; accountSubType: string };
   amount: number;
+  goldAnnotation?: { fineWeightGrams: number; label: string };
 }
 
 export interface ProfitLossData {
@@ -11,6 +12,12 @@ export interface ProfitLossData {
   totalRevenue: number;
   totalExpenses: number;
   netIncome: number;
+  goldMovement?: {
+    goldSold: number;
+    oldGoldReceived: number;
+    goldPurchased: number;
+    netMovement: number;
+  };
 }
 
 export async function getProfitLossData(

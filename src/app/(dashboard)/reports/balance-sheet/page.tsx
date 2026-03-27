@@ -19,11 +19,18 @@ import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { AsOfDateSelector } from "@/components/reports/as-of-date-selector";
 import { ReportExportButton } from "@/components/reports/report-export-button";
 import Link from "next/link";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Scale } from "lucide-react";
 
 interface AccountRow {
   account: { id: string; code: string; name: string; accountSubType: string };
   balance: number;
+  goldAnnotation?: {
+    fineWeightGrams: number;
+    label: string;
+    marketValue?: number;
+    marketRate?: number;
+    rateDate?: string;
+  };
 }
 
 interface BalanceSheet {
@@ -37,6 +44,15 @@ interface BalanceSheet {
   totalEquity: number;
   totalLiabilitiesAndEquity: number;
   isBalanced: boolean;
+  goldPosition?: {
+    inStockFineWeight: number;
+    withKarigarsFineWeight: number;
+    totalFineWeight: number;
+    bookValue: number;
+    marketValue: number;
+    currentRate: number;
+    rateDate: string;
+  };
 }
 
 // Group accounts by subtype
@@ -126,6 +142,14 @@ function SectionTable({ title, rows, total, color, t, fmt }: {
                           <p className="text-sm font-medium text-slate-900">{row.account.name}</p>
                           <span className="font-mono text-sm text-slate-900">{fmt(row.balance)}</span>
                         </div>
+                        {row.goldAnnotation && (
+                          <div className="mt-1">
+                            <p className="text-xs font-mono text-amber-600">{row.goldAnnotation.label}</p>
+                            {row.goldAnnotation.marketValue != null && (
+                              <p className="text-xs font-mono text-amber-600">{t("reports.marketValue")}: {fmt(row.goldAnnotation.marketValue)}</p>
+                            )}
+                          </div>
+                        )}
                       </Link>
                     ))}
                   </div>
@@ -176,6 +200,11 @@ function SectionTable({ title, rows, total, color, t, fmt }: {
                             >
                               <span className="font-mono text-slate-500 mr-2 text-xs">{row.account.code}</span>
                               <span className="text-sm">{row.account.name}</span>
+                              {row.goldAnnotation && (
+                                <span className="ml-2 text-xs font-mono text-amber-600">
+                                  ({row.goldAnnotation.label}{row.goldAnnotation.marketValue != null ? ` | ${t("reports.marketValue")}: ${fmt(row.goldAnnotation.marketValue)}` : ""})
+                                </span>
+                              )}
                             </Link>
                           </TableCell>
                           <TableCell className="text-right font-mono py-2 text-sm">{fmt(row.balance)}</TableCell>
@@ -439,6 +468,56 @@ export default function BalanceSheetPage() {
               </div>
             </CardContent>
           </Card>
+
+          {data.goldPosition && data.goldPosition.totalFineWeight > 0 && (
+            <Card className="border-amber-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-amber-700">
+                  <Scale className="h-5 w-5" />
+                  {t("reports.goldPosition")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-lg bg-amber-50 p-3">
+                    <p className="text-xs text-slate-500">{t("reports.inStock")}</p>
+                    <p className="mt-1 font-mono font-bold text-amber-700">{data.goldPosition.inStockFineWeight.toFixed(3)}g</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-50 p-3">
+                    <p className="text-xs text-slate-500">{t("reports.withKarigars")}</p>
+                    <p className="mt-1 font-mono font-bold text-amber-700">{data.goldPosition.withKarigarsFineWeight.toFixed(3)}g</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-50 p-3">
+                    <p className="text-xs text-slate-500">{t("reports.totalHoldings")}</p>
+                    <p className="mt-1 font-mono font-bold text-amber-700">{data.goldPosition.totalFineWeight.toFixed(3)}g</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">{t("reports.bookValue")}</p>
+                    <p className="mt-1 font-mono font-bold text-slate-900">{fmt(data.goldPosition.bookValue)}</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">{t("reports.marketValue")}</p>
+                    <p className="mt-1 font-mono font-bold text-slate-900">{fmt(data.goldPosition.marketValue)}</p>
+                    {data.goldPosition.rateDate && (
+                      <p className="mt-0.5 text-[10px] text-slate-400">@ {fmt(data.goldPosition.currentRate)}/g ({data.goldPosition.rateDate})</p>
+                    )}
+                  </div>
+                  {(() => {
+                    const gainLoss = data.goldPosition.marketValue - data.goldPosition.bookValue;
+                    const isGain = gainLoss >= 0;
+                    return (
+                      <div className={`rounded-lg p-3 ${isGain ? "bg-green-50" : "bg-red-50"}`}>
+                        <p className="text-xs text-slate-500">{t("reports.unrealizedGainLoss")}</p>
+                        <p className={`mt-1 font-mono font-bold ${isGain ? "text-green-600" : "text-red-600"}`}>
+                          {isGain ? "+" : ""}{fmt(gainLoss)}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       ) : (
         <p className="text-center py-8 text-slate-500">{t("reports.noDataAvailable")}</p>

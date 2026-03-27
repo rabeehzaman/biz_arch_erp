@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
+import { getOrgId, isJewelleryModuleEnabled } from "@/lib/auth-utils";
 import { getProfitLossData } from "@/lib/reports/profit-loss";
+import { getProfitLossGoldContext } from "@/lib/jewellery/report-gold-context";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,6 +20,16 @@ export async function GET(request: NextRequest) {
       searchParams.get("toDate") || new Date().toISOString().split("T")[0];
 
     const data = await getProfitLossData(organizationId, fromDate, toDate);
+
+    // Enrich with gold weight data for jewellery orgs
+    if (isJewelleryModuleEnabled(session)) {
+      const goldCtx = await getProfitLossGoldContext(organizationId, fromDate, toDate);
+      for (const row of [...data.revenue, ...data.expenses]) {
+        const annotation = goldCtx.accountAnnotations[row.account.code];
+        if (annotation) row.goldAnnotation = annotation;
+      }
+      data.goldMovement = goldCtx.goldMovement;
+    }
 
     return NextResponse.json({
       fromDate,

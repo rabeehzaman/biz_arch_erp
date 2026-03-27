@@ -3,6 +3,13 @@ import prisma from "@/lib/prisma";
 export interface BalanceSheetAccountRow {
   account: { id: string; code: string; name: string; accountSubType: string };
   balance: number;
+  goldAnnotation?: {
+    fineWeightGrams: number;
+    label: string;
+    marketValue?: number;
+    marketRate?: number;
+    rateDate?: string;
+  };
 }
 
 export interface BalanceSheetData {
@@ -15,6 +22,15 @@ export interface BalanceSheetData {
   totalEquity: number;
   totalLiabilitiesAndEquity: number;
   isBalanced: boolean;
+  goldPosition?: {
+    inStockFineWeight: number;
+    withKarigarsFineWeight: number;
+    totalFineWeight: number;
+    bookValue: number;
+    marketValue: number;
+    currentRate: number;
+    rateDate: string;
+  };
 }
 
 export async function getBalanceSheetData(
