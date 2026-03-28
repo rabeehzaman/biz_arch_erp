@@ -403,7 +403,7 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
 
       <div className="space-y-3">
         <Label>{t("pos.receiptMode")}</Label>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Button variant={receiptRenderMode === "htmlDriver" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("htmlDriver")}>
             {t("pos.htmlDriverSpooler")}
           </Button>
@@ -413,13 +413,18 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
           <Button variant={receiptRenderMode === "escposText" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("escposText")}>
             {t("pos.escposTextRaw")}
           </Button>
+          <Button variant={receiptRenderMode === "bitmapCanvas" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("bitmapCanvas")}>
+            {t("pos.bitmapCanvas")}
+          </Button>
         </div>
         <p className="text-xs text-muted-foreground">
           {receiptRenderMode === "htmlDriver"
             ? t("pos.htmlDriverSpoolerDesc")
             : receiptRenderMode === "htmlRaster"
               ? t("pos.htmlRasterEscposDesc")
-              : t("pos.escposTextRawDesc")}
+              : receiptRenderMode === "bitmapCanvas"
+                ? t("pos.bitmapCanvasDesc")
+                : t("pos.escposTextRawDesc")}
         </p>
         {receiptRenderMode === "htmlDriver" && connectionType !== "windows" && (
           <p className="text-xs text-amber-600">{t("pos.windowsDriverModeRequiresWindows")}</p>

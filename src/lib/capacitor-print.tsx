@@ -26,6 +26,7 @@ interface ThermalPrinterPlugin {
     printerDpi?: number;
     printerWidthMM?: number;
     base64Image: string;
+    qrCodeText?: string;
     timeoutSeconds?: number;
     cutPaper?: boolean;
     openCashDrawer?: boolean;
@@ -255,6 +256,53 @@ export async function capacitorPrintWithConfig(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Mobile print failed",
+    };
+  }
+}
+
+/**
+ * Print via the canvas-based bitmap method (better Arabic text quality).
+ * Uses ReceiptBitmapBuilder to draw the receipt on a Canvas, then sends
+ * the PNG to the native plugin along with the QR code text for native QR generation.
+ */
+export async function capacitorBitmapPrintWithConfig(
+  data: ReceiptData,
+  config?: Partial<MobilePrinterConfig>,
+): Promise<{ success: boolean; error?: string }> {
+  if (!isCapacitorEnvironment()) {
+    return { success: false, error: "Capacitor mobile bridge not available" };
+  }
+
+  try {
+    const resolved = requireConfiguredHost(config);
+
+    const { buildReceiptBitmap } = await import("@/lib/receipt-bitmap-layout");
+    const builder = await buildReceiptBitmap(data, {
+      paperWidth: resolved.paperWidth,
+      marginLeft: resolved.receiptMarginLeft,
+      marginRight: resolved.receiptMarginRight,
+    });
+
+    const pngDataUrl = builder.toPngDataUrl();
+    const base64Image = pngDataUrl.replace(/^data:image\/png;base64,/, "");
+
+    await ThermalPrinter.printImage({
+      host: resolved.host,
+      port: resolved.port,
+      printerDpi: 203,
+      printerWidthMM: resolved.paperWidth === 58 ? 48 : 72,
+      base64Image,
+      qrCodeText: data.qrCodeText ?? undefined,
+      timeoutSeconds: resolved.timeoutSeconds,
+      cutPaper: resolved.cutPaper,
+      openCashDrawer: resolved.openCashDrawer,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Bitmap canvas mobile print failed",
     };
   }
 }

@@ -11,7 +11,7 @@ const { PNG } = require('pngjs');
 const iconv = require('iconv-lite');
 const { printRawToWindowsPrinter, testWindowsPrinter } = require('./winspool-raw');
 
-const RECEIPT_RENDER_MODES = ['htmlDriver', 'htmlRaster', 'escposText'];
+const RECEIPT_RENDER_MODES = ['htmlDriver', 'htmlRaster', 'escposText', 'bitmapCanvas'];
 const ARABIC_CODE_PAGES = {
   pc864: {
     escposByte: 0x25,
@@ -399,6 +399,71 @@ class PrinterService {
     }
 
     return Buffer.from(bytes);
+  }
+
+  /**
+   * Build an ESC/POS buffer from a pre-rendered PNG image + optional native QR code.
+   * Used by the bitmapCanvas render mode: the renderer draws the receipt on a Canvas,
+   * converts to PNG, and sends it here.  The QR code is appended as a native printer
+   * command (GS ( k) for maximum speed and sharpness.
+   */
+  async buildBitmapReceiptBuffer(
+    pngBuffer,
+    { qrCodeText = null, cutPaper = true, openDrawer = false } = {}
+  ) {
+    if (!Buffer.isBuffer(pngBuffer) || pngBuffer.length === 0) {
+      throw new Error('No bitmap receipt image was provided');
+    }
+
+    const payload = [];
+    payload.push(Buffer.from([0x1B, 0x40]));           // ESC @ (Init)
+    payload.push(Buffer.from([0x1B, 0x61, 0x01]));     // ESC a 1 (Center)
+
+    // Receipt body as dithered bitmap
+    payload.push(this._buildEscStarImage(pngBuffer));
+
+    // Native QR code (GS ( k) — printer generates it internally
+    if (qrCodeText) {
+      payload.push(Buffer.from([0x1B, 0x61, 0x01]));   // Ensure center align
+      payload.push(PrinterService._buildNativeQRCommand(qrCodeText));
+      payload.push(Buffer.from([0x0A]));                // LF after QR
+    }
+
+    if (cutPaper) {
+      payload.push(Buffer.from([0x1B, 0x64, 0x03]));           // Feed 3 lines
+      payload.push(Buffer.from([0x1D, 0x56, 0x42, 0x00]));     // GS V B 0 (partial cut)
+    }
+
+    if (openDrawer) {
+      payload.push(Buffer.from([0x1B, 0x70, 0x00, 0x19, 0xFA])); // ESC p (pulse)
+    }
+
+    return Buffer.concat(payload);
+  }
+
+  /**
+   * Build a native ESC/POS QR code command sequence (GS ( k).
+   * The printer generates the QR internally — fastest and sharpest output.
+   */
+  static _buildNativeQRCommand(data, moduleSize = 5) {
+    const dataBytes = Buffer.from(data, 'utf-8');
+    const dataLen = dataBytes.length + 3;
+    const pL = dataLen & 0xFF;
+    const pH = (dataLen >> 8) & 0xFF;
+
+    return Buffer.concat([
+      // 1. Select QR model — Model 2
+      Buffer.from([0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]),
+      // 2. Set module size
+      Buffer.from([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, moduleSize]),
+      // 3. Set error correction level — M (0x31)
+      Buffer.from([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31]),
+      // 4. Store QR data
+      Buffer.from([0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30]),
+      dataBytes,
+      // 5. Print stored QR code
+      Buffer.from([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30]),
+    ]);
   }
 
   async testConnection() {

@@ -1818,6 +1818,8 @@
         "htmlDriverSpoolerDesc": "Uses the current styled HTML receipt and prints it through the Windows driver/spooler. Best when the Windows printer driver is reliable.",
         "htmlRasterEscposDesc": "Renders the current HTML receipt as an image and sends it as raw ESC/POS raster data. Recommended for Arabic and closer visual matching.",
         "escposTextRawDesc": "Builds the receipt directly with ESC/POS text commands. Fastest option, but Arabic shaping and exact HTML styling are limited.",
+        "bitmapCanvas": "Bitmap (Canvas)",
+        "bitmapCanvasDesc": "Draws the receipt directly on a Canvas for the best Arabic text quality, then sends a native QR code command. Industry standard for Saudi POS printers.",
         "usbPrinter": "USB Printer",
         "printerIpAddress": "Printer IP Address",
         "enterPrinterIp": "Enter the printer IP address first",

@@ -43,6 +43,13 @@ contextBridge.exposeInMainWorld('electronPOS', {
     return ipcRenderer.invoke('print-and-cache-rendered-receipt', html, receiptData, config);
   },
 
+  printBitmapReceipt: (imageBuffer, qrCodeText, config) => {
+    if (!(imageBuffer instanceof ArrayBuffer)) {
+      return Promise.reject(new Error('imageBuffer must be an ArrayBuffer'));
+    }
+    return ipcRenderer.invoke('print-bitmap-receipt', imageBuffer, qrCodeText, config);
+  },
+
   printCachedReceipt: (options, config) => ipcRenderer.invoke('print-cached-receipt', options, config),
   getLatestCachedReceipt: () => ipcRenderer.invoke('get-latest-cached-receipt'),
 

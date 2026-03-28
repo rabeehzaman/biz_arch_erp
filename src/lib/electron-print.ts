@@ -135,6 +135,21 @@ export async function electronPrintWithConfig(
   const resolvedConfig = await resolvePrinterConfig(config);
   const receiptRenderMode = getReceiptRenderMode(resolvedConfig);
 
+  if (receiptRenderMode === "bitmapCanvas") {
+    try {
+      const { buildReceiptBitmap } = await import("@/lib/receipt-bitmap-layout");
+      const builder = await buildReceiptBitmap(data, {
+        paperWidth: 80,
+        marginLeft: resolvedConfig?.receiptMarginLeft,
+        marginRight: resolvedConfig?.receiptMarginRight,
+      });
+      const pngBuffer = await builder.toPngBuffer();
+      return window.electronPOS.printBitmapReceipt(pngBuffer, data.qrCodeText ?? null, resolvedConfig);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Bitmap canvas render failed" };
+    }
+  }
+
   if (receiptRenderMode === "htmlDriver") {
     if (resolvedConfig?.connectionType !== "windows") {
       return { success: false, error: "Windows HTML mode requires Windows Printer connection" };

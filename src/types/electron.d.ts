@@ -1,6 +1,6 @@
 interface ElectronPrinterConfig {
   connectionType: 'network' | 'windows' | 'rawUsb';
-  receiptRenderMode: 'htmlDriver' | 'htmlRaster' | 'escposText';
+  receiptRenderMode: 'htmlDriver' | 'htmlRaster' | 'escposText' | 'bitmapCanvas';
   arabicCodePage: 'pc864' | 'wpc1256';
   networkIP: string;
   networkPort: number;
@@ -44,7 +44,7 @@ interface ElectronCachedReceiptRecord {
   key: string;
   invoiceNumber?: string | null;
   cachedAt: string;
-  renderMode: 'htmlDriver' | 'htmlRaster' | 'escposText';
+  renderMode: 'htmlDriver' | 'htmlRaster' | 'escposText' | 'bitmapCanvas';
   printerProfileHash: string;
   receiptData: ElectronCachedReceiptData;
 }
@@ -62,6 +62,11 @@ interface ElectronPOS {
   ) => Promise<ElectronPrintResult>;
   printRasterizedReceipt: (
     html: string,
+    config?: Partial<ElectronPrinterConfig>
+  ) => Promise<ElectronPrintResult>;
+  printBitmapReceipt: (
+    imageBuffer: ArrayBuffer,
+    qrCodeText?: string | null,
     config?: Partial<ElectronPrinterConfig>
   ) => Promise<ElectronPrintResult>;
   cacheRenderedReceipt: (

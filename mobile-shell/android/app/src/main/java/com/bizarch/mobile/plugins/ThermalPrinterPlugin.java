@@ -24,6 +24,60 @@ public class ThermalPrinterPlugin extends Plugin {
     private static final int DEFAULT_CHARS_PER_LINE = 48;
     private static final int MAX_IMAGE_CHUNK_HEIGHT = 256;
 
+    /**
+     * Build a native ESC/POS QR code command sequence (GS ( k).
+     * The printer generates the QR code internally — fastest and sharpest output.
+     */
+    private byte[] buildNativeQRCommand(String data, int moduleSize) {
+        byte[] dataBytes = data.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        int dataLen = dataBytes.length + 3;
+        byte pL = (byte) (dataLen & 0xFF);
+        byte pH = (byte) ((dataLen >> 8) & 0xFF);
+
+        // Assemble command parts
+        byte[][] parts = {
+            // 1. Select QR model — Model 2
+            {0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00},
+            // 2. Set module size
+            {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, (byte) moduleSize},
+            // 3. Set error correction level — M (0x31)
+            {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31},
+            // 4. Store QR data header
+            {0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30},
+        };
+
+        // Calculate total length
+        int total = 0;
+        for (byte[] part : parts) total += part.length;
+        total += dataBytes.length;
+        // 5. Print stored QR code
+        byte[] printCmd = {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30};
+        total += printCmd.length;
+        // Center align before QR
+        byte[] alignCmd = {0x1B, 0x61, 0x01};
+        total += alignCmd.length;
+        // LF after QR
+        total += 1;
+
+        byte[] result = new byte[total];
+        int offset = 0;
+
+        System.arraycopy(alignCmd, 0, result, offset, alignCmd.length);
+        offset += alignCmd.length;
+
+        for (byte[] part : parts) {
+            System.arraycopy(part, 0, result, offset, part.length);
+            offset += part.length;
+        }
+        System.arraycopy(dataBytes, 0, result, offset, dataBytes.length);
+        offset += dataBytes.length;
+        System.arraycopy(printCmd, 0, result, offset, printCmd.length);
+        offset += printCmd.length;
+        result[offset] = 0x0A; // LF
+
+        return result;
+    }
+
     private DeviceConnection createConnection(PluginCall call) throws Exception {
         String host = call.getString("host", "").trim();
         if (host.isEmpty()) {
@@ -71,6 +125,8 @@ public class ThermalPrinterPlugin extends Plugin {
 
             boolean cutPaper = call.getBoolean("cutPaper", true);
             boolean openCashDrawer = call.getBoolean("openCashDrawer", false);
+            String qrCodeText = call.getString("qrCodeText", "");
+            boolean hasNativeQR = qrCodeText != null && !qrCodeText.isEmpty();
 
             byte[] imageBytes = Base64.decode(base64Image, Base64.DEFAULT);
             Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
@@ -85,7 +141,8 @@ public class ThermalPrinterPlugin extends Plugin {
                 String printData = "[C]<img>" + hexImage + "</img>\n";
                 boolean lastChunk = i == chunks.size() - 1;
 
-                if (lastChunk) {
+                if (lastChunk && !hasNativeQR) {
+                    // No native QR — let EscPosPrinter handle cut/drawer on last chunk
                     if (openCashDrawer) {
                         printer.printFormattedTextAndOpenCashBox(printData, 20f);
                     } else if (cutPaper) {
@@ -94,6 +151,7 @@ public class ThermalPrinterPlugin extends Plugin {
                         printer.printFormattedText(printData, 20f);
                     }
                 } else {
+                    // More chunks follow, or native QR will be appended — no cut yet
                     printer.printFormattedText(printData, 20f);
                 }
 
@@ -101,6 +159,23 @@ public class ThermalPrinterPlugin extends Plugin {
             }
 
             bitmap.recycle();
+
+            // Native QR code via raw ESC/POS commands (GS ( k), then cut/drawer
+            if (hasNativeQR) {
+                byte[] qrCmd = buildNativeQRCommand(qrCodeText, 5);
+                connection.write(qrCmd);
+
+                // Paper cut after QR
+                if (cutPaper) {
+                    connection.write(new byte[]{0x1B, 0x64, 0x03});             // Feed 3 lines
+                    connection.write(new byte[]{0x1D, 0x56, 0x42, 0x00});       // Partial cut
+                }
+
+                // Cash drawer
+                if (openCashDrawer) {
+                    connection.write(new byte[]{0x1B, 0x70, 0x00, 0x19, (byte) 0xFA}); // Pulse
+                }
+            }
 
             JSObject result = new JSObject();
             result.put("success", true);

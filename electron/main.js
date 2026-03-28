@@ -652,6 +652,22 @@ ipcMain.handle('print-styled-receipt', async (_event, html, config) => {
   }
 });
 
+ipcMain.handle('print-bitmap-receipt', async (_event, imageArrayBuffer, qrCodeText, config) => {
+  try {
+    const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
+    const ps = createPrinterServiceFromConfig(normalized);
+    const pngBuffer = Buffer.from(imageArrayBuffer);
+    const buffer = await ps.buildBitmapReceiptBuffer(pngBuffer, {
+      qrCodeText: qrCodeText || null,
+      openDrawer: ps.mode === 'rawUsb',
+      cutPaper: true,
+    });
+    return await printBufferWithConfig(buffer, normalized);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('print-rasterized-receipt', async (_event, html, config) => {
   try {
     const normalized = PrinterService.normalizeConfig(config || loadPrinterConfig());
