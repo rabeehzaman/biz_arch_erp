@@ -10,55 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, Package, Search, Warehouse } from "lucide-react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { useLanguage } from "@/lib/i18n";
-
-interface Product {
-  id: string;
-  name: string;
-  sku: string | null;
-  cost: number;
-  unit: { id: string; name: string; code: string } | null;
-  isImeiTracked: boolean;
-}
-
-interface Supplier {
-  id: string;
-  name: string;
-  email: string | null;
-}
-
-interface ImeiEntry {
-  imei1: string;
-  imei2: string;
-  brand: string;
-  model: string;
-  color: string;
-  storageCapacity: string;
-  ram: string;
-  conditionGrade: string;
-}
-
-interface Branch {
-  id: string;
-  name: string;
-  code: string;
-  isActive: boolean;
-}
 
 interface WarehouseItem {
   id: string;
@@ -87,18 +49,6 @@ interface OpeningStock {
   stockLot: { id: string; remainingQuantity: number } | null;
 }
 
-const emptyForm = {
-  productId: "",
-  quantity: "",
-  unitCost: "",
-  stockDate: new Date().toISOString().split("T")[0],
-  notes: "",
-  warehouseId: "",
-  selectedBranchId: "",
-  supplierId: "",
-  imeiNumbers: [] as ImeiEntry[],
-};
-
 export default function OpeningStockPage() {
   const { data: session } = useSession();
   const { symbol, locale } = useCurrency();
@@ -106,18 +56,11 @@ export default function OpeningStockPage() {
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
   const [openingStocks, setOpeningStocks] = useState<OpeningStock[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseItem[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [search, setSearch] = useState("");
   const [filterWarehouse, setFilterWarehouse] = useState("all");
-
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ ...emptyForm });
-  const [saving, setSaving] = useState(false);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [_deleting, setDeleting] = useState(false);
@@ -129,26 +72,15 @@ export default function OpeningStockPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [stocksRes, productsRes, branchesRes, warehousesRes, suppliersRes] = await Promise.all([
+      const [stocksRes, warehousesRes] = await Promise.all([
         fetch("/api/opening-stocks"),
-        fetch("/api/products?compact=true"),
-        fetch("/api/branches"),
         fetch("/api/warehouses"),
-        fetch("/api/suppliers?compact=true"),
       ]);
 
       if (stocksRes.ok) setOpeningStocks(await stocksRes.json());
-      if (productsRes.ok) setProducts(await productsRes.json());
-      if (branchesRes.ok) {
-        const b = await branchesRes.json();
-        setBranches(b.filter((x: Branch) => x.isActive));
-      }
       if (warehousesRes.ok) {
         const w = await warehousesRes.json();
         setWarehouses(w.filter((x: WarehouseItem) => x.isActive));
-      }
-      if (suppliersRes.ok) {
-        setSuppliers(await suppliersRes.json());
       }
     } catch {
       toast.error(t("inventory.failedToLoadData2"));
@@ -156,19 +88,6 @@ export default function OpeningStockPage() {
       setIsLoading(false);
     }
   };
-
-  // Products not yet added for the selected warehouse
-  const alreadyAdded = new Set(
-    openingStocks.map((s) => `${s.productId}|${s.warehouseId ?? ""}`)
-  );
-  const availableProducts = products.filter(
-    (p) => !alreadyAdded.has(`${p.id}|${formData.warehouseId ?? ""}`)
-  );
-
-  // Warehouses filtered by selected branch in dialog
-  const dialogWarehouses = formData.selectedBranchId
-    ? warehouses.filter((w) => w.branchId === formData.selectedBranchId)
-    : warehouses;
 
   // Filtered table rows
   const filtered = openingStocks.filter((s) => {
@@ -186,98 +105,6 @@ export default function OpeningStockPage() {
     0
   );
   const uniqueWarehouses = new Set(openingStocks.map((s) => s.warehouseId).filter(Boolean)).size;
-
-  const selectedProduct = products.find((p) => p.id === formData.productId);
-  const isImeiTracked = selectedProduct?.isImeiTracked || false;
-
-  function openDialog() {
-    setFormData({ ...emptyForm, stockDate: new Date().toISOString().split("T")[0] });
-    setIsDialogOpen(true);
-  }
-
-  const makeEmptyImei = (): ImeiEntry => ({
-    imei1: "", imei2: "", brand: "", model: "", color: "", storageCapacity: "", ram: "", conditionGrade: "NEW",
-  });
-
-  const syncImeiCount = (qty: string, prodId: string) => {
-    const isTracked = products.find((p) => p.id === prodId)?.isImeiTracked;
-    if (!isTracked) return;
-    const count = Math.max(0, Math.floor(parseFloat(qty) || 0));
-    setFormData((prev) => {
-      const current = prev.imeiNumbers;
-      if (current.length === count) return prev;
-      if (current.length < count) {
-        return {
-          ...prev,
-          imeiNumbers: [...current, ...Array(count - current.length).fill(null).map(() => makeEmptyImei())],
-        };
-      }
-      return { ...prev, imeiNumbers: current.slice(0, count) };
-    });
-  };
-
-  const updateImeiField = (idx: number, field: keyof ImeiEntry, value: string) => {
-    setFormData((prev) => {
-      const updated = [...prev.imeiNumbers];
-      updated[idx] = { ...updated[idx], [field]: value };
-      return { ...prev, imeiNumbers: updated };
-    });
-  };
-
-  async function handleSave() {
-    if (!formData.productId || !formData.quantity || !formData.stockDate) {
-      toast.error(t("inventory.productQtyDateRequired"));
-      return;
-    }
-    if (parseFloat(formData.quantity) <= 0) {
-      toast.error(t("inventory.quantityGreaterThanZero"));
-      return;
-    }
-
-    if (isImeiTracked) {
-      if (!formData.supplierId) {
-        toast.error(t("inventory.supplierRequiredForImei"));
-        return;
-      }
-      const missingImei = formData.imeiNumbers.some((imei) => !imei.imei1 || !imei.brand || !imei.model);
-      if (missingImei || formData.imeiNumbers.length === 0) {
-        toast.error(t("inventory.fillRequiredImeiFields"));
-        return;
-      }
-    }
-
-    setSaving(true);
-    try {
-      const res = await fetch("/api/opening-stocks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: formData.productId,
-          quantity: parseFloat(formData.quantity),
-          unitCost: parseFloat(formData.unitCost) || 0,
-          stockDate: formData.stockDate,
-          notes: formData.notes || null,
-          warehouseId: formData.warehouseId || null,
-          deviceDetails: isImeiTracked ? {
-            supplierId: formData.supplierId,
-            imeiNumbers: formData.imeiNumbers,
-          } : undefined,
-        }),
-      });
-      if (res.ok) {
-        toast.success(t("inventory.openingStockAdded"));
-        setIsDialogOpen(false);
-        fetchData();
-      } else {
-        const err = await res.json();
-        toast.error(err.error || t("inventory.failedToAddOpeningStock"));
-      }
-    } catch {
-      toast.error(t("inventory.failedToAddOpeningStock"));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -308,10 +135,12 @@ export default function OpeningStockPage() {
             <h2 className="text-2xl font-bold text-slate-900">{t("inventory.openingStock")}</h2>
             <p className="text-slate-500">{t("inventory.openingStockDesc")}</p>
           </div>
-          <Button onClick={openDialog} className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t("inventory.addOpeningStock")}
-          </Button>
+          <Link href="/inventory/opening-stock/new">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              {t("inventory.addOpeningStock")}
+            </Button>
+          </Link>
         </div>
 
         {/* Stats */}
@@ -587,270 +416,6 @@ export default function OpeningStockPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Add Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setIsDialogOpen(false); }}>
-        <DialogContent className={isImeiTracked ? "max-w-3xl" : "max-w-md"}>
-          <DialogHeader>
-            <DialogTitle>{t("inventory.addOpeningStock")}</DialogTitle>
-            <DialogDescription>
-              {t("inventory.addOpeningStockDialogDesc")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {/* Warehouse selector (multi-branch only) */}
-            {multiBranchEnabled && (
-              <div className="border rounded-lg p-3 bg-slate-50 space-y-3">
-                <p className="text-sm font-medium text-slate-700">{t("inventory.warehouseOptional")}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">{t("inventory.branch")}</Label>
-                    <Select
-                      value={formData.selectedBranchId}
-                      onValueChange={(bId) =>
-                        setFormData((f) => ({ ...f, selectedBranchId: bId, warehouseId: "" }))
-                      }
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("inventory.allBranches")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {branches.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">{t("inventory.warehouse")}</Label>
-                    <Select
-                      value={formData.warehouseId}
-                      onValueChange={(wId) => setFormData((f) => ({ ...f, warehouseId: wId }))}
-                      disabled={dialogWarehouses.length === 0}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={t("common.select")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dialogWarehouses.map((w) => (
-                          <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Product */}
-            <div className="space-y-2">
-              <Label>{t("inventory.product2")}</Label>
-              <Select
-                value={formData.productId}
-                onValueChange={(v) => {
-                  const p = products.find((x) => x.id === v);
-                  setFormData((f) => ({
-                    ...f,
-                    productId: v,
-                    unitCost: p ? String(Number(p.cost)) : f.unitCost,
-                  }));
-                  syncImeiCount(formData.quantity, v);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("inventory.selectProduct")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableProducts.length === 0 ? (
-                    <div className="p-3 text-sm text-slate-500 text-center">
-                      {t("inventory.allProductsHaveStock")}
-                    </div>
-                  ) : (
-                    availableProducts.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                        {p.sku && <span className="text-slate-400 ml-1">({p.sku})</span>}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Quantity & Cost */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>{t("inventory.quantity2")}</Label>
-                <Input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="0"
-                  value={formData.quantity}
-                  onChange={(e) => {
-                    setFormData((f) => ({ ...f, quantity: e.target.value }));
-                    syncImeiCount(e.target.value, formData.productId);
-                  }}
-                  onFocus={(e) => e.target.select()}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("inventory.unitCost2")} ({symbol})</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.unitCost}
-                  onChange={(e) => setFormData((f) => ({ ...f, unitCost: e.target.value }))}
-                  onFocus={(e) => e.target.select()}
-                />
-              </div>
-            </div>
-
-            {/* Value preview */}
-            {formData.quantity && formData.unitCost && parseFloat(formData.quantity) > 0 && (
-              <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
-                <span className="font-medium">{t("inventory.totalValue")}: </span>
-                {symbol}{(parseFloat(formData.quantity || "0") * parseFloat(formData.unitCost || "0")).toLocaleString(locale, { minimumFractionDigits: 2 })}
-              </div>
-            )}
-
-            {/* Stock Date */}
-            <div className="space-y-2">
-              <Label>{t("inventory.stockDate")}</Label>
-              <Input
-                type="date"
-                value={formData.stockDate}
-                onChange={(e) => setFormData((f) => ({ ...f, stockDate: e.target.value }))}
-              />
-              <p className="text-xs text-slate-500">
-                {t("inventory.fifoNote")}
-              </p>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label>{t("common.notes")}</Label>
-              <Textarea
-                placeholder={t("inventory.optionalNotesPlaceholder")}
-                value={formData.notes}
-                onChange={(e) => setFormData((f) => ({ ...f, notes: e.target.value }))}
-                rows={2}
-              />
-            </div>
-
-            {/* IMEI Details */}
-            {isImeiTracked && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label>{t("inventory.supplier2")}</Label>
-                  <SupplierCombobox
-                    suppliers={suppliers}
-                    value={formData.supplierId}
-                    onValueChange={(v) => setFormData((f) => ({ ...f, supplierId: v }))}
-                    onSupplierCreated={fetchData}
-                  />
-                </div>
-                {formData.imeiNumbers.length > 0 && (
-                  <div className="space-y-3">
-                    <Label>{t("inventory.deviceDetails2")}</Label>
-                    <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3">
-                      {formData.imeiNumbers.map((imei, idx) => (
-                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-slate-50 border rounded-lg">
-                          <Input
-                            placeholder={`IMEI 1 (${idx + 1}) *`}
-                            value={imei.imei1}
-                            onChange={(e) => updateImeiField(idx, "imei1", e.target.value)}
-                            className="font-mono text-xs"
-                            maxLength={15}
-                            required
-                          />
-                          <Input
-                            placeholder="IMEI 2"
-                            value={imei.imei2}
-                            onChange={(e) => updateImeiField(idx, "imei2", e.target.value)}
-                            className="font-mono text-xs"
-                            maxLength={15}
-                          />
-                          <Input
-                            placeholder={`${t("mobileShop.brand")} *`}
-                            value={imei.brand}
-                            onChange={(e) => updateImeiField(idx, "brand", e.target.value)}
-                            className="text-xs"
-                            required
-                          />
-                          <Input
-                            placeholder={`${t("mobileShop.model")} *`}
-                            value={imei.model}
-                            onChange={(e) => updateImeiField(idx, "model", e.target.value)}
-                            className="text-xs"
-                            required
-                          />
-                          <Input
-                            placeholder={t("mobileShop.color")}
-                            value={imei.color}
-                            onChange={(e) => updateImeiField(idx, "color", e.target.value)}
-                            className="text-xs"
-                          />
-                          <Select
-                            value={imei.storageCapacity}
-                            onValueChange={(value) => updateImeiField(idx, "storageCapacity", value)}
-                          >
-                            <SelectTrigger className="text-xs h-9">
-                              <SelectValue placeholder={t("mobileShop.storage")} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {["8GB", "16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB", "4TB"].map((opt) => (
-                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={imei.ram}
-                            onValueChange={(value) => updateImeiField(idx, "ram", value)}
-                          >
-                            <SelectTrigger className="text-xs h-9">
-                              <SelectValue placeholder={t("mobileShop.ram")} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {["1GB", "1.5GB", "2GB", "3GB", "4GB", "6GB", "8GB", "10GB", "12GB", "16GB", "18GB", "24GB", "32GB", "64GB"].map((opt) => (
-                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={imei.conditionGrade}
-                            onValueChange={(value) => updateImeiField(idx, "conditionGrade", value)}
-                          >
-                            <SelectTrigger className="text-xs h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="NEW">{t("inventory.conditionNew")}</SelectItem>
-                              <SelectItem value="OPEN_BOX">{t("inventory.conditionOpenBox")}</SelectItem>
-                              <SelectItem value="GRADE_A">{t("inventory.conditionGradeA")}</SelectItem>
-                              <SelectItem value="GRADE_B">{t("inventory.conditionGradeB")}</SelectItem>
-                              <SelectItem value="GRADE_C">{t("inventory.conditionGradeC")}</SelectItem>
-                              <SelectItem value="REFURBISHED">{t("inventory.conditionRefurbished")}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>{t("common.cancel")}</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? t("common.saving") : t("inventory.addStock")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirm */}
       <ConfirmDialog
