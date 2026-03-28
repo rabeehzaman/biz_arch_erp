@@ -79,6 +79,11 @@ export interface POSSessionReportData {
       name: string | null;
       email: string | null;
     };
+    closedBy: {
+      id: string;
+      name: string | null;
+      email: string | null;
+    } | null;
     employee: {
       id: string;
       name: string;
@@ -114,6 +119,9 @@ export async function getPOSSessionReportData(
     where: { id, organizationId },
     include: {
       user: {
+        select: { id: true, name: true, email: true },
+      },
+      closedBy: {
         select: { id: true, name: true, email: true },
       },
       employee: {
@@ -313,6 +321,13 @@ export async function getPOSSessionReportData(
         name: posSession.user.name,
         email: posSession.user.email,
       },
+      closedBy: posSession.closedBy
+        ? {
+            id: posSession.closedBy.id,
+            name: posSession.closedBy.name,
+            email: posSession.closedBy.email,
+          }
+        : null,
       employee: posSession.employee
         ? {
             id: posSession.employee.id,

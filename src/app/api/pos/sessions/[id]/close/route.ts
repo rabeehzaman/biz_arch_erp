@@ -520,6 +520,7 @@ export async function PUT(
         data: {
           status: "CLOSED",
           closedAt: now,
+          closedById: session.user.id,
           closingCash,
           expectedCash,
           cashDifference,
@@ -529,6 +530,9 @@ export async function PUT(
         },
         include: {
           user: {
+            select: { id: true, name: true, email: true },
+          },
+          closedBy: {
             select: { id: true, name: true, email: true },
           },
         },

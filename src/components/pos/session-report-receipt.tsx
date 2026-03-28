@@ -99,6 +99,11 @@ export interface SessionReportData {
       name: string | null;
       email: string | null;
     };
+    closedBy: {
+      id: string;
+      name: string | null;
+      email: string | null;
+    } | null;
     employee: {
       id: string;
       name: string;
@@ -139,6 +144,8 @@ type Labels = {
   reportFor: string;
   overview: string;
   sessionNumber: string;
+  openedBy: string;
+  closedByLabel: string;
   cashier: string;
   employee: string;
   branch: string;
@@ -194,6 +201,8 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     reportFor: "Closed Session",
     overview: "Session Overview",
     sessionNumber: "Session #",
+    openedBy: "Opened By",
+    closedByLabel: "Closed By",
     cashier: "Cashier",
     employee: "Employee",
     branch: "Branch",
@@ -247,6 +256,8 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     reportFor: "الجلسة المغلقة",
     overview: "ملخص الجلسة",
     sessionNumber: "رقم الجلسة",
+    openedBy: "فتح بواسطة",
+    closedByLabel: "أغلق بواسطة",
     cashier: "الكاشير",
     employee: "الموظف",
     branch: "الفرع",
@@ -489,8 +500,12 @@ export function POSSessionReportReceipt({
       <div style={{ marginBottom: "7px" }}>
         <div style={sectionTitleStyle}>{labels.overview}</div>
         <KeyValueRow
-          label={labels.cashier}
+          label={labels.openedBy}
           value={report.session.user.name || report.session.user.email || labels.notAvailable}
+        />
+        <KeyValueRow
+          label={labels.closedByLabel}
+          value={report.session.closedBy?.name || report.session.closedBy?.email || labels.notAvailable}
         />
         <KeyValueRow
           label={labels.employee}

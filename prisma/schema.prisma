@@ -263,7 +263,8 @@ model User {
   customerAssignments CustomerAssignment[]
   invoices            Invoice[]
   creditNotes         CreditNote[]
-  posSessions         POSSession[]
+  posSessionsOpened   POSSession[]   @relation("OpenedSessions")
+  posSessionsClosed   POSSession[]   @relation("ClosedSessions")
   warehouseAccess     UserWarehouseAccess[]
   soldDevices         MobileDevice[]     @relation("SoldDevices")
   kotOrders           KOTOrder[]
@@ -1571,7 +1572,9 @@ model POSSession {
   organizationId    String
   organization      Organization     @relation(fields: [organizationId], references: [id])
   userId            String
-  user              User             @relation(fields: [userId], references: [id])
+  user              User             @relation("OpenedSessions", fields: [userId], references: [id])
+  closedById        String?
+  closedBy          User?            @relation("ClosedSessions", fields: [closedById], references: [id])
   employeeId        String?
   employee          Employee?        @relation(fields: [employeeId], references: [id])
   status            POSSessionStatus @default(OPEN)
@@ -1605,6 +1608,7 @@ model POSSession {
   @@index([organizationId, openedAt(sort: Desc)])
   @@index([organizationId, branchId, warehouseId, status])
   @@index([userId])
+  @@index([closedById])
   @@index([warehouseId])
   @@map("pos_sessions")
 }
