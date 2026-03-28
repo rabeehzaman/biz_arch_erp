@@ -132,6 +132,7 @@ const categories: ReportCategory[] = [
       { titleKey: "reports.expenseReport", descKey: "reports.expenseReportDesc", href: "/reports/expense-report", icon: DollarSign },
       { titleKey: "reports.stockSummary", descKey: "reports.stockSummaryDesc", href: "/reports/stock-summary", icon: Package, hideWhenModule: "jewellery" },
       { titleKey: "reports.branchPL", descKey: "reports.branchPlDesc", href: "/reports/branch-pl", icon: GitBranch, requiresFeature: "multiBranchEnabled" },
+      { titleKey: "reports.branchSales", descKey: "reports.branchSalesDesc", href: "/reports/branch-sales", icon: GitBranch, requiresFeature: "multiBranchEnabled" },
     ],
   },
 ];
