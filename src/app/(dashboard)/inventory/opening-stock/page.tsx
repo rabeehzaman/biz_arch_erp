@@ -12,8 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Package, Search, Warehouse } from "lucide-react";
+import { Plus, Trash2, Pencil, Package, Search, Warehouse } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -64,6 +68,10 @@ export default function OpeningStockPage() {
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [_deleting, setDeleting] = useState(false);
+
+  const [editStock, setEditStock] = useState<OpeningStock | null>(null);
+  const [editForm, setEditForm] = useState({ quantity: "", unitCost: "", stockDate: "", notes: "" });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -123,6 +131,49 @@ export default function OpeningStockPage() {
       toast.error(t("common.delete"));
     } finally {
       setDeleting(false);
+    }
+  }
+
+  function openEdit(stock: OpeningStock) {
+    setEditStock(stock);
+    setEditForm({
+      quantity: String(Number(stock.quantity)),
+      unitCost: String(Number(stock.unitCost)),
+      stockDate: new Date(stock.stockDate).toISOString().split("T")[0],
+      notes: stock.notes || "",
+    });
+  }
+
+  async function handleEdit() {
+    if (!editStock) return;
+    if (!editForm.quantity || parseFloat(editForm.quantity) <= 0) {
+      toast.error(t("inventory.quantityGreaterThanZero"));
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/opening-stocks/${editStock.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quantity: parseFloat(editForm.quantity),
+          unitCost: parseFloat(editForm.unitCost) || 0,
+          stockDate: editForm.stockDate,
+          notes: editForm.notes || null,
+        }),
+      });
+      if (res.ok) {
+        toast.success(t("inventory.openingStockUpdated"));
+        setEditStock(null);
+        fetchData();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || t("inventory.failedToUpdateOpeningStock"));
+      }
+    } catch {
+      toast.error(t("inventory.failedToUpdateOpeningStock"));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -260,14 +311,24 @@ export default function OpeningStockPage() {
                               <p className="mt-1 text-xs text-slate-500">SKU: {stock.product.sku}</p>
                             )}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 shrink-0 text-slate-400 hover:text-red-500"
-                            onClick={() => setDeleteId(stock.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 text-slate-400 hover:text-blue-500"
+                              onClick={() => openEdit(stock)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 text-slate-400 hover:text-red-500"
+                              onClick={() => setDeleteId(stock.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -337,7 +398,7 @@ export default function OpeningStockPage() {
                         <TableHead className="hidden sm:table-cell text-right">{t("inventory.totalValue")}</TableHead>
                         {multiBranchEnabled && <TableHead className="hidden sm:table-cell">{t("inventory.warehouse")}</TableHead>}
                         <TableHead className="hidden sm:table-cell">{t("common.date")}</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead className="w-[80px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -396,14 +457,24 @@ export default function OpeningStockPage() {
                               {format(new Date(stock.stockDate), "dd MMM yyyy")}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-red-500"
-                                onClick={() => setDeleteId(stock.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-400 hover:text-blue-500"
+                                  onClick={() => openEdit(stock)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-400 hover:text-red-500"
+                                  onClick={() => setDeleteId(stock.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -416,6 +487,71 @@ export default function OpeningStockPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editStock} onOpenChange={(open) => { if (!open) setEditStock(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("inventory.editOpeningStock")} — {editStock?.product.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>{t("common.quantity")} *</Label>
+                <Input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={editForm.quantity}
+                  onChange={(e) => setEditForm((f) => ({ ...f, quantity: e.target.value }))}
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("inventory.unitCost")} ({symbol})</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.unitCost}
+                  onChange={(e) => setEditForm((f) => ({ ...f, unitCost: e.target.value }))}
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+            </div>
+            {editForm.quantity && editForm.unitCost && parseFloat(editForm.quantity) > 0 && (
+              <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+                <span className="font-medium">{t("inventory.totalValue")}: </span>
+                {symbol}{(parseFloat(editForm.quantity || "0") * parseFloat(editForm.unitCost || "0")).toLocaleString(locale, { minimumFractionDigits: 2 })}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>{t("inventory.stockDate")}</Label>
+              <Input
+                type="date"
+                value={editForm.stockDate}
+                onChange={(e) => setEditForm((f) => ({ ...f, stockDate: e.target.value }))}
+              />
+              <p className="text-xs text-slate-500">{t("inventory.fifoNote")}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("common.notes")}</Label>
+              <Input
+                type="text"
+                placeholder={t("inventory.optionalNotesPlaceholder")}
+                value={editForm.notes}
+                onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditStock(null)}>{t("common.cancel")}</Button>
+            <Button onClick={handleEdit} disabled={saving}>
+              {saving ? t("common.saving") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm */}
       <ConfirmDialog
