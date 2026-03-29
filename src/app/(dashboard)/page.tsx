@@ -27,6 +27,7 @@ export default async function DashboardPage() {
           where: {
             organizationId,
             key: SETTING_KEYS.DEFAULT_LANDING_PAGE,
+            userId: null,
           },
         });
         if (setting?.value) {

@@ -209,39 +209,76 @@ function defaultConfig(): OrgFormConfig {
 const DEFAULT_MOBILE_TABS: MobileNavTab[] = MOBILE_NAV_TAB_POOL.slice(0, 5);
 
 // ── Main component ──────────────────────────────────────────────
-export function FormConfigTab({ orgId, edition }: { orgId: string; edition?: string }) {
+interface FormConfigTabProps {
+  orgId: string;
+  edition?: string;
+  /** If set, editing user-level config instead of org-level */
+  userId?: string;
+  userName?: string;
+}
+
+export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTabProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [config, setConfig] = useState<OrgFormConfig>(defaultConfig());
+  const [orgConfig, setOrgConfig] = useState<OrgFormConfig | null>(null);
+  const [hasUserOverrides, setHasUserOverrides] = useState(false);
 
   // Track which form accordions are expanded
   const [expandedForms, setExpandedForms] = useState<Set<string>>(new Set());
 
+  const isUserMode = !!userId;
+
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/admin/organizations/${orgId}/form-config`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setConfig({
-          fields: data.fields ?? {},
-          disabledReports: data.disabledReports ?? [],
-          disabledSidebarItems: data.disabledSidebarItems ?? [],
-          sidebarMode: data.sidebarMode ?? "full",
-          sidebarSectionOrder: data.sidebarSectionOrder ?? null,
-          mobileNavTabs: data.mobileNavTabs ?? null,
-          defaultLandingPage: data.defaultLandingPage ?? null,
-        });
+      if (isUserMode) {
+        const res = await fetch(
+          `/api/admin/organizations/${orgId}/user-form-config/${userId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setOrgConfig(data.orgConfig);
+          setHasUserOverrides(data.overriddenKeys.length > 0);
+          // If user has overrides, show user config; otherwise show org config as starting point
+          const activeConfig = data.overriddenKeys.length > 0 ? data.userConfig : data.orgConfig;
+          setConfig({
+            fields: activeConfig.fields ?? {},
+            disabledReports: activeConfig.disabledReports ?? [],
+            disabledSidebarItems: activeConfig.disabledSidebarItems ?? [],
+            sidebarMode: activeConfig.sidebarMode ?? "full",
+            sidebarSectionOrder: activeConfig.sidebarSectionOrder ?? null,
+            mobileNavTabs: activeConfig.mobileNavTabs ?? null,
+            defaultLandingPage: activeConfig.defaultLandingPage ?? null,
+          });
+        } else {
+          toast.error("Failed to load user form configuration");
+        }
       } else {
-        toast.error("Failed to load form configuration");
+        const res = await fetch(
+          `/api/admin/organizations/${orgId}/form-config`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setConfig({
+            fields: data.fields ?? {},
+            disabledReports: data.disabledReports ?? [],
+            disabledSidebarItems: data.disabledSidebarItems ?? [],
+            sidebarMode: data.sidebarMode ?? "full",
+            sidebarSectionOrder: data.sidebarSectionOrder ?? null,
+            mobileNavTabs: data.mobileNavTabs ?? null,
+            defaultLandingPage: data.defaultLandingPage ?? null,
+          });
+        } else {
+          toast.error("Failed to load form configuration");
+        }
       }
     } catch {
       toast.error("Failed to load form configuration");
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, [orgId, userId, isUserMode]);
 
   useEffect(() => {
     fetchConfig();
@@ -250,16 +287,21 @@ export function FormConfigTab({ orgId, edition }: { orgId: string; edition?: str
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(
-        `/api/admin/organizations/${orgId}/form-config`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(config),
-        }
-      );
+      const url = isUserMode
+        ? `/api/admin/organizations/${orgId}/user-form-config/${userId}`
+        : `/api/admin/organizations/${orgId}/form-config`;
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
       if (res.ok) {
-        toast.success("Form configuration saved successfully");
+        toast.success(
+          isUserMode
+            ? `Configuration saved for ${userName}`
+            : "Form configuration saved successfully"
+        );
+        if (isUserMode) setHasUserOverrides(true);
       } else {
         const err = await res.json();
         toast.error(err.error || "Failed to save configuration");
@@ -269,6 +311,44 @@ export function FormConfigTab({ orgId, edition }: { orgId: string; edition?: str
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleResetToOrg = async () => {
+    if (!isUserMode) return;
+    setResetting(true);
+    try {
+      const res = await fetch(
+        `/api/admin/organizations/${orgId}/user-form-config/${userId}`,
+        { method: "DELETE" }
+      );
+      if (res.ok) {
+        toast.success(`Configuration reset to org defaults for ${userName}`);
+        setHasUserOverrides(false);
+        // Reload to show org config
+        setLoading(true);
+        fetchConfig();
+      } else {
+        toast.error("Failed to reset configuration");
+      }
+    } catch {
+      toast.error("Failed to reset configuration");
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleCopyFromOrg = () => {
+    if (!orgConfig) return;
+    setConfig({
+      fields: orgConfig.fields ?? {},
+      disabledReports: orgConfig.disabledReports ?? [],
+      disabledSidebarItems: orgConfig.disabledSidebarItems ?? [],
+      sidebarMode: orgConfig.sidebarMode ?? "full",
+      sidebarSectionOrder: orgConfig.sidebarSectionOrder ?? null,
+      mobileNavTabs: orgConfig.mobileNavTabs ?? null,
+      defaultLandingPage: orgConfig.defaultLandingPage ?? null,
+    });
+    toast.success("Loaded org configuration — make changes and save");
   };
 
   // ── Field helpers ───────────────────────────────────────────
@@ -866,7 +946,7 @@ export function FormConfigTab({ orgId, edition }: { orgId: string; edition?: str
               Menu Item Visibility
             </Label>
             <p className="text-xs text-muted-foreground">
-              Disabled items will be hidden from the sidebar for all users in this organization.
+              Disabled items will be hidden from the sidebar{isUserMode ? " for this user" : " for all users in this organization"}.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {SIDEBAR_ITEMS.map((group) => (
@@ -1067,9 +1147,35 @@ export function FormConfigTab({ orgId, edition }: { orgId: string; edition?: str
       </CollapsibleSection>
 
       {/* ═══════════════════════════════════════════════════════════
-          Save Button
+          Save / User-mode actions
           ═══════════════════════════════════════════════════════════ */}
-      <div className="flex justify-end pb-4">
+      <div className="flex items-center justify-between pb-4">
+        <div className="flex items-center gap-2">
+          {isUserMode && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyFromOrg}
+                disabled={!orgConfig}
+              >
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                Copy from Org
+              </Button>
+              {hasUserOverrides && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleResetToOrg}
+                  disabled={resetting}
+                >
+                  {resetting && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                  Reset to Org Defaults
+                </Button>
+              )}
+            </>
+          )}
+        </div>
         <Button onClick={handleSave} disabled={saving} size="lg">
           {saving ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -14,13 +14,8 @@ export async function GET() {
     const organizationId = getOrgId(session);
 
     const [setting, organization] = await Promise.all([
-      prisma.setting.findUnique({
-        where: {
-          organizationId_key: {
-            organizationId,
-            key: POS_SESSION_REPORT_LANGUAGE_KEY,
-          },
-        },
+      prisma.setting.findFirst({
+        where: { organizationId, key: POS_SESSION_REPORT_LANGUAGE_KEY, userId: null },
       }),
       prisma.organization.findUnique({
         where: { id: organizationId },
@@ -55,20 +50,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await prisma.setting.upsert({
-      where: {
-        organizationId_key: {
-          organizationId,
-          key: POS_SESSION_REPORT_LANGUAGE_KEY,
-        },
-      },
-      update: { value },
-      create: {
-        organizationId,
-        key: POS_SESSION_REPORT_LANGUAGE_KEY,
-        value,
-      },
+    const existing = await prisma.setting.findFirst({
+      where: { organizationId, key: POS_SESSION_REPORT_LANGUAGE_KEY, userId: null },
     });
+    if (existing) {
+      await prisma.setting.update({ where: { id: existing.id }, data: { value } });
+    } else {
+      await prisma.setting.create({ data: { organizationId, key: POS_SESSION_REPORT_LANGUAGE_KEY, value } });
+    }
 
     return NextResponse.json({ success: true, value });
   } catch (error) {

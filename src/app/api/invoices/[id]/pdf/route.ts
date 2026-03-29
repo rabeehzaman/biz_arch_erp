@@ -34,7 +34,7 @@ export async function GET(
         select: { name: true, address: true, phone: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true, brandColor: true },
       }),
       prisma.setting.findFirst({
-        where: { organizationId, key: "invoice_pdf_format" },
+        where: { organizationId, key: "invoice_pdf_format", userId: null },
         select: { value: true },
       }),
     ]);

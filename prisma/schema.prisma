@@ -268,6 +268,7 @@ model User {
   warehouseAccess     UserWarehouseAccess[]
   soldDevices         MobileDevice[]     @relation("SoldDevices")
   kotOrders           KOTOrder[]
+  settings            Setting[]          @relation("UserSettings")
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -1640,11 +1641,14 @@ model Setting {
   value          String
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String?      // null = org-level default, non-null = user-level override
+  user           User?        @relation("UserSettings", fields: [userId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  @@unique([organizationId, key])
+  @@unique([organizationId, key, userId])
   @@index([organizationId])
+  @@index([userId])
   @@map("settings")
 }
 

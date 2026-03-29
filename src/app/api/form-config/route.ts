@@ -5,6 +5,7 @@ import { getOrgId } from "@/lib/auth-utils";
 import {
   SETTING_KEYS,
   type FormFieldConfig,
+  type FieldConfig,
   type MobileNavTab,
   type OrgFormConfig,
 } from "@/lib/form-config/types";
@@ -27,6 +28,39 @@ const EMPTY_CONFIG: OrgFormConfig = {
   mobileNavTabs: null,
   defaultLandingPage: null,
 };
+
+const ALL_KEYS = [
+  SETTING_KEYS.FORM_FIELD_CONFIG,
+  SETTING_KEYS.DISABLED_REPORTS,
+  SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
+  SETTING_KEYS.SIDEBAR_MODE,
+  SETTING_KEYS.SIDEBAR_SECTION_ORDER,
+  SETTING_KEYS.MOBILE_NAV_CONFIG,
+  SETTING_KEYS.DEFAULT_LANDING_PAGE,
+];
+
+/** Merge user-level field config over org-level, per form */
+function mergeFieldConfigs(
+  orgFields: FormFieldConfig,
+  userFields: FormFieldConfig
+): FormFieldConfig {
+  const merged: FormFieldConfig = { ...orgFields };
+  for (const [formName, userFormConfig] of Object.entries(userFields)) {
+    const key = formName as keyof FormFieldConfig;
+    const orgFormConfig = orgFields[key];
+    if (!orgFormConfig) {
+      merged[key] = userFormConfig;
+    } else {
+      merged[key] = {
+        hidden: userFormConfig.hidden ?? orgFormConfig.hidden,
+        defaults: { ...orgFormConfig.defaults, ...userFormConfig.defaults },
+        hiddenColumns:
+          userFormConfig.hiddenColumns ?? orgFormConfig.hiddenColumns,
+      } as FieldConfig;
+    }
+  }
+  return merged;
+}
 
 export async function GET() {
   try {
@@ -53,82 +87,62 @@ export async function GET() {
       return NextResponse.json(EMPTY_CONFIG);
     }
 
-    // Fetch all config settings in one query
-    const settings = await prisma.setting.findMany({
-      where: {
-        organizationId,
-        key: {
-          in: [
-            SETTING_KEYS.FORM_FIELD_CONFIG,
-            SETTING_KEYS.DISABLED_REPORTS,
-            SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
-            SETTING_KEYS.SIDEBAR_MODE,
-            SETTING_KEYS.SIDEBAR_SECTION_ORDER,
-            SETTING_KEYS.MOBILE_NAV_CONFIG,
-            SETTING_KEYS.DEFAULT_LANDING_PAGE,
-          ],
-        },
-      },
-    });
+    const userId = session.user.id;
 
-    const settingMap = new Map(settings.map((s) => [s.key, s.value]));
+    // Fetch org-level and user-level settings in parallel
+    const [orgSettings, userSettings] = await Promise.all([
+      prisma.setting.findMany({
+        where: { organizationId, userId: null, key: { in: ALL_KEYS } },
+      }),
+      userId
+        ? prisma.setting.findMany({
+            where: { organizationId, userId, key: { in: ALL_KEYS } },
+          })
+        : Promise.resolve([]),
+    ]);
 
-    const orgFields = parseJSON<FormFieldConfig>(
-      settingMap.get(SETTING_KEYS.FORM_FIELD_CONFIG),
-      {}
-    );
+    const orgMap = new Map(orgSettings.map((s) => [s.key, s.value]));
+    const userMap = new Map(userSettings.map((s) => [s.key, s.value]));
 
-    // Merge per-user defaults over org defaults
-    try {
-      const userId = session.user.id;
-      if (userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { formDefaults: true },
-        });
-
-        if (user?.formDefaults) {
-          const userDefaults = parseJSON<Record<string, Record<string, string | number | boolean>>>(
-            user.formDefaults,
-            {}
-          );
-          for (const [formName, userFormDefaults] of Object.entries(userDefaults)) {
-            if (!orgFields[formName as keyof FormFieldConfig]) {
-              orgFields[formName as keyof FormFieldConfig] = { hidden: [], defaults: {} };
-            }
-            const formConfig = orgFields[formName as keyof FormFieldConfig]!;
-            formConfig.defaults = { ...formConfig.defaults, ...userFormDefaults };
-          }
-        }
-      }
-    } catch {
-      // If user defaults merge fails, continue with org-only config
+    // Helper: user value overrides org value if present
+    function resolve<T>(key: string, fallback: T): T {
+      const userVal = userMap.get(key);
+      if (userVal !== undefined) return parseJSON<T>(userVal, fallback);
+      return parseJSON<T>(orgMap.get(key), fallback);
     }
 
+    // For form_field_config, do a deep per-form merge
+    const orgFields = parseJSON<FormFieldConfig>(
+      orgMap.get(SETTING_KEYS.FORM_FIELD_CONFIG),
+      {}
+    );
+    const userFields = parseJSON<FormFieldConfig>(
+      userMap.get(SETTING_KEYS.FORM_FIELD_CONFIG),
+      {}
+    );
+    const mergedFields =
+      Object.keys(userFields).length > 0
+        ? mergeFieldConfigs(orgFields, userFields)
+        : orgFields;
+
     const config: OrgFormConfig = {
-      fields: orgFields,
-      disabledReports: parseJSON<string[]>(
-        settingMap.get(SETTING_KEYS.DISABLED_REPORTS),
+      fields: mergedFields,
+      disabledReports: resolve<string[]>(SETTING_KEYS.DISABLED_REPORTS, []),
+      disabledSidebarItems: resolve<string[]>(
+        SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
         []
       ),
-      disabledSidebarItems: parseJSON<string[]>(
-        settingMap.get(SETTING_KEYS.DISABLED_SIDEBAR_ITEMS),
-        []
-      ),
-      sidebarMode: parseJSON<"full" | "hidden">(
-        settingMap.get(SETTING_KEYS.SIDEBAR_MODE),
-        "full"
-      ),
-      sidebarSectionOrder: parseJSON<string[] | null>(
-        settingMap.get(SETTING_KEYS.SIDEBAR_SECTION_ORDER),
+      sidebarMode: resolve<"full" | "hidden">(SETTING_KEYS.SIDEBAR_MODE, "full"),
+      sidebarSectionOrder: resolve<string[] | null>(
+        SETTING_KEYS.SIDEBAR_SECTION_ORDER,
         null
       ),
-      mobileNavTabs: parseJSON<MobileNavTab[] | null>(
-        settingMap.get(SETTING_KEYS.MOBILE_NAV_CONFIG),
+      mobileNavTabs: resolve<MobileNavTab[] | null>(
+        SETTING_KEYS.MOBILE_NAV_CONFIG,
         null
       ),
-      defaultLandingPage: parseJSON<string | null>(
-        settingMap.get(SETTING_KEYS.DEFAULT_LANDING_PAGE),
+      defaultLandingPage: resolve<string | null>(
+        SETTING_KEYS.DEFAULT_LANDING_PAGE,
         null
       ),
     };

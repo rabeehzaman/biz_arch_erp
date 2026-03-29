@@ -13,7 +13,7 @@ import {
   type FormName,
 } from "@/lib/form-config/types";
 
-function parseSettingJSON<T>(value: string | null | undefined, fallback: T): T {
+function parseJSON<T>(value: string | null | undefined, fallback: T): T {
   if (!value) return fallback;
   try {
     return JSON.parse(value) as T;
@@ -22,9 +22,54 @@ function parseSettingJSON<T>(value: string | null | undefined, fallback: T): T {
   }
 }
 
+const ALL_KEYS = [
+  SETTING_KEYS.FORM_FIELD_CONFIG,
+  SETTING_KEYS.DISABLED_REPORTS,
+  SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
+  SETTING_KEYS.SIDEBAR_MODE,
+  SETTING_KEYS.SIDEBAR_SECTION_ORDER,
+  SETTING_KEYS.MOBILE_NAV_CONFIG,
+  SETTING_KEYS.DEFAULT_LANDING_PAGE,
+];
+
+function buildConfigFromSettings(
+  settingMap: Map<string, string>
+): OrgFormConfig {
+  return {
+    fields: parseJSON<FormFieldConfig>(
+      settingMap.get(SETTING_KEYS.FORM_FIELD_CONFIG),
+      {}
+    ),
+    disabledReports: parseJSON<string[]>(
+      settingMap.get(SETTING_KEYS.DISABLED_REPORTS),
+      []
+    ),
+    disabledSidebarItems: parseJSON<string[]>(
+      settingMap.get(SETTING_KEYS.DISABLED_SIDEBAR_ITEMS),
+      []
+    ),
+    sidebarMode: parseJSON<"full" | "hidden">(
+      settingMap.get(SETTING_KEYS.SIDEBAR_MODE),
+      "full"
+    ),
+    sidebarSectionOrder: parseJSON<string[] | null>(
+      settingMap.get(SETTING_KEYS.SIDEBAR_SECTION_ORDER),
+      null
+    ),
+    mobileNavTabs: parseJSON<MobileNavTab[] | null>(
+      settingMap.get(SETTING_KEYS.MOBILE_NAV_CONFIG),
+      null
+    ),
+    defaultLandingPage: parseJSON<string | null>(
+      settingMap.get(SETTING_KEYS.DEFAULT_LANDING_PAGE),
+      null
+    ),
+  };
+}
+
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
     const session = await auth();
@@ -32,64 +77,40 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id, userId } = await params;
 
-    const settings = await prisma.setting.findMany({
-      where: {
-        organizationId: id,
-        userId: null,
-        key: {
-          in: [
-            SETTING_KEYS.FORM_FIELD_CONFIG,
-            SETTING_KEYS.DISABLED_REPORTS,
-            SETTING_KEYS.DISABLED_SIDEBAR_ITEMS,
-            SETTING_KEYS.SIDEBAR_MODE,
-            SETTING_KEYS.SIDEBAR_SECTION_ORDER,
-            SETTING_KEYS.MOBILE_NAV_CONFIG,
-            SETTING_KEYS.DEFAULT_LANDING_PAGE,
-          ],
-        },
-      },
+    // Verify user belongs to org
+    const user = await prisma.user.findFirst({
+      where: { id: userId, organizationId: id },
+      select: { id: true, name: true },
     });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
-    const settingMap = new Map(settings.map((s) => [s.key, s.value]));
+    // Fetch both org-level and user-level settings
+    const [orgSettings, userSettings] = await Promise.all([
+      prisma.setting.findMany({
+        where: { organizationId: id, userId: null, key: { in: ALL_KEYS } },
+      }),
+      prisma.setting.findMany({
+        where: { organizationId: id, userId, key: { in: ALL_KEYS } },
+      }),
+    ]);
 
-    const config: OrgFormConfig = {
-      fields: parseSettingJSON<FormFieldConfig>(
-        settingMap.get(SETTING_KEYS.FORM_FIELD_CONFIG),
-        {}
-      ),
-      disabledReports: parseSettingJSON<string[]>(
-        settingMap.get(SETTING_KEYS.DISABLED_REPORTS),
-        []
-      ),
-      disabledSidebarItems: parseSettingJSON<string[]>(
-        settingMap.get(SETTING_KEYS.DISABLED_SIDEBAR_ITEMS),
-        []
-      ),
-      sidebarMode: parseSettingJSON<"full" | "hidden">(
-        settingMap.get(SETTING_KEYS.SIDEBAR_MODE),
-        "full"
-      ),
-      sidebarSectionOrder: parseSettingJSON<string[] | null>(
-        settingMap.get(SETTING_KEYS.SIDEBAR_SECTION_ORDER),
-        null
-      ),
-      mobileNavTabs: parseSettingJSON<MobileNavTab[] | null>(
-        settingMap.get(SETTING_KEYS.MOBILE_NAV_CONFIG),
-        null
-      ),
-      defaultLandingPage: parseSettingJSON<string | null>(
-        settingMap.get(SETTING_KEYS.DEFAULT_LANDING_PAGE),
-        null
-      ),
-    };
+    const orgMap = new Map(orgSettings.map((s) => [s.key, s.value]));
+    const userMap = new Map(userSettings.map((s) => [s.key, s.value]));
 
-    return NextResponse.json(config);
+    return NextResponse.json({
+      orgConfig: buildConfigFromSettings(orgMap),
+      userConfig: buildConfigFromSettings(userMap),
+      // Which keys have user-level overrides
+      overriddenKeys: Array.from(userMap.keys()),
+    });
   } catch (error) {
-    console.error("Failed to fetch form config:", error);
+    console.error("Failed to fetch user form config:", error);
     return NextResponse.json(
-      { error: "Failed to fetch form config" },
+      { error: "Failed to fetch user form config" },
       { status: 500 }
     );
   }
@@ -97,7 +118,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
     const session = await auth();
@@ -105,10 +126,21 @@ export async function PUT(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id, userId } = await params;
+
+    // Verify user belongs to org
+    const user = await prisma.user.findFirst({
+      where: { id: userId, organizationId: id },
+      select: { id: true },
+    });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const body = (await request.json()) as Partial<OrgFormConfig>;
 
-    // Validate form field config
+    // --- Validation (same as org-level) ---
+
     if (body.fields) {
       for (const [formName, fieldConfig] of Object.entries(body.fields)) {
         if (!(formName in FORM_REGISTRY)) {
@@ -118,9 +150,12 @@ export async function PUT(
           );
         }
 
-        const formDef = FORM_REGISTRY[formName as FormName] as { label: string; fields: Record<string, { canHide: boolean; required: boolean }>; columns?: Record<string, { canHide: boolean }> };
+        const formDef = FORM_REGISTRY[formName as FormName] as {
+          label: string;
+          fields: Record<string, { canHide: boolean; required: boolean }>;
+          columns?: Record<string, { canHide: boolean }>;
+        };
 
-        // Validate hidden fields
         if (fieldConfig.hidden) {
           for (const fieldName of fieldConfig.hidden) {
             const field = formDef.fields[fieldName];
@@ -132,11 +167,12 @@ export async function PUT(
             }
             if (!field.canHide) {
               return NextResponse.json(
-                { error: `Field "${fieldName}" in "${formName}" cannot be hidden` },
+                {
+                  error: `Field "${fieldName}" in "${formName}" cannot be hidden`,
+                },
                 { status: 400 }
               );
             }
-            // If required and hidden, must have a default
             if (
               field.required &&
               (!fieldConfig.defaults ||
@@ -153,29 +189,33 @@ export async function PUT(
           }
         }
 
-        // Validate default field names
         if (fieldConfig.defaults) {
           for (const fieldName of Object.keys(fieldConfig.defaults)) {
             if (!(fieldName in formDef.fields)) {
               return NextResponse.json(
-                { error: `Unknown default field "${fieldName}" in form "${formName}"` },
+                {
+                  error: `Unknown default field "${fieldName}" in form "${formName}"`,
+                },
                 { status: 400 }
               );
             }
           }
         }
 
-        // Validate hidden columns
         if (fieldConfig.hiddenColumns) {
           if (!Array.isArray(fieldConfig.hiddenColumns)) {
             return NextResponse.json(
-              { error: `hiddenColumns must be an array in form "${formName}"` },
+              {
+                error: `hiddenColumns must be an array in form "${formName}"`,
+              },
               { status: 400 }
             );
           }
           if (!formDef.columns) {
             return NextResponse.json(
-              { error: `Form "${formName}" does not have configurable columns` },
+              {
+                error: `Form "${formName}" does not have configurable columns`,
+              },
               { status: 400 }
             );
           }
@@ -183,13 +223,17 @@ export async function PUT(
             const colDef = formDef.columns[colName];
             if (!colDef) {
               return NextResponse.json(
-                { error: `Unknown column "${colName}" in form "${formName}"` },
+                {
+                  error: `Unknown column "${colName}" in form "${formName}"`,
+                },
                 { status: 400 }
               );
             }
             if (!colDef.canHide) {
               return NextResponse.json(
-                { error: `Column "${colName}" in "${formName}" cannot be hidden` },
+                {
+                  error: `Column "${colName}" in "${formName}" cannot be hidden`,
+                },
                 { status: 400 }
               );
             }
@@ -198,7 +242,6 @@ export async function PUT(
       }
     }
 
-    // Validate disabled reports
     if (body.disabledReports) {
       if (!Array.isArray(body.disabledReports)) {
         return NextResponse.json(
@@ -207,7 +250,11 @@ export async function PUT(
         );
       }
       for (const slug of body.disabledReports) {
-        if (!ALL_REPORT_SLUGS.includes(slug as (typeof ALL_REPORT_SLUGS)[number])) {
+        if (
+          !ALL_REPORT_SLUGS.includes(
+            slug as (typeof ALL_REPORT_SLUGS)[number]
+          )
+        ) {
           return NextResponse.json(
             { error: `Unknown report slug: ${slug}` },
             { status: 400 }
@@ -216,7 +263,6 @@ export async function PUT(
       }
     }
 
-    // Validate disabled sidebar items
     if (body.disabledSidebarItems) {
       if (!Array.isArray(body.disabledSidebarItems)) {
         return NextResponse.json(
@@ -225,7 +271,11 @@ export async function PUT(
         );
       }
       for (const item of body.disabledSidebarItems) {
-        if (!ALL_SIDEBAR_ITEM_NAMES.includes(item as typeof ALL_SIDEBAR_ITEM_NAMES[number])) {
+        if (
+          !ALL_SIDEBAR_ITEM_NAMES.includes(
+            item as (typeof ALL_SIDEBAR_ITEM_NAMES)[number]
+          )
+        ) {
           return NextResponse.json(
             { error: `Unknown sidebar item: ${item}` },
             { status: 400 }
@@ -234,7 +284,6 @@ export async function PUT(
       }
     }
 
-    // Validate sidebar mode
     if (body.sidebarMode && !["full", "hidden"].includes(body.sidebarMode)) {
       return NextResponse.json(
         { error: "sidebarMode must be 'full' or 'hidden'" },
@@ -242,7 +291,6 @@ export async function PUT(
       );
     }
 
-    // Validate sidebar section order
     if (body.sidebarSectionOrder) {
       if (!Array.isArray(body.sidebarSectionOrder)) {
         return NextResponse.json(
@@ -251,7 +299,11 @@ export async function PUT(
         );
       }
       for (const section of body.sidebarSectionOrder) {
-        if (!SIDEBAR_SECTIONS.includes(section as (typeof SIDEBAR_SECTIONS)[number])) {
+        if (
+          !SIDEBAR_SECTIONS.includes(
+            section as (typeof SIDEBAR_SECTIONS)[number]
+          )
+        ) {
           return NextResponse.json(
             { error: `Unknown sidebar section: ${section}` },
             { status: 400 }
@@ -260,7 +312,6 @@ export async function PUT(
       }
     }
 
-    // Validate mobile nav tabs
     if (body.mobileNavTabs) {
       if (!Array.isArray(body.mobileNavTabs)) {
         return NextResponse.json(
@@ -276,7 +327,7 @@ export async function PUT(
       }
     }
 
-    // Upsert all settings
+    // --- Upsert user-level settings ---
     const upserts: { key: string; value: string }[] = [];
 
     if (body.fields !== undefined) {
@@ -325,7 +376,7 @@ export async function PUT(
     await Promise.all(
       upserts.map(async (u) => {
         const existing = await prisma.setting.findFirst({
-          where: { organizationId: id, key: u.key, userId: null },
+          where: { organizationId: id, key: u.key, userId },
         });
         if (existing) {
           await prisma.setting.update({
@@ -334,7 +385,7 @@ export async function PUT(
           });
         } else {
           await prisma.setting.create({
-            data: { organizationId: id, key: u.key, value: u.value },
+            data: { organizationId: id, key: u.key, value: u.value, userId },
           });
         }
       })
@@ -342,9 +393,36 @@ export async function PUT(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to update form config:", error);
+    console.error("Failed to update user form config:", error);
     return NextResponse.json(
-      { error: "Failed to update form config" },
+      { error: "Failed to update user form config" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string; userId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== "superadmin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id, userId } = await params;
+
+    // Delete all user-level settings (revert to org defaults)
+    await prisma.setting.deleteMany({
+      where: { organizationId: id, userId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to reset user form config:", error);
+    return NextResponse.json(
+      { error: "Failed to reset user form config" },
       { status: 500 }
     );
   }

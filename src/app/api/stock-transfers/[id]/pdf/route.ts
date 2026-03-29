@@ -41,11 +41,11 @@ export async function GET(
         },
       }),
       prisma.setting.findFirst({
-        where: { organizationId, key: "transfer_pdf_format" },
+        where: { organizationId, key: "transfer_pdf_format", userId: null },
         select: { value: true },
       }),
       prisma.setting.findFirst({
-        where: { organizationId, key: "transfer_pdf_hide_cost" },
+        where: { organizationId, key: "transfer_pdf_hide_cost", userId: null },
         select: { value: true },
       }),
       prisma.stockTransfer.findFirst({

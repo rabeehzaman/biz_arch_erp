@@ -16,6 +16,7 @@ export async function GET() {
             where: {
                 organizationId,
                 key: { startsWith: "restaurant_" },
+                userId: null,
             },
         });
 
@@ -55,13 +56,14 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        await prisma.setting.upsert({
-            where: {
-                organizationId_key: { organizationId, key },
-            },
-            update: { value: String(value) },
-            create: { organizationId, key, value: String(value) },
+        const existing = await prisma.setting.findFirst({
+            where: { organizationId, key, userId: null },
         });
+        if (existing) {
+            await prisma.setting.update({ where: { id: existing.id }, data: { value: String(value) } });
+        } else {
+            await prisma.setting.create({ data: { organizationId, key, value: String(value) } });
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -39,9 +39,9 @@ export async function GET(
     }
 
     const [pdfFormatSetting, transferPdfFormatSetting, transferHideCostSetting] = await Promise.all([
-      prisma.setting.findFirst({ where: { organizationId: id, key: "invoice_pdf_format" } }),
-      prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_format" } }),
-      prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_hide_cost" } }),
+      prisma.setting.findFirst({ where: { organizationId: id, key: "invoice_pdf_format", userId: null } }),
+      prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_format", userId: null } }),
+      prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_hide_cost", userId: null } }),
     ]);
 
     return NextResponse.json({
@@ -452,29 +452,38 @@ export async function PUT(
 
         // Upsert invoice PDF format setting
         if (invoicePdfFormat !== undefined) {
-          await tx.setting.upsert({
-            where: { organizationId_key: { organizationId: id, key: "invoice_pdf_format" } },
-            update: { value: invoicePdfFormat },
-            create: { organizationId: id, key: "invoice_pdf_format", value: invoicePdfFormat },
+          const existingInvoiceFmt = await tx.setting.findFirst({
+            where: { organizationId: id, key: "invoice_pdf_format", userId: null },
           });
+          if (existingInvoiceFmt) {
+            await tx.setting.update({ where: { id: existingInvoiceFmt.id }, data: { value: invoicePdfFormat } });
+          } else {
+            await tx.setting.create({ data: { organizationId: id, key: "invoice_pdf_format", value: invoicePdfFormat } });
+          }
         }
 
         // Upsert transfer PDF format setting
         if (transferPdfFormat !== undefined) {
-          await tx.setting.upsert({
-            where: { organizationId_key: { organizationId: id, key: "transfer_pdf_format" } },
-            update: { value: transferPdfFormat },
-            create: { organizationId: id, key: "transfer_pdf_format", value: transferPdfFormat },
+          const existingTransferFmt = await tx.setting.findFirst({
+            where: { organizationId: id, key: "transfer_pdf_format", userId: null },
           });
+          if (existingTransferFmt) {
+            await tx.setting.update({ where: { id: existingTransferFmt.id }, data: { value: transferPdfFormat } });
+          } else {
+            await tx.setting.create({ data: { organizationId: id, key: "transfer_pdf_format", value: transferPdfFormat } });
+          }
         }
 
         // Upsert transfer PDF hide cost setting
         if (transferPdfHideCost !== undefined) {
-          await tx.setting.upsert({
-            where: { organizationId_key: { organizationId: id, key: "transfer_pdf_hide_cost" } },
-            update: { value: String(transferPdfHideCost) },
-            create: { organizationId: id, key: "transfer_pdf_hide_cost", value: String(transferPdfHideCost) },
+          const existingHideCost = await tx.setting.findFirst({
+            where: { organizationId: id, key: "transfer_pdf_hide_cost", userId: null },
           });
+          if (existingHideCost) {
+            await tx.setting.update({ where: { id: existingHideCost.id }, data: { value: String(transferPdfHideCost) } });
+          } else {
+            await tx.setting.create({ data: { organizationId: id, key: "transfer_pdf_hide_cost", value: String(transferPdfHideCost) } });
+          }
         }
 
         // Seed default branch + warehouse when enabling multi-branch

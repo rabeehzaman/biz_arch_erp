@@ -18,13 +18,8 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
-    const setting = await prisma.setting.findUnique({
-      where: {
-        organizationId_key: {
-          organizationId,
-          key: POS_PAYMENT_METHODS_KEY,
-        },
-      },
+    const setting = await prisma.setting.findFirst({
+      where: { organizationId, key: POS_PAYMENT_METHODS_KEY, userId: null },
     });
 
     return NextResponse.json({
@@ -59,20 +54,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await prisma.setting.upsert({
-      where: {
-        organizationId_key: {
-          organizationId,
-          key: POS_PAYMENT_METHODS_KEY,
-        },
-      },
-      update: { value: serializeEnabledPOSPaymentMethods(methods) },
-      create: {
-        organizationId,
-        key: POS_PAYMENT_METHODS_KEY,
-        value: serializeEnabledPOSPaymentMethods(methods),
-      },
+    const existing = await prisma.setting.findFirst({
+      where: { organizationId, key: POS_PAYMENT_METHODS_KEY, userId: null },
     });
+    if (existing) {
+      await prisma.setting.update({ where: { id: existing.id }, data: { value: serializeEnabledPOSPaymentMethods(methods) } });
+    } else {
+      await prisma.setting.create({ data: { organizationId, key: POS_PAYMENT_METHODS_KEY, value: serializeEnabledPOSPaymentMethods(methods) } });
+    }
 
     return NextResponse.json({ success: true, methods });
   } catch (error) {

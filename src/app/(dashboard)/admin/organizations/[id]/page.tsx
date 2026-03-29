@@ -19,13 +19,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed, FileText } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { SubscriptionTab } from "./subscription-tab";
 import { FormConfigTab } from "./form-config-tab";
 import { UserDefaultsDialog } from "./user-defaults-dialog";
+import { UserFormConfigDialog } from "./user-form-config-dialog";
 import { INDIAN_STATES } from "@/lib/gst/constants";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n";
@@ -270,6 +271,8 @@ export default function OrganizationDetailsPage() {
 
     // User defaults state
     const [userDefaultsTarget, setUserDefaultsTarget] = useState<{ id: string; name: string } | null>(null);
+    // User form config state
+    const [userFormConfigTarget, setUserFormConfigTarget] = useState<{ id: string; name: string } | null>(null);
 
     // Change role state
     const [changeRoleOpen, setChangeRoleOpen] = useState(false);
@@ -2164,6 +2167,15 @@ export default function OrganizationDetailsPage() {
                                                             variant="outline"
                                                             size="sm"
                                                             className="h-8 px-3"
+                                                            onClick={() => setUserFormConfigTarget({ id: user.id, name: user.name || user.email })}
+                                                        >
+                                                            <FileText className="mr-1.5 h-3.5 w-3.5" />
+                                                            Form Config
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-3"
                                                             onClick={() => openChangeRoleDialog(user)}
                                                         >
                                                             <UserCog className="mr-1.5 h-3.5 w-3.5" />
@@ -2215,6 +2227,14 @@ export default function OrganizationDetailsPage() {
                                                                 >
                                                                     <Settings className="mr-1.5 h-3.5 w-3.5" />
                                                                     Defaults
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => setUserFormConfigTarget({ id: user.id, name: user.name || user.email })}
+                                                                >
+                                                                    <FileText className="mr-1.5 h-3.5 w-3.5" />
+                                                                    Form Config
                                                                 </Button>
                                                                 <Button
                                                                     variant="outline"
@@ -2307,6 +2327,17 @@ export default function OrganizationDetailsPage() {
                         userName={userDefaultsTarget.name}
                         open={!!userDefaultsTarget}
                         onOpenChange={(open) => !open && setUserDefaultsTarget(null)}
+                    />
+                )}
+
+                {userFormConfigTarget && (
+                    <UserFormConfigDialog
+                        orgId={organization.id}
+                        userId={userFormConfigTarget.id}
+                        userName={userFormConfigTarget.name}
+                        edition={edition}
+                        open={!!userFormConfigTarget}
+                        onOpenChange={(open) => !open && setUserFormConfigTarget(null)}
                     />
                 )}
 

@@ -13,8 +13,8 @@ export async function GET() {
 
     const organizationId = getOrgId(session);
 
-    const setting = await prisma.setting.findUnique({
-      where: { organizationId_key: { organizationId, key: POS_RECEIPT_PRINTING_KEY } },
+    const setting = await prisma.setting.findFirst({
+      where: { organizationId, key: POS_RECEIPT_PRINTING_KEY, userId: null },
     });
 
     return NextResponse.json({ value: setting?.value ?? "false" });
@@ -39,11 +39,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Value must be 'true' or 'false'" }, { status: 400 });
     }
 
-    await prisma.setting.upsert({
-      where: { organizationId_key: { organizationId, key: POS_RECEIPT_PRINTING_KEY } },
-      update: { value },
-      create: { organizationId, key: POS_RECEIPT_PRINTING_KEY, value },
+    const existing = await prisma.setting.findFirst({
+      where: { organizationId, key: POS_RECEIPT_PRINTING_KEY, userId: null },
     });
+    if (existing) {
+      await prisma.setting.update({ where: { id: existing.id }, data: { value } });
+    } else {
+      await prisma.setting.create({ data: { organizationId, key: POS_RECEIPT_PRINTING_KEY, value } });
+    }
 
     return NextResponse.json({ success: true, value });
   } catch (error) {

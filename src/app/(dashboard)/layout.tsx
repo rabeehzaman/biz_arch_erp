@@ -58,6 +58,7 @@ export default async function DashboardLayout({
           where: {
             organizationId,
             key: "disabledSidebarItems",
+            userId: null,
           },
         });
 
@@ -97,6 +98,7 @@ export default async function DashboardLayout({
         const configSettings = await prisma.setting.findMany({
           where: {
             organizationId: orgId,
+            userId: null,
             key: {
               in: [
                 SETTING_KEYS.FORM_FIELD_CONFIG,
