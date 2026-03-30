@@ -16,7 +16,7 @@ async function getBarcodeDetector(formats: string[]) {
     return new BarcodeDetector({ formats: formats as any });
 }
 
-export function GlobalScanner() {
+export function GlobalScanner({ isMobileShopMode }: { isMobileShopMode?: boolean }) {
     const router = useRouter();
     const { t } = useLanguage();
     const [isMounted, setIsMounted] = useState(false);
@@ -100,7 +100,11 @@ export function GlobalScanner() {
 
                     setTimeout(() => {
                         closeScanner();
-                        handleLookup(barcode);
+                        if (isMobileShopMode) {
+                            router.push(`/mobile-shop/imei-lookup?imei=${encodeURIComponent(barcode)}`);
+                        } else {
+                            handleLookup(barcode);
+                        }
                     }, 600);
                     return;
                 }
@@ -109,7 +113,7 @@ export function GlobalScanner() {
             .catch(() => {
                 rafRef.current = requestAnimationFrame(scanFrame);
             });
-    }, [handleLookup, stopCamera, closeScanner]);
+    }, [handleLookup, stopCamera, closeScanner, isMobileShopMode, router]);
 
     useEffect(() => {
         setIsMounted(true);

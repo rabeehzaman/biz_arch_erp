@@ -11,6 +11,7 @@ declare module "next-auth" {
       eInvoicingEnabled?: boolean;
       multiUnitEnabled?: boolean;
       multiBranchEnabled?: boolean;
+      isScannerEnabled?: boolean;
       isMobileShopModuleEnabled?: boolean;
       isJewelleryModuleEnabled?: boolean;
       isRestaurantModuleEnabled?: boolean;
@@ -29,6 +30,7 @@ declare module "next-auth" {
     eInvoicingEnabled?: boolean;
     multiUnitEnabled?: boolean;
     multiBranchEnabled?: boolean;
+    isScannerEnabled?: boolean;
     isMobileShopModuleEnabled?: boolean;
     isJewelleryModuleEnabled?: boolean;
     isRestaurantModuleEnabled?: boolean;
@@ -49,6 +51,7 @@ declare module "next-auth/jwt" {
     eInvoicingEnabled?: boolean;
     multiUnitEnabled?: boolean;
     multiBranchEnabled?: boolean;
+    isScannerEnabled?: boolean;
     isMobileShopModuleEnabled?: boolean;
     isJewelleryModuleEnabled?: boolean;
     isRestaurantModuleEnabled?: boolean;

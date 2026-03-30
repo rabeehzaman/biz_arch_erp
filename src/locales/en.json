@@ -2153,6 +2153,8 @@
         "enableAlternateUnitsDesc": "Allow defining products with multiple units",
         "enableMultiBranch": "Enable Multi-Branch",
         "enableMultiBranchDesc": "Manage multiple branches, warehouses",
+        "enableScanner": "Enable Barcode Scanner",
+        "enableScannerDesc": "Show the floating barcode scanner button on mobile",
         "enableMobileShop": "Enable Mobile Shop",
         "enableMobileShopDesc": "Track individual mobile devices by IMEI",
         "enableJewelleryShop": "Enable Jewellery Shop Module",

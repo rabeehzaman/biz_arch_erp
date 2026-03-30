@@ -29,6 +29,7 @@ model Organization {
   eInvoicingEnabled  Boolean  @default(false)
   multiUnitEnabled   Boolean  @default(false)
   multiBranchEnabled         Boolean  @default(false)
+  isScannerEnabled             Boolean  @default(false)
   isMobileShopModuleEnabled  Boolean  @default(false)
   isWeighMachineEnabled        Boolean  @default(false)
 

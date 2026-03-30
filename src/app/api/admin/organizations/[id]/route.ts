@@ -83,6 +83,7 @@ export async function PUT(
       eInvoicingEnabled,
       multiUnitEnabled,
       multiBranchEnabled,
+      isScannerEnabled,
       isMobileShopModuleEnabled,
       isWeighMachineEnabled,
       weighMachineBarcodePrefix,
@@ -329,6 +330,7 @@ export async function PUT(
     if (eInvoicingEnabled !== undefined) updateData.eInvoicingEnabled = gstEnabled ? eInvoicingEnabled : false;
     if (multiUnitEnabled !== undefined) updateData.multiUnitEnabled = multiUnitEnabled;
     if (multiBranchEnabled !== undefined) updateData.multiBranchEnabled = multiBranchEnabled;
+    if (isScannerEnabled !== undefined) updateData.isScannerEnabled = isScannerEnabled;
     if (isMobileShopModuleEnabled !== undefined) updateData.isMobileShopModuleEnabled = isMobileShopModuleEnabled;
     if (isWeighMachineEnabled !== undefined) updateData.isWeighMachineEnabled = isWeighMachineEnabled;
     if (weighMachineBarcodePrefix !== undefined) updateData.weighMachineBarcodePrefix = weighMachineBarcodePrefix || "77";

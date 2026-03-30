@@ -40,6 +40,7 @@ interface OrganizationDetails {
     eInvoicingEnabled: boolean;
     multiUnitEnabled: boolean;
     multiBranchEnabled: boolean;
+    isScannerEnabled: boolean;
     isMobileShopModuleEnabled: boolean;
     isWeighMachineEnabled: boolean;
     isJewelleryModuleEnabled: boolean;
@@ -156,6 +157,7 @@ export default function OrganizationDetailsPage() {
     const [eInvoicingEnabled, setEInvoicingEnabled] = useState(false);
     const [multiUnitEnabled, setMultiUnitEnabled] = useState(false);
     const [multiBranchEnabled, setMultiBranchEnabled] = useState(false);
+    const [isScannerEnabled, setIsScannerEnabled] = useState(false);
     const [isMobileShopModuleEnabled, setIsMobileShopModuleEnabled] = useState(false);
     const [isWeighMachineEnabled, setIsWeighMachineEnabled] = useState(false);
     const [isJewelleryModuleEnabled, setIsJewelleryModuleEnabled] = useState(false);
@@ -290,6 +292,7 @@ export default function OrganizationDetailsPage() {
         setEInvoicingEnabled(data.eInvoicingEnabled || false);
         setMultiUnitEnabled(data.multiUnitEnabled || false);
         setMultiBranchEnabled(data.multiBranchEnabled || false);
+        setIsScannerEnabled(data.isScannerEnabled || false);
         setIsMobileShopModuleEnabled(data.isMobileShopModuleEnabled || false);
         setIsWeighMachineEnabled(data.isWeighMachineEnabled || false);
         setIsJewelleryModuleEnabled(data.isJewelleryModuleEnabled || false);
@@ -471,6 +474,7 @@ export default function OrganizationDetailsPage() {
                     eInvoicingEnabled: gstEnabled ? eInvoicingEnabled : false,
                     multiUnitEnabled,
                     multiBranchEnabled,
+                    isScannerEnabled,
                     isMobileShopModuleEnabled,
                     isWeighMachineEnabled,
                     isJewelleryModuleEnabled,
@@ -1325,6 +1329,21 @@ export default function OrganizationDetailsPage() {
                                             id="multiBranchEnabled"
                                             checked={multiBranchEnabled}
                                             onCheckedChange={setMultiBranchEnabled}
+                                        />
+                                    </div>
+
+                                    {/* Scanner */}
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="isScannerEnabled">{t("admin.enableScanner")}</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("admin.enableScannerDesc")}
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isScannerEnabled"
+                                            checked={isScannerEnabled}
+                                            onCheckedChange={setIsScannerEnabled}
                                         />
                                     </div>
 

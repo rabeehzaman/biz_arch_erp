@@ -2040,6 +2040,8 @@
         "enableAlternateUnitsDesc": "السماح بتعريف المنتجات بوحدات متعددة",
         "enableMultiBranch": "تفعيل تعدد الفروع",
         "enableMultiBranchDesc": "إدارة فروع ومستودعات متعددة",
+        "enableScanner": "تفعيل ماسح الباركود",
+        "enableScannerDesc": "إظهار زر ماسح الباركود العائم على الهاتف",
         "enableMobileShop": "تفعيل متجر الأجهزة",
         "enableMobileShopDesc": "تتبع أجهزة الهاتف المحمول بـ IMEI",
         "enableJewelleryShop": "تفعيل وحدة متجر المجوهرات",
