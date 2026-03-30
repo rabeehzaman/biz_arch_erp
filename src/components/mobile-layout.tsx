@@ -320,9 +320,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
         cancelLabel={t("common.cancel")}
       />
 
-      {session?.user?.isScannerEnabled && (
-        <GlobalScanner isMobileShopMode={!!session?.user?.isMobileShopModuleEnabled} />
-      )}
+      <GlobalScanner isMobileShopMode={!!session?.user?.isMobileShopModuleEnabled} />
     </div>
     </NavigationDirectionProvider>
   );
