@@ -220,9 +220,17 @@ model Organization {
   metalLedgerEntries         MetalLedgerEntry[]
   subscriptionLogs           SubscriptionLog[]
 
+  // Inventory Adjustment Relations
+  inventoryAdjustments       InventoryAdjustment[]
+  inventoryAdjustmentItems   InventoryAdjustmentItem[]
+
   // Restaurant Module Relations
   restaurantTables           RestaurantTable[]
   kotOrders                  KOTOrder[]
+
+  // Comment Relations
+  customerComments           CustomerComment[]
+  supplierComments           SupplierComment[]
 
   @@map("organizations")
 }
@@ -270,6 +278,8 @@ model User {
   soldDevices         MobileDevice[]     @relation("SoldDevices")
   kotOrders           KOTOrder[]
   settings            Setting[]          @relation("UserSettings")
+  customerComments    CustomerComment[]  @relation("CustomerComments")
+  supplierComments    SupplierComment[]  @relation("SupplierComments")
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -357,10 +367,11 @@ model Product {
   creditNoteItems      CreditNoteItem[]
   debitNoteItems       DebitNoteItem[]
   costAuditLogs        CostAuditLog[]
-  stockTransferItems   StockTransferItem[]
-  mobileDevices        MobileDevice[]
-  bundleItems          ProductBundleItem[]  @relation("BundleParent")
-  bundleParents        ProductBundleItem[]  @relation("BundleComponent")
+  stockTransferItems         StockTransferItem[]
+  mobileDevices              MobileDevice[]
+  bundleItems                ProductBundleItem[]  @relation("BundleParent")
+  bundleParents              ProductBundleItem[]  @relation("BundleComponent")
+  inventoryAdjustmentItems   InventoryAdjustmentItem[]
 
   // Jewellery relation (1:1)
   jewelleryItem        JewelleryItem?
@@ -456,6 +467,8 @@ model Customer {
   posHeldOrders POSHeldOrder[]
   mobileDevices MobileDevice[]
 
+  comments      CustomerComment[]
+
   // Jewellery relations
   jewelleryRepairs   JewelleryRepair[]
   oldGoldPurchases   OldGoldPurchase[]
@@ -518,6 +531,8 @@ model Supplier {
   debitNotes       DebitNote[]
   expenses         Expense[]
   mobileDevices    MobileDevice[]
+
+  comments         SupplierComment[]
 
   // Jewellery relations
   jewelleryItems         JewelleryItem[]
@@ -1356,6 +1371,9 @@ model StockLot {
   creditNoteItemId      String?              @unique
   creditNoteItem        CreditNoteItem?      @relation(fields: [creditNoteItemId], references: [id])
 
+  inventoryAdjustmentItemId String?                  @unique
+  inventoryAdjustmentItem   InventoryAdjustmentItem? @relation(fields: [inventoryAdjustmentItemId], references: [id])
+
   stockTransferId String?
 
   warehouseId String?
@@ -1390,6 +1408,16 @@ enum StockSourceType {
   STOCK_TRANSFER
 }
 
+enum AdjustmentType {
+  INCREASE
+  DECREASE
+}
+
+enum StockTakeStatus {
+  DRAFT
+  RECONCILED
+}
+
 model StockLotConsumption {
   id             String       @id @default(cuid())
   stockLotId     String
@@ -1403,6 +1431,9 @@ model StockLotConsumption {
   stockTransferItemId String?
   stockTransferItem   StockTransferItem? @relation(fields: [stockTransferItemId], references: [id], onDelete: Cascade)
 
+  inventoryAdjustmentItemId String?
+  inventoryAdjustmentItem   InventoryAdjustmentItem? @relation(fields: [inventoryAdjustmentItemId], references: [id], onDelete: Cascade)
+
   quantityConsumed Decimal @db.Decimal(10, 2)
   unitCost         Decimal @db.Decimal(10, 2)
   totalCost        Decimal @db.Decimal(12, 2)
@@ -1412,6 +1443,7 @@ model StockLotConsumption {
   @@index([stockLotId])
   @@index([invoiceItemId])
   @@index([stockTransferItemId])
+  @@index([inventoryAdjustmentItemId])
   @@index([organizationId])
   @@map("stock_lot_consumptions")
 }
@@ -1442,6 +1474,63 @@ model OpeningStock {
   @@index([productId])
   @@index([warehouseId])
   @@map("opening_stocks")
+}
+
+// ==================== INVENTORY ADJUSTMENTS ====================
+
+model InventoryAdjustment {
+  id               String       @id @default(cuid())
+  adjustmentNumber String
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+
+  adjustmentDate DateTime
+  notes          String?
+  status         StockTakeStatus @default(DRAFT)
+
+  warehouseId String?
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
+
+  reconciledAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items InventoryAdjustmentItem[]
+
+  @@unique([organizationId, adjustmentNumber])
+  @@index([organizationId])
+  @@index([organizationId, adjustmentDate(sort: Desc)])
+  @@index([organizationId, status])
+  @@index([warehouseId])
+  @@map("inventory_adjustments")
+}
+
+model InventoryAdjustmentItem {
+  id                    String              @id @default(cuid())
+  inventoryAdjustmentId String
+  inventoryAdjustment   InventoryAdjustment @relation(fields: [inventoryAdjustmentId], references: [id], onDelete: Cascade)
+  organizationId        String
+  organization          Organization        @relation(fields: [organizationId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  systemQuantity   Decimal        @default(0) @db.Decimal(10, 2)
+  physicalQuantity Decimal        @default(0) @db.Decimal(10, 2)
+  adjustmentType   AdjustmentType
+  quantity         Decimal        @db.Decimal(10, 2)
+  unitCost         Decimal        @db.Decimal(10, 2)
+  reason           String?
+
+  createdAt DateTime @default(now())
+
+  stockLot        StockLot?
+  lotConsumptions StockLotConsumption[]
+
+  @@index([inventoryAdjustmentId])
+  @@index([productId])
+  @@index([organizationId])
+  @@map("inventory_adjustment_items")
 }
 
 // ==================== COST AUDIT LOG ====================
@@ -1706,6 +1795,7 @@ enum JournalSourceType {
   POS_SESSION_CLOSE
   POS_SESSION_OPEN
   KARIGAR_TRANSACTION
+  INVENTORY_ADJUSTMENT
 }
 
 enum ExpenseStatus {
@@ -1993,11 +2083,12 @@ model Warehouse {
   posSessions        POSSession[]
   stockLots          StockLot[]
   openingStocks      OpeningStock[]
-  stockTransfersFrom StockTransfer[]       @relation("SourceWarehouse")
-  stockTransfersTo   StockTransfer[]       @relation("DestinationWarehouse")
-  stockTransferItems StockTransferItem[]
-  userAccess         UserWarehouseAccess[]
-  posRegisterConfigs POSRegisterConfig[]
+  stockTransfersFrom      StockTransfer[]       @relation("SourceWarehouse")
+  stockTransfersTo        StockTransfer[]       @relation("DestinationWarehouse")
+  stockTransferItems      StockTransferItem[]
+  userAccess              UserWarehouseAccess[]
+  posRegisterConfigs      POSRegisterConfig[]
+  inventoryAdjustments    InventoryAdjustment[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -2771,4 +2862,40 @@ model KOTOrderItem {
 
   @@index([kotOrderId])
   @@map("kot_order_items")
+}
+
+// ==================== COMMENTS ====================
+
+model CustomerComment {
+  id             String       @id @default(cuid())
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation("CustomerComments", fields: [userId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  content        String       @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([customerId])
+  @@index([organizationId])
+  @@map("customer_comments")
+}
+
+model SupplierComment {
+  id             String       @id @default(cuid())
+  supplierId     String
+  supplier       Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation("SupplierComments", fields: [userId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  content        String       @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([supplierId])
+  @@index([organizationId])
+  @@map("supplier_comments")
 }

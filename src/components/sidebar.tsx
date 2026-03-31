@@ -106,6 +106,7 @@ const inventoryNavigation = [
   { nameKey: "nav.branches", href: "/inventory/branches", icon: GitBranch },
   { nameKey: "nav.stockTransfers", href: "/inventory/stock-transfers", icon: ArrowRightLeft },
   { nameKey: "nav.openingStock", href: "/inventory/opening-stock", icon: Package },
+  { nameKey: "nav.stockTake", href: "/inventory/adjustments", icon: ClipboardList },
 ];
 
 const mobileShopNavigation = [
@@ -178,6 +179,7 @@ const NAME_TO_KEY: Record<string, string> = {
   "Branches": "nav.branches",
   "Stock Transfers": "nav.stockTransfers",
   "Opening Stock": "nav.openingStock",
+  "Stock Take": "nav.stockTake",
   "IMEI Lookup": "nav.imeiLookup",
   "Device Inventory": "nav.deviceInventory",
   "Jewellery Dashboard": "nav.jewelleryDashboard",
@@ -375,10 +377,16 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
         visibleAccounting.length > 0 ? (
           <CollapsibleSection title="nav.accounting" icon={BookOpen} items={visibleAccounting} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
-      inventory: () =>
-        multiBranchEnabled && visibleInventory.length > 0 ? (
-          <CollapsibleSection title="nav.inventory" icon={Warehouse} items={visibleInventory} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
-        ) : null,
+      inventory: () => {
+        // Filter inventory items: branches and stock transfers need multiBranch, but opening stock and stock take always show
+        const multiBranchOnly = new Set(["nav.branches", "nav.stockTransfers"]);
+        const items = visibleInventory.filter(
+          (item) => multiBranchEnabled || !multiBranchOnly.has(item.nameKey)
+        );
+        return items.length > 0 ? (
+          <CollapsibleSection title="nav.inventory" icon={Warehouse} items={items} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
+        ) : null;
+      },
       mobileShop: () =>
         isMobileShopEnabled && visibleMobileShop.length > 0 ? (
           <CollapsibleSection title="nav.mobileShop" icon={Smartphone} items={visibleMobileShop} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />

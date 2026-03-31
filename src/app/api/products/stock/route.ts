@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -11,13 +11,17 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const warehouseId = request.nextUrl.searchParams.get("warehouseId");
 
     const products = await prisma.product.findMany({
       where: { isActive: true, organizationId, isService: false },
       orderBy: { name: "asc" },
       include: {
         stockLots: {
-          where: { remainingQuantity: { gt: 0 } },
+          where: {
+            remainingQuantity: { gt: 0 },
+            ...(warehouseId ? { warehouseId } : {}),
+          },
           select: {
             id: true,
             remainingQuantity: true,

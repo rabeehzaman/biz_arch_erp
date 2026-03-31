@@ -59,6 +59,7 @@ const DEFAULT_ACCOUNTS: AccountDef[] = [
   // Sales Discounts is a contra-revenue account (debit-normal). In journal entries, DEBIT this account to record discounts given.
   { code: "4200", name: "Sales Discounts (خصومات المبيعات)", accountType: "REVENUE", accountSubType: "OTHER_REVENUE", parentCode: "4000", isSystem: false },
   { code: "4900", name: "Other Revenue (إيرادات أخرى)", accountType: "REVENUE", accountSubType: "OTHER_REVENUE", parentCode: "4000", isSystem: false },
+  { code: "4910", name: "Inventory Adjustment Gain (أرباح تسوية المخزون)", accountType: "REVENUE", accountSubType: "OTHER_REVENUE", parentCode: "4000", isSystem: true },
 
   // EXPENSES
   { code: "5000", name: "Expenses (المصروفات)", accountType: "EXPENSE", accountSubType: "OPERATING_EXPENSE", isSystem: true },
@@ -76,6 +77,7 @@ const DEFAULT_ACCOUNTS: AccountDef[] = [
   // Purchase Discounts is a contra-expense account (credit-normal). In journal entries, CREDIT this account to record discounts received.
   { code: "5600", name: "Purchase Discounts (خصومات المشتريات)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: false },
   { code: "5900", name: "Other Expenses (مصروفات أخرى)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: false },
+  { code: "5910", name: "Inventory Adjustment Loss (خسارة تسوية المخزون)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: true },
   { code: "6150", name: "Cash Short and Over (العجز والزيادة في النقدية)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: true },
   { code: "6160", name: "Round Off Adjustment (تسوية التقريب)", accountType: "EXPENSE", accountSubType: "OTHER_EXPENSE", parentCode: "5000", isSystem: true },
 ];

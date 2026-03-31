@@ -133,6 +133,70 @@ export async function ensureJewelleryAccounts(
   };
 }
 
+export async function ensureInventoryAdjustmentAccounts(
+  tx: Tx,
+  organizationId: string
+): Promise<{
+  adjustmentExpense: { id: string; code: string; name: string };
+  adjustmentIncome: { id: string; code: string; name: string };
+} | null> {
+  let expenseAccount = await getSystemAccount(tx, organizationId, "5910");
+  let incomeAccount = await getSystemAccount(tx, organizationId, "4910");
+
+  if (!expenseAccount) {
+    const parentExpense = await tx.account.findFirst({
+      where: { organizationId, code: "5000" },
+      select: { id: true },
+    });
+    if (!parentExpense) return null;
+
+    expenseAccount = await tx.account.upsert({
+      where: { organizationId_code: { organizationId, code: "5910" } },
+      update: {},
+      create: {
+        organizationId,
+        code: "5910",
+        name: "Inventory Adjustment Loss (خسارة تسوية المخزون)",
+        accountType: "EXPENSE",
+        accountSubType: "OTHER_EXPENSE",
+        parentId: parentExpense.id,
+        isSystem: true,
+      },
+      select: { id: true, code: true, name: true },
+    });
+  }
+
+  if (!incomeAccount) {
+    const parentIncome = await tx.account.findFirst({
+      where: { organizationId, code: "4000" },
+      select: { id: true },
+    });
+    if (!parentIncome) return null;
+
+    incomeAccount = await tx.account.upsert({
+      where: { organizationId_code: { organizationId, code: "4910" } },
+      update: {},
+      create: {
+        organizationId,
+        code: "4910",
+        name: "Inventory Adjustment Gain (أرباح تسوية المخزون)",
+        accountType: "REVENUE",
+        accountSubType: "OTHER_REVENUE",
+        parentId: parentIncome.id,
+        isSystem: true,
+      },
+      select: { id: true, code: true, name: true },
+    });
+  }
+
+  if (!expenseAccount || !incomeAccount) return null;
+
+  return {
+    adjustmentExpense: expenseAccount,
+    adjustmentIncome: incomeAccount,
+  };
+}
+
 export function validateJournalBalance(
   lines: Array<{ debit: number; credit: number }>
 ): boolean {

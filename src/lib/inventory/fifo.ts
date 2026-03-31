@@ -181,7 +181,7 @@ export async function consumeStockFIFO(
   tx: PrismaTransaction,
   organizationId?: string,
   warehouseId?: string | null,
-  referenceType: "INVOICE" | "STOCK_TRANSFER" = "INVOICE"
+  referenceType: "INVOICE" | "STOCK_TRANSFER" | "INVENTORY_ADJUSTMENT" = "INVOICE"
 ): Promise<FIFOConsumptionResult> {
   const qty =
     quantityNeeded instanceof Decimal
@@ -233,8 +233,10 @@ export async function consumeStockFIFO(
     };
     if (referenceType === "INVOICE") {
       consumptionData.invoiceItemId = referenceId;
-    } else {
+    } else if (referenceType === "STOCK_TRANSFER") {
       consumptionData.stockTransferItemId = referenceId;
+    } else {
+      consumptionData.inventoryAdjustmentItemId = referenceId;
     }
     if (organizationId) consumptionData.organizationId = organizationId;
 
@@ -295,12 +297,14 @@ export async function consumeStockFIFO(
 export async function restoreStockFromConsumptions(
   referenceId: string,
   tx: PrismaTransaction,
-  referenceType: "INVOICE" | "STOCK_TRANSFER" = "INVOICE"
+  referenceType: "INVOICE" | "STOCK_TRANSFER" | "INVENTORY_ADJUSTMENT" = "INVOICE"
 ): Promise<void> {
   // Get all consumptions for this item
   const whereClause = referenceType === "INVOICE"
     ? { invoiceItemId: referenceId }
-    : { stockTransferItemId: referenceId };
+    : referenceType === "STOCK_TRANSFER"
+    ? { stockTransferItemId: referenceId }
+    : { inventoryAdjustmentItemId: referenceId };
 
   const consumptions = await tx.stockLotConsumption.findMany({
     where: whereClause,
@@ -410,6 +414,39 @@ export async function createStockLotFromOpeningStock(
 }
 
 /**
+ * Create stock lot from inventory adjustment (INCREASE)
+ */
+export async function createStockLotFromAdjustment(
+  inventoryAdjustmentItemId: string,
+  productId: string,
+  quantity: Decimal | number,
+  unitCost: Decimal | number,
+  lotDate: Date,
+  tx: PrismaTransaction,
+  organizationId?: string,
+  warehouseId?: string | null
+): Promise<void> {
+  const qty = quantity instanceof Decimal ? quantity : new Decimal(quantity);
+  const cost = unitCost instanceof Decimal ? unitCost : new Decimal(unitCost);
+
+  const lotData: any = {
+    productId,
+    sourceType: "ADJUSTMENT",
+    inventoryAdjustmentItemId,
+    lotDate,
+    unitCost: cost,
+    initialQuantity: qty,
+    remainingQuantity: qty,
+  };
+  if (organizationId) lotData.organizationId = organizationId;
+  if (warehouseId) lotData.warehouseId = warehouseId;
+
+  await tx.stockLot.create({
+    data: lotData,
+  });
+}
+
+/**
  * Recalculate FIFO for a product from a specific date forward
  * Used when backdated transactions are edited
  */
@@ -450,8 +487,16 @@ export async function recalculateFromDate(
     }
   });
 
-  if (salesCount === 0 && transfersCount === 0 && debitNotesCount === 0 && creditNotesCount === 0) {
-    // No sales, transfers, debit notes, or credit notes from this date onwards, nothing to recalculate
+  const adjustmentDecreaseCount = await tx.inventoryAdjustmentItem.count({
+    where: {
+      productId,
+      adjustmentType: "DECREASE",
+      inventoryAdjustment: { adjustmentDate: { gte: fromDate } },
+    },
+  });
+
+  if (salesCount === 0 && transfersCount === 0 && debitNotesCount === 0 && creditNotesCount === 0 && adjustmentDecreaseCount === 0) {
+    // No sales, transfers, debit notes, credit notes, or adjustment decreases from this date onwards, nothing to recalculate
     return;
   }
 
@@ -470,6 +515,11 @@ export async function recalculateFromDate(
           stockTransferItem: {
             include: {
               stockTransfer: true,
+            },
+          },
+          inventoryAdjustmentItem: {
+            include: {
+              inventoryAdjustment: true,
             },
           },
         },
@@ -538,18 +588,34 @@ export async function recalculateFromDate(
     orderBy: { creditNote: { issueDate: "asc" } }
   });
 
+  // 2e. Get all inventory adjustment DECREASE items for this product from fromDate onwards
+  const adjustmentDecreaseItems = await tx.inventoryAdjustmentItem.findMany({
+    where: {
+      productId,
+      adjustmentType: "DECREASE",
+      inventoryAdjustment: { adjustmentDate: { gte: fromDate } },
+    },
+    include: {
+      inventoryAdjustment: true,
+      lotConsumptions: true,
+    },
+    orderBy: { inventoryAdjustment: { adjustmentDate: "asc" } },
+  });
+
   // Merge into a single timeline sorted by date
   type TimelineEvent =
     | { type: "INVOICE", item: typeof salesItems[0], date: Date }
     | { type: "STOCK_TRANSFER", item: typeof transferItems[0], date: Date }
     | { type: "DEBIT_NOTE", item: typeof debitNoteItems[0], date: Date }
-    | { type: "CREDIT_NOTE", item: typeof creditNoteItems[0], date: Date };
+    | { type: "CREDIT_NOTE", item: typeof creditNoteItems[0], date: Date }
+    | { type: "ADJUSTMENT_DECREASE", item: typeof adjustmentDecreaseItems[0], date: Date };
 
   const events: TimelineEvent[] = [
     ...salesItems.map(item => ({ type: "INVOICE" as const, item, date: item.invoice.issueDate })),
     ...transferItems.map(item => ({ type: "STOCK_TRANSFER" as const, item, date: item.stockTransfer.transferDate })),
     ...debitNoteItems.map(item => ({ type: "DEBIT_NOTE" as const, item, date: item.debitNote.issueDate })),
-    ...creditNoteItems.map(item => ({ type: "CREDIT_NOTE" as const, item, date: item.creditNote.issueDate }))
+    ...creditNoteItems.map(item => ({ type: "CREDIT_NOTE" as const, item, date: item.creditNote.issueDate })),
+    ...adjustmentDecreaseItems.map(item => ({ type: "ADJUSTMENT_DECREASE" as const, item, date: item.inventoryAdjustment.adjustmentDate })),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   // 3. Reset all lot quantities
@@ -560,6 +626,7 @@ export async function recalculateFromDate(
         .filter((c) => {
           if (c.invoiceItem?.invoice?.issueDate) return c.invoiceItem.invoice.issueDate < fromDate;
           if (c.stockTransferItem?.stockTransfer?.transferDate) return c.stockTransferItem.stockTransfer.transferDate < fromDate;
+          if (c.inventoryAdjustmentItem?.inventoryAdjustment?.adjustmentDate) return c.inventoryAdjustmentItem.inventoryAdjustment.adjustmentDate < fromDate;
           return false;
         })
         .reduce((sum, c) => sum.add(c.quantityConsumed), new Decimal(0));
@@ -588,6 +655,7 @@ export async function recalculateFromDate(
   const itemIds = salesItems.map((item) => item.id);
   const transferItemIds = transferItems.map((t) => t.id);
   const debitNoteItemIds = debitNoteItems.map((dn) => dn.id);
+  const adjustmentItemIds = adjustmentDecreaseItems.map((a) => a.id);
 
   if (itemIds.length > 0) {
     await tx.stockLotConsumption.deleteMany({
@@ -602,6 +670,11 @@ export async function recalculateFromDate(
   if (debitNoteItemIds.length > 0) {
     await tx.debitNoteLotConsumption.deleteMany({
       where: { debitNoteItemId: { in: debitNoteItemIds } },
+    });
+  }
+  if (adjustmentItemIds.length > 0) {
+    await tx.stockLotConsumption.deleteMany({
+      where: { inventoryAdjustmentItemId: { in: adjustmentItemIds } },
     });
   }
 
@@ -718,6 +791,20 @@ export async function recalculateFromDate(
           data: { remainingQuantity: { decrement: consumption.quantity } }
         });
       }
+    } else if (event.type === "ADJUSTMENT_DECREASE") {
+      const adjItem = item as typeof adjustmentDecreaseItems[0];
+      const baseQty = new Decimal(adjItem.quantity);
+
+      await consumeStockFIFO(
+        adjItem.productId,
+        baseQty,
+        adjItem.id,
+        event.date,
+        tx,
+        organizationId,
+        adjItem.inventoryAdjustment.warehouseId || null,
+        "INVENTORY_ADJUSTMENT"
+      );
     } else if (event.type === "CREDIT_NOTE") {
       const cnItem = item as typeof creditNoteItems[0];
       if (cnItem.stockLot) {
