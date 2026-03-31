@@ -255,7 +255,7 @@ export default function CustomerBalancesPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <Link
-                              href={`/customers/${customer.id}/statement`}
+                              href={`/customers/${customer.id}?tab=statement`}
                               className="font-semibold text-blue-600 hover:underline"
                             >
                               {customer.name}
@@ -294,7 +294,7 @@ export default function CustomerBalancesPage() {
                         </div>
 
                         <Link
-                          href={`/customers/${customer.id}/statement`}
+                          href={`/customers/${customer.id}?tab=statement`}
                           className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center rounded-md border border-slate-200 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                         >
                           {t("reports.viewStatement")}
@@ -322,7 +322,7 @@ export default function CustomerBalancesPage() {
                             <TableRow key={customer.id}>
                               <TableCell>
                                 <Link
-                                  href={`/customers/${customer.id}/statement`}
+                                  href={`/customers/${customer.id}?tab=statement`}
                                   className="font-medium text-blue-600 hover:underline"
                                 >
                                   {customer.name}

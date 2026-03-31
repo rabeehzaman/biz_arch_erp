@@ -249,7 +249,7 @@ export default function SupplierBalancesPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <Link
-                              href={`/suppliers/${supplier.id}/statement`}
+                              href={`/suppliers/${supplier.id}?tab=statement`}
                               className="font-semibold text-blue-600 hover:underline"
                             >
                               {supplier.name}
@@ -282,7 +282,7 @@ export default function SupplierBalancesPage() {
                         </div>
 
                         <Link
-                          href={`/suppliers/${supplier.id}/statement`}
+                          href={`/suppliers/${supplier.id}?tab=statement`}
                           className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center rounded-md border border-slate-200 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                         >
                           {t("reports.viewStatement")}
@@ -310,7 +310,7 @@ export default function SupplierBalancesPage() {
                             <TableRow key={supplier.id}>
                               <TableCell className="font-medium">
                                 <Link
-                                  href={`/suppliers/${supplier.id}/statement`}
+                                  href={`/suppliers/${supplier.id}?tab=statement`}
                                   className="text-blue-600 hover:underline"
                                 >
                                   {supplier.name}

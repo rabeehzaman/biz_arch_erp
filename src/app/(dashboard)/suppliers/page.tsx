@@ -348,7 +348,7 @@ export default function SuppliersPage() {
                           </div>
                         }
                       >
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer" onClick={() => router.push(`/suppliers/${supplier.id}/statement`)}>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer" onClick={() => router.push(`/suppliers/${supplier.id}`)}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="font-semibold text-slate-900">{supplier.name}</p>
@@ -432,7 +432,7 @@ export default function SuppliersPage() {
                         </TableHeader>
                         <TableBody>
                           {suppliers.map((supplier) => (
-                            <TableRow key={supplier.id} onClick={() => router.push(`/suppliers/${supplier.id}/statement`)} className="cursor-pointer hover:bg-muted/50">
+                            <TableRow key={supplier.id} onClick={() => router.push(`/suppliers/${supplier.id}`)} className="cursor-pointer hover:bg-muted/50">
                               <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                                 <Checkbox
                                   checked={selectedIds.has(supplier.id)}

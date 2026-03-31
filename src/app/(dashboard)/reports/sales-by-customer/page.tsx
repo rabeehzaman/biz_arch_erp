@@ -204,7 +204,7 @@ export default function SalesByCustomerPage() {
                   {data.rows.map((row) => (
                     <div
                       key={row.customerId}
-                      onClick={() => router.push(`/customers/${row.customerId}/statement`)}
+                      onClick={() => router.push(`/customers/${row.customerId}?tab=statement`)}
                       className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -275,7 +275,7 @@ export default function SalesByCustomerPage() {
                     </TableHeader>
                     <TableBody>
                       {data.rows.map((row) => (
-                        <TableRow key={row.customerId} onClick={() => router.push(`/customers/${row.customerId}/statement`)} className="cursor-pointer hover:bg-muted/50">
+                        <TableRow key={row.customerId} onClick={() => router.push(`/customers/${row.customerId}?tab=statement`)} className="cursor-pointer hover:bg-muted/50">
                           <TableCell className="font-medium">{row.customerName}</TableCell>
                           <TableCell className="text-right">{row.invoiceCount}</TableCell>
                           <TableCell className="text-right">{row.returnCount}</TableCell>

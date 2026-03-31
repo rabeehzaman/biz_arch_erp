@@ -204,7 +204,7 @@ export default function PurchasesBySupplierPage() {
                   {data.rows.map((row) => (
                     <div
                       key={row.supplierId}
-                      onClick={() => router.push(`/suppliers/${row.supplierId}/statement`)}
+                      onClick={() => router.push(`/suppliers/${row.supplierId}?tab=statement`)}
                       className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -275,7 +275,7 @@ export default function PurchasesBySupplierPage() {
                     </TableHeader>
                     <TableBody>
                       {data.rows.map((row) => (
-                        <TableRow key={row.supplierId} onClick={() => router.push(`/suppliers/${row.supplierId}/statement`)} className="cursor-pointer hover:bg-muted/50">
+                        <TableRow key={row.supplierId} onClick={() => router.push(`/suppliers/${row.supplierId}?tab=statement`)} className="cursor-pointer hover:bg-muted/50">
                           <TableCell className="font-medium">{row.supplierName}</TableCell>
                           <TableCell className="text-right">{row.invoiceCount}</TableCell>
                           <TableCell className="text-right">{row.returnCount}</TableCell>

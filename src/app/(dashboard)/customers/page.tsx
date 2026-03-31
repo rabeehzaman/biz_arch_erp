@@ -500,7 +500,7 @@ export default function CustomersPage() {
                           </div>
                         }
                       >
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer" onClick={() => router.push(`/customers/${customer.id}/statement`)}>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer" onClick={() => router.push(`/customers/${customer.id}`)}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="font-semibold text-slate-900">{customer.name}</p>
@@ -546,7 +546,7 @@ export default function CustomersPage() {
 
                           <div className="mt-4">
                             <Button asChild variant="outline" className="min-h-[44px] w-full">
-                              <Link href={`/customers/${customer.id}/statement`}>
+                              <Link href={`/customers/${customer.id}`}>
                                 <FileText className="h-4 w-4" />
                                 {t("customers.viewStatement")}
                               </Link>
@@ -598,7 +598,7 @@ export default function CustomersPage() {
                       </TableHeader>
                       <TableBody>
                         {customers.map((customer) => (
-                          <TableRow key={customer.id} onClick={() => router.push(`/customers/${customer.id}/statement`)} className="cursor-pointer hover:bg-muted/50">
+                          <TableRow key={customer.id} onClick={() => router.push(`/customers/${customer.id}`)} className="cursor-pointer hover:bg-muted/50">
                             <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                               <Checkbox
                                 checked={selectedIds.has(customer.id)}
@@ -675,7 +675,7 @@ export default function CustomersPage() {
                                     {t("common.openingBalance")}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem asChild>
-                                    <Link href={`/customers/${customer.id}/statement`}>
+                                    <Link href={`/customers/${customer.id}`}>
                                       <FileText className="mr-2 h-4 w-4" />
                                       {t("customers.viewStatement")}
                                     </Link>
