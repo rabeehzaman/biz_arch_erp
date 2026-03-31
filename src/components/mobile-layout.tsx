@@ -24,7 +24,8 @@ import {
   CircleDollarSign,
   type LucideIcon,
 } from "lucide-react";
-import { useMobileNavConfig, useSidebarMode } from "@/hooks/use-form-config";
+import { useMobileNavConfig, useSidebarMode, useDisabledSidebarItems } from "@/hooks/use-form-config";
+import { MOBILE_TAB_TO_SIDEBAR_NAMES, PLUS_ACTION_ROUTE_TO_SIDEBAR_NAME } from "@/lib/form-config/types";
 import { GlobalScanner } from "@/components/scanner/global-scanner";
 import { MobileLanguageSwitcher } from "@/components/mobile-language-switcher";
 import { NetworkStatusBanner } from "@/components/mobile/network-status-banner";
@@ -96,6 +97,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   const { t } = useLanguage();
   const mobileNavConfig = useMobileNavConfig();
   const sidebarMode = useSidebarMode();
+  const disabledSidebarItems = useDisabledSidebarItems();
 
   const router = useRouter();
 
@@ -117,8 +119,38 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     return DEFAULT_TABS;
   }, [mobileNavConfig]);
 
-  const activeTab = getActiveTab(pathname, tabs);
-  const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
+  // Filter out tabs whose sidebar items are disabled, maintaining exactly 4 tabs
+  const filteredTabs = useMemo(() => {
+    if (disabledSidebarItems.length === 0) return tabs;
+
+    const allowed = tabs.filter((tab) => {
+      const names = MOBILE_TAB_TO_SIDEBAR_NAMES[tab.key];
+      if (!names || names.length === 0) return true;
+      return !names.every((n) => disabledSidebarItems.includes(n));
+    });
+
+    if (allowed.length >= 4) return allowed.slice(0, 4);
+
+    // Backfill from DEFAULT_TABS to maintain 4 tabs
+    const usedKeys = new Set(allowed.map((t) => t.key));
+    const fallbacks = DEFAULT_TABS.filter((t) => {
+      if (usedKeys.has(t.key)) return false;
+      const names = MOBILE_TAB_TO_SIDEBAR_NAMES[t.key];
+      if (!names || names.length === 0) return true;
+      return !names.every((n) => disabledSidebarItems.includes(n));
+    });
+
+    const result = [...allowed, ...fallbacks].slice(0, 4);
+    // Ensure "more" is always the last tab
+    if (!result.some((t) => t.key === "more")) {
+      const moreTab = DEFAULT_TABS.find((t) => t.key === "more")!;
+      result[result.length - 1] = moreTab;
+    }
+    return result;
+  }, [tabs, disabledSidebarItems]);
+
+  const activeTab = getActiveTab(pathname, filteredTabs);
+  const activeIndex = filteredTabs.findIndex((tab) => tab.key === activeTab);
   const isSuperadmin = session?.user?.role === "superadmin";
   const showLanguageSwitcher = pathname === "/";
   const { bottomOffset, hideFixedUi, scrolledDown } = useMobileFixedUi();
@@ -134,18 +166,25 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     "fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white shadow-[0_-10px_24px_-22px_rgba(15,23,42,0.18)]";
   const navHidden = hideFixedUi || scrolledDown;
 
-  // Quick actions for the center plus button
-  const plusActions: ActionSheetAction[] = useMemo(
-    () => [
-      { label: t("nav.newInvoice"), icon: FileText, onSelect: () => router.push("/invoices/new") },
-      { label: t("nav.newQuotation"), icon: FileCheck, onSelect: () => router.push("/quotations/new") },
-      { label: t("nav.newCustomer"), icon: Users, onSelect: () => router.push("/customers/new") },
-      { label: t("nav.newProduct"), icon: Package, onSelect: () => router.push("/products/new") },
-      { label: t("nav.openPOS"), icon: Monitor, onSelect: () => router.push("/pos") },
-      { label: t("nav.newExpense"), icon: CircleDollarSign, onSelect: () => router.push("/accounting/expenses/new") },
-    ],
-    [t, router],
-  );
+  // Quick actions for the center plus button, filtered by disabled sidebar items
+  const plusActions: ActionSheetAction[] = useMemo(() => {
+    const allActions = [
+      { label: t("nav.newInvoice"), icon: FileText, route: "/invoices/new", onSelect: () => router.push("/invoices/new") },
+      { label: t("nav.newQuotation"), icon: FileCheck, route: "/quotations/new", onSelect: () => router.push("/quotations/new") },
+      { label: t("nav.newCustomer"), icon: Users, route: "/customers/new", onSelect: () => router.push("/customers/new") },
+      { label: t("nav.newProduct"), icon: Package, route: "/products/new", onSelect: () => router.push("/products/new") },
+      { label: t("nav.openPOS"), icon: Monitor, route: "/pos", onSelect: () => router.push("/pos") },
+      { label: t("nav.newExpense"), icon: CircleDollarSign, route: "/accounting/expenses/new", onSelect: () => router.push("/accounting/expenses/new") },
+    ];
+
+    return allActions
+      .filter((a) => {
+        if (disabledSidebarItems.length === 0) return true;
+        const name = PLUS_ACTION_ROUTE_TO_SIDEBAR_NAME[a.route];
+        return !name || !disabledSidebarItems.includes(name);
+      })
+      .map(({ route: _route, ...rest }) => rest);
+  }, [t, router, disabledSidebarItems]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -224,7 +263,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
       >
         <div className="relative grid grid-cols-5 gap-1 px-2 pb-[calc(0.35rem+var(--app-safe-area-bottom))] pt-1">
           {/* Left tabs (first 2) */}
-          {tabs.slice(0, 2).map((tab, index) => {
+          {filteredTabs.slice(0, 2).map((tab, index) => {
             const isActive = activeTab === tab.key;
             return (
               <Link
@@ -272,7 +311,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
           </div>
 
           {/* Right tabs (last 2) */}
-          {tabs.slice(2, 4).map((tab, index) => {
+          {filteredTabs.slice(2, 4).map((tab, index) => {
             const isActive = activeTab === tab.key;
             return (
               <Link

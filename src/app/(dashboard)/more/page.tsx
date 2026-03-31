@@ -34,6 +34,12 @@ import {
   ChevronRight,
   ChevronDown,
   Building2,
+  ClipboardList,
+  LayoutDashboard,
+  UtensilsCrossed,
+  Grid3X3,
+  ShoppingCart,
+  Wrench,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -56,6 +62,7 @@ const KEY_TO_NAME: Record<string, string> = {
   "nav.branches": "Branches",
   "nav.stockTransfers": "Stock Transfers",
   "nav.openingStock": "Opening Stock",
+  "nav.stockTake": "Stock Take",
   "nav.imeiLookup": "IMEI Lookup",
   "nav.deviceInventory": "Device Inventory",
   "nav.profitByItems": "Profit by Items",
@@ -71,6 +78,19 @@ const KEY_TO_NAME: Record<string, string> = {
   "nav.branchPL": "Branch P&L",
   "nav.settings": "Settings",
   "nav.organizations": "Organizations",
+  // Restaurant
+  "nav.restaurantDashboard": "Restaurant Dashboard",
+  "nav.restaurantTables": "Tables",
+  "nav.restaurantKotHistory": "KOT History",
+  // Jewellery
+  "nav.jewelleryDashboard": "Jewellery Dashboard",
+  "nav.jewelleryInventory": "Jewellery Inventory",
+  "nav.goldRates": "Gold Rates",
+  "nav.jewellerySale": "Jewellery Sale",
+  "nav.oldGoldExchange": "Old Gold Exchange",
+  "nav.customerSchemes": "Customer Schemes",
+  "nav.karigars": "Karigars",
+  "nav.jewelleryRepairs": "Jewellery Repairs",
 };
 
 type NavItem = { nameKey: string; href: string; icon: React.ElementType };
@@ -101,11 +121,38 @@ const inventorySection: NavItem[] = [
   { nameKey: "nav.branches", href: "/inventory/branches", icon: GitBranch },
   { nameKey: "nav.stockTransfers", href: "/inventory/stock-transfers", icon: ArrowRightLeft },
   { nameKey: "nav.openingStock", href: "/inventory/opening-stock", icon: Package },
+  { nameKey: "nav.stockTake", href: "/inventory/adjustments", icon: ClipboardList },
 ];
 
 const mobileShopSection: NavItem[] = [
   { nameKey: "nav.imeiLookup", href: "/mobile-shop/imei-lookup", icon: Search },
   { nameKey: "nav.deviceInventory", href: "/mobile-shop/device-inventory", icon: Smartphone },
+];
+
+const restaurantSection: NavItem[] = [
+  { nameKey: "nav.restaurantDashboard", href: "/restaurant/dashboard", icon: LayoutDashboard },
+  { nameKey: "nav.restaurantTables", href: "/restaurant/tables", icon: Grid3X3 },
+  { nameKey: "nav.restaurantKotHistory", href: "/restaurant/kot-history", icon: ClipboardList },
+];
+
+const jewelleryGeneralSection: NavItem[] = [
+  { nameKey: "nav.jewelleryDashboard", href: "/jewellery-shop/dashboard", icon: LayoutDashboard },
+  { nameKey: "nav.jewelleryInventory", href: "/jewellery-shop/inventory", icon: Package },
+  { nameKey: "nav.goldRates", href: "/jewellery-shop/gold-rates", icon: BarChart3 },
+];
+
+const jewellerySalesSection: NavItem[] = [
+  { nameKey: "nav.customers", href: "/customers", icon: Users },
+  { nameKey: "nav.jewellerySale", href: "/jewellery-shop/sale", icon: ShoppingCart },
+  { nameKey: "nav.customerPayments", href: "/payments", icon: CreditCard },
+  { nameKey: "nav.oldGoldExchange", href: "/jewellery-shop/old-gold", icon: ArrowRightLeft },
+  { nameKey: "nav.customerSchemes", href: "/jewellery-shop/schemes", icon: CreditCard },
+];
+
+const jewelleryPurchasesSection: NavItem[] = [
+  ...purchasesSection,
+  { nameKey: "nav.karigars", href: "/jewellery-shop/karigars", icon: Users },
+  { nameKey: "nav.jewelleryRepairs", href: "/jewellery-shop/repairs", icon: Wrench },
 ];
 
 const reportsSection: NavItem[] = [
@@ -225,6 +272,8 @@ export default function MorePage() {
   const isSuperadmin = session?.user?.role === "superadmin";
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
   const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
+  const isJewelleryEnabled = session?.user?.isJewelleryModuleEnabled;
+  const isRestaurantEnabled = session?.user?.isRestaurantModuleEnabled;
   const { collapsed, toggle } = useCollapsedSections();
 
   const { data: disabledItems = [] } = useSWR<string[]>(
@@ -265,8 +314,12 @@ export default function MorePage() {
 
       {!isSuperadmin && (
         <>
-          <MenuSection title={t("nav.sales")} sectionKey="sales" items={salesSection} disabledItems={disabledItems} isCollapsed={!!collapsed["sales"]} onToggle={() => toggle("sales")} />
-          <MenuSection title={t("nav.purchases")} sectionKey="purchases" items={purchasesSection} disabledItems={disabledItems} isCollapsed={!!collapsed["purchases"]} onToggle={() => toggle("purchases")} />
+          {isJewelleryEnabled && (
+            <MenuSection title={t("nav.jewelleryShop")} sectionKey="jewelleryGeneral" items={jewelleryGeneralSection} disabledItems={disabledItems} isCollapsed={!!collapsed["jewelleryGeneral"]} onToggle={() => toggle("jewelleryGeneral")} />
+          )}
+
+          <MenuSection title={t("nav.sales")} sectionKey="sales" items={isJewelleryEnabled ? jewellerySalesSection : salesSection} disabledItems={disabledItems} isCollapsed={!!collapsed["sales"]} onToggle={() => toggle("sales")} />
+          <MenuSection title={t("nav.purchases")} sectionKey="purchases" items={isJewelleryEnabled ? jewelleryPurchasesSection : purchasesSection} disabledItems={disabledItems} isCollapsed={!!collapsed["purchases"]} onToggle={() => toggle("purchases")} />
           <MenuSection title={t("nav.accounting")} sectionKey="accounting" items={accountingSection} disabledItems={disabledItems} isCollapsed={!!collapsed["accounting"]} onToggle={() => toggle("accounting")} />
 
           {multiBranchEnabled && (
@@ -275,6 +328,10 @@ export default function MorePage() {
 
           {isMobileShopEnabled && (
             <MenuSection title={t("nav.mobileShop")} sectionKey="mobileShop" items={mobileShopSection} disabledItems={disabledItems} isCollapsed={!!collapsed["mobileShop"]} onToggle={() => toggle("mobileShop")} />
+          )}
+
+          {isRestaurantEnabled && (
+            <MenuSection title={t("nav.restaurant")} sectionKey="restaurant" items={restaurantSection} disabledItems={disabledItems} isCollapsed={!!collapsed["restaurant"]} onToggle={() => toggle("restaurant")} />
           )}
 
           <MenuSection title={t("nav.reports")} sectionKey="reports" items={reportsSection} disabledItems={disabledItems} isCollapsed={!!collapsed["reports"]} onToggle={() => toggle("reports")} />

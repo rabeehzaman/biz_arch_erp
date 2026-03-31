@@ -341,6 +341,31 @@ export const SIDEBAR_ITEMS = [
 
 export const ALL_SIDEBAR_ITEM_NAMES = SIDEBAR_ITEMS.flatMap((g) => g.items);
 
+// ── Mobile tab → sidebar item mapping (for disabled-item filtering) ──
+export const MOBILE_TAB_TO_SIDEBAR_NAMES: Record<string, string[]> = {
+  home: ["Dashboard"],
+  sales: ["Sales Invoices"],
+  purchases: ["Purchase Invoices"],
+  pos: ["POS Terminal"],
+  products: ["Products"],
+  customers: ["Customers"],
+  suppliers: ["Suppliers"],
+  expenses: ["Expenses"],
+  reports: [],
+  settings: [],
+  more: [],
+};
+
+// ── Plus-action route → sidebar item mapping ─────────────────────
+export const PLUS_ACTION_ROUTE_TO_SIDEBAR_NAME: Record<string, string> = {
+  "/invoices/new": "Sales Invoices",
+  "/quotations/new": "Quotations",
+  "/customers/new": "Customers",
+  "/products/new": "Products",
+  "/pos": "POS Terminal",
+  "/accounting/expenses/new": "Expenses",
+};
+
 // ── Setting keys used in the Setting table ─────────────────────
 export const SETTING_KEYS = {
   FORM_FIELD_CONFIG: "form_field_config",
