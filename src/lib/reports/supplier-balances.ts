@@ -31,7 +31,8 @@ export interface SupplierBalancesData {
 }
 
 export async function getSupplierBalancesData(
-  organizationId: string
+  organizationId: string,
+  branchId?: string
 ): Promise<SupplierBalancesData> {
   const suppliers = await prisma.supplier.findMany({
     where: { organizationId },
@@ -47,15 +48,63 @@ export async function getSupplierBalancesData(
     orderBy: { balance: "desc" },
   });
 
-  const formatted = suppliers.map((s) => ({
-    id: s.id,
-    name: s.name,
-    email: s.email,
-    phone: s.phone,
-    balance: Number(s.balance),
-    invoiceCount: s._count.purchaseInvoices,
-    isActive: s.isActive,
-  }));
+  let formatted: SupplierBalanceRow[];
+
+  if (branchId) {
+    // Recompute balances from branch-filtered purchase invoices and supplier payments
+    const [purchaseInvoices, supplierPayments] = await Promise.all([
+      prisma.purchaseInvoice.findMany({
+        where: { organizationId, branchId },
+        select: { supplierId: true, total: true },
+      }),
+      prisma.supplierPayment.findMany({
+        where: { organizationId, branchId },
+        select: { supplierId: true, amount: true },
+      }),
+    ]);
+
+    const invoiceTotals = new Map<string, number>();
+    for (const inv of purchaseInvoices) {
+      invoiceTotals.set(inv.supplierId, (invoiceTotals.get(inv.supplierId) || 0) + Number(inv.total));
+    }
+    const paymentTotals = new Map<string, number>();
+    for (const pmt of supplierPayments) {
+      paymentTotals.set(pmt.supplierId, (paymentTotals.get(pmt.supplierId) || 0) + Number(pmt.amount));
+    }
+
+    // Count branch-specific invoices per supplier
+    const invoiceCounts = new Map<string, number>();
+    for (const inv of purchaseInvoices) {
+      invoiceCounts.set(inv.supplierId, (invoiceCounts.get(inv.supplierId) || 0) + 1);
+    }
+
+    formatted = suppliers
+      .map((s) => {
+        const branchInvoiced = invoiceTotals.get(s.id) || 0;
+        const branchPaid = paymentTotals.get(s.id) || 0;
+        return {
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          phone: s.phone,
+          balance: branchInvoiced - branchPaid,
+          invoiceCount: invoiceCounts.get(s.id) || 0,
+          isActive: s.isActive,
+        };
+      })
+      .filter((s) => s.balance !== 0 || s.invoiceCount > 0)
+      .sort((a, b) => b.balance - a.balance);
+  } else {
+    formatted = suppliers.map((s) => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      phone: s.phone,
+      balance: Number(s.balance),
+      invoiceCount: s._count.purchaseInvoices,
+      isActive: s.isActive,
+    }));
+  }
 
   const ledgerBalance = formatted.reduce((sum, s) => sum + s.balance, 0);
 
@@ -75,8 +124,8 @@ export async function getSupplierBalancesData(
   return {
     suppliers: formatted,
     summary: {
-      totalSuppliers: suppliers.length,
-      activeSuppliers: suppliers.filter((s) => s.isActive).length,
+      totalSuppliers: formatted.length,
+      activeSuppliers: formatted.filter((s) => s.isActive).length,
       totalPayable: ledgerBalance,
       suppliersWithBalance: formatted.filter((s) => s.balance > 0).length,
     },

@@ -16,11 +16,14 @@ import {
 } from "@/components/ui/table";
 import { FileText, X, ChevronRight, ChevronDown, ArrowLeft, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
+import { firstOfMonth, lastOfMonth } from "@/lib/date-utils";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface Product {
   id: string;
@@ -79,12 +82,13 @@ interface ReportData {
 
 export default function ProfitByItemsPage() {
   const { t, isRTL } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState(firstOfMonth());
+  const [toDate, setToDate] = useState(lastOfMonth());
   const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(
     new Set()
   );
@@ -131,6 +135,7 @@ export default function ProfitByItemsPage() {
       if (selectedProductId) params.append("productId", selectedProductId);
       if (fromDate) params.append("from", fromDate);
       if (toDate) params.append("to", toDate);
+      if (branchParam) params.append("branchId", branchParam);
       if (params.toString()) url += `?${params.toString()}`;
 
       const response = await fetch(url);
@@ -298,6 +303,7 @@ export default function ProfitByItemsPage() {
                       className="w-full sm:w-40"
                     />
                   </div>
+                  <BranchFilterSelect branches={branches} filterBranchId={filterBranchId} onBranchChange={setFilterBranchId} multiBranchEnabled={multiBranchEnabled} />
                   <Button variant="outline" onClick={handleFilter} className="w-full sm:w-auto">
                     {t("common.filter")}
                   </Button>

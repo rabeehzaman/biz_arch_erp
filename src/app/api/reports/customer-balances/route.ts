@@ -1,17 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { getCustomerBalancesData } from "@/lib/reports/customer-balances";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const organizationId = getOrgId(session);
+    const { searchParams } = new URL(request.url);
+    const branchId = searchParams.get("branchId") || undefined;
 
-    const data = await getCustomerBalancesData(organizationId);
+    const data = await getCustomerBalancesData(organizationId, branchId);
 
     return NextResponse.json(data);
   } catch (error) {

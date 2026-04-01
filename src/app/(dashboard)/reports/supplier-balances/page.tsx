@@ -20,6 +20,8 @@ import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { ReportExportButton } from "@/components/reports/report-export-button";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface Supplier {
   id: string;
@@ -54,6 +56,7 @@ interface ReportData {
 export default function SupplierBalancesPage() {
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -62,7 +65,9 @@ export default function SupplierBalancesPage() {
   const fetchReport = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/reports/supplier-balances");
+      const params = new URLSearchParams();
+      if (branchParam) params.set("branchId", branchParam);
+      const response = await fetch(`/api/reports/supplier-balances?${params}`);
       if (!response.ok) throw new Error("Failed to fetch report");
       setReportData(await response.json());
     } catch {
@@ -70,12 +75,11 @@ export default function SupplierBalancesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, [t, branchParam]);
 
   useEffect(() => {
     fetchReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchReport]);
 
   const filteredSuppliers = reportData?.suppliers.filter(
     (supplier) =>
@@ -137,13 +141,21 @@ export default function SupplierBalancesPage() {
         />
       }
       filterBar={
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            placeholder={t("reports.searchSuppliers")}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder={t("reports.searchSuppliers")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <BranchFilterSelect
+            branches={branches}
+            filterBranchId={filterBranchId}
+            onBranchChange={setFilterBranchId}
+            multiBranchEnabled={multiBranchEnabled}
           />
         </div>
       }

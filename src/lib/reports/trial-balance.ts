@@ -16,7 +16,8 @@ export interface TrialBalanceData {
 
 export async function getTrialBalanceData(
   organizationId: string,
-  asOfDate: string
+  asOfDate: string,
+  branchId?: string
 ): Promise<TrialBalanceData> {
   const lines = await prisma.journalEntryLine.findMany({
     where: {
@@ -24,6 +25,7 @@ export async function getTrialBalanceData(
       journalEntry: {
         status: "POSTED",
         date: { lte: new Date(asOfDate + "T23:59:59.999Z") },
+        ...(branchId ? { branchId } : {}),
       },
     },
     include: {

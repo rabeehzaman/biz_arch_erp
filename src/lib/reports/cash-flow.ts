@@ -34,7 +34,8 @@ export interface CashFlowData {
 export async function getCashFlowData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<CashFlowData> {
   const transactions = await prisma.cashBankTransaction.findMany({
     where: {
@@ -43,6 +44,7 @@ export async function getCashFlowData(
         gte: new Date(fromDate),
         lte: new Date(toDate + "T23:59:59.999Z"),
       },
+      ...(branchId ? { cashBankAccount: { branchId } } : {}),
     },
     include: {
       cashBankAccount: { select: { id: true, name: true } },
@@ -75,7 +77,7 @@ export async function getCashFlowData(
   const totalOutflow = summary.reduce((sum, s) => sum + s.outflow, 0);
 
   const cashBankAccounts = await prisma.cashBankAccount.findMany({
-    where: { organizationId },
+    where: { organizationId, ...(branchId ? { branchId } : {}) },
     select: { id: true, name: true, balance: true, accountSubType: true },
   });
 
@@ -85,6 +87,7 @@ export async function getCashFlowData(
       journalEntry: {
         status: "POSTED",
         date: { lte: new Date(toDate + "T23:59:59.999Z") },
+        ...(branchId ? { branchId } : {}),
       },
       account: {
         code: { in: ["1100", "1200"] },

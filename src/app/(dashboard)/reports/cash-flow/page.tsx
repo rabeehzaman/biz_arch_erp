@@ -14,9 +14,12 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { firstOfYear, lastOfMonth } from "@/lib/date-utils";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { DateRangePresetSelector } from "@/components/reports/date-range-preset-selector";
 import { ReportExportButton } from "@/components/reports/report-export-button";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface CashFlowSummary {
   type: string;
@@ -66,13 +69,10 @@ const typeLabelKeys: Record<string, string> = {
 export default function CashFlowPage() {
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const [data, setData] = useState<CashFlow | null>(null);
-  const [fromDate, setFromDate] = useState(
-    new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]
-  );
-  const [toDate, setToDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [fromDate, setFromDate] = useState(firstOfYear());
+  const [toDate, setToDate] = useState(lastOfMonth());
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -80,6 +80,7 @@ export default function CashFlowPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({ fromDate, toDate });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/cash-flow?${params}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
@@ -88,7 +89,7 @@ export default function CashFlowPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [fromDate, toDate, t]);
+  }, [fromDate, toDate, branchParam, t]);
 
   useEffect(() => {
     fetchReport();
@@ -115,6 +116,7 @@ export default function CashFlowPage() {
     setIsDownloading(true);
     try {
       const params = new URLSearchParams({ fromDate, toDate, lang });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/cash-flow/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();
@@ -148,14 +150,17 @@ export default function CashFlowPage() {
         />
       }
       filterBar={
-        <DateRangePresetSelector
-          fromDate={fromDate}
-          toDate={toDate}
-          onFromDateChange={setFromDate}
-          onToDateChange={setToDate}
-          onGenerate={fetchReport}
-          isLoading={isLoading}
-        />
+        <>
+          <DateRangePresetSelector
+            fromDate={fromDate}
+            toDate={toDate}
+            onFromDateChange={setFromDate}
+            onToDateChange={setToDate}
+            onGenerate={fetchReport}
+            isLoading={isLoading}
+          />
+          <BranchFilterSelect branches={branches} filterBranchId={filterBranchId} onBranchChange={setFilterBranchId} multiBranchEnabled={multiBranchEnabled} />
+        </>
       }
     >
       {data ? (

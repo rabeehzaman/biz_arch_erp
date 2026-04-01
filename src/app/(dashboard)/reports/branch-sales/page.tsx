@@ -36,8 +36,11 @@ import {
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { firstOfMonth as firstOfMonthStr, lastOfMonth } from "@/lib/date-utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface BranchSessionRow {
   sessionId: string;
@@ -100,6 +103,7 @@ export default function BranchSalesPage() {
   const BackArrow = isRTL ? ArrowRight : ArrowLeft;
   const { data: session } = useSession();
   const multiBranchEnabled = (session?.user as any)?.multiBranchEnabled;
+  const { branches, filterBranchId, setFilterBranchId, branchParam } = useBranchFilter();
   const { symbol, locale } = useCurrency();
   const fmt = (n: number) =>
     `${symbol}${n.toLocaleString(locale, {
@@ -107,11 +111,8 @@ export default function BranchSalesPage() {
       maximumFractionDigits: 0,
     })}`;
 
-  const today = new Date();
-  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-  const [fromDate, setFromDate] = useState(format(firstOfMonth, "yyyy-MM-dd"));
-  const [toDate, setToDate] = useState(format(today, "yyyy-MM-dd"));
+  const [fromDate, setFromDate] = useState(firstOfMonthStr());
+  const [toDate, setToDate] = useState(lastOfMonth());
   const [data, setData] = useState<BranchSalesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -120,6 +121,7 @@ export default function BranchSalesPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ fromDate, toDate });
+      if (branchParam) params.set("branchId", branchParam);
       const res = await fetch(`/api/reports/branch-sales?${params}`);
       if (!res.ok) throw new Error("Failed to load");
       const json = await res.json();
@@ -129,7 +131,7 @@ export default function BranchSalesPage() {
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, t]);
+  }, [fromDate, toDate, t, branchParam]);
 
   useEffect(() => {
     fetchData();
@@ -286,7 +288,7 @@ export default function BranchSalesPage() {
         {/* Date Filters */}
         <Card>
           <CardContent className="p-4">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-4">
               <div className="space-y-1">
                 <Label className="text-xs text-slate-500">
                   {t("reports.fromDate")}
@@ -307,6 +309,12 @@ export default function BranchSalesPage() {
                   onChange={(e) => setToDate(e.target.value)}
                 />
               </div>
+              <BranchFilterSelect
+                branches={branches}
+                filterBranchId={filterBranchId}
+                onBranchChange={setFilterBranchId}
+                multiBranchEnabled={multiBranchEnabled}
+              />
               <Button
                 onClick={fetchData}
                 size="sm"

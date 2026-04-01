@@ -11,9 +11,12 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { todayStr } from "@/lib/date-utils";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { AsOfDateSelector } from "@/components/reports/as-of-date-selector";
 import { ReportExportButton } from "@/components/reports/report-export-button";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface AgingBuckets {
   current: number;
@@ -39,8 +42,9 @@ export default function ARAgingPage() {
   const router = useRouter();
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const [data, setData] = useState<ARAgingData | null>(null);
-  const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split("T")[0]);
+  const [asOfDate, setAsOfDate] = useState(todayStr());
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -48,12 +52,13 @@ export default function ARAgingPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({ asOfDate });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/ar-aging?${params}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
     } catch { toast.error(t("reports.noDataForPeriod")); }
     finally { setIsLoading(false); }
-  }, [asOfDate, t]);
+  }, [asOfDate, branchParam, t]);
 
   useEffect(() => { fetchReport(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
@@ -77,6 +82,7 @@ export default function ARAgingPage() {
     setIsDownloading(true);
     try {
       const params = new URLSearchParams({ asOfDate, lang });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/ar-aging/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();
@@ -107,12 +113,15 @@ export default function ARAgingPage() {
         />
       }
       filterBar={
-        <AsOfDateSelector
-          asOfDate={asOfDate}
-          onDateChange={setAsOfDate}
-          onGenerate={fetchReport}
-          isLoading={isLoading}
-        />
+        <>
+          <AsOfDateSelector
+            asOfDate={asOfDate}
+            onDateChange={setAsOfDate}
+            onGenerate={fetchReport}
+            isLoading={isLoading}
+          />
+          <BranchFilterSelect branches={branches} filterBranchId={filterBranchId} onBranchChange={setFilterBranchId} multiBranchEnabled={multiBranchEnabled} />
+        </>
       }
     >
       {data && (

@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
       searchParams.get("toDate") || new Date().toISOString().split("T")[0];
     const accountId = searchParams.get("accountId") || undefined;
     const lang = (searchParams.get("lang") === "ar" ? "ar" : "en") as "en" | "ar";
+    const branchId = searchParams.get("branchId") || undefined;
 
     const [organization, data] = await Promise.all([
       prisma.organization.findUnique({
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
           currency: true,
         },
       }),
-      getCashBankBookData(organizationId, "BANK", fromDate, toDate, accountId),
+      getCashBankBookData(organizationId, "BANK", fromDate, toDate, accountId, branchId),
     ]);
 
     if (!organization) {

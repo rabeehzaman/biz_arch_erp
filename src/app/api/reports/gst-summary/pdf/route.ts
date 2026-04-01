@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const toDateParam =
       searchParams.get("to") || new Date().toISOString();
     const lang = (searchParams.get("lang") === "ar" ? "ar" : "en") as "en" | "ar";
+    const branchId = searchParams.get("branchId") || undefined;
 
     const fromDate = new Date(fromDateParam);
     const toDate = new Date(toDateParam);
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
           where: {
             organizationId,
             issueDate: { gte: fromDate, lte: toDate },
+            ...(branchId ? { branchId } : {}),
           },
           _sum: {
             subtotal: true,
@@ -45,6 +47,7 @@ export async function GET(request: NextRequest) {
           where: {
             organizationId,
             issueDate: { gte: fromDate, lte: toDate },
+            ...(branchId ? { branchId } : {}),
           },
           _sum: {
             subtotal: true,
@@ -58,6 +61,7 @@ export async function GET(request: NextRequest) {
             organizationId,
             invoiceDate: { gte: fromDate, lte: toDate },
             status: { not: "DRAFT" },
+            ...(branchId ? { branchId } : {}),
           },
           _sum: {
             subtotal: true,
@@ -70,6 +74,7 @@ export async function GET(request: NextRequest) {
           where: {
             organizationId,
             issueDate: { gte: fromDate, lte: toDate },
+            ...(branchId ? { branchId } : {}),
           },
           _sum: {
             subtotal: true,

@@ -19,8 +19,9 @@ export async function GET(request: NextRequest) {
         .split("T")[0];
     const toDate =
       searchParams.get("toDate") || new Date().toISOString().split("T")[0];
+    const branchId = searchParams.get("branchId") || undefined;
 
-    const data = await getVATDetailData(organizationId, fromDate, toDate);
+    const data = await getVATDetailData(organizationId, fromDate, toDate, branchId);
 
     return NextResponse.json(data);
   } catch (error) {

@@ -28,14 +28,15 @@ export interface SalesByCustomerData {
 export async function getSalesByCustomerData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<SalesByCustomerData> {
   const from = new Date(fromDate);
   const to = new Date(toDate + "T23:59:59.999Z");
 
   const [invoices, creditNotes] = await Promise.all([
     prisma.invoice.findMany({
-      where: { organizationId, issueDate: { gte: from, lte: to } },
+      where: { organizationId, issueDate: { gte: from, lte: to }, ...(branchId ? { branchId } : {}) },
       select: {
         customerId: true,
         customer: { select: { name: true } },
@@ -48,7 +49,7 @@ export async function getSalesByCustomerData(
       },
     }),
     prisma.creditNote.findMany({
-      where: { organizationId, issueDate: { gte: from, lte: to } },
+      where: { organizationId, issueDate: { gte: from, lte: to }, ...(branchId ? { branchId } : {}) },
       select: {
         customerId: true,
         customer: { select: { name: true } },

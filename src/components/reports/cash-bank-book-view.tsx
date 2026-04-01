@@ -24,9 +24,12 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { firstOfMonth, lastOfMonth } from "@/lib/date-utils";
 import { ReportPageLayout } from "./report-page-layout";
 import { DateRangePresetSelector } from "./date-range-preset-selector";
 import { ReportExportButton } from "./report-export-button";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "./branch-filter-select";
 
 interface Transaction {
   id: string;
@@ -64,18 +67,13 @@ interface CashBankBookViewProps {
 export function CashBankBookView({ bookType }: CashBankBookViewProps) {
   const { fmt } = useCurrency();
   const { t } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const searchParams = useSearchParams();
   const initialAccountId = searchParams.get("accountId") || "";
 
   const [data, setData] = useState<BookData | null>(null);
-  const [fromDate, setFromDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-      .toISOString()
-      .split("T")[0]
-  );
-  const [toDate, setToDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [fromDate, setFromDate] = useState(firstOfMonth());
+  const [toDate, setToDate] = useState(lastOfMonth());
   const [accountId, setAccountId] = useState(initialAccountId);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -89,6 +87,7 @@ export function CashBankBookView({ bookType }: CashBankBookViewProps) {
     try {
       const params = new URLSearchParams({ fromDate, toDate });
       if (accountId && accountId !== "all") params.set("accountId", accountId);
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/${apiPath}?${params}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
@@ -97,7 +96,7 @@ export function CashBankBookView({ bookType }: CashBankBookViewProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [fromDate, toDate, accountId, apiPath, t]);
+  }, [fromDate, toDate, accountId, branchParam, apiPath, t]);
 
   useEffect(() => {
     fetchReport();
@@ -202,6 +201,7 @@ export function CashBankBookView({ bookType }: CashBankBookViewProps) {
               </Select>
             </div>
           )}
+          <BranchFilterSelect branches={branches} filterBranchId={filterBranchId} onBranchChange={setFilterBranchId} multiBranchEnabled={multiBranchEnabled} />
         </div>
       }
     >

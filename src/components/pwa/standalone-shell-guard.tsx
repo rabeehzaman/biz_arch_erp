@@ -69,9 +69,11 @@ export function StandaloneShellGuard() {
       const orientation = screen.orientation as LockableScreenOrientation | undefined;
 
       syncShellState(isStandalone, isLandscape);
-      setShowLandscapeBlocker(isStandalone && isLandscape);
 
-      if (isStandalone && orientation?.lock) {
+      const isMobileDevice = Math.min(screen.width, screen.height) < 768;
+      setShowLandscapeBlocker(isStandalone && isLandscape && isMobileDevice);
+
+      if (isStandalone && isMobileDevice && orientation?.lock) {
         orientation.lock("portrait").catch(() => {
           // iOS Safari ignores orientation locking for home-screen web apps, so we keep the overlay fallback.
         });

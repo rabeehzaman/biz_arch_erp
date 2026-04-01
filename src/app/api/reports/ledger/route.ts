@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get("id");
     const fromDate = searchParams.get("fromDate") || undefined;
     const toDate = searchParams.get("toDate") || undefined;
+    const branchId = searchParams.get("branchId") || undefined;
 
     if (!type || !id) {
       return NextResponse.json(
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await getLedgerData(organizationId, type, id, fromDate, toDate);
+    const data = await getLedgerData(organizationId, type, id, fromDate, toDate, branchId);
 
     return NextResponse.json(data);
   } catch (error) {

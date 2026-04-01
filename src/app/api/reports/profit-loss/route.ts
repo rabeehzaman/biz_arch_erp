@@ -18,8 +18,9 @@ export async function GET(request: NextRequest) {
       new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0];
     const toDate =
       searchParams.get("toDate") || new Date().toISOString().split("T")[0];
+    const branchId = searchParams.get("branchId") || undefined;
 
-    const data = await getProfitLossData(organizationId, fromDate, toDate);
+    const data = await getProfitLossData(organizationId, fromDate, toDate, branchId);
 
     // Enrich with gold weight data for jewellery orgs
     if (isJewelleryModuleEnabled(session)) {

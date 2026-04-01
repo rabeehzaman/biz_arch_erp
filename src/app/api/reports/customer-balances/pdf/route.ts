@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const organizationId = getOrgId(session);
     const { searchParams } = new URL(request.url);
     const lang = (searchParams.get("lang") === "ar" ? "ar" : "en") as "en" | "ar";
+    const branchId = searchParams.get("branchId") || undefined;
 
     const [organization, data] = await Promise.all([
       prisma.organization.findUnique({
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
           currency: true,
         },
       }),
-      getCustomerBalancesData(organizationId),
+      getCustomerBalancesData(organizationId, branchId),
     ]);
 
     if (!organization) {

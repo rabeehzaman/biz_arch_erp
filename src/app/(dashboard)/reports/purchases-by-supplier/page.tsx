@@ -11,9 +11,12 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { firstOfMonth, lastOfMonth } from "@/lib/date-utils";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { DateRangePresetSelector } from "@/components/reports/date-range-preset-selector";
 import { ReportExportButton } from "@/components/reports/report-export-button";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface PurchasesBySupplierRow {
   supplierId: string;
@@ -44,11 +47,10 @@ export default function PurchasesBySupplierPage() {
   const router = useRouter();
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const [data, setData] = useState<PurchasesBySupplierData | null>(null);
-  const [fromDate, setFromDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0]
-  );
-  const [toDate, setToDate] = useState(new Date().toISOString().split("T")[0]);
+  const [fromDate, setFromDate] = useState(firstOfMonth());
+  const [toDate, setToDate] = useState(lastOfMonth());
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -56,6 +58,7 @@ export default function PurchasesBySupplierPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({ fromDate, toDate });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/purchases-by-supplier?${params}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
@@ -64,7 +67,7 @@ export default function PurchasesBySupplierPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [fromDate, toDate, t]);
+  }, [fromDate, toDate, branchParam, t]);
 
   useEffect(() => {
     fetchReport();
@@ -100,6 +103,7 @@ export default function PurchasesBySupplierPage() {
     setIsDownloading(true);
     try {
       const params = new URLSearchParams({ fromDate, toDate, lang });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/purchases-by-supplier/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();
@@ -133,14 +137,17 @@ export default function PurchasesBySupplierPage() {
         />
       }
       filterBar={
-        <DateRangePresetSelector
-          fromDate={fromDate}
-          toDate={toDate}
-          onFromDateChange={setFromDate}
-          onToDateChange={setToDate}
-          onGenerate={fetchReport}
-          isLoading={isLoading}
-        />
+        <>
+          <DateRangePresetSelector
+            fromDate={fromDate}
+            toDate={toDate}
+            onFromDateChange={setFromDate}
+            onToDateChange={setToDate}
+            onGenerate={fetchReport}
+            isLoading={isLoading}
+          />
+          <BranchFilterSelect branches={branches} filterBranchId={filterBranchId} onBranchChange={setFilterBranchId} multiBranchEnabled={multiBranchEnabled} />
+        </>
       }
     >
       {data && (

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const fromDate = searchParams.get("fromDate") || new Date(new Date().getFullYear(), 0, 1).toISOString();
     const toDate = searchParams.get("toDate") || new Date().toISOString();
+    const branchId = searchParams.get("branchId") || undefined;
 
     const expenses = await prisma.expense.findMany({
       where: {
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
           gte: new Date(fromDate),
           lte: new Date(toDate),
         },
+        ...(branchId ? { branchId } : {}),
       },
       include: {
         supplier: { select: { id: true, name: true } },

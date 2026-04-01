@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     const toDate =
       searchParams.get("toDate") || new Date().toISOString().split("T")[0];
 
-    const data = await getBranchSalesData(organizationId, fromDate, toDate);
+    const branchId = searchParams.get("branchId") || undefined;
+    const data = await getBranchSalesData(organizationId, fromDate, toDate, branchId);
 
     return NextResponse.json(data);
   } catch (error) {

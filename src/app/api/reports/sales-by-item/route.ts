@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
       new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
     const toDate =
       searchParams.get("toDate") || new Date().toISOString().split("T")[0];
+    const branchId = searchParams.get("branchId") || undefined;
 
-    const data = await getSalesByItemData(organizationId, fromDate, toDate);
+    const data = await getSalesByItemData(organizationId, fromDate, toDate, branchId);
 
     return NextResponse.json({
       fromDate,

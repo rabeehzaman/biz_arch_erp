@@ -409,31 +409,11 @@ function ProductsPageContent() {
                       <>
                         <div className="space-y-3 sm:hidden">
                           {sortedProducts.map((product) => (
-                            <SwipeableCard
+                            <div
                               key={product.id}
-                              actions={
-                                <div className="flex h-full flex-col">
-                                  <button
-                                    type="button"
-                                    className="flex flex-1 items-center justify-center bg-blue-500 px-4 text-sm font-medium text-white"
-                                    onClick={() => handleEdit(product)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="flex flex-1 items-center justify-center bg-red-500 px-4 text-sm font-medium text-white"
-                                    onClick={() => handleDelete(product.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              }
+                              onClick={() => router.push(`/products/${product.id}`)}
+                              className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50"
                             >
-                              <div
-                                onClick={() => handleEdit(product)}
-                                className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:bg-muted/50"
-                              >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 space-y-1">
                                   <p className="font-semibold text-slate-900">{product.name}</p>
@@ -477,9 +457,7 @@ function ProductsPageContent() {
                                   </p>
                                 </div>
                               </div>
-
-                              </div>
-                            </SwipeableCard>
+                            </div>
                           ))}
                         </div>
 
@@ -544,7 +522,7 @@ function ProductsPageContent() {
                             </TableHeader>
                             <TableBody>
                               {sortedProducts.map((product) => (
-                                <TableRow key={product.id} onClick={() => handleEdit(product)} className="cursor-pointer hover:bg-muted/50">
+                                <TableRow key={product.id} onClick={() => router.push(`/products/${product.id}`)} className="cursor-pointer hover:bg-muted/50">
                                   <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                                     <Checkbox
                                       checked={selectedIds.has(product.id)}

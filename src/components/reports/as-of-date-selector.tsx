@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useLanguage } from "@/lib/i18n";
+import { localDateStr } from "@/lib/date-utils";
 
 interface AsOfDateSelectorProps {
   asOfDate: string;
@@ -23,7 +24,7 @@ function getPresetDate(preset: string): string | null {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const fmt = localDateStr;
 
   switch (preset) {
     case "today":

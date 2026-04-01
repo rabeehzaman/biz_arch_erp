@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const fromDate = searchParams.get("fromDate");
         const toDate = searchParams.get("toDate");
+        const branchId = searchParams.get("branchId") || undefined;
 
         const from = fromDate ? new Date(fromDate) : new Date(new Date().getFullYear(), 0, 1);
         const to = toDate ? new Date(toDate + "T23:59:59.999Z") : new Date();
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
         // Fetch invoice revenue grouped by branch
         const invoicesByBranch = await prisma.invoice.groupBy({
             by: ["branchId"],
-            where: { organizationId, issueDate: dateFilter },
+            where: { organizationId, issueDate: dateFilter, ...(branchId ? { branchId } : {}) },
             _sum: { subtotal: true, total: true, amountPaid: true, balanceDue: true },
             _count: { id: true },
         });
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
         // Fetch invoice revenue grouped by branch+warehouse (for drill-down)
         const invoicesByBranchWarehouse = await prisma.invoice.groupBy({
             by: ["branchId", "warehouseId"],
-            where: { organizationId, issueDate: dateFilter },
+            where: { organizationId, issueDate: dateFilter, ...(branchId ? { branchId } : {}) },
             _sum: { subtotal: true, total: true, amountPaid: true, balanceDue: true },
             _count: { id: true },
         });
@@ -54,14 +55,14 @@ export async function GET(request: NextRequest) {
         // Fetch purchase costs by branch
         const purchasesByBranch = await prisma.purchaseInvoice.groupBy({
             by: ["branchId"],
-            where: { organizationId, invoiceDate: dateFilter },
+            where: { organizationId, invoiceDate: dateFilter, ...(branchId ? { branchId } : {}) },
             _sum: { total: true },
         });
 
         // Fetch COGS per branch AND per branch+warehouse from invoice items
         const cogsPerKey: Record<string, number> = {};
         const invoicesWithCOGS = await prisma.invoice.findMany({
-            where: { organizationId, issueDate: dateFilter },
+            where: { organizationId, issueDate: dateFilter, ...(branchId ? { branchId } : {}) },
             select: {
                 branchId: true,
                 warehouseId: true,

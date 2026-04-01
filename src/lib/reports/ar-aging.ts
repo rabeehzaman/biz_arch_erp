@@ -22,7 +22,8 @@ export interface ARAgingData {
 
 export async function getARAgingData(
   organizationId: string,
-  asOfDate: string
+  asOfDate: string,
+  branchId?: string
 ): Promise<ARAgingData> {
   const asOf = new Date(asOfDate + "T23:59:59.999Z");
 
@@ -31,6 +32,7 @@ export async function getARAgingData(
       organizationId,
       balanceDue: { gt: 0 },
       issueDate: { lte: asOf },
+      ...(branchId ? { branchId } : {}),
     },
     select: {
       id: true,

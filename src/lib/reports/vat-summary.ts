@@ -18,26 +18,27 @@ export interface VATSummaryData {
 export async function getVATSummaryData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<VATSummaryData> {
   const from = new Date(fromDate);
   const to = new Date(toDate + "T23:59:59.999Z");
 
   const [salesAgg, salesReturnsAgg, purchasesAgg, purchaseReturnsAgg] = await Promise.all([
     prisma.invoice.aggregate({
-      where: { organizationId, issueDate: { gte: from, lte: to } },
+      where: { organizationId, issueDate: { gte: from, lte: to }, ...(branchId ? { branchId } : {}) },
       _sum: { subtotal: true, totalVat: true },
     }),
     prisma.creditNote.aggregate({
-      where: { organizationId, issueDate: { gte: from, lte: to } },
+      where: { organizationId, issueDate: { gte: from, lte: to }, ...(branchId ? { branchId } : {}) },
       _sum: { subtotal: true, totalVat: true },
     }),
     prisma.purchaseInvoice.aggregate({
-      where: { organizationId, invoiceDate: { gte: from, lte: to }, status: { not: "DRAFT" } },
+      where: { organizationId, invoiceDate: { gte: from, lte: to }, status: { not: "DRAFT" }, ...(branchId ? { branchId } : {}) },
       _sum: { subtotal: true, totalVat: true },
     }),
     prisma.debitNote.aggregate({
-      where: { organizationId, issueDate: { gte: from, lte: to } },
+      where: { organizationId, issueDate: { gte: from, lte: to }, ...(branchId ? { branchId } : {}) },
       _sum: { subtotal: true, totalVat: true },
     }),
   ]);

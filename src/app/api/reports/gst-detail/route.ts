@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
       new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0];
     const toDate =
       searchParams.get("to") || new Date().toISOString().split("T")[0];
+    const branchId = searchParams.get("branchId") || undefined;
 
-    const data = await getGSTDetailData(organizationId, fromDate, toDate);
+    const data = await getGSTDetailData(organizationId, fromDate, toDate, branchId);
 
     return NextResponse.json(data);
   } catch (error) {

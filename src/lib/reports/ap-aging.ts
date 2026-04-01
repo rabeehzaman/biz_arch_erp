@@ -22,7 +22,8 @@ export interface APAgingData {
 
 export async function getAPAgingData(
   organizationId: string,
-  asOfDate: string
+  asOfDate: string,
+  branchId?: string
 ): Promise<APAgingData> {
   const asOf = new Date(asOfDate + "T23:59:59.999Z");
 
@@ -32,6 +33,7 @@ export async function getAPAgingData(
       status: { in: ["RECEIVED", "PARTIALLY_PAID"] },
       balanceDue: { gt: 0 },
       invoiceDate: { lte: asOf },
+      ...(branchId ? { branchId } : {}),
     },
     select: {
       id: true,

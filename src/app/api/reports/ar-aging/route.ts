@@ -14,8 +14,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const asOfDate =
       searchParams.get("asOfDate") || new Date().toISOString().split("T")[0];
+    const branchId = searchParams.get("branchId") || undefined;
 
-    const data = await getARAgingData(organizationId, asOfDate);
+    const data = await getARAgingData(organizationId, asOfDate, branchId);
 
     return NextResponse.json({
       asOfDate,

@@ -15,11 +15,13 @@ export async function GET(request: Request) {
     const productId = searchParams.get("productId");
     const fromDate = searchParams.get("from");
     const toDate = searchParams.get("to");
+    const branchId = searchParams.get("branchId") || undefined;
 
     // Build where clause
     const where: {
       invoice?: {
         organizationId?: string;
+        branchId?: string;
         issueDate?: {
           gte?: Date;
           lte?: Date;
@@ -27,7 +29,7 @@ export async function GET(request: Request) {
       };
       productId?: string;
     } = {
-      invoice: { organizationId },
+      invoice: { organizationId, ...(branchId ? { branchId } : {}) },
     };
 
     if (productId) {

@@ -20,13 +20,15 @@ export async function GET(request: NextRequest) {
     const toDate =
       searchParams.get("toDate") || new Date().toISOString().split("T")[0];
     const accountId = searchParams.get("accountId") || undefined;
+    const branchId = searchParams.get("branchId") || undefined;
 
     const data = await getCashBankBookData(
       organizationId,
       "CASH",
       fromDate,
       toDate,
-      accountId
+      accountId,
+      branchId
     );
 
     return NextResponse.json(data);

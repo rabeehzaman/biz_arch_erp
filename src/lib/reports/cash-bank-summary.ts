@@ -25,10 +25,11 @@ export interface CashBankSummaryData {
 export async function getCashBankSummaryData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<CashBankSummaryData> {
   const accounts = await prisma.cashBankAccount.findMany({
-    where: { organizationId, isActive: true },
+    where: { organizationId, isActive: true, ...(branchId ? { branchId } : {}) },
     select: { id: true, name: true, accountSubType: true },
     orderBy: { name: "asc" },
   });

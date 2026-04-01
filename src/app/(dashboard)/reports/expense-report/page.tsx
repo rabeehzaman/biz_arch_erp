@@ -15,12 +15,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
+import { firstOfMonth, lastOfMonth } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrency } from "@/hooks/use-currency";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface CategoryRow {
   account: { code: string; name: string };
@@ -65,24 +68,21 @@ const statusColors: Record<string, string> = {
 export default function ExpenseReportPage() {
   const { t, isRTL } = useLanguage();
   const { locale } = useCurrency();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const fmt = (n: number) =>
     n.toLocaleString(locale, { minimumFractionDigits: 2 });
   const BackArrow = isRTL ? ArrowRight : ArrowLeft;
   const [data, setData] = useState<ExpenseReport | null>(null);
-  const [fromDate, setFromDate] = useState(
-    new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]
-  );
-  const [toDate, setToDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [fromDate, setFromDate] = useState(firstOfMonth());
+  const [toDate, setToDate] = useState(lastOfMonth());
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchReport = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/reports/expense-report?fromDate=${fromDate}&toDate=${toDate}`
-      );
+      const params = new URLSearchParams({ fromDate, toDate });
+      if (branchParam) params.set("branchId", branchParam);
+      const response = await fetch(`/api/reports/expense-report?${params}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
     } catch {
@@ -121,6 +121,12 @@ export default function ExpenseReportPage() {
                   <Label>{t("common.to")}</Label>
                   <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                 </div>
+                <BranchFilterSelect
+                  branches={branches}
+                  filterBranchId={filterBranchId}
+                  onBranchChange={setFilterBranchId}
+                  multiBranchEnabled={multiBranchEnabled}
+                />
                 <Button onClick={fetchReport} className="mt-6">{t("reports.generate")}</Button>
               </div>
             </CardHeader>

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const fromDate = searchParams.get("fromDate") || undefined;
     const toDate = searchParams.get("toDate") || undefined;
     const lang = (searchParams.get("lang") === "ar" ? "ar" : "en") as "en" | "ar";
+    const branchId = searchParams.get("branchId") || undefined;
 
     if (!type || !id) {
       return NextResponse.json({ error: "Missing type or id" }, { status: 400 });
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
           currency: true,
         },
       }),
-      getLedgerData(organizationId, type, id, fromDate, toDate),
+      getLedgerData(organizationId, type, id, fromDate, toDate, branchId),
     ]);
 
     if (!organization) {

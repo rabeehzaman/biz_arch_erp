@@ -34,7 +34,8 @@ export interface CustomerBalancesData {
 }
 
 export async function getCustomerBalancesData(
-  organizationId: string
+  organizationId: string,
+  branchId?: string
 ): Promise<CustomerBalancesData> {
   const customers = await prisma.customer.findMany({
     where: { organizationId },
@@ -50,15 +51,63 @@ export async function getCustomerBalancesData(
     orderBy: { balance: "desc" },
   });
 
-  const formatted = customers.map((c) => ({
-    id: c.id,
-    name: c.name,
-    email: c.email,
-    phone: c.phone,
-    balance: Number(c.balance),
-    invoiceCount: c._count.invoices,
-    isActive: c.isActive,
-  }));
+  let formatted: CustomerBalanceRow[];
+
+  if (branchId) {
+    // Recompute balances from branch-filtered invoices and payments
+    const [invoices, payments] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { organizationId, branchId },
+        select: { customerId: true, total: true },
+      }),
+      prisma.payment.findMany({
+        where: { organizationId, branchId },
+        select: { customerId: true, amount: true },
+      }),
+    ]);
+
+    const invoiceTotals = new Map<string, number>();
+    for (const inv of invoices) {
+      invoiceTotals.set(inv.customerId, (invoiceTotals.get(inv.customerId) || 0) + Number(inv.total));
+    }
+    const paymentTotals = new Map<string, number>();
+    for (const pmt of payments) {
+      paymentTotals.set(pmt.customerId, (paymentTotals.get(pmt.customerId) || 0) + Number(pmt.amount));
+    }
+
+    // Count branch-specific invoices per customer
+    const invoiceCounts = new Map<string, number>();
+    for (const inv of invoices) {
+      invoiceCounts.set(inv.customerId, (invoiceCounts.get(inv.customerId) || 0) + 1);
+    }
+
+    formatted = customers
+      .map((c) => {
+        const branchInvoiced = invoiceTotals.get(c.id) || 0;
+        const branchPaid = paymentTotals.get(c.id) || 0;
+        return {
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          phone: c.phone,
+          balance: branchInvoiced - branchPaid,
+          invoiceCount: invoiceCounts.get(c.id) || 0,
+          isActive: c.isActive,
+        };
+      })
+      .filter((c) => c.balance !== 0 || c.invoiceCount > 0)
+      .sort((a, b) => b.balance - a.balance);
+  } else {
+    formatted = customers.map((c) => ({
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      balance: Number(c.balance),
+      invoiceCount: c._count.invoices,
+      isActive: c.isActive,
+    }));
+  }
 
   const ledgerBalance = formatted.reduce((sum, c) => sum + c.balance, 0);
 
@@ -78,8 +127,8 @@ export async function getCustomerBalancesData(
   return {
     customers: formatted,
     summary: {
-      totalCustomers: customers.length,
-      activeCustomers: customers.filter((c) => c.isActive).length,
+      totalCustomers: formatted.length,
+      activeCustomers: formatted.filter((c) => c.isActive).length,
       totalReceivable: formatted.reduce((sum, c) => sum + Math.max(0, c.balance), 0),
       totalAdvances: formatted.reduce((sum, c) => sum + Math.abs(Math.min(0, c.balance)), 0),
       netBalance: ledgerBalance,

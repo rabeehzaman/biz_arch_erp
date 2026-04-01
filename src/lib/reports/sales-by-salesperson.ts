@@ -26,7 +26,8 @@ export interface SalesBySalespersonData {
 export async function getSalesBySalespersonData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<SalesBySalespersonData> {
   const from = new Date(fromDate);
   const to = new Date(toDate + "T23:59:59.999Z");
@@ -35,6 +36,7 @@ export async function getSalesBySalespersonData(
     where: {
       organizationId,
       issueDate: { gte: from, lte: to },
+      ...(branchId ? { branchId } : {}),
     },
     select: {
       id: true,

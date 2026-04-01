@@ -10,11 +10,14 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { firstOfMonth, lastOfMonth } from "@/lib/date-utils";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { DateRangePresetSelector } from "@/components/reports/date-range-preset-selector";
 import { ReportExportButton } from "@/components/reports/report-export-button";
 import { useEdition } from "@/hooks/use-edition";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface VATDetailRow {
   id: string;
@@ -65,11 +68,10 @@ export default function VATDetailPage() {
 function VATDetailContent() {
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const [data, setData] = useState<VATDetailData | null>(null);
-  const [fromDate, setFromDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0]
-  );
-  const [toDate, setToDate] = useState(new Date().toISOString().split("T")[0]);
+  const [fromDate, setFromDate] = useState(firstOfMonth());
+  const [toDate, setToDate] = useState(lastOfMonth());
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -77,6 +79,7 @@ function VATDetailContent() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({ fromDate, toDate });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/vat-detail?${params}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
@@ -85,7 +88,7 @@ function VATDetailContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [fromDate, toDate, t]);
+  }, [fromDate, toDate, branchParam, t]);
 
   useEffect(() => {
     fetchReport();
@@ -117,6 +120,7 @@ function VATDetailContent() {
     setIsDownloading(true);
     try {
       const params = new URLSearchParams({ fromDate, toDate, lang });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/vat-detail/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();
@@ -152,14 +156,17 @@ function VATDetailContent() {
         />
       }
       filterBar={
-        <DateRangePresetSelector
-          fromDate={fromDate}
-          toDate={toDate}
-          onFromDateChange={setFromDate}
-          onToDateChange={setToDate}
-          onGenerate={fetchReport}
-          isLoading={isLoading}
-        />
+        <>
+          <DateRangePresetSelector
+            fromDate={fromDate}
+            toDate={toDate}
+            onFromDateChange={setFromDate}
+            onToDateChange={setToDate}
+            onGenerate={fetchReport}
+            isLoading={isLoading}
+          />
+          <BranchFilterSelect branches={branches} filterBranchId={filterBranchId} onBranchChange={setFilterBranchId} multiBranchEnabled={multiBranchEnabled} />
+        </>
       }
     >
       {data && (

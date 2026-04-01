@@ -23,7 +23,8 @@ export interface PurchasesByItemData {
 export async function getPurchasesByItemData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<PurchasesByItemData> {
   const from = new Date(fromDate);
   const to = new Date(toDate + "T23:59:59.999Z");
@@ -34,6 +35,7 @@ export async function getPurchasesByItemData(
       purchaseInvoice: {
         invoiceDate: { gte: from, lte: to },
         status: { not: "DRAFT" },
+        ...(branchId ? { branchId } : {}),
       },
     },
     include: {

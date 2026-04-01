@@ -20,9 +20,11 @@ import Link from "next/link";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { firstOfYear as firstOfYearStr, lastOfMonth } from "@/lib/date-utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface WarehouseRow {
     warehouseId: string | null;
@@ -93,14 +95,12 @@ export default function BranchPLPage() {
     const BackArrow = isRTL ? ArrowRight : ArrowLeft;
     const { data: session } = useSession();
     const multiBranchEnabled = (session?.user as any)?.multiBranchEnabled;
+    const { branches, filterBranchId, setFilterBranchId, branchParam } = useBranchFilter();
     const { symbol, locale } = useCurrency();
     const fmt = (n: number) => `${symbol}${n.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-    const today = new Date();
-    const firstOfYear = new Date(today.getFullYear(), 0, 1);
-
-    const [fromDate, setFromDate] = useState(format(firstOfYear, "yyyy-MM-dd"));
-    const [toDate, setToDate] = useState(format(today, "yyyy-MM-dd"));
+    const [fromDate, setFromDate] = useState(firstOfYearStr());
+    const [toDate, setToDate] = useState(lastOfMonth());
     const [rows, setRows] = useState<BranchRow[]>([]);
     const [totals, setTotals] = useState<Totals | null>(null);
     const [loading, setLoading] = useState(true);
@@ -110,6 +110,7 @@ export default function BranchPLPage() {
         setLoading(true);
         try {
             const params = new URLSearchParams({ fromDate, toDate });
+            if (branchParam) params.set("branchId", branchParam);
             const res = await fetch(`/api/reports/branch-pl?${params}`);
             if (!res.ok) throw new Error("Failed to load");
             const data = await res.json();
@@ -120,7 +121,7 @@ export default function BranchPLPage() {
         } finally {
             setLoading(false);
         }
-    }, [fromDate, toDate, t]);
+    }, [fromDate, toDate, t, branchParam]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -207,7 +208,7 @@ export default function BranchPLPage() {
                 {/* Date Filters */}
                 <Card>
                     <CardContent className="p-4">
-                        <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="grid gap-4 sm:grid-cols-4">
                             <div className="space-y-1">
                                 <Label className="text-xs text-slate-500">{t("reports.fromDate")}</Label>
                                 <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -216,6 +217,12 @@ export default function BranchPLPage() {
                                 <Label className="text-xs text-slate-500">{t("reports.toDate")}</Label>
                                 <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                             </div>
+                            <BranchFilterSelect
+                                branches={branches}
+                                filterBranchId={filterBranchId}
+                                onBranchChange={setFilterBranchId}
+                                multiBranchEnabled={multiBranchEnabled}
+                            />
                             <Button onClick={fetchData} size="sm" className="w-full self-end sm:w-auto">{t("reports.generate")}</Button>
                         </div>
                     </CardContent>

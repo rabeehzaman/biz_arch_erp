@@ -15,9 +15,12 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { todayStr } from "@/lib/date-utils";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { AsOfDateSelector } from "@/components/reports/as-of-date-selector";
 import { ReportExportButton } from "@/components/reports/report-export-button";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 import Link from "next/link";
 import { ChevronRight, ChevronDown, Scale } from "lucide-react";
 
@@ -228,11 +231,10 @@ function SectionTable({ title, rows, total, color, t, fmt }: {
 export default function BalanceSheetPage() {
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const [data, setData] = useState<BalanceSheet | null>(null);
   const [expandedEquityGroups, setExpandedEquityGroups] = useState<Set<string>>(new Set());
-  const [asOfDate, setAsOfDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [asOfDate, setAsOfDate] = useState(todayStr());
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -240,6 +242,7 @@ export default function BalanceSheetPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({ asOfDate });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/balance-sheet?${params}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setData(await response.json());
@@ -248,7 +251,7 @@ export default function BalanceSheetPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [asOfDate, t]);
+  }, [asOfDate, branchParam, t]);
 
   useEffect(() => {
     fetchReport();
@@ -273,6 +276,7 @@ export default function BalanceSheetPage() {
     setIsDownloading(true);
     try {
       const params = new URLSearchParams({ asOfDate, lang });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/balance-sheet/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();
@@ -308,12 +312,15 @@ export default function BalanceSheetPage() {
         />
       }
       filterBar={
-        <AsOfDateSelector
-          asOfDate={asOfDate}
-          onDateChange={setAsOfDate}
-          onGenerate={fetchReport}
-          isLoading={isLoading}
-        />
+        <>
+          <AsOfDateSelector
+            asOfDate={asOfDate}
+            onDateChange={setAsOfDate}
+            onGenerate={fetchReport}
+            isLoading={isLoading}
+          />
+          <BranchFilterSelect branches={branches} filterBranchId={filterBranchId} onBranchChange={setFilterBranchId} multiBranchEnabled={multiBranchEnabled} />
+        </>
       }
     >
       {data ? (

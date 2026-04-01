@@ -25,7 +25,8 @@ export async function getLedgerData(
   entityType: "ACCOUNT" | "CUSTOMER" | "SUPPLIER",
   entityId: string,
   fromDate?: string,
-  toDate?: string
+  toDate?: string,
+  branchId?: string
 ): Promise<LedgerData> {
   let entityName = "";
   let transactions: LedgerTransaction[] = [];
@@ -51,6 +52,7 @@ export async function getLedgerData(
           journalEntry: {
             status: "POSTED",
             date: { lt: new Date(fromDate) },
+            ...(branchId ? { branchId } : {}),
           },
         },
         select: { debit: true, credit: true },
@@ -68,6 +70,7 @@ export async function getLedgerData(
         journalEntry: {
           status: "POSTED",
           ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
+          ...(branchId ? { branchId } : {}),
         },
       },
       include: { journalEntry: true },

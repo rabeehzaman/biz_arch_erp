@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
         const fromDateParam = searchParams.get("from") || new Date(new Date().getFullYear(), 0, 1).toISOString();
         const toDateParam = searchParams.get("to") || new Date().toISOString();
 
+        const branchId = searchParams.get("branchId") || undefined;
+
         const fromDate = new Date(fromDateParam);
         const toDate = new Date(toDateParam);
         toDate.setHours(23, 59, 59, 999);
@@ -24,6 +26,7 @@ export async function GET(request: NextRequest) {
             where: {
                 organizationId,
                 issueDate: { gte: fromDate, lte: toDate },
+                ...(branchId ? { branchId } : {}),
             },
             _sum: { subtotal: true, totalCgst: true, totalSgst: true, totalIgst: true },
         });
@@ -33,6 +36,7 @@ export async function GET(request: NextRequest) {
             where: {
                 organizationId,
                 issueDate: { gte: fromDate, lte: toDate },
+                ...(branchId ? { branchId } : {}),
             },
             _sum: { subtotal: true, totalCgst: true, totalSgst: true, totalIgst: true },
         });
@@ -43,6 +47,7 @@ export async function GET(request: NextRequest) {
                 organizationId,
                 invoiceDate: { gte: fromDate, lte: toDate },
                 status: { not: "DRAFT" },
+                ...(branchId ? { branchId } : {}),
             },
             _sum: { subtotal: true, totalCgst: true, totalSgst: true, totalIgst: true },
         });
@@ -52,6 +57,7 @@ export async function GET(request: NextRequest) {
             where: {
                 organizationId,
                 issueDate: { gte: fromDate, lte: toDate },
+                ...(branchId ? { branchId } : {}),
             },
             _sum: { subtotal: true, totalCgst: true, totalSgst: true, totalIgst: true },
         });

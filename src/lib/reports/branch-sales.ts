@@ -43,7 +43,8 @@ function classifyPayment(method: string): "cash" | "bank" | null {
 export async function getBranchSalesData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<BranchSalesData> {
   const from = new Date(fromDate);
   const to = new Date(toDate + "T23:59:59.999Z");
@@ -51,13 +52,14 @@ export async function getBranchSalesData(
   // Fetch branches and POS sessions in date range
   const [branches, sessions] = await Promise.all([
     prisma.branch.findMany({
-      where: { organizationId, isActive: true },
+      where: { organizationId, isActive: true, ...(branchId ? { id: branchId } : {}) },
       orderBy: { name: "asc" },
     }),
     prisma.pOSSession.findMany({
       where: {
         organizationId,
         openedAt: { gte: from, lte: to },
+        ...(branchId ? { branchId } : {}),
       },
       select: {
         id: true,

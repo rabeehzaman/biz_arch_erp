@@ -26,7 +26,8 @@ export async function getCashBankBookData(
   accountSubType: "CASH" | "BANK",
   fromDate: string,
   toDate: string,
-  accountId?: string
+  accountId?: string,
+  branchId?: string
 ): Promise<CashBankBookData> {
   // Get all matching cash/bank accounts
   const cashBankAccounts = await prisma.cashBankAccount.findMany({
@@ -34,6 +35,7 @@ export async function getCashBankBookData(
       organizationId,
       accountSubType,
       ...(accountId ? { id: accountId } : {}),
+      ...(branchId ? { branchId } : {}),
     },
     select: { id: true, name: true },
   });

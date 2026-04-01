@@ -25,7 +25,8 @@ export interface SalesByItemData {
 export async function getSalesByItemData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<SalesByItemData> {
   const from = new Date(fromDate);
   const to = new Date(toDate + "T23:59:59.999Z");
@@ -35,6 +36,7 @@ export async function getSalesByItemData(
       organizationId,
       invoice: {
         issueDate: { gte: from, lte: to },
+        ...(branchId ? { branchId } : {}),
       },
     },
     include: {

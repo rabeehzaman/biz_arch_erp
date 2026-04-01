@@ -15,8 +15,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const asOfDate =
       searchParams.get("asOfDate") || new Date().toISOString().split("T")[0];
+    const branchId = searchParams.get("branchId") || undefined;
 
-    const data = await getBalanceSheetData(organizationId, asOfDate);
+    const data = await getBalanceSheetData(organizationId, asOfDate, branchId);
 
     // Enrich with gold weight data for jewellery orgs
     if (isJewelleryModuleEnabled(session)) {

@@ -23,14 +23,15 @@ export interface VATDetailData {
 export async function getVATDetailData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<VATDetailData> {
   const from = new Date(fromDate);
   const to = new Date(toDate + "T23:59:59.999Z");
 
   const [invoices, creditNotes, purchases, debitNotes] = await Promise.all([
     prisma.invoice.findMany({
-      where: { organizationId, issueDate: { gte: from, lte: to } },
+      where: { organizationId, issueDate: { gte: from, lte: to }, ...(branchId ? { branchId } : {}) },
       select: {
         id: true,
         invoiceNumber: true,
@@ -43,7 +44,7 @@ export async function getVATDetailData(
       orderBy: { issueDate: "asc" },
     }),
     prisma.creditNote.findMany({
-      where: { organizationId, issueDate: { gte: from, lte: to } },
+      where: { organizationId, issueDate: { gte: from, lte: to }, ...(branchId ? { branchId } : {}) },
       select: {
         id: true,
         creditNoteNumber: true,
@@ -56,7 +57,7 @@ export async function getVATDetailData(
       orderBy: { issueDate: "asc" },
     }),
     prisma.purchaseInvoice.findMany({
-      where: { organizationId, invoiceDate: { gte: from, lte: to }, status: { not: "DRAFT" } },
+      where: { organizationId, invoiceDate: { gte: from, lte: to }, status: { not: "DRAFT" }, ...(branchId ? { branchId } : {}) },
       select: {
         id: true,
         purchaseInvoiceNumber: true,
@@ -69,7 +70,7 @@ export async function getVATDetailData(
       orderBy: { invoiceDate: "asc" },
     }),
     prisma.debitNote.findMany({
-      where: { organizationId, issueDate: { gte: from, lte: to } },
+      where: { organizationId, issueDate: { gte: from, lte: to }, ...(branchId ? { branchId } : {}) },
       select: {
         id: true,
         debitNoteNumber: true,

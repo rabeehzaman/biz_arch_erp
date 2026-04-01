@@ -32,9 +32,12 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { firstOfMonth, lastOfMonth } from "@/lib/date-utils";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { DateRangePresetSelector } from "@/components/reports/date-range-preset-selector";
 import { ReportExportButton } from "@/components/reports/report-export-button";
+import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
 interface LedgerTransaction {
   id: string;
@@ -65,6 +68,7 @@ interface EntityOption {
 export default function UnifiedLedgerPage() {
   const { fmt } = useCurrency();
   const { t, lang } = useLanguage();
+  const { branches, filterBranchId, setFilterBranchId, multiBranchEnabled, branchParam } = useBranchFilter();
   const searchParams = useSearchParams();
   const initialAccountId = searchParams.get("accountId");
   const initialCustomerId = searchParams.get("customerId");
@@ -89,14 +93,8 @@ export default function UnifiedLedgerPage() {
   const [isLoadingEntities, setIsLoadingEntities] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [fromDate, setFromDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-      .toISOString()
-      .split("T")[0]
-  );
-  const [toDate, setToDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [fromDate, setFromDate] = useState(firstOfMonth());
+  const [toDate, setToDate] = useState(lastOfMonth());
 
   // Fetch entity list when type changes
   useEffect(() => {
@@ -139,6 +137,7 @@ export default function UnifiedLedgerPage() {
         fromDate,
         toDate,
       });
+      if (branchParam) params.set("branchId", branchParam);
       const res = await fetch(`/api/reports/ledger?${params}`);
       if (!res.ok) throw new Error("Failed to load ledger");
       setData(await res.json());
@@ -147,7 +146,7 @@ export default function UnifiedLedgerPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [entityType, selectedEntityId, fromDate, toDate, t]);
+  }, [entityType, selectedEntityId, fromDate, toDate, branchParam, t]);
 
   // Auto-load when coming from deep link
   useEffect(() => {
@@ -203,6 +202,7 @@ export default function UnifiedLedgerPage() {
         toDate,
         lang,
       });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/ledger/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();
@@ -313,6 +313,7 @@ export default function UnifiedLedgerPage() {
             onGenerate={fetchLedger}
             isLoading={isLoading}
           />
+          <BranchFilterSelect branches={branches} filterBranchId={filterBranchId} onBranchChange={setFilterBranchId} multiBranchEnabled={multiBranchEnabled} />
         </div>
       }
     >

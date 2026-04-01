@@ -23,7 +23,8 @@ export interface ProfitLossData {
 export async function getProfitLossData(
   organizationId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  branchId?: string
 ): Promise<ProfitLossData> {
   const lines = await prisma.journalEntryLine.findMany({
     where: {
@@ -34,6 +35,7 @@ export async function getProfitLossData(
           gte: new Date(fromDate),
           lte: new Date(toDate + "T23:59:59.999Z"),
         },
+        ...(branchId ? { branchId } : {}),
       },
       account: {
         accountType: { in: ["REVENUE", "EXPENSE"] },

@@ -35,7 +35,8 @@ export interface BalanceSheetData {
 
 export async function getBalanceSheetData(
   organizationId: string,
-  asOfDate: string
+  asOfDate: string,
+  branchId?: string
 ): Promise<BalanceSheetData> {
   const lines = await prisma.journalEntryLine.findMany({
     where: {
@@ -43,6 +44,7 @@ export async function getBalanceSheetData(
       journalEntry: {
         status: "POSTED",
         date: { lte: new Date(asOfDate + "T23:59:59.999Z") },
+        ...(branchId ? { branchId } : {}),
       },
     },
     include: {
