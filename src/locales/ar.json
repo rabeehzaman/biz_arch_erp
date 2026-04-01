@@ -1343,6 +1343,7 @@
         "searchDevice": "بحث عن جهاز",
         "searchHelp": "اضغط Enter أو انقر على أيقونة الكاميرا أو امسح الباركود للبحث",
         "noDeviceMatchesImei": "لا يوجد جهاز مطابق لـ IMEI:",
+        "devicesFound": "أجهزة تم العثور عليها",
         "deviceSpecs": "مواصفات الجهاز",
         "color": "اللون",
         "storage": "التخزين",

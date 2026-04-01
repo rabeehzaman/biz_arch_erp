@@ -183,12 +183,25 @@ export function CommandPalette() {
 
         {partialImei && isMobileShopEnabled && (
           <CommandGroup heading={tt("IMEI")}>
-            <CommandItem value="imei-partial" disabled>
-              <Smartphone className="h-4 w-4 text-slate-300" />
-              <span className="text-slate-400">
-                {tt("Keep typing to complete IMEI")} (
-                {search.replace(/[\s-]/g, "").length}/15 digits)
-              </span>
+            <CommandItem
+              value={`imei-partial-${search.replace(/[\s-]/g, "")}`}
+              onSelect={() =>
+                navigate(
+                  `/mobile-shop/imei-lookup?imei=${search.replace(/[\s-]/g, "")}`,
+                  `${tt("Search IMEI")}: ...${search.replace(/[\s-]/g, "").slice(-4)}`,
+                  "Smartphone"
+                )
+              }
+            >
+              <Smartphone className="h-4 w-4 text-emerald-600" />
+              <div className="flex flex-col">
+                <span className="font-medium">
+                  {tt("Search IMEI")}: {search.replace(/[\s-]/g, "")}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {tt("Search devices by partial IMEI")}
+                </span>
+              </div>
             </CommandItem>
           </CommandGroup>
         )}

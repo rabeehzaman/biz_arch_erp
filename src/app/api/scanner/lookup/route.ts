@@ -63,9 +63,9 @@ export async function GET(request: NextRequest) {
                 where: {
                     organizationId,
                     OR: [
-                        { imei1: code },
-                        { imei2: code },
-                        { serialNumber: code },
+                        { imei1: { contains: code, mode: "insensitive" } },
+                        { imei2: { contains: code, mode: "insensitive" } },
+                        { serialNumber: { contains: code, mode: "insensitive" } },
                     ],
                 },
                 include: {

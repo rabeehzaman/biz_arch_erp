@@ -67,6 +67,7 @@ export default function ImeiLookupPage() {
   const [query, setQuery] = useState(() => searchParams.get("imei") ?? "");
   const [loading, setLoading] = useState(false);
   const [device, setDevice] = useState<DeviceResult | null>(null);
+  const [deviceList, setDeviceList] = useState<DeviceResult[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [searched, setSearched] = useState(false);
 
@@ -104,13 +105,20 @@ export default function ImeiLookupPage() {
     setLoading(true);
     setNotFound(false);
     setDevice(null);
+    setDeviceList([]);
     setSearched(true);
 
     try {
       const res = await fetch(`/api/mobile-devices/lookup?imei=${encodeURIComponent(searchImei)}`);
       if (res.ok) {
         const data = await res.json();
-        setDevice(data);
+        if (data.devices) {
+          // Multiple results
+          setDeviceList(data.devices);
+        } else {
+          // Single result
+          setDevice(data);
+        }
       } else if (res.status === 404) {
         setNotFound(true);
       }
@@ -119,6 +127,11 @@ export default function ImeiLookupPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const selectDevice = (d: DeviceResult) => {
+    setDeviceList([]);
+    setDevice(d);
   };
 
   return (
@@ -179,6 +192,41 @@ export default function ImeiLookupPage() {
               <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-900">{t("mobileShop.deviceNotFound")}</h3>
               <p className="text-slate-500 mt-1">{t("mobileShop.noDeviceMatchesImei")} <span className="font-mono">{query}</span></p>
+            </CardContent>
+          </Card>
+        )}
+
+        {deviceList.length > 0 && !loading && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                {deviceList.length} {t("mobileShop.devicesFound")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {deviceList.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => selectDevice(d)}
+                    className="w-full flex items-center gap-4 px-6 py-3 hover:bg-slate-50 transition-colors text-left"
+                  >
+                    <Smartphone className="h-5 w-5 text-slate-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{d.brand} {d.model}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{d.imei1}{d.imei2 ? ` / ${d.imei2}` : ""}</p>
+                    </div>
+                    <Badge className={statusColors[d.currentStatus] || "bg-gray-100 text-gray-800"}>
+                      {statusLabels[d.currentStatus] || d.currentStatus.replace("_", " ")}
+                    </Badge>
+                    {d.sellingPrice > 0 && (
+                      <span className="text-sm text-muted-foreground shrink-0">
+                        {symbol}{Number(d.sellingPrice).toLocaleString(locale)}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

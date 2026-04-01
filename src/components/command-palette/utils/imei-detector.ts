@@ -8,12 +8,12 @@ export function isIMEI(input: string): boolean {
 }
 
 /**
- * Returns true if the input looks like a partial IMEI (10-14 consecutive digits).
- * Used to show a "keep typing" hint.
+ * Returns true if the input looks like a partial IMEI (4-14 consecutive digits).
+ * Used to offer IMEI search action.
  */
 export function isPartialIMEI(input: string): boolean {
   const cleaned = input.replace(/[\s\-]/g, "");
-  return /^\d{10,14}$/.test(cleaned);
+  return /^\d{4,14}$/.test(cleaned);
 }
 
 /**

@@ -1456,6 +1456,7 @@
         "searchDevice": "Search Device",
         "searchHelp": "Press Enter, tap the camera icon, or scan a barcode to search",
         "noDeviceMatchesImei": "No device matches IMEI:",
+        "devicesFound": "devices found",
         "deviceSpecs": "Device Specs",
         "color": "Color",
         "storage": "Storage",
