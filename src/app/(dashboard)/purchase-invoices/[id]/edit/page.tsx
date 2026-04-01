@@ -231,12 +231,17 @@ export default function EditPurchaseInvoicePage({
           if (isLastItem) {
             shouldAddNewLine = true;
           }
+          let unitCost = Number(product.cost) || Number(product.price);
+          if (taxInclusive && unitCost > 0) {
+            const rate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
+            if (rate > 0) unitCost = Math.round(unitCost * (1 + rate / 100) * 100) / 100;
+          }
           return {
             ...item,
             productId: value as string,
             unitId: product.unitId || "",
             conversionFactor: 1,
-            unitCost: Number(product.cost) || Number(product.price),
+            unitCost,
             gstRate: Number(product.gstRate) || 0,
             hsnCode: product.hsnCode || "",
           };
@@ -246,17 +251,21 @@ export default function EditPurchaseInvoicePage({
       if (field === "unitId") {
         const product = products.find((p) => p.id === item.productId);
         if (product) {
+          let baseCost = Number(product.cost) || Number(product.price);
+          if (taxInclusive && baseCost > 0) {
+            const rate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
+            if (rate > 0) baseCost = Math.round(baseCost * (1 + rate / 100) * 100) / 100;
+          }
           if (value === product.unitId) {
             return {
               ...item,
               unitId: value as string,
               conversionFactor: 1,
-              unitCost: Number(product.cost) || Number(product.price),
+              unitCost: baseCost,
             };
           }
           const altConversion = unitConversions.find(uc => uc.toUnitId === product.unitId && uc.fromUnitId === value);
           if (altConversion) {
-            const baseCost = Number(product.cost) || Number(product.price);
             return {
               ...item,
               unitId: value as string,
