@@ -645,7 +645,7 @@ model InvoiceItem {
   conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
-  quantity    Decimal @db.Decimal(10, 2)
+  quantity    Decimal @db.Decimal(10, 4)
   unitPrice   Decimal @db.Decimal(10, 2)
   discount    Decimal @default(0) @db.Decimal(5, 2)
   total       Decimal @db.Decimal(12, 2)
@@ -771,7 +771,7 @@ model QuotationItem {
   conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
-  quantity    Decimal @db.Decimal(10, 2)
+  quantity    Decimal @db.Decimal(10, 4)
   unitPrice   Decimal @db.Decimal(10, 2)
   discount    Decimal @default(0) @db.Decimal(5, 2)
   total       Decimal @db.Decimal(12, 2)
@@ -898,7 +898,7 @@ model PurchaseInvoiceItem {
   conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
-  quantity    Decimal @db.Decimal(10, 2)
+  quantity    Decimal @db.Decimal(10, 4)
   unitCost    Decimal @db.Decimal(10, 2)
   discount    Decimal @default(0) @db.Decimal(5, 2)
   total       Decimal @db.Decimal(12, 2)
@@ -1026,7 +1026,7 @@ model CreditNoteItem {
   conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
-  quantity    Decimal @db.Decimal(10, 2)
+  quantity    Decimal @db.Decimal(10, 4)
   unitPrice   Decimal @db.Decimal(10, 2)
   discount    Decimal @default(0) @db.Decimal(5, 2)
   total       Decimal @db.Decimal(12, 2)
@@ -1149,7 +1149,7 @@ model DebitNoteItem {
   conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
-  quantity    Decimal @db.Decimal(10, 2)
+  quantity    Decimal @db.Decimal(10, 4)
   unitCost    Decimal @db.Decimal(10, 2)
   discount    Decimal @default(0) @db.Decimal(5, 2)
   total       Decimal @db.Decimal(12, 2)
@@ -1206,7 +1206,7 @@ model DebitNoteLotConsumption {
   stockLotId String
   stockLot   StockLot @relation(fields: [stockLotId], references: [id])
 
-  quantityReturned Decimal @db.Decimal(10, 2)
+  quantityReturned Decimal @db.Decimal(10, 4)
   unitCost         Decimal @db.Decimal(10, 2)
   totalCost        Decimal @db.Decimal(12, 2)
 
@@ -1381,8 +1381,8 @@ model StockLot {
 
   lotDate           DateTime
   unitCost          Decimal  @db.Decimal(10, 2)
-  initialQuantity   Decimal  @db.Decimal(10, 2)
-  remainingQuantity Decimal  @db.Decimal(10, 2)
+  initialQuantity   Decimal  @db.Decimal(10, 4)
+  remainingQuantity Decimal  @db.Decimal(10, 4)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1434,7 +1434,7 @@ model StockLotConsumption {
   inventoryAdjustmentItemId String?
   inventoryAdjustmentItem   InventoryAdjustmentItem? @relation(fields: [inventoryAdjustmentItemId], references: [id], onDelete: Cascade)
 
-  quantityConsumed Decimal @db.Decimal(10, 2)
+  quantityConsumed Decimal @db.Decimal(10, 4)
   unitCost         Decimal @db.Decimal(10, 2)
   totalCost        Decimal @db.Decimal(12, 2)
 
@@ -1455,7 +1455,7 @@ model OpeningStock {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  quantity  Decimal  @db.Decimal(10, 2)
+  quantity  Decimal  @db.Decimal(10, 4)
   unitCost  Decimal  @db.Decimal(10, 2)
   stockDate DateTime
 
@@ -1515,10 +1515,10 @@ model InventoryAdjustmentItem {
   productId String
   product   Product @relation(fields: [productId], references: [id])
 
-  systemQuantity   Decimal        @default(0) @db.Decimal(10, 2)
-  physicalQuantity Decimal        @default(0) @db.Decimal(10, 2)
+  systemQuantity   Decimal        @default(0) @db.Decimal(10, 4)
+  physicalQuantity Decimal        @default(0) @db.Decimal(10, 4)
   adjustmentType   AdjustmentType
-  quantity         Decimal        @db.Decimal(10, 2)
+  quantity         Decimal        @db.Decimal(10, 4)
   unitCost         Decimal        @db.Decimal(10, 2)
   reason           String?
 
@@ -2180,7 +2180,7 @@ model StockTransferItem {
   warehouseId String?
   warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
 
-  quantity Decimal @db.Decimal(10, 2)
+  quantity Decimal @db.Decimal(10, 4)
   unitCost Decimal @default(0) @db.Decimal(10, 2)
   notes    String?
 
@@ -2854,7 +2854,7 @@ model KOTOrderItem {
   product      Product?  @relation(fields: [productId], references: [id])
   name         String
   nameAr       String?
-  quantity     Decimal   @db.Decimal(10, 2)
+  quantity     Decimal   @db.Decimal(10, 4)
   modifiers    Json?
   notes        String?
   isNew        Boolean   @default(true)
