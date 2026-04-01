@@ -9,6 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useLanguage } from "@/lib/i18n";
+import { useEdition } from "@/hooks/use-edition";
 import { format } from "date-fns";
 import {
   Package, FileText, ShoppingCart, Archive, Clock, Barcode, Tag, Layers,
@@ -37,6 +38,8 @@ interface ProductOverview {
 export function ProductOverviewTab({ productId }: { productId: string }) {
   const { t } = useLanguage();
   const { fmt } = useCurrency();
+  const { edition } = useEdition();
+  const isSaudi = edition === "SAUDI";
   const [data, setData] = useState<ProductOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -87,7 +90,7 @@ export function ProductOverviewTab({ productId }: { productId: string }) {
             <div className="grid gap-4 sm:grid-cols-2">
               {product.sku && <DetailRow label="SKU" value={product.sku} />}
               {product.barcode && <DetailRow label={t("common.barcode") || "Barcode"} value={product.barcode} />}
-              {product.hsnCode && <DetailRow label="HSN Code" value={product.hsnCode} />}
+              {product.hsnCode && !isSaudi && <DetailRow label="HSN Code" value={product.hsnCode} />}
               {product.category && <DetailRow label={t("common.category") || "Category"} value={product.category.name} />}
               {product.unit && <DetailRow label={t("common.unit") || "Unit"} value={`${product.unit.name} (${product.unit.code})`} />}
               {product.arabicName && <DetailRow label={t("productDetail.arabicName") || "Arabic Name"} value={product.arabicName} dir="rtl" />}
@@ -108,7 +111,7 @@ export function ProductOverviewTab({ productId }: { productId: string }) {
             <CardTitle className="text-base">{t("productDetail.pricingAndTax")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className={`grid gap-4 ${!isSaudi ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
               <div>
                 <p className="text-xs text-slate-500">{t("productDetail.sellingPrice")}</p>
                 <p className="text-lg font-bold text-slate-900">{fmt(product.price)}</p>
@@ -117,10 +120,12 @@ export function ProductOverviewTab({ productId }: { productId: string }) {
                 <p className="text-xs text-slate-500">{t("productDetail.costPrice")}</p>
                 <p className="text-lg font-bold text-slate-900">{fmt(product.cost)}</p>
               </div>
-              <div>
-                <p className="text-xs text-slate-500">{t("productDetail.gstRate")}</p>
-                <p className="text-lg font-bold text-slate-900">{product.gstRate}%</p>
-              </div>
+              {!isSaudi && (
+                <div>
+                  <p className="text-xs text-slate-500">GST Rate</p>
+                  <p className="text-lg font-bold text-slate-900">{product.gstRate}%</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
