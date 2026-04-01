@@ -325,10 +325,10 @@ export async function PUT(
               },
             });
 
-            // Auto-update product.cost to original MRP (pre-discount) for form auto-population
+            // Auto-update product.cost to tax-exclusive base unit cost
             await tx.product.update({
               where: { id: item.productId },
-              data: { cost: Number(item.unitCost) },
+              data: { cost: baseUnitCost },
             });
           }
         }

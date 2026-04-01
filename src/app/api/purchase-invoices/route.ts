@@ -411,6 +411,10 @@ export async function POST(request: NextRequest) {
         const item = invoice.items[i];
         const originalItem = items[i];
         if (item.product?.isImeiTracked && originalItem.imeiNumbers?.length > 0) {
+          // Use tax-exclusive per-unit cost for device valuation
+          const netCostPerUnit = Number(item.quantity) > 0
+            ? lineAmounts[i].taxableAmount / Number(item.quantity)
+            : 0;
           for (const imeiEntry of originalItem.imeiNumbers) {
             await tx.mobileDevice.create({
               data: {
@@ -430,7 +434,7 @@ export async function POST(request: NextRequest) {
                 supplierId,
                 purchaseInvoiceId: invoice.id,
                 inwardDate: purchaseDate,
-                costPrice: Number(item.unitCost),
+                costPrice: netCostPerUnit,
                 mrp: imeiEntry.mrp ? Number(imeiEntry.mrp) : 0,
                 landedCost: 0,
                 sellingPrice: 0,
