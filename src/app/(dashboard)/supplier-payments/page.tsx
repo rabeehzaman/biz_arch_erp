@@ -133,13 +133,14 @@ export default function SupplierPaymentsPage() {
   const [deletePayment, setDeletePayment] = useState<SupplierPayment | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { isFieldHidden, getDefault } = useFormConfig("supplierPayment");
+  const [cashBankAccounts, setCashBankAccounts] = useState<Array<{ id: string; name: string; accountSubType: string; isDefault: boolean }>>([]);
   const [formData, setFormData] = useState({
     supplierId: "",
     purchaseInvoiceId: "",
     amount: "",
     discountGiven: "",
     paymentDate: new Date().toISOString().split("T")[0],
-    paymentMethod: getDefault("method", "CASH"),
+    cashBankAccountId: "",
     reference: getDefault("reference", ""),
     notes: getDefault("notes", ""),
     adjustmentAccountId: "",
@@ -149,7 +150,15 @@ export default function SupplierPaymentsPage() {
     fetchSuppliers();
     fetchInvoices();
     fetchAccounts();
+    fetchCashBankAccounts();
   }, []);
+
+  useEffect(() => {
+    if (cashBankAccounts.length > 0 && !formData.cashBankAccountId) {
+      const defaultAcc = cashBankAccounts.find((a) => a.isDefault) || cashBankAccounts[0];
+      setFormData((prev) => ({ ...prev, cashBankAccountId: defaultAcc.id }));
+    }
+  }, [cashBankAccounts]);
 
   const fetchSuppliers = async () => {
     const response = await fetch("/api/suppliers?compact=true");
@@ -176,6 +185,18 @@ export default function SupplierPaymentsPage() {
     }
   };
 
+  const fetchCashBankAccounts = async () => {
+    try {
+      const response = await fetch("/api/cash-bank-accounts?activeOnly=true");
+      if (response.ok) {
+        const data = await response.json();
+        setCashBankAccounts(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch cash/bank accounts:", error);
+    }
+  };
+
   const supplierInvoices = invoices.filter(
     (inv) => inv.supplierId === formData.supplierId
   );
@@ -187,7 +208,7 @@ export default function SupplierPaymentsPage() {
     if (!formData.supplierId) errors.supplierId = t("common.required");
     if (!formData.amount || parseFloat(formData.amount) <= 0) errors.amount = t("common.required");
     if (!formData.paymentDate) errors.paymentDate = t("common.required");
-    if (formData.paymentMethod === "ADJUSTMENT" && !formData.adjustmentAccountId) {
+    if (formData.cashBankAccountId === "ADJUSTMENT" && !formData.adjustmentAccountId) {
       errors.adjustmentAccountId = t("common.required");
     }
 
@@ -206,10 +227,11 @@ export default function SupplierPaymentsPage() {
           amount: parseFloat(formData.amount),
           discountGiven: parseFloat(formData.discountGiven) || 0,
           paymentDate: formData.paymentDate,
-          paymentMethod: formData.paymentMethod,
+          ...(formData.cashBankAccountId === "ADJUSTMENT"
+            ? { paymentMethod: "ADJUSTMENT", adjustmentAccountId: formData.adjustmentAccountId }
+            : { cashBankAccountId: formData.cashBankAccountId }),
           reference: formData.reference || null,
           notes: formData.notes || null,
-          adjustmentAccountId: formData.paymentMethod === "ADJUSTMENT" ? formData.adjustmentAccountId : undefined,
         }),
       });
 
@@ -228,13 +250,14 @@ export default function SupplierPaymentsPage() {
   };
 
   const resetForm = () => {
+    const defaultAcc = cashBankAccounts.find((a) => a.isDefault) || cashBankAccounts[0];
     setFormData({
       supplierId: "",
       purchaseInvoiceId: "",
       amount: "",
       discountGiven: "",
       paymentDate: new Date().toISOString().split("T")[0],
-      paymentMethod: "CASH",
+      cashBankAccountId: defaultAcc?.id || "",
       reference: "",
       notes: "",
       adjustmentAccountId: "",
@@ -385,28 +408,27 @@ export default function SupplierPaymentsPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label htmlFor="paymentMethod">{t("payments.paymentMethod")}</Label>
+                      <Label htmlFor="cashBankAccountId">{t("payments.payFrom")}</Label>
                       <Select
-                        value={formData.paymentMethod}
+                        value={formData.cashBankAccountId}
                         onValueChange={(value) =>
-                          setFormData({ ...formData, paymentMethod: value })
+                          setFormData({ ...formData, cashBankAccountId: value })
                         }
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="CASH">{t("common.cash")}</SelectItem>
-                          <SelectItem value="BANK_TRANSFER">{t("common.bankTransfer")}</SelectItem>
-                          <SelectItem value="CHECK">{t("common.check")}</SelectItem>
-                          <SelectItem value="CREDIT_CARD">{t("common.creditCard")}</SelectItem>
-                          <SelectItem value="UPI">{t("common.upi")}</SelectItem>
-                          <SelectItem value="OTHER">{t("common.other")}</SelectItem>
+                          {cashBankAccounts.map((acc) => (
+                            <SelectItem key={acc.id} value={acc.id}>
+                              {acc.name}
+                            </SelectItem>
+                          ))}
                           <SelectItem value="ADJUSTMENT">{t("common.adjustment")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    {formData.paymentMethod !== "ADJUSTMENT" && !isFieldHidden("reference") && (
+                    {formData.cashBankAccountId !== "ADJUSTMENT" && !isFieldHidden("reference") && (
                       <div className="grid gap-2">
                         <Label htmlFor="reference">{t("common.reference")}</Label>
                         <Input
@@ -421,7 +443,7 @@ export default function SupplierPaymentsPage() {
                     )}
                   </div>
 
-                  {formData.paymentMethod === "ADJUSTMENT" && (
+                  {formData.cashBankAccountId === "ADJUSTMENT" && (
                     <div className="grid gap-2">
                       <Label htmlFor="adjustmentAccount">{t("common.adjustmentAccount")} *</Label>
                       <Combobox

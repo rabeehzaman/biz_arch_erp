@@ -85,10 +85,10 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount, adjustmentAccountId } = body;
+    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount, adjustmentAccountId, cashBankAccountId } = body;
     const discountReceived = rawDiscount || 0;
     // Normalize paymentMethod to uppercase enum value
-    const paymentMethod = (rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH") as PaymentMethod;
+    let paymentMethod = (rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH") as PaymentMethod;
 
     if (!customerId || !amount) {
       return NextResponse.json(
@@ -220,6 +220,21 @@ export async function POST(request: NextRequest) {
 
       if (paymentMethod === "ADJUSTMENT") {
         debitAccountId = adjustmentAccountId;
+      } else if (cashBankAccountId) {
+        // Use explicitly selected cash/bank account
+        const selectedAccount = await tx.cashBankAccount.findFirst({
+          where: { id: cashBankAccountId, organizationId, isActive: true },
+          select: { id: true, accountId: true, accountSubType: true },
+        });
+        if (selectedAccount) {
+          cashBankInfo = { accountId: selectedAccount.accountId, cashBankAccountId: selectedAccount.id };
+          debitAccountId = selectedAccount.accountId;
+          paymentMethod = (selectedAccount.accountSubType === "CASH" ? "CASH" : "BANK_TRANSFER") as PaymentMethod;
+        } else {
+          console.error(`[payments] Selected cash/bank account "${cashBankAccountId}" not found or inactive in org ${organizationId} — falling back to default.`);
+          cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod);
+          if (cashBankInfo) debitAccountId = cashBankInfo.accountId;
+        }
       } else {
         cashBankInfo = await getDefaultCashBankAccount(tx, organizationId, paymentMethod);
         if (cashBankInfo) {

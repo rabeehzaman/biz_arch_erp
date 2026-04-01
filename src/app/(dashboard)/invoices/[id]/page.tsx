@@ -111,10 +111,11 @@ export default function InvoiceDetailPage({
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     amount: "",
-    paymentMethod: "CASH",
+    cashBankAccountId: "",
     paymentDate: new Date().toISOString().split("T")[0],
     reference: "",
   });
+  const [cashBankAccounts, setCashBankAccounts] = useState<Array<{ id: string; name: string; accountSubType: string; isDefault: boolean }>>([]);
   const [isMarkingSent, setIsMarkingSent] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -122,6 +123,7 @@ export default function InvoiceDetailPage({
 
   useEffect(() => {
     fetchInvoice();
+    fetchCashBankAccounts();
     // Initial load only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -131,6 +133,13 @@ export default function InvoiceDetailPage({
       setPaymentForm((prev) => ({ ...prev, amount: Number(invoice.balanceDue).toFixed(2) }));
     }
   }, [invoice]);
+
+  useEffect(() => {
+    if (cashBankAccounts.length > 0 && !paymentForm.cashBankAccountId) {
+      const defaultAcc = cashBankAccounts.find((a) => a.isDefault) || cashBankAccounts[0];
+      setPaymentForm((prev) => ({ ...prev, cashBankAccountId: defaultAcc.id }));
+    }
+  }, [cashBankAccounts]);
 
   const fetchInvoice = async () => {
     try {
@@ -146,6 +155,18 @@ export default function InvoiceDetailPage({
       router.push("/invoices");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchCashBankAccounts = async () => {
+    try {
+      const response = await fetch("/api/cash-bank-accounts?activeOnly=true");
+      if (response.ok) {
+        const data = await response.json();
+        setCashBankAccounts(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch cash/bank accounts:", error);
     }
   };
 
@@ -190,7 +211,7 @@ export default function InvoiceDetailPage({
           invoiceId: invoice.id,
           amount: parseFloat(paymentForm.amount),
           paymentDate: paymentForm.paymentDate,
-          paymentMethod: paymentForm.paymentMethod,
+          cashBankAccountId: paymentForm.cashBankAccountId,
           reference: paymentForm.reference || null,
         }),
       });
@@ -660,21 +681,20 @@ export default function InvoiceDetailPage({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>{t("payments.paymentMethod")}</Label>
+                    <Label>{t("payments.payFrom")}</Label>
                     <Select
-                      value={paymentForm.paymentMethod}
-                      onValueChange={(v) => setPaymentForm({ ...paymentForm, paymentMethod: v })}
+                      value={paymentForm.cashBankAccountId}
+                      onValueChange={(v) => setPaymentForm({ ...paymentForm, cashBankAccountId: v })}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="CASH">{t("common.cash")}</SelectItem>
-                        <SelectItem value="BANK_TRANSFER">{t("common.bankTransfer")}</SelectItem>
-                        <SelectItem value="CHECK">{t("common.check")}</SelectItem>
-                        <SelectItem value="CREDIT_CARD">{t("common.creditCard")}</SelectItem>
-                        <SelectItem value="UPI">{t("common.upi")}</SelectItem>
-                        <SelectItem value="OTHER">{t("common.other")}</SelectItem>
+                        {cashBankAccounts.map((acc) => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
