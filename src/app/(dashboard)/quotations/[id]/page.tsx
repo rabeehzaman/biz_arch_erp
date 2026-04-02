@@ -30,6 +30,12 @@ interface QuotationItem {
   unitPrice: number;
   discount: number;
   total: number;
+  vatRate?: number | null;
+  vatAmount?: number | null;
+  gstRate?: number | null;
+  cgstAmount?: number | null;
+  sgstAmount?: number | null;
+  igstAmount?: number | null;
   product: {
     name: string;
   } | null;
@@ -76,7 +82,7 @@ export default function QuotationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { symbol, locale } = useCurrency();
+  const { symbol, locale, fmt } = useCurrency();
   const router = useRouter();
   const { t } = useLanguage();
   const [quotation, setQuotation] = useState<Quotation | null>(null);
@@ -420,6 +426,13 @@ export default function QuotationDetailPage({
               </div>
             </div>
 
+            {(() => {
+              const hasGst = Number(quotation.totalCgst) > 0 || Number(quotation.totalSgst) > 0 || Number(quotation.totalIgst) > 0;
+              const hasTax = hasGst || Number(quotation.taxAmount) > 0;
+              const getItemTax = (item: QuotationItem) =>
+                Number(item.vatAmount || 0) + Number(item.cgstAmount || 0) + Number(item.sgstAmount || 0) + Number(item.igstAmount || 0);
+              return (
+                <>
             {/* Line Items — Desktop */}
             <div className="hidden sm:block">
               <Table className="print:text-sm">
@@ -429,11 +442,20 @@ export default function QuotationDetailPage({
                     <TableHead className="text-right">{t("common.qty")}</TableHead>
                     <TableHead className="text-right">{t("common.unitPrice")}</TableHead>
                     <TableHead className="text-right">{t("common.discount")}</TableHead>
-                    <TableHead className="text-right">{t("common.total")}</TableHead>
+                    {hasTax ? (
+                      <>
+                        <TableHead className="text-right">{t("common.grossAmount")}</TableHead>
+                        <TableHead className="text-right">{t("common.netAmount")}</TableHead>
+                      </>
+                    ) : (
+                      <TableHead className="text-right">{t("common.total")}</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {quotation.items.map((item) => (
+                  {quotation.items.map((item) => {
+                    const itemTax = getItemTax(item);
+                    return (
                     <TableRow key={item.id}>
                       <TableCell>{item.description}</TableCell>
                       <TableCell className="text-right">
@@ -445,18 +467,37 @@ export default function QuotationDetailPage({
                       <TableCell className="text-right">
                         {Number(item.discount)}%
                       </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {symbol}{Number(item.total).toLocaleString(locale)}
-                      </TableCell>
+                      {hasTax ? (
+                        <>
+                          <TableCell className="text-right text-slate-500">
+                            {symbol}{Number(item.total).toLocaleString(locale)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {fmt(Number(item.total) + itemTax)}
+                            {itemTax > 0 && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                ({t("common.gst")}: {fmt(itemTax)})
+                              </div>
+                            )}
+                          </TableCell>
+                        </>
+                      ) : (
+                        <TableCell className="text-right font-medium">
+                          {symbol}{Number(item.total).toLocaleString(locale)}
+                        </TableCell>
+                      )}
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
 
             {/* Line Items — Mobile */}
             <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
-              {quotation.items.map((item) => (
+              {quotation.items.map((item) => {
+                const itemTax = getItemTax(item);
+                return (
                 <div key={item.id} className="p-3 space-y-1">
                   <div className="font-medium text-sm">{item.description}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
@@ -467,11 +508,20 @@ export default function QuotationDetailPage({
                     )}
                   </div>
                   <div className="text-right font-semibold text-sm">
-                    {symbol}{Number(item.total).toLocaleString(locale)}
+                    {hasTax ? fmt(Number(item.total) + itemTax) : `${symbol}${Number(item.total).toLocaleString(locale)}`}
+                    {hasTax && itemTax > 0 && (
+                      <span className="text-[10px] text-slate-400 ml-1">
+                        ({t("common.gst")}: {fmt(itemTax)})
+                      </span>
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
+                </>
+              );
+            })()}
 
             {/* Totals */}
             <div className="flex justify-end mt-6 print:mt-4">

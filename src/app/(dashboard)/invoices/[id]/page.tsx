@@ -48,6 +48,12 @@ interface InvoiceItem {
   unitPrice: number;
   discount: number;
   total: number;
+  vatRate?: number | null;
+  vatAmount?: number | null;
+  gstRate?: number | null;
+  cgstAmount?: number | null;
+  sgstAmount?: number | null;
+  igstAmount?: number | null;
   product: {
     name: string;
   } | null;
@@ -105,7 +111,7 @@ export default function InvoiceDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const { t } = useLanguage();
-  const { symbol, locale } = useCurrency();
+  const { symbol, locale, fmt } = useCurrency();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -473,6 +479,14 @@ export default function InvoiceDetailPage({
                   </div>
                 </div>
 
+                {(() => {
+                  const isSaudi = !!invoice.saudiInvoiceType;
+                  const hasGst = Number(invoice.totalCgst) > 0 || Number(invoice.totalSgst) > 0 || Number(invoice.totalIgst) > 0;
+                  const hasTax = isSaudi || hasGst || Number(invoice.taxAmount) > 0;
+                  const getItemTax = (item: InvoiceItem) =>
+                    Number(item.vatAmount || 0) + Number(item.cgstAmount || 0) + Number(item.sgstAmount || 0) + Number(item.igstAmount || 0);
+                  return (
+                    <>
                 {/* Line Items — Desktop */}
                 <div className="hidden sm:block">
                   <Table>
@@ -482,11 +496,20 @@ export default function InvoiceDetailPage({
                         <TableHead className="text-right">{t("common.qty")}</TableHead>
                         <TableHead className="text-right">{t("common.unitPrice")}</TableHead>
                         <TableHead className="text-right">{t("common.discount")}</TableHead>
-                        <TableHead className="text-right">{t("common.total")}</TableHead>
+                        {hasTax ? (
+                          <>
+                            <TableHead className="text-right">{t("common.grossAmount")}</TableHead>
+                            <TableHead className="text-right">{t("common.netAmount")}</TableHead>
+                          </>
+                        ) : (
+                          <TableHead className="text-right">{t("common.total")}</TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoice.items.map((item) => (
+                      {invoice.items.map((item) => {
+                        const itemTax = getItemTax(item);
+                        return (
                         <TableRow key={item.id}>
                           <TableCell>{item.description}</TableCell>
                           <TableCell className="text-right">{Number(item.quantity)}</TableCell>
@@ -500,18 +523,37 @@ export default function InvoiceDetailPage({
                               "-"
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
-                            {symbol}{Number(item.total).toLocaleString(locale)}
-                          </TableCell>
+                          {hasTax ? (
+                            <>
+                              <TableCell className="text-right text-slate-500">
+                                {symbol}{Number(item.total).toLocaleString(locale)}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {fmt(Number(item.total) + itemTax)}
+                                {itemTax > 0 && (
+                                  <div className="text-[10px] text-slate-400 mt-0.5">
+                                    ({isSaudi ? t("common.vat") : t("common.gst")}: {fmt(itemTax)})
+                                  </div>
+                                )}
+                              </TableCell>
+                            </>
+                          ) : (
+                            <TableCell className="text-right">
+                              {symbol}{Number(item.total).toLocaleString(locale)}
+                            </TableCell>
+                          )}
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
 
                 {/* Line Items — Mobile */}
                 <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
-                  {invoice.items.map((item) => (
+                  {invoice.items.map((item) => {
+                    const itemTax = getItemTax(item);
+                    return (
                     <div key={item.id} className="p-3 space-y-1">
                       <div className="font-medium text-sm">{item.description}</div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
@@ -522,11 +564,20 @@ export default function InvoiceDetailPage({
                         )}
                       </div>
                       <div className="text-right font-semibold text-sm">
-                        {symbol}{Number(item.total).toLocaleString(locale)}
+                        {hasTax ? fmt(Number(item.total) + itemTax) : `${symbol}${Number(item.total).toLocaleString(locale)}`}
+                        {hasTax && itemTax > 0 && (
+                          <span className="text-[10px] text-slate-400 ml-1">
+                            ({isSaudi ? t("common.vat") : t("common.gst")}: {fmt(itemTax)})
+                          </span>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                    </>
+                  );
+                })()}
 
                 {/* Totals */}
                 <div className="flex justify-end mt-6">
