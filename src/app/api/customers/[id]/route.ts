@@ -2,21 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-
-// Helper to check if user can access a customer
-async function canAccessCustomer(customerId: string, organizationId: string, userId: string, isAdmin: boolean) {
-  if (isAdmin) return true;
-
-  const customer = await prisma.customer.findUnique({
-    where: { id: customerId, organizationId },
-    include: { assignments: true },
-  });
-
-  if (!customer) return false;
-
-  // Allow access only if customer is assigned to user
-  return customer.assignments.some(a => a.userId === userId);
-}
+import { canAccessCustomer, isAdminRole } from "@/lib/access-control";
 
 export async function GET(
   request: NextRequest,
@@ -30,7 +16,7 @@ export async function GET(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
-    const isAdmin = session.user.role === "admin";
+    const isAdmin = isAdminRole(session.user.role);
 
     if (!await canAccessCustomer(id, organizationId, session.user.id, isAdmin)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -86,7 +72,7 @@ export async function PUT(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
-    const isAdmin = session.user.role === "admin";
+    const isAdmin = isAdminRole(session.user.role);
 
     if (!await canAccessCustomer(id, organizationId, session.user.id, isAdmin)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -164,7 +150,7 @@ export async function DELETE(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
-    const isAdmin = session.user.role === "admin";
+    const isAdmin = isAdminRole(session.user.role);
 
     if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

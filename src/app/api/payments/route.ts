@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { PaymentMethod } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { isAdminRole } from "@/lib/access-control";
 import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
@@ -35,8 +36,12 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const { limit, offset, search } = parsePagination(request);
+    const isAdmin = isAdminRole(session.user.role);
+    const userId = session.user.id;
 
-    const baseWhere = { organizationId };
+    const baseWhere = isAdmin
+      ? { organizationId }
+      : { organizationId, customer: { assignments: { some: { userId } } } };
     const where = search
       ? {
           ...baseWhere,

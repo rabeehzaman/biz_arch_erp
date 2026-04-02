@@ -10,29 +10,7 @@ import { calculateLineVAT, calculateDocumentVAT, LineVATResult } from "@/lib/sau
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
-
-// Helper to check if user can access an invoice (based on customer assignment)
-async function canAccessInvoice(invoiceId: string, userId: string, isAdmin: boolean, organizationId: string) {
-  if (isAdmin) return true;
-
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId, organizationId },
-    select: {
-      customer: {
-        select: {
-          assignments: {
-            where: { userId },
-            select: { id: true }
-          }
-        }
-      }
-    },
-  });
-
-  if (!invoice) return false;
-
-  return invoice.customer.assignments.length > 0;
-}
+import { canAccessCustomer, isAdminRole } from "@/lib/access-control";
 
 export async function GET(
   request: NextRequest,
@@ -46,11 +24,7 @@ export async function GET(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
-    const isAdmin = session.user.role === "admin";
-
-    if (!await canAccessInvoice(id, session.user.id, isAdmin, organizationId)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const isAdmin = isAdminRole(session.user.role);
 
     const invoice = await prisma.invoice.findUnique({
       where: { id, organizationId },
@@ -82,6 +56,11 @@ export async function GET(
       );
     }
 
+    // Check salesman assignment
+    if (!await canAccessCustomer(invoice.customerId, organizationId, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
     return NextResponse.json(invoice);
   } catch (error) {
     console.error("Failed to fetch invoice:", error);
@@ -104,11 +83,7 @@ export async function PUT(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
-    const isAdmin = session.user.role === "admin";
-
-    if (!await canAccessInvoice(id, session.user.id, isAdmin, organizationId)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const isAdmin = isAdminRole(session.user.role);
 
     const body = await request.json();
     const { customerId, issueDate, dueDate, notes, terms, items, warehouseId: bodyWarehouseId, paymentType, isTaxInclusive, applyRoundOff } = body;
@@ -129,6 +104,11 @@ export async function PUT(
         { error: "Invoice not found" },
         { status: 404 }
       );
+    }
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(existingInvoice.customerId, organizationId, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
     // Resolve effective warehouseId (allow updating it, fall back to existing)
@@ -472,11 +452,7 @@ export async function DELETE(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
-    const isAdmin = session.user.role === "admin";
-
-    if (!await canAccessInvoice(id, session.user.id, isAdmin, organizationId)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const isAdmin = isAdminRole(session.user.role);
 
     // Get invoice with items and consumptions
     const invoice = await prisma.invoice.findUnique({
@@ -495,6 +471,11 @@ export async function DELETE(
         { error: "Invoice not found" },
         { status: 404 }
       );
+    }
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(invoice.customerId, organizationId, session.user.id, isAdmin)) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
     // Check which products had stock consumed

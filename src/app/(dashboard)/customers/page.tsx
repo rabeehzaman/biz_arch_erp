@@ -111,6 +111,8 @@ export default function CustomersPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkAssignDialogOpen, setIsBulkAssignDialogOpen] = useState(false);
+  const [bulkAssignUserId, setBulkAssignUserId] = useState<string>("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
@@ -297,6 +299,29 @@ export default function CustomersPage() {
     });
   };
 
+  const handleBulkAssign = async () => {
+    if (!bulkAssignUserId || selectedIds.size === 0) return;
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((customerId) =>
+          fetch(`/api/customers/${customerId}/assign`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userIds: [bulkAssignUserId] }),
+          })
+        )
+      );
+      setIsBulkAssignDialogOpen(false);
+      setBulkAssignUserId("");
+      setSelectedIds(new Set());
+      refresh();
+      toast.success(t("customers.customerUpdated"));
+    } catch (error) {
+      toast.error(t("common.error"));
+      console.error("Failed to bulk assign customers:", error);
+    }
+  };
+
   return (
     <PageAnimation>
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
@@ -444,6 +469,56 @@ export default function CustomersPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Bulk Assign Customers Dialog */}
+          <Dialog open={isBulkAssignDialogOpen} onOpenChange={(open) => {
+            setIsBulkAssignDialogOpen(open);
+            if (!open) setBulkAssignUserId("");
+          }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t("customers.assignCustomer")}</DialogTitle>
+                <DialogDescription>
+                  {selectedIds.size} {t("common.selected") || "selected"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-3">
+                {users.filter(u => u.role !== "admin").map((user) => (
+                  <div
+                    key={user.id}
+                    className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                      bulkAssignUserId === user.id ? "bg-blue-50 border border-blue-200" : "hover:bg-slate-50"
+                    }`}
+                    onClick={() => setBulkAssignUserId(user.id)}
+                  >
+                    <Checkbox
+                      id={`bulk-user-${user.id}`}
+                      checked={bulkAssignUserId === user.id}
+                      onCheckedChange={() => setBulkAssignUserId(user.id)}
+                    />
+                    <label
+                      htmlFor={`bulk-user-${user.id}`}
+                      className="text-sm font-medium leading-none cursor-pointer"
+                    >
+                      {user.name}
+                      <span className="text-slate-500 ml-2">({user.email})</span>
+                    </label>
+                  </div>
+                ))}
+                {users.filter(u => u.role !== "admin").length === 0 && (
+                  <p className="text-sm text-slate-500">{t("customers.noUsersAvailable")}</p>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsBulkAssignDialogOpen(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button onClick={handleBulkAssign} disabled={!bulkAssignUserId}>
+                  {t("customers.saveAssignments")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </StaggerItem>
 
         <StaggerItem>
@@ -563,6 +638,12 @@ export default function CustomersPage() {
                         <span className="text-sm font-medium text-slate-700">
                           {selectedIds.size} {t("common.selected") || "selected"}
                         </span>
+                        {isAdmin && (
+                          <Button variant="outline" size="sm" onClick={() => setIsBulkAssignDialogOpen(true)}>
+                            <UserPlus className="h-4 w-4 mr-1" />
+                            {t("customers.assign")}
+                          </Button>
+                        )}
                         <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                           <Trash2 className="h-4 w-4 mr-1" />
                           {t("common.delete")}

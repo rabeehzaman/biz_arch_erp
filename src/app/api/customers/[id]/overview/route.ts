@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { canAccessCustomer, isAdminRole } from "@/lib/access-control";
 
 export async function GET(
   request: NextRequest,
@@ -15,6 +16,11 @@ export async function GET(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(id, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     // Verify customer belongs to this org
     const customer = await prisma.customer.findFirst({

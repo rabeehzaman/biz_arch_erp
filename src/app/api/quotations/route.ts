@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
+import { isAdminRole } from "@/lib/access-control";
 import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
@@ -37,8 +38,12 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const { limit, offset, search } = parsePagination(request);
+    const isAdmin = isAdminRole(session.user.role);
+    const userId = session.user.id;
 
-    const baseWhere = { organizationId };
+    const baseWhere = isAdmin
+      ? { organizationId }
+      : { organizationId, customer: { assignments: { some: { userId } } } };
     const where = search
       ? {
           ...baseWhere,

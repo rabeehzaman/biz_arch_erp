@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
+import { canAccessCustomer, isAdminRole } from "@/lib/access-control";
 import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { calculateLineVAT, calculateDocumentVAT, LineVATResult } from "@/lib/saudi-vat/calculator";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
@@ -55,18 +56,9 @@ export async function GET(
       );
     }
 
-    // Check access control (user can only access credit notes for assigned customers)
-    if (session.user.role !== "admin") {
-      const customerAssignment = await prisma.customerAssignment.findFirst({
-        where: {
-          customerId: creditNote.customerId,
-          userId: session.user.id,
-        },
-      });
-
-      if (!customerAssignment) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+    // Check salesman assignment
+    if (!await canAccessCustomer(creditNote.customerId, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Credit note not found" }, { status: 404 });
     }
 
     return NextResponse.json(creditNote);
@@ -107,6 +99,11 @@ export async function PUT(
         { error: "Customer and items are required" },
         { status: 400 }
       );
+    }
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(customerId, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Credit note not found" }, { status: 404 });
     }
 
     const creditNoteDate = toMidnightUTC(issueDate);
@@ -474,6 +471,15 @@ export async function DELETE(
 
     const organizationId = getOrgId(session);
     const { id } = await params;
+
+    // Check salesman assignment before entering transaction
+    const cnForAccess = await prisma.creditNote.findUnique({
+      where: { id, organizationId },
+      select: { customerId: true },
+    });
+    if (!cnForAccess || !await canAccessCustomer(cnForAccess.customerId, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Credit note not found" }, { status: 404 });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       // Get the credit note with items

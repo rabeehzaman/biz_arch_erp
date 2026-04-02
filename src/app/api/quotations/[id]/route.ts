@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId, isTaxInclusivePrice as isTaxInclusivePriceSession, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
+import { canAccessCustomer, isAdminRole } from "@/lib/access-control";
 import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
@@ -53,6 +54,11 @@ export async function GET(
       );
     }
 
+    // Check salesman assignment
+    if (!await canAccessCustomer(quotation.customerId, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
+    }
+
     return NextResponse.json(quotation);
   } catch (error) {
     console.error("Failed to fetch quotation:", error);
@@ -87,6 +93,11 @@ export async function PUT(
         { error: "Quotation not found" },
         { status: 404 }
       );
+    }
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(existingQuotation.customerId, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
 
     // Only CONVERTED quotations cannot be edited (they're linked to invoices)
@@ -288,6 +299,11 @@ export async function DELETE(
         { error: "Quotation not found" },
         { status: 404 }
       );
+    }
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(quotation.customerId, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
 
     // Prevent deletion of converted quotations

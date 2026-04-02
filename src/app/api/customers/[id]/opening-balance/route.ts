@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { canAccessCustomer, isAdminRole } from "@/lib/access-control";
 
 export async function POST(
   request: NextRequest,
@@ -15,6 +16,12 @@ export async function POST(
     const organizationId = getOrgId(session);
 
     const { id } = await params;
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(id, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    }
+
     const body = await request.json();
     const { amount, transactionDate, description } = body;
 
@@ -143,6 +150,11 @@ export async function GET(
     const organizationId = getOrgId(session);
 
     const { id } = await params;
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(id, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     const openingBalance = await prisma.customerTransaction.findFirst({
       where: {

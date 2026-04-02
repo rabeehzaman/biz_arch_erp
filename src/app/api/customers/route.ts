@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { isAdminRole } from "@/lib/access-control";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const userId = session.user.id;
-    const isAdmin = session.user.role === "admin";
+    const isAdmin = isAdminRole(session.user.role);
     const { searchParams } = new URL(request.url);
     const compact = searchParams.get("compact") === "true";
 

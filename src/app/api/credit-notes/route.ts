@@ -16,6 +16,7 @@ import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
+import { isAdminRole } from "@/lib/access-control";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate credit note number: CN-YYYYMMDD-XXX
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const userId = session.user.id;
-    const isAdmin = session.user.role === "admin";
+    const isAdmin = isAdminRole(session.user.role);
     const { limit, offset, search } = parsePagination(request);
 
     const baseWhere = isAdmin

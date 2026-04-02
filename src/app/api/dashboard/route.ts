@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { isAdminRole } from "@/lib/access-control";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const organizationId = getOrgId(session);
+    const isAdmin = isAdminRole(session.user.role);
+    const userId = session.user.id;
+
+    // Scoped filters: admins see everything, salesmen see only assigned customers' data
+    const invoiceWhere = isAdmin
+      ? { organizationId }
+      : { organizationId, customer: { assignments: { some: { userId } } } };
+    const customerWhere = isAdmin
+      ? { organizationId, isActive: true }
+      : { organizationId, isActive: true, assignments: { some: { userId } } };
 
     const [
       totalInvoices,
@@ -24,22 +35,22 @@ export async function GET() {
       totalBranches,
       totalWarehouses,
     ] = await Promise.all([
-      prisma.invoice.count({ where: { organizationId } }),
+      prisma.invoice.count({ where: invoiceWhere }),
       prisma.invoice.count({
-        where: { organizationId, balanceDue: { gt: 0 } },
+        where: { ...invoiceWhere, balanceDue: { gt: 0 } },
       }),
-      prisma.customer.count({ where: { organizationId, isActive: true } }),
+      prisma.customer.count({ where: customerWhere }),
       prisma.product.count({ where: { organizationId, isActive: true } }),
       prisma.invoice.aggregate({
-        where: { organizationId },
+        where: invoiceWhere,
         _sum: { total: true },
       }),
       prisma.invoice.aggregate({
-        where: { organizationId },
+        where: invoiceWhere,
         _sum: { amountPaid: true },
       }),
       prisma.invoice.findMany({
-        where: { organizationId },
+        where: invoiceWhere,
         take: 5,
         orderBy: { createdAt: "desc" },
         select: {

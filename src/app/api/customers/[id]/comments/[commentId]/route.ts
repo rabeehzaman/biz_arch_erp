@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { canAccessCustomer, isAdminRole } from "@/lib/access-control";
 
 export async function DELETE(
   request: NextRequest,
@@ -15,15 +16,10 @@ export async function DELETE(
 
     const organizationId = getOrgId(session);
     const { id, commentId } = await params;
-    const isAdmin = session.user.role === "admin";
+    const isAdmin = isAdminRole(session.user.role);
 
-    // Verify customer belongs to this org
-    const customer = await prisma.customer.findFirst({
-      where: { id, organizationId },
-      select: { id: true },
-    });
-
-    if (!customer) {
+    // Check salesman assignment
+    if (!await canAccessCustomer(id, organizationId, session.user.id, isAdmin)) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     }
 

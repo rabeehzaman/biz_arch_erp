@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { canAccessCustomer, isAdminRole } from "@/lib/access-control";
 
 export async function GET(
   _request: NextRequest,
@@ -33,6 +34,11 @@ export async function GET(
         { error: "Payment not found" },
         { status: 404 }
       );
+    }
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(payment.customerId, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
     return NextResponse.json(payment);
@@ -77,6 +83,11 @@ export async function DELETE(
         { error: "Payment not found" },
         { status: 404 }
       );
+    }
+
+    // Check salesman assignment
+    if (!await canAccessCustomer(payment.customerId, organizationId, session.user.id, isAdminRole(session.user.role))) {
+      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
     // Use transaction to reverse all effects

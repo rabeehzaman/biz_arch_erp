@@ -13,6 +13,7 @@ import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
+import { isAdminRole } from "@/lib/access-control";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const userId = session.user.id;
-    const isAdmin = session.user.role === "admin";
+    const isAdmin = isAdminRole(session.user.role);
 
     const { limit, offset, search } = parsePagination(request);
 
