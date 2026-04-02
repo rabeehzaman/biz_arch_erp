@@ -90,6 +90,7 @@ export async function PUT(
       multiBranchEnabled,
       isScannerEnabled,
       isMobileShopModuleEnabled,
+      isPriceListEnabled,
       isWeighMachineEnabled,
       weighMachineBarcodePrefix,
       weighMachineProductCodeLen,
@@ -421,6 +422,9 @@ export async function PUT(
     if (jewelleryThemePreset !== undefined) updateData.jewelleryThemePreset = jewelleryThemePreset || null;
     if (jewelleryEnabledPurities !== undefined) updateData.jewelleryEnabledPurities = jewelleryEnabledPurities;
     if (jewelleryEnabledMetals !== undefined) updateData.jewelleryEnabledMetals = jewelleryEnabledMetals;
+
+    // Price list module
+    if (isPriceListEnabled !== undefined) updateData.isPriceListEnabled = isPriceListEnabled;
 
     // Restaurant module settings
     if (isRestaurantModuleEnabled !== undefined) updateData.isRestaurantModuleEnabled = isRestaurantModuleEnabled;

@@ -43,6 +43,7 @@ import {
   UtensilsCrossed,
   Grid3X3,
   ClipboardList,
+  Tags,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ const salesNavigation = [
   { nameKey: "nav.salesInvoices", href: "/invoices", icon: FileText },
   { nameKey: "nav.creditNotes", href: "/credit-notes", icon: FileMinus },
   { nameKey: "nav.customerPayments", href: "/payments", icon: CreditCard },
+  { nameKey: "nav.priceLists", href: "/price-lists", icon: Tags },
 ];
 
 const purchasesNavigation = [
@@ -168,6 +170,7 @@ const NAME_TO_KEY: Record<string, string> = {
   "Sales Invoices": "nav.salesInvoices",
   "Credit Notes": "nav.creditNotes",
   "Customer Payments": "nav.customerPayments",
+  "Price Lists": "nav.priceLists",
   "Suppliers": "nav.suppliers",
   "Purchase Invoices": "nav.purchaseInvoices",
   "Debit Notes": "nav.debitNotes",
@@ -344,10 +347,13 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
   const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
   const isJewelleryEnabled = session?.user?.isJewelleryModuleEnabled;
   const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
+  const isPriceListEnabled = (session?.user as { isPriceListEnabled?: boolean })?.isPriceListEnabled;
 
   // When jewellery is enabled, integrate jewellery items into existing sections
   const visibleNav = filterItems(isJewelleryEnabled ? jewelleryGeneralNav : navigation);
-  const visibleSales = filterItems(isJewelleryEnabled ? jewellerySalesNav : salesNavigation);
+  const visibleSales = filterItems(isJewelleryEnabled ? jewellerySalesNav : salesNavigation).filter(
+    (item) => item.nameKey !== "nav.priceLists" || isPriceListEnabled
+  );
   const visiblePurchases = filterItems(isJewelleryEnabled ? jewelleryPurchasesNav : purchasesNavigation);
   const visibleAccounting = filterItems(accountingNavigation);
   const visibleBottom = filterItems(bottomNavigation);

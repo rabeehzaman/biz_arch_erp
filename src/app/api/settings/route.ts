@@ -36,6 +36,8 @@ export async function GET() {
         bankIfscCode: true,
         bankBranch: true,
         roundOffMode: true,
+        isPriceListEnabled: true,
+        isRestaurantModuleEnabled: true,
       },
     });
 
@@ -43,7 +45,7 @@ export async function GET() {
       return NextResponse.json(DEFAULT_SETTINGS);
     }
 
-    const result: CompanySettingsFormData = {
+    const result: CompanySettingsFormData & { isPriceListEnabled?: boolean; isRestaurantModuleEnabled?: boolean } = {
       companyName: org.name || "",
       companyAddress: org.address || "",
       companyCity: org.city || "",
@@ -58,6 +60,8 @@ export async function GET() {
       bankIfscCode: org.bankIfscCode || "",
       bankBranch: org.bankBranch || "",
       roundOffMode: normalizeRoundOffMode(org.roundOffMode),
+      isPriceListEnabled: org.isPriceListEnabled ?? false,
+      isRestaurantModuleEnabled: org.isRestaurantModuleEnabled ?? false,
     };
 
     return NextResponse.json(result);
