@@ -104,6 +104,7 @@ interface OrganizationDetails {
     gstin: string | null;
     gstStateCode: string | null;
     saudiEInvoiceEnabled: boolean;
+    zatcaPhase2Allowed: boolean;
     vatNumber: string | null;
     commercialRegNumber: string | null;
     arabicName: string | null;
@@ -209,6 +210,7 @@ export default function OrganizationDetailsPage() {
     const [gstin, setGstin] = useState("");
     const [gstStateCode, setGstStateCode] = useState("");
     const [saudiEInvoiceEnabled, setSaudiEInvoiceEnabled] = useState(false);
+    const [zatcaPhase2Allowed, setZatcaPhase2Allowed] = useState(false);
     const [vatNumber, setVatNumber] = useState("");
     const [commercialRegNumber, setCommercialRegNumber] = useState("");
     const [arabicName, setArabicName] = useState("");
@@ -344,6 +346,7 @@ export default function OrganizationDetailsPage() {
         setGstin(data.gstin || "");
         setGstStateCode(data.gstStateCode || "");
         setSaudiEInvoiceEnabled(data.saudiEInvoiceEnabled || false);
+        setZatcaPhase2Allowed(data.zatcaPhase2Allowed || false);
         setVatNumber(data.vatNumber || "");
         setCommercialRegNumber(data.commercialRegNumber || "");
         setArabicName(data.arabicName || "");
@@ -526,6 +529,7 @@ export default function OrganizationDetailsPage() {
                     gstin: gstEnabled ? gstin : null,
                     gstStateCode: gstEnabled ? gstStateCode : null,
                     saudiEInvoiceEnabled,
+                    zatcaPhase2Allowed: saudiEInvoiceEnabled ? zatcaPhase2Allowed : false,
                     vatNumber: saudiEInvoiceEnabled ? vatNumber || null : null,
                     commercialRegNumber: saudiEInvoiceEnabled ? commercialRegNumber || null : null,
                     arabicName: edition === "SAUDI" ? arabicName || null : null,
@@ -1275,6 +1279,21 @@ export default function OrganizationDetailsPage() {
                                                     value={commercialRegNumber}
                                                     onChange={(e) => setCommercialRegNumber(e.target.value)}
                                                     placeholder="1010XXXXXX"
+                                                />
+                                            </div>
+
+                                            {/* ZATCA Phase 2 */}
+                                            <div className="flex items-center justify-between pt-2 border-t border-muted">
+                                                <div className="space-y-0.5">
+                                                    <Label htmlFor="zatcaPhase2Allowed">ZATCA Phase 2 Integration</Label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Enable real-time ZATCA e-invoicing (clearance &amp; reporting)
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    id="zatcaPhase2Allowed"
+                                                    checked={zatcaPhase2Allowed}
+                                                    onCheckedChange={setZatcaPhase2Allowed}
                                                 />
                                             </div>
                                         </div>

@@ -93,6 +93,7 @@ export async function PUT(
       gstin,
       gstStateCode,
       saudiEInvoiceEnabled,
+      zatcaPhase2Allowed,
       vatNumber,
       commercialRegNumber,
       arabicName,
@@ -346,6 +347,7 @@ export async function PUT(
     }
 
     if (saudiEInvoiceEnabled !== undefined) updateData.saudiEInvoiceEnabled = saudiEInvoiceEnabled;
+    if (zatcaPhase2Allowed !== undefined) updateData.zatcaPhase2Allowed = zatcaPhase2Allowed;
     if (vatNumber !== undefined) updateData.vatNumber = vatNumber || null;
     if (commercialRegNumber !== undefined) updateData.commercialRegNumber = commercialRegNumber || null;
     if (arabicName !== undefined) updateData.arabicName = arabicName || null;
