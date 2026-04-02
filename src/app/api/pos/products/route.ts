@@ -90,8 +90,8 @@ export async function GET() {
       name: p.name,
       sku: p.sku,
       barcode: p.barcode,
-      price: resolvedPrices?.get(p.id)?.source !== "base"
-        ? resolvedPrices!.get(p.id)!.price
+      price: resolvedPrices && resolvedPrices.get(p.id)?.source !== "base"
+        ? resolvedPrices.get(p.id)!.price
         : p.price,
       gstRate: isSaudi ? SAUDI_VAT_RATE : (Number(p.gstRate) || 0),
       hsnCode: p.hsnCode || null,
