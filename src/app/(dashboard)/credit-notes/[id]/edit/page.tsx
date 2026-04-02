@@ -472,7 +472,7 @@ export default function EditCreditNotePage({
                                                             updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
                                                         }
                                                         min="0"
-                                                        step="0.01"
+                                                        step="0.001"
                                                         ref={(el) => {
                                                             if (el) quantityRefs.current.set(item.id, el);
                                                             else quantityRefs.current.delete(item.id);
@@ -516,7 +516,7 @@ export default function EditCreditNotePage({
                                                             updateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)
                                                         }
                                                         min="0"
-                                                        step="0.01"
+                                                        step="0.001"
                                                     />
                                                 </div>
 
@@ -552,7 +552,7 @@ export default function EditCreditNotePage({
                                                         }}
                                                         min="0"
                                                         max="100"
-                                                        step="0.01"
+                                                        step="0.001"
                                                     />
                                                 </div>
                                             </div>

@@ -1875,19 +1875,19 @@ export default function OrganizationDetailsPage() {
                                                 <div className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
                                                     <div className="space-y-2">
                                                         <Label>{t("admin.jewelleryGoldTaxRate")}</Label>
-                                                        <Input type="number" step="0.01" min="0" max="100" value={jewelleryGoldTaxRate} onChange={(e) => setJewelleryGoldTaxRate(Number(e.target.value))} />
+                                                        <Input type="number" step="0.001" min="0" max="100" value={jewelleryGoldTaxRate} onChange={(e) => setJewelleryGoldTaxRate(Number(e.target.value))} />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label>{t("admin.jewelleryMakingChargeTaxRate")}</Label>
-                                                        <Input type="number" step="0.01" min="0" max="100" value={jewelleryMakingChargeTaxRate} onChange={(e) => setJewelleryMakingChargeTaxRate(Number(e.target.value))} />
+                                                        <Input type="number" step="0.001" min="0" max="100" value={jewelleryMakingChargeTaxRate} onChange={(e) => setJewelleryMakingChargeTaxRate(Number(e.target.value))} />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label>{t("admin.jewelleryStoneTaxRate")}</Label>
-                                                        <Input type="number" step="0.01" min="0" max="100" value={jewelleryStoneTaxRate} onChange={(e) => setJewelleryStoneTaxRate(Number(e.target.value))} />
+                                                        <Input type="number" step="0.001" min="0" max="100" value={jewelleryStoneTaxRate} onChange={(e) => setJewelleryStoneTaxRate(Number(e.target.value))} />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label>{t("admin.jewelleryInvestmentGoldTaxRate")}</Label>
-                                                        <Input type="number" step="0.01" min="0" max="100" value={jewelleryInvestmentGoldTaxRate} onChange={(e) => setJewelleryInvestmentGoldTaxRate(Number(e.target.value))} />
+                                                        <Input type="number" step="0.001" min="0" max="100" value={jewelleryInvestmentGoldTaxRate} onChange={(e) => setJewelleryInvestmentGoldTaxRate(Number(e.target.value))} />
                                                     </div>
                                                 </div>
                                                 <div className="grid gap-4 sm:grid-cols-2 mt-4">
@@ -1919,7 +1919,7 @@ export default function OrganizationDetailsPage() {
                                                         <>
                                                         <div className="space-y-2">
                                                             <Label>{t("admin.jewelleryTcsRate")}</Label>
-                                                            <Input type="number" step="0.01" min="0" max="100" value={jewelleryTcsRate} onChange={(e) => setJewelleryTcsRate(Number(e.target.value))} />
+                                                            <Input type="number" step="0.001" min="0" max="100" value={jewelleryTcsRate} onChange={(e) => setJewelleryTcsRate(Number(e.target.value))} />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label>{t("admin.jewelleryTcsThreshold")}</Label>
@@ -1964,11 +1964,11 @@ export default function OrganizationDetailsPage() {
                                                 <div className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-3">
                                                     <div className="space-y-2">
                                                         <Label>{t("admin.jewelleryBuyRateSpread")}</Label>
-                                                        <Input type="number" step="0.01" min="0" max="50" value={jewelleryBuyRateSpread} onChange={(e) => setJewelleryBuyRateSpread(Number(e.target.value))} />
+                                                        <Input type="number" step="0.001" min="0" max="50" value={jewelleryBuyRateSpread} onChange={(e) => setJewelleryBuyRateSpread(Number(e.target.value))} />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label>{t("admin.jewelleryDefaultWastage")}</Label>
-                                                        <Input type="number" step="0.01" min="0" max="50" value={jewelleryDefaultWastagePercent} onChange={(e) => setJewelleryDefaultWastagePercent(Number(e.target.value))} />
+                                                        <Input type="number" step="0.001" min="0" max="50" value={jewelleryDefaultWastagePercent} onChange={(e) => setJewelleryDefaultWastagePercent(Number(e.target.value))} />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label>{t("admin.jewelleryDefaultMakingChargeType")}</Label>
@@ -1998,7 +1998,7 @@ export default function OrganizationDetailsPage() {
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label>{t("admin.jewelleryReconciliationTolerance")}</Label>
-                                                        <Input type="number" step="0.01" min="0" max="10" value={jewelleryReconciliationTolerance} onChange={(e) => setJewelleryReconciliationTolerance(Number(e.target.value))} />
+                                                        <Input type="number" step="0.001" min="0" max="10" value={jewelleryReconciliationTolerance} onChange={(e) => setJewelleryReconciliationTolerance(Number(e.target.value))} />
                                                     </div>
                                                 </div>
 
@@ -2064,7 +2064,7 @@ export default function OrganizationDetailsPage() {
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label>{t("admin.jewellerySchemeRedemptionDiscount")}</Label>
-                                                            <Input type="number" step="0.01" min="0" max="100" value={jewellerySchemeRedemptionDiscount} onChange={(e) => setJewellerySchemeRedemptionDiscount(Number(e.target.value))} />
+                                                            <Input type="number" step="0.001" min="0" max="100" value={jewellerySchemeRedemptionDiscount} onChange={(e) => setJewellerySchemeRedemptionDiscount(Number(e.target.value))} />
                                                         </div>
                                                     </div>
                                                 </div>

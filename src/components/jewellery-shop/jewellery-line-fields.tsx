@@ -154,7 +154,7 @@ export function JewelleryLineFields({
           <Label className="text-[10px] text-amber-700">Gold Rate/g</Label>
           <Input
             type="number"
-            step="0.01"
+            step="0.001"
             min="0"
             value={jewelleryData.goldRate || goldRate || ""}
             onChange={(e) => onUpdate("goldRate", parseFloat(e.target.value) || 0)}
@@ -183,7 +183,7 @@ export function JewelleryLineFields({
           <Label className="text-[10px] text-amber-700">Making Value</Label>
           <Input
             type="number"
-            step="0.01"
+            step="0.001"
             min="0"
             value={jewelleryData.makingChargeValue || ""}
             onChange={(e) => onUpdate("makingChargeValue", parseFloat(e.target.value) || 0)}
@@ -195,7 +195,7 @@ export function JewelleryLineFields({
           <Label className="text-[10px] text-amber-700">Wastage %</Label>
           <Input
             type="number"
-            step="0.01"
+            step="0.001"
             min="0"
             max="100"
             value={jewelleryData.wastagePercent || ""}
@@ -208,7 +208,7 @@ export function JewelleryLineFields({
           <Label className="text-[10px] text-amber-700">Stone Value</Label>
           <Input
             type="number"
-            step="0.01"
+            step="0.001"
             min="0"
             value={jewelleryData.stoneValue || ""}
             onChange={(e) => onUpdate("stoneValue", parseFloat(e.target.value) || 0)}

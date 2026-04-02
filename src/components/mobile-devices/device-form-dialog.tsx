@@ -412,7 +412,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   <Input
                     type="number"
                     inputMode="decimal"
-                    step="0.01"
+                    step="0.001"
                     value={formData.costPrice}
                     onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
                     placeholder="0.00"
@@ -424,7 +424,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   <Input
                     type="number"
                     inputMode="decimal"
-                    step="0.01"
+                    step="0.001"
                     value={formData.mrp}
                     onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
                     placeholder="0.00"
@@ -435,7 +435,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   <Input
                     type="number"
                     inputMode="decimal"
-                    step="0.01"
+                    step="0.001"
                     value={formData.landedCost}
                     onChange={(e) => setFormData({ ...formData, landedCost: e.target.value })}
                     placeholder="0.00"
@@ -446,7 +446,7 @@ export function DeviceFormDialog({ open, onOpenChange, onSuccess, editDevice }: 
                   <Input
                     type="number"
                     inputMode="decimal"
-                    step="0.01"
+                    step="0.001"
                     value={formData.sellingPrice}
                     onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
                     placeholder="0.00"

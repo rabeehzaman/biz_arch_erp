@@ -753,7 +753,7 @@ export default function InvoiceDetailPage({
                   <Input
                     id="pay-amount"
                     type="number"
-                    step="0.01"
+                    step="0.001"
                     value={paymentForm.amount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
                     required

@@ -91,7 +91,7 @@ export default function RepairsPage() {
                 <div className="space-y-2"><Label>Item Description *</Label><Input value={form.itemDescription} onChange={(e) => setForm({ ...form, itemDescription: e.target.value })} placeholder="e.g., Gold chain repair, ring resizing" /></div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><Label>Repair Type</Label><Input value={form.repairType} onChange={(e) => setForm({ ...form, repairType: e.target.value })} placeholder="e.g., Soldering, Resizing" /></div>
-                  <div className="space-y-2"><Label>Estimated Cost</Label><Input type="number" step="0.01" value={form.estimatedCost} onChange={(e) => setForm({ ...form, estimatedCost: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Estimated Cost</Label><Input type="number" step="0.001" value={form.estimatedCost} onChange={(e) => setForm({ ...form, estimatedCost: e.target.value })} /></div>
                 </div>
                 <div className="space-y-2"><Label>Notes</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
                 <Button onClick={handleCreate} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Repair</Button>

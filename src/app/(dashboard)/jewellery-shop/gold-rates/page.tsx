@@ -214,7 +214,7 @@ export default function GoldRatesPage() {
                 <Label>Sell Rate (per gram)</Label>
                 <Input
                   type="number"
-                  step="0.01"
+                  step="0.001"
                   min="0"
                   value={sellRate}
                   onChange={(e) => setSellRate(e.target.value)}

@@ -559,7 +559,7 @@ export default function NewDebitNotePage() {
                               updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
                             }
                             min="0"
-                            step="0.01"
+                            step="0.001"
                             required
                             ref={(el) => {
                               if (el) quantityRefs.current.set(item.id, el);
@@ -604,7 +604,7 @@ export default function NewDebitNotePage() {
                               updateLineItem(item.id, "unitCost", parseFloat(e.target.value) || 0)
                             }
                             min="0"
-                            step="0.01"
+                            step="0.001"
                             required
                           />
                         </div>
@@ -642,7 +642,7 @@ export default function NewDebitNotePage() {
                             }}
                             min="0"
                             max="100"
-                            step="0.01"
+                            step="0.001"
                           />
                         </div>
                         )}

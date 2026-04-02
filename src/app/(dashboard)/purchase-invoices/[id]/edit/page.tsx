@@ -559,7 +559,7 @@ export default function EditPurchaseInvoicePage({
                                 type="number"
                                 onFocus={(e) => e.target.select()}
                                 min="0.01"
-                                step="0.01"
+                                step="0.001"
                                 value={item.quantity || ""}
                                 onChange={(e) =>
                                   updateLineItem(
@@ -600,7 +600,7 @@ export default function EditPurchaseInvoicePage({
                                 type="number"
                                 onFocus={(e) => e.target.select()}
                                 min="0"
-                                step="0.01"
+                                step="0.001"
                                 value={item.unitCost}
                                 onChange={(e) =>
                                   updateLineItem(
@@ -619,7 +619,7 @@ export default function EditPurchaseInvoicePage({
                                 onFocus={(e) => e.target.select()}
                                 min="0"
                                 max="100"
-                                step="0.01"
+                                step="0.001"
                                 value={item.discount || ""}
                                 onChange={(e) =>
                                   updateLineItem(
@@ -639,7 +639,7 @@ export default function EditPurchaseInvoicePage({
                                   onFocus={(e) => e.target.select()}
                                   min="0"
                                   max="100"
-                                  step="0.01"
+                                  step="0.001"
                                   value={item.vatRate ?? 15}
                                   onChange={(e) =>
                                     updateLineItem(item.id, "vatRate", parseFloat(e.target.value) || 0)
@@ -656,7 +656,7 @@ export default function EditPurchaseInvoicePage({
                                   onFocus={(e) => e.target.select()}
                                   min="0"
                                   max="100"
-                                  step="0.01"
+                                  step="0.001"
                                   value={item.gstRate || ""}
                                   onChange={(e) =>
                                     updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)
@@ -757,7 +757,7 @@ export default function EditPurchaseInvoicePage({
                               type="number"
                               onFocus={(e) => e.target.select()}
                               min="0.01"
-                              step="0.01"
+                              step="0.001"
                               value={item.quantity || ""}
                               onChange={(e) =>
                                 updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
@@ -771,7 +771,7 @@ export default function EditPurchaseInvoicePage({
                               type="number"
                               onFocus={(e) => e.target.select()}
                               min="0"
-                              step="0.01"
+                              step="0.001"
                               value={item.unitCost}
                               onChange={(e) =>
                                 updateLineItem(item.id, "unitCost", parseFloat(e.target.value) || 0)
@@ -786,7 +786,7 @@ export default function EditPurchaseInvoicePage({
                               onFocus={(e) => e.target.select()}
                               min="0"
                               max="100"
-                              step="0.01"
+                              step="0.001"
                               value={item.discount || ""}
                               onChange={(e) =>
                                 updateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)
@@ -802,7 +802,7 @@ export default function EditPurchaseInvoicePage({
                                 onFocus={(e) => e.target.select()}
                                 min="0"
                                 max="100"
-                                step="0.01"
+                                step="0.001"
                                 value={item.vatRate ?? 15}
                                 onChange={(e) =>
                                   updateLineItem(item.id, "vatRate", parseFloat(e.target.value) || 0)
@@ -819,7 +819,7 @@ export default function EditPurchaseInvoicePage({
                                 onFocus={(e) => e.target.select()}
                                 min="0"
                                 max="100"
-                                step="0.01"
+                                step="0.001"
                                 value={item.gstRate || ""}
                                 onChange={(e) =>
                                   updateLineItem(item.id, "gstRate", parseFloat(e.target.value) || 0)

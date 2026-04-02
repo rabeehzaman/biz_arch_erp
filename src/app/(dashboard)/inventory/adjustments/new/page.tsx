@@ -531,7 +531,7 @@ export default function NewStockTakePage() {
                                   type="number"
                                   onFocus={(e) => e.target.select()}
                                   min="0"
-                                  step="0.01"
+                                  step="0.001"
                                   value={item.physicalQuantity}
                                   onChange={(e) => updateItem(item.id, "physicalQuantity", e.target.value)}
                                   placeholder={t("inventory.enterPhysicalQty")}
@@ -644,7 +644,7 @@ export default function NewStockTakePage() {
                                   type="number"
                                   onFocus={(e) => e.target.select()}
                                   min="0"
-                                  step="0.01"
+                                  step="0.001"
                                   value={item.physicalQuantity}
                                   onChange={(e) => updateItem(item.id, "physicalQuantity", e.target.value)}
                                   placeholder={t("inventory.enterPhysicalQty")}

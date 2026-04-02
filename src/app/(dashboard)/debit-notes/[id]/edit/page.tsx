@@ -557,7 +557,7 @@ export default function EditDebitNotePage({
                                 )
                               }
                               min="0"
-                              step="0.01"
+                              step="0.001"
                               required
                               ref={(el) => {
                                 if (el) quantityRefs.current.set(item.id, el);
@@ -629,7 +629,7 @@ export default function EditDebitNotePage({
                                 )
                               }
                               min="0"
-                              step="0.01"
+                              step="0.001"
                               required
                             />
                           </div>
@@ -676,7 +676,7 @@ export default function EditDebitNotePage({
                               }}
                               min="0"
                               max="100"
-                              step="0.01"
+                              step="0.001"
                             />
                           </div>
                         </div>

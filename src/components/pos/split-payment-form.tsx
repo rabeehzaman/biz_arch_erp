@@ -105,7 +105,7 @@ export function SplitPaymentForm({
                 onChange={(e) => updatePayment(index, "amount", e.target.value)}
                 className="h-10 flex-1"
                 min={0}
-                step="0.01"
+                step="0.001"
               />
               {payment.method !== "CASH" && (
                 <Input

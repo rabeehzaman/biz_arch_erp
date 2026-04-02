@@ -138,24 +138,24 @@ export default function OldGoldPage() {
                 <div className="space-y-2">
                   <Label>Purity Readings (3 XRF readings)</Label>
                   <div className="grid grid-cols-4 gap-2">
-                    <Input type="number" step="0.01" placeholder="Reading 1" value={form.reading1} onChange={(e) => setForm({ ...form, reading1: e.target.value })} />
-                    <Input type="number" step="0.01" placeholder="Reading 2" value={form.reading2} onChange={(e) => setForm({ ...form, reading2: e.target.value })} />
-                    <Input type="number" step="0.01" placeholder="Reading 3" value={form.reading3} onChange={(e) => setForm({ ...form, reading3: e.target.value })} />
+                    <Input type="number" step="0.001" placeholder="Reading 1" value={form.reading1} onChange={(e) => setForm({ ...form, reading1: e.target.value })} />
+                    <Input type="number" step="0.001" placeholder="Reading 2" value={form.reading2} onChange={(e) => setForm({ ...form, reading2: e.target.value })} />
+                    <Input type="number" step="0.001" placeholder="Reading 3" value={form.reading3} onChange={(e) => setForm({ ...form, reading3: e.target.value })} />
                     <Button variant="outline" type="button" onClick={handleAvgReadings}>Avg</Button>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Purity % (averaged)</Label>
-                    <Input type="number" step="0.01" value={form.purityPercentage} onChange={(e) => setForm({ ...form, purityPercentage: e.target.value })} />
+                    <Input type="number" step="0.001" value={form.purityPercentage} onChange={(e) => setForm({ ...form, purityPercentage: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Melting Loss %</Label>
-                    <Input type="number" step="0.01" value={form.meltingLossPercent} onChange={(e) => setForm({ ...form, meltingLossPercent: e.target.value })} />
+                    <Input type="number" step="0.001" value={form.meltingLossPercent} onChange={(e) => setForm({ ...form, meltingLossPercent: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Rate (per g) *</Label>
-                    <Input type="number" step="0.01" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
+                    <Input type="number" step="0.001" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
                   </div>
                 </div>
                 <div className="rounded-md bg-muted p-3">

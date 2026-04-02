@@ -378,7 +378,7 @@ export default function CustomersPage() {
                     <Input
                       id="openingAmount"
                       type="number"
-                      step="0.01"
+                      step="0.001"
                       value={openingBalanceData.amount}
                       onChange={(e) =>
                         setOpeningBalanceData({ ...openingBalanceData, amount: e.target.value })

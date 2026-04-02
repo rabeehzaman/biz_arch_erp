@@ -75,7 +75,7 @@ export default function KarigarsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><Label>Specialization</Label><Input value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} placeholder="e.g., Chains, Rings" /></div>
-                  <div className="space-y-2"><Label>Wastage Allowance %</Label><Input type="number" step="0.01" value={form.wastageAllowancePercent} onChange={(e) => setForm({ ...form, wastageAllowancePercent: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Wastage Allowance %</Label><Input type="number" step="0.001" value={form.wastageAllowancePercent} onChange={(e) => setForm({ ...form, wastageAllowancePercent: e.target.value })} /></div>
                 </div>
                 <div className="space-y-2"><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
                 <Button onClick={handleCreate} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Add Karigar</Button>

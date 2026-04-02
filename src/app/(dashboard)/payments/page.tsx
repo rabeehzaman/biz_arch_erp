@@ -377,7 +377,7 @@ export default function PaymentsPage() {
                       <Input
                         id="amount"
                         type="number"
-                        step="0.01"
+                        step="0.001"
                         value={formData.amount}
                         onChange={(e) => {
                           setFormData({ ...formData, amount: e.target.value });
@@ -392,7 +392,7 @@ export default function PaymentsPage() {
                       <Input
                         id="discountReceived"
                         type="number"
-                        step="0.01"
+                        step="0.001"
                         value={formData.discountReceived}
                         onChange={(e) =>
                           setFormData({ ...formData, discountReceived: e.target.value })

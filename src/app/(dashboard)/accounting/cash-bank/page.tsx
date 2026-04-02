@@ -200,7 +200,7 @@ export default function CashBankPage() {
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="grid gap-2">
                           <Label>{t("common.amount")} *</Label>
-                          <Input type="number" step="0.01" value={transferData.amount} onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })} required />
+                          <Input type="number" step="0.001" value={transferData.amount} onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })} required />
                         </div>
                         <div className="grid gap-2">
                           <Label>{t("common.date")}</Label>
@@ -274,7 +274,7 @@ export default function CashBankPage() {
                       )}
                       <div className="grid gap-2">
                         <Label>{t("common.openingBalance")}</Label>
-                        <Input type="number" step="0.01" value={formData.openingBalance} onChange={(e) => setFormData({ ...formData, openingBalance: e.target.value })} placeholder="0.00" />
+                        <Input type="number" step="0.001" value={formData.openingBalance} onChange={(e) => setFormData({ ...formData, openingBalance: e.target.value })} placeholder="0.00" />
                       </div>
                     </div>
                     <DialogFooter>

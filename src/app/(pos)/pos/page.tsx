@@ -554,7 +554,7 @@ export default function POSDashboardPage() {
                                   )
                                 }
                                 min={0}
-                                step="0.01"
+                                step="0.001"
                                 className="mt-1"
                                 autoFocus
                                 onKeyDown={(e) => {

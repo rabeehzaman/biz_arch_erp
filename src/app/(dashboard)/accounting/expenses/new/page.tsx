@@ -276,7 +276,7 @@ export default function NewExpensePage() {
 
                         <Input
                           type="number"
-                          step="0.01"
+                          step="0.001"
                           min="0"
                           value={line.amount}
                           onChange={(e) =>
@@ -355,7 +355,7 @@ export default function NewExpensePage() {
                             <Label className="text-xs text-slate-500">{t("common.amount")}</Label>
                             <Input
                               type="number"
-                              step="0.01"
+                              step="0.001"
                               min="0"
                               value={line.amount}
                               onChange={(e) => updateLine(index, "amount", e.target.value)}

@@ -397,7 +397,7 @@ export function POSReturnDialog({
                             updatePrice(item.productId, parseFloat(e.target.value) || 0)
                           }
                           className="h-7 w-24 text-sm"
-                          step="0.01"
+                          step="0.001"
                         />
                       </div>
                     </div>

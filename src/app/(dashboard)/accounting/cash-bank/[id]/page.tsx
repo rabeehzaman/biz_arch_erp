@@ -284,7 +284,7 @@ export default function CashBankDetailPage({
                     <Label>{t("common.amount")} *</Label>
                     <Input
                       type="number"
-                      step="0.01"
+                      step="0.001"
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       required

@@ -188,25 +188,25 @@ export default function JewelleryInventoryPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Making Charge Value</Label>
-                    <Input type="number" step="0.01" value={form.makingChargeValue} onChange={(e) => setForm({ ...form, makingChargeValue: e.target.value })} />
+                    <Input type="number" step="0.001" value={form.makingChargeValue} onChange={(e) => setForm({ ...form, makingChargeValue: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Wastage %</Label>
-                    <Input type="number" step="0.01" value={form.wastagePercent} onChange={(e) => setForm({ ...form, wastagePercent: e.target.value })} />
+                    <Input type="number" step="0.001" value={form.wastagePercent} onChange={(e) => setForm({ ...form, wastagePercent: e.target.value })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Cost Price</Label>
-                    <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
+                    <Input type="number" step="0.001" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Gold Rate at Purchase</Label>
-                    <Input type="number" step="0.01" value={form.goldRateAtPurchase} onChange={(e) => setForm({ ...form, goldRateAtPurchase: e.target.value })} />
+                    <Input type="number" step="0.001" value={form.goldRateAtPurchase} onChange={(e) => setForm({ ...form, goldRateAtPurchase: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Stone Value</Label>
-                    <Input type="number" step="0.01" value={form.stoneValue} onChange={(e) => setForm({ ...form, stoneValue: e.target.value })} />
+                    <Input type="number" step="0.001" value={form.stoneValue} onChange={(e) => setForm({ ...form, stoneValue: e.target.value })} />
                   </div>
                 </div>
                 <div className="space-y-2">

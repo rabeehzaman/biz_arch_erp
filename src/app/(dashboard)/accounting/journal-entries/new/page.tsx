@@ -210,7 +210,7 @@ export default function NewJournalEntryPage() {
 
                         <Input
                           type="number"
-                          step="0.01"
+                          step="0.001"
                           min="0"
                           value={line.debit}
                           onChange={(e) =>
@@ -222,7 +222,7 @@ export default function NewJournalEntryPage() {
 
                         <Input
                           type="number"
-                          step="0.01"
+                          step="0.001"
                           min="0"
                           value={line.credit}
                           onChange={(e) =>
@@ -291,7 +291,7 @@ export default function NewJournalEntryPage() {
                               <Label className="text-xs text-slate-500">{t("accounting.debit")}</Label>
                               <Input
                                 type="number"
-                                step="0.01"
+                                step="0.001"
                                 min="0"
                                 value={line.debit}
                                 onChange={(e) => updateLine(index, "debit", e.target.value)}
@@ -303,7 +303,7 @@ export default function NewJournalEntryPage() {
                               <Label className="text-xs text-slate-500">{t("accounting.credit")}</Label>
                               <Input
                                 type="number"
-                                step="0.01"
+                                step="0.001"
                                 min="0"
                                 value={line.credit}
                                 onChange={(e) => updateLine(index, "credit", e.target.value)}

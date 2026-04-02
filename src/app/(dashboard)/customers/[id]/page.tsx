@@ -313,7 +313,7 @@ export default function CustomerDetailPage({
             <div className="mt-4 space-y-4">
               <div className="grid gap-2">
                 <label className="text-sm font-medium">{t("common.amount")}</label>
-                <input type="number" step="0.01" className="rounded-lg border px-3 py-2 text-sm" value={obAmount} onChange={(e) => setObAmount(e.target.value)} />
+                <input type="number" step="0.001" className="rounded-lg border px-3 py-2 text-sm" value={obAmount} onChange={(e) => setObAmount(e.target.value)} />
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium">{t("common.date")}</label>

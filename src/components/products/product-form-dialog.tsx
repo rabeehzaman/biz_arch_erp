@@ -379,7 +379,7 @@ export function ProductFormDialog({
                                 <Input
                                     id="prod-price"
                                     type="number"
-                                    step="0.01"
+                                    step="0.001"
                                     value={formData.price}
                                     onChange={(e) => {
                                         setFormData({ ...formData, price: e.target.value });
@@ -398,7 +398,7 @@ export function ProductFormDialog({
                                     id="prod-cost"
                                     type="number"
                                     min="0"
-                                    step="0.01"
+                                    step="0.001"
                                     value={formData.cost}
                                     onChange={(e) => {
                                         setFormData({ ...formData, cost: e.target.value });
@@ -573,7 +573,7 @@ export function ProductFormDialog({
                                                 <Input
                                                     type="number"
                                                     min="0.0001"
-                                                    step="0.01"
+                                                    step="0.001"
                                                     placeholder="Qty"
                                                     value={bi.quantity}
                                                     onChange={(e) => updateBundleItem(index, "quantity", e.target.value)}

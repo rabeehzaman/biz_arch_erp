@@ -320,7 +320,7 @@ export function PaymentPanel({
                       <Input
                         type="number"
                         min={0}
-                        step="0.01"
+                        step="0.001"
                         value={cashTendered}
                         onChange={(e) => setCashTendered(e.target.value)}
                         placeholder="0.00"

@@ -93,7 +93,7 @@ export default function SchemesPage() {
                   </Select>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2"><Label>Monthly Amount *</Label><Input type="number" step="0.01" value={form.monthlyAmount} onChange={(e) => setForm({ ...form, monthlyAmount: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Monthly Amount *</Label><Input type="number" step="0.001" value={form.monthlyAmount} onChange={(e) => setForm({ ...form, monthlyAmount: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Duration (months)</Label><Input type="number" min="1" max="24" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></div>
                 </div>
@@ -175,7 +175,7 @@ export default function SchemesPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>Record Payment — {selectedScheme?.schemeName}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2"><Label>Payment Amount</Label><Input type="number" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Payment Amount</Label><Input type="number" step="0.001" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} /></div>
               <Button onClick={handlePayment} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Record Payment</Button>
             </div>
           </DialogContent>
