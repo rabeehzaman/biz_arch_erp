@@ -62,6 +62,19 @@ function getLineAmountKey(itemId: string, ...amounts: number[]) {
   return `${itemId}:${amounts.map((amount) => amount.toFixed(2)).join(":")}`;
 }
 
+function getQuotationLineAmounts(item: { quantity: number; unitPrice: number; discount: number; gstRate: number; vatRate?: number }, taxInclusive: boolean, saudiEnabled: boolean) {
+  const discountedAmount = item.quantity * item.unitPrice * (1 - item.discount / 100);
+  const taxRate = saudiEnabled ? ((item as { vatRate?: number }).vatRate || 0) : (item.gstRate || 0);
+  if (taxInclusive && taxRate > 0) {
+    const subtotal = Math.round((discountedAmount / (1 + taxRate / 100)) * 100) / 100;
+    const tax = Math.round((discountedAmount - subtotal) * 100) / 100;
+    return { subtotal, tax, total: Math.round(discountedAmount * 100) / 100 };
+  }
+  const subtotal = Math.round(discountedAmount * 100) / 100;
+  const tax = Math.round((discountedAmount * (taxRate / 100)) * 100) / 100;
+  return { subtotal, tax, total: Math.round((subtotal + tax) * 100) / 100 };
+}
+
 export default function NewQuotationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -569,8 +582,9 @@ export default function NewQuotationPage() {
                         )}
                         <TableHead className="w-[12%] font-semibold">{t("common.unitPrice")} *</TableHead>
                         {!isColumnHidden("discount") && <TableHead className="w-[10%] font-semibold">{t("common.discountPercent")}</TableHead>}
-                        {session?.user?.gstEnabled && <TableHead className="w-[8%] font-semibold">{t("common.gstPercent")}</TableHead>}
-                        {session?.user?.gstEnabled ? (
+                        {session?.user?.gstEnabled && !saudiEnabled && <TableHead className="w-[8%] font-semibold">{t("common.gstPercent")}</TableHead>}
+                        {saudiEnabled && <TableHead className="w-[8%] font-semibold">{t("common.vatPercent")}</TableHead>}
+                        {taxEnabled ? (
                           <>
                             <TableHead className="text-right font-semibold">{t("common.grossAmount")}</TableHead>
                             <TableHead className="text-right font-semibold">{t("common.netAmount")}</TableHead>
@@ -583,9 +597,8 @@ export default function NewQuotationPage() {
                     </TableHeader>
                     <TableBody>
                       {lineItems.map((item, index) => {
-                        const lineGross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-                        const lineNet = lineGross * (1 + (item.gstRate || 0) / 100);
-                        const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
+                        const lineAmts = getQuotationLineAmounts(item, taxInclusive, saudiEnabled);
+                        const lineAmountKey = getLineAmountKey(item.id, lineAmts.subtotal, lineAmts.total);
                         return (
                           <Fragment key={item.id}>
                           <TableRow className="group hover:bg-slate-50 border-b">
@@ -730,11 +743,11 @@ export default function NewQuotationPage() {
                                 />
                               </TableCell>
                             )}
-                            {session?.user?.gstEnabled ? (
+                            {taxEnabled ? (
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                   <span key={`${lineAmountKey}:gross`}>
-                                    {symbol}{lineGross.toLocaleString(locale)}
+                                    {fmt(lineAmts.subtotal)}
                                   </span>
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
@@ -742,14 +755,19 @@ export default function NewQuotationPage() {
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
                                   <span key={`${lineAmountKey}:net`}>
-                                    {symbol}{lineNet.toLocaleString(locale)}
+                                    {fmt(lineAmts.total)}
                                   </span>
+                                  {lineAmts.tax > 0 && (
+                                    <div className="text-[10px] text-slate-400 mt-0.5">
+                                      ({saudiEnabled ? t("common.vat") : t("common.gst")}: {fmt(lineAmts.tax)})
+                                    </div>
+                                  )}
                                 </TableCell>
                               </>
                             ) : (
                               <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                 <span key={`${lineAmountKey}:single`}>
-                                  {symbol}{lineGross.toLocaleString(locale)}
+                                  {fmt(lineAmts.total)}
                                 </span>
                                 {item.discount > 0 && (
                                   <div className="text-xs text-green-600">(-{item.discount}%)</div>
@@ -791,9 +809,8 @@ export default function NewQuotationPage() {
                 {/* Mobile Card Layout */}
                 <div className="sm:hidden divide-y divide-slate-200">
                   {lineItems.map((item) => {
-                    const lineGross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-                    const lineNet = lineGross * (1 + (item.gstRate || 0) / 100);
-                    const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
+                    const lineAmts = getQuotationLineAmounts(item, taxInclusive, saudiEnabled);
+                    const lineAmountKey = getLineAmountKey(item.id, lineAmts.subtotal, lineAmts.total);
 
                     return (
                       <div key={item.id} className="p-3 space-y-3">
@@ -926,10 +943,13 @@ export default function NewQuotationPage() {
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">
-                            {session?.user?.gstEnabled
-                              ? `${symbol}${lineNet.toLocaleString(locale)}`
-                              : `${symbol}${lineGross.toLocaleString(locale)}`}
+                            {fmt(lineAmts.total)}
                           </span>
+                          {lineAmts.tax > 0 && taxEnabled && (
+                            <span className="text-[10px] text-slate-400 ml-1">
+                              ({saudiEnabled ? t("common.vat") : t("common.gst")}: {fmt(lineAmts.tax)})
+                            </span>
+                          )}
                         </div>
                       </div>
                     );

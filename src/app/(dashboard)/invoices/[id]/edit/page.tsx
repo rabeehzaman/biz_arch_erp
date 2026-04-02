@@ -68,6 +68,19 @@ function getLineAmountKey(itemId: string, ...amounts: number[]) {
   return `${itemId}:${amounts.map((amount) => amount.toFixed(2)).join(":")}`;
 }
 
+function getEditLineAmounts(item: { quantity: number; unitPrice: number; discount: number; vatRate: number; gstRate: number }, taxInclusive: boolean, saudiEnabled: boolean) {
+  const discountedAmount = item.quantity * item.unitPrice * (1 - item.discount / 100);
+  const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
+  if (taxInclusive && taxRate > 0) {
+    const subtotal = Math.round((discountedAmount / (1 + taxRate / 100)) * 100) / 100;
+    const tax = Math.round((discountedAmount - subtotal) * 100) / 100;
+    return { subtotal, tax, total: Math.round(discountedAmount * 100) / 100 };
+  }
+  const subtotal = Math.round(discountedAmount * 100) / 100;
+  const tax = Math.round((discountedAmount * (taxRate / 100)) * 100) / 100;
+  return { subtotal, tax, total: Math.round((subtotal + tax) * 100) / 100 };
+}
+
 export default function EditInvoicePage({
   params,
 }: {
@@ -634,10 +647,8 @@ export default function EditInvoicePage({
                         const product = products.find((p) => p.id === item.productId);
                         const availableStock = product?.availableStock ?? 0;
                         const hasStockShortfall = item.productId && item.quantity > availableStock;
-                        const lineGross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-                        const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-                        const lineNet = lineGross * (1 + taxRate / 100);
-                        const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
+                        const lineAmts = getEditLineAmounts(item, taxInclusive, saudiEnabled);
+                        const lineAmountKey = getLineAmountKey(item.id, lineAmts.subtotal, lineAmts.total);
                         return (
                           <TableRow key={item.id} className="group hover:bg-slate-50 border-b">
                             <TableCell className="align-top p-2 border-r border-slate-100 last:border-0">
@@ -797,7 +808,7 @@ export default function EditInvoicePage({
                               <>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                   <span key={`${lineAmountKey}:gross`}>
-                                    {symbol}{lineGross.toLocaleString(locale)}
+                                    {fmt(lineAmts.subtotal)}
                                   </span>
                                   {item.discount > 0 && (
                                     <div className="text-xs text-green-600">(-{item.discount}%)</div>
@@ -805,14 +816,19 @@ export default function EditInvoicePage({
                                 </TableCell>
                                 <TableCell className="text-right align-top p-2 py-4 text-sm font-medium border-r border-slate-100 last:border-0">
                                   <span key={`${lineAmountKey}:net`}>
-                                    {symbol}{lineNet.toFixed(2)}
+                                    {fmt(lineAmts.total)}
                                   </span>
+                                  {lineAmts.tax > 0 && (
+                                    <div className="text-[10px] text-slate-400 mt-0.5">
+                                      ({saudiEnabled ? t("common.vat") : t("common.gst")}: {fmt(lineAmts.tax)})
+                                    </div>
+                                  )}
                                 </TableCell>
                               </>
                             ) : (
                               <TableCell className="text-right align-top p-2 py-4 text-sm text-slate-500 border-r border-slate-100 last:border-0">
                                 <span key={`${lineAmountKey}:single`}>
-                                  {symbol}{lineGross.toLocaleString(locale)}
+                                  {fmt(lineAmts.total)}
                                 </span>
                                 {item.discount > 0 && (
                                   <div className="text-xs text-green-600">(-{item.discount}%)</div>
@@ -844,10 +860,8 @@ export default function EditInvoicePage({
                     const product = products.find((p) => p.id === item.productId);
                     const availableStock = product?.availableStock ?? 0;
                     const hasStockShortfall = item.productId && item.quantity > availableStock;
-                    const lineGross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-                    const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-                    const lineNet = lineGross * (1 + taxRate / 100);
-                    const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
+                    const lineAmts = getEditLineAmounts(item, taxInclusive, saudiEnabled);
+                    const lineAmountKey = getLineAmountKey(item.id, lineAmts.subtotal, lineAmts.total);
 
                     return (
                       <div key={item.id} className="p-3 space-y-3">
@@ -999,10 +1013,13 @@ export default function EditInvoicePage({
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">
-                            {(session?.user?.gstEnabled || saudiEnabled)
-                              ? `${symbol}${lineNet.toFixed(2)}`
-                              : `${symbol}${lineGross.toLocaleString(locale)}`}
+                            {fmt(lineAmts.total)}
                           </span>
+                          {lineAmts.tax > 0 && (session?.user?.gstEnabled || saudiEnabled) && (
+                            <span className="text-[10px] text-slate-400 ml-1">
+                              ({saudiEnabled ? t("common.vat") : t("common.gst")}: {fmt(lineAmts.tax)})
+                            </span>
+                          )}
                         </div>
                       </div>
                     );

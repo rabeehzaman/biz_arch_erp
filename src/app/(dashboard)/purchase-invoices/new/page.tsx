@@ -115,7 +115,7 @@ export default function NewPurchaseInvoicePage() {
   const { data: session } = useSession();
   const jewelleryEnabled = !!(session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled;
   const { getRate: getGoldRate } = useJewelleryRates(jewelleryEnabled);
-  const { symbol, locale } = useCurrency();
+  const { symbol, locale, fmt } = useCurrency();
   const { unitConversions } = useUnitConversions();
   const { t } = useLanguage();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
@@ -863,6 +863,11 @@ export default function NewPurchaseInvoicePage() {
                                   <span key={`${lineAmountKey}:net`}>
                                     {symbol}{lineNet.toLocaleString(locale)}
                                   </span>
+                                  {lineAmts.tax > 0 && (
+                                    <div className="text-[10px] text-slate-400 mt-0.5">
+                                      ({saudiEnabled ? t("common.vat") : t("common.gst")}: {fmt(lineAmts.tax)})
+                                    </div>
+                                  )}
                                 </TableCell>
                               </>
                             ) : (
@@ -1212,10 +1217,13 @@ export default function NewPurchaseInvoicePage() {
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">
-                            {taxEnabled
-                              ? `${symbol}${lineNet.toLocaleString(locale)}`
-                              : `${symbol}${lineGross.toLocaleString(locale)}`}
+                            {fmt(lineAmtsMob.net)}
                           </span>
+                          {lineAmtsMob.tax > 0 && taxEnabled && (
+                            <span className="text-[10px] text-slate-400 ml-1">
+                              ({saudiEnabled ? t("common.vat") : t("common.gst")}: {fmt(lineAmtsMob.tax)})
+                            </span>
+                          )}
                         </div>
 
                         {/* Mobile IMEI Section */}

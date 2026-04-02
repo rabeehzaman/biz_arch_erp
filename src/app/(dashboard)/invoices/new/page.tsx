@@ -1053,6 +1053,11 @@ export default function NewInvoicePage() {
                                     <span key={`${getLineAmountKey(item.id, lineAmounts.subtotal, lineAmounts.total)}:net`}>
                                       {fmt(lineAmounts.total)}
                                     </span>
+                                    {lineAmounts.tax > 0 && (
+                                      <div className="text-[10px] text-slate-400 mt-0.5">
+                                        ({taxMode === "vat" ? t("common.vat") : t("common.gst")}: {fmt(lineAmounts.tax)})
+                                      </div>
+                                    )}
                                   </TableCell>
                                 </>
                               ) : (
@@ -1309,6 +1314,11 @@ export default function NewInvoicePage() {
                           >
                             {fmt(lineAmounts.total)}
                           </span>
+                          {lineAmounts.tax > 0 && taxMode !== "none" && (
+                            <span className="text-[10px] text-slate-400 ml-1">
+                              ({taxMode === "vat" ? t("common.vat") : t("common.gst")}: {fmt(lineAmounts.tax)})
+                            </span>
+                          )}
                         </div>
 
                         {isImeiTracked && devices.length > 0 && (
