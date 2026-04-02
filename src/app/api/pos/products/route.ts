@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
+import { getOrgId, isPriceListEnabled, getPriceListId } from "@/lib/auth-utils";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
+import { resolveProductPrices } from "@/lib/price-list/resolve-price";
 
 export async function GET() {
   try {
@@ -68,12 +69,30 @@ export async function GET() {
       },
     });
 
+    // Resolve price list prices if enabled
+    let resolvedPrices: Map<string, { price: number; basePrice: number; source: string }> | null = null;
+    const userPriceListId = getPriceListId(session);
+    if (isPriceListEnabled(session) && userPriceListId) {
+      const mapped = products.map((p) => ({
+        id: p.id,
+        price: p.price,
+        hasJewelleryItem: !!p.jewelleryItem,
+      }));
+      resolvedPrices = await resolveProductPrices(mapped, {
+        userId: session.user.id,
+        userPriceListId,
+        organizationId,
+      });
+    }
+
     const result = products.map((p) => ({
       id: p.id,
       name: p.name,
       sku: p.sku,
       barcode: p.barcode,
-      price: p.price,
+      price: resolvedPrices?.get(p.id)?.source !== "base"
+        ? resolvedPrices!.get(p.id)!.price
+        : p.price,
       gstRate: isSaudi ? SAUDI_VAT_RATE : (Number(p.gstRate) || 0),
       hsnCode: p.hsnCode || null,
       categoryId: p.categoryId,

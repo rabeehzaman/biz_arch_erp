@@ -38,17 +38,22 @@ export async function GET(
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    const [pdfFormatSetting, transferPdfFormatSetting, transferHideCostSetting] = await Promise.all([
+    const [pdfFormatSetting, transferPdfFormatSetting, transferHideCostSetting, assignedTemplatesSetting] = await Promise.all([
       prisma.setting.findFirst({ where: { organizationId: id, key: "invoice_pdf_format", userId: null } }),
       prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_format", userId: null } }),
       prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_hide_cost", userId: null } }),
+      prisma.setting.findFirst({ where: { organizationId: id, key: "assigned_invoice_templates", userId: null } }),
     ]);
+
+    let assignedInvoiceTemplates: string[] = [];
+    try { assignedInvoiceTemplates = assignedTemplatesSetting ? JSON.parse(assignedTemplatesSetting.value) : []; } catch { /* ignore */ }
 
     return NextResponse.json({
       ...organization,
       invoicePdfFormat: pdfFormatSetting?.value || "A5_LANDSCAPE",
       transferPdfFormat: transferPdfFormatSetting?.value || "DEFAULT",
       transferPdfHideCost: transferHideCostSetting?.value === "true",
+      assignedInvoiceTemplates,
     });
   } catch (error) {
     console.error("Failed to fetch organization:", error);
@@ -99,6 +104,7 @@ export async function PUT(
       arabicAddress,
       arabicCity,
       invoicePdfFormat,
+      assignedInvoiceTemplates,
       transferPdfFormat,
       transferPdfHideCost,
       language,
@@ -461,6 +467,19 @@ export async function PUT(
             await tx.setting.update({ where: { id: existingInvoiceFmt.id }, data: { value: invoicePdfFormat } });
           } else {
             await tx.setting.create({ data: { organizationId: id, key: "invoice_pdf_format", value: invoicePdfFormat } });
+          }
+        }
+
+        // Upsert assigned invoice templates setting
+        if (assignedInvoiceTemplates !== undefined) {
+          const value = JSON.stringify(assignedInvoiceTemplates);
+          const existingAssigned = await tx.setting.findFirst({
+            where: { organizationId: id, key: "assigned_invoice_templates", userId: null },
+          });
+          if (existingAssigned) {
+            await tx.setting.update({ where: { id: existingAssigned.id }, data: { value } });
+          } else {
+            await tx.setting.create({ data: { organizationId: id, key: "assigned_invoice_templates", value } });
           }
         }
 

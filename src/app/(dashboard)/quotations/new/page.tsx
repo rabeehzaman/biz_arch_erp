@@ -38,6 +38,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  basePrice?: number;
   unitId: string | null;
   unit: { id: string; name: string; code: string } | null;
   gstRate?: number;
@@ -134,6 +135,26 @@ export default function NewQuotationPage() {
     // Refresh product options from the selected warehouse.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
+
+  // Resolve customer-specific price list prices when customer changes
+  const isPriceListOn = (session?.user as { isPriceListEnabled?: boolean })?.isPriceListEnabled ?? false;
+  useEffect(() => {
+    if (!isPriceListOn || !formData.customerId) return;
+    fetch(`/api/products/resolved-prices?customerId=${formData.customerId}`)
+      .then((r) => r.json())
+      .then((resolved: Record<string, { price: number; basePrice: number }>) => {
+        if (!resolved || Object.keys(resolved).length === 0) return;
+        setProducts((prev) =>
+          prev.map((p) => {
+            const rp = resolved[p.id];
+            if (rp) return { ...p, price: rp.price, basePrice: rp.basePrice };
+            return p;
+          })
+        );
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.customerId, isPriceListOn]);
 
   // Pre-fill form when duplicating an existing quotation
   useEffect(() => {

@@ -32,7 +32,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, Copy, Download, Loader2, Pencil, Printer, CreditCard, Send, Share2 } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, Pencil, Printer, CreditCard, Send, Share2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import QRCode from "react-qr-code";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -126,10 +132,14 @@ export default function InvoiceDetailPage({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [assignedTemplates, setAssignedTemplates] = useState<string[]>([]);
 
   useEffect(() => {
     fetchInvoice();
     fetchCashBankAccounts();
+    fetch("/api/settings/invoice-templates").then((r) => r.json()).then((d) => {
+      if (d.assigned) setAssignedTemplates(d.assigned);
+    }).catch(() => {});
     // Initial load only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -176,10 +186,11 @@ export default function InvoiceDetailPage({
     }
   };
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = async (template?: string) => {
     setIsDownloading(true);
     try {
-      const response = await fetch(`/api/invoices/${id}/pdf`);
+      const pdfUrl = template ? `/api/invoices/${id}/pdf?template=${template}` : `/api/invoices/${id}/pdf`;
+      const response = await fetch(pdfUrl);
       if (!response.ok) throw new Error("Failed to generate PDF");
 
       const blob = await response.blob();
@@ -351,13 +362,41 @@ export default function InvoiceDetailPage({
                 {t("sales.sentOn")} {format(new Date(invoice.sentAt), "dd MMM yyyy")}
               </span>
             )}
-            <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
-              {isDownloading
-                ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
-                : <Download className="h-4 w-4 sm:mr-2" />}
-              <span className="sm:hidden">{isDownloading ? "..." : "PDF"}</span>
-              <span className="hidden sm:inline">{isDownloading ? t("common.downloading") : t("common.downloadPDF")}</span>
-            </Button>
+            <div className="col-span-1 flex w-full sm:w-auto">
+              <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} disabled={isDownloading} className="h-9 flex-1 rounded-r-none border-r-0 sm:h-10 sm:flex-initial">
+                {isDownloading
+                  ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                  : <Download className="h-4 w-4 sm:mr-2" />}
+                <span className="sm:hidden">{isDownloading ? "..." : "PDF"}</span>
+                <span className="hidden sm:inline">{isDownloading ? t("common.downloading") : t("common.downloadPDF")}</span>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 rounded-l-none px-2 sm:h-10" disabled={isDownloading}>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {assignedTemplates.map((key) => {
+                    const labels: Record<string, string> = {
+                      A5_LANDSCAPE: "A5 Landscape",
+                      A4_PORTRAIT: "A4 Portrait",
+                      A4_GST2: "A4 GST",
+                      A4_VAT: "A4 VAT",
+                      A4_BILINGUAL: "A4 Bilingual",
+                      A4_MODERN_GST: "A4 Modern GST",
+                      A4_JEWELLERY: "A4 Jewellery",
+                    };
+                    return (
+                      <DropdownMenuItem key={key} onClick={() => handleDownloadPDF(key)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {labels[key] || key}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isPrinting
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />

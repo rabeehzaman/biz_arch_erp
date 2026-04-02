@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { InvoicePDF } from "@/components/pdf/invoice-pdf";
+import { InvoicePDF } from "@/components/pdf/invoice-pdf-a5";
 import { InvoiceA4PDF } from "@/components/pdf/invoice-pdf-a4";
 import { InvoiceA4GST2PDF } from "@/components/pdf/invoice-pdf-a4-gst2";
 import { InvoiceA4VATPDF } from "@/components/pdf/invoice-pdf-a4-vat";
@@ -13,6 +13,7 @@ import { JewelleryInvoicePDF } from "@/components/pdf/invoice-pdf-jewellery";
 import { createElement } from "react";
 import { format } from "date-fns";
 import { generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
+import { getEditionConfig } from "@/lib/edition";
 
 export async function GET(
   request: NextRequest,
@@ -27,18 +28,31 @@ export async function GET(
     const organizationId = getOrgId(session);
     const { id } = await params;
 
-    // Fetch organization and PDF format setting
-    const [org, pdfFormatSetting] = await Promise.all([
+    // Fetch organization and PDF format settings
+    const [org, pdfFormatSetting, assignedTemplatesSetting] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: organizationId },
-        select: { name: true, address: true, phone: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true, brandColor: true },
+        select: { name: true, address: true, phone: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true, brandColor: true, edition: true },
       }),
       prisma.setting.findFirst({
         where: { organizationId, key: "invoice_pdf_format", userId: null },
         select: { value: true },
       }),
+      prisma.setting.findFirst({
+        where: { organizationId, key: "assigned_invoice_templates", userId: null },
+        select: { value: true },
+      }),
     ]);
-    const invoicePdfFormat = pdfFormatSetting?.value || "A5_LANDSCAPE";
+
+    // Build valid templates from assigned list, falling back to edition defaults
+    let validTemplates: string[] = [];
+    try { validTemplates = assignedTemplatesSetting ? JSON.parse(assignedTemplatesSetting.value) : []; } catch { /* ignore */ }
+    if (validTemplates.length === 0) {
+      validTemplates = [...getEditionConfig(org?.edition).allowedInvoicePdfFormats];
+    }
+
+    const templateOverride = request.nextUrl.searchParams.get("template");
+    const invoicePdfFormat = (templateOverride && validTemplates.includes(templateOverride)) ? templateOverride : (pdfFormatSetting?.value || "A5_LANDSCAPE");
 
     // Fetch invoice with customer and items
     const invoice = await prisma.invoice.findUnique({

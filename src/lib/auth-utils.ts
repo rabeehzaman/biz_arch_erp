@@ -51,6 +51,14 @@ export function isTaxInclusivePrice(session: Session): boolean {
   return (session.user as { isTaxInclusivePrice?: boolean }).isTaxInclusivePrice === true;
 }
 
+export function isPriceListEnabled(session: Session): boolean {
+  return (session.user as { isPriceListEnabled?: boolean }).isPriceListEnabled === true;
+}
+
+export function getPriceListId(session: Session): string | null {
+  return (session.user as { priceListId?: string | null }).priceListId ?? null;
+}
+
 /**
  * Check subscription status for API routes. Returns a 402 response if expired, or null if OK.
  * Superadmin is always exempt.

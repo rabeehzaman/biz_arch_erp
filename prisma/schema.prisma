@@ -81,6 +81,9 @@ model Organization {
   jewelleryEnabledPurities          String[] @default(["K24", "K22", "K21", "K18", "K14", "K9"])
   jewelleryEnabledMetals            String[] @default(["GOLD", "SILVER", "PLATINUM"])
 
+  // Price List Module
+  isPriceListEnabled                Boolean  @default(false)
+
   // Restaurant Module
   isRestaurantModuleEnabled         Boolean  @default(false)
   restaurantTablesEnabled           Boolean  @default(true)
@@ -232,6 +235,10 @@ model Organization {
   customerComments           CustomerComment[]
   supplierComments           SupplierComment[]
 
+  // Price List Relations
+  priceLists                 PriceList[]
+  priceListAssignments       PriceListAssignment[]
+
   @@map("organizations")
 }
 
@@ -280,6 +287,7 @@ model User {
   settings            Setting[]          @relation("UserSettings")
   customerComments    CustomerComment[]  @relation("CustomerComments")
   supplierComments    SupplierComment[]  @relation("SupplierComments")
+  priceListAssignment PriceListAssignment?
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -379,6 +387,9 @@ model Product {
   // Restaurant KOT relation
   kotOrderItems        KOTOrderItem[]
 
+  // Price List relation
+  priceListItems       PriceListItem[]
+
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])
   @@unique([organizationId, weighMachineCode])
@@ -474,6 +485,8 @@ model Customer {
   oldGoldPurchases   OldGoldPurchase[]
   customerSchemes    CustomerScheme[]
   metalLedgerEntries MetalLedgerEntry[] @relation("customerMetalLedger")
+
+  priceListAssignment PriceListAssignment?
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -2898,4 +2911,61 @@ model SupplierComment {
   @@index([supplierId])
   @@index([organizationId])
   @@map("supplier_comments")
+}
+
+// ==================== PRICE LISTS ====================
+
+model PriceList {
+  id                     String       @id @default(cuid())
+  name                   String
+  description            String?
+  isActive               Boolean      @default(true)
+  defaultDiscountPercent Decimal      @default(0) @db.Decimal(5, 2)
+  organizationId         String
+  organization           Organization @relation(fields: [organizationId], references: [id])
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  items                  PriceListItem[]
+  assignments            PriceListAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@map("price_lists")
+}
+
+model PriceListItem {
+  id            String    @id @default(cuid())
+  priceListId   String
+  priceList     PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  overrideType  String    @default("FIXED")  // "FIXED" or "PERCENTAGE"
+  fixedPrice    Decimal?  @db.Decimal(10, 2)
+  percentOffset Decimal?  @db.Decimal(5, 2)   // negative = discount, positive = markup
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([priceListId, productId])
+  @@index([priceListId])
+  @@index([productId])
+  @@map("price_list_items")
+}
+
+model PriceListAssignment {
+  id             String       @id @default(cuid())
+  priceListId    String
+  priceList      PriceList    @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  userId         String?      @unique
+  user           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId     String?      @unique
+  customer       Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  assignedAt     DateTime     @default(now())
+
+  @@index([priceListId])
+  @@index([organizationId])
+  @@map("price_list_assignments")
 }

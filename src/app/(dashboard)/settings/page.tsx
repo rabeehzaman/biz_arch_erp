@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 
-type SettingsTab = "units" | "categories" | "accounting" | "pos" | "users" | "employees" | "restaurant";
+type SettingsTab = "units" | "categories" | "accounting" | "pos" | "users" | "employees" | "restaurant" | "price-lists";
 
 function SettingsPanelFallback() {
   return (
@@ -46,11 +46,16 @@ const RestaurantSettings = dynamic(
   () => import("@/components/settings/restaurant-settings").then((mod) => mod.RestaurantSettings),
   { loading: () => <SettingsPanelFallback /> }
 );
+const PriceListSettings = dynamic(
+  () => import("@/components/settings/price-list-settings").then((mod) => mod.PriceListSettings),
+  { loading: () => <SettingsPanelFallback /> }
+);
 
 export default function SettingsPage() {
   const { t } = useLanguage();
   const { data: session } = useSession();
   const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled ?? false;
+  const isPriceListEnabled = (session?.user as { isPriceListEnabled?: boolean })?.isPriceListEnabled ?? false;
   const [activeTab, setActiveTab] = useState<SettingsTab>("units");
   const [loadedTabs, setLoadedTabs] = useState<SettingsTab[]>(["units"]);
 
@@ -85,6 +90,9 @@ export default function SettingsPage() {
               {isRestaurantEnabled && (
                 <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="restaurant">{t("settings.tabRestaurant")}</TabsTrigger>
               )}
+              {isPriceListEnabled && (
+                <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="price-lists">{t("settings.tabPriceLists")}</TabsTrigger>
+              )}
             </TabsList>
           </div>
           <TabsContent value="units" {...getForceMountProps("units")} className="mt-6 data-[state=inactive]:hidden">
@@ -108,6 +116,11 @@ export default function SettingsPage() {
           {isRestaurantEnabled && (
             <TabsContent value="restaurant" {...getForceMountProps("restaurant")} className="mt-6 data-[state=inactive]:hidden">
               {loadedTabs.includes("restaurant") ? <RestaurantSettings /> : null}
+            </TabsContent>
+          )}
+          {isPriceListEnabled && (
+            <TabsContent value="price-lists" {...getForceMountProps("price-lists")} className="mt-6 data-[state=inactive]:hidden">
+              {loadedTabs.includes("price-lists") ? <PriceListSettings /> : null}
             </TabsContent>
           )}
         </Tabs>

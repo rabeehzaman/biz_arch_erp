@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId } from "@/lib/auth-utils";
+import { getOrgId, isPriceListEnabled, getPriceListId } from "@/lib/auth-utils";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { resolveProductPrices } from "@/lib/price-list/resolve-price";
 
 
 export async function GET(request: NextRequest) {
@@ -100,6 +101,29 @@ export async function GET(request: NextRequest) {
           0
         ),
       }));
+
+      // Apply price list resolution if enabled
+      const userPriceListId = getPriceListId(session);
+      if (isPriceListEnabled(session) && userPriceListId) {
+        const mapped = productsWithStock.map((p) => ({
+          id: p.id,
+          price: p.price,
+          hasJewelleryItem: !!p.jewelleryItem,
+        }));
+        const resolved = await resolveProductPrices(mapped, {
+          userId: session.user.id,
+          userPriceListId,
+          organizationId,
+        });
+        const result = productsWithStock.map((p) => {
+          const rp = resolved.get(p.id);
+          if (rp && rp.source !== "base") {
+            return { ...p, price: rp.price, basePrice: rp.basePrice };
+          }
+          return { ...p, basePrice: Number(p.price) };
+        });
+        return NextResponse.json(result);
+      }
 
       return NextResponse.json(productsWithStock);
     }

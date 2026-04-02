@@ -42,6 +42,7 @@ interface OrganizationDetails {
     multiBranchEnabled: boolean;
     isScannerEnabled: boolean;
     isMobileShopModuleEnabled: boolean;
+    isPriceListEnabled: boolean;
     isWeighMachineEnabled: boolean;
     isJewelleryModuleEnabled: boolean;
     jewelleryHuidMandatory: boolean;
@@ -124,6 +125,7 @@ interface OrganizationDetails {
     posDefaultCashAccountId: string | null;
     posDefaultBankAccountId: string | null;
     isTaxInclusivePrice: boolean;
+    assignedInvoiceTemplates: string[];
     createdAt: string;
     users: Array<{
         id: string;
@@ -196,6 +198,7 @@ export default function OrganizationDetailsPage() {
     const [jewelleryThemePreset, setJewelleryThemePreset] = useState("gold");
     const [jewelleryEnabledPurities, setJewelleryEnabledPurities] = useState<string[]>(["K24", "K22", "K21", "K18", "K14", "K9"]);
     const [jewelleryEnabledMetals, setJewelleryEnabledMetals] = useState<string[]>(["GOLD", "SILVER", "PLATINUM"]);
+    const [isPriceListEnabled, setIsPriceListEnabled] = useState(false);
     const [isRestaurantModuleEnabled, setIsRestaurantModuleEnabled] = useState(false);
     const [restaurantTablesEnabled, setRestaurantTablesEnabled] = useState(true);
     const [restaurantKotPrintingEnabled, setRestaurantKotPrintingEnabled] = useState(true);
@@ -214,6 +217,7 @@ export default function OrganizationDetailsPage() {
     const [arabicName, setArabicName] = useState("");
     const [arabicAddress, setArabicAddress] = useState("");
     const [arabicCity, setArabicCity] = useState("");
+    const [assignedInvoiceTemplates, setAssignedInvoiceTemplates] = useState<string[]>([]);
     const [invoicePdfFormat, setInvoicePdfFormat] = useState("A5_LANDSCAPE");
     const [transferPdfFormat, setTransferPdfFormat] = useState("DEFAULT");
     const [transferPdfHideCost, setTransferPdfHideCost] = useState(false);
@@ -331,6 +335,7 @@ export default function OrganizationDetailsPage() {
         setJewelleryThemePreset(data.jewelleryThemePreset || "gold");
         setJewelleryEnabledPurities(data.jewelleryEnabledPurities || ["K24", "K22", "K21", "K18", "K14", "K9"]);
         setJewelleryEnabledMetals(data.jewelleryEnabledMetals || ["GOLD", "SILVER", "PLATINUM"]);
+        setIsPriceListEnabled(data.isPriceListEnabled || false);
         setIsRestaurantModuleEnabled(data.isRestaurantModuleEnabled || false);
         setRestaurantTablesEnabled(data.restaurantTablesEnabled ?? true);
         setRestaurantKotPrintingEnabled(data.restaurantKotPrintingEnabled ?? true);
@@ -349,6 +354,7 @@ export default function OrganizationDetailsPage() {
         setArabicName(data.arabicName || "");
         setArabicAddress(data.arabicAddress || "");
         setArabicCity(data.arabicCity || "");
+        setAssignedInvoiceTemplates(data.assignedInvoiceTemplates || []);
         setInvoicePdfFormat(data.invoicePdfFormat || "A5_LANDSCAPE");
         setTransferPdfFormat(data.transferPdfFormat || "DEFAULT");
         setTransferPdfHideCost(data.transferPdfHideCost || false);
@@ -513,6 +519,7 @@ export default function OrganizationDetailsPage() {
                     jewelleryThemePreset: jewelleryThemePreset || null,
                     jewelleryEnabledPurities,
                     jewelleryEnabledMetals,
+                    isPriceListEnabled,
                     isRestaurantModuleEnabled,
                     restaurantTablesEnabled,
                     restaurantKotPrintingEnabled,
@@ -531,6 +538,7 @@ export default function OrganizationDetailsPage() {
                     arabicName: edition === "SAUDI" ? arabicName || null : null,
                     arabicAddress: edition === "SAUDI" ? arabicAddress || null : null,
                     arabicCity: edition === "SAUDI" ? arabicCity || null : null,
+                    assignedInvoiceTemplates,
                     invoicePdfFormat,
                     transferPdfFormat,
                     transferPdfHideCost,
@@ -1362,6 +1370,21 @@ export default function OrganizationDetailsPage() {
                                         />
                                     </div>
 
+                                    {/* Price Lists */}
+                                    <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="isPriceListEnabled">Enable Price Lists</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Create custom price lists and assign them to users or customers
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isPriceListEnabled"
+                                            checked={isPriceListEnabled}
+                                            onCheckedChange={setIsPriceListEnabled}
+                                        />
+                                    </div>
+
                                     {/* Jewellery Shop */}
                                     <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-0.5">
@@ -1535,37 +1558,78 @@ export default function OrganizationDetailsPage() {
 
                                 {/* INVOICE & PDF TAB */}
                                 <TabsContent value="invoice" className="space-y-6 mt-0">
-                                    {/* Invoice PDF Format */}
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    {/* Assign Invoice Templates */}
+                                    <div className="space-y-3">
                                         <div className="space-y-0.5">
-                                            <Label>{t("admin.invoicePdfFormat")}</Label>
+                                            <Label>Assign Invoice Templates</Label>
                                             <p className="text-xs text-muted-foreground">
-                                                {t("admin.invoicePdfFormatDesc")}
+                                                Select which invoice templates this organization can use
                                             </p>
                                         </div>
-                                        <Select value={invoicePdfFormat} onValueChange={setInvoicePdfFormat}>
-                                            <SelectTrigger className="w-full sm:w-52">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {edition === "INDIA" && (
-                                                    <>
-                                                    <SelectItem value="A5_LANDSCAPE">{t("admin.a5Landscape")}</SelectItem>
-                                                    <SelectItem value="A4_PORTRAIT">{t("admin.a4PortraitGst")}</SelectItem>
-                                                    <SelectItem value="A4_GST2">{t("admin.a4PortraitGst2")}</SelectItem>
-                                                    <SelectItem value="A4_MODERN_GST">{t("admin.a4ModernPortfolio")}</SelectItem>
-                                                    </>
-                                                )}
-                                                {edition === "SAUDI" && (
-                                                    <>
-                                                    <SelectItem value="A4_VAT">{t("admin.a4PortraitVat")}</SelectItem>
-                                                    <SelectItem value="A4_BILINGUAL">{t("admin.a4Bilingual")}</SelectItem>
-                                                    <SelectItem value="A4_MODERN_GST">{t("admin.a4ModernPortfolio")}</SelectItem>
-                                                    </>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                            {[
+                                                ...(edition === "INDIA" ? [
+                                                    { key: "A5_LANDSCAPE", label: "A5 Landscape" },
+                                                    { key: "A4_PORTRAIT", label: "A4 Portrait (GST)" },
+                                                    { key: "A4_GST2", label: "A4 Portrait (GST v2)" },
+                                                    { key: "A4_MODERN_GST", label: "A4 Modern" },
+                                                ] : []),
+                                                ...(edition === "SAUDI" ? [
+                                                    { key: "A4_VAT", label: "A4 Portrait (VAT)" },
+                                                    { key: "A4_BILINGUAL", label: "A4 Bilingual" },
+                                                    { key: "A4_MODERN_GST", label: "A4 Modern" },
+                                                ] : []),
+                                            ].map((tpl) => (
+                                                <label key={tpl.key} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="h-4 w-4 rounded border-gray-300"
+                                                        checked={assignedInvoiceTemplates.includes(tpl.key)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setAssignedInvoiceTemplates((prev) => [...prev, tpl.key]);
+                                                            } else {
+                                                                setAssignedInvoiceTemplates((prev) => prev.filter((k) => k !== tpl.key));
+                                                                if (invoicePdfFormat === tpl.key) setInvoicePdfFormat("");
+                                                            }
+                                                        }}
+                                                    />
+                                                    {tpl.label}
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
+
+                                    {/* Default Invoice Template */}
+                                    {assignedInvoiceTemplates.length > 0 && (
+                                        <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="space-y-0.5">
+                                                <Label>{t("admin.invoicePdfFormat")}</Label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Default template for this organization
+                                                </p>
+                                            </div>
+                                            <Select value={invoicePdfFormat} onValueChange={setInvoicePdfFormat}>
+                                                <SelectTrigger className="w-full sm:w-52">
+                                                    <SelectValue placeholder="Select default template" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {assignedInvoiceTemplates.map((key) => {
+                                                        const labels: Record<string, string> = {
+                                                            A5_LANDSCAPE: "A5 Landscape",
+                                                            A4_PORTRAIT: "A4 Portrait (GST)",
+                                                            A4_GST2: "A4 Portrait (GST v2)",
+                                                            A4_VAT: "A4 Portrait (VAT)",
+                                                            A4_BILINGUAL: "A4 Bilingual",
+                                                            A4_MODERN_GST: "A4 Modern",
+                                                            A4_JEWELLERY: "A4 Jewellery",
+                                                        };
+                                                        return <SelectItem key={key} value={key}>{labels[key] || key}</SelectItem>;
+                                                    })}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
 
                                     {/* Transfer PDF Format */}
                                     <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">

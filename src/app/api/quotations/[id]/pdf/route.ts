@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { InvoicePDF } from "@/components/pdf/invoice-pdf";
+import { InvoicePDF } from "@/components/pdf/invoice-pdf-a5";
 import { createElement } from "react";
 import { format } from "date-fns";
 

@@ -38,6 +38,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 isWeighMachineEnabled: true,
                 isJewelleryModuleEnabled: true,
                 isRestaurantModuleEnabled: true,
+                isPriceListEnabled: true,
                 weighMachineBarcodePrefix: true,
                 weighMachineProductCodeLen: true,
                 weighMachineWeightDigits: true,
@@ -65,6 +66,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        // Look up assigned price list for this user
+        let priceListId: string | null = null;
+        if (user.organizationId && user.organization?.isPriceListEnabled) {
+          const assignment = await prisma.priceListAssignment.findUnique({
+            where: { userId: user.id },
+            select: { priceListId: true },
+          });
+          priceListId = assignment?.priceListId ?? null;
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -80,6 +91,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           isWeighMachineEnabled: user.organization?.isWeighMachineEnabled ?? false,
           isJewelleryModuleEnabled: user.organization?.isJewelleryModuleEnabled ?? false,
           isRestaurantModuleEnabled: user.organization?.isRestaurantModuleEnabled ?? false,
+          isPriceListEnabled: user.organization?.isPriceListEnabled ?? false,
+          priceListId,
           weighMachineBarcodePrefix: user.organization?.weighMachineBarcodePrefix ?? "77",
           weighMachineProductCodeLen: user.organization?.weighMachineProductCodeLen ?? 5,
           weighMachineWeightDigits: user.organization?.weighMachineWeightDigits ?? 5,
