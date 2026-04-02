@@ -13,6 +13,7 @@ import { isBackdated, recalculateFromDate } from "@/lib/inventory/fifo";
 import { Decimal } from "@prisma/client/runtime/client";
 import { createAutoJournalEntry, ensureRoundOffAccount, getSystemAccount } from "@/lib/accounting/journal";
 import { createMetalLedgerEntry } from "@/lib/jewellery/metal-ledger";
+import { processDocumentForZatca } from "@/lib/saudi-vat/zatca-submission";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
@@ -523,7 +524,33 @@ export async function POST(request: NextRequest) {
       });
     }, { timeout: 60000 });
 
-    return NextResponse.json(result, { status: 201 });
+    // ZATCA Phase 2: Submit debit note to ZATCA
+    let zatcaSubmission = null;
+    let zatcaWarning = null;
+    if (saudiEnabled && result) {
+      const orgPhase2 = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { zatcaPhase2Active: true },
+      });
+      if (orgPhase2?.zatcaPhase2Active) {
+        try {
+          zatcaSubmission = await processDocumentForZatca(
+            prisma,
+            result.id,
+            "DEBIT_NOTE",
+            organizationId
+          );
+        } catch (error) {
+          console.error("ZATCA Phase 2 debit note submission error:", error);
+          zatcaWarning = "Debit note created but ZATCA submission failed. Retry from ZATCA dashboard.";
+        }
+      }
+    }
+
+    return NextResponse.json(
+      { ...result, zatcaSubmission, zatcaWarning },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Failed to create debit note:", error);
     return NextResponse.json(

@@ -11,6 +11,7 @@ import { calculateLineVAT, calculateDocumentVAT, determineSaudiInvoiceType, Line
 import { generateTLVQRCode } from "@/lib/saudi-vat/qr-code";
 import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash } from "@/lib/saudi-vat/invoice-hash";
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
+import { processDocumentForZatca } from "@/lib/saudi-vat/zatca-submission";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
     const [org, roundOffMode] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: organizationId },
-        select: { multiBranchEnabled: true, saudiEInvoiceEnabled: true, vatNumber: true, arabicName: true, name: true, isTaxInclusivePrice: true },
+        select: { multiBranchEnabled: true, saudiEInvoiceEnabled: true, vatNumber: true, arabicName: true, name: true, isTaxInclusivePrice: true, zatcaPhase2Active: true, zatcaClearanceAsync: true },
       }),
       getOrganizationRoundOffMode(prisma, organizationId),
     ]);
@@ -611,7 +612,27 @@ export async function POST(request: NextRequest) {
       return { invoice: updatedInvoice, warnings };
     }, { timeout: 60000 });
 
-    return NextResponse.json(result, { status: 201 });
+    // ZATCA Phase 2: Submit to ZATCA after successful transaction
+    let zatcaSubmission = null;
+    let zatcaWarning = null;
+    if (saudiEnabled && org?.zatcaPhase2Active && result.invoice) {
+      try {
+        zatcaSubmission = await processDocumentForZatca(
+          prisma,
+          result.invoice.id,
+          "INVOICE",
+          organizationId
+        );
+      } catch (error) {
+        console.error("ZATCA Phase 2 submission error:", error);
+        zatcaWarning = "Invoice created but ZATCA submission failed. Retry from ZATCA dashboard.";
+      }
+    }
+
+    return NextResponse.json(
+      { ...result, zatcaSubmission, zatcaWarning },
+      { status: 201 }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create invoice";
     console.error("Failed to create invoice:", message);

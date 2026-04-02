@@ -59,3 +59,56 @@ export async function generateQRCodeSVG(tlvBase64: string): Promise<string> {
     margin: 1,
   });
 }
+
+// ─── ZATCA Phase 2: Enhanced 9-Tag QR Code ────────────────────────────────
+
+export interface EnhancedQRCodeInput extends QRCodeInput {
+  invoiceHash: Buffer;          // Tag 6: SHA-256 raw bytes (32 bytes)
+  ecdsaSignature: Buffer;       // Tag 7: IEEE P1363 r||s (64 bytes)
+  publicKey: Buffer;            // Tag 8: DER SubjectPublicKeyInfo (~88 bytes)
+  certificateSignature: Buffer; // Tag 9: IEEE P1363 of CA signature (64 bytes)
+}
+
+function encodeTLVBinary(tag: number, value: Buffer): Uint8Array {
+  // Support lengths > 127 bytes using multi-byte length encoding
+  const lenBytes = encodeTLVLength(value.length);
+  const tlv = new Uint8Array(1 + lenBytes.length + value.length);
+  tlv[0] = tag;
+  tlv.set(lenBytes, 1);
+  tlv.set(value, 1 + lenBytes.length);
+  return tlv;
+}
+
+function encodeTLVLength(length: number): Uint8Array {
+  if (length < 128) {
+    return new Uint8Array([length]);
+  }
+  // Multi-byte: 0x81 for 1 extra byte, 0x82 for 2 extra bytes
+  if (length < 256) {
+    return new Uint8Array([0x81, length]);
+  }
+  return new Uint8Array([0x82, (length >> 8) & 0xff, length & 0xff]);
+}
+
+export function generateEnhancedTLVQRCode(data: EnhancedQRCodeInput): string {
+  const tag1 = encodeTLV(1, data.sellerName);
+  const tag2 = encodeTLV(2, data.vatNumber);
+  const tag3 = encodeTLV(3, data.timestamp);
+  const tag4 = encodeTLV(4, data.totalWithVat);
+  const tag5 = encodeTLV(5, data.totalVat);
+  const tag6 = encodeTLVBinary(6, data.invoiceHash);
+  const tag7 = encodeTLVBinary(7, data.ecdsaSignature);
+  const tag8 = encodeTLVBinary(8, data.publicKey);
+  const tag9 = encodeTLVBinary(9, data.certificateSignature);
+
+  const parts = [tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9];
+  const totalLength = parts.reduce((sum, p) => sum + p.length, 0);
+  const combined = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const part of parts) {
+    combined.set(part, offset);
+    offset += part.length;
+  }
+
+  return Buffer.from(combined).toString("base64");
+}

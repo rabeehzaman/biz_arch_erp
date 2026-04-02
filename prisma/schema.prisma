@@ -107,6 +107,12 @@ model Organization {
   arabicAddress         String?   // Arabic address
   arabicCity            String?   // Arabic city
 
+  // Saudi e-Invoice Phase 2
+  zatcaPhase2Allowed    Boolean  @default(false)   // Super admin toggle
+  zatcaPhase2Active     Boolean  @default(false)   // True after production CSID obtained
+  zatcaEnvironment      String   @default("SANDBOX") // SANDBOX | SIMULATION | PRODUCTION
+  zatcaClearanceAsync   Boolean  @default(false)   // Org admin toggle — async B2B clearance
+
   // Company Details (consolidated from Settings key-value table)
   address               String?
   city                  String?
@@ -231,6 +237,10 @@ model Organization {
   // Comment Relations
   customerComments           CustomerComment[]
   supplierComments           SupplierComment[]
+
+  // ZATCA Phase 2 Relations
+  zatcaCertificates          ZatcaCertificate[]
+  zatcaSubmissions           ZatcaSubmission[]
 
   @@map("organizations")
 }
@@ -621,6 +631,9 @@ model Invoice {
   oldGoldDeduction   Decimal  @default(0) @db.Decimal(15, 2)
   oldGoldAdjustments OldGoldPurchase[]
 
+  // ZATCA Phase 2
+  zatcaSubmissions ZatcaSubmission[]
+
   @@unique([organizationId, invoiceNumber])
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId])
@@ -1002,6 +1015,9 @@ model CreditNote {
   items                CreditNoteItem[]
   customerTransactions CustomerTransaction[]
 
+  // ZATCA Phase 2
+  zatcaSubmissions ZatcaSubmission[]
+
   @@unique([organizationId, creditNoteNumber])
   @@index([organizationId])
   @@index([organizationId, customerId])
@@ -1124,6 +1140,9 @@ model DebitNote {
 
   items                DebitNoteItem[]
   supplierTransactions SupplierTransaction[]
+
+  // ZATCA Phase 2
+  zatcaSubmissions ZatcaSubmission[]
 
   @@unique([organizationId, debitNoteNumber])
   @@index([organizationId])
@@ -2898,4 +2917,121 @@ model SupplierComment {
   @@index([supplierId])
   @@index([organizationId])
   @@map("supplier_comments")
+}
+
+// ==================== ZATCA PHASE 2 ====================
+
+enum ZatcaCertificateStatus {
+  CSR_GENERATED
+  COMPLIANCE_CSID_ISSUED
+  COMPLIANCE_PASSED
+  PRODUCTION_CSID_ISSUED
+  EXPIRED
+  REVOKED
+}
+
+enum ZatcaSubmissionStatus {
+  PENDING
+  CLEARED
+  REPORTED
+  REJECTED
+  WARNING
+  FAILED
+}
+
+enum ZatcaDocumentType {
+  INVOICE
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+model ZatcaCertificate {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  // CSR material
+  csrPem          String       @db.Text
+  privateKeyEnc   String       @db.Text    // AES-256-GCM encrypted PEM private key
+  privateKeyIv    String                    // IV for decryption
+  privateKeyTag   String                    // Auth tag for decryption
+
+  // Compliance phase
+  complianceCsid         String?  @db.Text
+  complianceRequestId    String?
+  complianceSecret       String?  @db.Text
+
+  // Production phase
+  productionCsid         String?  @db.Text
+  productionRequestId    String?
+  productionSecret       String?  @db.Text
+
+  // Certificate metadata
+  status          ZatcaCertificateStatus @default(CSR_GENERATED)
+  expiresAt       DateTime?
+  renewedFromId   String?
+
+  isActive        Boolean      @default(true)
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  submissions     ZatcaSubmission[]
+
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@map("zatca_certificates")
+}
+
+model ZatcaSubmission {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  // Polymorphic reference to the source document
+  documentType    ZatcaDocumentType
+  invoiceId       String?
+  invoice         Invoice?      @relation(fields: [invoiceId], references: [id])
+  creditNoteId    String?
+  creditNote      CreditNote?   @relation(fields: [creditNoteId], references: [id])
+  debitNoteId     String?
+  debitNote       DebitNote?    @relation(fields: [debitNoteId], references: [id])
+
+  // Submission mode
+  submissionMode  String       // "CLEARANCE" or "REPORTING"
+
+  // The signed UBL XML
+  signedXml       String       @db.Text
+  xmlHash         String       // SHA-256 base64 of the canonical signed XML
+
+  // Enhanced QR (9 tags, base64)
+  enhancedQrData  String?      @db.Text
+
+  // Certificate used for signing
+  certificateId   String
+  certificate     ZatcaCertificate @relation(fields: [certificateId], references: [id])
+
+  // ZATCA response
+  status          ZatcaSubmissionStatus @default(PENDING)
+  zatcaResponse   String?      @db.Text    // Full JSON response from ZATCA
+  clearedXml      String?      @db.Text    // ZATCA-stamped XML (clearance only)
+  warningMessages String?      @db.Text    // JSON array
+  errorMessages   String?      @db.Text    // JSON array
+  infoMessages    String?      @db.Text    // JSON array
+
+  // Retry tracking
+  attemptCount    Int          @default(0)
+  lastAttemptAt   DateTime?
+  nextRetryAt     DateTime?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([invoiceId])
+  @@index([creditNoteId])
+  @@index([debitNoteId])
+  @@index([status, nextRetryAt])
+  @@map("zatca_submissions")
 }
