@@ -473,7 +473,7 @@ export default function NewOpeningStockPage() {
                                   type="number"
                                   onFocus={(e) => e.target.select()}
                                   min="0.01"
-                                  step="0.01"
+                                  step="0.001"
                                   value={item.quantity || ""}
                                   onChange={(e) => updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)}
                                   className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
@@ -487,7 +487,7 @@ export default function NewOpeningStockPage() {
                                   type="number"
                                   onFocus={(e) => e.target.select()}
                                   min="0"
-                                  step="0.01"
+                                  step="0.001"
                                   value={item.unitCost}
                                   onChange={(e) => updateLineItem(item.id, "unitCost", parseFloat(e.target.value) || 0)}
                                   className="border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100"
@@ -642,7 +642,7 @@ export default function NewOpeningStockPage() {
                               type="number"
                               onFocus={(e) => e.target.select()}
                               min="0.01"
-                              step="0.01"
+                              step="0.001"
                               value={item.quantity || ""}
                               onChange={(e) => updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)}
                               required
@@ -654,7 +654,7 @@ export default function NewOpeningStockPage() {
                               type="number"
                               onFocus={(e) => e.target.select()}
                               min="0"
-                              step="0.01"
+                              step="0.001"
                               value={item.unitCost}
                               onChange={(e) => updateLineItem(item.id, "unitCost", parseFloat(e.target.value) || 0)}
                             />

@@ -501,7 +501,7 @@ export default function OpeningStockPage() {
                 <Input
                   type="number"
                   min="0.01"
-                  step="0.01"
+                  step="0.001"
                   value={editForm.quantity}
                   onChange={(e) => setEditForm((f) => ({ ...f, quantity: e.target.value }))}
                   onFocus={(e) => e.target.select()}
@@ -512,7 +512,7 @@ export default function OpeningStockPage() {
                 <Input
                   type="number"
                   min="0"
-                  step="0.01"
+                  step="0.001"
                   value={editForm.unitCost}
                   onChange={(e) => setEditForm((f) => ({ ...f, unitCost: e.target.value }))}
                   onFocus={(e) => e.target.select()}
