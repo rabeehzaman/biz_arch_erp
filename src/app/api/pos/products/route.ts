@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId, isPriceListEnabled, getPriceListId } from "@/lib/auth-utils";
+import { getOrgId } from "@/lib/auth-utils";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { resolveProductPrices } from "@/lib/price-list/resolve-price";
 
@@ -14,10 +14,10 @@ export async function GET() {
 
     const organizationId = getOrgId(session);
 
-    // Check if org uses Saudi VAT
+    // Check org settings (Saudi VAT + price list enabled)
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { saudiEInvoiceEnabled: true },
+      select: { saudiEInvoiceEnabled: true, isPriceListEnabled: true },
     });
     const isSaudi = org?.saudiEInvoiceEnabled || false;
 
@@ -27,6 +27,17 @@ export async function GET() {
       include: {
         category: { select: { id: true, name: true, slug: true, color: true } },
         unit: { select: { code: true, name: true } },
+        unitConversions: {
+          select: {
+            id: true,
+            unitId: true,
+            unit: { select: { id: true, name: true, code: true } },
+            conversionFactor: true,
+            barcode: true,
+            price: true,
+            isDefaultUnit: true,
+          },
+        },
         stockLots: {
           where: { remainingQuantity: { gt: 0 } },
           select: { remainingQuantity: true },
@@ -70,19 +81,27 @@ export async function GET() {
     });
 
     // Resolve price list prices if enabled
+    // Fetch the assignment fresh from DB instead of relying on the JWT-cached value,
+    // so changes take effect without requiring the user to re-login.
     let resolvedPrices: Map<string, { price: number; basePrice: number; source: string }> | null = null;
-    const userPriceListId = getPriceListId(session);
-    if (isPriceListEnabled(session) && userPriceListId) {
-      const mapped = products.map((p) => ({
-        id: p.id,
-        price: p.price,
-        hasJewelleryItem: !!p.jewelleryItem,
-      }));
-      resolvedPrices = await resolveProductPrices(mapped, {
-        userId: session.user.id,
-        userPriceListId,
-        organizationId,
+    if (org?.isPriceListEnabled) {
+      const assignment = await prisma.priceListAssignment.findUnique({
+        where: { userId: session.user.id },
+        select: { priceListId: true },
       });
+      const userPriceListId = assignment?.priceListId ?? null;
+      if (userPriceListId) {
+        const mapped = products.map((p) => ({
+          id: p.id,
+          price: p.price,
+          hasJewelleryItem: !!p.jewelleryItem,
+        }));
+        resolvedPrices = await resolveProductPrices(mapped, {
+          userId: session.user.id,
+          userPriceListId,
+          organizationId,
+        });
+      }
     }
 
     const result = products.map((p) => ({
@@ -119,6 +138,14 @@ export async function GET() {
           ),
         }))
         : [],
+      unitConversions: (p.unitConversions || []).map((uc) => ({
+        id: uc.id,
+        unitId: uc.unitId,
+        unit: uc.unit,
+        conversionFactor: Number(uc.conversionFactor),
+        barcode: uc.barcode,
+        price: uc.price != null ? Number(uc.price) : null,
+      })),
       jewelleryItem: p.jewelleryItem ? {
         id: p.jewelleryItem.id,
         tagNumber: p.jewelleryItem.tagNumber,
