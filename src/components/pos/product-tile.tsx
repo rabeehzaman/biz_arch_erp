@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Package, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/i18n";
@@ -36,6 +36,22 @@ function formatSelectedQuantity(quantity: number) {
   return quantity.toFixed(2).replace(/\.?0+$/, "");
 }
 
+const TILE_COLORS = [
+  "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e",
+  "#f97316", "#eab308", "#22c55e", "#14b8a6",
+  "#06b6d4", "#3b82f6", "#a855f7", "#e11d48",
+];
+
+function getTileColor(product: ProductTileProduct): string {
+  if (product.category?.color) return product.category.color;
+  // Stable color from product id
+  let hash = 0;
+  for (let i = 0; i < product.id.length; i++) {
+    hash = product.id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return TILE_COLORS[Math.abs(hash) % TILE_COLORS.length];
+}
+
 export function ProductTile({
   product,
   selectedQuantity = 0,
@@ -43,53 +59,34 @@ export function ProductTile({
 }: ProductTileProps) {
   const { fmt } = useCurrency();
   const { t } = useLanguage();
-  const outOfStock = !product.isService && !product.isBundle && (product.stockQuantity ?? 0) <= 0;
   const isSelected = selectedQuantity > 0;
+  const color = getTileColor(product);
 
   return (
     <button
       onClick={() => onAdd(product)}
       aria-pressed={isSelected}
       className={cn(
-        "relative flex min-h-[100px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-3 text-center transition-colors sm:min-h-[120px]",
-        outOfStock ? "cursor-pointer opacity-60" : "cursor-pointer",
-        isSelected && "border-primary bg-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]",
-        "hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100"
+        "relative flex h-[120px] flex-col items-center justify-center rounded-xl p-3 text-center transition-all cursor-pointer",
+        isSelected && "ring-2 ring-offset-2 ring-primary",
+        "active:scale-95"
       )}
+      style={{ backgroundColor: color + "20" }}
     >
       {isSelected && (
-        <Badge className="absolute right-2 top-2 min-w-6 justify-center rounded-full px-2 py-0.5 text-xs font-bold">
+        <Badge className="absolute right-1 top-1 z-10 min-w-5 justify-center rounded-full px-1.5 py-0 text-[10px] font-bold">
           {formatSelectedQuantity(selectedQuantity)}
         </Badge>
       )}
-      <div
-        className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg relative"
-        style={{ backgroundColor: (product.category?.color || "#0f172a") + "20" }}
-      >
-        {product.isBundle ? (
-          <Layers
-            className="h-5 w-5"
-            style={{ color: product.category?.color || "#0f172a" }}
-          />
-        ) : (
-          <Package
-            className="h-5 w-5"
-            style={{ color: product.category?.color || "#0f172a" }}
-          />
-        )}
-      </div>
       {product.isBundle && (
-        <span className="mb-0.5 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-          {t("pos.bundle")}
-        </span>
+        <div className="absolute left-1 top-1 z-10 flex items-center gap-0.5 rounded bg-slate-900/80 px-1 py-0.5">
+          <Layers className="h-2.5 w-2.5 text-white" />
+        </div>
       )}
-      <span className="text-sm font-medium line-clamp-2 leading-tight">
+      <span className="line-clamp-2 text-sm font-bold leading-tight text-slate-800">
         {product.name}
       </span>
-      {product.sku && (
-        <span className="text-xs text-muted-foreground mt-0.5">{product.sku}</span>
-      )}
-      <span className="mt-1 text-sm font-bold">
+      <span className="mt-1 text-xs font-semibold text-slate-500">
         {fmt(Number(product.price))}
       </span>
     </button>

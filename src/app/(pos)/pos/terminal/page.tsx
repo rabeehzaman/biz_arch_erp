@@ -34,6 +34,8 @@ import { POSHeader } from "@/components/pos/pos-header";
 import { ProductSearch } from "@/components/pos/product-search";
 import { CategoryTabs } from "@/components/pos/category-tabs";
 import { ProductGrid } from "@/components/pos/product-grid";
+import { ViewModeToggle } from "@/components/pos/view-mode-toggle";
+import { usePosViewMode } from "@/hooks/use-pos-view-mode";
 import { CartItem, type CartItemData } from "@/components/pos/cart-item";
 import { CartSummary, calculateCartTotal } from "@/components/pos/cart-summary";
 import { CustomerSelect } from "@/components/pos/customer-select";
@@ -376,6 +378,7 @@ function POSTerminalContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { viewMode, setViewMode } = usePosViewMode();
   const [view, setView] = useState<"cart" | "payment">("cart");
   const [mobileView, setMobileView] = useState<"products" | "cart" | "payment">("products");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -1086,8 +1089,19 @@ function POSTerminalContent() {
         i: completedCart.map(item => `${item.productId}:${item.quantity}:${item.price}:${item.discount}`).sort(),
         p: payments.map(p => `${p.method}:${parseFloat(p.amount)}`).sort(),
       });
-      const keyHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(keySource));
-      const idempotencyKey = Array.from(new Uint8Array(keyHash)).map(b => b.toString(16).padStart(2, "0")).join("");
+      let idempotencyKey: string;
+      if (crypto?.subtle) {
+        const keyHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(keySource));
+        idempotencyKey = Array.from(new Uint8Array(keyHash)).map(b => b.toString(16).padStart(2, "0")).join("");
+      } else {
+        // Fallback for insecure contexts (HTTP localhost)
+        let h = 0x811c9dc5;
+        for (let i = 0; i < keySource.length; i++) {
+          h ^= keySource.charCodeAt(i);
+          h = Math.imul(h, 0x01000193);
+        }
+        idempotencyKey = (h >>> 0).toString(16).padStart(8, "0");
+      }
 
       const requestStartedAt = performance.now();
       const res = await fetch("/api/pos/checkout", {
@@ -1423,13 +1437,19 @@ function POSTerminalContent() {
           "flex-1 flex-col gap-3 p-4 overflow-hidden",
           mobileView === "products" ? "flex" : "hidden md:flex"
         )}>
-          <ProductSearch value={searchQuery} onChange={setSearchQuery} />
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <ProductSearch value={searchQuery} onChange={setSearchQuery} />
+            </div>
+            <ViewModeToggle viewMode={viewMode} onChange={setViewMode} />
+          </div>
           <CategoryTabs
             categories={categories}
             selected={selectedCategory}
             onSelect={setSelectedCategory}
           />
           <ProductGrid
+            viewMode={viewMode}
             products={products.map(p => {
               const du = p.unitConversions?.find(uc => uc.isDefaultUnit);
               return du?.price != null ? { ...p, price: Number(du.price) } : p;
