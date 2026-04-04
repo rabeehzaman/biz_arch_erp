@@ -314,10 +314,25 @@ export async function smartPrintReceipt(data: ReceiptData): Promise<void> {
       await browserPrintReceipt(generateReceiptHtml(data));
     }
   } else if (isCapacitorEnvironment()) {
-    const result = await capacitorPrint(data);
-    if (!result.success) {
-      console.error("Capacitor print failed:", result.error);
-      await browserPrintReceipt(generateReceiptHtml(data));
+    // Indian GST stores: use text ESC/POS for sharper output on thermal printers
+    const isIndianGST = data.taxLabel === "GST" || !!(data.totalCgst || data.totalSgst || data.totalIgst);
+    if (isIndianGST) {
+      const { capacitorRawPrintWithConfig } = await import("@/lib/capacitor-print");
+      const result = await capacitorRawPrintWithConfig(data);
+      if (!result.success) {
+        console.error("Capacitor raw ESC/POS print failed:", result.error, "— falling back to image print");
+        const imgResult = await capacitorPrint(data);
+        if (!imgResult.success) {
+          console.error("Capacitor image fallback also failed:", imgResult.error);
+          await browserPrintReceipt(generateReceiptHtml(data));
+        }
+      }
+    } else {
+      const result = await capacitorPrint(data);
+      if (!result.success) {
+        console.error("Capacitor print failed:", result.error);
+        await browserPrintReceipt(generateReceiptHtml(data));
+      }
     }
   } else {
     await browserPrintReceipt(generateReceiptHtml(data));

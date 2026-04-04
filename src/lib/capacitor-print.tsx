@@ -31,6 +31,12 @@ interface ThermalPrinterPlugin {
     cutPaper?: boolean;
     openCashDrawer?: boolean;
   }): Promise<{ success: boolean }>;
+  printRaw(options: {
+    host: string;
+    port: number;
+    data: string;
+    timeoutSeconds?: number;
+  }): Promise<{ success: boolean; bytesSent: number }>;
   testConnection(options: {
     host: string;
     port: number;
@@ -303,6 +309,56 @@ export async function capacitorBitmapPrintWithConfig(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Bitmap canvas mobile print failed",
+    };
+  }
+}
+
+/**
+ * Print an Indian GST receipt using raw ESC/POS text commands.
+ * Builds the receipt buffer in JS (portable, no Node.js dependency)
+ * and sends raw bytes to the printer via the native printRaw() bridge.
+ */
+export async function capacitorRawPrintWithConfig(
+  data: ReceiptData,
+  config?: Partial<MobilePrinterConfig>,
+): Promise<{ success: boolean; error?: string }> {
+  if (!isCapacitorEnvironment()) {
+    return { success: false, error: "Capacitor mobile bridge not available" };
+  }
+
+  try {
+    const resolved = requireConfiguredHost(config);
+
+    const { mapReceiptToElectronFormat } = await import("@/lib/electron-print");
+    const { buildIndianGSTReceiptEscPos } = await import("@/lib/indian-receipt-escpos");
+
+    const mapped = mapReceiptToElectronFormat(data);
+    const paperWidth = resolved.paperWidth === 58 ? 32 : 48;
+    const escposBytes = buildIndianGSTReceiptEscPos(mapped, {
+      paperWidth: paperWidth as 48 | 32,
+      cutPaper: resolved.cutPaper,
+      openDrawer: resolved.openCashDrawer,
+    });
+
+    // Convert Uint8Array to base64 for Capacitor bridge
+    let binary = "";
+    for (let i = 0; i < escposBytes.length; i++) {
+      binary += String.fromCharCode(escposBytes[i]);
+    }
+    const base64Data = btoa(binary);
+
+    await ThermalPrinter.printRaw({
+      host: resolved.host,
+      port: resolved.port,
+      data: base64Data,
+      timeoutSeconds: resolved.timeoutSeconds,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Raw ESC/POS print failed",
     };
   }
 }

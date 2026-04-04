@@ -223,6 +223,45 @@ public class ThermalPrinterPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void printRaw(PluginCall call) {
+        DeviceConnection connection = null;
+
+        try {
+            String dataBase64 = call.getString("data", "");
+            if (dataBase64.isEmpty()) {
+                call.reject("Print data is required", "MISSING_DATA");
+                return;
+            }
+
+            byte[] bytes;
+            try {
+                bytes = Base64.decode(dataBase64, Base64.DEFAULT);
+            } catch (IllegalArgumentException e) {
+                call.reject("Invalid Base64: " + e.getMessage(), "INVALID_DATA");
+                return;
+            }
+
+            connection = createConnection(call);
+            connection.connect();
+            connection.write(bytes);
+
+            JSObject result = new JSObject();
+            result.put("success", true);
+            result.put("bytesSent", bytes.length);
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("Raw print failed: " + e.getMessage(), "PRINT_ERROR");
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    @PluginMethod
     public void openCashDrawer(PluginCall call) {
         DeviceConnection connection = null;
         EscPosPrinter printer = null;

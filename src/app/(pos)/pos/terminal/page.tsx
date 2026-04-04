@@ -1413,7 +1413,7 @@ function POSTerminalContent() {
 
   if (sessionLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-100">
+      <div className="flex h-dvh items-center justify-center bg-slate-100">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -1422,7 +1422,7 @@ function POSTerminalContent() {
   // No session → redirect handled by useEffect above
   if (!posSession) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-100">
+      <div className="flex h-dvh items-center justify-center bg-slate-100">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -1431,7 +1431,7 @@ function POSTerminalContent() {
   // ── Active Session → Full POS Interface ────────────────────────────
 
   return (
-    <PageAnimation className="flex h-screen flex-col">
+    <PageAnimation className="flex h-dvh flex-col">
       {/* Header */}
       <POSHeader
         session={posSession}
@@ -1455,7 +1455,7 @@ function POSTerminalContent() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel — Products */}
         <div className={cn(
-          "flex-1 flex-col gap-3 p-4 overflow-hidden",
+          "flex-1 flex-col gap-3 overflow-hidden pt-4 px-4 md:p-4",
           mobileView === "products" ? "flex" : "hidden md:flex"
         )}>
           <div className="flex items-center gap-2">
@@ -1482,6 +1482,44 @@ function POSTerminalContent() {
             selectionRevision={cartState.revision}
             onAddToCart={addToCartWithDefault}
           />
+
+          {/* Bottom bar — mobile only */}
+          {cart.length > 0 && (
+            <div className="flex shrink-0 border-t bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:hidden">
+              <button
+                className="flex flex-1 items-center justify-center gap-2 border-r py-3.5 text-sm font-semibold text-slate-700 active:bg-slate-100"
+                onClick={() => setMobileView("cart")}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {t("pos.cart")}
+                <Badge variant="secondary" className="min-w-5 justify-center rounded-full px-1.5 py-0 text-xs">
+                  {cartQuantity}
+                </Badge>
+              </button>
+              <button
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1 py-3.5 text-sm font-bold text-white active:opacity-90",
+                  isReturnMode ? "bg-red-600" : "bg-primary"
+                )}
+                onClick={() => {
+                  setChargedFromProducts(true);
+                  setView("payment");
+                  setMobileView("payment");
+                }}
+              >
+                {isReturnMode ? (
+                  <>
+                    <RotateCcw className="h-4 w-4" />
+                    {t("pos.processReturn")} {fmt(cartTotals.total)}
+                  </>
+                ) : (
+                  <>
+                    {t("pos.charge")} {fmt(cartTotals.total)}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Panel — Cart / Payment */}
@@ -1690,43 +1728,6 @@ function POSTerminalContent() {
           )}
         </div>
 
-        {/* Fixed bottom bar — mobile only */}
-        {mobileView === "products" && cart.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 z-40 flex border-t bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:hidden">
-            <button
-              className="flex flex-1 items-center justify-center gap-2 border-r py-3.5 text-sm font-semibold text-slate-700 active:bg-slate-100"
-              onClick={() => setMobileView("cart")}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {t("pos.cart")}
-              <Badge variant="secondary" className="min-w-5 justify-center rounded-full px-1.5 py-0 text-xs">
-                {cartQuantity}
-              </Badge>
-            </button>
-            <button
-              className={cn(
-                "flex flex-1 items-center justify-center gap-1 py-3.5 text-sm font-bold text-white active:opacity-90",
-                isReturnMode ? "bg-red-600" : "bg-primary"
-              )}
-              onClick={() => {
-                setChargedFromProducts(true);
-                setView("payment");
-                setMobileView("payment");
-              }}
-            >
-              {isReturnMode ? (
-                <>
-                  <RotateCcw className="h-4 w-4" />
-                  {t("pos.processReturn")} {fmt(cartTotals.total)}
-                </>
-              ) : (
-                <>
-                  {t("pos.charge")} {fmt(cartTotals.total)}
-                </>
-              )}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Close Session Dialog */}
@@ -1987,7 +1988,7 @@ export default function POSTerminalPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center bg-slate-100">
+        <div className="flex h-dvh items-center justify-center bg-slate-100">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       }
