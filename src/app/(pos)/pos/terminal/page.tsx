@@ -1500,6 +1500,23 @@ function POSTerminalContent() {
                   {cartQuantity}
                 </Badge>
               </button>
+              {isRestaurantEnabled && (
+                <button
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-4 py-3.5 text-sm font-semibold text-white active:bg-orange-500"
+                  onClick={handleSendToKitchen}
+                >
+                  <UtensilsCrossed className="h-4 w-4" />
+                  {t("restaurant.sendToKitchen")}
+                  {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(i.productId) ?? 0)) > 0) && (
+                    <Badge className="min-w-5 justify-center rounded-full bg-white px-1.5 py-0 text-xs text-orange-700">
+                      {cartState.items.reduce((count, i) => {
+                        const diff = i.quantity - (kotSentQuantities.get(i.productId) ?? 0);
+                        return diff > 0 ? count + 1 : count;
+                      }, 0)}
+                    </Badge>
+                  )}
+                </button>
+              )}
               <button
                 className={cn(
                   "flex flex-1 items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white active:opacity-90",
