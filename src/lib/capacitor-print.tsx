@@ -329,12 +329,10 @@ export async function capacitorRawPrintWithConfig(
   try {
     const resolved = requireConfiguredHost(config);
 
-    const { mapReceiptToElectronFormat } = await import("@/lib/electron-print");
     const { buildIndianGSTReceiptEscPos } = await import("@/lib/indian-receipt-escpos");
 
-    const mapped = mapReceiptToElectronFormat(data);
     const paperWidth = resolved.paperWidth === 58 ? 32 : 48;
-    const escposBytes = buildIndianGSTReceiptEscPos(mapped, {
+    const escposBytes = buildIndianGSTReceiptEscPos(data, {
       paperWidth: paperWidth as 48 | 32,
       cutPaper: resolved.cutPaper,
       openDrawer: resolved.openCashDrawer,
