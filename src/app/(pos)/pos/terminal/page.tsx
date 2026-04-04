@@ -394,6 +394,7 @@ function POSTerminalContent() {
   const [isClosingSession, setIsClosingSession] = useState(false);
   const [settleCashAccountId, setSettleCashAccountId] = useState("");
   const [settleBankAccountId, setSettleBankAccountId] = useState("");
+  const [chargedFromProducts, setChargedFromProducts] = useState(false);
   const autoFilledRef = useRef(false);
   const cartItemsContainerRef = useRef<HTMLDivElement | null>(null);
   const previousCartMetricsRef = useRef({ items: 0, quantity: 0 });
@@ -1475,7 +1476,15 @@ function POSTerminalContent() {
               variant="ghost"
               size="icon"
               className="h-9 w-9"
-              onClick={() => setMobileView(mobileView === "payment" ? "cart" : "products")}
+              onClick={() => {
+                if (mobileView === "payment" && chargedFromProducts) {
+                  setChargedFromProducts(false);
+                  setView("cart");
+                  setMobileView("products");
+                } else {
+                  setMobileView(mobileView === "payment" ? "cart" : "products");
+                }
+              }}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -1645,8 +1654,14 @@ function POSTerminalContent() {
               total={cartTotals.total}
               availableMethods={enabledPaymentMethods}
               onBack={() => {
-                setView("cart");
-                setMobileView("cart");
+                if (chargedFromProducts) {
+                  setChargedFromProducts(false);
+                  setView("cart");
+                  setMobileView("products");
+                } else {
+                  setView("cart");
+                  setMobileView("cart");
+                }
               }}
               onComplete={handleCheckout}
               isProcessing={isProcessing}
@@ -1655,17 +1670,42 @@ function POSTerminalContent() {
           )}
         </div>
 
-        {/* Floating cart FAB — mobile only */}
+        {/* Fixed bottom bar — mobile only */}
         {mobileView === "products" && cart.length > 0 && (
-          <button
-            className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform md:hidden"
-            onClick={() => setMobileView("cart")}
-          >
-            <ShoppingCart className="h-6 w-6" />
-            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
-              {cartQuantity}
-            </span>
-          </button>
+          <div className="fixed bottom-0 left-0 right-0 z-40 flex border-t bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:hidden">
+            <button
+              className="flex flex-1 items-center justify-center gap-2 border-r py-3.5 text-sm font-semibold text-slate-700 active:bg-slate-100"
+              onClick={() => setMobileView("cart")}
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {t("pos.cart")}
+              <Badge variant="secondary" className="min-w-5 justify-center rounded-full px-1.5 py-0 text-xs">
+                {cartQuantity}
+              </Badge>
+            </button>
+            <button
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1 py-3.5 text-sm font-bold text-white active:opacity-90",
+                isReturnMode ? "bg-red-600" : "bg-primary"
+              )}
+              onClick={() => {
+                setChargedFromProducts(true);
+                setView("payment");
+                setMobileView("payment");
+              }}
+            >
+              {isReturnMode ? (
+                <>
+                  <RotateCcw className="h-4 w-4" />
+                  {t("pos.processReturn")} {fmt(cartTotals.total)}
+                </>
+              ) : (
+                <>
+                  {t("pos.charge")} {fmt(cartTotals.total)}
+                </>
+              )}
+            </button>
+          </div>
         )}
       </div>
 

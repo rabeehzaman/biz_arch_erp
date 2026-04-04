@@ -2239,6 +2239,7 @@
         "bundle": "Bundle",
         "gridView": "Grid view",
         "listView": "List view",
+        "charge": "Charge",
         "registerAccounts": "Register Accounts",
         "registerAccountsDesc": "Set the store safe and bank accounts for this register. In clearing mode, the opening float is issued from the store safe and all cash returns to it at session close.",
         "storeSafeAccount": "Store Safe Account",
