@@ -44,6 +44,7 @@ export async function GET(
           totalVat: true,
           qrCodeData: true,
           customer: { select: { name: true } },
+          isInterState: true,
           items: {
             select: {
               description: true,
@@ -52,6 +53,13 @@ export async function GET(
               discount: true,
               total: true,
               gstRate: true,
+              cgstRate: true,
+              sgstRate: true,
+              igstRate: true,
+              cgstAmount: true,
+              sgstAmount: true,
+              igstAmount: true,
+              hsnCode: true,
               vatRate: true,
             },
           },

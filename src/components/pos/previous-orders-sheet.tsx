@@ -24,6 +24,13 @@ interface OrderItem {
   discount: number;
   total: number;
   gstRate: number | null;
+  cgstRate: number | null;
+  sgstRate: number | null;
+  igstRate: number | null;
+  cgstAmount: number | null;
+  sgstAmount: number | null;
+  igstAmount: number | null;
+  hsnCode: string | null;
   vatRate: number | null;
 }
 
@@ -44,6 +51,7 @@ interface Order {
   totalSgst: number | null;
   totalIgst: number | null;
   totalVat: number | null;
+  isInterState: boolean;
   qrCodeData: string | null;
   qrCodeDataURL: string | null;
   customer: { name: string } | null;
@@ -119,6 +127,14 @@ export function PreviousOrdersSheet({
           unitPrice: item.unitPrice,
           discount: item.discount,
           lineTotal: item.total,
+          hsnCode: item.hsnCode || undefined,
+          gstRate: Number(item.gstRate || 0) || undefined,
+          cgstRate: Number(item.cgstRate || 0) || undefined,
+          sgstRate: Number(item.sgstRate || 0) || undefined,
+          igstRate: Number(item.igstRate || 0) || undefined,
+          cgstAmount: Number(item.cgstAmount || 0) || undefined,
+          sgstAmount: Number(item.sgstAmount || 0) || undefined,
+          igstAmount: Number(item.igstAmount || 0) || undefined,
         })),
         subtotal: Number(order.subtotal),
         taxRate: isVat ? 15 : 0,
@@ -139,6 +155,11 @@ export function PreviousOrdersSheet({
         brandColor: receiptMeta.brandColor || undefined,
         currency: receiptMeta.currency,
         isTaxInclusivePrice: receiptMeta.isTaxInclusivePrice,
+        // Indian GST document-level fields
+        totalCgst: Number(order.totalCgst || 0) || undefined,
+        totalSgst: Number(order.totalSgst || 0) || undefined,
+        totalIgst: Number(order.totalIgst || 0) || undefined,
+        isInterState: order.isInterState || false,
       };
 
       await smartPrintReceipt(receiptData);
