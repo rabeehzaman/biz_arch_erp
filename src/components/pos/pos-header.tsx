@@ -68,7 +68,7 @@ export function POSHeader({
   const locationLabel = [branchName, warehouseName].filter(Boolean).join(" / ");
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-slate-900 px-2 sm:px-3 text-white gap-1 sm:gap-2">
+    <header className="flex min-h-14 items-center justify-between border-b bg-slate-900 px-2 pt-[var(--app-safe-area-top)] sm:px-3 text-white gap-1 sm:gap-2">
       <div className="flex items-center gap-2 min-w-0">
         {onBackToSessions && (
           <Button
