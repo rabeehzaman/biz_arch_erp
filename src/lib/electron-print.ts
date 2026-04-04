@@ -94,11 +94,20 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
       qty: item.quantity,
       price: item.unitPrice,
       total: item.lineTotal,
+      hsnCode: item.hsnCode || null,
+      gstRate: item.gstRate || 0,
+      cgstRate: item.cgstRate || 0,
+      sgstRate: item.sgstRate || 0,
+      igstRate: item.igstRate || 0,
+      cgstAmount: item.cgstAmount || 0,
+      sgstAmount: item.sgstAmount || 0,
+      igstAmount: item.igstAmount || 0,
     })),
     totals: {
       subtotal: data.subtotal,
       tax: data.taxAmount,
       total: data.total,
+      roundOff: data.roundOffAmount || 0,
     },
     payment: data.payments.map((p) => ({
       method: p.method,
@@ -110,6 +119,17 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
     qrCodeText: data.qrCodeText,
     footer: "Thank you for your purchase!",
     footerAr: "شكراً لزيارتكم",
+    // Indian GST document-level fields
+    gst: {
+      totalCgst: data.totalCgst || 0,
+      totalSgst: data.totalSgst || 0,
+      totalIgst: data.totalIgst || 0,
+      isInterState: data.isInterState || false,
+      placeOfSupply: data.placeOfSupply || null,
+      placeOfSupplyName: data.placeOfSupplyName || null,
+      fssaiNumber: data.fssaiNumber || null,
+      upiPaymentLink: data.upiPaymentLink || null,
+    },
     cutPaper: true,
     openDrawer: false,
   };

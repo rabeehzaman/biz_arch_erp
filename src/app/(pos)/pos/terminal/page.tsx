@@ -57,6 +57,7 @@ import {
   smartPrintReceipt,
 } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
+import { INDIAN_STATES } from "@/lib/gst/constants";
 import { printPOSSessionReport } from "@/lib/print-session-report";
 import {
   DEFAULT_ENABLED_POS_PAYMENT_METHODS,
@@ -1160,14 +1161,23 @@ function POSTerminalContent() {
         invoiceNumber: result.invoice?.invoiceNumber || "",
         date: new Date(),
         customerName: selectedCustomer?.name,
-        items: completedCart.map((item) => {
+        items: completedCart.map((item, idx) => {
           const lineTotal = item.quantity * item.price * (1 - (item.discount || 0) / 100);
+          const invoiceItem = result.invoice?.items?.[idx] as Record<string, unknown> | undefined;
           return {
             name: item.name,
             quantity: item.quantity,
             unitPrice: item.price,
             discount: item.discount || 0,
             lineTotal,
+            hsnCode: (invoiceItem?.hsnCode as string) || undefined,
+            gstRate: Number(invoiceItem?.gstRate || 0) || undefined,
+            cgstRate: Number(invoiceItem?.cgstRate || 0) || undefined,
+            sgstRate: Number(invoiceItem?.sgstRate || 0) || undefined,
+            igstRate: Number(invoiceItem?.igstRate || 0) || undefined,
+            cgstAmount: Number(invoiceItem?.cgstAmount || 0) || undefined,
+            sgstAmount: Number(invoiceItem?.sgstAmount || 0) || undefined,
+            igstAmount: Number(invoiceItem?.igstAmount || 0) || undefined,
           };
         }),
         subtotal: Number(result.invoice?.subtotal) || snapshotTotals.subtotal,
@@ -1193,6 +1203,16 @@ function POSTerminalContent() {
         brandColor: receiptMeta?.brandColor || undefined,
         currency: receiptMeta?.currency || undefined,
         isTaxInclusivePrice: receiptMeta?.isTaxInclusivePrice || false,
+        // Indian GST document-level fields
+        totalCgst: Number(result.invoice?.totalCgst || 0) || undefined,
+        totalSgst: Number(result.invoice?.totalSgst || 0) || undefined,
+        totalIgst: Number(result.invoice?.totalIgst || 0) || undefined,
+        isInterState: (result.invoice as Record<string, unknown>)?.isInterState as boolean || false,
+        placeOfSupply: (result.invoice as Record<string, unknown>)?.placeOfSupply as string || undefined,
+        placeOfSupplyName: (() => {
+          const pos = (result.invoice as Record<string, unknown>)?.placeOfSupply as string | undefined;
+          return pos ? (INDIAN_STATES[pos] || pos) : undefined;
+        })(),
       };
       setLastReceiptData(receiptData);
       setIsPendingReceipt(false);

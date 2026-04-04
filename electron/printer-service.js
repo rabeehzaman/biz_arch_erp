@@ -293,6 +293,260 @@ class PrinterService {
     return Buffer.from(printer.getBuffer());
   }
 
+  buildIndianGSTReceiptBuffer(data) {
+    const printer = PrinterService.createBufferPrinter();
+    const gst = data.gst || {};
+    const W = 48;
+
+    printer.initHardware();
+
+    // ═══ STORE HEADER ═══════════════════════════════════════
+    printer.println('\xCD'.repeat(W));
+    printer.alignCenter();
+    printer.bold(true);
+    printer.setTextDoubleHeight();
+    printer.println(data.header?.storeName || 'STORE');
+    printer.setTextNormal();
+    printer.bold(false);
+    printer.println('\xCD'.repeat(W));
+
+    // Address, Phone
+    printer.alignCenter();
+    if (data.header?.address) printer.println(data.header.address);
+    if (data.header?.phone) printer.println(`Tel: ${data.header.phone}`);
+
+    printer.drawLine();
+
+    // GSTIN — bold centered
+    const gstin = data.header?.vatNumber;
+    if (gstin) {
+      printer.alignCenter();
+      printer.bold(true);
+      printer.println(`GSTIN: ${gstin}`);
+      printer.bold(false);
+    }
+
+    printer.drawLine();
+
+    // ═══ TAX INVOICE / BILL OF SUPPLY ════════════════════════
+    const hasTax = (gst.totalCgst || 0) + (gst.totalSgst || 0) + (gst.totalIgst || 0) > 0;
+    const docLabel = hasTax ? 'TAX INVOICE' : 'BILL OF SUPPLY';
+    const boxInner = docLabel.length + 2;
+    const pad = Math.max(0, Math.floor((W - boxInner - 2) / 2));
+    const sp = ' '.repeat(pad);
+
+    printer.alignCenter();
+    printer.println(`${sp}\xC9${'═'.repeat(boxInner)}\xBB`);
+    printer.println(`${sp}\xBA ${docLabel} \xBA`);
+    printer.println(`${sp}\xC8${'═'.repeat(boxInner)}\xBC`);
+
+    printer.drawLine();
+
+    // ═══ INVOICE INFO ═══════════════════════════════════════
+    printer.alignLeft();
+    if (data.invoiceNo) printer.println(`Invoice: ${data.invoiceNo}`);
+    if (data.date) printer.println(`Date: ${data.date}`);
+    if (data.cashier) printer.println(`Cashier: ${data.cashier}`);
+    if (data.customerName) printer.println(`Customer: ${data.customerName}`);
+
+    // Place of Supply
+    if (gst.placeOfSupplyName || gst.placeOfSupply) {
+      const posText = gst.placeOfSupply && gst.placeOfSupplyName
+        ? `${gst.placeOfSupply} - ${gst.placeOfSupplyName}`
+        : (gst.placeOfSupplyName || gst.placeOfSupply);
+      printer.println(`Place of Supply: ${posText}`);
+    }
+
+    printer.drawLine();
+
+    // ═══ COLUMN HEADERS ═════════════════════════════════════
+    printer.bold(true);
+    printer.tableCustom([
+      { text: 'ITEM', align: 'LEFT', width: 0.5 },
+      { text: 'QTY', align: 'CENTER', width: 0.15 },
+      { text: 'AMOUNT', align: 'RIGHT', width: 0.35 },
+    ]);
+    printer.bold(false);
+    printer.drawLine();
+
+    // ═══ LINE ITEMS ═════════════════════════════════════════
+    if (Array.isArray(data.items)) {
+      for (const item of data.items) {
+        const lineTotal = (
+          item.total !== undefined
+            ? item.total
+            : ((item.qty || 1) * (item.price || 0))
+        ).toFixed(2);
+
+        // Line 1: Item name
+        printer.bold(true);
+        printer.println(item.name || '');
+        printer.bold(false);
+
+        // Line 2: HSN + Qty x Price ... Amount
+        const hsnPart = item.hsnCode ? `HSN:${item.hsnCode}` : '';
+        const qtyPart = `${item.qty || 1} x ${(item.price || 0).toFixed(2)}`;
+        const detailLeft = [hsnPart, qtyPart].filter(Boolean).join('  ');
+        printer.leftRight(`  ${detailLeft}`, lineTotal);
+
+        // Line 3: GST rate breakdown
+        const gstRate = item.gstRate || 0;
+        if (gstRate > 0) {
+          let gstDetail;
+          if (gst.isInterState) {
+            gstDetail = `GST ${gstRate}% (IGST ${gstRate}%)`;
+          } else {
+            const halfRate = gstRate / 2;
+            gstDetail = `GST ${gstRate}% (CGST ${halfRate}%+SGST ${halfRate}%)`;
+          }
+          printer.println(`  ${gstDetail}`);
+        }
+
+        // Arabic name (if present)
+        if (item.nameAr) {
+          this._appendArabicLine(printer, `  ${item.nameAr}`, 'right');
+        }
+      }
+    }
+
+    printer.drawLine();
+
+    // ═══ TOTALS ═════════════════════════════════════════════
+    if (data.totals) {
+      if (data.totals.subtotal !== undefined) {
+        printer.leftRight('Subtotal:', data.totals.subtotal.toFixed(2));
+      }
+      if (data.totals.discount) {
+        printer.leftRight('Discount:', `-${data.totals.discount.toFixed(2)}`);
+      }
+    }
+
+    // GST grouped by rate
+    if (Array.isArray(data.items)) {
+      const taxByRate = {};
+      for (const item of data.items) {
+        const rate = item.gstRate || 0;
+        if (rate <= 0) continue;
+        if (!taxByRate[rate]) taxByRate[rate] = { cgst: 0, sgst: 0, igst: 0 };
+        taxByRate[rate].cgst += (item.cgstAmount || 0);
+        taxByRate[rate].sgst += (item.sgstAmount || 0);
+        taxByRate[rate].igst += (item.igstAmount || 0);
+      }
+
+      const rates = Object.keys(taxByRate).map(Number).sort((a, b) => a - b);
+      for (const rate of rates) {
+        const t = taxByRate[rate];
+        if (gst.isInterState) {
+          printer.leftRight(`  IGST @ ${rate}%:`, t.igst.toFixed(2));
+        } else {
+          const halfRate = rate / 2;
+          printer.leftRight(`  CGST @ ${halfRate}%:`, t.cgst.toFixed(2));
+          printer.leftRight(`  SGST @ ${halfRate}%:`, t.sgst.toFixed(2));
+        }
+      }
+    }
+
+    // Round off
+    if (data.totals?.roundOff && Math.abs(data.totals.roundOff) > 0.001) {
+      const roStr = data.totals.roundOff > 0
+        ? `+${data.totals.roundOff.toFixed(2)}`
+        : data.totals.roundOff.toFixed(2);
+      printer.leftRight('Round Off:', roStr);
+    }
+
+    // ═══ TOTAL (double-height bold) ═════════════════════════
+    printer.println('\xCD'.repeat(W));
+    printer.alignCenter();
+    printer.bold(true);
+    printer.setTextDoubleHeight();
+    printer.println(`TOTAL: Rs ${(data.totals?.total || 0).toFixed(2)}`);
+    printer.setTextNormal();
+    printer.bold(false);
+    printer.println('\xCD'.repeat(W));
+
+    // ═══ PAYMENTS ═══════════════════════════════════════════
+    printer.alignLeft();
+    if (data.payment) {
+      if (Array.isArray(data.payment)) {
+        for (const p of data.payment) {
+          printer.leftRight(`${p.method}:`, p.amount.toFixed(2));
+        }
+      } else {
+        printer.leftRight('Payment:', data.payment.method || 'Cash');
+        if (data.payment.amount) {
+          printer.leftRight('Paid:', data.payment.amount.toFixed(2));
+        }
+      }
+      if (data.change && data.change > 0) {
+        printer.leftRight('Change:', data.change.toFixed(2));
+      }
+    }
+
+    printer.drawLine();
+
+    // ═══ BARCODE ════════════════════════════════════════════
+    if (data.barcode) {
+      printer.alignCenter();
+      printer.newLine();
+      printer.code128(data.barcode, {
+        width: 'MEDIUM',
+        height: 60,
+        text: 2,
+      });
+      printer.newLine();
+    }
+
+    // ═══ UPI QR CODE ════════════════════════════════════════
+    const upiLink = gst.upiPaymentLink;
+    if (upiLink) {
+      printer.alignCenter();
+      printer.println('Scan to Pay via UPI');
+      printer.printQR(upiLink, {
+        cellSize: 4,
+        correction: 'M',
+        model: 2,
+      });
+      printer.newLine();
+    } else {
+      // Fallback to standard QR code
+      const qrValue =
+        typeof data.qrcode === 'string' && !data.qrcode.startsWith('data:')
+          ? data.qrcode
+          : typeof data.qrCodeText === 'string'
+            ? data.qrCodeText
+            : null;
+      if (qrValue) {
+        printer.alignCenter();
+        printer.printQR(qrValue, { cellSize: 4, correction: 'M', model: 2 });
+        printer.newLine();
+      }
+    }
+
+    printer.drawLine();
+
+    // ═══ FOOTER ═════════════════════════════════════════════
+    printer.alignCenter();
+    printer.println('Thank you! Visit again');
+
+    if (gst.fssaiNumber) {
+      printer.println(`FSSAI Lic: ${gst.fssaiNumber}`);
+    }
+
+    printer.println('\xCD'.repeat(W));
+    printer.newLine();
+    printer.newLine();
+
+    if (data.cutPaper !== false) {
+      printer.partialCut();
+    }
+
+    if (data.openDrawer) {
+      printer.openCashDrawer();
+    }
+
+    return Buffer.from(printer.getBuffer());
+  }
+
   buildCashDrawerBuffer() {
     const printer = PrinterService.createBufferPrinter();
     printer.openCashDrawer();
@@ -483,7 +737,13 @@ class PrinterService {
     if (this.mode === 'rawUsb') {
       data.openDrawer = true;
     }
-    const buffer = this.buildReceiptBuffer(data);
+    // Auto-detect Indian GST receipt
+    const isIndianGST = data.taxLabel === 'GST' || (
+      data.gst && (data.gst.totalCgst > 0 || data.gst.totalSgst > 0 || data.gst.totalIgst > 0 || data.gst.placeOfSupply)
+    );
+    const buffer = isIndianGST
+      ? this.buildIndianGSTReceiptBuffer(data)
+      : this.buildReceiptBuffer(data);
     await this.sendBuffer(buffer, 'BizArch Receipt');
   }
 

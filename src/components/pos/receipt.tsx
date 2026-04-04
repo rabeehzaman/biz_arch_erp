@@ -10,6 +10,15 @@ export interface ReceiptItem {
   unitPrice: number;
   discount: number;
   lineTotal: number;
+  // Indian GST per-item fields
+  hsnCode?: string;
+  gstRate?: number;
+  cgstRate?: number;
+  sgstRate?: number;
+  igstRate?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
 }
 
 export interface ReceiptPayment {
@@ -47,6 +56,15 @@ export interface ReceiptData {
   currency?: string;
   isTaxInclusivePrice?: boolean;
   isReturn?: boolean;
+  // Indian GST document-level fields
+  totalCgst?: number;
+  totalSgst?: number;
+  totalIgst?: number;
+  isInterState?: boolean;
+  placeOfSupply?: string;
+  placeOfSupplyName?: string;
+  fssaiNumber?: string;
+  upiPaymentLink?: string;
 }
 
 // Payment method Arabic translations (standard Saudi terms)

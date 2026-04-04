@@ -54,3 +54,8 @@ next-env.d.ts
 
 # Neon branch tracking
 .neon-branch
+
+# Reference screenshots and assets
+loyverse_*.png
+loyverse frontend/
+uomupdateplan.md
