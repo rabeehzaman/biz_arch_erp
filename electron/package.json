@@ -1,6 +1,6 @@
 {
   "name": "bizarch-erp-desktop",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "BizArch ERP Desktop App with silent thermal printing",
   "main": "main.js",
   "author": "BizArch <dev@bizarch.com>",
