@@ -85,7 +85,7 @@ export function POSHeader({
         <div className="relative hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white p-0.5 shadow-sm sm:flex">
           <Image src="/bizarch-mark.svg" alt="BizArch Logo" fill sizes="32px" className="object-contain" priority />
         </div>
-        <span className="text-base font-bold whitespace-nowrap">{t("pos.title")}</span>
+        <span className="text-sm font-bold truncate sm:text-base sm:whitespace-nowrap">{t("pos.title")}</span>
         {session && (
           <Badge variant="secondary" className="hidden xs:inline-flex shrink-0 text-xs">
             {session.sessionNumber}
