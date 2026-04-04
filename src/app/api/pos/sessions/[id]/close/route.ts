@@ -246,10 +246,19 @@ export async function PUT(
           }
 
           if (lines.length < 2) {
+            console.error("POS cash settlement: insufficient lines", {
+              depositAmount, clearingCredit, cashDifference, expectedCash,
+              closingCash: Number(closingCash),
+              floatJournaledAtOpen: !!floatJournaledAtOpen,
+              hasCashShortOverAccount: !!cashShortOverAccount,
+              lines,
+            });
             throw new AutoJournalEntryCreationError(
               "Failed to prepare the POS cash settlement journal entry."
             );
           }
+
+          console.log("POS cash settlement lines:", JSON.stringify(lines));
 
           await createRequiredAutoJournalEntry(
             tx,
