@@ -18,6 +18,7 @@ interface Product {
   barcode?: string;
   isService?: boolean;
   availableStock?: number;
+  unitConversions?: { unitId: string; unit?: { name: string; code?: string }; conversionFactor: number | { toString(): string }; price?: number | { toString(): string } | null; isDefaultUnit?: boolean }[];
 }
 
 interface ProductComboboxProps {
@@ -77,9 +78,16 @@ export function ProductCombobox({
             );
           }}
           renderItem={(product) => {
-            const stock = product.availableStock ?? 0;
-            const isOutOfStock = !product.isService && stock === 0;
-            const isLowStock = !product.isService && stock > 0 && stock <= 5;
+            const baseStock = product.availableStock ?? 0;
+            const defaultUc = product.unitConversions?.find((uc) => uc.isDefaultUnit);
+            const factor = defaultUc ? Number(defaultUc.conversionFactor) : 1;
+            const displayPrice = defaultUc
+              ? (defaultUc.price != null ? Number(defaultUc.price) : Number(product.price) * factor)
+              : Number(product.price);
+            const displayStock = factor > 1 ? Math.floor(baseStock / factor) : baseStock;
+            const isOutOfStock = !product.isService && baseStock === 0;
+            const isLowStock = !product.isService && baseStock > 0 && displayStock <= 5;
+            const unitLabel = defaultUc?.unit?.name || defaultUc?.unit?.code || "";
 
             return (
               <div className="flex flex-col">
@@ -98,12 +106,13 @@ export function ProductCombobox({
                 </div>
                 <div className="text-sm text-slate-500">
                   {product.sku && <span>{t("products.skuPrefix")} {product.sku} | </span>}
-                  {symbol}{Number(product.price).toLocaleString(locale)}
+                  {symbol}{displayPrice.toLocaleString(locale)}
+                  {unitLabel && <span className="text-xs text-slate-400">/{unitLabel}</span>}
                   {product.isService ? (
                     <span className="ml-2 text-blue-600">{t("products.service")}</span>
                   ) : (
                     <span className="ml-2">
-                      {t("products.stockLabel")} <span className={isOutOfStock ? "text-red-600 font-medium" : isLowStock ? "text-yellow-600 font-medium" : ""}>{stock}</span>
+                      {t("products.stockLabel")} <span className={isOutOfStock ? "text-red-600 font-medium" : isLowStock ? "text-yellow-600 font-medium" : ""}>{displayStock}{unitLabel ? ` ${unitLabel}` : ""}</span>
                     </span>
                   )}
                 </div>

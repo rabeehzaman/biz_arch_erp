@@ -26,7 +26,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useFormConfig } from "@/hooks/use-form-config";
 import { UnitSelect } from "@/components/units/unit-select";
 import { CategorySelect } from "@/components/products/category-select";
-import { Plus, Trash2, Package } from "lucide-react";
+import { Plus, Trash2, Package, ArrowLeftRight } from "lucide-react";
 
 
 interface Product {
@@ -66,6 +66,15 @@ interface Product {
             unit?: { id: string; code: string; name: string } | null;
         };
     }>;
+    unitConversions?: Array<{
+        id: string;
+        unitId: string;
+        unit: { id: string; name: string; code: string };
+        conversionFactor: number;
+        barcode: string | null;
+        price: number | null;
+        isDefaultUnit: boolean;
+    }>;
 }
 
 interface BundleItemEntry {
@@ -73,6 +82,14 @@ interface BundleItemEntry {
     componentName: string;
     quantity: string;
     unitName: string;
+}
+
+interface UnitConversionEntry {
+    unitId: string;
+    conversionFactor: string;
+    barcode: string;
+    price: string;
+    isDefaultUnit: boolean;
 }
 
 interface ProductFormDialogProps {
@@ -94,11 +111,15 @@ export function ProductFormDialog({
     const { data: session } = useSession();
     const { t } = useLanguage();
     const { isFieldHidden, getDefault } = useFormConfig("product", { isEdit: !!productToEdit });
-    const sessionUser = session?.user as ({ gstEnabled?: boolean } & { saudiEInvoiceEnabled?: boolean } & { isMobileShopModuleEnabled?: boolean } & { isWeighMachineEnabled?: boolean } & { weighMachineProductCodeLen?: number }) | undefined;
+    const sessionUser = session?.user as ({ gstEnabled?: boolean } & { saudiEInvoiceEnabled?: boolean } & { isMobileShopModuleEnabled?: boolean } & { isWeighMachineEnabled?: boolean } & { weighMachineProductCodeLen?: number } & { multiUnitEnabled?: boolean }) | undefined;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; unit?: { code: string; name: string } | null }>>([]);
     const [bundleItems, setBundleItems] = useState<BundleItemEntry[]>([]);
+    const [unitConversionEntries, setUnitConversionEntries] = useState<UnitConversionEntry[]>([]);
+    const [allUnits, setAllUnits] = useState<Array<{ id: string; name: string; code: string }>>([]);
+    const [basePricePerUnit, setBasePricePerUnit] = useState("");
+    const [baseCostPerUnit, setBaseCostPerUnit] = useState("");
     const [formData, setFormData] = useState({
         name: "",
         description: getDefault("description", ""),
@@ -116,6 +137,20 @@ export function ProductFormDialog({
         weighMachineCode: "",
     });
 
+    // Fetch all units for unit conversion selection
+    useEffect(() => {
+        if (sessionUser?.multiUnitEnabled && open) {
+            fetch("/api/units")
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        setAllUnits(data.filter((u: { isActive: boolean }) => u.isActive));
+                    }
+                })
+                .catch(() => { /* ignore */ });
+        }
+    }, [sessionUser?.multiUnitEnabled, open]);
+
     // Fetch all products for bundle component selection
     useEffect(() => {
         if (formData.isBundle && open) {
@@ -132,11 +167,18 @@ export function ProductFormDialog({
 
     useEffect(() => {
         if (productToEdit && open) {
+            // If product has a default unit with a price, show that price instead of base
+            const defaultUc = productToEdit.unitConversions?.find(uc => uc.isDefaultUnit);
+            const displayPrice = defaultUc?.price != null ? Number(defaultUc.price) : productToEdit.price;
+            const displayCost = defaultUc
+                ? (Number(productToEdit.cost) * Number(defaultUc.conversionFactor))
+                : productToEdit.cost;
+
             setFormData({
                 name: productToEdit.name,
                 description: productToEdit.description || "",
-                price: productToEdit.price.toString(),
-                cost: productToEdit.cost.toString(),
+                price: displayPrice.toString(),
+                cost: displayCost.toString(),
                 unitId: productToEdit.unitId || productToEdit.unit?.id || "",
                 categoryId: productToEdit.categoryId || productToEdit.category?.id || "",
                 sku: productToEdit.sku || "",
@@ -159,6 +201,28 @@ export function ProductFormDialog({
                 })));
             } else {
                 setBundleItems([]);
+            }
+
+            // Load existing unit conversions
+            if (productToEdit.unitConversions && productToEdit.unitConversions.length > 0) {
+                setUnitConversionEntries(productToEdit.unitConversions.map(uc => ({
+                    unitId: uc.unitId,
+                    conversionFactor: Number(uc.conversionFactor).toString(),
+                    barcode: uc.barcode || "",
+                    price: uc.price != null ? Number(uc.price).toString() : "",
+                    isDefaultUnit: uc.isDefaultUnit ?? false,
+                })));
+            } else {
+                setUnitConversionEntries([]);
+            }
+
+            // Set base unit price/cost for editing
+            if (defaultUc) {
+                setBasePricePerUnit(Number(productToEdit.price).toString());
+                setBaseCostPerUnit(Number(productToEdit.cost).toString());
+            } else {
+                setBasePricePerUnit("");
+                setBaseCostPerUnit("");
             }
 
             setFormErrors({});
@@ -208,11 +272,26 @@ export function ProductFormDialog({
         setFormErrors({});
         setIsSubmitting(true);
 
+        // If a default unit is set, the entered price/cost is in that unit's terms
+        // Use the base unit price fields if provided, otherwise auto-calculate
+        const defaultUcEntry = unitConversionEntries.find(uc => uc.isDefaultUnit && uc.conversionFactor);
+        const enteredPrice = parseFloat(formData.price);
+        const enteredCost = parseFloat(formData.cost || "0");
+        let basePrice = enteredPrice;
+        let baseCost = enteredCost;
+        if (defaultUcEntry) {
+            const factor = parseFloat(defaultUcEntry.conversionFactor);
+            if (factor > 0) {
+                basePrice = basePricePerUnit ? parseFloat(basePricePerUnit) : Math.round((enteredPrice / factor) * 100) / 100;
+                baseCost = baseCostPerUnit ? parseFloat(baseCostPerUnit) : Math.round((enteredCost / factor) * 100) / 100;
+            }
+        }
+
         const payload: Record<string, unknown> = {
             name: formData.name,
             description: formData.description || null,
-            price: parseFloat(formData.price),
-            cost: parseFloat(formData.cost || "0"),
+            price: basePrice,
+            cost: baseCost,
             unitId: formData.unitId,
             categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : null,
             sku: formData.sku || null,
@@ -230,6 +309,22 @@ export function ProductFormDialog({
                 componentProductId: bi.componentProductId,
                 quantity: parseFloat(bi.quantity),
             }));
+        }
+
+        if (unitConversionEntries.length > 0) {
+            payload.unitConversions = unitConversionEntries
+                .filter(uc => uc.unitId && uc.conversionFactor)
+                .map(uc => ({
+                    unitId: uc.unitId,
+                    conversionFactor: parseFloat(uc.conversionFactor),
+                    barcode: uc.barcode || null,
+                    // For the default unit, store the entered price as its override price
+                    price: uc.isDefaultUnit ? enteredPrice : (uc.price ? parseFloat(uc.price) : null),
+                    isDefaultUnit: uc.isDefaultUnit,
+                }));
+        } else if (productToEdit) {
+            // Send empty array to clear existing conversions
+            payload.unitConversions = [];
         }
 
         try {
@@ -273,6 +368,9 @@ export function ProductFormDialog({
     const resetForm = () => {
         setFormErrors({});
         setBundleItems([]);
+        setUnitConversionEntries([]);
+        setBasePricePerUnit("");
+        setBaseCostPerUnit("");
         setFormData({
             name: "",
             description: getDefault("description", ""),
@@ -375,7 +473,15 @@ export function ProductFormDialog({
                         )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="prod-price">{t("common.price")} *</Label>
+                                <Label htmlFor="prod-price">
+                                    {t("common.price")} *
+                                    {(() => {
+                                        const du = unitConversionEntries.find(uc => uc.isDefaultUnit && uc.unitId);
+                                        if (!du) return null;
+                                        const unitName = allUnits.find(u => u.id === du.unitId)?.name;
+                                        return unitName ? <span className="text-xs text-muted-foreground font-normal ml-1">({t("common.per")} {unitName})</span> : null;
+                                    })()}
+                                </Label>
                                 <Input
                                     id="prod-price"
                                     type="number"
@@ -393,7 +499,15 @@ export function ProductFormDialog({
                             </div>
                             {!isFieldHidden("cost") && (
                             <div className="grid gap-2">
-                                <Label htmlFor="prod-cost">{t("products.cost")}</Label>
+                                <Label htmlFor="prod-cost">
+                                    {t("products.cost")}
+                                    {(() => {
+                                        const du = unitConversionEntries.find(uc => uc.isDefaultUnit && uc.unitId);
+                                        if (!du) return null;
+                                        const unitName = allUnits.find(u => u.id === du.unitId)?.name;
+                                        return unitName ? <span className="text-xs text-muted-foreground font-normal ml-1">({t("common.per")} {unitName})</span> : null;
+                                    })()}
+                                </Label>
                                 <Input
                                     id="prod-cost"
                                     type="number"
@@ -417,6 +531,43 @@ export function ProductFormDialog({
                             </div>
                             )}
                         </div>
+                        {(() => {
+                            const du = unitConversionEntries.find(uc => uc.isDefaultUnit && uc.unitId && uc.conversionFactor);
+                            if (!du) return null;
+                            const factor = parseFloat(du.conversionFactor);
+                            if (!factor || factor <= 0) return null;
+                            const baseUnitName = allUnits.find(u => u.id === formData.unitId)?.name || t("common.unit");
+                            const autoPrice = formData.price ? (parseFloat(formData.price) / factor).toFixed(2) : "";
+                            const autoCost = formData.cost ? (parseFloat(formData.cost) / factor).toFixed(2) : "";
+                            return (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 -mt-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-muted-foreground whitespace-nowrap">{t("common.per")} {baseUnitName}:</span>
+                                        <Input
+                                            type="number"
+                                            step="0.001"
+                                            className="h-8 text-sm"
+                                            placeholder={autoPrice}
+                                            value={basePricePerUnit}
+                                            onChange={(e) => setBasePricePerUnit(e.target.value)}
+                                        />
+                                    </div>
+                                    {!isFieldHidden("cost") && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-muted-foreground whitespace-nowrap">{t("common.per")} {baseUnitName}:</span>
+                                        <Input
+                                            type="number"
+                                            step="0.001"
+                                            className="h-8 text-sm"
+                                            placeholder={autoCost}
+                                            value={baseCostPerUnit}
+                                            onChange={(e) => setBaseCostPerUnit(e.target.value)}
+                                        />
+                                    </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {!isFieldHidden("unitId") && (
                             <div>
@@ -593,6 +744,142 @@ export function ProductFormDialog({
                                 {formErrors.bundle && (
                                     <p className="text-sm text-red-500">{formErrors.bundle}</p>
                                 )}
+                            </div>
+                        )}
+
+                        {sessionUser?.multiUnitEnabled && !formData.isService && formData.unitId && (
+                            <div className="space-y-3 rounded-xl border border-slate-200 bg-muted/30 p-3 sm:p-4">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <Label className="flex items-center gap-2 text-sm font-semibold">
+                                        <ArrowLeftRight className="h-4 w-4" />
+                                        {t("products.alternateUnits")}
+                                    </Label>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full sm:w-auto"
+                                        onClick={() => setUnitConversionEntries([...unitConversionEntries, { unitId: "", conversionFactor: "", barcode: "", price: "", isDefaultUnit: false }])}
+                                    >
+                                        <Plus className="h-3 w-3 mr-1" /> {t("products.addAlternateUnit")}
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {t("products.alternateUnitsDescription")}
+                                </p>
+                                {unitConversionEntries.length === 0 && (
+                                    <p className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded">
+                                        {t("products.noAlternateUnits")}
+                                    </p>
+                                )}
+                                {unitConversionEntries.map((uc, index) => (
+                                    <div key={index} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_100px_auto] sm:items-start">
+                                            <div className="min-w-0">
+                                                <Label className="mb-1 block text-xs text-slate-500">{t("common.unit")}</Label>
+                                                <Select
+                                                    value={uc.unitId}
+                                                    onValueChange={(value) => {
+                                                        const updated = [...unitConversionEntries];
+                                                        updated[index] = { ...updated[index], unitId: value };
+                                                        setUnitConversionEntries(updated);
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder={t("products.selectUnit")} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {allUnits
+                                                            .filter(u => u.id !== formData.unitId && !unitConversionEntries.some((e, i) => i !== index && e.unitId === u.id))
+                                                            .map(u => (
+                                                                <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                                                            ))
+                                                        }
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div>
+                                                <Label className="mb-1 block text-xs text-slate-500">{t("products.conversionFactor")}</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="0.0001"
+                                                    step="any"
+                                                    placeholder="e.g. 12"
+                                                    value={uc.conversionFactor}
+                                                    onChange={(e) => {
+                                                        const updated = [...unitConversionEntries];
+                                                        updated[index] = { ...updated[index], conversionFactor: e.target.value };
+                                                        setUnitConversionEntries(updated);
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-end sm:pt-5">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-10 w-10 shrink-0"
+                                                    onClick={() => setUnitConversionEntries(unitConversionEntries.filter((_, i) => i !== index))}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <Label className="mb-1 block text-xs text-slate-500">{t("products.packBarcode")}</Label>
+                                                <Input
+                                                    placeholder={t("common.optional")}
+                                                    value={uc.barcode}
+                                                    onChange={(e) => {
+                                                        const updated = [...unitConversionEntries];
+                                                        updated[index] = { ...updated[index], barcode: e.target.value };
+                                                        setUnitConversionEntries(updated);
+                                                    }}
+                                                />
+                                            </div>
+                                            {uc.isDefaultUnit ? (
+                                                <div className="flex items-end pb-2">
+                                                    <p className="text-xs text-muted-foreground">{t("products.priceFromMainField")}</p>
+                                                </div>
+                                            ) : (
+                                            <div>
+                                                <Label className="mb-1 block text-xs text-slate-500">{t("products.overridePrice")}</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    placeholder={t("common.optional")}
+                                                    value={uc.price}
+                                                    onChange={(e) => {
+                                                        const updated = [...unitConversionEntries];
+                                                        updated[index] = { ...updated[index], price: e.target.value };
+                                                        setUnitConversionEntries(updated);
+                                                    }}
+                                                />
+                                            </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 pt-1">
+                                            <input
+                                                type="checkbox"
+                                                id={`uc-stock-display-${index}`}
+                                                checked={uc.isDefaultUnit}
+                                                onChange={(e) => {
+                                                    const updated = unitConversionEntries.map((entry, i) => ({
+                                                        ...entry,
+                                                        isDefaultUnit: i === index ? e.target.checked : false,
+                                                    }));
+                                                    setUnitConversionEntries(updated);
+                                                }}
+                                                className="h-4 w-4 rounded border-gray-300"
+                                            />
+                                            <Label htmlFor={`uc-stock-display-${index}`} className="text-xs text-muted-foreground cursor-pointer">
+                                                {t("products.setAsDefaultUnit")}
+                                            </Label>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
 

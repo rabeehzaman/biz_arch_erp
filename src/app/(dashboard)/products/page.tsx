@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
@@ -20,10 +21,11 @@ import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/pa
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Search, Package, ArrowRight, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, ArrowRight, AlertTriangle, ArrowLeftRight } from "lucide-react";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
+import { BulkUnitConversionDialog } from "@/components/products/bulk-unit-conversion-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
@@ -70,6 +72,10 @@ interface InventoryProduct {
     remainingQuantity: number;
     unitCost: number;
   }[];
+  unitConversions?: {
+    conversionFactor: number;
+    unit: { code: string; name: string };
+  }[];
 }
 
 interface StockSummary {
@@ -80,6 +86,7 @@ interface StockSummary {
 }
 
 function ProductsPageContent() {
+  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeTab = searchParams.get("tab") === "inventory" ? "inventory" : "products";
@@ -104,6 +111,7 @@ function ProductsPageContent() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkConversionOpen, setIsBulkConversionOpen] = useState(false);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -278,8 +286,22 @@ function ProductsPageContent() {
     });
   };
 
-  const getStockQuantity = (product: InventoryProduct) =>
+  const getBaseStockQuantity = (product: InventoryProduct) =>
     product.stockLots?.reduce((sum, lot) => sum + Number(lot.remainingQuantity), 0) || 0;
+
+  const getStockDisplay = (product: InventoryProduct) => {
+    const baseQty = getBaseStockQuantity(product);
+    const displayUnit = product.unitConversions?.[0];
+    if (displayUnit && Number(displayUnit.conversionFactor) > 0) {
+      const factor = Number(displayUnit.conversionFactor);
+      const displayQty = Math.round((baseQty / factor) * 1000) / 1000;
+      return { qty: displayQty, unitLabel: displayUnit.unit?.name || displayUnit.unit?.code || "" };
+    }
+    const unitLabel = typeof product.unit === "object" ? (product.unit as any)?.code : product.unit;
+    return { qty: baseQty, unitLabel: unitLabel || "" };
+  };
+
+  const getStockQuantity = (product: InventoryProduct) => getStockDisplay(product).qty;
 
   const getStockValue = (product: InventoryProduct) =>
     product.stockLots?.reduce(
@@ -371,6 +393,16 @@ function ProductsPageContent() {
                 if (actionParam || barcodeParam || idParam) {
                   router.replace("/products", { scroll: false });
                 }
+              }}
+            />
+
+            <BulkUnitConversionDialog
+              open={isBulkConversionOpen}
+              onOpenChange={setIsBulkConversionOpen}
+              productIds={Array.from(selectedIds)}
+              onSuccess={() => {
+                refreshProducts();
+                setSelectedIds(new Set());
               }}
             />
 
@@ -471,6 +503,12 @@ function ProductsPageContent() {
                                 <Trash2 className="h-4 w-4 mr-1" />
                                 {t("common.delete")}
                               </Button>
+                              {session?.user?.multiUnitEnabled && (
+                                <Button variant="outline" size="sm" onClick={() => setIsBulkConversionOpen(true)}>
+                                  <ArrowLeftRight className="h-4 w-4 mr-1" />
+                                  {t("products.bulkAssignConversion") || "Assign Unit Conversion"}
+                                </Button>
+                              )}
                               <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
                                 {t("common.clear") || "Clear"}
                               </Button>
@@ -734,7 +772,7 @@ function ProductsPageContent() {
                                             : "text-slate-900"
                                       }`}
                                     >
-                                      {stockQty} {typeof product.unit === "object" ? (product.unit as any)?.code : product.unit}
+                                      {getStockDisplay(product).qty} {getStockDisplay(product).unitLabel}
                                     </p>
                                   </div>
                                   <div>
@@ -793,7 +831,7 @@ function ProductsPageContent() {
                                               : ""
                                         }
                                       >
-                                        {stockQty} {typeof product.unit === "object" ? (product.unit as any)?.code : product.unit}
+                                        {getStockDisplay(product).qty} {getStockDisplay(product).unitLabel}
                                       </span>
                                     </TableCell>
                                     <TableCell className="text-right">

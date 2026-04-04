@@ -18,15 +18,35 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get("customerId");
 
-    // Fetch product cost and price
+    // Fetch product cost, price, and default unit conversion
     const product = await prisma.product.findFirst({
       where: { id: productId, organizationId },
-      select: { cost: true, price: true },
+      select: {
+        cost: true,
+        price: true,
+        unitConversions: {
+          where: { isDefaultUnit: true },
+          select: {
+            conversionFactor: true,
+            price: true,
+            unit: { select: { name: true, code: true } },
+          },
+          take: 1,
+        },
+      },
     });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
+
+    const defaultUc = product.unitConversions[0];
+    const factor = defaultUc ? Number(defaultUc.conversionFactor) : 1;
+    const displayPrice = defaultUc?.price != null
+      ? Number(defaultUc.price)
+      : Number(product.price) * factor;
+    const displayCost = Number(product.cost) * factor;
+    const defaultUnitName = defaultUc?.unit?.name || defaultUc?.unit?.code || null;
 
     // Recent sales (last 10)
     const recentSales = await prisma.invoiceItem.findMany({
@@ -107,8 +127,9 @@ export async function GET(
       : { avgSalePrice: 0, minSalePrice: 0, maxSalePrice: 0 };
 
     return NextResponse.json({
-      cost: Number(product.cost),
-      currentPrice: Number(product.price),
+      cost: displayCost,
+      currentPrice: displayPrice,
+      defaultUnitName,
       lastSaleToCustomer,
       recentSales: recentSales.map((s) => ({
         customerName: s.invoice.customer.name,

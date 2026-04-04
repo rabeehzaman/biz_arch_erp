@@ -16,10 +16,22 @@ export async function GET(
     const organizationId = getOrgId(session);
     const { id } = await params;
 
-    // Verify product belongs to this org
+    // Verify product belongs to this org + fetch unit conversion info
     const product = await prisma.product.findFirst({
       where: { id, organizationId },
-      select: { id: true },
+      select: {
+        id: true,
+        price: true,
+        unitConversions: {
+          select: {
+            unitId: true,
+            unit: { select: { name: true, code: true } },
+            conversionFactor: true,
+            price: true,
+            isDefaultUnit: true,
+          },
+        },
+      },
     });
 
     if (!product) {
@@ -96,6 +108,16 @@ export async function GET(
       }
     }
 
+    // Find default unit conversion if set
+    const defaultUc = product.unitConversions.find((uc) => uc.isDefaultUnit);
+    const defaultUnit = defaultUc
+      ? {
+          unitName: defaultUc.unit.name,
+          unitCode: defaultUc.unit.code,
+          conversionFactor: Number(defaultUc.conversionFactor),
+        }
+      : null;
+
     return NextResponse.json({
       stockLots: mappedLots,
       openingStocks: openingStocks.map((os) => ({
@@ -112,6 +134,7 @@ export async function GET(
         lotCount: mappedLots.length,
         depletedLotCount,
       },
+      defaultUnit,
     });
   } catch (error) {
     console.error("Failed to fetch product stock:", error);

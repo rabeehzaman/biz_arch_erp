@@ -1,4 +1,4 @@
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -7,6 +7,7 @@ import {
   getDefaultMobilePrinterConfig,
   getMobilePrinterConfig,
   isCapacitorEnvironment,
+  ThermalPrinter,
   type MobilePrinterConfig,
 } from "@/lib/capacitor-print";
 import { isElectronEnvironment } from "@/lib/electron-print";
@@ -17,21 +18,6 @@ import {
   type SessionReportData,
   type SessionReportLanguage,
 } from "@/components/pos/session-report-receipt";
-
-interface ThermalPrinterPlugin {
-  printImage(options: {
-    host: string;
-    port: number;
-    printerDpi?: number;
-    printerWidthMM?: number;
-    base64Image: string;
-    timeoutSeconds?: number;
-    cutPaper?: boolean;
-    openCashDrawer?: boolean;
-  }): Promise<{ success: boolean }>;
-}
-
-const ThermalPrinter = registerPlugin<ThermalPrinterPlugin>("ThermalPrinter");
 
 type PrintResult = { success: boolean; error?: string };
 

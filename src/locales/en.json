@@ -2752,7 +2752,20 @@
         "skuPrefix": "SKU:",
         "service": "Service",
         "stockLabel": "Stock:",
-        "description": "Description"
+        "description": "Description",
+        "alternateUnits": "Alternate Units",
+        "addAlternateUnit": "Add Unit",
+        "alternateUnitsDescription": "Define how this product can be sold in different pack sizes",
+        "conversionFactor": "Qty in base unit",
+        "overridePrice": "Pack price",
+        "priceFromMainField": "Price is taken from the price field above",
+        "packBarcode": "Pack barcode",
+        "noAlternateUnits": "No alternate units defined. Product will only be sold in base unit.",
+        "selectUnit": "Select unit",
+        "bulkAssignConversion": "Assign Unit Conversion",
+        "bulkAssignDescription": "Apply a unit conversion to selected products",
+        "unitConversionApplied": "Unit conversion applied successfully",
+        "setAsDefaultUnit": "Set as default unit"
     },
     "productDetail": {
         "overview": "Overview",

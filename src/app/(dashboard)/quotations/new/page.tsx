@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,8 @@ import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
-import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { getProductUnitOptions, resolveUnitPrice, getDefaultUnit } from "@/lib/unit-utils";
+import { calculateLineAmounts } from "@/lib/line-amounts";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { useLanguage } from "@/lib/i18n";
 import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
@@ -44,6 +45,7 @@ interface Product {
   gstRate?: number;
   hsnCode?: string;
   jewelleryItem?: JewelleryItemData | null;
+  unitConversions?: { unitId: string; unit: { name: string; code?: string }; conversionFactor: number; price?: number | null; isDefaultUnit?: boolean }[];
 }
 
 interface LineItem {
@@ -63,17 +65,16 @@ function getLineAmountKey(itemId: string, ...amounts: number[]) {
   return `${itemId}:${amounts.map((amount) => amount.toFixed(2)).join(":")}`;
 }
 
-function getQuotationLineAmounts(item: { quantity: number; unitPrice: number; discount: number; gstRate: number; vatRate?: number }, taxInclusive: boolean, saudiEnabled: boolean) {
-  const discountedAmount = item.quantity * item.unitPrice * (1 - item.discount / 100);
-  const taxRate = saudiEnabled ? ((item as { vatRate?: number }).vatRate || 0) : (item.gstRate || 0);
-  if (taxInclusive && taxRate > 0) {
-    const subtotal = Math.round((discountedAmount / (1 + taxRate / 100)) * 100) / 100;
-    const tax = Math.round((discountedAmount - subtotal) * 100) / 100;
-    return { subtotal, tax, total: Math.round(discountedAmount * 100) / 100 };
-  }
-  const subtotal = Math.round(discountedAmount * 100) / 100;
-  const tax = Math.round((discountedAmount * (taxRate / 100)) * 100) / 100;
-  return { subtotal, tax, total: Math.round((subtotal + tax) * 100) / 100 };
+type QuotationTaxMode = "none" | "gst" | "vat";
+
+function getQuotationTaxMode(gstEnabled: boolean | undefined, saudiEnabled: boolean): QuotationTaxMode {
+  if (saudiEnabled) return "vat";
+  if (gstEnabled) return "gst";
+  return "none";
+}
+
+function getItemTaxRate(item: LineItem, taxMode: QuotationTaxMode): number {
+  return taxMode === "vat" ? (Number((item as { vatRate?: number }).vatRate) || 0) : taxMode === "gst" ? (Number(item.gstRate) || 0) : 0;
 }
 
 export default function NewQuotationPage() {
@@ -111,7 +112,6 @@ export default function NewQuotationPage() {
   const { t } = useLanguage();
   const jewelleryEnabled = !!(session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled;
   const { getRate: getGoldRate } = useJewelleryRates(jewelleryEnabled);
-  const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const taxInclusiveRef = useRef<HTMLButtonElement>(null);
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -302,12 +302,14 @@ export default function NewQuotationPage() {
             unitPrice = pricing.subtotal;
           }
 
+          const defaultUnit = jewellery ? null : getDefaultUnit(product, product.unitConversions);
+
           return {
             ...item,
             productId: value as string,
-            unitId: product.unitId || "",
-            conversionFactor: 1,
-            unitPrice,
+            unitId: defaultUnit ? defaultUnit.unitId : (product.unitId || ""),
+            conversionFactor: defaultUnit ? defaultUnit.conversionFactor : 1,
+            unitPrice: defaultUnit ? defaultUnit.unitPrice : unitPrice,
             gstRate: Number(product.gstRate) || 0,
             hsnCode: product.hsnCode || (jewellery ? "7113" : ""),
             jewellery,
@@ -318,23 +320,8 @@ export default function NewQuotationPage() {
       if (field === "unitId") {
         const product = products.find((p) => p.id === item.productId);
         if (product) {
-          if (value === product.unitId) {
-            return {
-              ...item,
-              unitId: value as string,
-              conversionFactor: 1,
-              unitPrice: Number(product.price),
-            };
-          }
-          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unitId && uc.fromUnitId === value);
-          if (altConversion) {
-            return {
-              ...item,
-              unitId: value as string,
-              conversionFactor: Number(altConversion.conversionFactor),
-              unitPrice: Number(product.price) * Number(altConversion.conversionFactor),
-            };
-          }
+          const resolved = resolveUnitPrice(Number(product.price), value as string, product.unitId!, product.unitConversions);
+          return { ...item, unitId: value as string, conversionFactor: resolved.conversionFactor, unitPrice: resolved.unitPrice };
         }
       }
 
@@ -386,41 +373,27 @@ export default function NewQuotationPage() {
   };
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
-  const taxEnabled = session?.user?.gstEnabled || saudiEnabled;
+  const taxMode = getQuotationTaxMode(session?.user?.gstEnabled, saudiEnabled);
+  const taxEnabled = taxMode !== "none";
   const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
   const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
   useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
 
-  const calculateSubtotal = () => {
-    return lineItems.reduce((sum, item) => {
-      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      if (taxInclusive) {
-        const rate = item.gstRate || 0;
-        return sum + (rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross);
-      }
-      return sum + gross;
-    }, 0);
-  };
-
-  const calculateTax = () => {
-    return lineItems.reduce((sum, item) => {
-      const gross = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      const rate = item.gstRate || 0;
-      if (taxInclusive) {
-        const base = rate > 0 ? Math.round((gross / (1 + rate / 100)) * 100) / 100 : gross;
-        return sum + (base * rate) / 100;
-      }
-      return sum + (gross * rate) / 100;
-    }, 0);
-  };
-
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
-  };
-
-  const subtotal = calculateSubtotal();
-  const tax = calculateTax();
-  const total = calculateTotal();
+  const { subtotal, tax, total } = useMemo(() => {
+    return lineItems.reduce(
+      (summary, item) => {
+        if (!item.productId) return summary;
+        const taxRate = getItemTaxRate(item, taxMode);
+        const amounts = calculateLineAmounts({ quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0, discount: Number(item.discount) || 0, taxRate }, taxInclusive);
+        return {
+          subtotal: summary.subtotal + amounts.subtotal,
+          tax: summary.tax + amounts.tax,
+          total: summary.total + amounts.total,
+        };
+      },
+      { subtotal: 0, tax: 0, total: 0 }
+    );
+  }, [lineItems, taxInclusive, taxMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -618,7 +591,7 @@ export default function NewQuotationPage() {
                     </TableHeader>
                     <TableBody>
                       {lineItems.map((item, index) => {
-                        const lineAmts = getQuotationLineAmounts(item, taxInclusive, saudiEnabled);
+                        const lineAmts = calculateLineAmounts({ quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0, discount: Number(item.discount) || 0, taxRate: getItemTaxRate(item, taxMode) }, taxInclusive);
                         const lineAmountKey = getLineAmountKey(item.id, lineAmts.subtotal, lineAmts.total);
                         return (
                           <Fragment key={item.id}>
@@ -677,15 +650,7 @@ export default function NewQuotationPage() {
                                   options={(() => {
                                     const product = products.find((p) => p.id === item.productId);
                                     if (!product) return [];
-                                    const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
-                                    const alternateOptions = unitConversions
-                                      .filter(uc => uc.toUnitId === product.unitId)
-                                      .map(uc => ({
-                                        id: uc.fromUnitId,
-                                        name: uc.fromUnit.name,
-                                        conversionFactor: Number(uc.conversionFactor)
-                                      }));
-                                    return [baseOption, ...alternateOptions];
+                                    return getProductUnitOptions(product as { unitId: string; unit?: { name?: string; code?: string } | null }, product.unitConversions);
                                   })()}
                                   disabled={!item.productId}
                                   onSelectFocusNext={(ref) => focusNextFocusable(ref)}
@@ -830,7 +795,7 @@ export default function NewQuotationPage() {
                 {/* Mobile Card Layout */}
                 <div className="sm:hidden divide-y divide-slate-200">
                   {lineItems.map((item) => {
-                    const lineAmts = getQuotationLineAmounts(item, taxInclusive, saudiEnabled);
+                    const lineAmts = calculateLineAmounts({ quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0, discount: Number(item.discount) || 0, taxRate: getItemTaxRate(item, taxMode) }, taxInclusive);
                     const lineAmountKey = getLineAmountKey(item.id, lineAmts.subtotal, lineAmts.total);
 
                     return (
@@ -940,11 +905,7 @@ export default function NewQuotationPage() {
                                 options={(() => {
                                   const p = products.find((p) => p.id === item.productId);
                                   if (!p) return [];
-                                  const baseOption = { id: p.unitId!, name: p.unit?.name || p.unit?.code || "Base Unit", conversionFactor: 1 };
-                                  const alternateOptions = unitConversions
-                                    .filter(uc => uc.toUnitId === p.unitId)
-                                    .map(uc => ({ id: uc.fromUnitId, name: uc.fromUnit.name, conversionFactor: Number(uc.conversionFactor) }));
-                                  return [baseOption, ...alternateOptions];
+                                  return getProductUnitOptions(p as { unitId: string; unit?: { name?: string; code?: string } | null }, p.unitConversions);
                                 })()}
                                 disabled={!item.productId}
                                 onSelectFocusNext={(ref) => focusNextFocusable(ref)}

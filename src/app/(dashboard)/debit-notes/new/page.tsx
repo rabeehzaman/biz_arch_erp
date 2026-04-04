@@ -17,7 +17,7 @@ import { ProductCombobox } from "@/components/invoices/product-combobox";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
-import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { getProductUnitOptions, resolveUnitPrice, getDefaultUnit } from "@/lib/unit-utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
@@ -37,10 +37,12 @@ interface Supplier {
 interface Product {
   id: string;
   name: string;
+  price: number;
   cost: number;
   sku: string | null;
   unitId: string | null;
   unit: { id: string; name: string; code: string } | null;
+  unitConversions?: any[];
   jewelleryItem?: JewelleryItemData | null;
 }
 
@@ -91,7 +93,6 @@ export default function NewDebitNotePage() {
     },
   ]);
   const { data: session } = useSession();
-  const { unitConversions } = useUnitConversions();
   const { symbol } = useCurrency();
   const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
   const [applyRoundOff, setApplyRoundOff] = useState(false);
@@ -199,6 +200,9 @@ export default function NewDebitNotePage() {
       unitCost = pricing.subtotal;
     }
 
+    const baseCostForDefault = Number(product.cost) || Number(product.price);
+    const defaultUnit = getDefaultUnit(product, product.unitConversions, { basePrice: baseCostForDefault });
+
     setItems((prevItems) =>
       prevItems.map((item) =>
         item.id === itemId
@@ -206,9 +210,9 @@ export default function NewDebitNotePage() {
             ...item,
             productId,
             description: product.name,
-            unitId: product.unitId || "",
-            conversionFactor: 1,
-            unitCost,
+            unitId: defaultUnit ? defaultUnit.unitId : (product.unitId || ""),
+            conversionFactor: defaultUnit ? defaultUnit.conversionFactor : 1,
+            unitCost: defaultUnit ? defaultUnit.unitPrice : unitCost,
             gstRate: (product as any).gstRate || 0,
             hsnCode: (product as any).hsnCode || (jewellery ? "7113" : ""),
             jewellery,
@@ -238,23 +242,8 @@ export default function NewDebitNotePage() {
         if (field === "unitId") {
           const product = products.find((p) => p.id === item.productId);
           if (product) {
-            if (value === product.unitId) {
-              return {
-                ...item,
-                unitId: value as string,
-                conversionFactor: 1,
-                unitCost: Number(product.cost),
-              };
-            }
-            const altConversion = unitConversions.find(uc => uc.toUnitId === product.unitId && uc.fromUnitId === value);
-            if (altConversion) {
-              return {
-                ...item,
-                unitId: value as string,
-                conversionFactor: Number(altConversion.conversionFactor),
-                unitCost: Number(product.cost) * Number(altConversion.conversionFactor),
-              };
-            }
+            const resolved = resolveUnitPrice(Number(product.cost) || Number(product.price), value as string, product.unitId!, product.unitConversions, { ignoreOverridePrice: true });
+            return { ...item, unitId: value as string, conversionFactor: resolved.conversionFactor, unitCost: resolved.unitPrice };
           }
         }
 
@@ -577,15 +566,7 @@ export default function NewDebitNotePage() {
                               options={(() => {
                                 const product = products.find((p) => p.id === item.productId);
                                 if (!product) return [];
-                                const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || t("sales.baseUnit"), conversionFactor: 1 };
-                                const alternateOptions = unitConversions
-                                  .filter(uc => uc.toUnitId === product.unitId)
-                                  .map(uc => ({
-                                    id: uc.fromUnitId,
-                                    name: uc.fromUnit.name,
-                                    conversionFactor: Number(uc.conversionFactor)
-                                  }));
-                                return [baseOption, ...alternateOptions];
+                                return getProductUnitOptions(product as { unitId: string; unit?: { name?: string; code?: string } | null }, product.unitConversions);
                               })()}
                               disabled={!item.productId}
                               onSelectFocusNext={(ref) => focusNextFocusable(ref)}

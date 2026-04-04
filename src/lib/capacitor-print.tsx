@@ -43,7 +43,7 @@ interface ThermalPrinterPlugin {
   }): Promise<{ success: boolean } | void>;
 }
 
-const ThermalPrinter = registerPlugin<ThermalPrinterPlugin>("ThermalPrinter");
+export const ThermalPrinter = registerPlugin<ThermalPrinterPlugin>("ThermalPrinter");
 
 export function getDefaultMobilePrinterConfig(): MobilePrinterConfig {
   return {

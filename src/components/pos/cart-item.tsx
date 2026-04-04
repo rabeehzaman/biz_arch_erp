@@ -30,6 +30,9 @@ export interface CartItemData {
   stockQuantity: number;
   gstRate?: number;
   hsnCode?: string;
+  unitId?: string;
+  unitName?: string;
+  conversionFactor: number;
   jewellery?: CartItemJewelleryData | null;
 }
 
@@ -52,7 +55,7 @@ export function CartItem({
       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-2">
         <div className="min-w-0 overflow-hidden">
           <p className="text-sm font-medium leading-tight whitespace-normal break-words [overflow-wrap:anywhere]">
-            {item.name}
+            {item.name}{item.unitName ? ` (${item.unitName})` : ""}
           </p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span>{fmt(Number(item.price))}</span>

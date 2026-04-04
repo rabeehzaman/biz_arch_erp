@@ -17,7 +17,7 @@ import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
-import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { getProductUnitOptions, resolveUnitPrice, getDefaultUnit } from "@/lib/unit-utils";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
@@ -35,6 +35,7 @@ interface Product {
     sku: string | null;
     unitId: string | null;
     unit: { id: string; name: string; code: string } | null;
+    unitConversions?: any[];
 }
 
 interface LineItem {
@@ -84,7 +85,6 @@ export default function EditCreditNotePage({
     const [appliedToBalance, setAppliedToBalance] = useState(true);
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     const { data: session } = useSession();
-    const { unitConversions } = useUnitConversions();
     const { symbol } = useCurrency();
     const { t } = useLanguage();
 
@@ -179,13 +179,14 @@ export default function EditCreditNotePage({
                 if (field === "productId") {
                     const product = products.find((p) => p.id === value);
                     if (product) {
+                        const defaultUnit = getDefaultUnit(product, product.unitConversions);
                         return {
                             ...item,
                             productId: value as string,
                             description: product.name,
-                            unitId: product.unitId || "",
-                            conversionFactor: 1,
-                            unitPrice: Number(product.price),
+                            unitId: defaultUnit ? defaultUnit.unitId : (product.unitId || ""),
+                            conversionFactor: defaultUnit ? defaultUnit.conversionFactor : 1,
+                            unitPrice: defaultUnit ? defaultUnit.unitPrice : Number(product.price),
                         };
                     }
                     return { ...item, productId: value as string, description: "", unitPrice: 0 };
@@ -194,23 +195,8 @@ export default function EditCreditNotePage({
                 if (field === "unitId") {
                     const product = products.find((p) => p.id === item.productId);
                     if (product) {
-                        if (value === product.unitId) {
-                            return {
-                                ...item,
-                                unitId: value as string,
-                                conversionFactor: 1,
-                                unitPrice: Number(product.price),
-                            };
-                        }
-                        const altConversion = unitConversions.find(uc => uc.toUnitId === product.unitId && uc.fromUnitId === value);
-                        if (altConversion) {
-                            return {
-                                ...item,
-                                unitId: value as string,
-                                conversionFactor: Number(altConversion.conversionFactor),
-                                unitPrice: Number(product.price) * Number(altConversion.conversionFactor),
-                            };
-                        }
+                        const resolved = resolveUnitPrice(Number(product.price), value as string, product.unitId!, product.unitConversions);
+                        return { ...item, unitId: value as string, conversionFactor: resolved.conversionFactor, unitPrice: resolved.unitPrice };
                     }
                 }
 
@@ -489,15 +475,7 @@ export default function EditCreditNotePage({
                                                             options={(() => {
                                                                 const product = products.find((p) => p.id === item.productId);
                                                                 if (!product) return [];
-                                                                const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || t("sales.baseUnit"), conversionFactor: 1 };
-                                                                const alternateOptions = unitConversions
-                                                                    .filter(uc => uc.toUnitId === product.unitId)
-                                                                    .map(uc => ({
-                                                                        id: uc.fromUnitId,
-                                                                        name: uc.fromUnit.name,
-                                                                        conversionFactor: Number(uc.conversionFactor)
-                                                                    }));
-                                                                return [baseOption, ...alternateOptions];
+                                                                return getProductUnitOptions(product as { unitId: string; unit?: { name?: string; code?: string } | null }, product.unitConversions);
                                                             })()}
                                                             disabled={!item.productId}
                                                             onSelectFocusNext={(ref) => focusNextFocusable(ref)}

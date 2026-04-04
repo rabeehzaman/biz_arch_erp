@@ -239,6 +239,9 @@ model Organization {
   priceLists                 PriceList[]
   priceListAssignments       PriceListAssignment[]
 
+  // Product Unit Conversion Relations
+  productUnitConversions     ProductUnitConversion[]
+
   @@map("organizations")
 }
 
@@ -333,6 +336,8 @@ model Unit {
   debitNoteItems       DebitNoteItem[]
   conversionsFrom      UnitConversion[]      @relation("FromUnit")
   conversionsTo        UnitConversion[]      @relation("ToUnit")
+  productUnitConversions ProductUnitConversion[]
+  priceListItems         PriceListItem[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -390,6 +395,9 @@ model Product {
   // Price List relation
   priceListItems       PriceListItem[]
 
+  // Product-level unit conversions
+  unitConversions      ProductUnitConversion[]
+
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])
   @@unique([organizationId, weighMachineCode])
@@ -438,6 +446,27 @@ model UnitConversion {
   @@index([fromUnitId])
   @@index([toUnitId])
   @@map("unit_conversions")
+}
+
+model ProductUnitConversion {
+  id               String       @id @default(cuid())
+  productId        String
+  product          Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitId           String
+  unit             Unit         @relation(fields: [unitId], references: [id])
+  conversionFactor Decimal      @db.Decimal(10, 4)
+  barcode              String?
+  price                Decimal?     @db.Decimal(10, 2)
+  isDefaultUnit   Boolean      @default(false)
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([productId, unitId])
+  @@index([organizationId])
+  @@index([productId])
+  @@map("product_unit_conversions")
 }
 
 // ==================== CUSTOMERS ====================
@@ -2941,13 +2970,15 @@ model PriceListItem {
   priceList     PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
   productId     String
   product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitId        String?
+  unit          Unit?     @relation(fields: [unitId], references: [id])
   overrideType  String    @default("FIXED")  // "FIXED" or "PERCENTAGE"
   fixedPrice    Decimal?  @db.Decimal(10, 2)
   percentOffset Decimal?  @db.Decimal(5, 2)   // negative = discount, positive = markup
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  @@unique([priceListId, productId])
+  @@unique([priceListId, productId, unitId])
   @@index([priceListId])
   @@index([productId])
   @@map("price_list_items")

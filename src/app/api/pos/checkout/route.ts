@@ -76,6 +76,8 @@ interface CheckoutItem {
   discount?: number;
   gstRate?: number;
   hsnCode?: string;
+  unitId?: string;
+  conversionFactor?: number;
   jewellery?: {
     jewelleryItemId: string;
     goldRate: number;
@@ -393,6 +395,7 @@ export async function POST(request: NextRequest) {
             },
           });
           if (product) {
+            const stockConversionFactor = item.conversionFactor || 1;
             if (product.isBundle && product.bundleItems.length > 0) {
               // For bundles, check each component's stock
               for (const bi of product.bundleItems) {
@@ -400,7 +403,7 @@ export async function POST(request: NextRequest) {
                   (sum: number, lot: { remainingQuantity: unknown }) => sum + Number(lot.remainingQuantity),
                   0
                 );
-                const needed = item.quantity * Number(bi.quantity);
+                const needed = item.quantity * stockConversionFactor * Number(bi.quantity);
                 if (needed > componentStock) {
                   stockWarnings.push(
                     `Bundle "${item.name}" component "${bi.componentProduct.name}" has ${componentStock} units available but ${needed.toFixed(2)} needed.`
@@ -412,9 +415,10 @@ export async function POST(request: NextRequest) {
                 (sum: number, lot: { remainingQuantity: unknown }) => sum + Number(lot.remainingQuantity),
                 0
               );
-              if (item.quantity > availableStock) {
+              const baseNeeded = item.quantity * stockConversionFactor;
+              if (baseNeeded > availableStock) {
                 stockWarnings.push(
-                  `"${item.name}" has ${availableStock} units available but ${item.quantity} requested.`
+                  `"${item.name}" has ${availableStock} units available but ${baseNeeded} requested.`
                 );
               }
             }
@@ -567,7 +571,10 @@ export async function POST(request: NextRequest) {
       // ── 6. FIFO stock consumption ────────────────────────────────────
       const warnings: string[] = [...stockWarnings];
 
-      for (const invoiceItem of invoice.items) {
+      for (let fifoIdx = 0; fifoIdx < invoice.items.length; fifoIdx++) {
+        const invoiceItem = invoice.items[fifoIdx];
+        const sourceItem = items[fifoIdx]; // original checkout item (same order)
+        const itemConversionFactor = sourceItem?.conversionFactor || 1;
         if (invoiceItem.productId) {
           // Skip FIFO for jewellery items — they use status-based tracking
           if (invoiceItem.jewelleryItemId) {
@@ -614,7 +621,8 @@ export async function POST(request: NextRequest) {
             // Bundle: consume stock from each component product
             let bundleTotalCOGS = 0;
             for (const bi of product.bundleItems) {
-              const componentQty = Number(invoiceItem.quantity) * Number(bi.quantity);
+              const baseQuantity = Number(invoiceItem.quantity) * itemConversionFactor;
+              const componentQty = baseQuantity * Number(bi.quantity);
               const fifoResult = await consumeStockFIFO(
                 bi.componentProductId,
                 componentQty,
@@ -635,9 +643,10 @@ export async function POST(request: NextRequest) {
             });
           } else {
             // Standard product: consume stock directly
+            const baseQuantity = Number(invoiceItem.quantity) * itemConversionFactor;
             const fifoResult = await consumeStockFIFO(
               invoiceItem.productId,
-              invoiceItem.quantity,
+              baseQuantity,
               invoiceItem.id,
               now,
               tx,

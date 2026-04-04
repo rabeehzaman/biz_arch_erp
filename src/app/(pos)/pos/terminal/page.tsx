@@ -103,6 +103,16 @@ interface POSJewelleryItem {
   categoryName: string | null;
 }
 
+interface POSUnitConversion {
+  id: string;
+  unitId: string;
+  unit: { id: string; name: string; code: string } | null;
+  conversionFactor: number;
+  barcode: string | null;
+  price: number | null;
+  isDefaultUnit?: boolean;
+}
+
 interface POSProduct {
   id: string;
   name: string;
@@ -117,6 +127,7 @@ interface POSProduct {
   weighMachineCode: string | null;
   isService?: boolean;
   isBundle?: boolean;
+  unitConversions?: POSUnitConversion[];
   jewelleryItem?: POSJewelleryItem | null;
 }
 
@@ -151,7 +162,7 @@ interface CheckoutTimingPayload {
 }
 
 type CartAction =
-  | { type: "ADD"; product: any; quantity?: number }
+  | { type: "ADD"; product: any; quantity?: number; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null }
   | { type: "REMOVE"; productId: string }
   | { type: "CLEAR" }
   | { type: "RESTORE"; items: CartItemData[] };
@@ -236,8 +247,11 @@ function buildCartState(items: CartItemData[], previousRevision = -1): CartState
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD": {
-      const { product, quantity } = action;
-      const idx = state.items.findIndex((item) => item.productId === product.id);
+      const { product, quantity, unitId, unitName, conversionFactor: cf, price: altPrice } = action;
+      const effectiveConversionFactor = cf ?? 1;
+      const effectivePrice = altPrice != null ? altPrice : Number(product.price);
+      // Match existing cart line by productId + unitId so the same product in different units gets separate lines
+      const idx = state.items.findIndex((item) => item.productId === product.id && (item.unitId || undefined) === (unitId || undefined));
       if (idx >= 0) {
         const newItems = [...state.items];
         const currentItem = newItems[idx];
@@ -271,12 +285,15 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         {
           productId: product.id,
           name: product.name,
-          price: Number(product.price),
+          price: effectivePrice,
           quantity: quantity ?? 1,
           discount: 0,
           stockQuantity: product.stockQuantity ?? 0,
           gstRate: Number(product.gstRate) || 0,
           hsnCode: product.hsnCode || (ji ? "7113" : undefined),
+          unitId,
+          unitName,
+          conversionFactor: effectiveConversionFactor,
           jewellery: jewelleryData,
         },
       ];
@@ -497,14 +514,30 @@ function POSTerminalContent() {
     [cartState.items, taxInclusive, roundOffMode]
   );
   const scanCodeIndex = useMemo(() => {
-    const index = new Map<string, POSProduct>();
+    const index = new Map<string, { product: POSProduct; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null }>();
 
     for (const product of products) {
+      const defaultUc = product.unitConversions?.find((uc) => uc.isDefaultUnit);
+      const defaultEntry = defaultUc
+        ? { product, unitId: defaultUc.unitId, unitName: defaultUc.unit?.name, conversionFactor: Number(defaultUc.conversionFactor), price: defaultUc.price != null ? Number(defaultUc.price) : null }
+        : { product };
       if (product.barcode) {
-        index.set(product.barcode, product);
+        index.set(product.barcode, defaultEntry);
       }
       if (product.sku) {
-        index.set(product.sku, product);
+        index.set(product.sku, defaultEntry);
+      }
+      // Index alt-unit barcodes
+      for (const uc of product.unitConversions || []) {
+        if (uc.barcode) {
+          index.set(uc.barcode, {
+            product,
+            unitId: uc.unitId,
+            unitName: uc.unit?.name,
+            conversionFactor: Number(uc.conversionFactor),
+            price: uc.price != null ? Number(uc.price) : null,
+          });
+        }
       }
     }
 
@@ -568,9 +601,20 @@ function POSTerminalContent() {
     );
   }, []);
 
-  const addToCart = useCallback((product: any, quantity?: number) => {
-    dispatchCart({ type: "ADD", product, quantity });
+  const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null) => {
+    dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price });
   }, []);
+
+  // Wrapper for product tile clicks — applies default unit if set
+  const addToCartWithDefault = useCallback((tileProduct: any) => {
+    const fullProduct = products.find(p => p.id === tileProduct.id);
+    const defaultUc = fullProduct?.unitConversions?.find((uc: any) => uc.isDefaultUnit);
+    if (defaultUc) {
+      addToCart(tileProduct, 1, defaultUc.unitId, defaultUc.unit?.name, Number(defaultUc.conversionFactor), defaultUc.price != null ? Number(defaultUc.price) : null);
+    } else {
+      addToCart(tileProduct);
+    }
+  }, [products, addToCart]);
 
   // ── Barcode Scanner Listener ───────────────────────────────────────
   useEffect(() => {
@@ -608,12 +652,13 @@ function POSTerminalContent() {
           }
 
           // Fall back to regular barcode/SKU lookup
-          const product = scanCodeIndex.get(barcodeBuffer);
+          const match = scanCodeIndex.get(barcodeBuffer);
 
-          if (product) {
-            addToCart(product);
+          if (match) {
+            addToCart(match.product, undefined, match.unitId, match.unitName, match.conversionFactor, match.price);
             setSearchQuery("");
-            toast.success(`Added ${product.name}`);
+            const displayName = match.unitName ? `${match.product.name} (${match.unitName})` : match.product.name;
+            toast.success(`Added ${displayName}`);
           } else {
             toast.error(`Product not found for barcode: ${barcodeBuffer}`);
           }
@@ -1059,6 +1104,8 @@ function POSTerminalContent() {
             discount: item.discount,
             gstRate: item.gstRate || 0,
             hsnCode: item.hsnCode || undefined,
+            unitId: item.unitId || undefined,
+            conversionFactor: item.conversionFactor || 1,
           })),
           payments: payments.map((p) => ({
             method: p.method,
@@ -1248,6 +1295,7 @@ function POSTerminalContent() {
         ...item,
         stockQuantity: currentProduct?.stockQuantity ?? item.stockQuantity,
         price: currentProduct ? Number(currentProduct.price) : item.price,
+        conversionFactor: item.conversionFactor ?? 1,
       };
     });
     dispatchCart({ type: "RESTORE", items: restoredItems });
@@ -1382,13 +1430,16 @@ function POSTerminalContent() {
             onSelect={setSelectedCategory}
           />
           <ProductGrid
-            products={products}
+            products={products.map(p => {
+              const du = p.unitConversions?.find(uc => uc.isDefaultUnit);
+              return du?.price != null ? { ...p, price: Number(du.price) } : p;
+            })}
             isLoading={productsLoading}
             searchQuery={deferredSearchQuery}
             selectedCategory={selectedCategory}
             selectedQuantities={selectedProductQuantities}
             selectionRevision={cartState.revision}
-            onAddToCart={addToCart}
+            onAddToCart={addToCartWithDefault}
           />
         </div>
 

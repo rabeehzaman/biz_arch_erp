@@ -21,7 +21,8 @@ import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
-import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { getProductUnitOptions, resolveUnitPrice, getDefaultUnit } from "@/lib/unit-utils";
+import { calculateLineAmounts } from "@/lib/line-amounts";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
@@ -45,6 +46,7 @@ interface Product {
   cost: number;
   unitId: string | null;
   unit: { id: string; name: string; code: string } | null;
+  unitConversions?: { unitId: string; unit: { name: string; code?: string }; conversionFactor: number | { toString(): string }; price?: number | { toString(): string } | null; isDefaultUnit?: boolean }[];
   gstRate?: number;
   hsnCode?: string;
   isImeiTracked?: boolean;
@@ -116,7 +118,6 @@ export default function NewPurchaseInvoicePage() {
   const jewelleryEnabled = !!(session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled;
   const { getRate: getGoldRate } = useJewelleryRates(jewelleryEnabled);
   const { symbol, locale, fmt } = useCurrency();
-  const { unitConversions } = useUnitConversions();
   const { t } = useLanguage();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const taxInclusiveRef = useRef<HTMLButtonElement>(null);
@@ -296,12 +297,22 @@ export default function NewPurchaseInvoicePage() {
             unitCost = pricing.subtotal;
           }
 
+          const baseCostForDefault = Number(product.cost) || Number(product.price);
+          const defaultUnit = getDefaultUnit(product, product.unitConversions, { basePrice: baseCostForDefault });
+          let finalUnitId = defaultUnit ? defaultUnit.unitId : (product.unitId || "");
+          let finalConversionFactor = defaultUnit ? defaultUnit.conversionFactor : 1;
+          let finalUnitCost = defaultUnit ? defaultUnit.unitPrice : unitCost;
+          if (defaultUnit && taxInclusive && finalUnitCost > 0) {
+            const taxRate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
+            if (taxRate > 0) finalUnitCost = Math.round(finalUnitCost * (1 + taxRate / 100) * 100) / 100;
+          }
+
           return {
             ...item,
             productId: value as string,
-            unitId: product.unitId || "",
-            conversionFactor: 1,
-            unitCost,
+            unitId: finalUnitId,
+            conversionFactor: finalConversionFactor,
+            unitCost: defaultUnit ? finalUnitCost : unitCost,
             gstRate: Number(product.gstRate) || 0,
             hsnCode: product.hsnCode || (jewellery ? "7113" : ""),
             jewellery,
@@ -317,23 +328,8 @@ export default function NewPurchaseInvoicePage() {
             const rate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
             if (rate > 0) baseCost = Math.round(baseCost * (1 + rate / 100) * 100) / 100;
           }
-          if (value === product.unitId) {
-            return {
-              ...item,
-              unitId: value as string,
-              conversionFactor: 1,
-              unitCost: baseCost,
-            };
-          }
-          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unitId && uc.fromUnitId === value);
-          if (altConversion) {
-            return {
-              ...item,
-              unitId: value as string,
-              conversionFactor: Number(altConversion.conversionFactor),
-              unitCost: baseCost * Number(altConversion.conversionFactor),
-            };
-          }
+          const resolved = resolveUnitPrice(baseCost, value as string, product.unitId!, product.unitConversions, { ignoreOverridePrice: true });
+          return { ...item, unitId: value as string, conversionFactor: resolved.conversionFactor, unitCost: resolved.unitPrice };
         }
       }
 
@@ -434,22 +430,12 @@ export default function NewPurchaseInvoicePage() {
   useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
   useEffect(() => { setApplyRoundOff(roundOffEnabled); }, [roundOffEnabled]);
 
-  function getPurchaseLineAmounts(item: LineItem) {
-    const discountedAmount = item.quantity * item.unitCost * (1 - item.discount / 100);
-    const taxRate = saudiEnabled ? (item.vatRate || 0) : (item.gstRate || 0);
-    if (taxInclusive && taxRate > 0) {
-      const subtotalLine = Math.round((discountedAmount / (1 + taxRate / 100)) * 100) / 100;
-      const taxLine = Math.round((discountedAmount - subtotalLine) * 100) / 100;
-      return { gross: subtotalLine, subtotal: subtotalLine, tax: taxLine, net: discountedAmount };
-    }
-    const taxLine = Math.round((discountedAmount * taxRate / 100) * 100) / 100;
-    return { gross: discountedAmount, subtotal: discountedAmount, tax: taxLine, net: discountedAmount + taxLine };
-  }
+  const getLineAmts = (item: LineItem) => calculateLineAmounts({ quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitCost) || 0, discount: Number(item.discount) || 0, taxRate: saudiEnabled ? (Number(item.vatRate) || 0) : (Number(item.gstRate) || 0) }, taxInclusive);
 
-  const subtotal = lineItems.reduce((sum, item) => sum + getPurchaseLineAmounts(item).subtotal, 0);
-  const tax = lineItems.reduce((sum, item) => sum + getPurchaseLineAmounts(item).tax, 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + getLineAmts(item).subtotal, 0);
+  const tax = lineItems.reduce((sum, item) => sum + getLineAmts(item).tax, 0);
   const total = taxInclusive
-    ? lineItems.reduce((sum, item) => sum + getPurchaseLineAmounts(item).net, 0)
+    ? lineItems.reduce((sum, item) => sum + getLineAmts(item).total, 0)
     : subtotal + tax;
   const { roundOffAmount, roundedTotal } = calculateRoundOff(
     total,
@@ -685,9 +671,9 @@ export default function NewPurchaseInvoicePage() {
                       {lineItems.map((item, index) => {
                         const product = products.find((p) => p.id === item.productId);
                         const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
-                        const lineAmts = getPurchaseLineAmounts(item);
-                        const lineGross = lineAmts.gross;
-                        const lineNet = lineAmts.net;
+                        const lineAmts = getLineAmts(item);
+                        const lineGross = lineAmts.subtotal;
+                        const lineNet = lineAmts.total;
                         const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
                         return (
                           <Fragment key={item.id}><TableRow className="group hover:bg-slate-50 border-b">
@@ -745,15 +731,7 @@ export default function NewPurchaseInvoicePage() {
                                   options={(() => {
                                     const product = products.find((p) => p.id === item.productId);
                                     if (!product) return [];
-                                    const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || "Base Unit", conversionFactor: 1 };
-                                    const alternateOptions = unitConversions
-                                      .filter(uc => uc.toUnitId === product.unitId)
-                                      .map(uc => ({
-                                        id: uc.fromUnitId,
-                                        name: uc.fromUnit.name,
-                                        conversionFactor: Number(uc.conversionFactor)
-                                      }));
-                                    return [baseOption, ...alternateOptions];
+                                    return getProductUnitOptions(product as { unitId: string; unit?: { name?: string; code?: string } | null }, product.unitConversions);
                                   })()}
                                   disabled={!item.productId}
                                   onSelectFocusNext={(ref) => focusNextFocusable(ref)}
@@ -1045,9 +1023,9 @@ export default function NewPurchaseInvoicePage() {
                   {lineItems.map((item) => {
                     const product = products.find((p) => p.id === item.productId);
                     const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
-                    const lineAmtsMob = getPurchaseLineAmounts(item);
-                    const lineGross = lineAmtsMob.gross;
-                    const lineNet = lineAmtsMob.net;
+                    const lineAmtsMob = getLineAmts(item);
+                    const lineGross = lineAmtsMob.subtotal;
+                    const lineNet = lineAmtsMob.total;
                     const lineAmountKey = getLineAmountKey(item.id, lineGross, lineNet);
 
                     return (
@@ -1200,13 +1178,9 @@ export default function NewPurchaseInvoicePage() {
                                 value={item.unitId}
                                 onValueChange={(value) => updateLineItem(item.id, "unitId", value)}
                                 options={(() => {
-                                  const p = products.find((p) => p.id === item.productId);
-                                  if (!p) return [];
-                                  const baseOption = { id: p.unitId!, name: p.unit?.name || p.unit?.code || "Base Unit", conversionFactor: 1 };
-                                  const alternateOptions = unitConversions
-                                    .filter(uc => uc.toUnitId === p.unitId)
-                                    .map(uc => ({ id: uc.fromUnitId, name: uc.fromUnit.name, conversionFactor: Number(uc.conversionFactor) }));
-                                  return [baseOption, ...alternateOptions];
+                                  const product = products.find((p) => p.id === item.productId);
+                                  if (!product) return [];
+                                  return getProductUnitOptions(product as { unitId: string; unit?: { name?: string; code?: string } | null }, product.unitConversions);
                                 })()}
                                 disabled={!item.productId}
                                 onSelectFocusNext={(ref) => focusNextFocusable(ref)}
@@ -1217,7 +1191,7 @@ export default function NewPurchaseInvoicePage() {
 
                         <div className="flex justify-end pt-1 border-t border-dashed border-slate-200">
                           <span key={`${lineAmountKey}:mobile`} className="text-sm font-semibold">
-                            {fmt(lineAmtsMob.net)}
+                            {fmt(lineAmtsMob.total)}
                           </span>
                           {lineAmtsMob.tax > 0 && taxEnabled && (
                             <span className="text-[10px] text-slate-400 ml-1">

@@ -15,6 +15,14 @@ import {
   Package, FileText, ShoppingCart, Archive, Clock, Barcode, Tag, Layers,
 } from "lucide-react";
 
+interface UnitConversion {
+  unitId: string;
+  unit: { name: string; code: string };
+  conversionFactor: number;
+  price: number | null;
+  isDefaultUnit: boolean;
+}
+
 interface ProductOverview {
   product: {
     id: string; name: string; arabicName: string | null; description: string | null;
@@ -24,6 +32,7 @@ interface ProductOverview {
     weighMachineCode: string | null; isActive: boolean; createdAt: string;
     category: { id: string; name: string } | null;
     unit: { id: string; code: string; name: string } | null;
+    unitConversions?: UnitConversion[];
     bundleItems: Array<{ id: string; quantity: number; componentProduct: { id: string; name: string; unit: { code: string } | null } }>;
   };
   stock: {
@@ -77,6 +86,19 @@ export function ProductOverviewTab({ productId }: { productId: string }) {
 
   const { product } = data;
 
+  // Resolve default unit if set
+  const defaultUc = product.unitConversions?.find((uc) => uc.isDefaultUnit);
+  const displayUnit = defaultUc
+    ? { name: defaultUc.unit.name, code: defaultUc.unit.code }
+    : product.unit;
+  const displayPrice = defaultUc
+    ? (defaultUc.price != null ? defaultUc.price : product.price * defaultUc.conversionFactor)
+    : product.price;
+  const displayCost = defaultUc
+    ? product.cost * defaultUc.conversionFactor
+    : product.cost;
+  const stockFactor = defaultUc ? defaultUc.conversionFactor : 1;
+
   return (
     <div className="grid gap-6 lg:grid-cols-5">
       {/* Left Column */}
@@ -92,7 +114,7 @@ export function ProductOverviewTab({ productId }: { productId: string }) {
               {product.barcode && <DetailRow label={t("common.barcode") || "Barcode"} value={product.barcode} />}
               {product.hsnCode && !isSaudi && <DetailRow label="HSN Code" value={product.hsnCode} />}
               {product.category && <DetailRow label={t("common.category") || "Category"} value={product.category.name} />}
-              {product.unit && <DetailRow label={t("common.unit") || "Unit"} value={`${product.unit.name} (${product.unit.code})`} />}
+              {displayUnit && <DetailRow label={t("common.unit") || "Unit"} value={`${displayUnit.name} (${displayUnit.code})`} />}
               {product.arabicName && <DetailRow label={t("productDetail.arabicName") || "Arabic Name"} value={product.arabicName} dir="rtl" />}
               <DetailRow label={t("productDetail.createdOn") || "Created On"} value={format(new Date(product.createdAt), "dd MMM yyyy")} />
             </div>
@@ -113,12 +135,18 @@ export function ProductOverviewTab({ productId }: { productId: string }) {
           <CardContent>
             <div className={`grid gap-4 ${!isSaudi ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
               <div>
-                <p className="text-xs text-slate-500">{t("productDetail.sellingPrice")}</p>
-                <p className="text-lg font-bold text-slate-900">{fmt(product.price)}</p>
+                <p className="text-xs text-slate-500">
+                  {t("productDetail.sellingPrice")}
+                  {defaultUc && <span className="ml-1 text-slate-400">/ {defaultUc.unit.code}</span>}
+                </p>
+                <p className="text-lg font-bold text-slate-900">{fmt(displayPrice)}</p>
               </div>
               <div>
-                <p className="text-xs text-slate-500">{t("productDetail.costPrice")}</p>
-                <p className="text-lg font-bold text-slate-900">{fmt(product.cost)}</p>
+                <p className="text-xs text-slate-500">
+                  {t("productDetail.costPrice")}
+                  {defaultUc && <span className="ml-1 text-slate-400">/ {defaultUc.unit.code}</span>}
+                </p>
+                <p className="text-lg font-bold text-slate-900">{fmt(displayCost)}</p>
               </div>
               {!isSaudi && (
                 <div>
@@ -175,7 +203,10 @@ export function ProductOverviewTab({ productId }: { productId: string }) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">{t("productDetail.stockOnHand")}</span>
-                  <span className="text-2xl font-bold text-slate-900">{data.stock.totalOnHand}</span>
+                  <span className="text-2xl font-bold text-slate-900">
+                    {(data.stock.totalOnHand / stockFactor).toLocaleString(undefined, { maximumFractionDigits: 3 })}
+                    {defaultUc && <span className="ml-1 text-sm font-normal text-slate-400">{defaultUc.unit.code}</span>}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">{t("productDetail.totalStockValue")}</span>
@@ -205,7 +236,10 @@ export function ProductOverviewTab({ productId }: { productId: string }) {
                   {data.stock.byWarehouse.map((wh) => (
                     <TableRow key={wh.warehouseId || "default"}>
                       <TableCell className="text-sm">{wh.warehouseName}</TableCell>
-                      <TableCell className="text-right text-sm font-medium">{wh.quantity}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">
+                        {(wh.quantity / stockFactor).toLocaleString(undefined, { maximumFractionDigits: 3 })}
+                        {defaultUc && <span className="ml-1 text-xs text-slate-400">{defaultUc.unit.code}</span>}
+                      </TableCell>
                       <TableCell className="text-right text-sm">{fmt(wh.value)}</TableCell>
                     </TableRow>
                   ))}

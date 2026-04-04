@@ -25,6 +25,9 @@ interface StockData {
   summary: {
     totalOnHand: number; totalValue: number; lotCount: number; depletedLotCount: number;
   };
+  defaultUnit: {
+    unitName: string; unitCode: string; conversionFactor: number;
+  } | null;
 }
 
 const sourceTypeBadge: Record<string, { variant: "default" | "secondary" | "outline" | "success" | "warning" | "info"; label: string }> = {
@@ -67,6 +70,11 @@ export function ProductStockTab({ productId }: { productId: string }) {
 
   if (!data) return null;
 
+  const du = data.defaultUnit;
+  const factor = du ? du.conversionFactor : 1;
+  const fmtQty = (qty: number) => (qty / factor).toLocaleString(undefined, { maximumFractionDigits: 3 });
+  const unitLabel = du ? du.unitCode : null;
+
   const activeLots = data.stockLots.filter((l) => l.remainingQuantity > 0);
   const depletedLots = data.stockLots.filter((l) => l.remainingQuantity === 0);
 
@@ -75,7 +83,10 @@ export function ProductStockTab({ productId }: { productId: string }) {
       {/* Summary Bar */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border bg-white p-4 text-center">
-          <p className="text-2xl font-bold text-slate-900">{data.summary.totalOnHand}</p>
+          <p className="text-2xl font-bold text-slate-900">
+            {fmtQty(data.summary.totalOnHand)}
+            {unitLabel && <span className="ml-1 text-sm font-normal text-slate-400">{unitLabel}</span>}
+          </p>
           <p className="text-xs text-slate-500">{t("productDetail.stockOnHand")}</p>
         </div>
         <div className="rounded-xl border bg-white p-4 text-center">
@@ -113,7 +124,10 @@ export function ProductStockTab({ productId }: { productId: string }) {
                       <Badge variant={sourceTypeBadge[lot.sourceType]?.variant || "secondary"} className="text-xs">
                         {sourceTypeBadge[lot.sourceType]?.label || lot.sourceType}
                       </Badge>
-                      <span className="font-semibold">{lot.remainingQuantity} / {lot.initialQuantity}</span>
+                      <span className="font-semibold">
+                        {fmtQty(lot.remainingQuantity)} / {fmtQty(lot.initialQuantity)}
+                        {unitLabel && <span className="ml-1 text-xs text-slate-400">{unitLabel}</span>}
+                      </span>
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                       <span>{format(new Date(lot.lotDate), "dd MMM yyyy")}</span>
@@ -121,7 +135,7 @@ export function ProductStockTab({ productId }: { productId: string }) {
                     </div>
                     <div className="mt-1 flex items-center justify-between text-xs">
                       <span className="text-slate-500">{lot.sourceReference}</span>
-                      <span>{fmt(lot.unitCost)} / unit</span>
+                      <span>{fmt(lot.unitCost * factor)} / {unitLabel || "unit"}</span>
                     </div>
                   </div>
                 ))}
@@ -151,9 +165,9 @@ export function ProductStockTab({ productId }: { productId: string }) {
                         </TableCell>
                         <TableCell className="font-mono text-sm">{lot.sourceReference}</TableCell>
                         <TableCell>{lot.warehouseName}</TableCell>
-                        <TableCell className="text-right">{fmt(lot.unitCost)}</TableCell>
-                        <TableCell className="text-right">{lot.initialQuantity}</TableCell>
-                        <TableCell className="text-right font-medium">{lot.remainingQuantity}</TableCell>
+                        <TableCell className="text-right">{fmt(lot.unitCost * factor)}</TableCell>
+                        <TableCell className="text-right">{fmtQty(lot.initialQuantity)}</TableCell>
+                        <TableCell className="text-right font-medium">{fmtQty(lot.remainingQuantity)}</TableCell>
                       </TableRow>
                     ))}
                     {depletedLots.length > 0 && (
@@ -173,8 +187,8 @@ export function ProductStockTab({ productId }: { productId: string }) {
                             </TableCell>
                             <TableCell className="font-mono text-sm">{lot.sourceReference}</TableCell>
                             <TableCell>{lot.warehouseName}</TableCell>
-                            <TableCell className="text-right">{fmt(lot.unitCost)}</TableCell>
-                            <TableCell className="text-right">{lot.initialQuantity}</TableCell>
+                            <TableCell className="text-right">{fmt(lot.unitCost * factor)}</TableCell>
+                            <TableCell className="text-right">{fmtQty(lot.initialQuantity)}</TableCell>
                             <TableCell className="text-right line-through">0</TableCell>
                           </TableRow>
                         ))}
@@ -217,8 +231,8 @@ export function ProductStockTab({ productId }: { productId: string }) {
                     <TableRow key={os.id}>
                       <TableCell>{format(new Date(os.stockDate), "dd MMM yyyy")}</TableCell>
                       <TableCell>{os.warehouseName}</TableCell>
-                      <TableCell className="text-right">{os.quantity}</TableCell>
-                      <TableCell className="text-right">{fmt(os.unitCost)}</TableCell>
+                      <TableCell className="text-right">{fmtQty(os.quantity)}</TableCell>
+                      <TableCell className="text-right">{fmt(os.unitCost * factor)}</TableCell>
                       <TableCell className="text-right font-medium">{fmt(os.quantity * os.unitCost)}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-slate-500">{os.notes || "-"}</TableCell>
                     </TableRow>

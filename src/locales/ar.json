@@ -2639,7 +2639,20 @@
         "skuPrefix": "SKU:",
         "service": "خدمة",
         "stockLabel": "المخزون:",
-        "description": "الوصف"
+        "description": "الوصف",
+        "alternateUnits": "وحدات بديلة",
+        "addAlternateUnit": "إضافة وحدة",
+        "alternateUnitsDescription": "حدد كيف يمكن بيع هذا المنتج بأحجام عبوات مختلفة",
+        "conversionFactor": "الكمية بالوحدة الأساسية",
+        "overridePrice": "سعر العبوة",
+        "priceFromMainField": "السعر مأخوذ من حقل السعر أعلاه",
+        "packBarcode": "باركود العبوة",
+        "noAlternateUnits": "لم يتم تحديد وحدات بديلة. سيتم بيع المنتج بالوحدة الأساسية فقط.",
+        "selectUnit": "اختر الوحدة",
+        "bulkAssignConversion": "تعيين تحويل الوحدات",
+        "bulkAssignDescription": "تطبيق تحويل وحدات على المنتجات المحددة",
+        "unitConversionApplied": "تم تطبيق تحويل الوحدات بنجاح",
+        "setAsDefaultUnit": "تعيين كوحدة افتراضية"
     },
     "productDetail": {
         "overview": "نظرة عامة",

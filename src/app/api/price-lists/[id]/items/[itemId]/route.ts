@@ -27,6 +27,10 @@ export async function PATCH(
   const body = await request.json();
   const data: Record<string, unknown> = {};
 
+  if (body.unitId !== undefined) {
+    data.unitId = body.unitId || null;
+  }
+
   if (body.overrideType !== undefined) {
     data.overrideType = body.overrideType;
     if (body.overrideType === "FIXED") {
@@ -44,7 +48,10 @@ export async function PATCH(
   const updated = await prisma.priceListItem.update({
     where: { id: itemId },
     data,
-    include: { product: { select: { id: true, name: true, sku: true, price: true } } },
+    include: {
+      product: { select: { id: true, name: true, sku: true, price: true } },
+      unit: { select: { id: true, name: true, code: true } },
+    },
   });
 
   return NextResponse.json(updated);

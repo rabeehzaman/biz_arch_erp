@@ -145,6 +145,7 @@ export async function GET() {
         conversionFactor: Number(uc.conversionFactor),
         barcode: uc.barcode,
         price: uc.price != null ? Number(uc.price) : null,
+        isDefaultUnit: uc.isDefaultUnit,
       })),
       jewelleryItem: p.jewelleryItem ? {
         id: p.jewelleryItem.id,

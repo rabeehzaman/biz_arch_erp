@@ -28,6 +28,14 @@ export async function GET(request: NextRequest) {
             unitCost: true,
           },
         },
+        unitConversions: {
+          where: { isDefaultUnit: true },
+          select: {
+            conversionFactor: true,
+            unit: { select: { code: true, name: true } },
+          },
+          take: 1,
+        },
       },
     });
 

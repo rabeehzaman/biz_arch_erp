@@ -68,6 +68,17 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          unitConversions: {
+            select: {
+              id: true,
+              unitId: true,
+              unit: { select: { id: true, name: true, code: true } },
+              conversionFactor: true,
+              barcode: true,
+              price: true,
+              isDefaultUnit: true,
+            },
+          },
           jewelleryItem: {
             select: {
               id: true,
@@ -154,6 +165,17 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          unitConversions: {
+            select: {
+              id: true,
+              unitId: true,
+              unit: { select: { id: true, name: true, code: true } },
+              conversionFactor: true,
+              barcode: true,
+              price: true,
+              isDefaultUnit: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -193,11 +215,23 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, description, price, cost, unitId, categoryId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems } = body;
+    const { name, description, price, cost, unitId, categoryId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
         { error: "Name and price are required" },
+        { status: 400 }
+      );
+    }
+
+    // Check for duplicate product name
+    const existingByName = await prisma.product.findFirst({
+      where: { organizationId, name: { equals: name.trim(), mode: "insensitive" } },
+      select: { id: true },
+    });
+    if (existingByName) {
+      return NextResponse.json(
+        { error: "A product with this name already exists." },
         { status: 400 }
       );
     }
@@ -257,7 +291,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Re-fetch with bundle items included
+      // Create unit conversions if provided
+      if (Array.isArray(unitConversions) && unitConversions.length > 0) {
+        for (const uc of unitConversions) {
+          if (uc.unitId && uc.conversionFactor > 0) {
+            await tx.productUnitConversion.create({
+              data: {
+                productId: newProduct.id,
+                unitId: uc.unitId,
+                conversionFactor: uc.conversionFactor,
+                barcode: uc.barcode || null,
+                price: uc.price != null ? uc.price : null,
+                isDefaultUnit: uc.isDefaultUnit ?? false,
+                organizationId,
+              },
+            });
+          }
+        }
+      }
+
+      // Re-fetch with all relations included
       const fullProduct = await tx.product.findUnique({
         where: { id: newProduct.id },
         include: {
@@ -267,6 +320,17 @@ export async function POST(request: NextRequest) {
               componentProduct: {
                 select: { id: true, name: true, price: true, cost: true, unit: { select: { id: true, code: true, name: true } } },
               },
+            },
+          },
+          unitConversions: {
+            select: {
+              id: true,
+              unitId: true,
+              unit: { select: { id: true, name: true, code: true } },
+              conversionFactor: true,
+              barcode: true,
+              price: true,
+              isDefaultUnit: true,
             },
           },
         },

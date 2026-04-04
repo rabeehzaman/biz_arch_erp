@@ -26,6 +26,17 @@ export async function GET(
             },
           },
         },
+        unitConversions: {
+          select: {
+            id: true,
+            unitId: true,
+            unit: { select: { id: true, name: true, code: true } },
+            conversionFactor: true,
+            barcode: true,
+            price: true,
+            isDefaultUnit: true,
+          },
+        },
       },
     });
 
@@ -59,7 +70,21 @@ export async function PUT(
     const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
-    const { name, description, price, cost, unitId, categoryId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems } = body;
+    const { name, description, price, cost, unitId, categoryId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions } = body;
+
+    // Check for duplicate product name (exclude current product)
+    if (name) {
+      const existingByName = await prisma.product.findFirst({
+        where: { organizationId, name: { equals: name.trim(), mode: "insensitive" }, id: { not: id } },
+        select: { id: true },
+      });
+      if (existingByName) {
+        return NextResponse.json(
+          { error: "A product with this name already exists." },
+          { status: 400 }
+        );
+      }
+    }
 
     const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
     if (gstRate !== undefined && gstRate !== null && !VALID_GST_RATES.includes(Number(gstRate))) {
@@ -118,6 +143,29 @@ export async function PUT(
         }
       }
 
+      // Update unit conversions if provided (delete-and-recreate)
+      if (Array.isArray(unitConversions)) {
+        await tx.productUnitConversion.deleteMany({
+          where: { productId: id },
+        });
+
+        for (const uc of unitConversions) {
+          if (uc.unitId && uc.conversionFactor > 0) {
+            await tx.productUnitConversion.create({
+              data: {
+                productId: id,
+                unitId: uc.unitId,
+                conversionFactor: uc.conversionFactor,
+                barcode: uc.barcode || null,
+                price: uc.price != null ? uc.price : null,
+                isDefaultUnit: uc.isDefaultUnit ?? false,
+                organizationId,
+              },
+            });
+          }
+        }
+      }
+
       // Re-fetch with all relations
       return tx.product.findUnique({
         where: { id },
@@ -128,6 +176,16 @@ export async function PUT(
               componentProduct: {
                 select: { id: true, name: true, price: true, cost: true, unitId: true, unit: { select: { id: true, code: true, name: true } } },
               },
+            },
+          },
+          unitConversions: {
+            select: {
+              id: true,
+              unitId: true,
+              unit: { select: { id: true, name: true, code: true } },
+              conversionFactor: true,
+              barcode: true,
+              price: true,
             },
           },
         },

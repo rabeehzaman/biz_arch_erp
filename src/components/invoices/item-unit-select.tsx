@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import {
     Select,
     SelectContent,
@@ -14,7 +14,7 @@ interface UnitOption {
     id: string;
     name: string;
     conversionFactor: number;
-    price?: number;
+    price?: number | null;
 }
 
 interface ItemUnitSelectProps {
@@ -23,7 +23,7 @@ interface ItemUnitSelectProps {
     options: UnitOption[];
     required?: boolean;
     disabled?: boolean;
-    className?: string; // Add className prop for flexibility
+    className?: string;
     onSelectFocusNext?: (triggerRef: React.RefObject<HTMLButtonElement | null>) => void;
 }
 
@@ -38,12 +38,19 @@ export function ItemUnitSelect({
     const { t } = useLanguage();
     const triggerRef = useRef<HTMLButtonElement>(null);
 
-    // If there's only one option and no value is selected, auto-select it
+    // Determine the effective value: use the passed value if it's valid in options,
+    // otherwise fall back to the first option (default unit when set).
+    const effectiveValue = (value && options.some(opt => opt.id === value))
+        ? value
+        : options[0]?.id || "";
+
+    // Sync parent state when effectiveValue diverges from passed value
+    // (e.g. default unit selected via options reorder but parent still holds base unit)
     useEffect(() => {
-        if (options.length > 0 && !value && !disabled) {
-            onValueChange(options[0].id);
+        if (effectiveValue && effectiveValue !== value) {
+            onValueChange(effectiveValue);
         }
-    }, [options, value, onValueChange, disabled]);
+    }, [effectiveValue, value, onValueChange]);
 
     const handleValueChange = (newValue: string) => {
         onValueChange(newValue);
@@ -56,7 +63,7 @@ export function ItemUnitSelect({
 
     return (
         <div className={`w-full ${className || ""}`}>
-            <Select value={value} onValueChange={handleValueChange} disabled={disabled || options.length === 0}>
+            <Select value={effectiveValue} onValueChange={handleValueChange} disabled={disabled || options.length === 0}>
                 <SelectTrigger
                     ref={triggerRef}
                     className="w-full h-10 border-0 bg-transparent hover:bg-slate-100 focus:ring-1 focus:ring-slate-950 rounded-sm"

@@ -32,6 +32,15 @@ export async function GET(
         include: {
           category: { select: { id: true, name: true } },
           unit: { select: { id: true, code: true, name: true } },
+          unitConversions: {
+            select: {
+              unitId: true,
+              unit: { select: { name: true, code: true } },
+              conversionFactor: true,
+              price: true,
+              isDefaultUnit: true,
+            },
+          },
           bundleItems: {
             include: {
               componentProduct: {
@@ -125,6 +134,13 @@ export async function GET(
         price: Number(product.price),
         cost: Number(product.cost),
         gstRate: Number(product.gstRate),
+        unitConversions: product.unitConversions.map((uc) => ({
+          unitId: uc.unitId,
+          unit: uc.unit,
+          conversionFactor: Number(uc.conversionFactor),
+          price: uc.price != null ? Number(uc.price) : null,
+          isDefaultUnit: uc.isDefaultUnit,
+        })),
         bundleItems: product.bundleItems.map((bi) => ({
           ...bi,
           quantity: Number(bi.quantity),

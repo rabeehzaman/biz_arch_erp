@@ -37,6 +37,7 @@ interface StockRow {
     productName: string;
     sku: string | null;
     unit: { id: string; name: string; code: string } | null;
+    defaultUnit: { unitName: string; unitCode: string; conversionFactor: number } | null;
     warehouseId: string | null;
     warehouseName: string | null;
     branchName: string | null;
@@ -132,17 +133,23 @@ export default function StockSummaryPage() {
         ];
         const csvRows = [
             headers.join(","),
-            ...filteredRows.map((r) => [
-                `"${r.productName}"`,
-                r.sku || "",
-                r.warehouseName || "Global",
-                r.branchName || "",
-                r.totalQuantity,
-                r.avgCost.toFixed(2),
-                r.totalValue.toFixed(2),
-                r.reorderPoint ?? "",
-                r.lotCount,
-            ].join(","))
+            ...filteredRows.map((r) => {
+                const qty = r.defaultUnit
+                    ? (r.totalQuantity / r.defaultUnit.conversionFactor)
+                    : r.totalQuantity;
+                const unitCode = r.defaultUnit ? r.defaultUnit.unitCode : (r.unit?.code || "");
+                return [
+                    `"${r.productName}"`,
+                    r.sku || "",
+                    r.warehouseName || "Global",
+                    r.branchName || "",
+                    `${qty} ${unitCode}`.trim(),
+                    r.avgCost.toFixed(2),
+                    r.totalValue.toFixed(2),
+                    r.reorderPoint ?? "",
+                    r.lotCount,
+                ].join(",");
+            })
         ];
         const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
         const url = URL.createObjectURL(blob);
@@ -347,8 +354,12 @@ export default function StockSummaryPage() {
                                                     <div>
                                                         <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{t("reports.qtyInStock")}</p>
                                                         <p className={`mt-1 font-semibold ${isLow ? "text-red-600" : "text-slate-900"}`}>
-                                                            {row.totalQuantity.toLocaleString(locale, { maximumFractionDigits: 2 })}
-                                                            {row.unit && <span className="ml-1 text-xs text-slate-400">{row.unit.code}</span>}
+                                                            {row.defaultUnit
+                                                                ? (row.totalQuantity / row.defaultUnit.conversionFactor).toLocaleString(locale, { maximumFractionDigits: 3 })
+                                                                : row.totalQuantity.toLocaleString(locale, { maximumFractionDigits: 2 })}
+                                                            <span className="ml-1 text-xs text-slate-400">
+                                                                {row.defaultUnit ? row.defaultUnit.unitCode : row.unit?.code}
+                                                            </span>
                                                         </p>
                                                         {row.reorderPoint !== null && (
                                                             <p className="mt-1 text-xs text-slate-400">{t("reports.reorderAt")} {row.reorderPoint}</p>
@@ -420,11 +431,13 @@ export default function StockSummaryPage() {
                                                         )}
                                                         <TableCell className="text-right tabular-nums">
                                                             <span className={isLow ? "text-red-600 font-semibold" : ""}>
-                                                                {row.totalQuantity.toLocaleString(locale, { maximumFractionDigits: 2 })}
+                                                                {row.defaultUnit
+                                                                    ? (row.totalQuantity / row.defaultUnit.conversionFactor).toLocaleString(locale, { maximumFractionDigits: 3 })
+                                                                    : row.totalQuantity.toLocaleString(locale, { maximumFractionDigits: 2 })}
                                                             </span>
-                                                            {row.unit && (
-                                                                <span className="text-xs text-slate-400 ml-1">{row.unit.code}</span>
-                                                            )}
+                                                            <span className="text-xs text-slate-400 ml-1">
+                                                                {row.defaultUnit ? row.defaultUnit.unitCode : row.unit?.code}
+                                                            </span>
                                                             {row.reorderPoint !== null && (
                                                                 <p className="text-xs text-slate-400">
                                                                     {t("reports.reorderAt")} {row.reorderPoint}

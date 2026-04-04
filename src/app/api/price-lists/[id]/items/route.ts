@@ -22,7 +22,10 @@ export async function GET(
 
   const items = await prisma.priceListItem.findMany({
     where: { priceListId: id },
-    include: { product: { select: { id: true, name: true, sku: true, price: true } } },
+    include: {
+      product: { select: { id: true, name: true, sku: true, price: true } },
+      unit: { select: { id: true, name: true, code: true } },
+    },
     orderBy: { product: { name: "asc" } },
   });
 
@@ -92,11 +95,15 @@ export async function POST(
         data: {
           priceListId: id,
           productId: item.productId,
+          unitId: item.unitId || null,
           overrideType: item.overrideType ?? "FIXED",
           fixedPrice: item.overrideType === "PERCENTAGE" ? null : (item.fixedPrice ?? null),
           percentOffset: item.overrideType === "PERCENTAGE" ? (item.percentOffset ?? 0) : null,
         },
-        include: { product: { select: { id: true, name: true, sku: true, price: true } } },
+        include: {
+          product: { select: { id: true, name: true, sku: true, price: true } },
+          unit: { select: { id: true, name: true, code: true } },
+        },
       });
       created.push(record);
     } catch (e: unknown) {

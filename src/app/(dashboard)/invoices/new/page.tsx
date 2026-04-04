@@ -20,14 +20,15 @@ import { StickyBottomBar } from "@/components/mobile/sticky-bottom-bar";
 import { useEnterToTab } from "@/hooks/use-enter-to-tab";
 import { useSession } from "next-auth/react";
 import { ItemUnitSelect } from "@/components/invoices/item-unit-select";
-import { useUnitConversions } from "@/hooks/use-unit-conversions";
+import { getProductUnitOptions, resolveUnitPrice, getDefaultUnit } from "@/lib/unit-utils";
+import { calculateLineAmounts } from "@/lib/line-amounts";
 import { BranchWarehouseSelector } from "@/components/inventory/branch-warehouse-selector";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { parseWeightBarcode, WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
 import { useCurrency } from "@/hooks/use-currency";
 import { Switch } from "@/components/ui/switch";
 import { useRoundOffSettings } from "@/hooks/use-round-off-settings";
-import { calculateRoundOff } from "@/lib/round-off";
+import { calculateRoundOff, roundCurrency } from "@/lib/round-off";
 import { createClientId } from "@/lib/client-id";
 import { useLanguage } from "@/lib/i18n";
 import { PriceHistoryDialog } from "@/components/invoices/price-history-dialog";
@@ -58,6 +59,7 @@ interface Product {
   hsnCode?: string;
   weighMachineCode?: string | null;
   jewelleryItem?: JewelleryItemData | null;
+  unitConversions?: { unitId: string; unit: { name: string; code?: string }; conversionFactor: number; price?: number | null; isDefaultUnit?: boolean }[];
 }
 
 interface MobileDeviceOption {
@@ -87,46 +89,14 @@ interface LineItem {
 
 type InvoiceTaxMode = "none" | "gst" | "vat";
 
-function roundCurrency(amount: number) {
-  return Math.round((amount + Number.EPSILON) * 100) / 100;
-}
-
 function getInvoiceTaxMode(gstEnabled: boolean | undefined, saudiEnabled: boolean): InvoiceTaxMode {
   if (saudiEnabled) return "vat";
   if (gstEnabled) return "gst";
   return "none";
 }
 
-function getInvoiceLineAmounts(item: LineItem, taxMode: InvoiceTaxMode, taxInclusive: boolean) {
-  const quantity = Number(item.quantity) || 0;
-  const unitPrice = Number(item.unitPrice) || 0;
-  const discount = Number(item.discount) || 0;
-  const taxRate = taxMode === "vat"
-    ? Number(item.vatRate) || 0
-    : taxMode === "gst"
-      ? Number(item.gstRate) || 0
-      : 0;
-  const discountedAmount = quantity * unitPrice * (1 - discount / 100);
-
-  if (taxInclusive && taxRate > 0) {
-    const subtotal = roundCurrency(discountedAmount / (1 + taxRate / 100));
-    const tax = roundCurrency(discountedAmount - subtotal);
-
-    return {
-      subtotal,
-      tax,
-      total: roundCurrency(discountedAmount),
-    };
-  }
-
-  const subtotal = roundCurrency(discountedAmount);
-  const tax = roundCurrency(discountedAmount * (taxRate / 100));
-
-  return {
-    subtotal,
-    tax,
-    total: roundCurrency(subtotal + tax),
-  };
+function getItemTaxRate(item: LineItem, taxMode: InvoiceTaxMode): number {
+  return taxMode === "vat" ? (Number(item.vatRate) || 0) : taxMode === "gst" ? (Number(item.gstRate) || 0) : 0;
 }
 
 function getLineAmountKey(itemId: string, subtotal: number, total: number) {
@@ -172,7 +142,6 @@ export default function NewInvoicePage() {
 
   const { data: session, status: sessionStatus } = useSession();
   const { fmt } = useCurrency();
-  const { unitConversions } = useUnitConversions();
   const { containerRef: formRef, focusNextFocusable } = useEnterToTab();
   const saveAndNew = useRef(false);
   const paymentTypeRef = useRef<HTMLButtonElement>(null);
@@ -210,15 +179,16 @@ export default function NewInvoicePage() {
         );
       }
       // Otherwise add a new line
+      const defaultUnit = getDefaultUnit(product, product.unitConversions);
       return [
         ...prev,
         {
           id: createClientId("invoice-line"),
           productId: product.id,
           quantity: parsed.weightKg,
-          unitId: product.unitId || "",
-          conversionFactor: 1,
-          unitPrice: Number(product.price),
+          unitId: defaultUnit ? defaultUnit.unitId : (product.unitId || ""),
+          conversionFactor: defaultUnit ? defaultUnit.conversionFactor : 1,
+          unitPrice: defaultUnit ? defaultUnit.unitPrice : Number(product.price),
           discount: 0,
           gstRate: Number(product.gstRate) || 0,
           hsnCode: product.hsnCode || "",
@@ -428,12 +398,14 @@ export default function NewInvoicePage() {
             unitPrice = pricing.subtotal;
           }
 
+          const defaultUnit = jewellery ? null : getDefaultUnit(product, product.unitConversions);
+
           return {
             ...item,
             productId: value as string,
-            unitId: product.unitId || "",
-            conversionFactor: 1,
-            unitPrice,
+            unitId: defaultUnit ? defaultUnit.unitId : (product.unitId || ""),
+            conversionFactor: defaultUnit ? defaultUnit.conversionFactor : 1,
+            unitPrice: defaultUnit ? defaultUnit.unitPrice : unitPrice,
             gstRate: Number(product.gstRate) || 0,
             hsnCode: product.hsnCode || (jewellery ? "7113" : ""),
             jewellery,
@@ -444,23 +416,13 @@ export default function NewInvoicePage() {
       if (field === "unitId") {
         const product = products.find((p) => p.id === item.productId);
         if (product) {
-          if (value === product.unitId) {
-            return {
-              ...item,
-              unitId: value as string,
-              conversionFactor: 1,
-              unitPrice: Number(product.price),
-            };
-          }
-          const altConversion = unitConversions.find(uc => uc.toUnitId === product.unitId && uc.fromUnitId === value);
-          if (altConversion) {
-            return {
-              ...item,
-              unitId: value as string,
-              conversionFactor: Number(altConversion.conversionFactor),
-              unitPrice: Number(product.price) * Number(altConversion.conversionFactor),
-            };
-          }
+          const resolved = resolveUnitPrice(Number(product.price), value as string, product.unitId!, product.unitConversions);
+          return {
+            ...item,
+            unitId: value as string,
+            conversionFactor: resolved.conversionFactor,
+            unitPrice: resolved.unitPrice,
+          };
         }
       }
 
@@ -561,7 +523,8 @@ export default function NewInvoicePage() {
       (summary, item) => {
         if (!item.productId) return summary;
 
-        const amounts = getInvoiceLineAmounts(item, taxMode, taxInclusive);
+        const taxRate = getItemTaxRate(item, taxMode);
+        const amounts = calculateLineAmounts({ quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0, discount: Number(item.discount) || 0, taxRate }, taxInclusive);
         summary.subtotal = roundCurrency(summary.subtotal + amounts.subtotal);
         summary.tax = roundCurrency(summary.tax + amounts.tax);
         summary.total = roundCurrency(summary.total + amounts.total);
@@ -875,7 +838,7 @@ export default function NewInvoicePage() {
                         const hasStockShortfall = item.productId && !product?.isService && item.quantity > availableStock;
                         const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
                         const devices = isImeiTracked ? (availableDevices[item.productId] || []) : [];
-                        const lineAmounts = getInvoiceLineAmounts(item, taxMode, taxInclusive);
+                        const lineAmounts = calculateLineAmounts({ quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0, discount: Number(item.discount) || 0, taxRate: getItemTaxRate(item, taxMode) }, taxInclusive);
 
                         return (
                           <Fragment key={item.id}>
@@ -953,15 +916,7 @@ export default function NewInvoicePage() {
                                     options={(() => {
                                       const product = products.find((p) => p.id === item.productId);
                                       if (!product) return [];
-                                      const baseOption = { id: product.unitId!, name: product.unit?.name || product.unit?.code || t("common.baseUnit"), conversionFactor: 1 };
-                                      const alternateOptions = unitConversions
-                                        .filter(uc => uc.toUnitId === product.unitId)
-                                        .map(uc => ({
-                                          id: uc.fromUnitId,
-                                          name: uc.fromUnit.name,
-                                          conversionFactor: Number(uc.conversionFactor)
-                                        }));
-                                      return [baseOption, ...alternateOptions];
+                                      return getProductUnitOptions(product as { unitId: string; unit?: { name?: string; code?: string } | null }, product.unitConversions);
                                     })()}
                                     disabled={!item.productId}
                                     onSelectFocusNext={(ref) => focusNextFocusable(ref)}
@@ -986,7 +941,7 @@ export default function NewInvoicePage() {
                                   required
                                 />
                                 {item.productId && product?.cost !== undefined && product.cost > 0 && (
-                                  <p className="text-[10px] text-slate-400 mt-0.5 px-1">{t("common.cost")}: {fmt(product.cost)}</p>
+                                  <p className="text-[10px] text-slate-400 mt-0.5 px-1">{t("common.cost")}: {fmt(Number(product.cost) * (item.conversionFactor || 1))}</p>
                                 )}
                               </TableCell>
                               {!isColumnHidden("discount") && (
@@ -1167,7 +1122,7 @@ export default function NewInvoicePage() {
                     const hasStockShortfall = item.productId && !product?.isService && item.quantity > availableStock;
                     const isImeiTracked = product?.isImeiTracked && session?.user?.isMobileShopModuleEnabled;
                     const devices = isImeiTracked ? (availableDevices[item.productId] || []) : [];
-                    const lineAmounts = getInvoiceLineAmounts(item, taxMode, taxInclusive);
+                    const lineAmounts = calculateLineAmounts({ quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0, discount: Number(item.discount) || 0, taxRate: getItemTaxRate(item, taxMode) }, taxInclusive);
 
                     return (
                       <div key={item.id} className="p-3 space-y-3">
@@ -1252,7 +1207,7 @@ export default function NewInvoicePage() {
                               required
                             />
                             {item.productId && product?.cost !== undefined && product.cost > 0 && (
-                              <p className="text-[10px] text-slate-400 mt-0.5">{t("common.cost")}: {fmt(product.cost)}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{t("common.cost")}: {fmt(Number(product.cost) * (item.conversionFactor || 1))}</p>
                             )}
                           </div>
                           {!isColumnHidden("discount") && (
@@ -1315,11 +1270,7 @@ export default function NewInvoicePage() {
                                 options={(() => {
                                   const p = products.find((p) => p.id === item.productId);
                                   if (!p) return [];
-                                  const baseOption = { id: p.unitId!, name: p.unit?.name || p.unit?.code || t("common.baseUnit"), conversionFactor: 1 };
-                                  const alternateOptions = unitConversions
-                                    .filter(uc => uc.toUnitId === p.unitId)
-                                    .map(uc => ({ id: uc.fromUnitId, name: uc.fromUnit.name, conversionFactor: Number(uc.conversionFactor) }));
-                                  return [baseOption, ...alternateOptions];
+                                  return getProductUnitOptions(p as { unitId: string; unit?: { name?: string; code?: string } | null }, p.unitConversions);
                                 })()}
                                 disabled={!item.productId}
                                 onSelectFocusNext={(ref) => focusNextFocusable(ref)}

@@ -196,24 +196,10 @@ async function printKotCapacitor(data: KOTReceiptData): Promise<{ success: boole
 
   try {
     // Dynamically import to avoid issues in non-Capacitor environments
-    const { Capacitor, registerPlugin } = await import("@capacitor/core");
+    const { Capacitor } = await import("@capacitor/core");
     const { createRoot } = await import("react-dom/client");
     const { toPng } = await import("html-to-image");
-
-    interface ThermalPrinterPlugin {
-      printImage(options: {
-        host: string;
-        port: number;
-        printerDpi?: number;
-        printerWidthMM?: number;
-        base64Image: string;
-        timeoutSeconds?: number;
-        cutPaper?: boolean;
-        openCashDrawer?: boolean;
-      }): Promise<{ success: boolean }>;
-    }
-
-    const ThermalPrinter = registerPlugin<ThermalPrinterPlugin>("ThermalPrinter");
+    const { ThermalPrinter } = await import("@/lib/capacitor-print");
 
     // Render KOT receipt to image
     const container = document.createElement("div");

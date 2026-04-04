@@ -11,6 +11,7 @@ import { useLanguage } from "@/lib/i18n";
 interface PriceHistoryData {
   cost: number;
   currentPrice: number;
+  defaultUnitName?: string | null;
   lastSaleToCustomer: {
     unitPrice: number;
     discount: number;
@@ -116,11 +117,11 @@ export function PriceHistoryDialog({
             <TabsContent value="overview" className="space-y-4 mt-4">
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-slate-500">{t("common.costPrice")}</p>
+                  <p className="text-xs text-slate-500">{t("common.costPrice")}{data.defaultUnitName && <span className="text-slate-400"> /{data.defaultUnitName}</span>}</p>
                   <p className="text-lg font-semibold">{fmt(data.cost)}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-slate-500">{t("common.sellingPrice")}</p>
+                  <p className="text-xs text-slate-500">{t("common.sellingPrice")}{data.defaultUnitName && <span className="text-slate-400"> /{data.defaultUnitName}</span>}</p>
                   <p className="text-lg font-semibold">{fmt(data.currentPrice)}</p>
                 </div>
                 <div className="rounded-lg border p-3">

@@ -31,6 +31,14 @@ export async function GET(request: NextRequest) {
                         name: true,
                         sku: true,
                         unit: { select: { id: true, name: true, code: true } },
+                        unitConversions: {
+                            where: { isDefaultUnit: true },
+                            select: {
+                                unit: { select: { name: true, code: true } },
+                                conversionFactor: true,
+                            },
+                            take: 1,
+                        },
                     },
                 },
                 warehouse: {
@@ -51,6 +59,7 @@ export async function GET(request: NextRequest) {
             productName: string;
             sku: string | null;
             unit: { id: string; name: string; code: string } | null;
+            defaultUnit: { unitName: string; unitCode: string; conversionFactor: number } | null;
             warehouseId: string | null;
             warehouseName: string | null;
             branchName: string | null;
@@ -75,11 +84,19 @@ export async function GET(request: NextRequest) {
                 existing.avgCost = existing.totalQuantity > 0 ? existing.totalValue / existing.totalQuantity : 0;
                 existing.lotCount++;
             } else {
+                const defUc = lot.product.unitConversions?.[0] ?? null;
                 grouped.set(key, {
                     productId: lot.productId,
                     productName: lot.product.name,
                     sku: lot.product.sku,
                     unit: lot.product.unit,
+                    defaultUnit: defUc
+                        ? {
+                              unitName: defUc.unit.name,
+                              unitCode: defUc.unit.code,
+                              conversionFactor: Number(defUc.conversionFactor),
+                          }
+                        : null,
                     warehouseId: lot.warehouseId,
                     warehouseName: lot.warehouse?.name ?? null,
                     branchName: lot.warehouse?.branch?.name ?? null,

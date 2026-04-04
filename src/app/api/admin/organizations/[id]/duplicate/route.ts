@@ -347,6 +347,27 @@ export async function POST(
                     }
                 }
 
+                // Duplicate product unit conversions
+                const productUnitConversions = await tx.productUnitConversion.findMany({
+                    where: { organizationId: id },
+                });
+                for (const puc of productUnitConversions) {
+                    const newProductId = productIdMap.get(puc.productId);
+                    const newUnitId = unitIdMap.get(puc.unitId);
+                    if (newProductId && newUnitId) {
+                        await tx.productUnitConversion.create({
+                            data: {
+                                organizationId: N,
+                                productId: newProductId,
+                                unitId: newUnitId,
+                                conversionFactor: puc.conversionFactor,
+                                barcode: puc.barcode,
+                                price: puc.price,
+                            },
+                        });
+                    }
+                }
+
                 // ═══════════════════════════════════════════════════════════════
                 // If NOT including transactional data, we're done
                 // ═══════════════════════════════════════════════════════════════
