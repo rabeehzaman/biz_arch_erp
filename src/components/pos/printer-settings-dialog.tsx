@@ -20,9 +20,11 @@ import {
   capacitorPrintWithConfig,
   getDefaultMobilePrinterConfig,
   getMobilePrinterConfig,
+  getSecondaryMobilePrinterConfig,
   isCapacitorEnvironment,
   openMobileCashDrawer,
   saveMobilePrinterConfig,
+  saveSecondaryMobilePrinterConfig,
   testMobilePrinterConnection,
   type MobilePrinterConfig,
 } from "@/lib/capacitor-print";
@@ -69,6 +71,11 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
   const [mobileTimeoutSeconds, setMobileTimeoutSeconds] = useState("10");
   const [mobileCutPaper, setMobileCutPaper] = useState(true);
   const [mobileOpenCashDrawerOnPrint, setMobileOpenCashDrawerOnPrint] = useState(false);
+
+  // Secondary printer state (Capacitor only)
+  const [secondaryEnabled, setSecondaryEnabled] = useState(false);
+  const [secondaryHost, setSecondaryHost] = useState("");
+  const [secondaryPort, setSecondaryPort] = useState("9100");
 
   useEffect(() => {
     if (!open) return;
@@ -147,6 +154,17 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
       setMobileOpenCashDrawerOnPrint(config.openCashDrawer);
       setReceiptMarginLeft(config.receiptMarginLeft);
       setReceiptMarginRight(config.receiptMarginRight);
+
+      const secondary = getSecondaryMobilePrinterConfig();
+      if (secondary?.host) {
+        setSecondaryEnabled(true);
+        setSecondaryHost(secondary.host);
+        setSecondaryPort(String(secondary.port));
+      } else {
+        setSecondaryEnabled(false);
+        setSecondaryHost("");
+        setSecondaryPort("9100");
+      }
     }
   }, [open]);
 
@@ -242,6 +260,16 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
       setIsSavingConfig(true);
       try {
         saveMobilePrinterConfig(config);
+        // Save or clear secondary printer
+        if (secondaryEnabled && secondaryHost.trim()) {
+          saveSecondaryMobilePrinterConfig({
+            host: secondaryHost.trim(),
+            port: parseInt(secondaryPort, 10) || 9100,
+            paperWidth: mobilePaperWidth,
+          });
+        } else {
+          saveSecondaryMobilePrinterConfig(null);
+        }
         toast.success(t("pos.mobilePrinterConfigSaved"));
       } catch {
         toast.error(t("pos.mobilePrinterConfigSaveFailed"));
@@ -640,6 +668,40 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
           </div>
           <Switch id="dlg-mobile-drawer" checked={mobileOpenCashDrawerOnPrint} onCheckedChange={setMobileOpenCashDrawerOnPrint} />
         </div>
+      </div>
+
+      {/* Secondary Printer (duplicate receipt) */}
+      <div className="space-y-3 rounded-lg border p-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="dlg-secondary-enabled" className="font-semibold">Secondary Printer</Label>
+            <p className="text-xs text-muted-foreground">Print a duplicate receipt to a second printer</p>
+          </div>
+          <Switch id="dlg-secondary-enabled" checked={secondaryEnabled} onCheckedChange={setSecondaryEnabled} />
+        </div>
+        {secondaryEnabled && (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-1">
+              <Label htmlFor="dlg-secondary-host">IP Address</Label>
+              <Input
+                id="dlg-secondary-host"
+                placeholder="192.168.1.101"
+                value={secondaryHost}
+                onChange={(e) => setSecondaryHost(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="dlg-secondary-port">Port</Label>
+              <Input
+                id="dlg-secondary-port"
+                type="number"
+                placeholder="9100"
+                value={secondaryPort}
+                onChange={(e) => setSecondaryPort(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">

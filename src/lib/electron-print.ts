@@ -1,6 +1,6 @@
 import type { ReceiptData } from "@/components/pos/receipt";
 import { generateReceiptHtml, printReceipt as browserPrintReceipt, type ReceiptHtmlOptions } from "@/lib/print-receipt";
-import { capacitorPrintWithConfig, isCapacitorEnvironment, type MobilePrinterConfig } from "@/lib/capacitor-print";
+import { capacitorPrintWithConfig, isCapacitorEnvironment, getSecondaryMobilePrinterConfig, type MobilePrinterConfig } from "@/lib/capacitor-print";
 
 type SerializedReceiptData = Omit<ReceiptData, "date"> & {
   date: string;
@@ -306,6 +306,27 @@ export function openCashDrawerIfEnabled(): void {
  * Smart print: uses Electron silent printing if available, otherwise falls back
  * to browser iframe print dialog.
  */
+/**
+ * Print a receipt to a specific Capacitor printer config.
+ * Uses raw ESC/POS for Indian GST, image otherwise.
+ * If config is omitted, uses the saved primary printer config.
+ */
+async function capacitorPrintToConfig(
+  data: ReceiptData,
+  config?: Partial<MobilePrinterConfig>,
+): Promise<{ success: boolean; error?: string }> {
+  const isIndianGST = data.taxLabel === "GST" || !!(data.totalCgst || data.totalSgst || data.totalIgst);
+
+  if (isIndianGST) {
+    const { capacitorRawPrintWithConfig } = await import("@/lib/capacitor-print");
+    const result = await capacitorRawPrintWithConfig(data, config);
+    if (result.success) return result;
+    console.error("Raw ESC/POS failed:", result.error, "— falling back to image");
+  }
+
+  return capacitorPrintWithConfig(data, config);
+}
+
 export async function smartPrintReceipt(data: ReceiptData): Promise<void> {
   if (isElectronEnvironment()) {
     const result = await electronPrint(data);
@@ -314,24 +335,23 @@ export async function smartPrintReceipt(data: ReceiptData): Promise<void> {
       await browserPrintReceipt(generateReceiptHtml(data));
     }
   } else if (isCapacitorEnvironment()) {
-    // Indian GST stores: use text ESC/POS for sharper output on thermal printers
-    const isIndianGST = data.taxLabel === "GST" || !!(data.totalCgst || data.totalSgst || data.totalIgst);
-    if (isIndianGST) {
-      const { capacitorRawPrintWithConfig } = await import("@/lib/capacitor-print");
-      const result = await capacitorRawPrintWithConfig(data);
-      if (!result.success) {
-        console.error("Capacitor raw ESC/POS print failed:", result.error, "— falling back to image print");
-        const imgResult = await capacitorPrint(data);
-        if (!imgResult.success) {
-          console.error("Capacitor image fallback also failed:", imgResult.error);
-          await browserPrintReceipt(generateReceiptHtml(data));
+    // Print to primary printer (no config = uses saved primary config)
+    const primaryResult = await capacitorPrintToConfig(data);
+    if (!primaryResult.success) {
+      console.error("Capacitor primary print failed:", primaryResult.error);
+      await browserPrintReceipt(generateReceiptHtml(data));
+    }
+
+    // Print to secondary printer if configured
+    const secondaryConfig = getSecondaryMobilePrinterConfig();
+    if (secondaryConfig?.host) {
+      try {
+        const secondaryResult = await capacitorPrintToConfig(data, secondaryConfig);
+        if (!secondaryResult.success) {
+          console.error("Secondary printer failed:", secondaryResult.error);
         }
-      }
-    } else {
-      const result = await capacitorPrint(data);
-      if (!result.success) {
-        console.error("Capacitor print failed:", result.error);
-        await browserPrintReceipt(generateReceiptHtml(data));
+      } catch (err) {
+        console.error("Secondary printer threw:", err);
       }
     }
   } else {

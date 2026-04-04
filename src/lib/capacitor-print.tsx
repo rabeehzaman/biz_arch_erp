@@ -6,6 +6,7 @@ import { toPng } from "html-to-image";
 import { PosReceipt, type ReceiptData } from "@/components/pos/receipt";
 
 const MOBILE_PRINTER_CONFIG_KEY = "bizarch.mobilePrinterConfig.v1";
+const SECONDARY_PRINTER_CONFIG_KEY = "bizarch.mobilePrinterConfig.secondary.v1";
 
 export interface MobilePrinterConfig {
   connectionType: "tcp";
@@ -133,6 +134,33 @@ export function saveMobilePrinterConfig(
     JSON.stringify(normalized)
   );
   return normalized;
+}
+
+// --- Secondary receipt printer (duplicate receipt to a second printer) ---
+
+export function getSecondaryMobilePrinterConfig(): MobilePrinterConfig | null {
+  if (!isBrowser()) return null;
+  const raw = window.localStorage.getItem(SECONDARY_PRINTER_CONFIG_KEY);
+  if (!raw) return null;
+  try {
+    return normalizeConfig(JSON.parse(raw) as Partial<MobilePrinterConfig>);
+  } catch {
+    return null;
+  }
+}
+
+export function saveSecondaryMobilePrinterConfig(
+  config: Partial<MobilePrinterConfig> | null,
+): void {
+  if (!isBrowser()) return;
+  if (!config) {
+    window.localStorage.removeItem(SECONDARY_PRINTER_CONFIG_KEY);
+    return;
+  }
+  window.localStorage.setItem(
+    SECONDARY_PRINTER_CONFIG_KEY,
+    JSON.stringify(normalizeConfig(config)),
+  );
 }
 
 function requireConfiguredHost(
