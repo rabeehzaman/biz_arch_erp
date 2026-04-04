@@ -82,10 +82,10 @@ export function POSHeader({
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
-        <div className="relative hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white p-0.5 shadow-sm sm:flex">
+        <div className="relative hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white p-0.5 shadow-sm md:flex">
           <Image src="/bizarch-mark.svg" alt="BizArch Logo" fill sizes="32px" className="object-contain" priority />
         </div>
-        <span className="text-sm font-bold truncate sm:text-base sm:whitespace-nowrap">{t("pos.title")}</span>
+        <span className="hidden md:inline text-sm font-bold truncate sm:text-base sm:whitespace-nowrap">{t("pos.title")}</span>
         {session && (
           <Badge variant="secondary" className="hidden xs:inline-flex shrink-0 text-xs">
             {session.sessionNumber}
@@ -105,7 +105,7 @@ export function POSHeader({
       </div>
 
       <div className="flex items-center gap-1 sm:gap-3 shrink-0">
-        <div className="hidden sm:flex items-center gap-2 text-sm text-slate-300">
+        <div className="hidden md:flex items-center gap-2 text-sm text-slate-300">
           <Clock className="h-4 w-4" />
           <POSClock />
         </div>

@@ -45,7 +45,7 @@ import type { ReceiptData } from "@/components/pos/receipt";
 import { ReturnPanel } from "@/components/pos/return-panel";
 import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
 import { TableSelect } from "@/components/pos/table-select";
-import { printKOT } from "@/lib/restaurant/kot-print";
+import { printKOT, printKOTMulti } from "@/lib/restaurant/kot-print";
 import type { KOTReceiptData } from "@/components/restaurant/kot-receipt";
 import {
   cacheReceiptArtifactWithConfig,
@@ -298,6 +298,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           unitName,
           conversionFactor: effectiveConversionFactor,
           jewellery: jewelleryData,
+          categoryId: product.categoryId ?? null,
         },
       ];
       return buildCartState(newItems, state.revision);
@@ -899,12 +900,12 @@ function POSTerminalContent() {
 
   const handleSendToKitchen = async () => {
     // Build list of unsent items (new items or quantity increases)
-    const itemsToSend: { productId: string; name: string; quantity: number }[] = [];
+    const itemsToSend: { productId: string; name: string; quantity: number; categoryId?: string | null }[] = [];
     for (const item of cartState.items) {
       const sentQty = kotSentQuantities.get(item.productId) ?? 0;
       const diff = item.quantity - sentQty;
       if (diff > 0) {
-        itemsToSend.push({ productId: item.productId, name: item.name, quantity: diff });
+        itemsToSend.push({ productId: item.productId, name: item.name, quantity: diff, categoryId: item.categoryId });
       }
     }
     if (itemsToSend.length === 0) {
@@ -959,10 +960,11 @@ function POSTerminalContent() {
           items: itemsToSend.map(item => ({
             name: item.name,
             quantity: item.quantity,
+            categoryId: item.categoryId,
             isNew: kotType === "FOLLOWUP",
           })),
         };
-        await printKOT(kotReceiptData);
+        await printKOTMulti(kotReceiptData);
       } catch (printErr) {
         console.error("KOT print failed:", printErr);
         // Don't fail the KOT creation just because printing failed
@@ -1039,9 +1041,9 @@ function POSTerminalContent() {
           section: selectedTable?.section || undefined,
           serverName: authSession?.user?.name || undefined,
           timestamp: new Date(),
-          items: [{ name: item.name, quantity: sentQty }],
+          items: [{ name: item.name, quantity: sentQty, categoryId: item.categoryId }],
         };
-        await printKOT(kotReceiptData);
+        await printKOTMulti(kotReceiptData);
       } catch (printErr) {
         console.error("Void KOT print failed:", printErr);
       }
@@ -1485,20 +1487,20 @@ function POSTerminalContent() {
 
           {/* Bottom bar — mobile only */}
           {cart.length > 0 && (
-            <div className="flex shrink-0 border-t bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:hidden">
+            <div className="flex shrink-0 gap-3 bg-slate-900 p-3 pb-[max(0.75rem,var(--app-safe-area-bottom))] md:hidden">
               <button
-                className="flex flex-1 items-center justify-center gap-2 border-r py-3.5 text-sm font-semibold text-slate-700 active:bg-slate-100"
+                className="flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-5 py-3.5 text-sm font-semibold text-white active:bg-slate-600"
                 onClick={() => setMobileView("cart")}
               >
                 <ShoppingCart className="h-5 w-5" />
                 {t("pos.cart")}
-                <Badge variant="secondary" className="min-w-5 justify-center rounded-full px-1.5 py-0 text-xs">
+                <Badge className="min-w-5 justify-center rounded-full bg-white px-1.5 py-0 text-xs text-slate-900">
                   {cartQuantity}
                 </Badge>
               </button>
               <button
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1 py-3.5 text-sm font-bold text-white active:opacity-90",
+                  "flex flex-1 items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white active:opacity-90",
                   isReturnMode ? "bg-red-600" : "bg-primary"
                 )}
                 onClick={() => {
