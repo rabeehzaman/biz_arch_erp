@@ -1457,9 +1457,10 @@ function POSTerminalContent() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel — Products */}
         <div className={cn(
-          "flex-1 flex-col gap-3 overflow-hidden pt-4 px-4 md:p-4",
+          "flex-1 flex-col overflow-hidden pt-4 md:p-4",
           mobileView === "products" ? "flex" : "hidden md:flex"
         )}>
+          <div className="flex flex-col gap-3 flex-1 overflow-hidden px-4 md:px-0">
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <ProductSearch value={searchQuery} onChange={setSearchQuery} />
@@ -1484,6 +1485,7 @@ function POSTerminalContent() {
             selectionRevision={cartState.revision}
             onAddToCart={addToCartWithDefault}
           />
+          </div>
 
           {/* Bottom bar — mobile only */}
           {cart.length > 0 && (
