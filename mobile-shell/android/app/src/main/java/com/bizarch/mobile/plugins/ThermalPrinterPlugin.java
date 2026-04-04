@@ -1,8 +1,13 @@
 package com.bizarch.mobile.plugins;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.util.Base64;
+import android.util.Log;
 import com.dantsu.escposprinter.EscPosPrinter;
 import com.dantsu.escposprinter.connection.DeviceConnection;
 import com.dantsu.escposprinter.connection.tcp.TcpConnection;
@@ -12,11 +17,16 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
 @CapacitorPlugin(name = "ThermalPrinter")
 public class ThermalPrinterPlugin extends Plugin {
+    private static final String TAG = "ThermalPrinter";
     private static final int DEFAULT_PORT = 9100;
     private static final int DEFAULT_TIMEOUT_SECONDS = 10;
     private static final int DEFAULT_DPI = 203;
@@ -24,47 +34,107 @@ public class ThermalPrinterPlugin extends Plugin {
     private static final int DEFAULT_CHARS_PER_LINE = 48;
     private static final int MAX_IMAGE_CHUNK_HEIGHT = 256;
 
+    // ── Direct TCP helpers (bypass DantSu for reliability) ──────────
+
     /**
-     * Build a native ESC/POS QR code command sequence (GS ( k).
-     * The printer generates the QR code internally — fastest and sharpest output.
+     * Send raw bytes to a network printer via direct java.net.Socket.
+     * Handles TCP_NODELAY, SO_LINGER, shutdownOutput, WiFi binding.
      */
+    private void sendOnce(String ip, int port, byte[] data) throws IOException {
+        Socket socket = null;
+        try {
+            // Bind to WiFi network (prevents Android routing through cellular)
+            Network wifi = getWifiNetwork();
+            if (wifi != null) {
+                socket = wifi.getSocketFactory().createSocket();
+            } else {
+                socket = new Socket();
+            }
+
+            // Configure BEFORE connecting
+            socket.setTcpNoDelay(true);
+            socket.setSoLinger(true, 5);
+            socket.setSoTimeout(5000);
+
+            // Connect with 4-second timeout
+            socket.connect(new InetSocketAddress(ip, port), 4000);
+
+            // Write all data
+            OutputStream out = socket.getOutputStream();
+            out.write(data);
+            out.flush();
+
+            // Graceful shutdown — guarantees all data sent before FIN
+            socket.shutdownOutput();
+
+            // Brief delay for printer to receive + TCP retransmissions
+            Thread.sleep(300);
+
+            // Drain printer status bytes (prevents RST on close)
+            try {
+                socket.setSoTimeout(200);
+                byte[] drain = new byte[256];
+                while (socket.getInputStream().read(drain) > 0) {
+                    // discard
+                }
+            } catch (IOException ignored) {
+                // Timeout or EOF — expected
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Print interrupted");
+        } finally {
+            if (socket != null) {
+                try { socket.close(); } catch (IOException ignored) {}
+            }
+        }
+    }
+
+    private Network getWifiNetwork() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getContext()
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+            for (Network network : cm.getAllNetworks()) {
+                NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+                if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    return network;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not get WiFi network: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // ── ESC/POS QR code builder ─────────────────────────────────────
+
     private byte[] buildNativeQRCommand(String data, int moduleSize) {
         byte[] dataBytes = data.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         int dataLen = dataBytes.length + 3;
         byte pL = (byte) (dataLen & 0xFF);
         byte pH = (byte) ((dataLen >> 8) & 0xFF);
 
-        // Assemble command parts
         byte[][] parts = {
-            // 1. Select QR model — Model 2
             {0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00},
-            // 2. Set module size
             {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, (byte) moduleSize},
-            // 3. Set error correction level — M (0x31)
             {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31},
-            // 4. Store QR data header
             {0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30},
         };
 
-        // Calculate total length
         int total = 0;
         for (byte[] part : parts) total += part.length;
         total += dataBytes.length;
-        // 5. Print stored QR code
         byte[] printCmd = {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30};
         total += printCmd.length;
-        // Center align before QR
         byte[] alignCmd = {0x1B, 0x61, 0x01};
         total += alignCmd.length;
-        // LF after QR
-        total += 1;
+        total += 1; // LF
 
         byte[] result = new byte[total];
         int offset = 0;
 
         System.arraycopy(alignCmd, 0, result, offset, alignCmd.length);
         offset += alignCmd.length;
-
         for (byte[] part : parts) {
             System.arraycopy(part, 0, result, offset, part.length);
             offset += part.length;
@@ -73,17 +143,18 @@ public class ThermalPrinterPlugin extends Plugin {
         offset += dataBytes.length;
         System.arraycopy(printCmd, 0, result, offset, printCmd.length);
         offset += printCmd.length;
-        result[offset] = 0x0A; // LF
+        result[offset] = 0x0A;
 
         return result;
     }
+
+    // ── DantSu helpers (for printImage) ─────────────────────────────
 
     private DeviceConnection createConnection(PluginCall call) throws Exception {
         String host = call.getString("host", "").trim();
         if (host.isEmpty()) {
             throw new Exception("Printer host is required");
         }
-
         int port = call.getInt("port", DEFAULT_PORT);
         int timeoutSeconds = call.getInt("timeoutSeconds", DEFAULT_TIMEOUT_SECONDS);
         return new TcpConnection(host, port, timeoutSeconds);
@@ -99,14 +170,119 @@ public class ThermalPrinterPlugin extends Plugin {
     private List<Bitmap> splitBitmap(Bitmap source) {
         List<Bitmap> chunks = new ArrayList<>();
         int y = 0;
-
         while (y < source.getHeight()) {
             int height = Math.min(MAX_IMAGE_CHUNK_HEIGHT, source.getHeight() - y);
             chunks.add(Bitmap.createBitmap(source, 0, y, source.getWidth(), height));
             y += height;
         }
-
         return chunks;
+    }
+
+    // ── Plugin methods ──────────────────────────────────────────────
+
+    @PluginMethod
+    public void printRaw(PluginCall call) {
+        String ip = call.getString("host", "").trim();
+        int port = call.getInt("port", DEFAULT_PORT);
+        String dataBase64 = call.getString("data", "");
+        int maxRetries = call.getInt("retries", 3);
+
+        if (ip.isEmpty()) {
+            call.reject("Printer host is required", "MISSING_HOST");
+            return;
+        }
+        if (dataBase64.isEmpty()) {
+            call.reject("Print data is required", "MISSING_DATA");
+            return;
+        }
+
+        byte[] bytes;
+        try {
+            bytes = Base64.decode(dataBase64, Base64.DEFAULT);
+        } catch (IllegalArgumentException e) {
+            call.reject("Invalid Base64: " + e.getMessage(), "INVALID_DATA");
+            return;
+        }
+
+        // Run on background thread to avoid blocking Capacitor's plugin thread
+        new Thread(() -> {
+            IOException lastError = null;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    Log.d(TAG, "printRaw attempt " + attempt + "/" + maxRetries
+                        + " -> " + ip + ":" + port + " (" + bytes.length + " bytes)");
+                    sendOnce(ip, port, bytes);
+                    Log.d(TAG, "printRaw succeeded on attempt " + attempt);
+
+                    JSObject result = new JSObject();
+                    result.put("success", true);
+                    result.put("bytesSent", bytes.length);
+                    result.put("attempts", attempt);
+                    call.resolve(result);
+                    return;
+                } catch (IOException e) {
+                    lastError = e;
+                    Log.w(TAG, "printRaw attempt " + attempt + " failed: " + e.getMessage());
+                    if (attempt < maxRetries) {
+                        try {
+                            Thread.sleep(500L * (1 << (attempt - 1)));
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            call.reject("Print interrupted", "PRINT_ERROR");
+                            return;
+                        }
+                    }
+                }
+            }
+            call.reject("Print failed after " + maxRetries + " attempts: "
+                + (lastError != null ? lastError.getMessage() : "unknown"), "PRINT_ERROR");
+        }).start();
+    }
+
+    @PluginMethod
+    public void testConnection(PluginCall call) {
+        String ip = call.getString("host", "").trim();
+        int port = call.getInt("port", DEFAULT_PORT);
+
+        if (ip.isEmpty()) {
+            JSObject result = new JSObject();
+            result.put("connected", false);
+            result.put("message", "Printer host is required");
+            call.resolve(result);
+            return;
+        }
+
+        // Run on background thread
+        new Thread(() -> {
+            Socket socket = null;
+            try {
+                Network wifi = getWifiNetwork();
+                if (wifi != null) {
+                    socket = wifi.getSocketFactory().createSocket();
+                } else {
+                    socket = new Socket();
+                }
+                socket.setTcpNoDelay(true);
+                socket.connect(new InetSocketAddress(ip, port), 4000);
+                socket.close();
+                socket = null;
+
+                JSObject result = new JSObject();
+                result.put("connected", true);
+                result.put("message", "Connection successful");
+                call.resolve(result);
+            } catch (Exception e) {
+                JSObject result = new JSObject();
+                result.put("connected", false);
+                result.put("message", "Connection failed: " + e.getMessage());
+                call.resolve(result);
+            } finally {
+                if (socket != null) {
+                    try { socket.close(); } catch (IOException ignored) {}
+                }
+            }
+        }).start();
     }
 
     @PluginMethod
@@ -142,7 +318,6 @@ public class ThermalPrinterPlugin extends Plugin {
                 boolean lastChunk = i == chunks.size() - 1;
 
                 if (lastChunk && !hasNativeQR) {
-                    // No native QR — let EscPosPrinter handle cut/drawer on last chunk
                     if (openCashDrawer) {
                         printer.printFormattedTextAndOpenCashBox(printData, 20f);
                     } else if (cutPaper) {
@@ -151,7 +326,6 @@ public class ThermalPrinterPlugin extends Plugin {
                         printer.printFormattedText(printData, 20f);
                     }
                 } else {
-                    // More chunks follow, or native QR will be appended — no cut yet
                     printer.printFormattedText(printData, 20f);
                 }
 
@@ -160,20 +334,21 @@ public class ThermalPrinterPlugin extends Plugin {
 
             bitmap.recycle();
 
-            // Native QR code via raw ESC/POS commands (GS ( k), then cut/drawer
+            // Native QR code via raw ESC/POS then cut/drawer
             if (hasNativeQR) {
                 byte[] qrCmd = buildNativeQRCommand(qrCodeText, 5);
                 connection.write(qrCmd);
+                connection.send();
 
-                // Paper cut after QR
                 if (cutPaper) {
-                    connection.write(new byte[]{0x1B, 0x64, 0x03});             // Feed 3 lines
-                    connection.write(new byte[]{0x1D, 0x56, 0x42, 0x00});       // Partial cut
+                    connection.write(new byte[]{0x1B, 0x64, 0x03});
+                    connection.write(new byte[]{0x1D, 0x56, 0x42, 0x00});
+                    connection.send();
                 }
 
-                // Cash drawer
                 if (openCashDrawer) {
-                    connection.write(new byte[]{0x1B, 0x70, 0x00, 0x19, (byte) 0xFA}); // Pulse
+                    connection.write(new byte[]{0x1B, 0x70, 0x00, 0x19, (byte) 0xFA});
+                    connection.send();
                 }
             }
 
@@ -187,73 +362,6 @@ public class ThermalPrinterPlugin extends Plugin {
                 if (printer != null) {
                     printer.disconnectPrinter();
                 } else if (connection != null) {
-                    connection.disconnect();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-    }
-
-    @PluginMethod
-    public void testConnection(PluginCall call) {
-        DeviceConnection connection = null;
-
-        try {
-            connection = createConnection(call);
-            connection.connect();
-            connection.disconnect();
-
-            JSObject result = new JSObject();
-            result.put("connected", true);
-            result.put("message", "Connection successful");
-            call.resolve(result);
-        } catch (Exception e) {
-            JSObject result = new JSObject();
-            result.put("connected", false);
-            result.put("message", "Connection failed: " + e.getMessage());
-            call.resolve(result);
-        } finally {
-            try {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-    }
-
-    @PluginMethod
-    public void printRaw(PluginCall call) {
-        DeviceConnection connection = null;
-
-        try {
-            String dataBase64 = call.getString("data", "");
-            if (dataBase64.isEmpty()) {
-                call.reject("Print data is required", "MISSING_DATA");
-                return;
-            }
-
-            byte[] bytes;
-            try {
-                bytes = Base64.decode(dataBase64, Base64.DEFAULT);
-            } catch (IllegalArgumentException e) {
-                call.reject("Invalid Base64: " + e.getMessage(), "INVALID_DATA");
-                return;
-            }
-
-            connection = createConnection(call);
-            connection.connect();
-            connection.write(bytes);
-
-            JSObject result = new JSObject();
-            result.put("success", true);
-            result.put("bytesSent", bytes.length);
-            call.resolve(result);
-        } catch (Exception e) {
-            call.reject("Raw print failed: " + e.getMessage(), "PRINT_ERROR");
-        } finally {
-            try {
-                if (connection != null) {
                     connection.disconnect();
                 }
             } catch (Exception ignored) {
