@@ -16,13 +16,13 @@ export async function initCapacitorPlugins() {
 
   try {
     const { StatusBar, Style } = await import("@capacitor/status-bar");
-    await StatusBar.setBackgroundColor({ color: "#ffffff" });
     await StatusBar.setStyle({ style: Style.Light });
   } catch {}
 
   try {
     const { SplashScreen } = await import("@capacitor/splash-screen");
-    await SplashScreen.hide();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await SplashScreen.hide({ fadeOutDuration: 200 });
   } catch {}
 
   try {

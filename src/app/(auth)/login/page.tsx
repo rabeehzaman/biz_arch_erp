@@ -80,7 +80,7 @@ export default function LoginPage() {
           aria-hidden="true"
           className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(14,165,233,0.12),rgba(248,250,252,0))]"
         />
-        <div className="absolute inset-x-4 top-4 z-20 flex justify-end">
+        <div className="absolute inset-x-4 z-20 flex justify-end" style={{ top: "calc(1rem + var(--app-safe-area-top))" }}>
           <div className="inline-flex overflow-hidden rounded-full border border-slate-200 bg-white p-1 shadow-sm">
             <button
               type="button"

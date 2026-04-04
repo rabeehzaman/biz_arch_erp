@@ -29,6 +29,9 @@ const config: CapacitorConfig = {
     Keyboard: {
       resize: "body",
     },
+    SystemBars: {
+      style: "LIGHT",
+    },
   },
 };
 

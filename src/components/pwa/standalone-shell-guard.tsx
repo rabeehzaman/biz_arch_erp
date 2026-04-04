@@ -33,6 +33,13 @@ function bindMediaQuery(mediaQueryList: MediaQueryList, listener: MediaQueryList
 }
 
 function detectStandaloneMode() {
+  // Capacitor WebView should be treated as standalone
+  if (
+    typeof (window as any).Capacitor !== "undefined" &&
+    (window as any).Capacitor.isNativePlatform?.()
+  ) {
+    return true;
+  }
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     window.matchMedia("(display-mode: fullscreen)").matches ||

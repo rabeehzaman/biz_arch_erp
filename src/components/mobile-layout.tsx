@@ -160,7 +160,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   const [plusTapped, setPlusTapped] = useState(false);
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [pillStyle, setPillStyle] = useState({ left: 0, width: 0 });
-  const baseContentClassName = "min-h-[100dvh] bg-slate-50 px-4 pt-4";
+  const baseContentClassName = "min-h-[100dvh] bg-slate-50 px-4 pt-[calc(1rem+var(--app-safe-area-top))]";
   const contentClassName = `${baseContentClassName} pb-[calc(5.25rem+var(--app-safe-area-bottom))]`;
   const bottomNavClassName =
     "fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white shadow-[0_-10px_24px_-22px_rgba(15,23,42,0.18)]";

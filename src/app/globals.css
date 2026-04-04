@@ -91,8 +91,8 @@
 
 :root {
   --radius: 1rem;
-  --app-safe-area-top: env(safe-area-inset-top, 0px);
-  --app-safe-area-bottom: clamp(0px, env(safe-area-inset-bottom, 0px), 40px);
+  --app-safe-area-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --app-safe-area-bottom: clamp(0px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)), 40px);
   --mobile-fixed-ui-offset: 0px;
 
   --background: hsl(210 20% 98%);

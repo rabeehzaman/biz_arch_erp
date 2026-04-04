@@ -60,7 +60,11 @@ const standaloneShellBootstrap = `
     var standaloneViewport = baseViewport + ", maximum-scale=1, user-scalable=no";
     var isStandalone = false;
 
-    if (window.matchMedia) {
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      isStandalone = true;
+    }
+
+    if (!isStandalone && window.matchMedia) {
       isStandalone =
         window.matchMedia("(display-mode: standalone)").matches ||
         window.matchMedia("(display-mode: fullscreen)").matches;

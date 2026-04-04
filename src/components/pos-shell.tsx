@@ -32,7 +32,7 @@ export function POSShell({ children }: { children: React.ReactNode }) {
     "fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white shadow-[0_-10px_24px_-22px_rgba(15,23,42,0.18)] md:hidden";
   const shellClassName = pathname.startsWith("/pos/terminal")
     ? "h-screen overflow-hidden bg-slate-100"
-    : "min-h-screen bg-slate-100";
+    : "min-h-screen overflow-x-hidden bg-slate-100 pt-[var(--app-safe-area-top)]";
 
   useEffect(() => {
     if (!pathname.startsWith("/pos/terminal")) {

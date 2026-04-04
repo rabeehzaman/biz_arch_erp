@@ -357,7 +357,7 @@ export default function POSDashboardPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-slate-100">
+    <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden bg-slate-100">
       {/* Top Bar */}
       <header className="flex flex-col gap-3 border-b bg-white px-4 py-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:py-0">
         <div className="flex items-center gap-3">
@@ -375,8 +375,8 @@ export default function POSDashboardPage() {
           <h1 className="text-lg font-bold">{t("pos.title")}</h1>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative w-full sm:w-64">
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <div className="relative w-full min-w-[160px] sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={t("pos.searchRegisters")}
