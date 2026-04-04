@@ -95,6 +95,19 @@ export function buildKotEscPos(
   p.bold(false);
   p.printDoubleLine();
 
+  // ═══ STATION NAME (multi-printer routing) ══════════════════
+  if (data.stationName) {
+    p.alignCenter();
+    p.inverseColors(true);
+    p.bold(true);
+    p.doubleHeight(true);
+    p.println(` ${data.stationName.toUpperCase()} `);
+    p.setNormal();
+    p.bold(false);
+    p.inverseColors(false);
+    p.newLine();
+  }
+
   // ═══ TYPE LABEL ════════════════════════════════════════════
   if (isVoid) {
     // VOID: inverse (white-on-black) + double-height — unmissable

@@ -18,9 +18,12 @@ export interface KOTReceiptData {
     modifiers?: string[];
     notes?: string;
     isNew?: boolean;
+    categoryId?: string | null;
   }[];
   specialInstructions?: string;
   isReprint?: boolean;
+  /** Printer station name (e.g. "HOT KITCHEN", "BAR") — shown on receipt when multi-printer routing is active */
+  stationName?: string;
 }
 
 const KOT_TYPE_LABELS: Record<KOTReceiptData["kotType"], string> = {
@@ -92,6 +95,22 @@ export function KOTReceipt({ data }: { data: KOTReceiptData }) {
       }}>
         #{data.kotNumber}
       </div>
+
+      {/* Station Name (multi-printer routing) */}
+      {data.stationName && (
+        <div style={{
+          ...centerStyle,
+          fontSize: "16px",
+          fontWeight: 900,
+          padding: "4px 8px",
+          margin: "4px 0",
+          backgroundColor: "#000",
+          color: "#fff",
+          letterSpacing: "2px",
+        }}>
+          {data.stationName.toUpperCase()}
+        </div>
+      )}
 
       {/* Type Indicator */}
       <div style={{

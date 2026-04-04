@@ -34,6 +34,7 @@ export interface CartItemData {
   unitName?: string;
   conversionFactor: number;
   jewellery?: CartItemJewelleryData | null;
+  categoryId?: string | null;
 }
 
 interface CartItemProps {

@@ -8,10 +8,29 @@ import { isCapacitorEnvironment, type MobilePrinterConfig } from "@/lib/capacito
 
 export type { KOTReceiptData } from "@/components/restaurant/kot-receipt";
 
+// --- Multi-printer station types ---
+
+/** A single KOT printer station (e.g., "Hot Kitchen", "Bar") */
+export interface KOTPrinterStation {
+  id: string;
+  name: string;
+  categoryIds: string[];
+  isDefault: boolean;
+  mobileConfig: MobilePrinterConfig | null;
+  electronConfig: ElectronPrinterConfig | null;
+}
+
+/** Multi-printer config stored in localStorage */
+export interface KOTMultiPrinterConfig {
+  version: 2;
+  stations: KOTPrinterStation[];
+}
+
 // --- Config keys (separate from receipt printer) ---
 
 const KOT_ELECTRON_CONFIG_KEY = "kot-printer-config";
 const KOT_MOBILE_CONFIG_KEY = "bizarch.kotPrinterConfig.v1";
+const KOT_MULTI_CONFIG_KEY = "bizarch.kotMultiPrinterConfig.v2";
 
 // Reuse the receipt printer mobile config key as fallback
 const RECEIPT_MOBILE_CONFIG_KEY = "bizarch.mobilePrinterConfig.v1";
@@ -68,6 +87,59 @@ function getReceiptMobilePrinterConfig(): MobilePrinterConfig | null {
   } catch {
     return null;
   }
+}
+
+// --- Multi-printer config helpers ---
+
+export function getKotMultiPrinterConfig(): KOTMultiPrinterConfig | null {
+  if (!isBrowser()) return null;
+
+  const raw = localStorage.getItem(KOT_MULTI_CONFIG_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as KOTMultiPrinterConfig;
+    } catch {
+      // fall through
+    }
+  }
+
+  // Auto-migrate from single-printer config
+  return migrateToMultiPrinterConfig();
+}
+
+export function saveKotMultiPrinterConfig(config: KOTMultiPrinterConfig): void {
+  if (!isBrowser()) return;
+  localStorage.setItem(KOT_MULTI_CONFIG_KEY, JSON.stringify(config));
+}
+
+/**
+ * Migrate old single-printer config into a one-station multi config.
+ * Returns null if no old config exists.
+ */
+function migrateToMultiPrinterConfig(): KOTMultiPrinterConfig | null {
+  const mobileConfig = getKotMobilePrinterConfig() ?? getReceiptMobilePrinterConfig();
+  const electronConfig = getKotElectronConfig();
+
+  if (!mobileConfig && !electronConfig) return null;
+
+  const config: KOTMultiPrinterConfig = {
+    version: 2,
+    stations: [{
+      id: generateStationId(),
+      name: "Kitchen",
+      categoryIds: [],
+      isDefault: true,
+      mobileConfig: mobileConfig ?? null,
+      electronConfig: electronConfig ?? null,
+    }],
+  };
+
+  saveKotMultiPrinterConfig(config);
+  return config;
+}
+
+function generateStationId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
 // --- KOT HTML generation ---
@@ -324,6 +396,155 @@ async function printKotCapacitor(data: KOTReceiptData): Promise<{ success: boole
   }
 }
 
+// --- Per-station printing (used by multi-printer routing) ---
+
+/**
+ * Print a KOT to a specific Electron printer using explicit config.
+ */
+async function printKotElectronWithConfig(
+  data: KOTReceiptData,
+  config: ElectronPrinterConfig,
+): Promise<{ success: boolean; error?: string }> {
+  if (!window.electronPOS) {
+    return { success: false, error: "Electron POS bridge not available" };
+  }
+
+  const renderMode = config.receiptRenderMode
+    ?? (config.connectionType === "windows" ? "htmlDriver" : "escposText");
+
+  const html = generateKotHtml(data);
+
+  if (renderMode === "htmlDriver") {
+    return window.electronPOS.printStyledReceipt(html, config);
+  }
+
+  return window.electronPOS.printRasterizedReceipt(html, config);
+}
+
+/**
+ * Print a KOT to a specific printer station, auto-detecting platform.
+ */
+async function printKotToStation(
+  data: KOTReceiptData,
+  station: KOTPrinterStation,
+): Promise<{ success: boolean; error?: string }> {
+  if (isElectronEnvironment()) {
+    if (!station.electronConfig) {
+      return { success: false, error: `No Electron config for station "${station.name}"` };
+    }
+    return printKotElectronWithConfig(data, station.electronConfig);
+  }
+
+  if (isCapacitorEnvironment()) {
+    const config = station.mobileConfig;
+    if (!config?.host) {
+      return { success: false, error: `No mobile config for station "${station.name}"` };
+    }
+
+    // Try raw ESC/POS text first, fall back to image
+    try {
+      const result = await printKotCapacitorRaw(data, config);
+      if (result.success) return result;
+      console.error(`KOT raw ESC/POS to "${station.name}" failed:`, result.error);
+    } catch (err) {
+      console.error(`KOT raw ESC/POS to "${station.name}" threw:`, err);
+    }
+
+    try {
+      return await printKotCapacitorImage(data, config);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : `Print to "${station.name}" failed`,
+      };
+    }
+  }
+
+  // Web fallback — can't route to specific printers
+  return printKotWeb(data);
+}
+
+// --- Multi-printer routing ---
+
+/**
+ * Print a KOT with multi-printer routing by category.
+ * Items are grouped by their category→station mapping and printed separately.
+ * Falls back to single-printer printKOT if no multi-config or only one default station.
+ */
+export async function printKOTMulti(
+  data: KOTReceiptData,
+): Promise<{ success: boolean; errors: string[] }> {
+  const multiConfig = getKotMultiPrinterConfig();
+
+  // No multi config or single default with no category assignments → use simple path
+  if (
+    !multiConfig ||
+    multiConfig.stations.length === 0 ||
+    (multiConfig.stations.length === 1 &&
+      multiConfig.stations[0].isDefault &&
+      multiConfig.stations[0].categoryIds.length === 0)
+  ) {
+    const result = await printKOT(data);
+    return { success: result.success, errors: result.error ? [result.error] : [] };
+  }
+
+  const stations = multiConfig.stations;
+
+  // Build category→station lookup
+  const categoryToStation = new Map<string, KOTPrinterStation>();
+  let defaultStation: KOTPrinterStation | null = null;
+
+  for (const station of stations) {
+    if (station.isDefault) defaultStation = station;
+    for (const catId of station.categoryIds) {
+      categoryToStation.set(catId, station);
+    }
+  }
+
+  // If no explicit default, use first station
+  if (!defaultStation) defaultStation = stations[0];
+
+  // Group items by station
+  const stationItems = new Map<string, KOTReceiptData["items"]>();
+
+  for (const item of data.items) {
+    const station = (item.categoryId && categoryToStation.get(item.categoryId)) || defaultStation;
+    const existing = stationItems.get(station.id) ?? [];
+    existing.push(item);
+    stationItems.set(station.id, existing);
+  }
+
+  // Print to each station that has items
+  const errors: string[] = [];
+  let anySuccess = false;
+
+  const printJobs = Array.from(stationItems.entries()).map(async ([stationId, items]) => {
+    const station = stations.find(s => s.id === stationId);
+    if (!station) return;
+
+    const stationData: KOTReceiptData = {
+      ...data,
+      items,
+      stationName: stations.length > 1 ? station.name : undefined,
+    };
+
+    try {
+      const result = await printKotToStation(stationData, station);
+      if (result.success) {
+        anySuccess = true;
+      } else if (result.error) {
+        errors.push(`${station.name}: ${result.error}`);
+      }
+    } catch (err) {
+      errors.push(`${station.name}: ${err instanceof Error ? err.message : "Print failed"}`);
+    }
+  });
+
+  await Promise.all(printJobs);
+
+  return { success: anySuccess || errors.length === 0, errors };
+}
+
 // --- Web fallback ---
 
 async function printKotWeb(data: KOTReceiptData): Promise<{ success: boolean; error?: string }> {
@@ -388,4 +609,4 @@ export async function printKOT(data: KOTReceiptData): Promise<{ success: boolean
 /**
  * Generate the KOT HTML string (useful for previews or custom print flows).
  */
-export { generateKotHtml };
+export { generateKotHtml, generateStationId };
