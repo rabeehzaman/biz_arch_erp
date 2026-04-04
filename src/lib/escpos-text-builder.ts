@@ -79,8 +79,26 @@ export class EscPosTextBuilder {
   }
 
   doubleHeight(on: boolean): this {
-    // ESC ! n — bit 4 = double height, bit 5 = double width
+    // ESC ! n — bit 4 = double height
     this.raw([0x1b, 0x21, on ? 0x10 : 0x00]);
+    return this;
+  }
+
+  doubleSize(on: boolean): this {
+    // ESC ! n — bit 4 = double height, bit 5 = double width (both = 4x size)
+    this.raw([0x1b, 0x21, on ? 0x30 : 0x00]);
+    return this;
+  }
+
+  inverseColors(on: boolean): this {
+    // GS B n — 1 = white-on-black, 0 = normal
+    this.raw([0x1d, 0x42, on ? 0x01 : 0x00]);
+    return this;
+  }
+
+  underline(on: boolean): this {
+    // ESC - n — 1 = underline on, 0 = off
+    this.raw([0x1b, 0x2d, on ? 0x01 : 0x00]);
     return this;
   }
 

@@ -178,12 +178,122 @@ async function printKotElectron(data: KOTReceiptData): Promise<{ success: boolea
     return window.electronPOS.printRasterizedReceipt(html, config);
   }
 
-  // ESC/POS text mode: still use HTML rasterized since KOT doesn't have
-  // a dedicated ESC/POS text formatter — rasterize the HTML instead
+  // ESC/POS text mode: KOT has a dedicated ESC/POS text formatter (kot-escpos.ts)
+  // but Electron lacks a printRawBuffer IPC bridge — rasterize the HTML instead.
+  // Raw ESC/POS is used on Capacitor/Android for faster, sharper output.
   return window.electronPOS.printRasterizedReceipt(html, config);
 }
 
 // --- Capacitor printing ---
+
+/**
+ * Raw ESC/POS text path — sharper, faster output on thermal printers.
+ */
+async function printKotCapacitorRaw(
+  data: KOTReceiptData,
+  config: MobilePrinterConfig,
+): Promise<{ success: boolean; error?: string }> {
+  const { buildKotEscPos } = await import("@/lib/restaurant/kot-escpos");
+  const { ThermalPrinter } = await import("@/lib/capacitor-print");
+
+  const paperWidth = config.paperWidth === 58 ? 32 : 48;
+  const escposBytes = buildKotEscPos(data, {
+    paperWidth: paperWidth as 48 | 32,
+    cutPaper: config.cutPaper,
+  });
+
+  // Convert Uint8Array to base64 for Capacitor bridge
+  let binary = "";
+  for (let i = 0; i < escposBytes.length; i++) {
+    binary += String.fromCharCode(escposBytes[i]);
+  }
+  const base64Data = btoa(binary);
+
+  await ThermalPrinter.printRaw({
+    host: config.host,
+    port: config.port,
+    data: base64Data,
+    timeoutSeconds: config.timeoutSeconds,
+  });
+
+  return { success: true };
+}
+
+/**
+ * Image-based fallback — renders KOT as PNG then sends as ESC/POS image.
+ */
+async function printKotCapacitorImage(
+  data: KOTReceiptData,
+  config: MobilePrinterConfig,
+): Promise<{ success: boolean; error?: string }> {
+  const { createRoot } = await import("react-dom/client");
+  const { toPng } = await import("html-to-image");
+  const { ThermalPrinter } = await import("@/lib/capacitor-print");
+
+  const container = document.createElement("div");
+  const width = config.paperWidth === 58 ? "58mm" : "80mm";
+
+  Object.assign(container.style, {
+    position: "fixed",
+    left: "-10000px",
+    top: "0",
+    pointerEvents: "none",
+    background: "#ffffff",
+  });
+
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  try {
+    root.render(
+      createElement("div", {
+        style: {
+          width,
+          padding: `0 ${config.receiptMarginRight}mm 0 ${config.receiptMarginLeft}mm`,
+          background: "#ffffff",
+        },
+      }, createElement(KOTReceipt, { data }))
+    );
+
+    // Wait for paint
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+
+    if (document.fonts?.ready) {
+      await document.fonts.ready.catch(() => undefined);
+    }
+
+    const target = container.firstElementChild;
+    if (!(target instanceof HTMLElement)) {
+      throw new Error("Failed to render KOT preview");
+    }
+
+    const png = await toPng(target, {
+      backgroundColor: "#ffffff",
+      cacheBust: true,
+      pixelRatio: 2,
+    });
+
+    const base64Image = png.replace(/^data:image\/png;base64,/, "");
+
+    await ThermalPrinter.printImage({
+      host: config.host,
+      port: config.port,
+      printerDpi: 203,
+      printerWidthMM: config.paperWidth === 58 ? 48 : 72,
+      base64Image,
+      timeoutSeconds: config.timeoutSeconds,
+      cutPaper: config.cutPaper,
+      openCashDrawer: false, // KOT never opens cash drawer
+    });
+
+    return { success: true };
+  } finally {
+    root.unmount();
+    container.remove();
+  }
+}
 
 async function printKotCapacitor(data: KOTReceiptData): Promise<{ success: boolean; error?: string }> {
   const config = getKotMobilePrinterConfig()
@@ -194,77 +304,18 @@ async function printKotCapacitor(data: KOTReceiptData): Promise<{ success: boole
     return { success: false, error: "No KOT printer host configured" };
   }
 
+  // Try raw ESC/POS text first (sharper, faster)
   try {
-    // Dynamically import to avoid issues in non-Capacitor environments
-    const { Capacitor } = await import("@capacitor/core");
-    const { createRoot } = await import("react-dom/client");
-    const { toPng } = await import("html-to-image");
-    const { ThermalPrinter } = await import("@/lib/capacitor-print");
+    const result = await printKotCapacitorRaw(data, config);
+    if (result.success) return result;
+    console.error("KOT raw ESC/POS failed:", result.error, "— falling back to image");
+  } catch (err) {
+    console.error("KOT raw ESC/POS threw:", err, "— falling back to image");
+  }
 
-    // Render KOT receipt to image
-    const container = document.createElement("div");
-    const width = config.paperWidth === 58 ? "58mm" : "80mm";
-
-    Object.assign(container.style, {
-      position: "fixed",
-      left: "-10000px",
-      top: "0",
-      pointerEvents: "none",
-      background: "#ffffff",
-    });
-
-    document.body.appendChild(container);
-    const root = createRoot(container);
-
-    try {
-      root.render(
-        createElement("div", {
-          style: {
-            width,
-            padding: `0 ${config.receiptMarginRight}mm 0 ${config.receiptMarginLeft}mm`,
-            background: "#ffffff",
-          },
-        }, createElement(KOTReceipt, { data }))
-      );
-
-      // Wait for paint
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
-
-      if (document.fonts?.ready) {
-        await document.fonts.ready.catch(() => undefined);
-      }
-
-      const target = container.firstElementChild;
-      if (!(target instanceof HTMLElement)) {
-        throw new Error("Failed to render KOT preview");
-      }
-
-      const png = await toPng(target, {
-        backgroundColor: "#ffffff",
-        cacheBust: true,
-        pixelRatio: 2,
-      });
-
-      const base64Image = png.replace(/^data:image\/png;base64,/, "");
-
-      await ThermalPrinter.printImage({
-        host: config.host,
-        port: config.port,
-        printerDpi: 203,
-        printerWidthMM: config.paperWidth === 58 ? 48 : 72,
-        base64Image,
-        timeoutSeconds: config.timeoutSeconds,
-        cutPaper: config.cutPaper,
-        openCashDrawer: false, // KOT never opens cash drawer
-      });
-
-      return { success: true };
-    } finally {
-      root.unmount();
-      container.remove();
-    }
+  // Fall back to image print
+  try {
+    return await printKotCapacitorImage(data, config);
   } catch (error) {
     return {
       success: false,
