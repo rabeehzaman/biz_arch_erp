@@ -242,6 +242,9 @@ model Organization {
   // Product Unit Conversion Relations
   productUnitConversions     ProductUnitConversion[]
 
+  // Multi-org membership
+  memberships                UserOrganization[] @relation("OrgMemberships")
+
   @@map("organizations")
 }
 
@@ -291,6 +294,7 @@ model User {
   customerComments    CustomerComment[]  @relation("CustomerComments")
   supplierComments    SupplierComment[]  @relation("SupplierComments")
   priceListAssignment PriceListAssignment?
+  organizations       UserOrganization[]
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -2999,4 +3003,22 @@ model PriceListAssignment {
   @@index([priceListId])
   @@index([organizationId])
   @@map("price_list_assignments")
+}
+
+// ==================== USER ORGANIZATION MEMBERSHIP ====================
+
+model UserOrganization {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation("OrgMemberships", fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String       @default("user")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("user_organizations")
 }

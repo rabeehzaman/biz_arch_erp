@@ -1,5 +1,11 @@
 import { DefaultSession } from "next-auth";
 
+interface UserOrgMembership {
+  organizationId: string;
+  name: string;
+  role: string;
+}
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -21,6 +27,7 @@ declare module "next-auth" {
       saudiEInvoiceEnabled?: boolean;
       language?: string;
       currency?: string;
+      userOrganizations?: UserOrgMembership[];
     } & DefaultSession["user"];
   }
 
@@ -42,6 +49,7 @@ declare module "next-auth" {
     saudiEInvoiceEnabled?: boolean;
     language?: string;
     currency?: string;
+    userOrganizations?: UserOrgMembership[];
   }
 }
 
@@ -65,5 +73,6 @@ declare module "next-auth/jwt" {
     saudiEInvoiceEnabled?: boolean;
     language?: string;
     currency?: string;
+    userOrganizations?: UserOrgMembership[];
   }
 }

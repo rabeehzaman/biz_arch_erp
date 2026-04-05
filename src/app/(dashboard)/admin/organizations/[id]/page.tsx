@@ -19,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed, FileText } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed, FileText, UserPlus, UserMinus } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -286,6 +286,16 @@ export default function OrganizationDetailsPage() {
     const [selectedRole, setSelectedRole] = useState("");
     const [isChangingRole, setIsChangingRole] = useState(false);
     const [changeRoleError, setChangeRoleError] = useState("");
+
+    // Add existing user to org
+    const [addMemberOpen, setAddMemberOpen] = useState(false);
+    const [addMemberEmail, setAddMemberEmail] = useState("");
+    const [addMemberRole, setAddMemberRole] = useState("user");
+    const [isAddingMember, setIsAddingMember] = useState(false);
+
+    // Remove user from org
+    const [removeMemberUser, setRemoveMemberUser] = useState<{ id: string; name: string | null; email: string } | null>(null);
+    const [isRemovingMember, setIsRemovingMember] = useState(false);
 
     // Cash/Bank accounts for POS default settlement
     const [orgCashBankAccounts, setOrgCashBankAccounts] = useState<Array<{ id: string; name: string; accountSubType: string }>>([]);
@@ -682,7 +692,7 @@ export default function OrganizationDetailsPage() {
             const res = await fetch(`/api/admin/users/${changeRoleUser.id}/change-role`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ role: selectedRole }),
+                body: JSON.stringify({ role: selectedRole, organizationId: id }),
             });
             if (res.ok) {
                 setChangeRoleOpen(false);
@@ -696,6 +706,54 @@ export default function OrganizationDetailsPage() {
             setChangeRoleError(t("admin.failedToChangeRole"));
         } finally {
             setIsChangingRole(false);
+        }
+    };
+
+    const handleAddMember = async () => {
+        if (!addMemberEmail.trim()) return;
+        setIsAddingMember(true);
+        try {
+            const res = await fetch(`/api/admin/organizations/${id}/members`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: addMemberEmail.trim(), role: addMemberRole }),
+            });
+            if (res.ok) {
+                setAddMemberOpen(false);
+                setAddMemberEmail("");
+                setAddMemberRole("user");
+                fetchOrganization();
+                toast.success("User added to organization");
+            } else {
+                const data = await res.json();
+                toast.error(data.error || "Failed to add user");
+            }
+        } catch {
+            toast.error("Failed to add user");
+        } finally {
+            setIsAddingMember(false);
+        }
+    };
+
+    const handleRemoveMember = async () => {
+        if (!removeMemberUser) return;
+        setIsRemovingMember(true);
+        try {
+            const res = await fetch(`/api/admin/organizations/${id}/members/${removeMemberUser.id}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                setRemoveMemberUser(null);
+                fetchOrganization();
+                toast.success("User removed from organization");
+            } else {
+                const data = await res.json();
+                toast.error(data.error || "Failed to remove user");
+            }
+        } catch {
+            toast.error("Failed to remove user");
+        } finally {
+            setIsRemovingMember(false);
         }
     };
 
@@ -2220,6 +2278,10 @@ export default function OrganizationDetailsPage() {
                                 {t("admin.usersCount").replace("{count}", String(organization.users?.length || 0))}
                             </CardTitle>
                             <CardDescription>{t("admin.usersDesc")}</CardDescription>
+                            <Button variant="outline" size="sm" className="mt-2" onClick={() => setAddMemberOpen(true)}>
+                                <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                                Add Existing User
+                            </Button>
                         </CardHeader>
                         <CardContent>
                             {resetPwSuccess && (
@@ -2279,6 +2341,15 @@ export default function OrganizationDetailsPage() {
                                                         >
                                                             <KeyRound className="mr-1.5 h-3.5 w-3.5" />
                                                             {t("admin.resetPassword")}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            onClick={() => setRemoveMemberUser(user)}
+                                                        >
+                                                            <UserMinus className="mr-1.5 h-3.5 w-3.5" />
+                                                            Remove
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -2341,6 +2412,15 @@ export default function OrganizationDetailsPage() {
                                                                 >
                                                                     <KeyRound className="mr-1.5 h-3.5 w-3.5" />
                                                                     {t("admin.resetPassword")}
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    onClick={() => setRemoveMemberUser(user)}
+                                                                >
+                                                                    <UserMinus className="mr-1.5 h-3.5 w-3.5" />
+                                                                    Remove
                                                                 </Button>
                                                             </div>
                                                         </TableCell>
@@ -2618,6 +2698,67 @@ export default function OrganizationDetailsPage() {
                             <Button onClick={handleResetPassword} disabled={isResettingPw || !newPassword || !confirmPassword}>
                                 {isResettingPw ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
                                 {t("admin.resetPassword")}
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                {/* Add Existing User Dialog */}
+                <AlertDialog open={addMemberOpen} onOpenChange={(open) => { if (!open && !isAddingMember) { setAddMemberOpen(false); setAddMemberEmail(""); setAddMemberRole("user"); } }}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Add Existing User</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Enter the email of an existing user to add them to this organization.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label>Email</Label>
+                                <Input
+                                    type="email"
+                                    value={addMemberEmail}
+                                    onChange={(e) => setAddMemberEmail(e.target.value)}
+                                    placeholder="user@example.com"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Role</Label>
+                                <Select value={addMemberRole} onValueChange={setAddMemberRole}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="admin">Admin</SelectItem>
+                                        <SelectItem value="user">User</SelectItem>
+                                        <SelectItem value="pos">POS</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <AlertDialogCancel disabled={isAddingMember}>{t("common.cancel")}</AlertDialogCancel>
+                            <Button onClick={handleAddMember} disabled={isAddingMember || !addMemberEmail.trim()}>
+                                {isAddingMember ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                                Add to Organization
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                {/* Remove Member Confirmation */}
+                <AlertDialog open={!!removeMemberUser} onOpenChange={(open) => { if (!open && !isRemovingMember) setRemoveMemberUser(null); }}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Remove User from Organization</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Remove <strong className="text-foreground">{removeMemberUser?.name || removeMemberUser?.email}</strong> from this organization?
+                                They will lose access to all data in this organization. If they belong to other organizations, their account will remain active.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <AlertDialogCancel disabled={isRemovingMember}>{t("common.cancel")}</AlertDialogCancel>
+                            <Button variant="destructive" onClick={handleRemoveMember} disabled={isRemovingMember}>
+                                {isRemovingMember ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserMinus className="h-4 w-4 mr-2" />}
+                                Remove
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>

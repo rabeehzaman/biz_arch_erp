@@ -54,6 +54,7 @@ export function Header() {
   const { config: editionConfig } = useEdition();
   const [orgName, setOrgName] = useState<string>("");
   const [switchingLang, setSwitchingLang] = useState(false);
+  const [switchingOrg, setSwitchingOrg] = useState(false);
   const [mounted, setMounted] = useState(false);
   const isDashboardHome = pathname === "/";
   const isVoucherRoute = VOUCHER_ROUTE_PREFIXES.some((href) => matchesRoute(pathname, href));
@@ -115,6 +116,30 @@ export function Header() {
     }
   };
 
+  const userOrgs = session?.user?.userOrganizations ?? [];
+  const hasMultipleOrgs = userOrgs.length > 1;
+
+  const handleOrgSwitch = async (targetOrgId: string) => {
+    if (targetOrgId === session?.user?.organizationId || switchingOrg) return;
+    setSwitchingOrg(true);
+    try {
+      const res = await fetch("/api/organizations/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ organizationId: targetOrgId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await update(data);
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error("Failed to switch organization:", err);
+    } finally {
+      setSwitchingOrg(false);
+    }
+  };
+
   const accountMenu = mounted ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -144,6 +169,32 @@ export function Header() {
           <User className="mr-2 h-4 w-4" />
           {t("header.profile")}
         </DropdownMenuItem>
+        {hasMultipleOrgs && (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Building2 className="mr-2 h-4 w-4" />
+            {t("header.switchOrganization")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              {userOrgs.map((org) => (
+                <DropdownMenuItem
+                  key={org.organizationId}
+                  onClick={() => handleOrgSwitch(org.organizationId)}
+                  disabled={switchingOrg}
+                >
+                  <Check className={`mr-2 h-4 w-4 ${
+                    org.organizationId === session?.user?.organizationId
+                      ? "opacity-100" : "opacity-0"
+                  }`} />
+                  <span className="flex-1 truncate">{org.name}</span>
+                  <span className="ml-2 text-[10px] text-slate-400">{org.role}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+        )}
         {editionConfig.isLanguageSwitchable && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>

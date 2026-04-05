@@ -106,6 +106,7 @@
         "quickAccessHint": "Search records and actions instantly with the command palette.",
         "searchPlaceholder": "Search or jump to...",
         "profile": "Profile",
+        "switchOrganization": "Switch Organization",
         "language": "Language",
         "english": "English",
         "arabic": "العربية",

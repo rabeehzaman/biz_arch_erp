@@ -76,6 +76,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           priceListId = assignment?.priceListId ?? null;
         }
 
+        // Fetch all org memberships for multi-org switching
+        const memberships = await prisma.userOrganization.findMany({
+          where: { userId: user.id },
+          include: { organization: { select: { name: true } } },
+          orderBy: { createdAt: "asc" },
+        });
+        const userOrganizations = memberships.map((m) => ({
+          organizationId: m.organizationId,
+          name: m.organization.name,
+          role: m.role,
+        }));
+
         return {
           id: user.id,
           email: user.email,
@@ -103,6 +115,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           language: user.language ?? user.organization?.language ?? "en",
           currency: user.organization?.currency ?? "INR",
           landingPage: user.landingPage ?? null,
+          userOrganizations,
         };
       },
     }),

@@ -29,9 +29,11 @@ export async function PUT(
       );
     }
 
+    const { organizationId } = body;
+
     const targetUser = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, role: true },
+      select: { id: true, role: true, organizationId: true },
     });
 
     if (!targetUser) {
@@ -52,9 +54,25 @@ export async function PUT(
       );
     }
 
-    await prisma.user.update({
-      where: { id },
-      data: { role },
+    // Determine which org's membership to update
+    const orgId = organizationId || targetUser.organizationId;
+
+    await prisma.$transaction(async (tx) => {
+      // Update UserOrganization role if org context is known
+      if (orgId) {
+        await tx.userOrganization.updateMany({
+          where: { userId: id, organizationId: orgId },
+          data: { role },
+        });
+      }
+
+      // Also update user.role if this is the user's active org
+      if (!orgId || orgId === targetUser.organizationId) {
+        await tx.user.update({
+          where: { id },
+          data: { role },
+        });
+      }
     });
 
     return NextResponse.json({ message: "Role updated successfully" });

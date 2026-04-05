@@ -48,30 +48,69 @@ export async function POST(request: NextRequest) {
     const existing = await prisma.user.findUnique({
       where: { email },
     });
+
+    const userRole = role || "admin";
+
     if (existing) {
+      // If user already exists, add them to this org instead of rejecting
+      const existingMembership = await prisma.userOrganization.findUnique({
+        where: {
+          userId_organizationId: {
+            userId: existing.id,
+            organizationId,
+          },
+        },
+      });
+      if (existingMembership) {
+        return NextResponse.json(
+          { error: "This user is already a member of this organization" },
+          { status: 409 }
+        );
+      }
+
+      await prisma.userOrganization.create({
+        data: {
+          userId: existing.id,
+          organizationId,
+          role: userRole,
+        },
+      });
+
       return NextResponse.json(
-        { error: "A user with this email already exists" },
-        { status: 409 }
+        { id: existing.id, name: existing.name, email: existing.email, role: userRole, organizationId },
+        { status: 201 }
       );
     }
 
     const hashedPassword = await hash(password, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: role || "admin",
-        organizationId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        organizationId: true,
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: userRole,
+          organizationId,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          organizationId: true,
+        },
+      });
+
+      await tx.userOrganization.create({
+        data: {
+          userId: newUser.id,
+          organizationId,
+          role: userRole,
+        },
+      });
+
+      return newUser;
     });
 
     return NextResponse.json(user, { status: 201 });

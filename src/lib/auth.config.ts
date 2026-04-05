@@ -88,11 +88,39 @@ export const authConfig: NextAuthConfig = {
         token.language = (user as { language?: string }).language ?? "en";
         token.currency = (user as { currency?: string }).currency ?? "INR";
         token.landingPage = (user as { landingPage?: string | null }).landingPage ?? null;
+        token.userOrganizations = (user as { userOrganizations?: Array<{ organizationId: string; name: string; role: string }> }).userOrganizations ?? [];
       }
-      // Handle client-side session updates (e.g. language switch)
+      // Handle client-side session updates (e.g. language switch, org switch)
       if (trigger === "update" && sessionUpdate) {
         if ((sessionUpdate as { language?: string }).language) {
           token.language = (sessionUpdate as { language: string }).language;
+        }
+        // Handle organization switch — overwrite all org-specific fields
+        const update = sessionUpdate as Record<string, unknown>;
+        if (update.switchOrgContext) {
+          const ctx = update.switchOrgContext as Record<string, unknown>;
+          token.organizationId = ctx.organizationId as string;
+          token.role = ctx.role as string;
+          token.edition = ctx.edition as string ?? "INDIA";
+          token.gstEnabled = ctx.gstEnabled as boolean ?? false;
+          token.eInvoicingEnabled = ctx.eInvoicingEnabled as boolean ?? false;
+          token.multiUnitEnabled = ctx.multiUnitEnabled as boolean ?? false;
+          token.multiBranchEnabled = ctx.multiBranchEnabled as boolean ?? false;
+          token.isMobileShopModuleEnabled = ctx.isMobileShopModuleEnabled as boolean ?? false;
+          token.isWeighMachineEnabled = ctx.isWeighMachineEnabled as boolean ?? false;
+          token.isJewelleryModuleEnabled = ctx.isJewelleryModuleEnabled as boolean ?? false;
+          token.isRestaurantModuleEnabled = ctx.isRestaurantModuleEnabled as boolean ?? false;
+          token.isPriceListEnabled = ctx.isPriceListEnabled as boolean ?? false;
+          token.priceListId = ctx.priceListId as string | null ?? null;
+          token.weighMachineBarcodePrefix = ctx.weighMachineBarcodePrefix as string ?? "77";
+          token.weighMachineProductCodeLen = ctx.weighMachineProductCodeLen as number ?? 5;
+          token.weighMachineWeightDigits = ctx.weighMachineWeightDigits as number ?? 5;
+          token.weighMachineDecimalPlaces = ctx.weighMachineDecimalPlaces as number ?? 3;
+          token.gstStateCode = ctx.gstStateCode as string | null ?? null;
+          token.saudiEInvoiceEnabled = ctx.saudiEInvoiceEnabled as boolean ?? false;
+          token.isTaxInclusivePrice = ctx.isTaxInclusivePrice as boolean ?? false;
+          token.language = ctx.language as string ?? "en";
+          token.currency = ctx.currency as string ?? "INR";
         }
       }
       return token;
@@ -122,6 +150,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as { isTaxInclusivePrice?: boolean }).isTaxInclusivePrice = token.isTaxInclusivePrice as boolean;
         (session.user as { language?: string }).language = token.language as string ?? "en";
         (session.user as { currency?: string }).currency = token.currency as string ?? "INR";
+        (session.user as { userOrganizations?: Array<{ organizationId: string; name: string; role: string }> }).userOrganizations = (Array.isArray(token.userOrganizations) ? token.userOrganizations : []) as Array<{ organizationId: string; name: string; role: string }>;
       }
       return session;
     },

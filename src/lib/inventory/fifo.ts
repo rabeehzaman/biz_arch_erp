@@ -872,18 +872,26 @@ export async function isBackdated(
 }
 
 /**
- * Check if there are any zero-COGS items for a product that need recalculation
- * Returns the earliest date that needs recalculation, or null if no zero-COGS items
+ * Check if there are any invoice items that need COGS recalculation for a product.
+ * Detects two cases:
+ * 1. Items with costOfGoodsSold = 0 (no fallback cost was available)
+ * 2. Items with costOfGoodsSold > 0 but NO StockLotConsumption records
+ *    (fallback product.cost was used because no stock lots existed at sale time)
+ * Returns the earliest invoice date that needs recalculation, or null if none found.
  */
 export async function hasZeroCOGSItems(
   productId: string,
   tx: PrismaTransaction = prisma
 ): Promise<Date | null> {
-  // Find the earliest invoice item with zero COGS for this product
-  const earliestZeroCOGS = await tx.invoiceItem.findFirst({
+  const earliestNeedsRecalc = await tx.invoiceItem.findFirst({
     where: {
       productId,
-      costOfGoodsSold: 0,
+      jewelleryItemId: null,
+      product: { isService: false, isBundle: false },
+      OR: [
+        { costOfGoodsSold: 0 },
+        { costOfGoodsSold: { gt: 0 }, lotConsumptions: { none: {} } },
+      ],
     },
     include: {
       invoice: {
@@ -895,7 +903,7 @@ export async function hasZeroCOGSItems(
     },
   });
 
-  return earliestZeroCOGS ? earliestZeroCOGS.invoice.issueDate : null;
+  return earliestNeedsRecalc ? earliestNeedsRecalc.invoice.issueDate : null;
 }
 
 /**

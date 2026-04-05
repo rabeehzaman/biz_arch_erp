@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedDefaultCOA } from "@/lib/accounting/seed-coa";
+import { seedDefaultCOA, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedGSTAccounts } from "@/lib/accounting/seed-coa";
 
 export async function GET() {
   try {
@@ -104,6 +104,13 @@ export async function POST(request: NextRequest) {
     // will silently fail to create journal entries for all transactions.
     try {
       await seedDefaultCOA(prisma as never, organization.id);
+      // Seed edition-specific accounts (VAT/GST)
+      if (editionValue === "SAUDI") {
+        await seedSaudiVATAccounts(prisma as never, organization.id);
+        await seedSaudiStandardAccounts(prisma as never, organization.id);
+      } else {
+        await seedGSTAccounts(prisma as never, organization.id);
+      }
     } catch (coaError) {
       console.error("Failed to seed COA for new org:", coaError);
       await prisma.organization.delete({ where: { id: organization.id } });

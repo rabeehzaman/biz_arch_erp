@@ -24,6 +24,14 @@ export async function GET(
     const organization = await prisma.organization.findUnique({
       where: { id },
       include: {
+        memberships: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, createdAt: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
         users: {
           select: { id: true, name: true, email: true, role: true, createdAt: true },
           orderBy: { createdAt: "desc" },
@@ -36,6 +44,17 @@ export async function GET(
 
     if (!organization) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+    }
+
+    // Prefer memberships for user list (org-specific roles), fall back to direct users
+    if (organization.memberships.length > 0) {
+      organization.users = organization.memberships.map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        email: m.user.email,
+        role: m.role,
+        createdAt: m.user.createdAt,
+      }));
     }
 
     const [pdfFormatSetting, transferPdfFormatSetting, transferHideCostSetting, assignedTemplatesSetting] = await Promise.all([
@@ -725,9 +744,34 @@ export async function DELETE(
     await prisma.cashBankAccount.deleteMany({ where: { organizationId: id } });
     await prisma.account.deleteMany({ where: { organizationId: id } });
 
-    // 9. Users, settings, and the organization itself
+    // 9. Settings, user memberships, and the organization itself
     await prisma.setting.deleteMany({ where: { organizationId: id } });
-    await prisma.user.deleteMany({ where: { organizationId: id } });
+
+    // Remove org memberships (cascade will handle this, but be explicit)
+    await prisma.userOrganization.deleteMany({ where: { organizationId: id } });
+
+    // Only delete users who have no remaining org memberships
+    // First, unlink users from this org
+    const orgUsers = await prisma.user.findMany({
+      where: { organizationId: id },
+      select: { id: true },
+    });
+    for (const u of orgUsers) {
+      const remainingMembership = await prisma.userOrganization.findFirst({
+        where: { userId: u.id },
+      });
+      if (remainingMembership) {
+        // User has other orgs — switch them to the next one
+        await prisma.user.update({
+          where: { id: u.id },
+          data: { organizationId: remainingMembership.organizationId, role: remainingMembership.role },
+        });
+      } else {
+        // User only belonged to this org — delete them
+        await prisma.user.delete({ where: { id: u.id } });
+      }
+    }
+
     await prisma.organization.delete({ where: { id } });
 
     return NextResponse.json({ message: "Organization deleted" });
