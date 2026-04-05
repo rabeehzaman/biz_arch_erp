@@ -198,6 +198,7 @@ export const FORM_REGISTRY = {
     label: "Product",
     fields: {
       name:        { label: "Name",        type: "text"     as const, required: true,  canHide: false },
+      arabicName:  { label: "Arabic Name", type: "text"     as const, required: false, canHide: true, edition: "SAUDI" },
       description: { label: "Description", type: "textarea" as const, required: false, canHide: true },
       price:       { label: "Price",       type: "number"   as const, required: true,  canHide: false },
       cost:        { label: "Cost",        type: "number"   as const, required: false, canHide: true },

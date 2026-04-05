@@ -70,7 +70,7 @@ export async function PUT(
     const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
-    const { name, description, price, cost, unitId, categoryId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions } = body;
+    const { name, description, price, cost, unitId, categoryId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions, arabicName } = body;
 
     // Check for duplicate product name (exclude current product)
     if (name) {
@@ -100,6 +100,7 @@ export async function PUT(
         data: {
           name,
           description,
+          ...(arabicName !== undefined && { arabicName: arabicName || null }),
           price,
           ...(cost !== undefined && { cost }),
           unitId,

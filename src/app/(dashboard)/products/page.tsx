@@ -33,10 +33,12 @@ import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 import { SwipeableCard } from "@/components/mobile/swipeable-card";
+import { useEdition } from "@/hooks/use-edition";
 
 interface Product {
   id: string;
   name: string;
+  arabicName: string | null;
   description: string | null;
   price: number;
   cost: number;
@@ -91,6 +93,8 @@ function ProductsPageContent() {
   const router = useRouter();
   const activeTab = searchParams.get("tab") === "inventory" ? "inventory" : "products";
   const { t, lang } = useLanguage();
+  const { edition } = useEdition();
+  const isSaudi = edition === "SAUDI";
   const { fmt } = useCurrency();
 
   const formatAmount = (amount: number) => fmt(amount);
@@ -449,6 +453,9 @@ function ProductsPageContent() {
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 space-y-1">
                                   <p className="font-semibold text-slate-900">{product.name}</p>
+                                  {isSaudi && product.arabicName && (
+                                    <p className="text-sm text-slate-600" dir="rtl">{product.arabicName}</p>
+                                  )}
                                   {product.description && (
                                     <p className="line-clamp-2 text-sm text-slate-500">
                                       {product.description}
@@ -535,6 +542,11 @@ function ProductsPageContent() {
                                     {sortField === "name" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
                                   </span>
                                 </TableHead>
+                                {isSaudi && (
+                                <TableHead className="hidden md:table-cell">
+                                  {t("products.arabicName") || "Arabic Name"}
+                                </TableHead>
+                                )}
                                 <TableHead className="hidden sm:table-cell cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("sku")}>
                                   <span className="inline-flex items-center gap-1">
                                     {t("products.sku")}
@@ -585,6 +597,11 @@ function ProductsPageContent() {
                                       )}
                                     </div>
                                   </TableCell>
+                                  {isSaudi && (
+                                  <TableCell className="hidden md:table-cell" dir="rtl">
+                                    {product.arabicName || "-"}
+                                  </TableCell>
+                                  )}
                                   <TableCell className="hidden sm:table-cell">
                                     {product.sku || "-"}
                                   </TableCell>

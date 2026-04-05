@@ -32,6 +32,7 @@ import { Plus, Trash2, Package, ArrowLeftRight } from "lucide-react";
 interface Product {
     id: string;
     name: string;
+    arabicName: string | null;
     description: string | null;
     price: number;
     cost: number;
@@ -122,6 +123,7 @@ export function ProductFormDialog({
     const [baseCostPerUnit, setBaseCostPerUnit] = useState("");
     const [formData, setFormData] = useState({
         name: "",
+        arabicName: "",
         description: getDefault("description", ""),
         price: "",
         cost: getDefault("cost", ""),
@@ -176,6 +178,7 @@ export function ProductFormDialog({
 
             setFormData({
                 name: productToEdit.name,
+                arabicName: productToEdit.arabicName || "",
                 description: productToEdit.description || "",
                 price: displayPrice.toString(),
                 cost: displayCost.toString(),
@@ -289,6 +292,7 @@ export function ProductFormDialog({
 
         const payload: Record<string, unknown> = {
             name: formData.name,
+            arabicName: formData.arabicName || null,
             description: formData.description || null,
             price: basePrice,
             cost: baseCost,
@@ -373,6 +377,7 @@ export function ProductFormDialog({
         setBaseCostPerUnit("");
         setFormData({
             name: "",
+            arabicName: "",
             description: getDefault("description", ""),
             price: "",
             cost: getDefault("cost", ""),
@@ -459,6 +464,19 @@ export function ProductFormDialog({
                                 <p className="text-sm text-red-500">{formErrors.name}</p>
                             )}
                         </div>
+                        {!isFieldHidden("arabicName") && sessionUser?.saudiEInvoiceEnabled && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="prod-arabicName">{t("products.arabicName") || "Arabic Name"}</Label>
+                            <Input
+                                id="prod-arabicName"
+                                value={formData.arabicName}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, arabicName: e.target.value })
+                                }
+                                dir="rtl"
+                            />
+                        </div>
+                        )}
                         {!isFieldHidden("description") && (
                         <div className="grid gap-2">
                             <Label htmlFor="prod-description">{t("products.description")}</Label>
