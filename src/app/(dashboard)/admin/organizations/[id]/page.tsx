@@ -1693,7 +1693,7 @@ export default function OrganizationDetailsPage() {
                                         </div>
                                     )}
 
-                                    {invoicePdfFormat === "A4_MODERN_GST" && (
+                                    {(invoicePdfFormat === "A4_MODERN_GST" || invoicePdfFormat === "A4_BILINGUAL") && (
                                         <div className="space-y-4 pt-6 border-t border-border mt-4">
                                             <div className="space-y-0.5 mb-2">
                                                 <Label>{t("admin.companyLogoUrl")}</Label>
@@ -1730,23 +1730,30 @@ export default function OrganizationDetailsPage() {
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-3 max-w-md">
-                                                <Input
-                                                    id="brandColor"
-                                                    value={brandColor}
-                                                    onChange={(e) => setBrandColor(e.target.value)}
-                                                    placeholder="#2a3b38"
-                                                    className="flex-1"
-                                                />
-                                                <input
-                                                    type="color"
-                                                    value={brandColor || "#2a3b38"}
-                                                    onChange={(e) => setBrandColor(e.target.value)}
-                                                    className="h-9 w-12 cursor-pointer rounded border border-input p-0.5"
-                                                />
-                                                <div
-                                                    className="h-9 w-9 rounded border border-input flex-shrink-0"
-                                                    style={{ backgroundColor: brandColor || "#2a3b38" }}
-                                                />
+                                                {(() => {
+                                                    const defaultColor = invoicePdfFormat === "A4_BILINGUAL" ? "#a10a11" : "#2a3b38";
+                                                    return (
+                                                        <>
+                                                            <Input
+                                                                id="brandColor"
+                                                                value={brandColor}
+                                                                onChange={(e) => setBrandColor(e.target.value)}
+                                                                placeholder={defaultColor}
+                                                                className="flex-1"
+                                                            />
+                                                            <input
+                                                                type="color"
+                                                                value={brandColor || defaultColor}
+                                                                onChange={(e) => setBrandColor(e.target.value)}
+                                                                className="h-9 w-12 cursor-pointer rounded border border-input p-0.5"
+                                                            />
+                                                            <div
+                                                                className="h-9 w-9 rounded border border-input flex-shrink-0"
+                                                                style={{ backgroundColor: brandColor || defaultColor }}
+                                                            />
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     )}

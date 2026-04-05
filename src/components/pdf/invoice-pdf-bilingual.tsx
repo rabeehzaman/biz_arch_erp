@@ -344,6 +344,7 @@ export interface InvoiceBilingualProps {
     title?: string;
     headerImageUrl?: string;
     footerImageUrl?: string;
+    brandColor?: string;
 }
 
 export function InvoiceBilingualPDF({
@@ -351,7 +352,9 @@ export function InvoiceBilingualPDF({
     title,
     headerImageUrl,
     footerImageUrl,
+    brandColor,
 }: InvoiceBilingualProps) {
+    const color = brandColor || THEME.primary;
     const isSimplified = invoice.saudiInvoiceType === "SIMPLIFIED";
     const enTitle = title || (isSimplified ? "Simplified Tax Invoice" : "Tax Invoice");
     const arTitle = isSimplified ? "فاتورة ضريبية مبسطة" : "فاتورة ضريبية";
@@ -433,7 +436,7 @@ export function InvoiceBilingualPDF({
                         </View>
 
                         {/* Red Title Box */}
-                        <View style={styles.redTitleBox}>
+                        <View style={[styles.redTitleBox, { backgroundColor: color }]}>
                             <Text style={styles.redTitleAr}>{arTitle}</Text>
                             <Text style={styles.redTitleEn}>{enTitle}</Text>
                         </View>
@@ -526,10 +529,10 @@ export function InvoiceBilingualPDF({
 
                     {/* Pagination Label */}
                     <View style={styles.paginationRow}>
-                        <Text style={styles.paginationText} render={({ pageNumber, totalPages }) => (
+                        <Text style={[styles.paginationText, { color: color }]} render={({ pageNumber, totalPages }) => (
                             `PAGE ${pageNumber} OF ${totalPages}`
                         )} fixed />
-                        <Text style={styles.paginationText} render={({ pageNumber, totalPages }) => (
+                        <Text style={[styles.paginationText, { color: color }]} render={({ pageNumber, totalPages }) => (
                             `الصفحة ${pageNumber} من ${totalPages}`
                         )} fixed />
                     </View>
@@ -537,11 +540,11 @@ export function InvoiceBilingualPDF({
                     {/* Items Table */}
                     <View style={styles.table}>
                         <View style={styles.headerRow} fixed>
-                            <View style={[styles.headerCellWrap, { width: COL.sl, backgroundColor: THEME.primary }]}>
+                            <View style={[styles.headerCellWrap, { width: COL.sl, backgroundColor: color }]}>
                                 <Text style={styles.headerTextEn}>S.N</Text>
                                 <Ar style={styles.headerTextAr}>م</Ar>
                             </View>
-                            <View style={[styles.headerCellWrap, { width: COL.item, backgroundColor: THEME.primary }]}>
+                            <View style={[styles.headerCellWrap, { width: COL.item, backgroundColor: color }]}>
                                 <Text style={styles.headerTextEn}>Item Description</Text>
                                 <Ar style={styles.headerTextAr}>وصف الصنف</Ar>
                             </View>
@@ -668,11 +671,11 @@ export function InvoiceBilingualPDF({
                         )}
                         <View style={styles.totalsRow}>
                             <View style={styles.totalsLabelBox}>
-                                <Text style={[styles.totalsLabelTextMain, { color: THEME.primary }]}>NET+VAT</Text>
-                                <Ar style={[styles.totalsLabelTextMain, { color: THEME.primary }]}>الصافي مع الضريبة</Ar>
+                                <Text style={[styles.totalsLabelTextMain, { color: color }]}>NET+VAT</Text>
+                                <Ar style={[styles.totalsLabelTextMain, { color: color }]}>الصافي مع الضريبة</Ar>
                             </View>
                             <View style={[styles.totalsValueBox, { backgroundColor: THEME.gray }]}>
-                                <Text style={[styles.totalsLabelTextMain, { color: THEME.primary }]}>{formatCurrency(invoice.total)}</Text>
+                                <Text style={[styles.totalsLabelTextMain, { color: color }]}>{formatCurrency(invoice.total)}</Text>
                             </View>
                         </View>
                         {/* Signatures & Terms Block pushed to bottom of content block */}

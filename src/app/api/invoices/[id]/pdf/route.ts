@@ -342,6 +342,7 @@ export async function GET(
           title: "Tax Invoice",
           headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
           footerImageUrl: org?.pdfFooterImageUrl ?? undefined,
+          brandColor: org?.brandColor ?? undefined,
         }) as any
       );
     } else if (invoicePdfFormat === "A4_PORTRAIT" || invoicePdfFormat === "A4_GST2") {
