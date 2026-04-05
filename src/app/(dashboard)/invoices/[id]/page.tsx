@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, Pencil, Printer, CreditCard, Send, Share2 } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, Pencil, Printer, Receipt, CreditCard, Send, Share2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +47,8 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { shareContent } from "@/lib/capacitor-share";
+import { printInvoiceReceipt } from "@/lib/print-invoice-receipt";
+import type { InvoiceReceiptData } from "@/components/invoices/invoice-receipt";
 
 interface InvoiceItem {
   id: string;
@@ -98,6 +101,13 @@ interface Invoice {
   terms: string | null;
   paymentType: string;
   items: InvoiceItem[];
+  payments?: {
+    id: string;
+    amount: number;
+    paymentDate: string;
+    paymentMethod: string;
+    reference: string | null;
+  }[];
   branch?: { id: string; name: string; code: string } | null;
   warehouse?: { id: string; name: string; code: string } | null;
   // Saudi e-Invoice fields
@@ -116,8 +126,10 @@ export default function InvoiceDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { data: session } = useSession();
   const { t } = useLanguage();
   const { symbol, locale, fmt } = useCurrency();
+  const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -131,8 +143,10 @@ export default function InvoiceDetailPage({
   const [isMarkingSent, setIsMarkingSent] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   const [assignedTemplates, setAssignedTemplates] = useState<string[]>([]);
+  const [receiptMeta, setReceiptMeta] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     fetchInvoice();
@@ -143,6 +157,14 @@ export default function InvoiceDetailPage({
     // Initial load only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Fetch receipt meta for Saudi receipt printing
+  useEffect(() => {
+    if (!saudiEnabled) return;
+    fetch("/api/receipt-meta").then((r) => r.json()).then((d) => {
+      if (!d.error) setReceiptMeta(d);
+    }).catch(() => {});
+  }, [saudiEnabled]);
 
   useEffect(() => {
     if (invoice && Number(invoice.balanceDue) > 0) {
@@ -205,7 +227,6 @@ export default function InvoiceDetailPage({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success(t("common.pdfDownloaded"));
     } catch (error) {
       toast.error(t("common.pdfDownloadFailed"));
       console.error(error);
@@ -238,7 +259,6 @@ export default function InvoiceDetailPage({
         throw new Error(err.error || t("payments.failedToRecordPayment"));
       }
 
-      toast.success(t("payments.paymentRecorded"));
       setIsPaymentDialogOpen(false);
       fetchInvoice();
     } catch (error) {
@@ -258,7 +278,6 @@ export default function InvoiceDetailPage({
         body: JSON.stringify({ action: "markSent" }),
       });
       if (!response.ok) throw new Error("Failed to mark as sent");
-      toast.success(t("sales.invoiceMarkedAsSent"));
       fetchInvoice();
     } catch {
       toast.error(t("sales.failedToMarkAsSent"));
@@ -286,6 +305,87 @@ export default function InvoiceDetailPage({
       console.error(error);
     } finally {
       setIsPrinting(false);
+    }
+  };
+
+  const handlePrintReceipt = async () => {
+    if (!invoice || !receiptMeta) return;
+    setIsPrintingReceipt(true);
+    try {
+      // Generate QR code data URL server-side if invoice has qrCodeData
+      let qrCodeDataURL: string | null = (receiptMeta.qrCodeDataURL as string) || null;
+      if (invoice.qrCodeData && !qrCodeDataURL) {
+        const qrRes = await fetch(`/api/receipt-meta?qrCodeData=${encodeURIComponent(invoice.qrCodeData)}`);
+        const qrData = await qrRes.json();
+        if (qrData.qrCodeDataURL) qrCodeDataURL = qrData.qrCodeDataURL;
+      }
+
+      const data: InvoiceReceiptData = {
+        storeName: receiptMeta.storeName as string || "",
+        storeAddress: receiptMeta.storeAddress as string | undefined,
+        storeCity: receiptMeta.storeCity as string | undefined,
+        storeState: receiptMeta.storeState as string | undefined,
+        storePhone: receiptMeta.storePhone as string | undefined,
+        vatNumber: receiptMeta.vatNumber as string | undefined,
+        secondaryName: receiptMeta.secondaryName as string | undefined,
+        logoUrl: receiptMeta.logoUrl as string | undefined,
+        logoHeight: receiptMeta.logoHeight as number | undefined,
+        brandColor: receiptMeta.brandColor as string | undefined,
+        currency: receiptMeta.currency as string || "SAR",
+
+        invoiceNumber: invoice.invoiceNumber,
+        issueDate: new Date(invoice.issueDate),
+        dueDate: new Date(invoice.dueDate),
+        paymentType: invoice.paymentType,
+        saudiInvoiceType: invoice.saudiInvoiceType || undefined,
+
+        customerName: invoice.customer.name,
+        customerSecondaryName: invoice.customer.arabicName || undefined,
+        customerPhone: invoice.customer.phone || undefined,
+        customerEmail: invoice.customer.email || undefined,
+        customerAddress: invoice.customer.address || undefined,
+        customerCity: invoice.customer.city || undefined,
+        customerState: invoice.customer.state || undefined,
+        customerZipCode: invoice.customer.zipCode || undefined,
+        customerVatNumber: invoice.customer.vatNumber || undefined,
+
+        items: invoice.items.map((item) => ({
+          name: item.product?.name || item.description,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          discount: Number(item.discount),
+          lineTotal: Number(item.total),
+        })),
+
+        subtotal: Number(invoice.subtotal),
+        taxRate: Number(invoice.taxRate),
+        taxAmount: invoice.totalVat ? Number(invoice.totalVat) : Number(invoice.taxAmount),
+        roundOffAmount: invoice.applyRoundOff ? Number(invoice.roundOffAmount) : undefined,
+        total: Number(invoice.total),
+        isTaxInclusivePrice: invoice.isTaxInclusive || false,
+
+        amountPaid: Number(invoice.amountPaid),
+        balanceDue: Number(invoice.balanceDue),
+        isOverdue: new Date(invoice.dueDate) < new Date() && Number(invoice.balanceDue) > 0,
+
+        payments: (invoice.payments || []).map((p) => ({
+          date: new Date(p.paymentDate),
+          method: p.paymentMethod,
+          amount: Number(p.amount),
+          reference: p.reference,
+        })),
+
+        notes: invoice.notes || undefined,
+        terms: invoice.terms || undefined,
+        qrCodeDataURL: qrCodeDataURL || undefined,
+      };
+
+      await printInvoiceReceipt(data);
+    } catch (error) {
+      toast.error(t("common.printFailed"));
+      console.error(error);
+    } finally {
+      setIsPrintingReceipt(false);
     }
   };
 
@@ -403,18 +503,24 @@ export default function InvoiceDetailPage({
                 : <Printer className="h-4 w-4 sm:mr-2" />}
               <span>{isPrinting ? "..." : t("common.print")}</span>
             </Button>
+            {saudiEnabled && (
+              <Button variant="outline" size="sm" onClick={handlePrintReceipt} disabled={isPrintingReceipt || !receiptMeta} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+                {isPrintingReceipt
+                  ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                  : <Receipt className="h-4 w-4 sm:mr-2" />}
+                <span>{isPrintingReceipt ? "..." : "Receipt"}</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
               className="col-span-1 h-9 w-full sm:h-10 sm:w-auto"
               onClick={async () => {
-                const shared = await shareContent({
+                await shareContent({
                   title: `${t("sales.invoice")} ${invoice?.invoiceNumber}`,
                   text: `${t("sales.invoice")} ${invoice?.invoiceNumber} — ${symbol}${Number(invoice?.total ?? 0).toLocaleString(locale)}`,
                   url: typeof window !== "undefined" ? window.location.href : undefined,
                 });
-                if (shared) toast.success(t("common.share"));
-                else toast.info(t("common.copiedToClipboard"));
               }}
             >
               <Share2 className="h-4 w-4 sm:mr-2" />
@@ -448,7 +554,7 @@ export default function InvoiceDetailPage({
                     <h2 className="text-lg font-bold sm:text-xl">
                       {invoice.invoiceNumber}
                       <button
-                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(invoice.invoiceNumber); toast.success(t("common.copiedToClipboard") || "Copied to clipboard"); }}
+                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(invoice.invoiceNumber); }}
                         className="ml-1 inline-flex items-center text-slate-400 hover:text-slate-600 transition-colors"
                         title={t("common.copyToClipboard") || "Copy to clipboard"}
                       >
