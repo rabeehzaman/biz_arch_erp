@@ -15,7 +15,10 @@ import { smartPrintReceipt } from "@/lib/electron-print";
 import type { ReceiptData } from "@/components/pos/receipt";
 import { useLanguage } from "@/lib/i18n";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) => fetch(url).then((r) => {
+  if (!r.ok) throw new Error(`API error ${r.status}`);
+  return r.json();
+});
 
 interface OrderItem {
   description: string;
@@ -123,10 +126,10 @@ export function PreviousOrdersSheet({
         customerName: order.customer?.name,
         items: order.items.map((item) => ({
           name: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discount: item.discount,
-          lineTotal: item.total,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          discount: Number(item.discount),
+          lineTotal: Number(item.total),
           hsnCode: item.hsnCode || undefined,
           gstRate: Number(item.gstRate || 0) || undefined,
           cgstRate: Number(item.cgstRate || 0) || undefined,
