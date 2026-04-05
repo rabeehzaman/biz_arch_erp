@@ -362,7 +362,6 @@ export default function EditPurchaseInvoicePage({
       });
 
       if (response.ok) {
-        toast.success(t("purchases.invoiceUpdated"));
         router.push(`/purchase-invoices/${id}`);
       } else {
         const error = await response.json();

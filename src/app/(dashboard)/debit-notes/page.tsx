@@ -77,7 +77,6 @@ export default function DebitNotesPage() {
           });
           if (!response.ok) throw new Error("Failed to delete");
           refresh();
-          toast.success(t("accounting.debitNoteDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
           console.error("Failed to delete debit note:", error);

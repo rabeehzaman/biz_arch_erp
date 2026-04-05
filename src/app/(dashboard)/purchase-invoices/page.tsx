@@ -148,7 +148,6 @@ export default function PurchaseInvoicesPage() {
           const response = await fetch(`/api/purchase-invoices/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
           refresh();
-          toast.success(t("purchases.purchaseInvoiceDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
           console.error("Failed to delete purchase invoice:", error);
@@ -242,7 +241,6 @@ export default function PurchaseInvoicesPage() {
                                   fetch(`/api/purchase-invoices/${id}`, { method: "DELETE" })
                                 )
                               );
-                              toast.success(`${count} ${t("purchases.purchaseInvoices").toLowerCase()} ${t("common.deleted").toLowerCase()}`);
                               setSelectedIds(new Set());
                               refresh();
                             } catch {

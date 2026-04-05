@@ -514,7 +514,6 @@ export default function NewPurchaseInvoicePage() {
       if (response.ok) {
         const invoice = await response.json();
         setIsDirty(false);
-        toast.success(t("purchases.purchaseInvoiceCreatedStock"));
         router.push(`/purchase-invoices/${invoice.id}`);
       } else {
         const error = await response.json();

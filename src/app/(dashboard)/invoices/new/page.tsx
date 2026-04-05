@@ -198,7 +198,6 @@ export default function NewInvoicePage() {
       ];
     });
 
-    toast.success(`${product.name} — ${parsed.weightKg} kg`);
   }, [products, weighMachineConfig]);
 
   useBarcodeScanner(handleWeightScan, weighMachineEnabled);
@@ -622,22 +621,11 @@ export default function NewInvoicePage() {
         const invoice = data.invoice || data;
         const warnings = data.warnings || [];
 
-        // Display warnings if any
-        if (warnings.length > 0) {
-          warnings.forEach((warning: string) => {
-            toast.warning(warning, { duration: 6000 });
-          });
-        }
-
         setIsDirty(false);
         if (saveAndNew.current) {
           saveAndNew.current = false;
-          toast.success(t("sales.invoiceCreatedStartingNew"));
           router.push("/invoices/new");
         } else {
-          toast.success(t("sales.invoiceCreated"), {
-            action: { label: t("sales.newInvoice"), onClick: () => router.push("/invoices/new") },
-          });
           router.push(`/invoices/${invoice.id}`);
         }
       } else {

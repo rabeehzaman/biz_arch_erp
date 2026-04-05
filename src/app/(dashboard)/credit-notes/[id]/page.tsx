@@ -99,7 +99,6 @@ export default function CreditNoteDetailPage() {
             method: "DELETE",
           });
           if (!response.ok) throw new Error("Failed to delete");
-          toast.success(t("creditNotes.creditNoteDeleted"));
           router.push("/credit-notes");
         } catch (error) {
           toast.error(t("creditNotes.failedToDelete"));

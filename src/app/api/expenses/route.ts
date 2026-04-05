@@ -5,6 +5,7 @@ import { getOrgId, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
 import { generateAutoNumber } from "@/lib/accounting/auto-number";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
+import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 export async function GET() {
   try {
@@ -14,9 +15,17 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
+
+    const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId, role);
+    if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
+      return NextResponse.json([]);
+    }
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
     const expenses = await prisma.expense.findMany({
-      where: { organizationId },
+      where: { organizationId, ...branchFilter },
       orderBy: { createdAt: "desc" },
       include: {
         supplier: { select: { id: true, name: true } },

@@ -114,7 +114,6 @@ export default function NewJournalEntryPage() {
       }
 
       setIsDirty(false);
-      toast.success(t("accounting.journalEntryCreated"));
       router.push("/accounting/journal-entries");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("accounting.failedToCreateJournalEntry"));

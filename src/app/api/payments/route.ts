@@ -6,6 +6,7 @@ import { getOrgId } from "@/lib/auth-utils";
 import { isAdminRole } from "@/lib/access-control";
 import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate payment number: PAY-YYYYMMDD-XXX
 async function generatePaymentNumber(organizationId: string) {
@@ -39,9 +40,15 @@ export async function GET(request: NextRequest) {
     const isAdmin = isAdminRole(session.user.role);
     const userId = session.user.id;
 
+    const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId!, session.user.role);
+    if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
+      return paginatedResponse([], 0, false);
+    }
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
+
     const baseWhere = isAdmin
-      ? { organizationId }
-      : { organizationId, customer: { assignments: { some: { userId } } } };
+      ? { organizationId, ...branchFilter }
+      : { organizationId, customer: { assignments: { some: { userId } } }, ...branchFilter };
     const where = search
       ? {
           ...baseWhere,

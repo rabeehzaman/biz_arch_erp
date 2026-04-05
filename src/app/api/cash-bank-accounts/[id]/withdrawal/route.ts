@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createAutoJournalEntry, getSystemAccount } from "@/lib/accounting/journal";
+import { getUserAllowedCashBankAccountIds } from "@/lib/user-access";
 
 export async function POST(
   request: NextRequest,
@@ -15,9 +16,17 @@ export async function POST(
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
     const { id } = await params;
     const body = await request.json();
     const { amount, description, transactionDate, referenceType, referenceId } = body;
+
+    // Check cash/bank account access
+    const allowedIds = await getUserAllowedCashBankAccountIds(prisma, organizationId, userId, role);
+    if (allowedIds !== null && !allowedIds.includes(id)) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -53,6 +62,7 @@ export async function POST(
           referenceId: referenceId || null,
           transactionDate: transactionDate ? new Date(transactionDate) : new Date(),
           organizationId,
+          createdById: userId,
         },
       });
 

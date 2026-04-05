@@ -400,7 +400,6 @@ export default function NewDebitNotePage() {
       }
 
       const data = await response.json();
-      toast.success(t("debitNotes.debitNoteCreated"));
       router.push(`/debit-notes/${data.id}`);
     } catch (error: any) {
       toast.error(error.message);

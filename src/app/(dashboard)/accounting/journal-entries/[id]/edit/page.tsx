@@ -131,7 +131,6 @@ export default function EditJournalEntryPage({ params }: { params: Promise<{ id:
                 throw new Error(err.error || "Failed to update");
             }
 
-            toast.success(t("accounting.journalEntryUpdated"));
             router.push("/accounting/journal-entries");
         } catch (error) {
             toast.error(error instanceof Error ? error.message : t("accounting.failedToUpdateJournalEntry"));

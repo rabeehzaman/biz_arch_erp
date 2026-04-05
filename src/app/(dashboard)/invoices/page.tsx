@@ -164,7 +164,6 @@ export default function InvoicesPage() {
           const response = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
           if (!response.ok) throw new Error("Failed to delete");
           refresh();
-          toast.success(t("sales.invoiceDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
           console.error("Failed to delete invoice:", error);
@@ -264,7 +263,6 @@ export default function InvoicesPage() {
                                     fetch(`/api/invoices/${id}`, { method: "DELETE" })
                                   )
                                 );
-                                toast.success(`${count} ${t("sales.invoices").toLowerCase()} ${t("common.deleted").toLowerCase()}`);
                                 setSelectedIds(new Set());
                                 refresh();
                               } catch {

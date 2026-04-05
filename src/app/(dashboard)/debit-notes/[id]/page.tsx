@@ -102,7 +102,6 @@ export default function DebitNoteDetailPage() {
             method: "DELETE",
           });
           if (!response.ok) throw new Error("Failed to delete");
-          toast.success(t("debitNotes.debitNoteDeleted"));
           router.push("/debit-notes");
         } catch (error) {
           toast.error(t("debitNotes.failedToDelete"));

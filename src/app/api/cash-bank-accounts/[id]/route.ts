@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { getUserAllowedCashBankAccountIds } from "@/lib/user-access";
 
 export async function GET(
   _request: NextRequest,
@@ -14,7 +15,15 @@ export async function GET(
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
     const { id } = await params;
+
+    // Check cash/bank account access
+    const allowedIds = await getUserAllowedCashBankAccountIds(prisma, organizationId, userId, role);
+    if (allowedIds !== null && !allowedIds.includes(id)) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
 
     const account = await prisma.cashBankAccount.findFirst({
       where: { id, organizationId },
@@ -52,9 +61,17 @@ export async function PUT(
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
     const { id } = await params;
     const body = await request.json();
     const { name, bankName, accountNumber, isDefault, isActive } = body;
+
+    // Check cash/bank account access
+    const allowedIds = await getUserAllowedCashBankAccountIds(prisma, organizationId, userId, role);
+    if (allowedIds !== null && !allowedIds.includes(id)) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
 
     const existing = await prisma.cashBankAccount.findFirst({
       where: { id, organizationId },
@@ -97,7 +114,15 @@ export async function DELETE(
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
     const { id } = await params;
+
+    // Check cash/bank account access
+    const allowedIds = await getUserAllowedCashBankAccountIds(prisma, organizationId, userId, role);
+    if (allowedIds !== null && !allowedIds.includes(id)) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
 
     const account = await prisma.cashBankAccount.findFirst({
       where: { id, organizationId },

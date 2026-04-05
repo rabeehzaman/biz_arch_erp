@@ -206,6 +206,7 @@ model Organization {
   stockTransfers             StockTransfer[]
   stockTransferItems         StockTransferItem[]
   userWarehouseAccess        UserWarehouseAccess[]
+  userCashBankAccess         UserCashBankAccess[]
   mobileDevices              MobileDevice[]
   productBundleItems         ProductBundleItem[]
 
@@ -295,6 +296,8 @@ model User {
   supplierComments    SupplierComment[]  @relation("SupplierComments")
   priceListAssignment PriceListAssignment?
   organizations       UserOrganization[]
+  cashBankAccess      UserCashBankAccess[]
+  cashBankTransactions CashBankTransaction[] @relation("CashBankTransactionCreator")
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -1919,6 +1922,7 @@ model CashBankAccount {
   defaultBankRegisterConfigs POSRegisterConfig[] @relation("POSRegisterDefaultBankAccount")
   orgDefaultCash             Organization[]      @relation("OrgDefaultCashAccount")
   orgDefaultBank             Organization[]      @relation("OrgDefaultBankAccount")
+  userAccess                 UserCashBankAccess[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -1939,6 +1943,8 @@ model CashBankTransaction {
   transactionDate   DateTime
   organizationId    String
   organization      Organization            @relation(fields: [organizationId], references: [id])
+  createdById       String?
+  createdBy         User?                   @relation("CashBankTransactionCreator", fields: [createdById], references: [id])
   createdAt         DateTime                @default(now())
 
   @@index([cashBankAccountId, transactionDate])
@@ -2260,6 +2266,26 @@ model UserWarehouseAccess {
   @@index([branchId])
   @@index([organizationId])
   @@map("user_warehouse_access")
+}
+
+// ==================== USER CASH/BANK ACCOUNT ACCESS ====================
+
+model UserCashBankAccess {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cashBankAccountId String
+  cashBankAccount   CashBankAccount @relation(fields: [cashBankAccountId], references: [id], onDelete: Cascade)
+  isDefault         Boolean         @default(false)
+  organizationId    String
+  organization      Organization    @relation(fields: [organizationId], references: [id])
+  createdAt         DateTime        @default(now())
+
+  @@unique([userId, cashBankAccountId])
+  @@index([userId])
+  @@index([cashBankAccountId])
+  @@index([organizationId])
+  @@map("user_cash_bank_access")
 }
 
 // ==================== MOBILE DEVICE TRACKING ====================

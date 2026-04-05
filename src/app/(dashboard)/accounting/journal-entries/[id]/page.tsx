@@ -98,11 +98,6 @@ export default function JournalEntryDetailPage({
         const err = await response.json();
         throw new Error(err.error || `Failed to ${confirmAction}`);
       }
-      toast.success(
-        confirmAction === "post"
-          ? t("accounting.journalEntryPosted")
-          : t("accounting.journalEntryVoided")
-      );
       setConfirmAction(null);
       fetchEntry();
     } catch (error) {

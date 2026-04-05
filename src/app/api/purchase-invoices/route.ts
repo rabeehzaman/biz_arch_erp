@@ -14,6 +14,7 @@ import { calculateLineVAT, LineVATResult } from "@/lib/saudi-vat/calculator";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
 async function generatePurchaseInvoiceNumber(organizationId: string) {
@@ -43,13 +44,21 @@ export async function GET(request: NextRequest) {
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const { limit, offset, search } = parsePagination(request);
 
+    const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId, role);
+    if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
+      return paginatedResponse([], 0, false);
+    }
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
+
     const baseWhere = status && status !== "all"
-      ? { status: status as never, organizationId }
-      : { organizationId };
+      ? { status: status as never, organizationId, ...branchFilter }
+      : { organizationId, ...branchFilter };
 
     const where = search
       ? {

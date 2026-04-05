@@ -18,6 +18,7 @@ import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 import { isAdminRole } from "@/lib/access-control";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate credit note number: CN-YYYYMMDD-XXX
 async function generateCreditNoteNumber(organizationId: string) {
@@ -53,8 +54,14 @@ export async function GET(request: NextRequest) {
     const isAdmin = isAdminRole(session.user.role);
     const { limit, offset, search } = parsePagination(request);
 
+    const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId!, session.user.role);
+    if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
+      return paginatedResponse([], 0, false);
+    }
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
+
     const baseWhere = isAdmin
-      ? { organizationId }
+      ? { organizationId, ...branchFilter }
       : {
           organizationId,
           customer: {
@@ -62,6 +69,7 @@ export async function GET(request: NextRequest) {
               some: { userId },
             },
           },
+          ...branchFilter,
         };
 
     const where = search

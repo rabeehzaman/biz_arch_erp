@@ -243,7 +243,6 @@ export default function PaymentsPage() {
       refresh();
       fetchCustomers();
       fetchInvoices();
-      toast.success(t("payments.paymentRecorded"));
     } catch (error) {
       toast.error(t("common.error"));
       console.error("Failed to save payment:", error);
@@ -282,7 +281,6 @@ export default function PaymentsPage() {
       refresh();
       fetchCustomers();
       fetchInvoices();
-      toast.success(t("payments.paymentDeleted"));
     } catch (error) {
       toast.error(t("common.error"));
       console.error("Failed to delete payment:", error);

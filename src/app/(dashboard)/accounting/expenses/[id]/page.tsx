@@ -133,7 +133,6 @@ export default function ExpenseDetailPage({
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success(t("accounting.expenseApproved"));
       setConfirmAction(null);
       fetchData();
     } catch (error) {
@@ -153,7 +152,6 @@ export default function ExpenseDetailPage({
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success(t("accounting.expensePaid"));
       setIsPayDialogOpen(false);
       fetchData();
     } catch (error) {
@@ -170,7 +168,6 @@ export default function ExpenseDetailPage({
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success(t("accounting.expenseVoided"));
       setConfirmAction(null);
       fetchData();
     } catch (error) {

@@ -149,7 +149,8 @@
         "tabUnitConversions": "تحويلات الوحدات",
         "tabUserWarehouse": "صلاحيات المستودعات",
         "tabRestaurant": "المطعم",
-        "tabPriceLists": "قوائم الأسعار"
+        "tabPriceLists": "قوائم الأسعار",
+        "tabCashBank": "صلاحيات الصندوق/البنك"
     },
     "priceLists": {
         "title": "قوائم الأسعار",
@@ -3076,6 +3077,23 @@
         "accessRevoked": "تم سحب الوصول",
         "loadFailed": "فشل في تحميل بيانات وصول المستخدمين",
         "userAndWarehouseRequired": "المستخدم والمستودع مطلوبان"
+    },
+    "userCashBank": {
+        "description": "تعيين المستخدمين لحسابات صندوق/بنك محددة. المستخدمون بدون تعيينات يمكنهم الوصول لجميع الحسابات.",
+        "grantAccess": "منح الوصول",
+        "revokeAccess": "سحب الوصول",
+        "noAssignments": "لا توجد تعيينات وصول",
+        "noAssignmentsDesc": "جميع المستخدمين حالياً لديهم وصول غير مقيد لجميع حسابات الصندوق/البنك.",
+        "grantFirstAccess": "منح أول وصول",
+        "grantAccountAccess": "منح وصول لحساب الصندوق/البنك",
+        "selectUser": "اختر المستخدم",
+        "selectAccount": "اختر حساب الصندوق/البنك",
+        "setAsDefault": "تعيين كحساب افتراضي لهذا المستخدم",
+        "accessGranted": "تم منح الوصول",
+        "grantFailed": "فشل في منح الوصول",
+        "accessRevoked": "تم سحب الوصول",
+        "loadFailed": "فشل في تحميل بيانات وصول المستخدمين",
+        "userAndAccountRequired": "المستخدم وحساب الصندوق/البنك مطلوبان"
     },
     "login": {
         "invalidCredentials": "بريد إلكتروني أو كلمة مرور غير صحيحة",

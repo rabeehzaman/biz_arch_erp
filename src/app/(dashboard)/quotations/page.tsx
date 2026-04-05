@@ -76,7 +76,6 @@ export default function QuotationsPage() {
             throw new Error(error.error || "Failed to delete");
           }
           refresh();
-          toast.success(t("quotations.quotationDeleted"));
         } catch (error: any) {
           toast.error(error.message || t("common.error"));
           console.error("Failed to delete quotation:", error);

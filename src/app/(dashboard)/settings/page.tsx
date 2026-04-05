@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
 
-type SettingsTab = "units" | "categories" | "accounting" | "pos" | "users" | "employees" | "restaurant";
+type SettingsTab = "units" | "categories" | "accounting" | "pos" | "users" | "cashbank" | "employees" | "restaurant";
 
 function SettingsPanelFallback() {
   return (
@@ -40,6 +40,10 @@ const UserWarehouseSettings = dynamic(
 );
 const EmployeesSettings = dynamic(
   () => import("@/components/settings/employees-settings").then((mod) => mod.EmployeesSettings),
+  { loading: () => <SettingsPanelFallback /> }
+);
+const UserCashBankSettings = dynamic(
+  () => import("@/components/settings/user-cash-bank-settings").then((mod) => mod.UserCashBankSettings),
   { loading: () => <SettingsPanelFallback /> }
 );
 const RestaurantSettings = dynamic(
@@ -93,6 +97,7 @@ export default function SettingsPage() {
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="accounting">{t("settings.tabAccounting")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="pos">{t("settings.tabPOS")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="users">{t("settings.tabUsers")}</TabsTrigger>
+              <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="cashbank">{t("settings.tabCashBank")}</TabsTrigger>
               <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="employees">{t("settings.tabEmployees")}</TabsTrigger>
               {isRestaurantEnabled && (
                 <TabsTrigger className="min-h-[44px] shrink-0 whitespace-nowrap px-3 py-2" value="restaurant">{t("settings.tabRestaurant")}</TabsTrigger>
@@ -113,6 +118,9 @@ export default function SettingsPage() {
           </TabsContent>
           <TabsContent value="users" {...getForceMountProps("users")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("users") ? <UserWarehouseSettings /> : null}
+          </TabsContent>
+          <TabsContent value="cashbank" {...getForceMountProps("cashbank")} className="mt-6 data-[state=inactive]:hidden">
+            {loadedTabs.includes("cashbank") ? <UserCashBankSettings /> : null}
           </TabsContent>
           <TabsContent value="employees" {...getForceMountProps("employees")} className="mt-6 data-[state=inactive]:hidden">
             {loadedTabs.includes("employees") ? <EmployeesSettings /> : null}

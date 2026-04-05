@@ -17,6 +17,7 @@ import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate debit note number: DN-YYYYMMDD-XXX
 async function generateDebitNoteNumber(organizationId: string) {
@@ -46,9 +47,17 @@ export async function GET(request: NextRequest) {
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
     const { limit, offset, search } = parsePagination(request);
 
-    const baseWhere = { organizationId };
+    const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId, role);
+    if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
+      return paginatedResponse([], 0, false);
+    }
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
+
+    const baseWhere = { organizationId, ...branchFilter };
     const where = search
       ? {
           ...baseWhere,

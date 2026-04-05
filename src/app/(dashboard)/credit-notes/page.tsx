@@ -77,7 +77,6 @@ export default function CreditNotesPage() {
           });
           if (!response.ok) throw new Error("Failed to delete");
           refresh();
-          toast.success(t("accounting.creditNoteDeleted"));
         } catch (error) {
           toast.error(t("common.error"));
           console.error("Failed to delete credit note:", error);

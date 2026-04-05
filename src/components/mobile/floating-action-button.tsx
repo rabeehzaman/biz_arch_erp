@@ -18,7 +18,7 @@ export function FloatingActionButton({
   label,
   onClick,
 }: FloatingActionButtonProps) {
-  const { hideFixedUi, scrolledDown } = useMobileFixedUi();
+  const { bottomOffset, hideFixedUi, scrolledDown } = useMobileFixedUi();
   const { impactLight } = useHaptics();
 
   if (hideFixedUi) return null;
@@ -26,7 +26,13 @@ export function FloatingActionButton({
   const className =
     "fixed z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 active:scale-95 sm:hidden " +
     "end-4 bottom-[calc(6rem+var(--app-safe-area-bottom))] " +
-    (!scrolledDown ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0 pointer-events-none");
+    (!scrolledDown ? "opacity-100" : "opacity-0 pointer-events-none");
+
+  const style = {
+    transform: scrolledDown
+      ? `translateY(calc(1rem + ${bottomOffset}px))`
+      : `translateY(${bottomOffset}px)`,
+  };
 
   const handlePointerDown = () => {
     impactLight();
@@ -41,7 +47,7 @@ export function FloatingActionButton({
 
   if (href) {
     return (
-      <Link href={href} className={className} onPointerDown={handlePointerDown}>
+      <Link href={href} className={className} style={style} onPointerDown={handlePointerDown}>
         {content}
       </Link>
     );
@@ -51,6 +57,7 @@ export function FloatingActionButton({
     <button
       type="button"
       className={className}
+      style={style}
       onClick={onClick}
       onPointerDown={handlePointerDown}
     >

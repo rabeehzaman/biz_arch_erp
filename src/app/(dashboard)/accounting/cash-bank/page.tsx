@@ -111,7 +111,6 @@ export default function CashBankPage() {
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success(t("accounting.accountCreated"));
       setIsDialogOpen(false);
       setFormData({ name: "", accountId: "", accountSubType: "BANK", bankName: "", accountNumber: "", openingBalance: "" });
       fetchData();
@@ -135,7 +134,6 @@ export default function CashBankPage() {
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success(t("accounting.transferCompleted"));
       setIsTransferOpen(false);
       setTransferData({ fromAccountId: "", toAccountId: "", amount: "", description: "", transactionDate: new Date().toISOString().split("T")[0] });
       fetchData();

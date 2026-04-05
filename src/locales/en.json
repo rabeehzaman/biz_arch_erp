@@ -149,7 +149,8 @@
         "tabUnitConversions": "Unit Conversions",
         "tabUserWarehouse": "User Warehouse Access",
         "tabRestaurant": "Restaurant",
-        "tabPriceLists": "Price Lists"
+        "tabPriceLists": "Price Lists",
+        "tabCashBank": "Cash/Bank Access"
     },
     "priceLists": {
         "title": "Price Lists",
@@ -3076,6 +3077,23 @@
         "accessRevoked": "Access revoked",
         "loadFailed": "Failed to load user access data",
         "userAndWarehouseRequired": "User and warehouse are required"
+    },
+    "userCashBank": {
+        "description": "Assign users to specific cash/bank accounts. Users with no assignments can access all accounts.",
+        "grantAccess": "Grant Access",
+        "revokeAccess": "Revoke Access",
+        "noAssignments": "No access assignments",
+        "noAssignmentsDesc": "All users currently have unrestricted access to all cash/bank accounts.",
+        "grantFirstAccess": "Grant First Access",
+        "grantAccountAccess": "Grant Cash/Bank Account Access",
+        "selectUser": "Select user",
+        "selectAccount": "Select cash/bank account",
+        "setAsDefault": "Set as default account for this user",
+        "accessGranted": "Access granted",
+        "grantFailed": "Failed to grant access",
+        "accessRevoked": "Access revoked",
+        "loadFailed": "Failed to load user access data",
+        "userAndAccountRequired": "User and cash/bank account are required"
     },
     "login": {
         "invalidCredentials": "Invalid email or password",

@@ -8,6 +8,7 @@ import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate quotation number: QUO-YYYYMMDD-XXX
 async function generateQuotationNumber(organizationId: string) {
@@ -41,9 +42,15 @@ export async function GET(request: NextRequest) {
     const isAdmin = isAdminRole(session.user.role);
     const userId = session.user.id;
 
+    const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId!, session.user.role);
+    if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
+      return paginatedResponse([], 0, false);
+    }
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
+
     const baseWhere = isAdmin
-      ? { organizationId }
-      : { organizationId, customer: { assignments: { some: { userId } } } };
+      ? { organizationId, ...branchFilter }
+      : { organizationId, customer: { assignments: { some: { userId } } }, ...branchFilter };
     const where = search
       ? {
           ...baseWhere,

@@ -307,7 +307,6 @@ export default function EditCreditNotePage({
                 throw new Error(error.error || "Failed to update credit note");
             }
 
-            toast.success(t("creditNotes.creditNoteUpdated"));
             router.push(`/credit-notes/${id}`);
         } catch (error: any) {
             toast.error(error.message);

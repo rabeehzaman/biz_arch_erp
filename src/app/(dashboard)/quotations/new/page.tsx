@@ -449,7 +449,6 @@ export default function NewQuotationPage() {
 
       if (response.ok) {
         const quotation = await response.json();
-        toast.success(t("quotations.quotationCreated"));
         router.push(`/quotations/${quotation.id}`);
       } else {
         toast.error(t("quotations.failedToCreate"));

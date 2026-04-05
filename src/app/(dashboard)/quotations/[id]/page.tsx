@@ -133,7 +133,6 @@ export default function QuotationDetailPage({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success(t("common.pdfDownloaded"));
     } catch (error) {
       toast.error(t("common.pdfDownloadFailed"));
       console.error(error);
@@ -183,7 +182,6 @@ export default function QuotationDetailPage({
           }
 
           const invoice = await response.json();
-          toast.success(t("quotations.convertedToInvoice"));
           router.push(`/invoices/${invoice.id}`);
         } catch (error: any) {
           toast.error(error.message || t("quotations.failedToConvert"));
@@ -210,7 +208,6 @@ export default function QuotationDetailPage({
           if (!response.ok) throw new Error("Failed to cancel");
 
           fetchQuotation();
-          toast.success(t("quotations.quotationCancelled"));
         } catch (error) {
           toast.error(t("quotations.failedToCancel"));
           console.error(error);

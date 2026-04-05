@@ -113,7 +113,6 @@ export default function CashBankDetailPage({
         const err = await response.json();
         throw new Error(err.error);
       }
-      toast.success(dialogType === "deposit" ? t("accounting.depositRecorded") : t("accounting.withdrawalRecorded"));
       setDialogType(null);
       setFormData({ amount: "", description: "", transactionDate: new Date().toISOString().split("T")[0] });
       fetchAccount();

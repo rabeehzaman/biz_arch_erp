@@ -367,7 +367,6 @@ export default function EditDebitNotePage({
         throw new Error(error.error || "Failed to update debit note");
       }
 
-      toast.success(t("debitNotes.debitNoteUpdated"));
       router.push(`/debit-notes/${id}`);
     } catch (error: unknown) {
       const message =

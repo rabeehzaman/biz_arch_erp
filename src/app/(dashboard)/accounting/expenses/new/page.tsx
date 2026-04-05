@@ -133,7 +133,6 @@ export default function NewExpensePage() {
       }
 
       setIsDirty(false);
-      toast.success(t("accounting.expenseCreated"));
       router.push("/accounting/expenses");
     } catch (error) {
       toast.error(

@@ -347,7 +347,6 @@ export default function EditQuotationPage({
       });
 
       if (response.ok) {
-        toast.success(t("quotations.quotationUpdated"));
         router.push(`/quotations/${id}`);
       } else {
         toast.error(t("quotations.failedToUpdate"));

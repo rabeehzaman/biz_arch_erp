@@ -15,6 +15,7 @@ import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 import { isAdminRole } from "@/lib/access-control";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
 async function generateInvoiceNumber(organizationId: string) {
@@ -49,13 +50,20 @@ export async function GET(request: NextRequest) {
 
     const { limit, offset, search } = parsePagination(request);
 
-    const baseWhere = isAdmin ? { organizationId } : {
+    const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId!, session.user.role);
+    if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
+      return paginatedResponse([], 0, false);
+    }
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
+
+    const baseWhere = isAdmin ? { organizationId, ...branchFilter } : {
       organizationId,
       customer: {
         assignments: {
           some: { userId }
         }
-      }
+      },
+      ...branchFilter,
     };
 
     const where = search

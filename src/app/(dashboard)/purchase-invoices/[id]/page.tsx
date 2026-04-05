@@ -209,7 +209,6 @@ export default function PurchaseInvoiceDetailPage({
         const err = await response.json();
         throw new Error(err.error || "Failed to record payment");
       }
-      toast.success(t("payments.paymentRecorded"));
       setIsPaymentDialogOpen(false);
       fetchInvoice();
     } catch (error) {
@@ -228,7 +227,6 @@ export default function PurchaseInvoiceDetailPage({
       });
       if (!response.ok) throw new Error("Failed to update");
       fetchInvoice();
-      toast.success(t("purchases.statusUpdated"));
     } catch (error) {
       toast.error(t("purchases.failedToUpdateStatus"));
       console.error("Failed to update status:", error);
@@ -253,7 +251,6 @@ export default function PurchaseInvoiceDetailPage({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success(t("common.pdfDownloaded"));
     } catch (error) {
       toast.error(t("common.pdfDownloadFailed"));
       console.error(error);

@@ -371,7 +371,6 @@ export default function NewCreditNotePage() {
       }
 
       const data = await response.json();
-      toast.success(t("creditNotes.creditNoteCreated"));
       router.push(`/credit-notes/${data.id}`);
     } catch (error: any) {
       toast.error(error.message);

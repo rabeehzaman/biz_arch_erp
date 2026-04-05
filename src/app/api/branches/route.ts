@@ -18,9 +18,7 @@ export async function GET() {
             orderBy: { createdAt: "asc" },
         });
 
-        return NextResponse.json(branches, {
-            headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
-        });
+        return NextResponse.json(branches);
     } catch (error) {
         console.error("Failed to fetch branches:", error);
         return NextResponse.json({ error: "Failed to fetch branches" }, { status: 500 });

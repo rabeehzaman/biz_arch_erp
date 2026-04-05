@@ -126,7 +126,6 @@ export default function JournalEntriesPage() {
         const err = await response.json();
         throw new Error(err.error || "Failed to delete");
       }
-      toast.success(t("accounting.journalEntryDeleted"));
       fetchEntries();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("common.error"));

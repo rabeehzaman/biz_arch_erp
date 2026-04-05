@@ -169,7 +169,6 @@ export default function EditInvoicePage({
       ];
     });
 
-    toast.success(`${product.name} — ${parsed.weightKg} kg`);
   }, [products, weighMachineConfig]);
 
   useBarcodeScanner(handleWeightScan, weighMachineEnabled);
@@ -427,14 +426,6 @@ export default function EditInvoicePage({
         const data = await response.json();
         const warnings = data.warnings || [];
 
-        // Display warnings if any
-        if (warnings.length > 0) {
-          warnings.forEach((warning: string) => {
-            toast.warning(warning, { duration: 6000 });
-          });
-        }
-
-        toast.success(t("sales.invoiceUpdated"));
         router.push(`/invoices/${id}`);
       } else {
         toast.error(t("sales.failedToUpdateInvoice"));

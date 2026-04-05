@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import {
+  getUserAllowedCashBankAccountIds,
+  buildCashBankAccessWhereClause,
+  getUserAllowedBranchIds,
+  buildBranchWhereClause,
+} from "@/lib/user-access";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,13 +17,35 @@ export async function GET(request: NextRequest) {
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get("activeOnly") === "true";
+
+    const [allowedAccountIds, allowedBranchIds] = await Promise.all([
+      getUserAllowedCashBankAccountIds(prisma, organizationId, userId, role),
+      getUserAllowedBranchIds(prisma, organizationId, userId, role),
+    ]);
+
+    // If user has no access in an opt-in org, return empty
+    if (
+      (allowedAccountIds !== null && allowedAccountIds.length === 0) ||
+      (allowedBranchIds !== null && allowedBranchIds.length === 0)
+    ) {
+      return NextResponse.json([]);
+    }
+
+    const accountFilter = buildCashBankAccessWhereClause(allowedAccountIds);
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, {
+      includeNullBranch: true,
+    });
 
     const accounts = await prisma.cashBankAccount.findMany({
       where: {
         organizationId,
         ...(activeOnly ? { isActive: true } : {}),
+        ...accountFilter,
+        ...branchFilter,
       },
       orderBy: { createdAt: "asc" },
       include: {
@@ -90,6 +118,7 @@ export async function POST(request: NextRequest) {
             description: "Opening Balance",
             transactionDate: new Date(),
             organizationId,
+            createdById: session.user.id,
           },
         });
       }

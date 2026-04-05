@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate supplier payment number: SPAY-YYYYMMDD-XXX
 async function generateSupplierPaymentNumber(organizationId: string) {
@@ -34,9 +35,17 @@ export async function GET(request: NextRequest) {
     }
 
     const organizationId = getOrgId(session);
+    const userId = session.user.id!;
+    const role = (session.user as any).role || "user";
     const { limit, offset, search } = parsePagination(request);
 
-    const baseWhere = { organizationId };
+    const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId, role);
+    if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
+      return paginatedResponse([], 0, false);
+    }
+    const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
+
+    const baseWhere = { organizationId, ...branchFilter };
     const where = search
       ? {
           ...baseWhere,
