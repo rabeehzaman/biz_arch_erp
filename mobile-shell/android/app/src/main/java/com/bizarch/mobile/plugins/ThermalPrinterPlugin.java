@@ -939,28 +939,30 @@ public class ThermalPrinterPlugin extends Plugin {
             return;
         }
 
-        // Inject viewport meta tag to make CSS pixels = bitmap pixels (bypass density scaling)
-        // and replace mm-based widths with 100% so body fills the viewport
-        String viewportMeta = "<meta name=\"viewport\" content=\"width=" + paperWidth + ", initial-scale=1.0, user-scalable=no\">";
+        // Replace mm-based widths with 100% so body fills the WebView viewport
         String adjustedHtml = html
-                .replace("<meta charset=\"utf-8\">", "<meta charset=\"utf-8\">\n" + viewportMeta)
                 .replace("width: 80mm", "width: 100%")
-                .replace("width:80mm", "width: 100%")
-                .replace("size: 80mm", "size: " + paperWidth + "px");
+                .replace("width:80mm", "width: 100%");
 
         getActivity().runOnUiThread(() -> {
             try {
-                android.webkit.WebView webView = new android.webkit.WebView(getActivity());
+                // Create mdpi (density=1.0) context so 1 CSS pixel = 1 bitmap pixel
+                android.content.res.Configuration mdpiConfig =
+                        new android.content.res.Configuration(getActivity().getResources().getConfiguration());
+                mdpiConfig.densityDpi = android.util.DisplayMetrics.DENSITY_MEDIUM; // 160
+                android.content.Context mdpiContext = getActivity().createConfigurationContext(mdpiConfig);
+
+                // Must call before creating WebView on API 21+
+                android.webkit.WebView.enableSlowWholeDocumentDraw();
+
+                android.webkit.WebView webView = new android.webkit.WebView(mdpiContext);
                 webView.setVisibility(android.view.View.INVISIBLE);
                 webView.setBackgroundColor(Color.WHITE);
 
-                // Disable zoom/scaling — we want 1:1 pixel mapping
                 webView.getSettings().setJavaScriptEnabled(false);
                 webView.getSettings().setLoadWithOverviewMode(false);
                 webView.getSettings().setUseWideViewPort(false);
-                webView.getSettings().setSupportZoom(false);
-                webView.getSettings().setBuiltInZoomControls(false);
-                webView.setInitialScale(100);
+                webView.getSettings().setTextZoom(100);
 
                 // Attach to activity's view hierarchy (required for rendering)
                 android.widget.FrameLayout rootView = getActivity().findViewById(android.R.id.content);
