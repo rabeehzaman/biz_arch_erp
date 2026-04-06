@@ -925,7 +925,7 @@ public class ThermalPrinterPlugin extends Plugin {
         return out.toByteArray();
     }
 
-    // ── HTML to thermal printer (WebView capture pipeline) ────────
+    // ── HTML to thermal printer (WebView → PDF → PdfRenderer pipeline) ──
 
     @SuppressLint("MissingPermission")
     @PluginMethod
@@ -939,119 +939,141 @@ public class ThermalPrinterPlugin extends Plugin {
             return;
         }
 
-        // Replace mm-based widths with 100% so body fills the WebView viewport
-        String adjustedHtml = html
-                .replace("width: 80mm", "width: 100%")
-                .replace("width:80mm", "width: 100%");
-
-        final float density = getActivity().getResources().getDisplayMetrics().density;
-        final int layoutWidth = Math.round(paperWidth * density); // e.g. 576 * 2.625 = 1512
-
         getActivity().runOnUiThread(() -> {
             try {
-                android.webkit.WebView.enableSlowWholeDocumentDraw();
-
                 android.webkit.WebView webView = new android.webkit.WebView(getActivity());
                 webView.setVisibility(android.view.View.INVISIBLE);
                 webView.setBackgroundColor(Color.WHITE);
-
                 webView.getSettings().setJavaScriptEnabled(false);
-                webView.getSettings().setLoadWithOverviewMode(false);
-                webView.getSettings().setUseWideViewPort(false);
-                webView.getSettings().setTextZoom(100);
 
-                // Layout at density-scaled width so CSS viewport = paperWidth CSS pixels
                 android.widget.FrameLayout rootView = getActivity().findViewById(android.R.id.content);
                 rootView.addView(webView, new android.widget.FrameLayout.LayoutParams(
-                        layoutWidth, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT));
+                        android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.FrameLayout.LayoutParams.WRAP_CONTENT));
 
                 webView.setWebViewClient(new android.webkit.WebViewClient() {
-                    private boolean captured = false;
+                    private boolean processed = false;
 
                     @Override
                     public void onPageFinished(android.webkit.WebView view, String url) {
-                        if (captured) return;
-                        captured = true;
+                        if (processed) return;
+                        processed = true;
 
-                        // Wait for layout + rendering to complete
+                        // Delay for rendering to complete before creating print adapter
                         view.postDelayed(() -> {
                             try {
-                                // Measure at density-scaled width
-                                view.measure(
-                                        android.view.View.MeasureSpec.makeMeasureSpec(layoutWidth,
-                                                android.view.View.MeasureSpec.EXACTLY),
-                                        android.view.View.MeasureSpec.makeMeasureSpec(0,
-                                                android.view.View.MeasureSpec.UNSPECIFIED));
+                                // 80mm = 3150 mils, tall page to avoid breaks
+                                android.print.PrintAttributes attrs = new android.print.PrintAttributes.Builder()
+                                        .setMediaSize(new android.print.PrintAttributes.MediaSize(
+                                                "RECEIPT_80MM", "80mm Receipt", 3150, 50000))
+                                        .setResolution(new android.print.PrintAttributes.Resolution(
+                                                "pdf", "PDF", 72, 72))
+                                        .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
+                                        .build();
 
-                                int measuredH = view.getMeasuredHeight();
-                                if (measuredH <= 0) {
-                                    measuredH = (int) (view.getContentHeight() * density);
-                                }
-                                if (measuredH <= 0) measuredH = (int) (800 * density);
+                                android.print.PrintDocumentAdapter adapter =
+                                        view.createPrintDocumentAdapter("receipt");
 
-                                view.layout(0, 0, layoutWidth, measuredH);
+                                File pdfFile = File.createTempFile("receipt_", ".pdf",
+                                        getContext().getCacheDir());
 
-                                // Capture at full density resolution, then downscale
-                                Bitmap largeBitmap = Bitmap.createBitmap(
-                                        layoutWidth, measuredH, Bitmap.Config.ARGB_8888);
-                                largeBitmap.eraseColor(Color.WHITE);
-                                android.graphics.Canvas canvas = new android.graphics.Canvas(largeBitmap);
-                                view.draw(canvas);
+                                new android.print.PdfPrint(attrs).print(adapter, pdfFile,
+                                        new android.print.PdfPrint.Callback() {
+                                    @Override
+                                    public void onSuccess(File file) {
+                                        // Clean up WebView on UI thread
+                                        getActivity().runOnUiThread(() -> {
+                                            rootView.removeView(view);
+                                            view.destroy();
+                                        });
 
-                                // Downscale to printer width
-                                int bitmapH = Math.round(measuredH / density);
-                                Bitmap bitmap = Bitmap.createScaledBitmap(largeBitmap, paperWidth, bitmapH, true);
-                                largeBitmap.recycle();
+                                        // Process PDF on background thread
+                                        printExecutor.execute(() -> {
+                                            PdfRenderer renderer = null;
+                                            ParcelFileDescriptor fd = null;
+                                            try {
+                                                fd = ParcelFileDescriptor.open(file,
+                                                        ParcelFileDescriptor.MODE_READ_ONLY);
+                                                renderer = new PdfRenderer(fd);
+                                                fd = null;
 
-                                // Remove WebView from hierarchy
-                                rootView.removeView(view);
-                                view.destroy();
+                                                int pageCount = renderer.getPageCount();
+                                                ByteArrayOutputStream allData = new ByteArrayOutputStream();
+                                                allData.write(new byte[]{0x1B, 0x40}); // ESC @
 
-                                final Bitmap capturedBitmap = bitmap;
-                                printExecutor.execute(() -> {
-                                    try {
-                                        floydSteinbergDither(capturedBitmap);
+                                                for (int i = 0; i < pageCount; i++) {
+                                                    PdfRenderer.Page page = renderer.openPage(i);
+                                                    try {
+                                                        float scale = (float) paperWidth / (float) page.getWidth();
+                                                        int bitmapH = Math.round(page.getHeight() * scale);
 
-                                        ByteArrayOutputStream allData = new ByteArrayOutputStream();
-                                        allData.write(new byte[]{0x1B, 0x40});
+                                                        Bitmap bitmap = Bitmap.createBitmap(
+                                                                paperWidth, bitmapH, Bitmap.Config.ARGB_8888);
+                                                        bitmap.eraseColor(Color.WHITE);
+                                                        Matrix matrix = new Matrix();
+                                                        matrix.setScale(scale, scale);
+                                                        page.render(bitmap, null, matrix,
+                                                                PdfRenderer.Page.RENDER_MODE_FOR_PRINT);
 
-                                        byte[] rasterData = buildStripRasterCommands(
-                                                capturedBitmap, paperWidth, capturedBitmap.getHeight(),
-                                                MAX_IMAGE_CHUNK_HEIGHT);
-                                        allData.write(rasterData);
-                                        capturedBitmap.recycle();
+                                                        floydSteinbergDither(bitmap);
+                                                        allData.write(buildStripRasterCommands(
+                                                                bitmap, paperWidth, bitmapH,
+                                                                MAX_IMAGE_CHUNK_HEIGHT));
+                                                        bitmap.recycle();
+                                                    } finally {
+                                                        page.close();
+                                                    }
+                                                }
 
-                                        allData.write(new byte[]{0x1B, 0x64, 0x04});
-                                        if (cutPaper) {
-                                            allData.write(new byte[]{0x1D, 0x56, 0x42, 0x00});
-                                        }
+                                                allData.write(new byte[]{0x1B, 0x64, 0x04});
+                                                if (cutPaper) {
+                                                    allData.write(new byte[]{0x1D, 0x56, 0x42, 0x00});
+                                                }
 
-                                        if (isBluetooth(call)) {
-                                            String address = call.getString("address", "").trim();
-                                            sendRawBluetooth(address, allData.toByteArray());
-                                        } else {
-                                            String host = call.getString("host", "").trim();
-                                            int port = call.getInt("port", DEFAULT_PORT);
-                                            sendOnce(host, port, allData.toByteArray());
-                                        }
+                                                if (isBluetooth(call)) {
+                                                    String address = call.getString("address", "").trim();
+                                                    sendRawBluetooth(address, allData.toByteArray());
+                                                } else {
+                                                    String host = call.getString("host", "").trim();
+                                                    int port = call.getInt("port", DEFAULT_PORT);
+                                                    sendOnce(host, port, allData.toByteArray());
+                                                }
 
-                                        JSObject result = new JSObject();
-                                        result.put("success", true);
-                                        call.resolve(result);
-                                    } catch (Exception e) {
-                                        call.reject("HTML thermal print failed: " + e.getMessage(), "PRINT_ERROR");
+                                                JSObject result = new JSObject();
+                                                result.put("success", true);
+                                                call.resolve(result);
+                                            } catch (Exception e) {
+                                                call.reject("PDF render failed: " + e.getMessage(), "PRINT_ERROR");
+                                            } finally {
+                                                if (renderer != null) renderer.close();
+                                                else if (fd != null) {
+                                                    try { fd.close(); } catch (IOException ignored) {}
+                                                }
+                                                file.delete();
+                                            }
+                                        });
+                                    }
+
+                                    @Override
+                                    public void onFailure(String error) {
+                                        getActivity().runOnUiThread(() -> {
+                                            rootView.removeView(view);
+                                            view.destroy();
+                                        });
+                                        pdfFile.delete();
+                                        call.reject("PDF generation failed: " + error, "PDF_ERROR");
                                     }
                                 });
                             } catch (Exception e) {
                                 rootView.removeView(view);
                                 view.destroy();
-                                call.reject("WebView capture failed: " + e.getMessage(), "CAPTURE_ERROR");
+                                call.reject("Print adapter failed: " + e.getMessage(), "ADAPTER_ERROR");
                             }
-                        }, 800);
+                        }, 500);
                     }
                 });
 
-                webView.loadDataWithBaseURL(null, adjustedHtml, "text/html", "UTF-8", null);
+                webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
             } catch (Exception e) {
                 call.reject("Failed to create WebView: " + e.getMessage(), "WEBVIEW_ERROR");
             }
