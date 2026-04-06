@@ -4,6 +4,7 @@ import { registerPlugin } from "@capacitor/core";
 
 interface PdfPrinterPlugin {
   print(options: { data: string; jobName: string }): Promise<{ success: boolean }>;
+  printHtml(options: { html: string; jobName: string }): Promise<{ success: boolean }>;
   download(options: {
     data: string;
     filename: string;
@@ -30,6 +31,13 @@ export async function capacitorPrintPdf(
 ): Promise<void> {
   const base64 = await blobToBase64(blob);
   await PdfPrinter.print({ data: base64, jobName });
+}
+
+export async function capacitorPrintHtml(
+  html: string,
+  jobName: string
+): Promise<void> {
+  await PdfPrinter.printHtml({ html, jobName });
 }
 
 export async function capacitorDownloadPdf(

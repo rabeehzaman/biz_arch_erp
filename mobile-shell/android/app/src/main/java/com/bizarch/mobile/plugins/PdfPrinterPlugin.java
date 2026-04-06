@@ -14,13 +14,21 @@ import android.print.PrintDocumentAdapter;
 import android.print.PrintDocumentInfo;
 import android.print.PrintManager;
 import android.provider.MediaStore;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.util.Base64;
 import android.util.Log;
+import androidx.core.app.NotificationCompat;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,6 +38,19 @@ import java.io.OutputStream;
 @CapacitorPlugin(name = "PdfPrinter")
 public class PdfPrinterPlugin extends Plugin {
     private static final String TAG = "PdfPrinter";
+    private static final String CHANNEL_ID = "pdf_downloads";
+
+    @Override
+    public void load() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID, "Downloads",
+                    NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription("PDF download notifications");
+            NotificationManager nm = getContext().getSystemService(NotificationManager.class);
+            if (nm != null) nm.createNotificationChannel(channel);
+        }
+    }
 
     @PluginMethod
     public void print(PluginCall call) {
@@ -129,6 +150,42 @@ public class PdfPrinterPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void printHtml(PluginCall call) {
+        String html = call.getString("html", "");
+        String jobName = call.getString("jobName", "Receipt");
+
+        if (html.isEmpty()) {
+            call.reject("HTML content is required", "MISSING_DATA");
+            return;
+        }
+
+        getActivity().runOnUiThread(() -> {
+            try {
+                WebView webView = new WebView(getContext());
+                webView.getSettings().setJavaScriptEnabled(false);
+                webView.setWebViewClient(new WebViewClient() {
+                    private boolean printed = false;
+
+                    @Override
+                    public void onPageFinished(WebView view, String url) {
+                        if (printed) return;
+                        printed = true;
+
+                        PrintManager printManager = (PrintManager) getActivity()
+                                .getSystemService(Activity.PRINT_SERVICE);
+                        PrintDocumentAdapter adapter = view.createPrintDocumentAdapter(jobName);
+                        printManager.print(jobName, adapter, null);
+                        call.resolve(new JSObject().put("success", true));
+                    }
+                });
+                webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+            } catch (Exception e) {
+                call.reject("Print failed: " + e.getMessage(), "PRINT_ERROR");
+            }
+        });
+    }
+
+    @PluginMethod
     public void download(PluginCall call) {
         String base64Data = call.getString("data", "");
         String filename = call.getString("filename", "document.pdf");
@@ -170,6 +227,8 @@ public class PdfPrinterPlugin extends Plugin {
                 os.write(pdfBytes);
                 os.close();
 
+                showDownloadNotification(filename, uri);
+
                 JSObject result = new JSObject();
                 result.put("success", true);
                 result.put("uri", uri.toString());
@@ -195,6 +254,33 @@ public class PdfPrinterPlugin extends Plugin {
             }
         } catch (Exception e) {
             call.reject("Download failed: " + e.getMessage(), "DOWNLOAD_ERROR");
+        }
+    }
+
+    private void showDownloadNotification(String filename, Uri uri) {
+        try {
+            Intent viewIntent = new Intent(Intent.ACTION_VIEW);
+            viewIntent.setDataAndType(uri, "application/pdf");
+            viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    getContext(), 0, viewIntent,
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), CHANNEL_ID)
+                    .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                    .setContentTitle("Download complete")
+                    .setContentText(filename)
+                    .setAutoCancel(true)
+                    .setContentIntent(pendingIntent)
+                    .setPriority(NotificationCompat.PRIORITY_LOW);
+
+            NotificationManager nm = getContext().getSystemService(NotificationManager.class);
+            if (nm != null) {
+                nm.notify((int) System.currentTimeMillis(), builder.build());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to show download notification: " + e.getMessage());
         }
     }
 }

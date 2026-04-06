@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { InvoiceReceipt, type InvoiceReceiptData } from "@/components/invoices/invoice-receipt";
 import { printReceipt } from "@/lib/print-receipt";
+import { isCapacitorEnvironment } from "@/lib/capacitor-plugins";
 
 export type { InvoiceReceiptData } from "@/components/invoices/invoice-receipt";
 
@@ -53,7 +54,13 @@ export function generateInvoiceReceiptHtml(data: InvoiceReceiptData, options?: R
 </html>`;
 }
 
-export function printInvoiceReceipt(data: InvoiceReceiptData, options?: ReceiptHtmlOptions): Promise<void> {
+export async function printInvoiceReceipt(data: InvoiceReceiptData, options?: ReceiptHtmlOptions): Promise<void> {
   const html = generateInvoiceReceiptHtml(data, options);
+
+  if (isCapacitorEnvironment()) {
+    const { capacitorPrintHtml } = await import("@/lib/capacitor-pdf-printer");
+    return capacitorPrintHtml(html, "Invoice Receipt");
+  }
+
   return printReceipt(html);
 }
