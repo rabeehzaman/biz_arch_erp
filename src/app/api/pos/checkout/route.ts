@@ -184,6 +184,7 @@ export async function POST(request: NextRequest) {
           arabicName: true,
           name: true,
           pdfHeaderImageUrl: true,
+          logoUrl: true,
           posReceiptLogoUrl: true,
           posReceiptLogoHeight: true,
           brandColor: true,
@@ -1094,7 +1095,7 @@ export async function POST(request: NextRequest) {
     const responsePayload = {
       ...responseResult,
       receiptMeta: {
-        logoUrl: org?.posReceiptLogoUrl || org?.pdfHeaderImageUrl || null,
+        logoUrl: org?.posReceiptLogoUrl || org?.logoUrl || org?.pdfHeaderImageUrl || null,
         logoHeight: org?.posReceiptLogoHeight ?? 80,
         brandColor: org?.brandColor || null,
         vatNumber: org?.vatNumber || null,

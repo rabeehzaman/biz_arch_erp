@@ -32,7 +32,7 @@ export async function GET(
     const [org, pdfFormatSetting, assignedTemplatesSetting] = await Promise.all([
       prisma.organization.findUnique({
         where: { id: organizationId },
-        select: { name: true, address: true, phone: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true, brandColor: true, edition: true },
+        select: { name: true, address: true, phone: true, gstEnabled: true, gstin: true, gstStateCode: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, logoUrl: true, arabicName: true, arabicAddress: true, vatNumber: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true, brandColor: true, edition: true },
       }),
       prisma.setting.findFirst({
         where: { organizationId, key: "invoice_pdf_format", userId: null },
@@ -225,7 +225,7 @@ export async function GET(
           invoice: jwInvoice,
           currencySymbol: org?.currency === "SAR" ? "﷼" : "₹",
           currency: org?.currency ?? "INR",
-          headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
+          headerImageUrl: (org?.logoUrl || org?.pdfHeaderImageUrl) ?? undefined,
         }) as any
       );
     } else if (invoicePdfFormat === "A4_VAT") {
@@ -469,7 +469,7 @@ export async function GET(
           currencySymbol,
           currency: org?.currency || "INR",
           brandColor: org?.brandColor ?? undefined,
-          headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
+          headerImageUrl: (org?.logoUrl || org?.pdfHeaderImageUrl) ?? undefined,
         }) as any
       );
     } else {

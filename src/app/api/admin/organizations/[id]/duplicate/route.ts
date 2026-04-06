@@ -98,6 +98,7 @@ export async function POST(
                         pdfFooterImageUrl: sourceOrg.pdfFooterImageUrl,
                         brandColor: sourceOrg.brandColor,
                         invoiceLogoHeight: sourceOrg.invoiceLogoHeight,
+                        logoUrl: sourceOrg.logoUrl,
                         posReceiptLogoUrl: sourceOrg.posReceiptLogoUrl,
                         posReceiptLogoHeight: sourceOrg.posReceiptLogoHeight,
                         posAccountingMode: sourceOrg.posAccountingMode,

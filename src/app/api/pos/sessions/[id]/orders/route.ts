@@ -72,6 +72,7 @@ export async function GET(
         where: { id: organizationId },
         select: {
           posReceiptLogoUrl: true,
+          logoUrl: true,
           pdfHeaderImageUrl: true,
           posReceiptLogoHeight: true,
           brandColor: true,
@@ -104,7 +105,7 @@ export async function GET(
     return NextResponse.json({
       orders: ordersWithQR,
       receiptMeta: {
-        logoUrl: org?.posReceiptLogoUrl || org?.pdfHeaderImageUrl || null,
+        logoUrl: org?.posReceiptLogoUrl || org?.logoUrl || org?.pdfHeaderImageUrl || null,
         logoHeight: org?.posReceiptLogoHeight ?? 80,
         brandColor: org?.brandColor || null,
         vatNumber: org?.vatNumber || null,

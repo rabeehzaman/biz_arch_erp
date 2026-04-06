@@ -117,6 +117,7 @@ interface OrganizationDetails {
     pdfFooterImageUrl: string | null;
     brandColor: string | null;
     invoiceLogoHeight: number | null;
+    logoUrl: string | null;
     posReceiptLogoUrl: string | null;
     posReceiptLogoHeight: number | null;
     language: string;
@@ -225,6 +226,7 @@ export default function OrganizationDetailsPage() {
     const [pdfFooterImageUrl, setPdfFooterImageUrl] = useState("");
     const [brandColor, setBrandColor] = useState("");
     const [invoiceLogoHeight, setInvoiceLogoHeight] = useState(60);
+    const [logoUrl, setLogoUrl] = useState("");
     const [posReceiptLogoUrl, setPosReceiptLogoUrl] = useState("");
     const [posReceiptLogoHeight, setPosReceiptLogoHeight] = useState(80);
     const [language, setLanguage] = useState("en");
@@ -372,6 +374,7 @@ export default function OrganizationDetailsPage() {
         setPdfFooterImageUrl(data.pdfFooterImageUrl || "");
         setBrandColor(data.brandColor || "");
         setInvoiceLogoHeight(data.invoiceLogoHeight ?? 60);
+        setLogoUrl(data.logoUrl || "");
         setPosReceiptLogoUrl(data.posReceiptLogoUrl || "");
         setPosReceiptLogoHeight(data.posReceiptLogoHeight ?? 80);
         setLanguage(data.language || "en");
@@ -556,6 +559,7 @@ export default function OrganizationDetailsPage() {
                     pdfFooterImageUrl,
                     brandColor: brandColor || null,
                     invoiceLogoHeight,
+                    logoUrl: logoUrl || null,
                     posReceiptLogoUrl: posReceiptLogoUrl || null,
                     posReceiptLogoHeight,
                     language,
@@ -1751,70 +1755,73 @@ export default function OrganizationDetailsPage() {
                                         </div>
                                     )}
 
-                                    {(invoicePdfFormat === "A4_MODERN_GST" || invoicePdfFormat === "A4_BILINGUAL") && (
-                                        <div className="space-y-4 pt-6 border-t border-border mt-4">
-                                            <div className="space-y-0.5 mb-2">
-                                                <Label>{t("admin.companyLogoUrl")}</Label>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {t("admin.companyLogoDesc")}
-                                                </p>
-                                            </div>
-                                            <div className="space-y-2 max-w-md">
-                                                <Label htmlFor="pdfHeaderImageUrl" className="text-xs">{t("admin.logoImageUrl")}</Label>
-                                                <Input
-                                                    id="pdfHeaderImageUrl"
-                                                    value={pdfHeaderImageUrl}
-                                                    onChange={(e) => setPdfHeaderImageUrl(e.target.value)}
-                                                    placeholder="https://example.com/logo.png"
-                                                />
-                                            </div>
-                                            <div className="space-y-2 max-w-md mt-4">
-                                                <Label className="text-xs">{t("admin.invoiceLogoHeight")}: {invoiceLogoHeight}px</Label>
-                                                <input
-                                                    type="range"
-                                                    min={20}
-                                                    max={200}
-                                                    value={invoiceLogoHeight}
-                                                    onChange={(e) => setInvoiceLogoHeight(Number(e.target.value))}
-                                                    className="w-full"
-                                                />
-                                                <p className="text-xs text-muted-foreground">{t("admin.logoHeightDesc")}</p>
-                                            </div>
-
-                                            <div className="space-y-0.5 mb-2 mt-6">
-                                                <Label>{t("admin.brandColor")}</Label>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {t("admin.brandColorDesc")}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-3 max-w-md">
-                                                {(() => {
-                                                    const defaultColor = invoicePdfFormat === "A4_BILINGUAL" ? "#a10a11" : "#2a3b38";
-                                                    return (
-                                                        <>
-                                                            <Input
-                                                                id="brandColor"
-                                                                value={brandColor}
-                                                                onChange={(e) => setBrandColor(e.target.value)}
-                                                                placeholder={defaultColor}
-                                                                className="flex-1"
-                                                            />
-                                                            <input
-                                                                type="color"
-                                                                value={brandColor || defaultColor}
-                                                                onChange={(e) => setBrandColor(e.target.value)}
-                                                                className="h-9 w-12 cursor-pointer rounded border border-input p-0.5"
-                                                            />
-                                                            <div
-                                                                className="h-9 w-9 rounded border border-input flex-shrink-0"
-                                                                style={{ backgroundColor: brandColor || defaultColor }}
-                                                            />
-                                                        </>
-                                                    );
-                                                })()}
-                                            </div>
+                                    {/* Company Logo — used by Modern GST, Jewellery, and receipt templates */}
+                                    <div className="space-y-4 pt-6 border-t border-border mt-4">
+                                        <div className="space-y-0.5 mb-2">
+                                            <Label>{t("admin.companyLogoUrl")}</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("admin.companyLogoDesc")}
+                                            </p>
                                         </div>
-                                    )}
+                                        <div className="space-y-2 max-w-md">
+                                            <Label htmlFor="logoUrl" className="text-xs">{t("admin.logoImageUrl")}</Label>
+                                            <Input
+                                                id="logoUrl"
+                                                value={logoUrl}
+                                                onChange={(e) => setLogoUrl(e.target.value)}
+                                                placeholder="https://example.com/logo.png"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 max-w-md mt-4">
+                                            <Label className="text-xs">{t("admin.invoiceLogoHeight")}: {invoiceLogoHeight}px</Label>
+                                            <input
+                                                type="range"
+                                                min={20}
+                                                max={200}
+                                                value={invoiceLogoHeight}
+                                                onChange={(e) => setInvoiceLogoHeight(Number(e.target.value))}
+                                                className="w-full"
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t("admin.logoHeightDesc")}</p>
+                                        </div>
+
+                                        {(invoicePdfFormat === "A4_MODERN_GST" || invoicePdfFormat === "A4_BILINGUAL") && (
+                                            <>
+                                                <div className="space-y-0.5 mb-2 mt-6">
+                                                    <Label>{t("admin.brandColor")}</Label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {t("admin.brandColorDesc")}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3 max-w-md">
+                                                    {(() => {
+                                                        const defaultColor = invoicePdfFormat === "A4_BILINGUAL" ? "#a10a11" : "#2a3b38";
+                                                        return (
+                                                            <>
+                                                                <Input
+                                                                    id="brandColor"
+                                                                    value={brandColor}
+                                                                    onChange={(e) => setBrandColor(e.target.value)}
+                                                                    placeholder={defaultColor}
+                                                                    className="flex-1"
+                                                                />
+                                                                <input
+                                                                    type="color"
+                                                                    value={brandColor || defaultColor}
+                                                                    onChange={(e) => setBrandColor(e.target.value)}
+                                                                    className="h-9 w-12 cursor-pointer rounded border border-input p-0.5"
+                                                                />
+                                                                <div
+                                                                    className="h-9 w-9 rounded border border-input flex-shrink-0"
+                                                                    style={{ backgroundColor: brandColor || defaultColor }}
+                                                                />
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
 
                                     {/* POS Receipt Logo */}
                                     <div className="space-y-4 pt-6 border-t border-border mt-4">

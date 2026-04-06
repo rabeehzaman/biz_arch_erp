@@ -133,6 +133,7 @@ export async function PUT(
       pdfFooterImageUrl,
       brandColor,
       invoiceLogoHeight,
+      logoUrl,
       posReceiptLogoUrl,
       posReceiptLogoHeight,
       posAccountingMode,
@@ -383,6 +384,7 @@ export async function PUT(
     if (pdfFooterImageUrl !== undefined) updateData.pdfFooterImageUrl = pdfFooterImageUrl || null;
     if (brandColor !== undefined) updateData.brandColor = brandColor || null;
     if (invoiceLogoHeight !== undefined) updateData.invoiceLogoHeight = Number(invoiceLogoHeight) || 60;
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl || null;
     if (posReceiptLogoUrl !== undefined) updateData.posReceiptLogoUrl = posReceiptLogoUrl || null;
     if (posReceiptLogoHeight !== undefined) updateData.posReceiptLogoHeight = Number(posReceiptLogoHeight) || 80;
     if (posAccountingMode !== undefined) updateData.posAccountingMode = posAccountingMode;
