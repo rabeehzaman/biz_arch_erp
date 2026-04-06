@@ -94,7 +94,6 @@ const formatCurrency = (amount: number, currency?: string) => {
 };
 
 export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
-  const color = data.brandColor || "#1a4731";
   const cur = data.currency || "SAR";
 
   // Bilingual label helper — "English / عربي"
@@ -114,35 +113,29 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
 
   const accentDivider: React.CSSProperties = {
     height: "2px",
-    background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+    background: "#000",
     margin: "8px 0",
     border: "none",
   };
 
   const thinDivider: React.CSSProperties = {
     height: "1px",
-    background: "#ddd",
+    background: "#000",
     margin: "6px 0",
     border: "none",
   };
 
   const dottedDivider: React.CSSProperties = {
-    borderTop: "1px dashed #ccc",
+    borderTop: "1px dashed #000",
     margin: "6px 0",
   };
 
-  // Balance due styling
-  const getBalanceStyle = (): { bg: string; text: string; border: string; label: string } => {
-    if (data.balanceDue <= 0) {
-      return { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0", label: "مدفوعة / PAID" };
-    }
-    if (data.isOverdue) {
-      return { bg: "#fef2f2", text: "#dc2626", border: "#fecaca", label: "متأخر / OVERDUE" };
-    }
-    return { bg: "#fffbeb", text: "#d97706", border: "#fde68a", label: "مستحق / DUE" };
+  // Balance due styling — B&W compatible
+  const getBalanceLabel = (): string => {
+    if (data.balanceDue <= 0) return "مدفوعة / PAID";
+    if (data.isOverdue) return "متأخر / OVERDUE";
+    return "مستحق / DUE";
   };
-
-  const balanceStyle = getBalanceStyle();
 
   // Invoice type label
   const invoiceTypeLabel = data.saudiInvoiceType === "STANDARD"
@@ -220,7 +213,7 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
             color: "#000",
             marginTop: "3px",
             padding: "2px 8px",
-            background: "#f5f5f5",
+            border: "1px solid #000",
             borderRadius: "3px",
             display: "inline-block",
           }}>
@@ -260,9 +253,8 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
       {/* 6. Bill To Box */}
       <div style={{
         padding: "6px 8px",
-        background: "#f9fafb",
         borderRadius: "4px",
-        border: "1px solid #e5e7eb",
+        border: "1px solid #000",
         marginBottom: "4px",
       }}>
         <div style={{
@@ -305,7 +297,7 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
             color: "#000",
             marginTop: "4px",
             padding: "2px 6px",
-            background: "#e5e7eb",
+            border: "1px solid #000",
             borderRadius: "3px",
             display: "inline-block",
           }}>
@@ -340,7 +332,7 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
           <div key={i} style={{
             paddingBottom: "4px",
             marginBottom: "4px",
-            borderBottom: i < data.items.length - 1 ? "1px dotted #eee" : "none",
+            borderBottom: i < data.items.length - 1 ? "1px dotted #000" : "none",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <span style={{ flex: 1, fontSize: "12px", fontWeight: 600, paddingRight: "4px" }}>
@@ -357,7 +349,7 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
               </span>
             </div>
             {item.discount > 0 && (
-              <div style={{ fontSize: "10px", color: "#e74c3c", marginTop: "1px" }}>
+              <div style={{ fontSize: "10px", color: "#000", marginTop: "1px" }}>
                 خصم / Disc: {item.discount}%
               </div>
             )}
@@ -403,8 +395,8 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
           fontSize: "15px",
           marginTop: "3px",
           padding: "4px 8px",
-          background: color,
-          color: "#fff",
+          border: "2px solid #000",
+          color: "#000",
           borderRadius: "4px",
         }}>
           <span>{bl("TOTAL", "الإجمالي")}</span>
@@ -427,15 +419,14 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
           fontWeight: 700,
           marginTop: "4px",
           padding: "4px 8px",
-          background: balanceStyle.bg,
-          color: balanceStyle.text,
+          color: "#000",
           borderRadius: "4px",
-          border: `1px solid ${balanceStyle.border}`,
+          border: "1px solid #000",
         }}>
           <span>{bl("Balance Due", "الرصيد المستحق")}</span>
           <span>
             {formatCurrency(Math.abs(data.balanceDue), cur)}
-            <span style={{ fontSize: "9px", marginLeft: "4px" }}>{balanceStyle.label}</span>
+            <span style={{ fontSize: "9px", marginLeft: "4px" }}>{getBalanceLabel()}</span>
           </span>
         </div>
       </div>
@@ -499,9 +490,8 @@ export function InvoiceReceipt({ data }: { data: InvoiceReceiptData }) {
           ...centerStyle,
           margin: "4px 0",
           padding: "8px",
-          border: "1px solid #e5e7eb",
+          border: "1px solid #000",
           borderRadius: "6px",
-          background: "#fafafa",
         }}>
           <img
             src={data.qrCodeDataURL}

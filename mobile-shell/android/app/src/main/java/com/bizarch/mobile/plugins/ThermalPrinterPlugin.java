@@ -956,13 +956,6 @@ public class ThermalPrinterPlugin extends Plugin {
             return;
         }
 
-        // Force B&W: inject CSS to strip all colors for thermal printing
-        String bwCss = "<style>* { color: #000 !important; background-color: #fff !important; "
-                + "border-color: #000 !important; box-shadow: none !important; "
-                + "text-shadow: none !important; -webkit-print-color-adjust: exact !important; } "
-                + "img { filter: grayscale(100%) contrast(150%) !important; }</style>";
-        String adjustedHtml = html.replace("</head>", bwCss + "</head>");
-
         // The CSS says width:80mm = 302px at 96 DPI (WebView default).
         // Capture at CSS width, then scale up to printer dots.
         final int cssWidth = 302; // 80mm at 96 DPI
@@ -1064,7 +1057,7 @@ public class ThermalPrinterPlugin extends Plugin {
                     }
                 });
 
-                webView.loadDataWithBaseURL(null, adjustedHtml, "text/html", "UTF-8", null);
+                webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
             } catch (Exception e) {
                 call.reject("Failed to create WebView: " + e.getMessage(), "WEBVIEW_ERROR");
             }
