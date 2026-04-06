@@ -30,6 +30,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.core.content.FileProvider;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -254,6 +256,52 @@ public class PdfPrinterPlugin extends Plugin {
             }
         } catch (Exception e) {
             call.reject("Download failed: " + e.getMessage(), "DOWNLOAD_ERROR");
+        }
+    }
+
+    @PluginMethod
+    public void shareFile(PluginCall call) {
+        String base64Data = call.getString("data", "");
+        String filename = call.getString("filename", "document.pdf");
+        String mimeType = call.getString("mimeType", "application/pdf");
+
+        if (base64Data.isEmpty()) {
+            call.reject("File data is required", "MISSING_DATA");
+            return;
+        }
+
+        byte[] fileBytes;
+        try {
+            fileBytes = Base64.decode(base64Data, Base64.DEFAULT);
+        } catch (IllegalArgumentException e) {
+            call.reject("Invalid base64 data", "INVALID_DATA");
+            return;
+        }
+
+        try {
+            File cacheDir = new File(getContext().getCacheDir(), "shared");
+            cacheDir.mkdirs();
+            File file = new File(cacheDir, filename);
+            FileOutputStream fos = new FileOutputStream(file);
+            fos.write(fileBytes);
+            fos.close();
+
+            Uri contentUri = FileProvider.getUriForFile(
+                    getContext(),
+                    getContext().getPackageName() + ".fileprovider",
+                    file);
+
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType(mimeType);
+            shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            getActivity().startActivity(
+                    Intent.createChooser(shareIntent, "Share " + filename));
+
+            call.resolve(new JSObject().put("success", true));
+        } catch (Exception e) {
+            call.reject("Share failed: " + e.getMessage(), "SHARE_ERROR");
         }
     }
 

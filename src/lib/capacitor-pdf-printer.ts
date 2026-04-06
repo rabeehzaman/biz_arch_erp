@@ -9,6 +9,11 @@ interface PdfPrinterPlugin {
     data: string;
     filename: string;
   }): Promise<{ success: boolean; uri?: string; path?: string }>;
+  shareFile(options: {
+    data: string;
+    filename: string;
+    mimeType?: string;
+  }): Promise<{ success: boolean }>;
 }
 
 const PdfPrinter = registerPlugin<PdfPrinterPlugin>("PdfPrinter");
@@ -38,6 +43,14 @@ export async function capacitorPrintHtml(
   jobName: string
 ): Promise<void> {
   await PdfPrinter.printHtml({ html, jobName });
+}
+
+export async function capacitorSharePdf(
+  blob: Blob,
+  filename: string
+): Promise<void> {
+  const base64 = await blobToBase64(blob);
+  await PdfPrinter.shareFile({ data: base64, filename, mimeType: "application/pdf" });
 }
 
 export async function capacitorDownloadPdf(

@@ -530,11 +530,24 @@ export default function InvoiceDetailPage({
               size="sm"
               className="col-span-1 h-9 w-full sm:h-10 sm:w-auto"
               onClick={async () => {
-                await shareContent({
-                  title: `${t("sales.invoice")} ${invoice?.invoiceNumber}`,
-                  text: `${t("sales.invoice")} ${invoice?.invoiceNumber} — ${symbol}${Number(invoice?.total ?? 0).toLocaleString(locale)}`,
-                  url: typeof window !== "undefined" ? window.location.href : undefined,
-                });
+                if (isCapacitorEnvironment()) {
+                  try {
+                    const response = await fetch(`/api/invoices/${id}/pdf`);
+                    if (!response.ok) throw new Error("Failed to generate PDF");
+                    const blob = await response.blob();
+                    const { capacitorSharePdf } = await import("@/lib/capacitor-pdf-printer");
+                    await capacitorSharePdf(blob, `invoice-${invoice?.invoiceNumber}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+                  } catch (error) {
+                    toast.error(t("common.shareFailed"));
+                    console.error(error);
+                  }
+                } else {
+                  await shareContent({
+                    title: `${t("sales.invoice")} ${invoice?.invoiceNumber}`,
+                    text: `${t("sales.invoice")} ${invoice?.invoiceNumber} — ${symbol}${Number(invoice?.total ?? 0).toLocaleString(locale)}`,
+                    url: typeof window !== "undefined" ? window.location.href : undefined,
+                  });
+                }
               }}
             >
               <Share2 className="h-4 w-4 sm:mr-2" />
