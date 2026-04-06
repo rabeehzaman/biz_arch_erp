@@ -6,7 +6,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw, UtensilsCrossed } from "lucide-react";
+import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw, UtensilsCrossed, ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -1766,92 +1766,31 @@ function POSTerminalContent() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("pos.closePosSession")}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="sr-only">
               {t("pos.enterClosingCashAmount")}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
-              <div>
-                <span className="text-muted-foreground">{t("pos.session")}</span>
-                <p className="font-medium">{posSession.sessionNumber}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">{t("pos.opened")}</span>
-                <p className="font-medium">
-                  {formatDistanceToNow(new Date(posSession.openedAt), { addSuffix: true })}
-                </p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">{t("pos.openingCash")}</span>
-                <p className="font-medium">
-                  {fmt(Number(posSession.openingCash))}
-                </p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">{t("pos.transactions")}</span>
-                <p className="font-medium">{posSession.totalTransactions}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">{t("pos.expectedCash")}</span>
-                <p className="font-medium">
-                  {isLoadingSummary ? (
-                    <Loader2 className="h-3 w-3 animate-spin inline" />
-                  ) : (
-                    fmt(expectedCash)
-                  )}
-                </p>
-              </div>
+          <div className="space-y-5 py-2">
+            {/* Expected Cash — hero number */}
+            <div className="text-center">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t("pos.expectedCash")}
+              </p>
+              {isLoadingSummary ? (
+                <Loader2 className="mx-auto mt-2 h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <p className="mt-1 text-2xl font-bold tabular-nums">{fmt(expectedCash)}</p>
+              )}
             </div>
-            {!isLoadingSummary && visiblePaymentBreakdown.length > 0 && (
-              <div className="rounded-lg border bg-slate-50/70 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium">{t("pos.paymentBreakdown")}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("pos.transactions")}: {posSession.totalTransactions}
-                  </span>
-                </div>
-                <div className="space-y-1.5 text-sm">
-                  {visiblePaymentBreakdown.map((payment) => (
-                    <div
-                      key={payment.method}
-                      className="flex items-center justify-between gap-4"
-                    >
-                      <span className={payment.method === "CASH_REFUND" ? "text-red-500" : "text-muted-foreground"}>
-                        {getPaymentMethodLabel(payment.method, t)}
-                      </span>
-                      <span className={cn("font-medium", payment.method === "CASH_REFUND" && "text-red-500")}>
-                        {payment.method === "CASH_REFUND" ? `-${fmt(Math.abs(Number(payment.total)))}` : fmt(Number(payment.total))}
-                      </span>
-                    </div>
-                  ))}
-                  {nonCashTotal > 0 && (
-                    <div className="mt-2 flex items-center justify-between gap-4 border-t pt-2">
-                      <span className="font-medium text-slate-700">
-                        {t("pos.depositNonCashTo")}
-                      </span>
-                      <span className="font-semibold">{fmt(nonCashTotal)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+
+            {/* Counted Closing Cash — main input */}
             <div>
-              <div className="flex justify-between items-end mb-1">
-                <label className="text-sm font-medium">{t("pos.countedClosingCash")}</label>
-                {countedClosingCash !== null && !isLoadingSummary && cashDifference !== null && (
-                  <span className={cn(
-                    "text-sm font-medium",
-                    cashDifference > 0 ? "text-green-600" : (cashDifference < 0 ? "text-red-600" : "text-slate-600")
-                  )}>
-                    {t("pos.diff")} {formatSignedDifference(cashDifference, fmt)}
-                  </span>
-                )}
-              </div>
+              <label className="mb-1 block text-sm font-medium">{t("pos.countedClosingCash")}</label>
               <Input
                 type="text"
                 inputMode="decimal"
                 placeholder="0.00"
+                className="h-12 text-center text-lg tabular-nums"
                 value={closingCash}
                 onInput={(e) => syncClosingCashValue((e.target as HTMLInputElement).value)}
                 onChange={(e) => syncClosingCashValue(e.currentTarget.value)}
@@ -1859,8 +1798,30 @@ function POSTerminalContent() {
               />
             </div>
 
+            {/* Cash Difference — prominent display */}
+            {countedClosingCash !== null && !isLoadingSummary && cashDifference !== null && (
+              <div className={cn(
+                "rounded-lg py-3 text-center",
+                cashDifference > 0 ? "bg-green-50" : cashDifference < 0 ? "bg-red-50" : "bg-slate-50"
+              )}>
+                <p className={cn(
+                  "text-xl font-bold tabular-nums",
+                  cashDifference > 0 ? "text-green-600" : cashDifference < 0 ? "text-red-600" : "text-slate-600"
+                )}>
+                  {formatSignedDifference(cashDifference, fmt)}
+                </p>
+                <p className={cn(
+                  "mt-0.5 text-xs font-medium",
+                  cashDifference > 0 ? "text-green-600" : cashDifference < 0 ? "text-red-600" : "text-slate-500"
+                )}>
+                  {cashDifference > 0 ? t("pos.overage") : cashDifference < 0 ? t("pos.shortage") : t("pos.exactMatch")}
+                </p>
+              </div>
+            )}
+
+            {/* Employee PIN — conditional */}
             {posSession.employeeId && (
-              <div className="mt-2">
+              <div>
                 <label className="mb-1 block text-sm font-medium">
                   {t("pos.employeePin")}
                 </label>
@@ -1870,9 +1831,61 @@ function POSTerminalContent() {
                   placeholder={t("pos.enterFourDigitPin")}
                   value={closePinCode}
                   onChange={(e) => setClosePinCode(e.target.value.replace(/\D/g, ""))}
-                  className="font-mono"
+                  className="h-12 text-center font-mono text-lg tracking-[0.3em]"
                 />
               </div>
+            )}
+
+            {/* Session Details — collapsible */}
+            {!isLoadingSummary && (
+              <details className="group rounded-lg border">
+                <summary className="flex cursor-pointer items-center justify-between px-3 py-2.5 text-sm font-medium select-none">
+                  {t("pos.sessionDetails")}
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="border-t px-3 pb-3 pt-2 text-sm">
+                  {/* Meta row */}
+                  <div className="mb-2 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                    <span>{posSession.sessionNumber}</span>
+                    <span>&middot;</span>
+                    <span>{formatDistanceToNow(new Date(posSession.openedAt), { addSuffix: true })}</span>
+                    <span>&middot;</span>
+                    <span>{posSession.totalTransactions} {t("pos.transactions").toLowerCase()}</span>
+                  </div>
+                  {/* Opening Cash */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-muted-foreground">{t("pos.openingCash")}</span>
+                    <span className="font-medium tabular-nums">{fmt(Number(posSession.openingCash))}</span>
+                  </div>
+                  {/* Cash Sales */}
+                  {cashSalesTotal > 0 && (
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-muted-foreground">{t("pos.cashSales")}</span>
+                      <span className="font-medium tabular-nums">{fmt(cashSalesTotal)}</span>
+                    </div>
+                  )}
+                  {/* Payment breakdown rows (non-cash + refunds) */}
+                  {visiblePaymentBreakdown
+                    .filter((p) => p.method !== "CASH")
+                    .map((payment) => (
+                    <div key={payment.method} className="flex items-center justify-between py-1">
+                      <span className={payment.method === "CASH_REFUND" ? "text-red-500" : "text-muted-foreground"}>
+                        {getPaymentMethodLabel(payment.method, t)}
+                      </span>
+                      <span className={cn("font-medium tabular-nums", payment.method === "CASH_REFUND" && "text-red-500")}>
+                        {payment.method === "CASH_REFUND" ? `-${fmt(Math.abs(Number(payment.total)))}` : fmt(Number(payment.total))}
+                      </span>
+                    </div>
+                  ))}
+                  {/* Non-cash deposit total */}
+                  {nonCashTotal > 0 && (
+                    <div className="mt-1 flex items-center justify-between border-t pt-2">
+                      <span className="font-medium text-slate-700">{t("pos.depositNonCashTo")}</span>
+                      <span className="font-semibold tabular-nums">{fmt(nonCashTotal)}</span>
+                    </div>
+                  )}
+                </div>
+              </details>
             )}
 
             {/* Settlement accounts are auto-filled from register config or org defaults and sent silently */}

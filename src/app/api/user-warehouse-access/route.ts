@@ -14,7 +14,7 @@ export async function GET() {
             include: {
                 user: { select: { id: true, name: true, email: true } },
                 branch: { select: { id: true, name: true, code: true } },
-                warehouse: { select: { id: true, name: true, code: true } },
+                warehouse: { select: { id: true, name: true, code: true, branchId: true, isActive: true } },
             },
             orderBy: { createdAt: "asc" },
         });

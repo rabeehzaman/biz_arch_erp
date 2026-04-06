@@ -57,33 +57,33 @@ export function BranchWarehouseSelector({
                     fetch("/api/user-warehouse-access")
                 ]);
 
-                if (branchRes.ok) {
+                if (branchRes.ok && warehouseRes.ok) {
                     const bData = await branchRes.json();
-                    setBranches(bData.filter((b: any) => b.isActive));
-                }
-
-                if (warehouseRes.ok) {
                     const wData = await warehouseRes.json();
 
-                    const userAccess = wData.filter((a: any) =>
-                        userRole === 'admin' ||
-                        userRole === 'superadmin' ||
-                        a.userId === userId
-                    );
+                    const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+                    const userAccess = wData.filter((a: any) => isAdmin || a.userId === userId);
+                    const featureConfigured = wData.length > 0;
 
                     let availableWarehouses: any[] = [];
-                    if (userRole === 'admin' || userRole === 'superadmin') {
-                        // Admins get all warehouses
+                    if (isAdmin || !featureConfigured) {
+                        // Admins or no restrictions configured: see everything
+                        setBranches(bData.filter((b: any) => b.isActive));
                         const allWarehousesRes = await fetch("/api/warehouses");
                         if (allWarehousesRes.ok) {
                             availableWarehouses = await allWarehousesRes.json();
                         }
                     } else {
-                        // Normal users only get assigned warehouses
+                        // Restricted users: only their branches and warehouses
                         availableWarehouses = userAccess.map((access: any) => access.warehouse).filter(Boolean);
+                        const allowedBranchIds = new Set(userAccess.map((a: any) => a.branchId));
+                        setBranches(bData.filter((b: any) => b.isActive && allowedBranchIds.has(b.id)));
                     }
 
                     setWarehouses(availableWarehouses.filter((w: any) => w.isActive));
+                } else if (branchRes.ok) {
+                    const bData = await branchRes.json();
+                    setBranches(bData.filter((b: any) => b.isActive));
                 }
             } catch (error) {
                 console.error("Failed to load branches and warehouses", error);

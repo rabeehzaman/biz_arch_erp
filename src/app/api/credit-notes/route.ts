@@ -465,15 +465,30 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create auto journal entry: DR Sales Revenue [+ DR VAT/GST Output], CR Accounts Receivable (or Cash for POS)
+      // Create auto journal entry: DR Sales Revenue [+ DR VAT/GST Output], CR Accounts Receivable (or Cash/Clearing for POS)
       // Always create journal entries for POS returns (cash is physically returned) or when applied to balance
       if (appliedToBalance || posSessionId) {
         const revenueAccount = await getSystemAccount(tx, organizationId, "4100");
-        // POS returns are cash refunds — credit Cash instead of AR
-        const creditAccount = posSessionId
-          ? await getSystemAccount(tx, organizationId, "1100")
-          : await getSystemAccount(tx, organizationId, "1300");
-        const creditDescription = posSessionId ? "Cash (POS Refund)" : "Accounts Receivable";
+        // POS returns: credit Clearing (1150) in clearing mode so the clearing account
+        // nets out at session close, or Cash (1100) in direct mode
+        let creditAccount;
+        let creditDescription: string;
+        if (posSessionId) {
+          const org = await tx.organization.findUnique({
+            where: { id: organizationId },
+            select: { posAccountingMode: true },
+          });
+          if (org?.posAccountingMode === "CLEARING_ACCOUNT") {
+            creditAccount = await getSystemAccount(tx, organizationId, "1150");
+            creditDescription = "POS Undeposited Funds (Refund)";
+          } else {
+            creditAccount = await getSystemAccount(tx, organizationId, "1100");
+            creditDescription = "Cash (POS Refund)";
+          }
+        } else {
+          creditAccount = await getSystemAccount(tx, organizationId, "1300");
+          creditDescription = "Accounts Receivable";
+        }
         if (revenueAccount && creditAccount) {
           const returnLines: Array<{ accountId: string; description: string; debit: number; credit: number }> = [
             { accountId: revenueAccount.id, description: "Sales Revenue (Return)", debit: subtotal, credit: 0 },

@@ -154,7 +154,10 @@ export async function PUT(
 
       const cashReceived = roundCurrency(Number(cashPayments._sum.amount || 0));
 
-      // Subtract cash refunds given for POS returns
+      // Subtract cash refunds given for POS returns.
+      // NOTE: All POS returns are settled as cash from the register regardless of the
+      // original payment method. If non-cash refund support is added later, this
+      // aggregate must be filtered by refund method.
       const returnAggregates = await tx.creditNote.aggregate({
         where: { organizationId, posSessionId: id },
         _sum: { total: true },
@@ -224,7 +227,7 @@ export async function PUT(
             : Number(closingCash) - Number(posSession.openingCash)); // net deposit (legacy flow)
           const clearingCredit = roundCurrency(floatJournaledAtOpen
             ? expectedCash   // float + sales — matches what was debited to clearing at open + sales
-            : depositAmount); // legacy: only sales proceeds credited back
+            : Math.max(0, depositAmount)); // legacy: cap at 0 — shortage handled in Step C
 
           const lines: { accountId: string; description: string; debit: number; credit: number }[] = [];
 
@@ -245,11 +248,30 @@ export async function PUT(
             lines.push({ accountId: clearingAccount.id, description: "POS Undeposited Funds", debit: 0, credit: clearingCredit });
           }
 
-          if (lines.length < 2) {
+          // Only create journal entry if we have balanced lines; legacy flow with
+          // depositAmount <= 0 has nothing to settle here — Step C handles the shortage.
+          if (lines.length >= 2) {
+            console.log("POS cash settlement lines:", JSON.stringify(lines));
+
+            await createRequiredAutoJournalEntry(
+              tx,
+              organizationId,
+              {
+                date: now,
+                description: `POS Session Close - Cash to Store Safe (${posSession.sessionNumber})`,
+                sourceType: "POS_SESSION_CLOSE",
+                sourceId: id,
+                branchId: posSession.branchId,
+                lines,
+              },
+              "Failed to post the POS cash settlement journal entry."
+            );
+          } else if (floatJournaledAtOpen && lines.length < 2) {
+            // New flow should always produce at least 2 lines — this is unexpected
             console.error("POS cash settlement: insufficient lines", {
               depositAmount, clearingCredit, cashDifference, expectedCash,
               closingCash: Number(closingCash),
-              floatJournaledAtOpen: !!floatJournaledAtOpen,
+              floatJournaledAtOpen: true,
               hasCashShortOverAccount: !!cashShortOverAccount,
               lines,
             });
@@ -257,22 +279,6 @@ export async function PUT(
               "Failed to prepare the POS cash settlement journal entry."
             );
           }
-
-          console.log("POS cash settlement lines:", JSON.stringify(lines));
-
-          await createRequiredAutoJournalEntry(
-            tx,
-            organizationId,
-            {
-              date: now,
-              description: `POS Session Close - Cash to Store Safe (${posSession.sessionNumber})`,
-              sourceType: "POS_SESSION_CLOSE",
-              sourceId: id,
-              branchId: posSession.branchId,
-              lines,
-            },
-            "Failed to post the POS cash settlement journal entry."
-          );
 
           if (depositAmount > 0) {
             await tx.cashBankAccount.update({
@@ -535,7 +541,7 @@ export async function PUT(
           cashDifference,
           totalSales,
           totalTransactions,
-          notes: notes || posSession.notes,
+          notes: notes !== undefined ? (notes || null) : posSession.notes,
         },
         include: {
           user: {
