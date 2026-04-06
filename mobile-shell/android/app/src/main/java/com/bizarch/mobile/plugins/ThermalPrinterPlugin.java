@@ -1025,7 +1025,7 @@ public class ThermalPrinterPlugin extends Plugin {
                                 final Bitmap finalBitmap = bitmap;
                                 printExecutor.execute(() -> {
                                     try {
-                                        sharpThreshold(finalBitmap);
+                                        floydSteinbergDither(finalBitmap);
 
                                         ByteArrayOutputStream allData = new ByteArrayOutputStream();
                                         allData.write(new byte[]{0x1B, 0x40});
