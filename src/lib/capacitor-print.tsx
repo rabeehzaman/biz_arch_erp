@@ -288,6 +288,102 @@ async function renderReceiptToBase64Image(
   }
 }
 
+/**
+ * Render a React element to a base64 PNG image for thermal printing.
+ * Used by both POS receipt and invoice receipt paths.
+ */
+export async function renderReactToBase64Image(
+  element: React.ReactElement,
+  config: { paperWidth: 58 | 80; receiptMarginLeft: number; receiptMarginRight: number }
+): Promise<string> {
+  if (!isBrowser()) {
+    throw new Error("Receipt image rendering requires a browser environment");
+  }
+
+  const container = document.createElement("div");
+  const width = config.paperWidth === 58 ? "58mm" : "80mm";
+
+  Object.assign(container.style, {
+    position: "fixed",
+    left: "-10000px",
+    top: "0",
+    pointerEvents: "none",
+    background: "#ffffff",
+  });
+
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  try {
+    root.render(
+      <div
+        style={{
+          width,
+          padding: `0 ${config.receiptMarginRight}mm 0 ${config.receiptMarginLeft}mm`,
+          background: "#ffffff",
+        }}
+      >
+        {element}
+      </div>
+    );
+
+    await waitForPaint();
+    if (document.fonts?.ready) {
+      await document.fonts.ready.catch(() => undefined);
+    }
+    await waitForImages(container);
+    await waitForPaint();
+
+    const target = container.firstElementChild;
+    if (!(target instanceof HTMLElement)) {
+      throw new Error("Failed to render the receipt preview");
+    }
+
+    const png = await toPng(target, {
+      backgroundColor: "#ffffff",
+      cacheBust: true,
+      pixelRatio: 2,
+    });
+
+    return stripPngPrefix(png);
+  } finally {
+    root.unmount();
+    container.remove();
+  }
+}
+
+/**
+ * Print a pre-rendered base64 image to the configured thermal printer.
+ */
+export async function capacitorPrintBase64Image(
+  base64Image: string,
+  config?: Partial<MobilePrinterConfig>,
+  options?: { qrCodeText?: string },
+): Promise<{ success: boolean; error?: string }> {
+  if (!isCapacitorEnvironment()) {
+    return { success: false, error: "Capacitor mobile bridge not available" };
+  }
+  try {
+    const resolved = requireConfiguredPrinter(config);
+    await ThermalPrinter.printImage({
+      ...connectionParams(resolved),
+      printerDpi: 203,
+      printerWidthMM: resolved.paperWidth === 58 ? 48 : 72,
+      base64Image,
+      qrCodeText: options?.qrCodeText,
+      timeoutSeconds: resolved.timeoutSeconds,
+      cutPaper: resolved.cutPaper,
+      openCashDrawer: resolved.openCashDrawer,
+    });
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Print failed",
+    };
+  }
+}
+
 export async function capacitorPrintWithConfig(
   data: ReceiptData,
   config?: Partial<MobilePrinterConfig>

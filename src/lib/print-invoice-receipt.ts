@@ -56,56 +56,21 @@ export function generateInvoiceReceiptHtml(data: InvoiceReceiptData, options?: R
 
 export async function printInvoiceReceipt(data: InvoiceReceiptData, options?: ReceiptHtmlOptions): Promise<void> {
   if (isCapacitorEnvironment()) {
-    // Use silent thermal printing if a printer is configured
-    const { getMobilePrinterConfig, capacitorBitmapPrintWithConfig } = await import("@/lib/capacitor-print");
+    const { getMobilePrinterConfig, renderReactToBase64Image, capacitorPrintBase64Image } = await import("@/lib/capacitor-print");
     const config = getMobilePrinterConfig();
     if (config && (config.host || config.address)) {
-      // Build ReceiptData-compatible object for the thermal printer
-      const receiptData = {
-        storeName: data.storeName,
-        storeAddress: data.storeAddress,
-        storeCity: data.storeCity,
-        storeState: data.storeState,
-        storePhone: data.storePhone,
-        vatNumber: data.vatNumber,
-        secondaryName: data.secondaryName,
-        logoUrl: data.logoUrl,
-        logoHeight: data.logoHeight,
-        brandColor: data.brandColor,
-        currency: data.currency,
-        invoiceNumber: data.invoiceNumber,
-        invoiceDate: data.issueDate,
-        paymentType: data.paymentType,
-        saudiInvoiceType: data.saudiInvoiceType,
-        customerName: data.customerName,
-        customerSecondaryName: data.customerSecondaryName,
-        customerPhone: data.customerPhone,
-        customerVatNumber: data.customerVatNumber,
-        items: data.items.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discount: item.discount,
-          lineTotal: item.lineTotal,
-        })),
-        subtotal: data.subtotal,
-        taxRate: data.taxRate,
-        taxAmount: data.taxAmount,
-        roundOffAmount: data.roundOffAmount,
-        total: data.total,
-        isTaxInclusivePrice: data.isTaxInclusivePrice,
-        amountPaid: data.amountPaid,
-        balanceDue: data.balanceDue,
-        isOverdue: data.isOverdue,
-        payments: data.payments,
-        notes: data.notes,
-        qrCodeDataURL: data.qrCodeDataURL,
-      };
-      const result = await capacitorBitmapPrintWithConfig(receiptData as never, config);
+      // Render InvoiceReceipt component to image and send to thermal printer
+      const base64Image = await renderReactToBase64Image(
+        createElement(InvoiceReceipt, { data }),
+        config,
+      );
+      const result = await capacitorPrintBase64Image(base64Image, config, {
+        qrCodeText: data.qrCodeDataURL ? undefined : undefined,
+      });
       if (result.success) return;
-      // If thermal print fails, fall through to HTML print preview
+      // Fall through to print preview on failure
     }
-    // Fallback: use native print preview
+    // Fallback: native print preview
     const html = generateInvoiceReceiptHtml(data, options);
     const { capacitorPrintHtml } = await import("@/lib/capacitor-pdf-printer");
     return capacitorPrintHtml(html, "Invoice Receipt");
