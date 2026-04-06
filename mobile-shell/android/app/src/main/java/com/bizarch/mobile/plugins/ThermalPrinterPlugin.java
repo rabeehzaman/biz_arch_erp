@@ -493,30 +493,133 @@ public class ThermalPrinterPlugin extends Plugin {
         }));
     }
 
+    // ── ESC/POS raster image builder (for Bluetooth) ──────────────
+
+    private byte[] buildRasterImageCommand(Bitmap bitmap) {
+        // Convert bitmap to monochrome ESC/POS raster format
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int bytesPerRow = (width + 7) / 8;
+
+        // ESC/POS GS v 0 command: print raster bit image
+        // GS v 0 m xL xH yL yH [data]
+        byte[] header = new byte[]{
+                0x1D, 0x76, 0x30, 0x00,
+                (byte) (bytesPerRow & 0xFF), (byte) ((bytesPerRow >> 8) & 0xFF),
+                (byte) (height & 0xFF), (byte) ((height >> 8) & 0xFF)
+        };
+
+        byte[] imageData = new byte[bytesPerRow * height];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = bitmap.getPixel(x, y);
+                int gray = (int) (0.299 * ((pixel >> 16) & 0xFF) +
+                        0.587 * ((pixel >> 8) & 0xFF) +
+                        0.114 * (pixel & 0xFF));
+                if (gray < 128) {
+                    imageData[y * bytesPerRow + (x / 8)] |= (byte) (0x80 >> (x % 8));
+                }
+            }
+        }
+
+        byte[] result = new byte[header.length + imageData.length];
+        System.arraycopy(header, 0, result, 0, header.length);
+        System.arraycopy(imageData, 0, result, header.length, imageData.length);
+        return result;
+    }
+
     @SuppressLint("MissingPermission")
     @PluginMethod
     public void printImage(PluginCall call) {
         withBluetoothPermission(call, () -> printExecutor.execute(() -> {
-            DeviceConnection connection = null;
-            EscPosPrinter printer = null;
-
-            try {
-                if (isBluetooth(call)) {
+            // For Bluetooth: build raw ESC/POS raster and send via direct socket
+            if (isBluetooth(call)) {
+                try {
                     String address = call.getString("address", "").trim();
                     if (address.isEmpty()) {
                         call.reject("Bluetooth address is required", "MISSING_ADDRESS");
                         return;
                     }
-                    BluetoothDevice device = BluetoothAdapter.getDefaultAdapter()
-                            .getRemoteDevice(address);
-                    try {
-                        connection = new BluetoothConnection(device);
-                    } catch (Exception e) {
-                        connection = new ReflectionBluetoothConnection(device);
+
+                    String base64Image = call.getString("base64Image", "");
+                    if (base64Image.isEmpty()) {
+                        call.reject("Receipt image is required", "MISSING_DATA");
+                        return;
                     }
-                } else {
-                    connection = createConnection(call);
+
+                    boolean cutPaper = call.getBoolean("cutPaper", true);
+                    boolean openCashDrawer = call.getBoolean("openCashDrawer", false);
+                    String qrCodeText = call.getString("qrCodeText", "");
+
+                    byte[] imageBytes = Base64.decode(base64Image, Base64.DEFAULT);
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+                    if (bitmap == null) {
+                        call.reject("Failed to decode receipt image", "INVALID_IMAGE");
+                        return;
+                    }
+
+                    // Scale to printer width (384 dots for 80mm at 203 DPI)
+                    float printerWidthMM = call.getFloat("printerWidthMM", DEFAULT_WIDTH_MM);
+                    int printerDots = (int) (printerWidthMM / 25.4f * DEFAULT_DPI);
+                    if (bitmap.getWidth() != printerDots) {
+                        int scaledHeight = (int) ((float) bitmap.getHeight() / bitmap.getWidth() * printerDots);
+                        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, printerDots, scaledHeight, true);
+                        bitmap.recycle();
+                        bitmap = scaled;
+                    }
+
+                    // Build ESC/POS commands
+                    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+
+                    // Initialize printer
+                    baos.write(new byte[]{0x1B, 0x40}); // ESC @
+
+                    // Print image in chunks (max 256 rows to avoid buffer overflow)
+                    int y = 0;
+                    while (y < bitmap.getHeight()) {
+                        int chunkHeight = Math.min(MAX_IMAGE_CHUNK_HEIGHT, bitmap.getHeight() - y);
+                        Bitmap chunk = Bitmap.createBitmap(bitmap, 0, y, bitmap.getWidth(), chunkHeight);
+                        baos.write(buildRasterImageCommand(chunk));
+                        chunk.recycle();
+                        y += chunkHeight;
+                    }
+
+                    // QR code via native ESC/POS
+                    if (qrCodeText != null && !qrCodeText.isEmpty()) {
+                        baos.write(buildNativeQRCommand(qrCodeText, 5));
+                    }
+
+                    // Feed + cut
+                    if (cutPaper) {
+                        baos.write(new byte[]{0x1B, 0x64, 0x03}); // feed 3 lines
+                        baos.write(new byte[]{0x1D, 0x56, 0x42, 0x00}); // partial cut
+                    }
+
+                    // Cash drawer
+                    if (openCashDrawer) {
+                        baos.write(new byte[]{0x1B, 0x70, 0x00, 0x19, (byte) 0xFA});
+                    }
+
+                    bitmap.recycle();
+
+                    // Send via reliable direct socket with chunked writes
+                    sendRawBluetooth(address, baos.toByteArray());
+
+                    JSObject result = new JSObject();
+                    result.put("success", true);
+                    call.resolve(result);
+                } catch (Exception e) {
+                    call.reject("Bluetooth image print failed: " + e.getMessage(), "PRINT_ERROR");
                 }
+                return;
+            }
+
+            // TCP path — unchanged, uses DantSu
+            DeviceConnection connection = null;
+            EscPosPrinter printer = null;
+
+            try {
+                connection = createConnection(call);
                 printer = createPrinter(call, connection);
 
             String base64Image = call.getString("base64Image", "");
@@ -580,52 +683,6 @@ public class ThermalPrinterPlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("success", true);
             call.resolve(result);
-            } catch (EscPosConnectionException e) {
-                // If Bluetooth, retry with reflection fallback
-                if (isBluetooth(call)) {
-                    try {
-                        String address = call.getString("address", "").trim();
-                        BluetoothDevice device = BluetoothAdapter.getDefaultAdapter()
-                                .getRemoteDevice(address);
-                        DeviceConnection fallback = new ReflectionBluetoothConnection(device);
-                        EscPosPrinter fallbackPrinter = createPrinter(call, fallback);
-                        // Re-run the image print logic with fallback
-                        // (simplified: just re-print the image)
-                        String base64Image2 = call.getString("base64Image", "");
-                        byte[] imageBytes2 = Base64.decode(base64Image2, Base64.DEFAULT);
-                        Bitmap bitmap2 = BitmapFactory.decodeByteArray(imageBytes2, 0, imageBytes2.length);
-                        if (bitmap2 != null) {
-                            List<Bitmap> chunks2 = splitBitmap(bitmap2);
-                            for (int i = 0; i < chunks2.size(); i++) {
-                                Bitmap chunk = chunks2.get(i);
-                                String hexImage = PrinterTextParserImg.bitmapToHexadecimalString(
-                                        fallbackPrinter, chunk, false);
-                                String printData = "[C]<img>" + hexImage + "</img>\n";
-                                if (i == chunks2.size() - 1) {
-                                    boolean cutPaper2 = call.getBoolean("cutPaper", true);
-                                    if (cutPaper2) {
-                                        fallbackPrinter.printFormattedTextAndCut(printData, 20f);
-                                    } else {
-                                        fallbackPrinter.printFormattedText(printData, 20f);
-                                    }
-                                } else {
-                                    fallbackPrinter.printFormattedText(printData, 20f);
-                                }
-                                chunk.recycle();
-                            }
-                            bitmap2.recycle();
-                        }
-                        fallbackPrinter.disconnectPrinter();
-                        JSObject result = new JSObject();
-                        result.put("success", true);
-                        call.resolve(result);
-                        return;
-                    } catch (Exception e2) {
-                        call.reject("Image print failed after BT reflection retry: " + e2.getMessage());
-                        return;
-                    }
-                }
-                call.reject("Image print failed: " + e.getMessage());
             } catch (Exception e) {
                 call.reject("Image print failed: " + e.getMessage());
             } finally {

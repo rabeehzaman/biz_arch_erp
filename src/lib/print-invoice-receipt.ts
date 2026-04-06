@@ -59,16 +59,17 @@ export async function printInvoiceReceipt(data: InvoiceReceiptData, options?: Re
     const { getMobilePrinterConfig, renderReactToBase64Image, capacitorPrintBase64Image } = await import("@/lib/capacitor-print");
     const config = getMobilePrinterConfig();
     if (config && (config.host || config.address)) {
-      // Render InvoiceReceipt component to image and send to thermal printer
-      const base64Image = await renderReactToBase64Image(
-        createElement(InvoiceReceipt, { data }),
-        config,
-      );
-      const result = await capacitorPrintBase64Image(base64Image, config, {
-        qrCodeText: data.qrCodeDataURL ? undefined : undefined,
-      });
-      if (result.success) return;
-      // Fall through to print preview on failure
+      try {
+        const base64Image = await renderReactToBase64Image(
+          createElement(InvoiceReceipt, { data }),
+          config,
+        );
+        const result = await capacitorPrintBase64Image(base64Image, config);
+        if (result.success) return;
+        console.warn("Thermal print failed, falling back to print preview:", result.error);
+      } catch (err) {
+        console.warn("Thermal print error, falling back to print preview:", err);
+      }
     }
     // Fallback: native print preview
     const html = generateInvoiceReceiptHtml(data, options);
