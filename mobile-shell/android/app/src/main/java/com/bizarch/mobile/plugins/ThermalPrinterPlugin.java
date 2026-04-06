@@ -687,7 +687,20 @@ public class ThermalPrinterPlugin extends Plugin {
     @SuppressLint("MissingPermission")
     @PluginMethod
     public void listBluetoothDevices(PluginCall call) {
-        withBluetoothPermission(call, () -> {
+        // Always check BT permissions (not gated by connectionType)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (getPermissionState("bluetooth") != PermissionState.GRANTED) {
+                pendingAction = () -> executeListDevices(call);
+                requestPermissionForAlias("bluetooth", call, "onBtPermResult");
+                return;
+            }
+        }
+        executeListDevices(call);
+    }
+
+    @SuppressLint("MissingPermission")
+    private void executeListDevices(PluginCall call) {
+        {
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             if (adapter == null) {
                 call.reject("Bluetooth not available on this device", "BT_UNAVAILABLE");
@@ -734,6 +747,6 @@ public class ThermalPrinterPlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("devices", devices);
             call.resolve(result);
-        });
+        }
     }
 }
