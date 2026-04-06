@@ -18,7 +18,7 @@ export async function GET(
     const organizationId = getOrgId(session);
 
     const { id } = await params;
-    const openingStock = await prisma.openingStock.findUnique({
+    const openingStock = await prisma.openingStock.findFirst({
       where: { id, organizationId },
       include: {
         product: {
@@ -62,7 +62,7 @@ export async function PUT(
     const body = await request.json();
     const { quantity, unitCost, stockDate, notes } = body;
 
-    const existingOpeningStock = await prisma.openingStock.findUnique({
+    const existingOpeningStock = await prisma.openingStock.findFirst({
       where: { id, organizationId },
       include: { stockLot: true },
     });
@@ -82,7 +82,7 @@ export async function PUT(
     await prisma.$transaction(async (tx) => {
       // Update opening stock entry
       await tx.openingStock.update({
-        where: { id, organizationId },
+        where: { id },
         data: {
           quantity: newQuantity,
           unitCost: newUnitCost,
@@ -147,9 +147,9 @@ export async function PUT(
           });
         }
       }
-    });
+    }, { timeout: 60000 });
 
-    const updatedOpeningStock = await prisma.openingStock.findUnique({
+    const updatedOpeningStock = await prisma.openingStock.findFirst({
       where: { id, organizationId },
       include: {
         product: {
@@ -184,7 +184,7 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const openingStock = await prisma.openingStock.findUnique({
+    const openingStock = await prisma.openingStock.findFirst({
       where: { id, organizationId },
       include: {
         stockLot: {
@@ -233,7 +233,7 @@ export async function DELETE(
 
       // Delete the opening stock entry
       await tx.openingStock.delete({
-        where: { id, organizationId },
+        where: { id },
       });
 
       // Delete associated journal entry
