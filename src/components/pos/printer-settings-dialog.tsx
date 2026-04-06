@@ -22,10 +22,12 @@ import {
   getMobilePrinterConfig,
   getSecondaryMobilePrinterConfig,
   isCapacitorEnvironment,
+  listBluetoothDevices,
   openMobileCashDrawer,
   saveMobilePrinterConfig,
   saveSecondaryMobilePrinterConfig,
   testMobilePrinterConnection,
+  type BluetoothDevice,
   type MobilePrinterConfig,
 } from "@/lib/capacitor-print";
 import { electronPrintWithConfig, isElectronEnvironment } from "@/lib/electron-print";
@@ -71,6 +73,11 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
   const [mobileTimeoutSeconds, setMobileTimeoutSeconds] = useState("10");
   const [mobileCutPaper, setMobileCutPaper] = useState(true);
   const [mobileOpenCashDrawerOnPrint, setMobileOpenCashDrawerOnPrint] = useState(false);
+  const [mobileConnectionType, setMobileConnectionType] = useState<"tcp" | "bluetooth">("tcp");
+  const [bluetoothAddress, setBluetoothAddress] = useState("");
+  const [bluetoothDeviceName, setBluetoothDeviceName] = useState("");
+  const [btDevices, setBtDevices] = useState<BluetoothDevice[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   // Secondary printer state (Capacitor only)
   const [secondaryEnabled, setSecondaryEnabled] = useState(false);
@@ -146,8 +153,11 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
 
     if (capacitor) {
       const config = getMobilePrinterConfig() ?? getDefaultMobilePrinterConfig();
+      setMobileConnectionType(config.connectionType === "bluetooth" ? "bluetooth" : "tcp");
       setMobileHost(config.host);
       setMobilePort(String(config.port));
+      setBluetoothAddress(config.address || "");
+      setBluetoothDeviceName(config.deviceName || "");
       setMobilePaperWidth(config.paperWidth);
       setMobileTimeoutSeconds(String(config.timeoutSeconds));
       setMobileCutPaper(config.cutPaper);
@@ -228,9 +238,11 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
   });
 
   const buildMobileConfig = (): MobilePrinterConfig => ({
-    connectionType: "tcp",
+    connectionType: mobileConnectionType,
     host: mobileHost.trim(),
     port: parseInt(mobilePort, 10) || 9100,
+    address: bluetoothAddress.trim() || undefined,
+    deviceName: bluetoothDeviceName.trim() || undefined,
     paperWidth: mobilePaperWidth,
     timeoutSeconds: parseInt(mobileTimeoutSeconds, 10) || 10,
     cutPaper: mobileCutPaper,
@@ -248,8 +260,34 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
   };
 
   const validateMobileConfig = (config: MobilePrinterConfig): string | null => {
-    if (!config.host) return t("pos.enterPrinterIp");
+    if (config.connectionType === "bluetooth") {
+      if (!config.address) return "Select a Bluetooth printer";
+    } else {
+      if (!config.host) return t("pos.enterPrinterIp");
+    }
     return null;
+  };
+
+  const scanBluetoothDevices = async () => {
+    setIsScanning(true);
+    try {
+      const res = await listBluetoothDevices();
+      if (res.success && res.devices) {
+        // Sort: printers first, then by name
+        const sorted = [...res.devices].sort((a, b) => {
+          if (a.isPrinter !== b.isPrinter) return a.isPrinter ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+        setBtDevices(sorted);
+        if (sorted.length === 0) toast.info("No paired Bluetooth devices found");
+      } else {
+        toast.error(res.error || "Failed to scan devices");
+      }
+    } catch {
+      toast.error("Failed to scan Bluetooth devices");
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const savePrinterConfig = async () => {
@@ -610,16 +648,71 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
 
   const renderCapacitorContent = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-3">
-        <div className="col-span-2 space-y-1">
-          <Label htmlFor="dlg-mobile-host">{t("pos.printerIpAddress")}</Label>
-          <Input id="dlg-mobile-host" placeholder="192.168.1.100" value={mobileHost} onChange={(e) => setMobileHost(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="dlg-mobile-port">{t("pos.port")}</Label>
-          <Input id="dlg-mobile-port" type="number" placeholder="9100" value={mobilePort} onChange={(e) => setMobilePort(e.target.value)} />
-        </div>
+      <div className="space-y-1">
+        <Label>{t("pos.connectionType")}</Label>
+        <Select value={mobileConnectionType} onValueChange={(v) => setMobileConnectionType(v as "tcp" | "bluetooth")}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tcp"><span className="flex items-center gap-2"><Wifi className="h-3.5 w-3.5" /> Wi-Fi (TCP)</span></SelectItem>
+            <SelectItem value="bluetooth"><span className="flex items-center gap-2">Bluetooth</span></SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
+      {mobileConnectionType === "tcp" ? (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2 space-y-1">
+            <Label htmlFor="dlg-mobile-host">{t("pos.printerIpAddress")}</Label>
+            <Input id="dlg-mobile-host" placeholder="192.168.1.100" value={mobileHost} onChange={(e) => setMobileHost(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="dlg-mobile-port">{t("pos.port")}</Label>
+            <Input id="dlg-mobile-port" type="number" placeholder="9100" value={mobilePort} onChange={(e) => setMobilePort(e.target.value)} />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Button onClick={scanBluetoothDevices} disabled={isScanning} variant="outline" size="sm">
+              {isScanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Scan Paired Devices
+            </Button>
+            {bluetoothDeviceName && (
+              <span className="text-sm text-muted-foreground">
+                Selected: <strong>{bluetoothDeviceName}</strong>
+              </span>
+            )}
+          </div>
+          {btDevices.length > 0 && (
+            <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border p-2">
+              {btDevices.map((device) => (
+                <button
+                  key={device.address}
+                  type="button"
+                  className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
+                    bluetoothAddress === device.address ? "bg-accent font-medium" : ""
+                  }`}
+                  onClick={() => {
+                    setBluetoothAddress(device.address);
+                    setBluetoothDeviceName(device.name);
+                  }}
+                >
+                  <div>
+                    <div className="font-medium">{device.name}</div>
+                    <div className="text-xs text-muted-foreground">{device.address}</div>
+                  </div>
+                  {device.isPrinter && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Printer</span>
+                  )}
+                  {bluetoothAddress === device.address && (
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">

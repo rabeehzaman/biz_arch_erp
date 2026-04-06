@@ -9,9 +9,11 @@ const MOBILE_PRINTER_CONFIG_KEY = "bizarch.mobilePrinterConfig.v1";
 const SECONDARY_PRINTER_CONFIG_KEY = "bizarch.mobilePrinterConfig.secondary.v1";
 
 export interface MobilePrinterConfig {
-  connectionType: "tcp";
+  connectionType: "tcp" | "bluetooth";
   host: string;
   port: number;
+  address?: string;       // Bluetooth MAC address
+  deviceName?: string;    // Bluetooth device display name
   paperWidth: 58 | 80;
   timeoutSeconds: number;
   cutPaper: boolean;
@@ -20,10 +22,21 @@ export interface MobilePrinterConfig {
   receiptMarginRight: number;
 }
 
+interface BluetoothDevice {
+  name: string;
+  address: string;
+  isPrinter: boolean;
+}
+
+interface ConnectionTarget {
+  connectionType?: "tcp" | "bluetooth";
+  host?: string;
+  port?: number;
+  address?: string;  // BT MAC address
+}
+
 interface ThermalPrinterPlugin {
-  printImage(options: {
-    host: string;
-    port: number;
+  printImage(options: ConnectionTarget & {
     printerDpi?: number;
     printerWidthMM?: number;
     base64Image: string;
@@ -32,22 +45,17 @@ interface ThermalPrinterPlugin {
     cutPaper?: boolean;
     openCashDrawer?: boolean;
   }): Promise<{ success: boolean }>;
-  printRaw(options: {
-    host: string;
-    port: number;
+  printRaw(options: ConnectionTarget & {
     data: string;
     timeoutSeconds?: number;
   }): Promise<{ success: boolean; bytesSent: number }>;
-  testConnection(options: {
-    host: string;
-    port: number;
+  testConnection(options: ConnectionTarget & {
     timeoutSeconds?: number;
   }): Promise<{ connected: boolean; message: string }>;
-  openCashDrawer(options: {
-    host: string;
-    port: number;
+  openCashDrawer(options: ConnectionTarget & {
     timeoutSeconds?: number;
   }): Promise<{ success: boolean } | void>;
+  listBluetoothDevices(): Promise<{ devices: BluetoothDevice[] }>;
 }
 
 export const ThermalPrinter = registerPlugin<ThermalPrinterPlugin>("ThermalPrinter");
@@ -89,10 +97,14 @@ function normalizeConfig(
   const parsedLeftMargin = Number(config?.receiptMarginLeft);
   const parsedRightMargin = Number(config?.receiptMarginRight);
 
+  const connType = config?.connectionType === "bluetooth" ? "bluetooth" : "tcp";
+
   return {
-    connectionType: "tcp",
+    connectionType: connType,
     host: String(config?.host ?? defaults.host).trim(),
     port: Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : defaults.port,
+    address: config?.address?.trim() || undefined,
+    deviceName: config?.deviceName?.trim() || undefined,
     paperWidth: normalizePaperWidth(config?.paperWidth),
     timeoutSeconds: Number.isFinite(parsedTimeout) && parsedTimeout > 0
       ? parsedTimeout
@@ -163,14 +175,28 @@ export function saveSecondaryMobilePrinterConfig(
   );
 }
 
-function requireConfiguredHost(
+function requireConfiguredPrinter(
   config?: Partial<MobilePrinterConfig>
 ): MobilePrinterConfig {
   const resolved = normalizeConfig(config ?? getMobilePrinterConfig());
-  if (!resolved.host) {
-    throw new Error("No mobile printer host configured");
+  if (resolved.connectionType === "bluetooth") {
+    if (!resolved.address) {
+      throw new Error("No Bluetooth printer address configured");
+    }
+  } else {
+    if (!resolved.host) {
+      throw new Error("No mobile printer host configured");
+    }
   }
   return resolved;
+}
+
+/** Build the connection target params from config */
+function connectionParams(config: MobilePrinterConfig): ConnectionTarget {
+  if (config.connectionType === "bluetooth") {
+    return { connectionType: "bluetooth", address: config.address };
+  }
+  return { connectionType: "tcp", host: config.host, port: config.port };
 }
 
 function stripPngPrefix(dataUrl: string): string {
@@ -271,12 +297,11 @@ export async function capacitorPrintWithConfig(
   }
 
   try {
-    const resolved = requireConfiguredHost(config);
+    const resolved = requireConfiguredPrinter(config);
     const base64Image = await renderReceiptToBase64Image(data, resolved);
 
     await ThermalPrinter.printImage({
-      host: resolved.host,
-      port: resolved.port,
+      ...connectionParams(resolved),
       printerDpi: 203,
       printerWidthMM: resolved.paperWidth === 58 ? 48 : 72,
       base64Image,
@@ -308,7 +333,7 @@ export async function capacitorBitmapPrintWithConfig(
   }
 
   try {
-    const resolved = requireConfiguredHost(config);
+    const resolved = requireConfiguredPrinter(config);
 
     const { buildReceiptBitmap } = await import("@/lib/receipt-bitmap-layout");
     const builder = await buildReceiptBitmap(data, {
@@ -321,8 +346,7 @@ export async function capacitorBitmapPrintWithConfig(
     const base64Image = pngDataUrl.replace(/^data:image\/png;base64,/, "");
 
     await ThermalPrinter.printImage({
-      host: resolved.host,
-      port: resolved.port,
+      ...connectionParams(resolved),
       printerDpi: 203,
       printerWidthMM: resolved.paperWidth === 58 ? 48 : 72,
       base64Image,
@@ -355,7 +379,7 @@ export async function capacitorRawPrintWithConfig(
   }
 
   try {
-    const resolved = requireConfiguredHost(config);
+    const resolved = requireConfiguredPrinter(config);
 
     const { buildIndianGSTReceiptEscPos } = await import("@/lib/indian-receipt-escpos");
 
@@ -374,8 +398,7 @@ export async function capacitorRawPrintWithConfig(
     const base64Data = btoa(binary);
 
     await ThermalPrinter.printRaw({
-      host: resolved.host,
-      port: resolved.port,
+      ...connectionParams(resolved),
       data: base64Data,
       timeoutSeconds: resolved.timeoutSeconds,
     });
@@ -397,10 +420,9 @@ export async function testMobilePrinterConnection(
   }
 
   try {
-    const resolved = requireConfiguredHost(config);
+    const resolved = requireConfiguredPrinter(config);
     const result = await ThermalPrinter.testConnection({
-      host: resolved.host,
-      port: resolved.port,
+      ...connectionParams(resolved),
       timeoutSeconds: resolved.timeoutSeconds,
     });
 
@@ -425,10 +447,9 @@ export async function openMobileCashDrawer(
   }
 
   try {
-    const resolved = requireConfiguredHost(config);
+    const resolved = requireConfiguredPrinter(config);
     await ThermalPrinter.openCashDrawer({
-      host: resolved.host,
-      port: resolved.port,
+      ...connectionParams(resolved),
       timeoutSeconds: resolved.timeoutSeconds,
     });
     return { success: true };
@@ -436,6 +457,27 @@ export async function openMobileCashDrawer(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to open cash drawer",
+    };
+  }
+}
+
+export type { BluetoothDevice };
+
+export async function listBluetoothDevices(): Promise<{
+  success: boolean;
+  devices?: BluetoothDevice[];
+  error?: string;
+}> {
+  if (!isCapacitorEnvironment()) {
+    return { success: false, error: "Capacitor mobile bridge not available" };
+  }
+  try {
+    const result = await ThermalPrinter.listBluetoothDevices();
+    return { success: true, devices: result.devices };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to list Bluetooth devices",
     };
   }
 }

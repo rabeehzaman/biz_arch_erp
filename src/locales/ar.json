@@ -1998,6 +1998,7 @@
         "paperWidth": "عرض الورق",
         "paper58mm": "58 مم",
         "paper80mm": "80 مم",
+        "connectionType": "نوع الاتصال",
         "connectionTimeout": "مهلة الاتصال (ث)",
         "cutPaper": "قص الورق",
         "cutPaperDesc": "إرسال أمر قص بعد كل طباعة من الهاتف.",

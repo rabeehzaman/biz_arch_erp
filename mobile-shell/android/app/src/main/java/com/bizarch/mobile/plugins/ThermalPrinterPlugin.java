@@ -1,30 +1,59 @@
 package com.bizarch.mobile.plugins;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
+import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
 import com.dantsu.escposprinter.EscPosPrinter;
 import com.dantsu.escposprinter.connection.DeviceConnection;
+import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection;
 import com.dantsu.escposprinter.connection.tcp.TcpConnection;
+import com.dantsu.escposprinter.exceptions.EscPosConnectionException;
 import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-@CapacitorPlugin(name = "ThermalPrinter")
+@CapacitorPlugin(
+    name = "ThermalPrinter",
+    permissions = {
+        @Permission(
+            strings = { Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN },
+            alias = "bluetooth"
+        ),
+        @Permission(
+            strings = { Manifest.permission.ACCESS_FINE_LOCATION },
+            alias = "location"
+        )
+    }
+)
 public class ThermalPrinterPlugin extends Plugin {
     private static final String TAG = "ThermalPrinter";
     private static final int DEFAULT_PORT = 9100;
@@ -33,6 +62,124 @@ public class ThermalPrinterPlugin extends Plugin {
     private static final float DEFAULT_WIDTH_MM = 72f;
     private static final int DEFAULT_CHARS_PER_LINE = 48;
     private static final int MAX_IMAGE_CHUNK_HEIGHT = 256;
+
+    private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final int BT_CHUNK_SIZE = 1024;
+    private static final int BT_CHUNK_DELAY_MS = 20;
+    private static final int BT_POST_FLUSH_DELAY_MS = 300;
+
+    private final ExecutorService printExecutor = Executors.newSingleThreadExecutor();
+
+    private static final String[] PRINTER_KEYWORDS = {
+        "printer", "print", "pos", "xprinter", "mht", "milestone",
+        "hoin", "rongta", "munbyn", "gprinter", "thermal", "receipt",
+        "label", "tsc", "bixolon", "star", "epson"
+    };
+
+    // ── Bluetooth helpers ───────────────────────────────────────────
+
+    @SuppressLint("MissingPermission")
+    private BluetoothSocket createAndConnectSocket(BluetoothDevice device) throws IOException {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        BluetoothSocket socket = null;
+
+        // Attempt 1: Standard SDP-based connection
+        try {
+            socket = device.createRfcommSocketToServiceRecord(SPP_UUID);
+            if (adapter != null) adapter.cancelDiscovery();
+            socket.connect();
+            return socket;
+        } catch (IOException e) {
+            try { if (socket != null) socket.close(); } catch (IOException ignored) {}
+            Log.d(TAG, "SDP connect failed, trying reflection fallback: " + e.getMessage());
+        }
+
+        // Attempt 2: Reflection fallback — bypasses SDP, connects to RFCOMM channel 1
+        try {
+            socket = (BluetoothSocket) device.getClass()
+                    .getMethod("createRfcommSocket", new Class[]{int.class})
+                    .invoke(device, 1);
+            if (adapter != null) adapter.cancelDiscovery();
+            socket.connect();
+            return socket;
+        } catch (Exception e) {
+            try { if (socket != null) socket.close(); } catch (IOException ignored) {}
+            throw new IOException("Bluetooth connect failed after SDP and reflection: " + e.getMessage());
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void sendRawBluetooth(String macAddress, byte[] data) throws IOException {
+        BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(macAddress);
+        BluetoothSocket socket = createAndConnectSocket(device);
+
+        try {
+            OutputStream os = socket.getOutputStream();
+            // Chunked writes to prevent overwhelming printer buffer
+            for (int offset = 0; offset < data.length; offset += BT_CHUNK_SIZE) {
+                int len = Math.min(BT_CHUNK_SIZE, data.length - offset);
+                os.write(data, offset, len);
+                os.flush();
+                if (data.length > BT_CHUNK_SIZE) {
+                    Thread.sleep(BT_CHUNK_DELAY_MS);
+                }
+            }
+            os.flush();
+            Thread.sleep(BT_POST_FLUSH_DELAY_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            try { socket.close(); } catch (IOException ignored) {}
+        }
+    }
+
+    private boolean isBluetooth(PluginCall call) {
+        return "bluetooth".equals(call.getString("connectionType", "tcp"));
+    }
+
+    /**
+     * Permission gate — checks BT permissions before running action.
+     * For TCP calls, runs immediately.
+     */
+    private void withBluetoothPermission(PluginCall call, Runnable action) {
+        if (!isBluetooth(call)) {
+            action.run();
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (getPermissionState("bluetooth") != PermissionState.GRANTED) {
+                pendingAction = action;
+                requestPermissionForAlias("bluetooth", call, "onBtPermResult");
+                return;
+            }
+        } else {
+            if (getPermissionState("location") != PermissionState.GRANTED) {
+                pendingAction = action;
+                requestPermissionForAlias("location", call, "onBtPermResult");
+                return;
+            }
+        }
+        action.run();
+    }
+
+    private Runnable pendingAction;
+
+    @PermissionCallback
+    private void onBtPermResult(PluginCall call) {
+        boolean granted;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            granted = getPermissionState("bluetooth") == PermissionState.GRANTED;
+        } else {
+            granted = getPermissionState("location") == PermissionState.GRANTED;
+        }
+        if (granted && pendingAction != null) {
+            pendingAction.run();
+            pendingAction = null;
+        } else {
+            call.reject("Bluetooth permission is required", "PERMISSION_DENIED");
+            pendingAction = null;
+        }
+    }
 
     // ── Direct TCP helpers (bypass DantSu for reliability) ──────────
 
@@ -182,15 +329,7 @@ public class ThermalPrinterPlugin extends Plugin {
 
     @PluginMethod
     public void printRaw(PluginCall call) {
-        String ip = call.getString("host", "").trim();
-        int port = call.getInt("port", DEFAULT_PORT);
         String dataBase64 = call.getString("data", "");
-        int maxRetries = call.getInt("retries", 3);
-
-        if (ip.isEmpty()) {
-            call.reject("Printer host is required", "MISSING_HOST");
-            return;
-        }
         if (dataBase64.isEmpty()) {
             call.reject("Print data is required", "MISSING_DATA");
             return;
@@ -204,95 +343,181 @@ public class ThermalPrinterPlugin extends Plugin {
             return;
         }
 
-        // Run on background thread to avoid blocking Capacitor's plugin thread
-        new Thread(() -> {
-            IOException lastError = null;
+        withBluetoothPermission(call, () -> printExecutor.execute(() -> {
+            int maxRetries = call.getInt("retries", 3);
 
-            for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    Log.d(TAG, "printRaw attempt " + attempt + "/" + maxRetries
-                        + " -> " + ip + ":" + port + " (" + bytes.length + " bytes)");
-                    sendOnce(ip, port, bytes);
-                    Log.d(TAG, "printRaw succeeded on attempt " + attempt);
-
-                    JSObject result = new JSObject();
-                    result.put("success", true);
-                    result.put("bytesSent", bytes.length);
-                    result.put("attempts", attempt);
-                    call.resolve(result);
+            if (isBluetooth(call)) {
+                String address = call.getString("address", "").trim();
+                if (address.isEmpty()) {
+                    call.reject("Bluetooth address is required", "MISSING_ADDRESS");
                     return;
-                } catch (IOException e) {
-                    lastError = e;
-                    Log.w(TAG, "printRaw attempt " + attempt + " failed: " + e.getMessage());
-                    if (attempt < maxRetries) {
-                        try {
-                            Thread.sleep(500L * (1 << (attempt - 1)));
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            call.reject("Print interrupted", "PRINT_ERROR");
-                            return;
+                }
+                IOException lastError = null;
+                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        Log.d(TAG, "printRaw BT attempt " + attempt + "/" + maxRetries
+                                + " -> " + address + " (" + bytes.length + " bytes)");
+                        sendRawBluetooth(address, bytes);
+                        Log.d(TAG, "printRaw BT succeeded on attempt " + attempt);
+                        JSObject result = new JSObject();
+                        result.put("success", true);
+                        result.put("bytesSent", bytes.length);
+                        result.put("attempts", attempt);
+                        call.resolve(result);
+                        return;
+                    } catch (IOException e) {
+                        lastError = e;
+                        Log.w(TAG, "printRaw BT attempt " + attempt + " failed: " + e.getMessage());
+                        if (attempt < maxRetries) {
+                            try { Thread.sleep(500L * (1 << (attempt - 1))); }
+                            catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                                call.reject("Print interrupted", "PRINT_ERROR");
+                                return;
+                            }
                         }
                     }
                 }
+                call.reject("Bluetooth print failed after " + maxRetries + " attempts: "
+                        + (lastError != null ? lastError.getMessage() : "unknown"), "PRINT_ERROR");
+            } else {
+                // Existing TCP path — unchanged
+                String ip = call.getString("host", "").trim();
+                int port = call.getInt("port", DEFAULT_PORT);
+                if (ip.isEmpty()) {
+                    call.reject("Printer host is required", "MISSING_HOST");
+                    return;
+                }
+                IOException lastError = null;
+                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        Log.d(TAG, "printRaw TCP attempt " + attempt + "/" + maxRetries
+                                + " -> " + ip + ":" + port + " (" + bytes.length + " bytes)");
+                        sendOnce(ip, port, bytes);
+                        Log.d(TAG, "printRaw TCP succeeded on attempt " + attempt);
+                        JSObject result = new JSObject();
+                        result.put("success", true);
+                        result.put("bytesSent", bytes.length);
+                        result.put("attempts", attempt);
+                        call.resolve(result);
+                        return;
+                    } catch (IOException e) {
+                        lastError = e;
+                        Log.w(TAG, "printRaw TCP attempt " + attempt + " failed: " + e.getMessage());
+                        if (attempt < maxRetries) {
+                            try { Thread.sleep(500L * (1 << (attempt - 1))); }
+                            catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                                call.reject("Print interrupted", "PRINT_ERROR");
+                                return;
+                            }
+                        }
+                    }
+                }
+                call.reject("Print failed after " + maxRetries + " attempts: "
+                        + (lastError != null ? lastError.getMessage() : "unknown"), "PRINT_ERROR");
             }
-            call.reject("Print failed after " + maxRetries + " attempts: "
-                + (lastError != null ? lastError.getMessage() : "unknown"), "PRINT_ERROR");
-        }).start();
+        }));
     }
 
     @PluginMethod
     public void testConnection(PluginCall call) {
-        String ip = call.getString("host", "").trim();
-        int port = call.getInt("port", DEFAULT_PORT);
-
-        if (ip.isEmpty()) {
-            JSObject result = new JSObject();
-            result.put("connected", false);
-            result.put("message", "Printer host is required");
-            call.resolve(result);
-            return;
-        }
-
-        // Run on background thread
-        new Thread(() -> {
-            Socket socket = null;
-            try {
-                Network wifi = getWifiNetwork();
-                if (wifi != null) {
-                    socket = wifi.getSocketFactory().createSocket();
-                } else {
-                    socket = new Socket();
+        withBluetoothPermission(call, () -> printExecutor.execute(() -> {
+            if (isBluetooth(call)) {
+                String address = call.getString("address", "").trim();
+                if (address.isEmpty()) {
+                    JSObject result = new JSObject();
+                    result.put("connected", false);
+                    result.put("message", "Bluetooth address is required");
+                    call.resolve(result);
+                    return;
                 }
-                socket.setTcpNoDelay(true);
-                socket.connect(new InetSocketAddress(ip, port), 4000);
-                socket.close();
-                socket = null;
-
-                JSObject result = new JSObject();
-                result.put("connected", true);
-                result.put("message", "Connection successful");
-                call.resolve(result);
-            } catch (Exception e) {
-                JSObject result = new JSObject();
-                result.put("connected", false);
-                result.put("message", "Connection failed: " + e.getMessage());
-                call.resolve(result);
-            } finally {
-                if (socket != null) {
-                    try { socket.close(); } catch (IOException ignored) {}
+                BluetoothSocket socket = null;
+                try {
+                    BluetoothDevice device = BluetoothAdapter.getDefaultAdapter()
+                            .getRemoteDevice(address);
+                    socket = createAndConnectSocket(device);
+                    socket.close();
+                    socket = null;
+                    JSObject result = new JSObject();
+                    result.put("connected", true);
+                    result.put("message", "Bluetooth connection successful");
+                    call.resolve(result);
+                } catch (Exception e) {
+                    JSObject result = new JSObject();
+                    result.put("connected", false);
+                    result.put("message", "Bluetooth connection failed: " + e.getMessage());
+                    call.resolve(result);
+                } finally {
+                    if (socket != null) {
+                        try { socket.close(); } catch (IOException ignored) {}
+                    }
+                }
+            } else {
+                String ip = call.getString("host", "").trim();
+                int port = call.getInt("port", DEFAULT_PORT);
+                if (ip.isEmpty()) {
+                    JSObject result = new JSObject();
+                    result.put("connected", false);
+                    result.put("message", "Printer host is required");
+                    call.resolve(result);
+                    return;
+                }
+                Socket socket = null;
+                try {
+                    Network wifi = getWifiNetwork();
+                    if (wifi != null) {
+                        socket = wifi.getSocketFactory().createSocket();
+                    } else {
+                        socket = new Socket();
+                    }
+                    socket.setTcpNoDelay(true);
+                    socket.connect(new InetSocketAddress(ip, port), 4000);
+                    socket.close();
+                    socket = null;
+                    JSObject result = new JSObject();
+                    result.put("connected", true);
+                    result.put("message", "Connection successful");
+                    call.resolve(result);
+                } catch (Exception e) {
+                    JSObject result = new JSObject();
+                    result.put("connected", false);
+                    result.put("message", "Connection failed: " + e.getMessage());
+                    call.resolve(result);
+                } finally {
+                    if (socket != null) {
+                        try { socket.close(); } catch (IOException ignored) {}
+                    }
                 }
             }
-        }).start();
+        }));
     }
 
+    @SuppressLint("MissingPermission")
     @PluginMethod
     public void printImage(PluginCall call) {
-        DeviceConnection connection = null;
-        EscPosPrinter printer = null;
+        withBluetoothPermission(call, () -> printExecutor.execute(() -> {
+            DeviceConnection connection = null;
+            EscPosPrinter printer = null;
 
-        try {
-            connection = createConnection(call);
-            printer = createPrinter(call, connection);
+            try {
+                if (isBluetooth(call)) {
+                    String address = call.getString("address", "").trim();
+                    if (address.isEmpty()) {
+                        call.reject("Bluetooth address is required", "MISSING_ADDRESS");
+                        return;
+                    }
+                    BluetoothDevice device = BluetoothAdapter.getDefaultAdapter()
+                            .getRemoteDevice(address);
+                    try {
+                        connection = new BluetoothConnection(device);
+                    } catch (Exception e) {
+                        connection = new ReflectionBluetoothConnection(device);
+                    }
+                } else {
+                    connection = createConnection(call);
+                }
+                printer = createPrinter(call, connection);
 
             String base64Image = call.getString("base64Image", "");
             if (base64Image.isEmpty()) {
@@ -355,44 +580,160 @@ public class ThermalPrinterPlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("success", true);
             call.resolve(result);
-        } catch (Exception e) {
-            call.reject("Image print failed: " + e.getMessage());
-        } finally {
-            try {
-                if (printer != null) {
-                    printer.disconnectPrinter();
-                } else if (connection != null) {
-                    connection.disconnect();
+            } catch (EscPosConnectionException e) {
+                // If Bluetooth, retry with reflection fallback
+                if (isBluetooth(call)) {
+                    try {
+                        String address = call.getString("address", "").trim();
+                        BluetoothDevice device = BluetoothAdapter.getDefaultAdapter()
+                                .getRemoteDevice(address);
+                        DeviceConnection fallback = new ReflectionBluetoothConnection(device);
+                        EscPosPrinter fallbackPrinter = createPrinter(call, fallback);
+                        // Re-run the image print logic with fallback
+                        // (simplified: just re-print the image)
+                        String base64Image2 = call.getString("base64Image", "");
+                        byte[] imageBytes2 = Base64.decode(base64Image2, Base64.DEFAULT);
+                        Bitmap bitmap2 = BitmapFactory.decodeByteArray(imageBytes2, 0, imageBytes2.length);
+                        if (bitmap2 != null) {
+                            List<Bitmap> chunks2 = splitBitmap(bitmap2);
+                            for (int i = 0; i < chunks2.size(); i++) {
+                                Bitmap chunk = chunks2.get(i);
+                                String hexImage = PrinterTextParserImg.bitmapToHexadecimalString(
+                                        fallbackPrinter, chunk, false);
+                                String printData = "[C]<img>" + hexImage + "</img>\n";
+                                if (i == chunks2.size() - 1) {
+                                    boolean cutPaper2 = call.getBoolean("cutPaper", true);
+                                    if (cutPaper2) {
+                                        fallbackPrinter.printFormattedTextAndCut(printData, 20f);
+                                    } else {
+                                        fallbackPrinter.printFormattedText(printData, 20f);
+                                    }
+                                } else {
+                                    fallbackPrinter.printFormattedText(printData, 20f);
+                                }
+                                chunk.recycle();
+                            }
+                            bitmap2.recycle();
+                        }
+                        fallbackPrinter.disconnectPrinter();
+                        JSObject result = new JSObject();
+                        result.put("success", true);
+                        call.resolve(result);
+                        return;
+                    } catch (Exception e2) {
+                        call.reject("Image print failed after BT reflection retry: " + e2.getMessage());
+                        return;
+                    }
                 }
-            } catch (Exception ignored) {
+                call.reject("Image print failed: " + e.getMessage());
+            } catch (Exception e) {
+                call.reject("Image print failed: " + e.getMessage());
+            } finally {
+                try {
+                    if (printer != null) {
+                        printer.disconnectPrinter();
+                    } else if (connection != null) {
+                        connection.disconnect();
+                    }
+                } catch (Exception ignored) {
+                }
             }
-        }
+        }));
     }
 
+    @SuppressLint("MissingPermission")
     @PluginMethod
     public void openCashDrawer(PluginCall call) {
-        DeviceConnection connection = null;
-        EscPosPrinter printer = null;
+        withBluetoothPermission(call, () -> printExecutor.execute(() -> {
+            DeviceConnection connection = null;
+            EscPosPrinter printer = null;
 
-        try {
-            connection = createConnection(call);
-            printer = createPrinter(call, connection);
+            try {
+                if (isBluetooth(call)) {
+                    String address = call.getString("address", "").trim();
+                    if (address.isEmpty()) {
+                        call.reject("Bluetooth address is required", "MISSING_ADDRESS");
+                        return;
+                    }
+                    BluetoothDevice device = BluetoothAdapter.getDefaultAdapter()
+                            .getRemoteDevice(address);
+                    connection = new BluetoothConnection(device);
+                } else {
+                    connection = createConnection(call);
+                }
+                printer = createPrinter(call, connection);
             printer.printFormattedTextAndOpenCashBox("\n", 20f);
 
             JSObject result = new JSObject();
             result.put("success", true);
             call.resolve(result);
-        } catch (Exception e) {
-            call.reject("Cash drawer failed: " + e.getMessage());
-        } finally {
-            try {
-                if (printer != null) {
-                    printer.disconnectPrinter();
-                } else if (connection != null) {
-                    connection.disconnect();
+            } catch (Exception e) {
+                call.reject("Cash drawer failed: " + e.getMessage());
+            } finally {
+                try {
+                    if (printer != null) {
+                        printer.disconnectPrinter();
+                    } else if (connection != null) {
+                        connection.disconnect();
+                    }
+                } catch (Exception ignored) {
                 }
-            } catch (Exception ignored) {
             }
-        }
+        }));
+    }
+
+    // ── Bluetooth device listing ────────────────────────────────────
+
+    @SuppressLint("MissingPermission")
+    @PluginMethod
+    public void listBluetoothDevices(PluginCall call) {
+        withBluetoothPermission(call, () -> {
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            if (adapter == null) {
+                call.reject("Bluetooth not available on this device", "BT_UNAVAILABLE");
+                return;
+            }
+            if (!adapter.isEnabled()) {
+                call.reject("Bluetooth is disabled", "BT_DISABLED");
+                return;
+            }
+
+            Set<BluetoothDevice> bonded = adapter.getBondedDevices();
+            JSArray devices = new JSArray();
+
+            for (BluetoothDevice device : bonded) {
+                String name = device.getName();
+                boolean isPrinter = false;
+
+                // Check Bluetooth device class
+                if (device.getBluetoothClass() != null) {
+                    int majorClass = device.getBluetoothClass().getMajorDeviceClass();
+                    if (majorClass == BluetoothClass.Device.Major.IMAGING) {
+                        isPrinter = true;
+                    }
+                }
+
+                // Check name heuristics
+                if (!isPrinter && name != null) {
+                    String lowerName = name.toLowerCase();
+                    for (String keyword : PRINTER_KEYWORDS) {
+                        if (lowerName.contains(keyword)) {
+                            isPrinter = true;
+                            break;
+                        }
+                    }
+                }
+
+                JSObject d = new JSObject();
+                d.put("name", name != null ? name : "Unknown");
+                d.put("address", device.getAddress());
+                d.put("isPrinter", isPrinter);
+                devices.put(d);
+            }
+
+            JSObject result = new JSObject();
+            result.put("devices", devices);
+            call.resolve(result);
+        });
     }
 }

@@ -2111,6 +2111,7 @@
         "paperWidth": "Paper Width",
         "paper58mm": "58 mm",
         "paper80mm": "80 mm",
+        "connectionType": "Connection Type",
         "connectionTimeout": "Connection Timeout (s)",
         "cutPaper": "Cut Paper",
         "cutPaperDesc": "Send a cut command after each mobile print.",
