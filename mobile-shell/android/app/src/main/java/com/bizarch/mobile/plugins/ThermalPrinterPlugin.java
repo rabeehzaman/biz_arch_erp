@@ -925,6 +925,118 @@ public class ThermalPrinterPlugin extends Plugin {
         return out.toByteArray();
     }
 
+    // ── HTML to thermal printer (WebView capture pipeline) ────────
+
+    @SuppressLint("MissingPermission")
+    @PluginMethod
+    public void printHtmlToThermal(PluginCall call) {
+        String html = call.getString("html", "");
+        int paperWidth = call.getInt("paperWidth", 576);
+        boolean cutPaper = call.getBoolean("cutPaper", true);
+
+        if (html.isEmpty()) {
+            call.reject("HTML content is required", "MISSING_DATA");
+            return;
+        }
+
+        // WebView must be created on UI thread
+        getActivity().runOnUiThread(() -> {
+            try {
+                android.webkit.WebView webView = new android.webkit.WebView(getContext());
+                // Set width to match paper dots for 1:1 pixel mapping
+                webView.setLayoutParams(new android.view.ViewGroup.LayoutParams(paperWidth, 1));
+                webView.getSettings().setJavaScriptEnabled(false);
+                webView.getSettings().setLoadWithOverviewMode(false);
+                webView.getSettings().setUseWideViewPort(false);
+                webView.setInitialScale(100);
+                webView.setBackgroundColor(Color.WHITE);
+
+                webView.setWebViewClient(new android.webkit.WebViewClient() {
+                    private boolean captured = false;
+
+                    @Override
+                    public void onPageFinished(android.webkit.WebView view, String url) {
+                        if (captured) return;
+                        captured = true;
+
+                        // Delay slightly for rendering to complete
+                        view.postDelayed(() -> {
+                            try {
+                                // Measure content height
+                                int contentHeight = view.getContentHeight();
+                                if (contentHeight <= 0) contentHeight = 800;
+
+                                // Resize to full content
+                                view.setLayoutParams(new android.view.ViewGroup.LayoutParams(
+                                        paperWidth, contentHeight));
+                                view.layout(0, 0, paperWidth, contentHeight);
+
+                                // Capture to bitmap
+                                Bitmap bitmap = Bitmap.createBitmap(
+                                        paperWidth, contentHeight, Bitmap.Config.ARGB_8888);
+                                bitmap.eraseColor(Color.WHITE);
+                                android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+                                view.draw(canvas);
+
+                                // Process on background thread
+                                final Bitmap capturedBitmap = bitmap;
+                                printExecutor.execute(() -> {
+                                    try {
+                                        floydSteinbergDither(capturedBitmap);
+
+                                        ByteArrayOutputStream allData = new ByteArrayOutputStream();
+                                        allData.write(new byte[]{0x1B, 0x40}); // ESC @
+
+                                        byte[] rasterData = buildStripRasterCommands(
+                                                capturedBitmap, paperWidth, capturedBitmap.getHeight(),
+                                                MAX_IMAGE_CHUNK_HEIGHT);
+                                        allData.write(rasterData);
+
+                                        capturedBitmap.recycle();
+
+                                        allData.write(new byte[]{0x1B, 0x64, 0x04}); // feed
+                                        if (cutPaper) {
+                                            allData.write(new byte[]{0x1D, 0x56, 0x42, 0x00});
+                                        }
+
+                                        if (isBluetooth(call)) {
+                                            String address = call.getString("address", "").trim();
+                                            if (address.isEmpty()) {
+                                                call.reject("Bluetooth address is required", "MISSING_ADDRESS");
+                                                return;
+                                            }
+                                            sendRawBluetooth(address, allData.toByteArray());
+                                        } else {
+                                            String host = call.getString("host", "").trim();
+                                            int port = call.getInt("port", DEFAULT_PORT);
+                                            if (host.isEmpty()) {
+                                                call.reject("Printer host is required", "MISSING_HOST");
+                                                return;
+                                            }
+                                            sendOnce(host, port, allData.toByteArray());
+                                        }
+
+                                        JSObject result = new JSObject();
+                                        result.put("success", true);
+                                        call.resolve(result);
+                                    } catch (Exception e) {
+                                        call.reject("HTML thermal print failed: " + e.getMessage(), "PRINT_ERROR");
+                                    }
+                                });
+                            } catch (Exception e) {
+                                call.reject("WebView capture failed: " + e.getMessage(), "CAPTURE_ERROR");
+                            }
+                        }, 500); // 500ms delay for render completion
+                    }
+                });
+
+                webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+            } catch (Exception e) {
+                call.reject("Failed to create WebView: " + e.getMessage(), "WEBVIEW_ERROR");
+            }
+        });
+    }
+
     // ── Bluetooth device listing ────────────────────────────────────
 
     @SuppressLint("MissingPermission")

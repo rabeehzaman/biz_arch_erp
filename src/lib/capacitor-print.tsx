@@ -61,6 +61,11 @@ interface ThermalPrinterPlugin {
     paperWidth?: number;  // 384 or 576 dots
     cutPaper?: boolean;
   }): Promise<{ success: boolean; pages?: number }>;
+  printHtmlToThermal(options: ConnectionTarget & {
+    html: string;
+    paperWidth?: number;  // 384 or 576 dots
+    cutPaper?: boolean;
+  }): Promise<{ success: boolean }>;
 }
 
 export const ThermalPrinter = registerPlugin<ThermalPrinterPlugin>("ThermalPrinter");
@@ -624,6 +629,38 @@ export async function capacitorPrintPdfToThermal(
     return {
       success: false,
       error: error instanceof Error ? error.message : "PDF thermal print failed",
+    };
+  }
+}
+
+/**
+ * Print HTML content to the configured thermal printer.
+ * Renders HTML in a native WebView, captures as bitmap, dithers, sends as raster.
+ */
+export async function capacitorPrintHtmlToThermal(
+  html: string,
+  config?: Partial<MobilePrinterConfig>,
+): Promise<{ success: boolean; error?: string }> {
+  if (!isCapacitorEnvironment()) {
+    return { success: false, error: "Capacitor mobile bridge not available" };
+  }
+
+  try {
+    const resolved = requireConfiguredPrinter(config);
+    const paperDots = resolved.paperWidth === 58 ? 384 : 576;
+
+    await ThermalPrinter.printHtmlToThermal({
+      ...connectionParams(resolved),
+      html,
+      paperWidth: paperDots,
+      cutPaper: resolved.cutPaper,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "HTML thermal print failed",
     };
   }
 }
