@@ -944,18 +944,14 @@ public class ThermalPrinterPlugin extends Plugin {
                 .replace("width: 80mm", "width: 100%")
                 .replace("width:80mm", "width: 100%");
 
+        final float density = getActivity().getResources().getDisplayMetrics().density;
+        final int layoutWidth = Math.round(paperWidth * density); // e.g. 576 * 2.625 = 1512
+
         getActivity().runOnUiThread(() -> {
             try {
-                // Create mdpi (density=1.0) context so 1 CSS pixel = 1 bitmap pixel
-                android.content.res.Configuration mdpiConfig =
-                        new android.content.res.Configuration(getActivity().getResources().getConfiguration());
-                mdpiConfig.densityDpi = android.util.DisplayMetrics.DENSITY_MEDIUM; // 160
-                android.content.Context mdpiContext = getActivity().createConfigurationContext(mdpiConfig);
-
-                // Must call before creating WebView on API 21+
                 android.webkit.WebView.enableSlowWholeDocumentDraw();
 
-                android.webkit.WebView webView = new android.webkit.WebView(mdpiContext);
+                android.webkit.WebView webView = new android.webkit.WebView(getActivity());
                 webView.setVisibility(android.view.View.INVISIBLE);
                 webView.setBackgroundColor(Color.WHITE);
 
@@ -964,10 +960,10 @@ public class ThermalPrinterPlugin extends Plugin {
                 webView.getSettings().setUseWideViewPort(false);
                 webView.getSettings().setTextZoom(100);
 
-                // Attach to activity's view hierarchy (required for rendering)
+                // Layout at density-scaled width so CSS viewport = paperWidth CSS pixels
                 android.widget.FrameLayout rootView = getActivity().findViewById(android.R.id.content);
                 rootView.addView(webView, new android.widget.FrameLayout.LayoutParams(
-                        paperWidth, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT));
+                        layoutWidth, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT));
 
                 webView.setWebViewClient(new android.webkit.WebViewClient() {
                     private boolean captured = false;
@@ -977,28 +973,31 @@ public class ThermalPrinterPlugin extends Plugin {
                         if (captured) return;
                         captured = true;
 
-                        // Wait for layout pass to complete
+                        // Wait for layout + rendering to complete
                         view.postDelayed(() -> {
                             try {
-                                // Force measure with exact width, unspecified height
+                                // Measure at density-scaled width
                                 view.measure(
-                                        android.view.View.MeasureSpec.makeMeasureSpec(paperWidth,
+                                        android.view.View.MeasureSpec.makeMeasureSpec(layoutWidth,
                                                 android.view.View.MeasureSpec.EXACTLY),
                                         android.view.View.MeasureSpec.makeMeasureSpec(0,
                                                 android.view.View.MeasureSpec.UNSPECIFIED));
 
-                                int captureHeight = view.getMeasuredHeight();
-                                if (captureHeight <= 0) {
-                                    captureHeight = view.getContentHeight();
+                                int measuredH = view.getMeasuredHeight();
+                                if (measuredH <= 0) {
+                                    measuredH = (int) (view.getContentHeight() * density);
                                 }
-                                if (captureHeight <= 0) captureHeight = 800;
+                                if (measuredH <= 0) measuredH = (int) (800 * density);
 
-                                view.layout(0, 0, paperWidth, captureHeight);
+                                view.layout(0, 0, layoutWidth, measuredH);
 
+                                // Create bitmap at target printer width, scale down from density-sized render
+                                int bitmapH = Math.round(measuredH / density);
                                 Bitmap bitmap = Bitmap.createBitmap(
-                                        paperWidth, captureHeight, Bitmap.Config.ARGB_8888);
+                                        paperWidth, bitmapH, Bitmap.Config.ARGB_8888);
                                 bitmap.eraseColor(Color.WHITE);
                                 android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+                                canvas.scale(1f / density, 1f / density);
                                 view.draw(canvas);
 
                                 // Remove WebView from hierarchy
