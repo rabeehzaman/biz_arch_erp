@@ -939,9 +939,11 @@ public class ThermalPrinterPlugin extends Plugin {
             return;
         }
 
-        // Replace CSS mm-based widths with 100% so body fills the WebView viewport,
-        // and convert mm padding to proportional pixel values
+        // Inject viewport meta tag to make CSS pixels = bitmap pixels (bypass density scaling)
+        // and replace mm-based widths with 100% so body fills the viewport
+        String viewportMeta = "<meta name=\"viewport\" content=\"width=" + paperWidth + ", initial-scale=1.0, user-scalable=no\">";
         String adjustedHtml = html
+                .replace("<meta charset=\"utf-8\">", "<meta charset=\"utf-8\">\n" + viewportMeta)
                 .replace("width: 80mm", "width: 100%")
                 .replace("width:80mm", "width: 100%")
                 .replace("size: 80mm", "size: " + paperWidth + "px");
