@@ -326,7 +326,21 @@ export default function InvoiceDetailPage({
     if (!invoice || !receiptMeta) return;
     setIsPrintingReceipt(true);
     try {
-      // Generate QR code data URL server-side if invoice has qrCodeData
+      // On Capacitor with a configured thermal printer: fetch PDF and print natively
+      if (isCapacitorEnvironment()) {
+        const { getMobilePrinterConfig, capacitorPrintPdfToThermal } = await import("@/lib/capacitor-print");
+        const printerConfig = getMobilePrinterConfig();
+        if (printerConfig && (printerConfig.host || printerConfig.address)) {
+          const response = await fetch(`/api/invoices/${id}/pdf`);
+          if (!response.ok) throw new Error("Failed to generate PDF");
+          const blob = await response.blob();
+          const result = await capacitorPrintPdfToThermal(blob, printerConfig);
+          if (result.success) return;
+          console.warn("Thermal print failed, falling back:", result.error);
+        }
+      }
+
+      // Fallback: HTML receipt via printInvoiceReceipt (browser print dialog / print preview)
       let qrCodeDataURL: string | null = (receiptMeta.qrCodeDataURL as string) || null;
       if (invoice.qrCodeData && !qrCodeDataURL) {
         const qrRes = await fetch(`/api/receipt-meta?qrCodeData=${encodeURIComponent(invoice.qrCodeData)}`);

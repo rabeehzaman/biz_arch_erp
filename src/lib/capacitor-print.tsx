@@ -56,6 +56,11 @@ interface ThermalPrinterPlugin {
     timeoutSeconds?: number;
   }): Promise<{ success: boolean } | void>;
   listBluetoothDevices(): Promise<{ devices: BluetoothDevice[] }>;
+  printPdfToThermal(options: ConnectionTarget & {
+    base64Pdf: string;
+    paperWidth?: number;  // 384 or 576 dots
+    cutPaper?: boolean;
+  }): Promise<{ success: boolean; pages?: number }>;
 }
 
 export const ThermalPrinter = registerPlugin<ThermalPrinterPlugin>("ThermalPrinter");
@@ -574,6 +579,51 @@ export async function listBluetoothDevices(): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to list Bluetooth devices",
+    };
+  }
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Print a PDF to the configured thermal printer using native PdfRenderer.
+ * Works for both Bluetooth and TCP printers.
+ */
+export async function capacitorPrintPdfToThermal(
+  pdfBlob: Blob,
+  config?: Partial<MobilePrinterConfig>,
+): Promise<{ success: boolean; error?: string }> {
+  if (!isCapacitorEnvironment()) {
+    return { success: false, error: "Capacitor mobile bridge not available" };
+  }
+
+  try {
+    const resolved = requireConfiguredPrinter(config);
+    const base64Pdf = await blobToBase64(pdfBlob);
+    const paperDots = resolved.paperWidth === 58 ? 384 : 576;
+
+    await ThermalPrinter.printPdfToThermal({
+      ...connectionParams(resolved),
+      base64Pdf,
+      paperWidth: paperDots,
+      cutPaper: resolved.cutPaper,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "PDF thermal print failed",
     };
   }
 }

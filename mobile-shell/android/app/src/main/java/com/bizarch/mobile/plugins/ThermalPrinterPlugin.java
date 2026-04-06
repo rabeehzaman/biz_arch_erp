@@ -30,11 +30,19 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.pdf.PdfRenderer;
+import android.os.ParcelFileDescriptor;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -737,6 +745,184 @@ public class ThermalPrinterPlugin extends Plugin {
                 }
             }
         }));
+    }
+
+    // ── PDF to thermal printer (PdfRenderer pipeline) ─────────────
+
+    @SuppressLint("MissingPermission")
+    @PluginMethod
+    public void printPdfToThermal(PluginCall call) {
+        withBluetoothPermission(call, () -> printExecutor.execute(() -> {
+            String base64Pdf = call.getString("base64Pdf", "");
+            int paperWidth = call.getInt("paperWidth", 576);
+            boolean cutPaper = call.getBoolean("cutPaper", true);
+
+            if (base64Pdf.isEmpty()) {
+                call.reject("PDF data is required", "MISSING_DATA");
+                return;
+            }
+
+            File tempFile = null;
+            PdfRenderer renderer = null;
+            ParcelFileDescriptor fd = null;
+
+            try {
+                byte[] pdfBytes = Base64.decode(base64Pdf, Base64.DEFAULT);
+
+                tempFile = File.createTempFile("print_", ".pdf", getContext().getCacheDir());
+                FileOutputStream fos = new FileOutputStream(tempFile);
+                fos.write(pdfBytes);
+                fos.close();
+
+                fd = ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY);
+                renderer = new PdfRenderer(fd);
+                fd = null; // renderer now owns the FD
+
+                int pageCount = renderer.getPageCount();
+                ByteArrayOutputStream allData = new ByteArrayOutputStream();
+
+                // Initialize printer
+                allData.write(new byte[]{0x1B, 0x40});
+
+                for (int i = 0; i < pageCount; i++) {
+                    PdfRenderer.Page page = renderer.openPage(i);
+                    try {
+                        float scale = (float) paperWidth / (float) page.getWidth();
+                        int bitmapHeight = Math.round(page.getHeight() * scale);
+
+                        Bitmap bitmap = Bitmap.createBitmap(
+                                paperWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
+                        bitmap.eraseColor(Color.WHITE);
+
+                        Matrix matrix = new Matrix();
+                        matrix.setScale(scale, scale);
+                        page.render(bitmap, null, matrix,
+                                PdfRenderer.Page.RENDER_MODE_FOR_PRINT);
+
+                        floydSteinbergDither(bitmap);
+
+                        byte[] rasterData = buildStripRasterCommands(
+                                bitmap, paperWidth, bitmapHeight, MAX_IMAGE_CHUNK_HEIGHT);
+                        allData.write(rasterData);
+
+                        bitmap.recycle();
+
+                        if (i < pageCount - 1) {
+                            allData.write(new byte[]{0x1B, 0x64, 0x03});
+                        }
+                    } finally {
+                        page.close();
+                    }
+                }
+
+                allData.write(new byte[]{0x1B, 0x64, 0x04});
+
+                if (cutPaper) {
+                    allData.write(new byte[]{0x1D, 0x56, 0x42, 0x00});
+                }
+
+                if (isBluetooth(call)) {
+                    String address = call.getString("address", "").trim();
+                    if (address.isEmpty()) {
+                        call.reject("Bluetooth address is required", "MISSING_ADDRESS");
+                        return;
+                    }
+                    sendRawBluetooth(address, allData.toByteArray());
+                } else {
+                    String host = call.getString("host", "").trim();
+                    int port = call.getInt("port", DEFAULT_PORT);
+                    if (host.isEmpty()) {
+                        call.reject("Printer host is required", "MISSING_HOST");
+                        return;
+                    }
+                    sendOnce(host, port, allData.toByteArray());
+                }
+
+                JSObject result = new JSObject();
+                result.put("success", true);
+                result.put("pages", pageCount);
+                call.resolve(result);
+
+            } catch (Exception e) {
+                call.reject("PDF print failed: " + e.getMessage(), "PRINT_ERROR");
+            } finally {
+                if (renderer != null) {
+                    renderer.close();
+                } else if (fd != null) {
+                    try { fd.close(); } catch (IOException ignored) {}
+                }
+                if (tempFile != null) {
+                    tempFile.delete();
+                }
+            }
+        }));
+    }
+
+    private void floydSteinbergDither(Bitmap bitmap) {
+        int w = bitmap.getWidth(), h = bitmap.getHeight();
+        float[] curRow = new float[w];
+        float[] nxtRow = new float[w];
+        int[] pixels = new int[w];
+
+        for (int y = 0; y < h; y++) {
+            bitmap.getPixels(pixels, 0, w, 0, y, w, 1);
+
+            for (int x = 0; x < w; x++) {
+                int c = pixels[x];
+                float lum = 0.299f * ((c >> 16) & 0xFF)
+                          + 0.587f * ((c >> 8) & 0xFF)
+                          + 0.114f * (c & 0xFF);
+                float oldVal = Math.min(255f, Math.max(0f, curRow[x] + lum));
+                int newVal = oldVal < 128f ? 0 : 255;
+                pixels[x] = newVal == 0 ? 0xFF000000 : 0xFFFFFFFF;
+                float err = oldVal - newVal;
+
+                if (x + 1 < w)  curRow[x + 1] += err * 7f / 16f;
+                if (x > 0)      nxtRow[x - 1] += err * 3f / 16f;
+                                 nxtRow[x]     += err * 5f / 16f;
+                if (x + 1 < w)  nxtRow[x + 1] += err * 1f / 16f;
+            }
+
+            bitmap.setPixels(pixels, 0, w, 0, y, w, 1);
+            float[] tmp = curRow;
+            curRow = nxtRow;
+            nxtRow = tmp;
+            Arrays.fill(nxtRow, 0f);
+        }
+    }
+
+    private byte[] buildStripRasterCommands(Bitmap mono, int w, int h, int maxStripH) {
+        int widthBytes = (w + 7) / 8;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        int[] rowPixels = new int[w];
+
+        for (int y = 0; y < h; y += maxStripH) {
+            int stripH = Math.min(maxStripH, h - y);
+
+            out.write(0x1D);
+            out.write(0x76);
+            out.write(0x30);
+            out.write(0x00);
+            out.write(widthBytes & 0xFF);
+            out.write((widthBytes >> 8) & 0xFF);
+            out.write(stripH & 0xFF);
+            out.write((stripH >> 8) & 0xFF);
+
+            for (int row = y; row < y + stripH; row++) {
+                mono.getPixels(rowPixels, 0, w, 0, row, w, 1);
+                for (int col = 0; col < widthBytes; col++) {
+                    int b = 0;
+                    for (int bit = 0; bit < 8; bit++) {
+                        int px = col * 8 + bit;
+                        if (px < w && (rowPixels[px] & 0xFF) == 0) {
+                            b |= (0x80 >> bit);
+                        }
+                    }
+                    out.write(b);
+                }
+            }
+        }
+        return out.toByteArray();
     }
 
     // ── Bluetooth device listing ────────────────────────────────────
