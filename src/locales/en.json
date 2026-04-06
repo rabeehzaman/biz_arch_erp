@@ -446,6 +446,7 @@
         "downloadPDF": "Download PDF",
         "pdfDownloaded": "PDF downloaded successfully",
         "pdfDownloadFailed": "Failed to download PDF",
+        "savedToDownloads": "Saved to Downloads",
         "printFailed": "Failed to print",
         "billTo": "Bill To",
         "createdOn": "Created on",

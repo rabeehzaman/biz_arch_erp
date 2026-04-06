@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
+import { isCapacitorEnvironment } from "@/lib/capacitor-plugins";
 
 interface QuotationItem {
   id: string;
@@ -122,17 +123,24 @@ export default function QuotationDetailPage({
       if (!response.ok) throw new Error("Failed to generate PDF");
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `quotation-${quotation?.quotationNumber}-${format(
-        new Date(),
-        "yyyy-MM-dd"
-      )}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+
+      if (isCapacitorEnvironment()) {
+        const { capacitorDownloadPdf } = await import("@/lib/capacitor-pdf-printer");
+        await capacitorDownloadPdf(blob, `quotation-${quotation?.quotationNumber}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+        toast.success(t("common.savedToDownloads"));
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `quotation-${quotation?.quotationNumber}-${format(
+          new Date(),
+          "yyyy-MM-dd"
+        )}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
     } catch (error) {
       toast.error(t("common.pdfDownloadFailed"));
       console.error(error);
@@ -148,12 +156,18 @@ export default function QuotationDetailPage({
       if (!response.ok) throw new Error("Failed to generate PDF");
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const printWindow = window.open(url, "_blank");
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-        };
+
+      if (isCapacitorEnvironment()) {
+        const { capacitorPrintPdf } = await import("@/lib/capacitor-pdf-printer");
+        await capacitorPrintPdf(blob, `Quotation ${quotation?.quotationNumber}`);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
       }
     } catch (error) {
       toast.error(t("common.printFailed"));

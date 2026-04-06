@@ -446,6 +446,7 @@
         "downloadPDF": "تحميل PDF",
         "pdfDownloaded": "تم تحميل ملف PDF بنجاح",
         "pdfDownloadFailed": "فشل في تحميل ملف PDF",
+        "savedToDownloads": "تم الحفظ في التنزيلات",
         "printFailed": "فشل في الطباعة",
         "billTo": "فاتورة إلى",
         "createdOn": "تم الإنشاء في",

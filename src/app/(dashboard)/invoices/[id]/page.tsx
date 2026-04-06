@@ -47,6 +47,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { shareContent } from "@/lib/capacitor-share";
+import { isCapacitorEnvironment } from "@/lib/capacitor-plugins";
 import { printInvoiceReceipt } from "@/lib/print-invoice-receipt";
 import type { InvoiceReceiptData } from "@/components/invoices/invoice-receipt";
 
@@ -216,17 +217,24 @@ export default function InvoiceDetailPage({
       if (!response.ok) throw new Error("Failed to generate PDF");
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `invoice-${invoice?.invoiceNumber}-${format(
-        new Date(),
-        "yyyy-MM-dd"
-      )}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+
+      if (isCapacitorEnvironment()) {
+        const { capacitorDownloadPdf } = await import("@/lib/capacitor-pdf-printer");
+        await capacitorDownloadPdf(blob, `invoice-${invoice?.invoiceNumber}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+        toast.success(t("common.savedToDownloads"));
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `invoice-${invoice?.invoiceNumber}-${format(
+          new Date(),
+          "yyyy-MM-dd"
+        )}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
     } catch (error) {
       toast.error(t("common.pdfDownloadFailed"));
       console.error(error);
@@ -293,12 +301,18 @@ export default function InvoiceDetailPage({
       if (!response.ok) throw new Error("Failed to generate PDF");
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const printWindow = window.open(url, "_blank");
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-        };
+
+      if (isCapacitorEnvironment()) {
+        const { capacitorPrintPdf } = await import("@/lib/capacitor-pdf-printer");
+        await capacitorPrintPdf(blob, `Invoice ${invoice?.invoiceNumber}`);
+      } else {
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
       }
     } catch (error) {
       toast.error(t("common.printFailed"));

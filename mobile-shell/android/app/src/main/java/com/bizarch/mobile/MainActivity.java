@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import com.bizarch.mobile.plugins.PdfPrinterPlugin;
 import com.bizarch.mobile.plugins.ThermalPrinterPlugin;
 import com.getcapacitor.BridgeActivity;
 
@@ -14,6 +15,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(ThermalPrinterPlugin.class);
+        registerPlugin(PdfPrinterPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Calculate status bar height from system resources
