@@ -235,9 +235,12 @@ export function MobileLayout({ children }: MobileLayoutProps) {
       <NetworkStatusBanner />
       <div className={contentClassName}>
         <div className="mx-auto w-full max-w-[1680px]">
-          {showLanguageSwitcher && (
-            <div className="mb-3 flex justify-end">
-              <MobileLanguageSwitcher />
+          {pathname === "/" && (
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-sm font-semibold text-slate-700">
+                {t("header.welcome")}, {session?.user?.name || ""}
+              </p>
+              {showLanguageSwitcher && <MobileLanguageSwitcher />}
             </div>
           )}
           <div className="flex flex-col gap-6">{children}</div>

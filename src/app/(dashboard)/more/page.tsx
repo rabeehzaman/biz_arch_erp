@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { useLanguage } from "@/lib/i18n";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import useSWR from "swr";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Users,
   FileText,
@@ -281,8 +282,52 @@ export default function MorePage() {
     fetcher
   );
 
+  const { data: warehouseAccess } = useSWR(
+    !isSuperadmin && multiBranchEnabled && session?.user ? "/api/user-warehouse-access" : null,
+    fetcher
+  );
+
+  const initials = session?.user?.name
+    ?.split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase() || "U";
+
+  const assignedBranch = useMemo(() => {
+    if (!warehouseAccess || !Array.isArray(warehouseAccess)) return null;
+    const userId = session?.user?.id;
+    const myAccess = warehouseAccess.filter((a: { userId: string }) => a.userId === userId);
+    if (myAccess.length === 0) return null;
+    const defaultAccess = myAccess.find((a: { isDefault: boolean }) => a.isDefault);
+    return (defaultAccess || myAccess[0])?.branch?.name ?? null;
+  }, [warehouseAccess, session?.user?.id]);
+
   return (
     <div className="pb-4">
+      {!isSuperadmin && session?.user && (
+        <div className="mb-5">
+          <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+            <div className="flex items-center gap-3.5 px-4 py-3.5">
+              <Avatar className="h-10 w-10 shrink-0">
+                <AvatarFallback className="bg-slate-900 text-sm font-semibold text-white">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-900">{session.user.name}</p>
+                <p className="truncate text-xs text-slate-500">{session.user.email}</p>
+                {assignedBranch && (
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                    <GitBranch className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{assignedBranch}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <h1 className="mb-6 text-2xl font-bold text-slate-900">{t("nav.more")}</h1>
 
       {isSuperadmin && (
