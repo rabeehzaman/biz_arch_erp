@@ -939,10 +939,11 @@ public class ThermalPrinterPlugin extends Plugin {
             return;
         }
 
-        // Replace CSS mm-based width with pixel width matching printer dots
+        // Replace CSS mm-based widths with 100% so body fills the WebView viewport,
+        // and convert mm padding to proportional pixel values
         String adjustedHtml = html
-                .replace("width: 80mm", "width: " + paperWidth + "px")
-                .replace("width:80mm", "width: " + paperWidth + "px")
+                .replace("width: 80mm", "width: 100%")
+                .replace("width:80mm", "width: 100%")
                 .replace("size: 80mm", "size: " + paperWidth + "px");
 
         getActivity().runOnUiThread(() -> {
