@@ -84,9 +84,17 @@ function DialogContent({
 
     const onViewportChange = () => {
       const heightDiff = window.innerHeight - viewport.height
-      // Only react if the keyboard actually takes significant space (>120px)
-      if (heightDiff > 120) {
+      // Only react if the keyboard actually takes significant space (>80px)
+      if (heightDiff > 80) {
         setKeyboardInset(heightDiff)
+
+        // Ensure the focused input is visible within the dialog
+        requestAnimationFrame(() => {
+          const active = document.activeElement as HTMLElement | null
+          if (active && contentRef.current?.contains(active)) {
+            active.scrollIntoView({ block: "center", behavior: "smooth" })
+          }
+        })
       } else {
         setKeyboardInset(0)
       }

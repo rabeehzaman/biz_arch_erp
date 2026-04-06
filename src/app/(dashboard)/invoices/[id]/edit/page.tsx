@@ -461,7 +461,7 @@ export default function EditInvoicePage({
           </div>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit}>
+        <form ref={formRef} onSubmit={handleSubmit} className="pb-16 sm:pb-0">
           <div className="space-y-6">
             <Card>
               <CardHeader>

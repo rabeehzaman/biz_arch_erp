@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, Pencil, Printer, Receipt, CreditCard, Send, Share2 } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, MoreHorizontal, Pencil, Printer, Receipt, CreditCard, Send, Share2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -456,53 +456,43 @@ export default function InvoiceDetailPage({
               )}
             </div>
           </div>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <Link href={`/invoices/${id}/edit`} className="col-span-1 sm:w-auto">
-              <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
-                <Pencil className="h-4 w-4 sm:mr-2" />
-                <span className="sm:inline">{t("common.edit")}</span>
+          {/* Desktop: inline buttons */}
+          <div className="hidden sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+            <Link href={`/invoices/${id}/edit`}>
+              <Button variant="outline" size="sm" className="h-10">
+                <Pencil className="mr-2 h-4 w-4" />
+                {t("common.edit")}
               </Button>
             </Link>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/invoices/new?duplicate=${invoice.id}`)} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
-              <Copy className="h-4 w-4 sm:mr-2" />
-              <span className="sm:inline">{t("common.duplicate")}</span>
+            <Button variant="outline" size="sm" onClick={() => router.push(`/invoices/new?duplicate=${invoice.id}`)} className="h-10">
+              <Copy className="mr-2 h-4 w-4" />
+              {t("common.duplicate")}
             </Button>
             {invoice && Number(invoice.balanceDue) > 0 && (
-              <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
-                <CreditCard className="h-4 w-4 sm:mr-2" />
-                <span className="sm:hidden">{t("common.pay")}</span>
-                <span className="hidden sm:inline">{t("sales.recordPayment")}</span>
+              <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" className="h-10">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {t("sales.recordPayment")}
               </Button>
             )}
             {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleMarkAsSent}
-                disabled={isMarkingSent}
-                className="col-span-1 h-9 w-full sm:h-10 sm:w-auto"
-              >
-                <Send className="h-4 w-4 sm:mr-2" />
-                <span className="sm:hidden">{t("common.sent2")}</span>
-                <span className="hidden sm:inline">{t("sales.markAsSent")}</span>
+              <Button variant="outline" size="sm" onClick={handleMarkAsSent} disabled={isMarkingSent} className="h-10">
+                <Send className="mr-2 h-4 w-4" />
+                {t("sales.markAsSent")}
               </Button>
             )}
             {invoice?.sentAt && (
-              <span className="col-span-2 text-xs text-slate-500 sm:w-auto sm:text-sm">
+              <span className="text-sm text-slate-500">
                 {t("sales.sentOn")} {format(new Date(invoice.sentAt), "dd MMM yyyy")}
               </span>
             )}
-            <div className="col-span-1 flex w-full sm:w-auto">
-              <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} disabled={isDownloading} className="h-9 flex-1 rounded-r-none border-r-0 sm:h-10 sm:flex-initial">
-                {isDownloading
-                  ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
-                  : <Download className="h-4 w-4 sm:mr-2" />}
-                <span className="sm:hidden">{isDownloading ? "..." : "PDF"}</span>
-                <span className="hidden sm:inline">{isDownloading ? t("common.downloading") : t("common.downloadPDF")}</span>
+            <div className="flex">
+              <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} disabled={isDownloading} className="h-10 rounded-r-none border-r-0">
+                {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                {isDownloading ? t("common.downloading") : t("common.downloadPDF")}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 rounded-l-none px-2 sm:h-10" disabled={isDownloading}>
+                  <Button variant="outline" size="sm" className="h-10 rounded-l-none px-2" disabled={isDownloading}>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -527,24 +517,20 @@ export default function InvoiceDetailPage({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
-              {isPrinting
-                ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
-                : <Printer className="h-4 w-4 sm:mr-2" />}
-              <span>{isPrinting ? "..." : t("common.print")}</span>
+            <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting} className="h-10">
+              {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+              {isPrinting ? "..." : t("common.print")}
             </Button>
             {saudiEnabled && (
-              <Button variant="outline" size="sm" onClick={handlePrintReceipt} disabled={isPrintingReceipt || !receiptMeta} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
-                {isPrintingReceipt
-                  ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
-                  : <Receipt className="h-4 w-4 sm:mr-2" />}
-                <span>{isPrintingReceipt ? "..." : "Receipt"}</span>
+              <Button variant="outline" size="sm" onClick={handlePrintReceipt} disabled={isPrintingReceipt || !receiptMeta} className="h-10">
+                {isPrintingReceipt ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Receipt className="mr-2 h-4 w-4" />}
+                {isPrintingReceipt ? "..." : "Receipt"}
               </Button>
             )}
             <Button
               variant="outline"
               size="sm"
-              className="col-span-1 h-9 w-full sm:h-10 sm:w-auto"
+              className="h-10"
               onClick={async () => {
                 if (isCapacitorEnvironment()) {
                   try {
@@ -566,9 +552,105 @@ export default function InvoiceDetailPage({
                 }
               }}
             >
-              <Share2 className="h-4 w-4 sm:mr-2" />
-              <span className="sm:inline">{t("common.share")}</span>
+              <Share2 className="mr-2 h-4 w-4" />
+              {t("common.share")}
             </Button>
+          </div>
+
+          {/* Mobile: primary actions + overflow menu */}
+          <div className="flex w-full items-center gap-2 sm:hidden">
+            <Link href={`/invoices/${id}/edit`} className="flex-1">
+              <Button variant="outline" size="sm" className="h-9 w-full">
+                <Pencil className="mr-1.5 h-4 w-4" />
+                {t("common.edit")}
+              </Button>
+            </Link>
+            {invoice && Number(invoice.balanceDue) > 0 && (
+              <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" className="h-9 flex-1">
+                <CreditCard className="mr-1.5 h-4 w-4" />
+                {t("common.pay")}
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} disabled={isDownloading} className="h-9 flex-1">
+              {isDownloading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+              PDF
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon-sm" className="h-9 w-9 shrink-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => router.push(`/invoices/new?duplicate=${invoice.id}`)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  {t("common.duplicate")}
+                </DropdownMenuItem>
+                {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
+                  <DropdownMenuItem onClick={handleMarkAsSent} disabled={isMarkingSent}>
+                    <Send className="mr-2 h-4 w-4" />
+                    {t("sales.markAsSent")}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={handlePrint} disabled={isPrinting}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  {t("common.print")}
+                </DropdownMenuItem>
+                {saudiEnabled && (
+                  <DropdownMenuItem onClick={handlePrintReceipt} disabled={isPrintingReceipt || !receiptMeta}>
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Receipt
+                  </DropdownMenuItem>
+                )}
+                {assignedTemplates.map((key) => {
+                  const labels: Record<string, string> = {
+                    A5_LANDSCAPE: "A5 Landscape",
+                    A4_PORTRAIT: "A4 Portrait",
+                    A4_GST2: "A4 GST",
+                    A4_VAT: "A4 VAT",
+                    A4_BILINGUAL: "A4 Bilingual",
+                    A4_MODERN_GST: "A4 Modern GST",
+                    A4_JEWELLERY: "A4 Jewellery",
+                  };
+                  return (
+                    <DropdownMenuItem key={key} onClick={() => handleDownloadPDF(key)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      {labels[key] || key}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuItem
+                  onClick={async () => {
+                    if (isCapacitorEnvironment()) {
+                      try {
+                        const response = await fetch(`/api/invoices/${id}/pdf`);
+                        if (!response.ok) throw new Error("Failed to generate PDF");
+                        const blob = await response.blob();
+                        const { capacitorSharePdf } = await import("@/lib/capacitor-pdf-printer");
+                        await capacitorSharePdf(blob, `invoice-${invoice?.invoiceNumber}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+                      } catch (error) {
+                        toast.error(t("common.shareFailed"));
+                        console.error(error);
+                      }
+                    } else {
+                      await shareContent({
+                        title: `${t("sales.invoice")} ${invoice?.invoiceNumber}`,
+                        text: `${t("sales.invoice")} ${invoice?.invoiceNumber} — ${symbol}${Number(invoice?.total ?? 0).toLocaleString(locale)}`,
+                        url: typeof window !== "undefined" ? window.location.href : undefined,
+                      });
+                    }
+                  }}
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  {t("common.share")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {invoice?.sentAt && (
+              <span className="text-[10px] text-slate-500">
+                {t("sales.sentOn")} {format(new Date(invoice.sentAt), "dd MMM yyyy")}
+              </span>
+            )}
           </div>
         </div>
 

@@ -91,7 +91,7 @@ export function PriceHistoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-base">{productName} — {t("sales.priceHistory")}</DialogTitle>
         </DialogHeader>
@@ -187,32 +187,53 @@ export function PriceHistoryDialog({
             {/* Sales History Tab */}
             <TabsContent value="sales" className="mt-4">
               {data.recentSales.length > 0 ? (
-                <div className="rounded-lg border overflow-auto max-h-[400px]">
-                  <Table>
-                    <TableHeader className="bg-slate-50">
-                      <TableRow>
-                        <TableHead className="text-xs">{t("common.date")}</TableHead>
-                        <TableHead className="text-xs">{t("common.customer")}</TableHead>
-                        <TableHead className="text-xs text-right">{t("common.price")}</TableHead>
-                        <TableHead className="text-xs text-right">{t("common.discountPercent")}</TableHead>
-                        <TableHead className="text-xs">{t("common.invoiceHash")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.recentSales.map((sale, i) => (
-                        <TableRow key={i}>
-                          <TableCell className="text-xs">{formatDate(sale.date)}</TableCell>
-                          <TableCell className="text-xs">{sale.customerName}</TableCell>
-                          <TableCell className="text-xs text-right">{fmt(sale.unitPrice)}</TableCell>
-                          <TableCell className="text-xs text-right">
-                            {sale.discount > 0 ? `${sale.discount}%` : "—"}
-                          </TableCell>
-                          <TableCell className="text-xs font-mono">{sale.invoiceNumber}</TableCell>
+                <>
+                  {/* Desktop table */}
+                  <div className="hidden sm:block rounded-lg border overflow-auto">
+                    <Table>
+                      <TableHeader className="bg-slate-50">
+                        <TableRow>
+                          <TableHead className="text-xs">{t("common.date")}</TableHead>
+                          <TableHead className="text-xs">{t("common.customer")}</TableHead>
+                          <TableHead className="text-xs text-right">{t("common.price")}</TableHead>
+                          <TableHead className="text-xs text-right">{t("common.discountPercent")}</TableHead>
+                          <TableHead className="text-xs">{t("common.invoiceHash")}</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {data.recentSales.map((sale, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-xs">{formatDate(sale.date)}</TableCell>
+                            <TableCell className="text-xs">{sale.customerName}</TableCell>
+                            <TableCell className="text-xs text-right">{fmt(sale.unitPrice)}</TableCell>
+                            <TableCell className="text-xs text-right">
+                              {sale.discount > 0 ? `${sale.discount}%` : "—"}
+                            </TableCell>
+                            <TableCell className="text-xs font-mono">{sale.invoiceNumber}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {/* Mobile cards */}
+                  <div className="sm:hidden divide-y divide-slate-200 rounded-lg border">
+                    {data.recentSales.map((sale, i) => (
+                      <div key={i} className="p-3 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium">{sale.customerName}</span>
+                          <span className="text-xs font-semibold">{fmt(sale.unitPrice)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>{formatDate(sale.date)}</span>
+                          <span className="flex items-center gap-2">
+                            {sale.discount > 0 && <span className="text-green-600">-{sale.discount}%</span>}
+                            <span className="font-mono">#{sale.invoiceNumber}</span>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <p className="text-sm text-slate-500 text-center py-8">
                   {t("sales.noSalesHistory")}
@@ -223,32 +244,53 @@ export function PriceHistoryDialog({
             {/* Purchase History Tab */}
             <TabsContent value="purchases" className="mt-4">
               {data.recentPurchases.length > 0 ? (
-                <div className="rounded-lg border overflow-auto max-h-[400px]">
-                  <Table>
-                    <TableHeader className="bg-slate-50">
-                      <TableRow>
-                        <TableHead className="text-xs">{t("common.date")}</TableHead>
-                        <TableHead className="text-xs">{t("common.supplier")}</TableHead>
-                        <TableHead className="text-xs text-right">{t("common.cost")}</TableHead>
-                        <TableHead className="text-xs text-right">{t("common.discountPercent")}</TableHead>
-                        <TableHead className="text-xs">{t("common.invoiceHash")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.recentPurchases.map((purchase, i) => (
-                        <TableRow key={i}>
-                          <TableCell className="text-xs">{formatDate(purchase.date)}</TableCell>
-                          <TableCell className="text-xs">{purchase.supplierName}</TableCell>
-                          <TableCell className="text-xs text-right">{fmt(purchase.unitCost)}</TableCell>
-                          <TableCell className="text-xs text-right">
-                            {purchase.discount > 0 ? `${purchase.discount}%` : "—"}
-                          </TableCell>
-                          <TableCell className="text-xs font-mono">{purchase.invoiceNumber}</TableCell>
+                <>
+                  {/* Desktop table */}
+                  <div className="hidden sm:block rounded-lg border overflow-auto">
+                    <Table>
+                      <TableHeader className="bg-slate-50">
+                        <TableRow>
+                          <TableHead className="text-xs">{t("common.date")}</TableHead>
+                          <TableHead className="text-xs">{t("common.supplier")}</TableHead>
+                          <TableHead className="text-xs text-right">{t("common.cost")}</TableHead>
+                          <TableHead className="text-xs text-right">{t("common.discountPercent")}</TableHead>
+                          <TableHead className="text-xs">{t("common.invoiceHash")}</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {data.recentPurchases.map((purchase, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-xs">{formatDate(purchase.date)}</TableCell>
+                            <TableCell className="text-xs">{purchase.supplierName}</TableCell>
+                            <TableCell className="text-xs text-right">{fmt(purchase.unitCost)}</TableCell>
+                            <TableCell className="text-xs text-right">
+                              {purchase.discount > 0 ? `${purchase.discount}%` : "—"}
+                            </TableCell>
+                            <TableCell className="text-xs font-mono">{purchase.invoiceNumber}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {/* Mobile cards */}
+                  <div className="sm:hidden divide-y divide-slate-200 rounded-lg border">
+                    {data.recentPurchases.map((purchase, i) => (
+                      <div key={i} className="p-3 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium">{purchase.supplierName}</span>
+                          <span className="text-xs font-semibold">{fmt(purchase.unitCost)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>{formatDate(purchase.date)}</span>
+                          <span className="flex items-center gap-2">
+                            {purchase.discount > 0 && <span className="text-green-600">-{purchase.discount}%</span>}
+                            <span className="font-mono">#{purchase.invoiceNumber}</span>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <p className="text-sm text-slate-500 text-center py-8">
                   {t("sales.noPurchaseHistory")}

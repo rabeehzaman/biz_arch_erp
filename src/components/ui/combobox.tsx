@@ -238,7 +238,7 @@ export function Combobox<T>({
       id={listboxId}
       ref={listRef}
       role="listbox"
-      className={cn("overflow-y-auto p-2", isMobile ? "max-h-[60dvh]" : "max-h-60")}
+      className={cn("overflow-y-auto overscroll-contain p-2", isMobile ? "max-h-[60dvh]" : "max-h-60")}
     >
       {filteredItems.length === 0 ? (
         <div className="py-6 text-center text-sm text-slate-500">
