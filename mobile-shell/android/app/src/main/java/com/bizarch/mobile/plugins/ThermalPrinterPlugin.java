@@ -939,17 +939,30 @@ public class ThermalPrinterPlugin extends Plugin {
             return;
         }
 
-        // WebView must be created on UI thread
+        // Replace CSS mm-based width with pixel width matching printer dots
+        String adjustedHtml = html
+                .replace("width: 80mm", "width: " + paperWidth + "px")
+                .replace("width:80mm", "width: " + paperWidth + "px")
+                .replace("size: 80mm", "size: " + paperWidth + "px");
+
         getActivity().runOnUiThread(() -> {
             try {
-                android.webkit.WebView webView = new android.webkit.WebView(getContext());
-                // Set width to match paper dots for 1:1 pixel mapping
-                webView.setLayoutParams(new android.view.ViewGroup.LayoutParams(paperWidth, 1));
+                android.webkit.WebView webView = new android.webkit.WebView(getActivity());
+                webView.setVisibility(android.view.View.INVISIBLE);
+                webView.setBackgroundColor(Color.WHITE);
+
+                // Disable zoom/scaling — we want 1:1 pixel mapping
                 webView.getSettings().setJavaScriptEnabled(false);
                 webView.getSettings().setLoadWithOverviewMode(false);
                 webView.getSettings().setUseWideViewPort(false);
+                webView.getSettings().setSupportZoom(false);
+                webView.getSettings().setBuiltInZoomControls(false);
                 webView.setInitialScale(100);
-                webView.setBackgroundColor(Color.WHITE);
+
+                // Attach to activity's view hierarchy (required for rendering)
+                android.widget.FrameLayout rootView = getActivity().findViewById(android.R.id.content);
+                rootView.addView(webView, new android.widget.FrameLayout.LayoutParams(
+                        paperWidth, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT));
 
                 webView.setWebViewClient(new android.webkit.WebViewClient() {
                     private boolean captured = false;
@@ -959,60 +972,59 @@ public class ThermalPrinterPlugin extends Plugin {
                         if (captured) return;
                         captured = true;
 
-                        // Delay slightly for rendering to complete
+                        // Wait for layout pass to complete
                         view.postDelayed(() -> {
                             try {
-                                // Measure content height
-                                int contentHeight = view.getContentHeight();
-                                if (contentHeight <= 0) contentHeight = 800;
+                                // Force measure with exact width, unspecified height
+                                view.measure(
+                                        android.view.View.MeasureSpec.makeMeasureSpec(paperWidth,
+                                                android.view.View.MeasureSpec.EXACTLY),
+                                        android.view.View.MeasureSpec.makeMeasureSpec(0,
+                                                android.view.View.MeasureSpec.UNSPECIFIED));
 
-                                // Resize to full content
-                                view.setLayoutParams(new android.view.ViewGroup.LayoutParams(
-                                        paperWidth, contentHeight));
-                                view.layout(0, 0, paperWidth, contentHeight);
+                                int captureHeight = view.getMeasuredHeight();
+                                if (captureHeight <= 0) {
+                                    captureHeight = view.getContentHeight();
+                                }
+                                if (captureHeight <= 0) captureHeight = 800;
 
-                                // Capture to bitmap
+                                view.layout(0, 0, paperWidth, captureHeight);
+
                                 Bitmap bitmap = Bitmap.createBitmap(
-                                        paperWidth, contentHeight, Bitmap.Config.ARGB_8888);
+                                        paperWidth, captureHeight, Bitmap.Config.ARGB_8888);
                                 bitmap.eraseColor(Color.WHITE);
                                 android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
                                 view.draw(canvas);
 
-                                // Process on background thread
+                                // Remove WebView from hierarchy
+                                rootView.removeView(view);
+                                view.destroy();
+
                                 final Bitmap capturedBitmap = bitmap;
                                 printExecutor.execute(() -> {
                                     try {
                                         floydSteinbergDither(capturedBitmap);
 
                                         ByteArrayOutputStream allData = new ByteArrayOutputStream();
-                                        allData.write(new byte[]{0x1B, 0x40}); // ESC @
+                                        allData.write(new byte[]{0x1B, 0x40});
 
                                         byte[] rasterData = buildStripRasterCommands(
                                                 capturedBitmap, paperWidth, capturedBitmap.getHeight(),
                                                 MAX_IMAGE_CHUNK_HEIGHT);
                                         allData.write(rasterData);
-
                                         capturedBitmap.recycle();
 
-                                        allData.write(new byte[]{0x1B, 0x64, 0x04}); // feed
+                                        allData.write(new byte[]{0x1B, 0x64, 0x04});
                                         if (cutPaper) {
                                             allData.write(new byte[]{0x1D, 0x56, 0x42, 0x00});
                                         }
 
                                         if (isBluetooth(call)) {
                                             String address = call.getString("address", "").trim();
-                                            if (address.isEmpty()) {
-                                                call.reject("Bluetooth address is required", "MISSING_ADDRESS");
-                                                return;
-                                            }
                                             sendRawBluetooth(address, allData.toByteArray());
                                         } else {
                                             String host = call.getString("host", "").trim();
                                             int port = call.getInt("port", DEFAULT_PORT);
-                                            if (host.isEmpty()) {
-                                                call.reject("Printer host is required", "MISSING_HOST");
-                                                return;
-                                            }
                                             sendOnce(host, port, allData.toByteArray());
                                         }
 
@@ -1024,13 +1036,15 @@ public class ThermalPrinterPlugin extends Plugin {
                                     }
                                 });
                             } catch (Exception e) {
+                                rootView.removeView(view);
+                                view.destroy();
                                 call.reject("WebView capture failed: " + e.getMessage(), "CAPTURE_ERROR");
                             }
-                        }, 500); // 500ms delay for render completion
+                        }, 800);
                     }
                 });
 
-                webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+                webView.loadDataWithBaseURL(null, adjustedHtml, "text/html", "UTF-8", null);
             } catch (Exception e) {
                 call.reject("Failed to create WebView: " + e.getMessage(), "WEBVIEW_ERROR");
             }
