@@ -991,14 +991,17 @@ public class ThermalPrinterPlugin extends Plugin {
 
                                 view.layout(0, 0, layoutWidth, measuredH);
 
-                                // Create bitmap at target printer width, scale down from density-sized render
-                                int bitmapH = Math.round(measuredH / density);
-                                Bitmap bitmap = Bitmap.createBitmap(
-                                        paperWidth, bitmapH, Bitmap.Config.ARGB_8888);
-                                bitmap.eraseColor(Color.WHITE);
-                                android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
-                                canvas.scale(1f / density, 1f / density);
+                                // Capture at full density resolution, then downscale
+                                Bitmap largeBitmap = Bitmap.createBitmap(
+                                        layoutWidth, measuredH, Bitmap.Config.ARGB_8888);
+                                largeBitmap.eraseColor(Color.WHITE);
+                                android.graphics.Canvas canvas = new android.graphics.Canvas(largeBitmap);
                                 view.draw(canvas);
+
+                                // Downscale to printer width
+                                int bitmapH = Math.round(measuredH / density);
+                                Bitmap bitmap = Bitmap.createScaledBitmap(largeBitmap, paperWidth, bitmapH, true);
+                                largeBitmap.recycle();
 
                                 // Remove WebView from hierarchy
                                 rootView.removeView(view);
