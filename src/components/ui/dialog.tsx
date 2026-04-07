@@ -140,6 +140,7 @@ function DialogContent({
         }}
         {...props}
       >
+        <DialogPrimitive.Description className="sr-only"> </DialogPrimitive.Description>
         {/* Drag handle — mobile only */}
         <div className="mx-auto mt-3 mb-1 h-1.5 w-14 shrink-0 rounded-full bg-slate-300/70 sm:hidden" />
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-contain p-5 pb-[calc(1rem+var(--app-safe-area-bottom))] pt-3 sm:gap-4 sm:p-6 sm:pt-6">

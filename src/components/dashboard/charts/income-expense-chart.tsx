@@ -78,7 +78,7 @@ export function IncomeExpenseChart({
 
         {/* Chart */}
         <div className="h-[240px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={1}>
             <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               <XAxis

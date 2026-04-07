@@ -35,6 +35,28 @@ export function MobileSelect({
   const [open, setOpen] = React.useState(false)
   const scrollYBeforeOpenRef = React.useRef(0)
   const { selectionChanged } = useHaptics()
+  const [keyboardInset, setKeyboardInset] = React.useState(0)
+
+  React.useEffect(() => {
+    if (!open) {
+      setKeyboardInset(0)
+      return
+    }
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const onViewportChange = () => {
+      const diff = window.innerHeight - viewport.height
+      setKeyboardInset(diff > 120 ? diff : 0)
+    }
+    onViewportChange()
+    viewport.addEventListener("resize", onViewportChange)
+    viewport.addEventListener("scroll", onViewportChange)
+    return () => {
+      viewport.removeEventListener("resize", onViewportChange)
+      viewport.removeEventListener("scroll", onViewportChange)
+      setKeyboardInset(0)
+    }
+  }, [open])
 
   const selectedOption = options.find((o) => o.value === value)
 
@@ -71,12 +93,14 @@ export function MobileSelect({
           <DialogPrimitive.Content
             data-slot="dialog-content"
             className="glass-panel-strong fixed inset-x-0 bottom-0 z-50 flex max-h-[70dvh] w-full flex-col overflow-hidden rounded-t-[2rem] border-t border-slate-200 outline-none overscroll-contain data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
+            style={keyboardInset > 0 ? { maxHeight: `calc(100dvh - ${keyboardInset}px)` } : undefined}
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             <div className="mx-auto mt-3 mb-1 h-1.5 w-14 shrink-0 rounded-full bg-slate-300/70" />
             <DialogPrimitive.Title className="sr-only">
               {placeholder}
             </DialogPrimitive.Title>
+            <DialogPrimitive.Description className="sr-only">{placeholder}</DialogPrimitive.Description>
             <div className="flex-1 overflow-y-auto p-2 pb-[calc(0.5rem+var(--app-safe-area-bottom))]">
               {options.map((option) => {
                 const isSelected = value === option.value

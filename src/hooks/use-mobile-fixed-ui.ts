@@ -88,11 +88,13 @@ export function useMobileFixedUi() {
       clearRecoveryTimeouts();
 
       // Check if a combobox/select requested scroll preservation.
-      // Read on every call (don't consume) so re-triggered recovery
-      // passes still use the correct target.
       const targetScrollY = getPreserveScrollY();
 
       const lastDelay = MOBILE_FIXED_UI_RECOVERY_DELAYS[MOBILE_FIXED_UI_RECOVERY_DELAYS.length - 1];
+
+      // Once scroll has been restored to the target, stop calling scrollTo
+      // so later recovery passes don't fight user scrolling.
+      let scrollRestored = false;
 
       recoveryTimeoutsRef.current = MOBILE_FIXED_UI_RECOVERY_DELAYS.map((delay) =>
         window.setTimeout(() => {
@@ -101,7 +103,14 @@ export function useMobileFixedUi() {
           // innerHeight at the keyboard-shrunk value after modal close,
           // causing the bottom nav to float above a gap.
           // When preserveScroll was requested, restore to that position instead.
-          window.scrollTo(0, targetScrollY ?? 0);
+          if (!scrollRestored) {
+            window.scrollTo(0, targetScrollY ?? 0);
+            // Once position matches target, stop future scrollTo calls
+            if (targetScrollY != null && Math.abs(window.scrollY - targetScrollY) < 5) {
+              scrollRestored = true;
+              clearPreserveScrollY();
+            }
+          }
 
           const overlayOpen = hasBlockingOverlayOpen();
           const viewportState = measureViewportState();
@@ -109,7 +118,7 @@ export function useMobileFixedUi() {
           setHasBlockingOverlay(overlayOpen);
           applyViewportState(viewportState, { allowBottomOffset: true });
 
-          // Clear the preserve-scroll target after the last recovery pass
+          // Fallback: always clear at the last delay
           if (delay === lastDelay && targetScrollY != null) {
             clearPreserveScrollY();
           }

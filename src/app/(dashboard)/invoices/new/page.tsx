@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, ArrowLeft, Scale, History } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Scale, History, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
@@ -37,6 +37,7 @@ import { JewelleryLineFields, createJewelleryLineState, type JewelleryLineState,
 import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
 import { OldGoldAdjustment } from "@/components/jewellery-shop/old-gold-adjustment";
 import { useFormConfig } from "@/hooks/use-form-config";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface Customer {
   id: string;
@@ -149,6 +150,11 @@ export default function NewInvoicePage() {
   const quantityRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const productComboRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
+  const isMobile = useIsMobile();
+  const lineItemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [collapsedItems, setCollapsedItems] = useState<Set<string>>(new Set());
+  const [detailsCollapsed, setDetailsCollapsed] = useState(false);
+
   const jewelleryEnabled = !!(session?.user as { isJewelleryModuleEnabled?: boolean })?.isJewelleryModuleEnabled;
   const { getRate: getGoldRate } = useJewelleryRates(jewelleryEnabled);
 
@@ -220,6 +226,13 @@ export default function NewInvoicePage() {
     // Refresh product options from the selected warehouse.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
+
+  // Auto-collapse details on mobile after customer is selected
+  useEffect(() => {
+    if (isMobile && formData.customerId) {
+      setDetailsCollapsed(true);
+    }
+  }, [isMobile, formData.customerId]);
 
   // Resolve customer-specific price list prices when customer changes
   const isPriceListOn = (session?.user as { isPriceListEnabled?: boolean })?.isPriceListEnabled ?? false;
@@ -348,6 +361,11 @@ export default function NewInvoicePage() {
         const productTrigger = productComboRefs.current.get(newId);
         if (productTrigger) {
           productTrigger.focus();
+        }
+        // Scroll new item into view on mobile
+        const el = lineItemRefs.current.get(newId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }, 50);
     }
@@ -664,14 +682,34 @@ export default function NewInvoicePage() {
           </div>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit} onChangeCapture={() => setIsDirty(true)} className="sm:pb-0 pb-16">
+        <form ref={formRef} onSubmit={handleSubmit} onChangeCapture={() => setIsDirty(true)} className="pb-0">
           <div className="space-y-6">
             {/* Customer & Date */}
             <Card>
               <CardHeader>
-                <CardTitle>{t("sales.invoiceDetails")}</CardTitle>
+                <CardTitle>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between sm:pointer-events-none"
+                    onClick={() => setDetailsCollapsed((prev) => !prev)}
+                  >
+                    <span>{t("sales.invoiceDetails")}</span>
+                    {formData.customerId && (
+                      <span className="sm:hidden">
+                        {detailsCollapsed
+                          ? <ChevronDown className="h-4 w-4 text-slate-400" />
+                          : <ChevronUp className="h-4 w-4 text-slate-400" />}
+                      </span>
+                    )}
+                  </button>
+                </CardTitle>
+                {detailsCollapsed && formData.customerId && (
+                  <p className="text-sm text-slate-500 sm:hidden">
+                    {customers.find((c) => c.id === formData.customerId)?.name} &middot; {formData.paymentType === "CASH" ? t("common.cashPaymentType") : t("common.creditPaymentType")}
+                  </p>
+                )}
               </CardHeader>
-              <CardContent>
+              <CardContent className={detailsCollapsed && isMobile ? "hidden" : ""}>
                 <BranchWarehouseSelector
                   branchId={formData.branchId}
                   warehouseId={formData.warehouseId}
@@ -1112,8 +1150,36 @@ export default function NewInvoicePage() {
                     const devices = isImeiTracked ? (availableDevices[item.productId] || []) : [];
                     const lineAmounts = calculateLineAmounts({ quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0, discount: Number(item.discount) || 0, taxRate: getItemTaxRate(item, taxMode) }, taxInclusive);
 
+                    const isCollapsed = collapsedItems.has(item.id) && item.productId;
+
                     return (
-                      <div key={item.id} className="p-3 space-y-3">
+                      <div
+                        key={item.id}
+                        ref={(el) => {
+                          if (el) lineItemRefs.current.set(item.id, el);
+                          else lineItemRefs.current.delete(item.id);
+                        }}
+                        className="p-3 space-y-3"
+                      >
+                        {/* Collapsed view: tap to expand */}
+                        {isCollapsed ? (
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2.5"
+                            onClick={() => setCollapsedItems((prev) => { const next = new Set(prev); next.delete(item.id); return next; })}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-xs font-medium text-slate-400">#{lineItems.filter(i => i.productId).indexOf(item) + 1}</span>
+                              <span className="truncate text-sm font-medium text-slate-800">{product?.name || ""}</span>
+                              <span className="text-xs text-slate-500">x{item.quantity}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-sm font-semibold">{fmt(lineAmounts.total)}</span>
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            </div>
+                          </button>
+                        ) : (
+                        <>
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1" ref={(el) => {
                             if (el) {
@@ -1145,6 +1211,17 @@ export default function NewInvoicePage() {
                                 onClick={() => setPriceHistoryItem({ productId: item.productId, productName: product?.name || "" })}
                               >
                                 <History className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {item.productId && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400 hover:text-slate-600"
+                                onClick={() => setCollapsedItems((prev) => { const next = new Set(prev); next.add(item.id); return next; })}
+                              >
+                                <ChevronUp className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
@@ -1310,6 +1387,8 @@ export default function NewInvoicePage() {
                             fmt={fmt}
                           />
                         )}
+                        </>
+                        )}
                       </div>
                     );
                   })}
@@ -1374,21 +1453,6 @@ export default function NewInvoicePage() {
               </CardHeader>
               <CardContent>
                 <div className="ml-auto max-w-full space-y-2 sm:max-w-xs">
-                  <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
-                    <div>
-                      <p className="text-sm font-medium">{t("common.applyRoundOff")}</p>
-                      <p className="text-xs text-slate-500">
-                        {roundOffEnabled
-                          ? t("sales.roundOffEnabledHint")
-                          : t("sales.roundOffDisabledHint")}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={applyRoundOff}
-                      onCheckedChange={setApplyRoundOff}
-                      disabled={!roundOffEnabled}
-                    />
-                  </div>
                   {taxMode === "vat" && (
                     <div className="mb-2 text-left text-xs font-medium text-slate-500 sm:text-right">{t("sales.vatInvoiceZatca")}</div>
                   )}
@@ -1425,11 +1489,11 @@ export default function NewInvoicePage() {
                     <span key={`summary-total:${totals.grandTotal}`}>{fmt(totals.grandTotal)}</span>
                   </div>
                 </div>
-                <div className="mt-6 hidden gap-3 sm:flex sm:justify-end">
+                <div className="mt-6 flex gap-3 sm:justify-end">
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-auto"
+                    className="flex-1 sm:flex-none sm:w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
                     onClick={() => {
                       saveAndNew.current = true;
@@ -1440,33 +1504,12 @@ export default function NewInvoicePage() {
                   </Button>
                   <Button
                     type="submit"
-                    className="w-auto"
+                    className="flex-1 sm:flex-none sm:w-auto"
                     disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
                   >
                     {isSubmitting ? t("common.creating") : t("sales.createInvoice")}
                   </Button>
                 </div>
-                <StickyBottomBar>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
-                    onClick={() => {
-                      saveAndNew.current = true;
-                      formRef.current?.requestSubmit();
-                    }}
-                  >
-                    {isSubmitting ? t("common.saving") : t("common.saveAndNew")}
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={isSubmitting || !formData.customerId || !formData.date || !lineItems.some(item => item.productId)}
-                  >
-                    {isSubmitting ? t("common.creating") : t("sales.createInvoice")}
-                  </Button>
-                </StickyBottomBar>
               </CardContent>
             </Card>
           </div>

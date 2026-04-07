@@ -75,6 +75,7 @@ function AlertDialogContent({
         }}
         {...props}
       >
+        <AlertDialogPrimitive.Description className="sr-only"> </AlertDialogPrimitive.Description>
         {/* Drag handle — mobile only */}
         <div className="mx-auto mt-3 mb-1 h-1.5 w-14 shrink-0 rounded-full bg-slate-300/70 sm:hidden" />
         <div className="flex min-h-0 flex-1 flex-col gap-4 p-5 pb-[calc(1.5rem+var(--app-safe-area-bottom))] pt-3 sm:p-6 sm:pt-6">

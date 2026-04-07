@@ -54,6 +54,8 @@ export function ActionSheet({
           className="fixed inset-x-0 bottom-0 z-50 flex flex-col gap-2 p-3 pb-[calc(0.75rem+var(--app-safe-area-bottom))] outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
+          <DialogPrimitive.Title className="sr-only">Actions</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">Actions</DialogPrimitive.Description>
           {/* Actions group */}
           <div className="overflow-hidden rounded-2xl bg-white">
             {/* Drag handle */}

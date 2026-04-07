@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, FileText, Eye, Trash2 } from "lucide-react";
+import { Plus, Search, FileText, Eye, Trash2, LayoutList, LayoutGrid } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -75,6 +75,7 @@ export default function InvoicesPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [mobileCompact, setMobileCompact] = useState(false);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
   const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
@@ -285,7 +286,60 @@ export default function InvoicesPage() {
                     </div>
                   )}
 
-                  <div className="space-y-3 sm:hidden">
+                  <div className="sm:hidden">
+                    {/* View mode toggle */}
+                    <div className="mb-3 flex justify-end">
+                      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setMobileCompact(false)}
+                          className={`rounded-md p-1.5 transition-colors ${!mobileCompact ? "bg-white text-slate-900 shadow-sm" : "text-slate-400"}`}
+                        >
+                          <LayoutGrid className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMobileCompact(true)}
+                          className={`rounded-md p-1.5 transition-colors ${mobileCompact ? "bg-white text-slate-900 shadow-sm" : "text-slate-400"}`}
+                        >
+                          <LayoutList className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {mobileCompact ? (
+                      /* Compact list view */
+                      <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                        {sortedInvoices.map((invoice) => {
+                          const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
+                          return (
+                            <div
+                              key={invoice.id}
+                              className="flex items-center gap-3 px-3 py-2.5 active:bg-slate-50 cursor-pointer"
+                              onClick={() => router.push(`/invoices/${invoice.id}`)}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-slate-500">{invoice.invoiceNumber}</span>
+                                  <Badge variant="outline" className={`${status.className} text-[10px] px-1.5 py-0`}>
+                                    {status.label}
+                                  </Badge>
+                                </div>
+                                <p className="truncate text-sm font-medium text-slate-800">{invoice.customer.name}</p>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <p className="text-sm font-semibold text-slate-900">{fmt(Number(invoice.total))}</p>
+                                {Number(invoice.balanceDue) > 0 && (
+                                  <p className="text-[11px] text-red-600">{t("common.due")}: {fmt(Number(invoice.balanceDue))}</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* Card view (original) */
+                      <div className="space-y-3">
                     {sortedInvoices.map((invoice) => {
                       const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
 
@@ -387,6 +441,8 @@ export default function InvoicesPage() {
                         </SwipeableCard>
                       );
                     })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="hidden sm:block overflow-x-auto">
