@@ -1,6 +1,7 @@
 import type { ReceiptData } from "@/components/pos/receipt";
 import { generateReceiptHtml, printReceipt as browserPrintReceipt, type ReceiptHtmlOptions } from "@/lib/print-receipt";
-import { capacitorPrintWithConfig, isCapacitorEnvironment, getSecondaryMobilePrinterConfig, type MobilePrinterConfig } from "@/lib/capacitor-print";
+import { capacitorPrintWithConfig, isCapacitorEnvironment, getSecondaryMobilePrinterConfig, getReceiptMultiPrinterConfig, type MobilePrinterConfig } from "@/lib/capacitor-print";
+import { toast } from "sonner";
 
 type SerializedReceiptData = Omit<ReceiptData, "date"> & {
   date: string;
@@ -335,23 +336,59 @@ export async function smartPrintReceipt(data: ReceiptData): Promise<void> {
       await browserPrintReceipt(generateReceiptHtml(data));
     }
   } else if (isCapacitorEnvironment()) {
-    // Print to primary printer (no config = uses saved primary config)
-    const primaryResult = await capacitorPrintToConfig(data);
-    if (!primaryResult.success) {
-      console.error("Capacitor primary print failed:", primaryResult.error);
-      await browserPrintReceipt(generateReceiptHtml(data));
-    }
+    const multiConfig = getReceiptMultiPrinterConfig();
 
-    // Print to secondary printer if configured
-    const secondaryConfig = getSecondaryMobilePrinterConfig();
-    if (secondaryConfig?.host) {
-      try {
-        const secondaryResult = await capacitorPrintToConfig(data, secondaryConfig);
-        if (!secondaryResult.success) {
-          console.error("Secondary printer failed:", secondaryResult.error);
+    if (multiConfig && multiConfig.stations.length > 0) {
+      // Multi-printer path: print to all configured stations
+      const errors: string[] = [];
+      let anySuccess = false;
+
+      for (const station of multiConfig.stations) {
+        const config = station.mobileConfig;
+        if (!config) continue;
+        const hasConnection = config.connectionType === "bluetooth"
+          ? !!config.address
+          : !!config.host;
+        if (!hasConnection) continue;
+
+        try {
+          const result = await capacitorPrintToConfig(data, config);
+          if (result.success) {
+            anySuccess = true;
+          } else {
+            errors.push(`${station.name}: ${result.error}`);
+          }
+        } catch (err) {
+          errors.push(`${station.name}: ${err instanceof Error ? err.message : "Print failed"}`);
         }
-      } catch (err) {
-        console.error("Secondary printer threw:", err);
+      }
+
+      if (!anySuccess && errors.length > 0) {
+        // All printers failed — fall back to browser print
+        console.error("All receipt printers failed:", errors);
+        await browserPrintReceipt(generateReceiptHtml(data));
+      } else if (errors.length > 0) {
+        // Some printers failed — show toast
+        toast.error(errors.join("\n"));
+      }
+    } else {
+      // Legacy fallback: primary + secondary
+      const primaryResult = await capacitorPrintToConfig(data);
+      if (!primaryResult.success) {
+        console.error("Capacitor primary print failed:", primaryResult.error);
+        await browserPrintReceipt(generateReceiptHtml(data));
+      }
+
+      const secondaryConfig = getSecondaryMobilePrinterConfig();
+      if (secondaryConfig?.host) {
+        try {
+          const secondaryResult = await capacitorPrintToConfig(data, secondaryConfig);
+          if (!secondaryResult.success) {
+            toast.error(`Secondary printer: ${secondaryResult.error}`);
+          }
+        } catch (err) {
+          toast.error(`Secondary printer: ${err instanceof Error ? err.message : "Print failed"}`);
+        }
       }
     }
   } else {

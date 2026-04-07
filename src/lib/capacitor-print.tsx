@@ -185,6 +185,73 @@ export function saveSecondaryMobilePrinterConfig(
   );
 }
 
+// --- Receipt multi-printer config (KOT-style station routing) ---
+
+const RECEIPT_MULTI_CONFIG_KEY = "bizarch.receiptMultiPrinterConfig.v1";
+
+export interface ReceiptPrinterStation {
+  id: string;
+  name: string;
+  mobileConfig: MobilePrinterConfig | null;
+  electronConfig: ElectronPrinterConfig | null;
+}
+
+export interface ReceiptMultiPrinterConfig {
+  version: 1;
+  stations: ReceiptPrinterStation[];
+}
+
+export function generateReceiptStationId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+export function getReceiptMultiPrinterConfig(): ReceiptMultiPrinterConfig | null {
+  if (!isBrowser()) return null;
+
+  const raw = localStorage.getItem(RECEIPT_MULTI_CONFIG_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as ReceiptMultiPrinterConfig;
+    } catch {
+      // fall through
+    }
+  }
+
+  // Auto-migrate from primary + secondary configs
+  return migrateReceiptToMultiPrinterConfig();
+}
+
+export function saveReceiptMultiPrinterConfig(config: ReceiptMultiPrinterConfig): void {
+  if (!isBrowser()) return;
+  localStorage.setItem(RECEIPT_MULTI_CONFIG_KEY, JSON.stringify(config));
+}
+
+function migrateReceiptToMultiPrinterConfig(): ReceiptMultiPrinterConfig | null {
+  const primary = getMobilePrinterConfig();
+  if (!primary) return null;
+
+  const stations: ReceiptPrinterStation[] = [{
+    id: generateReceiptStationId(),
+    name: "Main Printer",
+    mobileConfig: primary,
+    electronConfig: null,
+  }];
+
+  const secondary = getSecondaryMobilePrinterConfig();
+  if (secondary?.host || secondary?.address) {
+    stations.push({
+      id: generateReceiptStationId(),
+      name: "Secondary Printer",
+      mobileConfig: secondary,
+      electronConfig: null,
+    });
+  }
+
+  const config: ReceiptMultiPrinterConfig = { version: 1, stations };
+  saveReceiptMultiPrinterConfig(config);
+  return config;
+}
+
 function requireConfiguredPrinter(
   config?: Partial<MobilePrinterConfig>
 ): MobilePrinterConfig {

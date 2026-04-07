@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { CheckCircle2, Loader2, Monitor, Printer, RefreshCw, Usb, Wifi, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Loader2, Monitor, Plus, Printer, RefreshCw, Trash2, Usb, Wifi, XCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,15 +20,17 @@ import {
   capacitorPrintWithConfig,
   getDefaultMobilePrinterConfig,
   getMobilePrinterConfig,
-  getSecondaryMobilePrinterConfig,
+  getReceiptMultiPrinterConfig,
+  generateReceiptStationId,
+  saveReceiptMultiPrinterConfig,
   isCapacitorEnvironment,
   listBluetoothDevices,
   openMobileCashDrawer,
   saveMobilePrinterConfig,
-  saveSecondaryMobilePrinterConfig,
   testMobilePrinterConnection,
   type BluetoothDevice,
   type MobilePrinterConfig,
+  type ReceiptPrinterStation,
 } from "@/lib/capacitor-print";
 import { electronPrintWithConfig, isElectronEnvironment } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
@@ -79,10 +81,9 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
   const [btDevices, setBtDevices] = useState<BluetoothDevice[]>([]);
   const [isScanning, setIsScanning] = useState(false);
 
-  // Secondary printer state (Capacitor only)
-  const [secondaryEnabled, setSecondaryEnabled] = useState(false);
-  const [secondaryHost, setSecondaryHost] = useState("");
-  const [secondaryPort, setSecondaryPort] = useState("9100");
+  // Multi-printer stations (Capacitor only)
+  const [stations, setStations] = useState<ReceiptPrinterStation[]>([]);
+  const [editingStationId, setEditingStationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -152,29 +153,39 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
     }
 
     if (capacitor) {
-      const config = getMobilePrinterConfig() ?? getDefaultMobilePrinterConfig();
-      setMobileConnectionType(config.connectionType === "bluetooth" ? "bluetooth" : "tcp");
-      setMobileHost(config.host);
-      setMobilePort(String(config.port));
-      setBluetoothAddress(config.address || "");
-      setBluetoothDeviceName(config.deviceName || "");
-      setMobilePaperWidth(config.paperWidth);
-      setMobileTimeoutSeconds(String(config.timeoutSeconds));
-      setMobileCutPaper(config.cutPaper);
-      setMobileOpenCashDrawerOnPrint(config.openCashDrawer);
-      setReceiptMarginLeft(config.receiptMarginLeft);
-      setReceiptMarginRight(config.receiptMarginRight);
-
-      const secondary = getSecondaryMobilePrinterConfig();
-      if (secondary?.host) {
-        setSecondaryEnabled(true);
-        setSecondaryHost(secondary.host);
-        setSecondaryPort(String(secondary.port));
+      // Load multi-printer config (auto-migrates from legacy primary/secondary)
+      const multiConfig = getReceiptMultiPrinterConfig();
+      if (multiConfig && multiConfig.stations.length > 0) {
+        setStations(multiConfig.stations);
+        // Load first station's config into editing fields
+        const first = multiConfig.stations[0].mobileConfig ?? getDefaultMobilePrinterConfig();
+        setMobileConnectionType(first.connectionType === "bluetooth" ? "bluetooth" : "tcp");
+        setMobileHost(first.host);
+        setMobilePort(String(first.port));
+        setBluetoothAddress(first.address || "");
+        setBluetoothDeviceName(first.deviceName || "");
+        setMobilePaperWidth(first.paperWidth);
+        setMobileTimeoutSeconds(String(first.timeoutSeconds));
+        setMobileCutPaper(first.cutPaper);
+        setMobileOpenCashDrawerOnPrint(first.openCashDrawer);
+        setReceiptMarginLeft(first.receiptMarginLeft);
+        setReceiptMarginRight(first.receiptMarginRight);
       } else {
-        setSecondaryEnabled(false);
-        setSecondaryHost("");
-        setSecondaryPort("9100");
+        const config = getMobilePrinterConfig() ?? getDefaultMobilePrinterConfig();
+        setMobileConnectionType(config.connectionType === "bluetooth" ? "bluetooth" : "tcp");
+        setMobileHost(config.host);
+        setMobilePort(String(config.port));
+        setBluetoothAddress(config.address || "");
+        setBluetoothDeviceName(config.deviceName || "");
+        setMobilePaperWidth(config.paperWidth);
+        setMobileTimeoutSeconds(String(config.timeoutSeconds));
+        setMobileCutPaper(config.cutPaper);
+        setMobileOpenCashDrawerOnPrint(config.openCashDrawer);
+        setReceiptMarginLeft(config.receiptMarginLeft);
+        setReceiptMarginRight(config.receiptMarginRight);
+        setStations([]);
       }
+      setEditingStationId(null);
     }
   }, [open]);
 
@@ -290,23 +301,80 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
     }
   };
 
+  // --- Station helpers ---
+
+  const buildMobileConfigFromFields = (): MobilePrinterConfig => buildMobileConfig();
+
+  const startEditingStation = (station: ReceiptPrinterStation) => {
+    setEditingStationId(station.id);
+    const mc = station.mobileConfig ?? getDefaultMobilePrinterConfig();
+    setMobileConnectionType(mc.connectionType === "bluetooth" ? "bluetooth" : "tcp");
+    setMobileHost(mc.host);
+    setMobilePort(String(mc.port));
+    setBluetoothAddress(mc.address || "");
+    setBluetoothDeviceName(mc.deviceName || "");
+    setMobilePaperWidth(mc.paperWidth);
+    setMobileTimeoutSeconds(String(mc.timeoutSeconds));
+    setMobileCutPaper(mc.cutPaper);
+    setMobileOpenCashDrawerOnPrint(mc.openCashDrawer);
+    setReceiptMarginLeft(mc.receiptMarginLeft);
+    setReceiptMarginRight(mc.receiptMarginRight);
+  };
+
+  const saveStationEdit = () => {
+    const config = buildMobileConfigFromFields();
+    setStations(prev => prev.map(s => {
+      if (s.id !== editingStationId) return s;
+      return { ...s, mobileConfig: config };
+    }));
+    setEditingStationId(null);
+  };
+
+  const addStation = () => {
+    const newStation: ReceiptPrinterStation = {
+      id: generateReceiptStationId(),
+      name: stations.length === 0 ? "Main Printer" : `Printer ${stations.length + 1}`,
+      mobileConfig: getDefaultMobilePrinterConfig(),
+      electronConfig: null,
+    };
+    setStations(prev => [...prev, newStation]);
+    startEditingStation(newStation);
+  };
+
+  const removeStation = (stationId: string) => {
+    setStations(prev => prev.filter(s => s.id !== stationId));
+    if (editingStationId === stationId) setEditingStationId(null);
+  };
+
+  const getStationSummary = (station: ReceiptPrinterStation): string => {
+    if (station.mobileConfig?.connectionType === "bluetooth") {
+      return station.mobileConfig.deviceName || station.mobileConfig.address || "No device";
+    }
+    if (station.mobileConfig?.host) {
+      return `${station.mobileConfig.host}:${station.mobileConfig.port}`;
+    }
+    return "Not configured";
+  };
+
   const savePrinterConfig = async () => {
     if (isCapacitor) {
-      const config = buildMobileConfig();
-      const err = validateMobileConfig(config);
-      if (err) { toast.error(err); return; }
+      // Save current station edit if editing
+      if (editingStationId) {
+        const config = buildMobileConfigFromFields();
+        const err = validateMobileConfig(config);
+        if (err) { toast.error(err); return; }
+      }
       setIsSavingConfig(true);
       try {
-        saveMobilePrinterConfig(config);
-        // Save or clear secondary printer
-        if (secondaryEnabled && secondaryHost.trim()) {
-          saveSecondaryMobilePrinterConfig({
-            host: secondaryHost.trim(),
-            port: parseInt(secondaryPort, 10) || 9100,
-            paperWidth: mobilePaperWidth,
-          });
-        } else {
-          saveSecondaryMobilePrinterConfig(null);
+        // Build final stations with any pending edits
+        const finalStations = editingStationId
+          ? stations.map(s => s.id === editingStationId ? { ...s, mobileConfig: buildMobileConfigFromFields() } : s)
+          : stations;
+        saveReceiptMultiPrinterConfig({ version: 1, stations: finalStations });
+        setStations(finalStations);
+        // Also save primary for legacy compatibility
+        if (finalStations.length > 0 && finalStations[0].mobileConfig) {
+          saveMobilePrinterConfig(finalStations[0].mobileConfig);
         }
         toast.success(t("pos.mobilePrinterConfigSaved"));
       } catch {
@@ -646,8 +714,25 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
     </div>
   );
 
-  const renderCapacitorContent = () => (
-    <div className="space-y-6">
+  const renderStationEdit = () => (
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" onClick={() => saveStationEdit()} className="mb-1 -ml-2">
+        <ChevronLeft className="mr-1 h-4 w-4" />
+        Back to printers
+      </Button>
+
+      {/* Station Name */}
+      <div className="space-y-1">
+        <Label htmlFor="dlg-station-name">Printer Name</Label>
+        <Input
+          id="dlg-station-name"
+          placeholder="e.g. Main Printer, Counter 2"
+          value={stations.find(s => s.id === editingStationId)?.name ?? ""}
+          onChange={(e) => setStations(prev => prev.map(s => s.id === editingStationId ? { ...s, name: e.target.value } : s))}
+        />
+      </div>
+
+      {/* Connection */}
       <div className="space-y-1">
         <Label>{t("pos.connectionType")}</Label>
         <Select value={mobileConnectionType} onValueChange={(v) => setMobileConnectionType(v as "tcp" | "bluetooth")}>
@@ -743,7 +828,6 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
             <Input id="dlg-mobile-margin-right" type="number" min={0} max={15} value={receiptMarginRight} onChange={(e) => setReceiptMarginRight(parseInt(e.target.value, 10) || 0)} />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">{t("pos.receiptMarginsDesc")}</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -763,56 +847,83 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
         </div>
       </div>
 
-      {/* Secondary Printer (duplicate receipt) */}
-      <div className="space-y-3 rounded-lg border p-3">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="dlg-secondary-enabled" className="font-semibold">Secondary Printer</Label>
-            <p className="text-xs text-muted-foreground">Print a duplicate receipt to a second printer</p>
-          </div>
-          <Switch id="dlg-secondary-enabled" checked={secondaryEnabled} onCheckedChange={setSecondaryEnabled} />
-        </div>
-        {secondaryEnabled && (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2 space-y-1">
-              <Label htmlFor="dlg-secondary-host">IP Address</Label>
-              <Input
-                id="dlg-secondary-host"
-                placeholder="192.168.1.101"
-                value={secondaryHost}
-                onChange={(e) => setSecondaryHost(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="dlg-secondary-port">Port</Label>
-              <Input
-                id="dlg-secondary-port"
-                type="number"
-                placeholder="9100"
-                value={secondaryPort}
-                onChange={(e) => setSecondaryPort(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
+      {/* Per-station action buttons */}
       <div className="flex flex-wrap gap-2">
-        <Button onClick={testConnection} disabled={isTesting} variant="outline">
+        <Button onClick={testConnection} disabled={isTesting} variant="outline" size="sm">
           {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
           {t("pos.testConnection")}
         </Button>
-        <Button onClick={openCashDrawer} variant="outline">{t("pos.openCashDrawer")}</Button>
-        <Button onClick={printTestReceipt} variant="outline">
+        <Button onClick={openCashDrawer} variant="outline" size="sm">{t("pos.openCashDrawer")}</Button>
+        <Button onClick={printTestReceipt} variant="outline" size="sm">
           <Printer className="mr-2 h-4 w-4" />
           {t("pos.printTestReceipt")}
         </Button>
       </div>
 
-      <Button onClick={savePrinterConfig} disabled={isSavingConfig} className="w-full">
-        {isSavingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {t("pos.savePrinterConfig")}
-      </Button>
+      {stations.length > 1 && (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => removeStation(editingStationId!)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Remove Printer
+        </Button>
+      )}
+    </div>
+  );
+
+  const renderCapacitorContent = () => (
+    <div className="space-y-6">
+      {editingStationId ? renderStationEdit() : (
+        <>
+          {/* Station list */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Receipt Printers</Label>
+              <Button variant="outline" size="sm" onClick={addStation}>
+                <Plus className="mr-1 h-4 w-4" />
+                Add Printer
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Receipts will be printed to all configured printers
+            </p>
+
+            {stations.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-center">
+                <p className="text-sm text-muted-foreground">No printers configured</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={addStation}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Printer
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {stations.map((station) => (
+                  <button
+                    key={station.id}
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent"
+                    onClick={() => startEditingStation(station)}
+                  >
+                    <div>
+                      <div className="font-medium">{station.name || "Unnamed Printer"}</div>
+                      <div className="text-xs text-muted-foreground">{getStationSummary(station)}</div>
+                    </div>
+                    <ChevronLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Button onClick={savePrinterConfig} disabled={isSavingConfig} className="w-full">
+            {isSavingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("pos.savePrinterConfig")}
+          </Button>
+        </>
+      )}
     </div>
   );
 
