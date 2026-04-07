@@ -70,28 +70,6 @@ export function Combobox<T>({
     return () => clearTimeout(timer);
   }, [autoFocus]);
 
-  // Track keyboard height on mobile so the sheet fills available space
-  const [keyboardInset, setKeyboardInset] = React.useState(0);
-  React.useEffect(() => {
-    if (!open || !isMobile) {
-      setKeyboardInset(0);
-      return;
-    }
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    const onViewportChange = () => {
-      const diff = window.innerHeight - viewport.height;
-      setKeyboardInset(diff > 120 ? diff : 0);
-    };
-    onViewportChange();
-    viewport.addEventListener("resize", onViewportChange);
-    viewport.addEventListener("scroll", onViewportChange);
-    return () => {
-      viewport.removeEventListener("resize", onViewportChange);
-      viewport.removeEventListener("scroll", onViewportChange);
-      setKeyboardInset(0);
-    };
-  }, [open, isMobile]);
 
   // Ensure items is always an array
   const safeItems = React.useMemo(() => {
@@ -339,7 +317,6 @@ export function Combobox<T>({
             <DialogPrimitive.Content
               data-slot="dialog-content"
               className="glass-panel-strong fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-[2rem] border-t border-slate-200 outline-none overscroll-contain data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
-              style={keyboardInset > 0 ? { maxHeight: `calc(100dvh - ${keyboardInset}px)` } : undefined}
               onOpenAutoFocus={(e) => {
                 e.preventDefault();
                 setTimeout(() => inputRef.current?.focus(), 50);
