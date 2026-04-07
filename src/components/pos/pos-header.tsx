@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, History, Languages, Loader2, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
+import { Armchair, ArrowLeft, Clock, History, Languages, Loader2, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -30,6 +30,7 @@ interface POSHeaderProps {
   onPreviousOrders?: () => void;
   selectedTable?: { number: number; name: string } | null;
   isRestaurantMode?: boolean;
+  onTableClick?: () => void;
 }
 
 function POSClock() {
@@ -59,6 +60,7 @@ export function POSHeader({
   onPreviousOrders,
   selectedTable,
   isRestaurantMode,
+  onTableClick,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
@@ -97,10 +99,19 @@ export function POSHeader({
             <span className="truncate">{locationLabel}</span>
           </div>
         )}
-        {selectedTable && (
-          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-            Table {selectedTable.number}
-          </Badge>
+        {isRestaurantMode && (
+          <button
+            onClick={onTableClick}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
+              selectedTable
+                ? "bg-orange-500 text-white hover:bg-orange-400"
+                : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
+            )}
+          >
+            <Armchair className="h-3.5 w-3.5" />
+            {selectedTable ? `T${selectedTable.number}` : "Table"}
+          </button>
         )}
       </div>
 

@@ -1522,6 +1522,7 @@ function POSTerminalContent() {
         onPreviousOrders={openPreviousOrders}
         selectedTable={selectedTable}
         isRestaurantMode={isRestaurantEnabled}
+        onTableClick={() => setShowTableSelect(true)}
       />
 
       {/* Main Content */}
