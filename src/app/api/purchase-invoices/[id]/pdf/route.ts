@@ -23,7 +23,7 @@ export async function GET(
     // Fetch organization details
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { name: true, arabicName: true, arabicAddress: true, vatNumber: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, currency: true },
+      select: { name: true, arabicName: true, arabicAddress: true, vatNumber: true, currency: true },
     });
 
     // Fetch purchase invoice with supplier and items
@@ -128,8 +128,6 @@ export async function GET(
       createElement(PurchaseInvoicePDF, {
         invoice: pdfInvoice,
         balanceInfo,
-        headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
-        footerImageUrl: org?.pdfFooterImageUrl ?? undefined,
       }) as any
     );
 
