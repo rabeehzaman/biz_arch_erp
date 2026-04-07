@@ -860,16 +860,21 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
         </Button>
       </div>
 
-      {stations.length > 1 && (
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => removeStation(editingStationId!)}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Remove Printer
+      <div className="flex items-center gap-2">
+        <Button onClick={savePrinterConfig} disabled={isSavingConfig} className="flex-1">
+          {isSavingConfig && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {t("pos.savePrinterConfig")}
         </Button>
-      )}
+        {stations.length > 1 && (
+          <Button
+            variant="destructive"
+            size="icon"
+            onClick={() => removeStation(editingStationId!)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 
