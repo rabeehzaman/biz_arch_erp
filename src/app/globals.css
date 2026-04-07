@@ -493,6 +493,16 @@
     overscroll-behavior-y: contain;
   }
 
+  /* Prevent iOS Safari auto-zoom on input focus (requires >= 16px) */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Disable double-tap-to-zoom while keeping pinch and scroll */
+  * {
+    touch-action: manipulation;
+  }
+
   /* Prevent rubber-band inside dialogs/sheets */
   [data-slot="dialog-content"],
   [data-slot="sheet-content"] {

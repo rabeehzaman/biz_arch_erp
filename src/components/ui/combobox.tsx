@@ -331,7 +331,12 @@ export function Combobox<T>({
               )}
               onOpenAutoFocus={(e) => {
                 e.preventDefault();
-                setTimeout(() => inputRef.current?.focus(), 50);
+                if (mobileFullScreen) {
+                  // Focus immediately to stay within user gesture context (iOS keyboard)
+                  requestAnimationFrame(() => inputRef.current?.focus());
+                } else {
+                  setTimeout(() => inputRef.current?.focus(), 50);
+                }
               }}
             >
               {mobileFullScreen ? (
@@ -348,10 +353,11 @@ export function Combobox<T>({
                     <input
                       ref={inputRef}
                       type="text"
+                      autoFocus
                       placeholder={placeholder}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="flex h-12 w-full bg-transparent py-3 text-sm outline-none placeholder:text-slate-500"
+                      className="flex h-12 w-full bg-transparent py-3 text-base outline-none placeholder:text-slate-500"
                     />
                     {searchQuery && (
                       <button type="button" onClick={() => setSearchQuery("")} className="shrink-0 p-1">
