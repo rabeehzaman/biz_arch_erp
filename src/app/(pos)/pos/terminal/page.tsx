@@ -1584,8 +1584,7 @@ function POSTerminalContent() {
           </div>
 
           {/* Bottom bar — mobile only */}
-          {cart.length > 0 && (
-            <div className="flex shrink-0 gap-3 bg-slate-900 p-3 pb-[max(0.75rem,var(--app-safe-area-bottom))] md:hidden">
+          <div className="flex shrink-0 gap-3 bg-slate-900 p-3 pb-[max(0.75rem,var(--app-safe-area-bottom))] md:hidden">
               <button
                 className="flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-5 py-3.5 text-sm font-semibold text-white active:bg-slate-600"
                 onClick={() => setMobileView("cart")}
@@ -1625,9 +1624,10 @@ function POSTerminalContent() {
               )}
               <button
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white active:opacity-90",
+                  "flex flex-1 items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white active:opacity-90 disabled:opacity-50",
                   isReturnMode ? "bg-red-600" : "bg-primary"
                 )}
+                disabled={cart.length === 0}
                 onClick={() => {
                   setChargedFromProducts(true);
                   setView("payment");
@@ -1645,8 +1645,7 @@ function POSTerminalContent() {
                   </>
                 )}
               </button>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Right Panel — Cart / Payment */}
