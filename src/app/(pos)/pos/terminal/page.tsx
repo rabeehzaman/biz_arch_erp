@@ -930,12 +930,8 @@ function POSTerminalContent() {
 
   // ── Send to Kitchen (KOT) ─────────────────────────────────────────
 
-  const handleSendToKitchen = async () => {
-    if (kotInFlightRef.current) return;
-    kotInFlightRef.current = true;
-    setIsKotSending(true);
-
-    // Build list of unsent items (new items or quantity increases)
+  /** Core KOT send logic — returns the created KOT id, or null if nothing to send */
+  const sendKotForUnsentItems = async (opts?: { silent?: boolean }): Promise<string | null> => {
     const itemsToSend: { productId: string; name: string; quantity: number; categoryId?: string | null }[] = [];
     for (const item of cartState.items) {
       const sentQty = kotSentQuantities.get(item.productId) ?? 0;
@@ -944,12 +940,84 @@ function POSTerminalContent() {
         itemsToSend.push({ productId: item.productId, name: item.name, quantity: diff, categoryId: item.categoryId });
       }
     }
-    if (itemsToSend.length === 0) {
-      toast.info("No new items to send to kitchen");
-      kotInFlightRef.current = false;
-      setIsKotSending(false);
-      return;
+    if (itemsToSend.length === 0) return null;
+
+    const kotType = kotOrderIds.length === 0 ? "STANDARD" : "FOLLOWUP";
+    const res = await fetch("/api/restaurant/kot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tableId: selectedTable?.id || null,
+        posSessionId: posSession?.id || null,
+        kotType,
+        orderType,
+        serverName: authSession?.user?.name || undefined,
+        guestCount: guestCount || undefined,
+        items: itemsToSend.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          quantity: item.quantity,
+          isNew: kotType === "FOLLOWUP",
+        })),
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to create KOT");
+    const kot = await res.json();
+
+    // Update sent quantities to current cart quantities
+    const newSentQtys = new Map(kotSentQuantities);
+    for (const item of cartState.items) {
+      newSentQtys.set(item.productId, item.quantity);
     }
+    setKotSentQuantities(newSentQtys);
+    setKotOrderIds(prev => [...prev, kot.id]);
+
+    // Print KOT
+    try {
+      const kotReceiptData: KOTReceiptData = {
+        kotNumber: kot.kotNumber,
+        kotType: kot.kotType,
+        orderType: kot.orderType,
+        tableName: selectedTable?.name,
+        tableNumber: selectedTable?.number,
+        section: selectedTable?.section || undefined,
+        serverName: authSession?.user?.name || undefined,
+        guestCount: guestCount || undefined,
+        timestamp: new Date(),
+        items: itemsToSend.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          categoryId: item.categoryId,
+          isNew: kotType === "FOLLOWUP",
+        })),
+      };
+      await printKOTMulti(kotReceiptData);
+    } catch (printErr) {
+      console.error("KOT print failed:", printErr);
+      toast.warning("KOT saved but printing failed — please reprint from kitchen display", { duration: 6000 });
+    }
+
+    if (!opts?.silent) {
+      toast.success(`KOT ${kot.kotNumber} sent to kitchen`);
+    }
+
+    // Update table status to OCCUPIED if it was AVAILABLE
+    if (selectedTable?.id) {
+      fetch(`/api/restaurant/tables/${selectedTable.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "OCCUPIED", guestCount }),
+      }).catch(() => {});
+    }
+
+    return kot.id;
+  };
+
+  const handleSendToKitchen = async () => {
+    if (kotInFlightRef.current) return;
+    kotInFlightRef.current = true;
+    setIsKotSending(true);
 
     if (orderType === "DINE_IN" && !selectedTable) {
       toast.error("Please select a table for dine-in orders");
@@ -960,71 +1028,9 @@ function POSTerminalContent() {
     }
 
     try {
-      const kotType = kotOrderIds.length === 0 ? "STANDARD" : "FOLLOWUP";
-      const res = await fetch("/api/restaurant/kot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tableId: selectedTable?.id || null,
-          posSessionId: posSession?.id || null,
-          kotType,
-          orderType,
-          serverName: authSession?.user?.name || undefined,
-          guestCount: guestCount || undefined,
-          items: itemsToSend.map(item => ({
-            productId: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            isNew: kotType === "FOLLOWUP",
-          })),
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to create KOT");
-      const kot = await res.json();
-
-      // Update sent quantities to current cart quantities
-      const newSentQtys = new Map(kotSentQuantities);
-      for (const item of cartState.items) {
-        newSentQtys.set(item.productId, item.quantity);
-      }
-      setKotSentQuantities(newSentQtys);
-      setKotOrderIds(prev => [...prev, kot.id]);
-
-      // Print KOT
-      try {
-        const kotReceiptData: KOTReceiptData = {
-          kotNumber: kot.kotNumber,
-          kotType: kot.kotType,
-          orderType: kot.orderType,
-          tableName: selectedTable?.name,
-          tableNumber: selectedTable?.number,
-          section: selectedTable?.section || undefined,
-          serverName: authSession?.user?.name || undefined,
-          guestCount: guestCount || undefined,
-          timestamp: new Date(),
-          items: itemsToSend.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            categoryId: item.categoryId,
-            isNew: kotType === "FOLLOWUP",
-          })),
-        };
-        await printKOTMulti(kotReceiptData);
-      } catch (printErr) {
-        console.error("KOT print failed:", printErr);
-        toast.warning("KOT saved but printing failed — please reprint from kitchen display", { duration: 6000 });
-      }
-
-      toast.success(`KOT ${kot.kotNumber} sent to kitchen`);
-
-      // Update table status to OCCUPIED if it was AVAILABLE
-      if (selectedTable?.id) {
-        fetch(`/api/restaurant/tables/${selectedTable.id}/status`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "OCCUPIED", guestCount }),
-        }).catch(() => {});
+      const kotId = await sendKotForUnsentItems();
+      if (!kotId) {
+        toast.info("No new items to send to kitchen");
       }
     } catch (error) {
       console.error("Failed to send KOT:", error);
@@ -1132,6 +1138,16 @@ function POSTerminalContent() {
     openCashDrawerIfEnabled();
 
     setIsPendingReceipt(true); // hide reprint until new receipt data is ready
+
+    // Auto-send KOT for any unsent items before checkout
+    if (isRestaurantEnabled) {
+      try {
+        await sendKotForUnsentItems({ silent: true });
+      } catch (err) {
+        console.error("Auto KOT before checkout failed:", err);
+        // Don't block checkout — KOT failure shouldn't prevent payment
+      }
+    }
 
     try {
       // Content-based idempotency key: same cart + payments + counter = same key.
