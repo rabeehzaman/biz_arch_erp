@@ -751,8 +751,20 @@ function POSTerminalContent() {
     clearCart();
   }, [clearCart, kotSentQuantities]);
 
+  /** Reset a table back to AVAILABLE in the database */
+  const freeTable = useCallback((tableId: string) => {
+    fetch(`/api/restaurant/tables/${tableId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "AVAILABLE" }),
+    }).catch(() => {});
+  }, []);
+
   const confirmClearCartWithKot = useCallback(() => {
-    if (selectedTable) tableOrdersRef.current.delete(selectedTable.id);
+    if (selectedTable) {
+      tableOrdersRef.current.delete(selectedTable.id);
+      freeTable(selectedTable.id);
+    }
     clearCart();
     setKotSentQuantities(new Map());
     setKotOrderIds([]);
@@ -760,7 +772,7 @@ function POSTerminalContent() {
     setOrderType("DINE_IN");
     setGuestCount(1);
     setShowClearCartKotWarning(false);
-  }, [clearCart, selectedTable]);
+  }, [clearCart, selectedTable, freeTable]);
 
   const applyOptimisticCheckoutUpdates = useCallback(
     (completedCart: CartItemData[], completedTotal: number, completedHeldOrderId: string | null) => {
@@ -895,7 +907,19 @@ function POSTerminalContent() {
           : t("pos.failedToPrintSessionReport");
       }
 
+      // Free all occupied tables from this session before clearing
+      if (selectedTable) freeTable(selectedTable.id);
+      for (const tableId of tableOrdersRef.current.keys()) {
+        freeTable(tableId);
+      }
+      tableOrdersRef.current.clear();
+
       clearCart();
+      setKotSentQuantities(new Map());
+      setKotOrderIds([]);
+      setSelectedTable(null);
+      setOrderType("DINE_IN");
+      setGuestCount(1);
       await mutateSession();
       setShowCloseDialog(false);
       setClosingCash("");
