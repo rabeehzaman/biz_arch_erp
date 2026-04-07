@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/i18n";
 import { toast } from "sonner";
@@ -95,7 +94,6 @@ export default function RestaurantDashboardPage() {
     table: RestaurantTable | null;
   }>({ open: false, table: null });
   const [newStatus, setNewStatus] = useState<string>("");
-  const [guestCount, setGuestCount] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
 
   const totalTables = tables?.length ?? 0;
@@ -106,7 +104,6 @@ export default function RestaurantDashboardPage() {
   const handleTableClick = (table: RestaurantTable) => {
     setStatusDialog({ open: true, table });
     setNewStatus(table.status);
-    setGuestCount(table.guestCount?.toString() ?? "");
   };
 
   const handleStatusUpdate = async () => {
@@ -118,7 +115,6 @@ export default function RestaurantDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: newStatus,
-          guestCount: guestCount ? parseInt(guestCount) : undefined,
         }),
       });
       if (!res.ok) {
@@ -244,9 +240,7 @@ export default function RestaurantDashboardPage() {
                   <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <Users className="h-3 w-3" />
                     <span>
-                      {table.status === "OCCUPIED" && table.guestCount
-                        ? `${table.guestCount}/${table.capacity}`
-                        : `${table.capacity} seats`}
+                      {table.capacity} seats
                     </span>
                   </div>
                   {table.status === "OCCUPIED" && (
@@ -275,7 +269,7 @@ export default function RestaurantDashboardPage() {
               Update Table #{statusDialog.table?.number} - {statusDialog.table?.name}
             </DialogTitle>
             <DialogDescription>
-              Change the table status and guest count.
+              Change the table status.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -293,19 +287,6 @@ export default function RestaurantDashboardPage() {
                 </SelectContent>
               </Select>
             </div>
-            {(newStatus === "OCCUPIED" || newStatus === "RESERVED") && (
-              <div className="space-y-2">
-                <Label>Guest Count</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={statusDialog.table?.capacity ?? 99}
-                  value={guestCount}
-                  onChange={(e) => setGuestCount(e.target.value)}
-                  placeholder={`Max ${statusDialog.table?.capacity ?? 0} guests`}
-                />
-              </div>
-            )}
           </div>
           <DialogFooter>
             <Button

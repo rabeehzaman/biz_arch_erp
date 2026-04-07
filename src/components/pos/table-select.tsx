@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import useSWR from "swr";
 import { Loader2, Users, Package } from "lucide-react";
 import {
@@ -11,14 +10,6 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { useLanguage } from "@/lib/i18n";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -61,39 +52,15 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway }: T
     fetcher
   );
 
-  const [pendingTable, setPendingTable] = useState<RestaurantTable | null>(null);
-  const [guestCount, setGuestCount] = useState("1");
-
   const handleTableClick = (table: RestaurantTable) => {
     if (table.status !== "AVAILABLE" && table.status !== "OCCUPIED") return;
-    if (table.status === "OCCUPIED") {
-      // Skip guest count prompt — guests already seated
-      onSelectTable({
-        id: table.id,
-        number: table.number,
-        name: table.name,
-        section: table.section || undefined,
-        capacity: table.capacity,
-      });
-      return;
-    }
-    setPendingTable(table);
-    setGuestCount("1");
-  };
-
-  const handleConfirmGuests = () => {
-    if (!pendingTable) return;
-    const count = parseInt(guestCount) || 1;
     onSelectTable({
-      id: pendingTable.id,
-      number: pendingTable.number,
-      name: pendingTable.name,
-      section: pendingTable.section || undefined,
-      capacity: pendingTable.capacity,
+      id: table.id,
+      number: table.number,
+      name: table.name,
+      section: table.section || undefined,
+      capacity: table.capacity,
     });
-    // Store guest count via a custom event for the parent to handle
-    window.dispatchEvent(new CustomEvent("restaurant-guest-count", { detail: count }));
-    setPendingTable(null);
   };
 
   const handleTakeaway = () => {
@@ -179,40 +146,6 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway }: T
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Guest count dialog */}
-      <Dialog open={!!pendingTable} onOpenChange={() => setPendingTable(null)}>
-        <DialogContent className="sm:max-w-xs">
-          <DialogHeader>
-            <DialogTitle>
-              Table {pendingTable?.number} - {pendingTable?.name}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <label className="text-sm font-medium">{t("restaurant.guestCount")}</label>
-            <Input
-              type="number"
-              min={1}
-              max={pendingTable?.capacity || 20}
-              value={guestCount}
-              onChange={(e) => setGuestCount(e.target.value)}
-              className="text-center text-lg"
-              autoFocus
-            />
-            <p className="text-xs text-muted-foreground text-center">
-              Capacity: {pendingTable?.capacity}
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingTable(null)}>
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={handleConfirmGuests}>
-              {t("common.confirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

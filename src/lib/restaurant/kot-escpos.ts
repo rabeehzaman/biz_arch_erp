@@ -151,20 +151,10 @@ export function buildKotEscPos(
     }
   }
 
-  // Guests + Server
-  const guestPart =
-    data.guestCount != null && data.guestCount > 0
-      ? `Guests: ${data.guestCount}`
-      : "";
-  const serverPart = data.serverName ? `Server: ${data.serverName}` : "";
-
-  if (guestPart && serverPart) {
+  // Server
+  if (data.serverName) {
     p.bold(true);
-    p.leftRight(guestPart, serverPart);
-    p.bold(false);
-  } else if (guestPart || serverPart) {
-    p.bold(true);
-    p.println(guestPart || serverPart);
+    p.println(`Server: ${data.serverName}`);
     p.bold(false);
   }
 

@@ -345,7 +345,6 @@ export function KOTPrinterSettingsDialog({ open, onOpenChange }: KOTPrinterSetti
       tableNumber: 5,
       section: "Main Hall",
       serverName: "Test Server",
-      guestCount: 4,
       timestamp: new Date(),
       stationName: editName.trim() || undefined,
       items: [

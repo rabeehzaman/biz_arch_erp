@@ -9,7 +9,6 @@ export interface KOTReceiptData {
   tableNumber?: number;
   section?: string;
   serverName?: string;
-  guestCount?: number;
   timestamp: Date;
   items: {
     name: string;
@@ -155,19 +154,11 @@ export function KOTReceipt({ data }: { data: KOTReceiptData }) {
           </div>
         )}
 
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontSize: "12px",
-          marginTop: "2px",
-        }}>
-          {data.guestCount != null && data.guestCount > 0 && (
-            <span>Guests: {data.guestCount}</span>
-          )}
-          {data.serverName && (
+        {data.serverName && (
+          <div style={{ fontSize: "12px", marginTop: "2px" }}>
             <span>Server: {data.serverName}</span>
-          )}
-        </div>
+          </div>
+        )}
 
         <div style={{ fontSize: "11px", marginTop: "2px" }}>
           {format(data.timestamp, "dd MMM yyyy")}

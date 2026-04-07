@@ -69,7 +69,6 @@ interface KOTOrder {
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   serverName: string | null;
   specialInstructions: string | null;
-  guestCount: number | null;
   printedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
@@ -392,11 +391,6 @@ export default function KOTHistoryPage() {
                               <p className="text-sm text-muted-foreground italic">
                                 {t("Special Instructions")}:{" "}
                                 {kot.specialInstructions}
-                              </p>
-                            )}
-                            {kot.guestCount && (
-                              <p className="text-sm text-muted-foreground">
-                                {t("Guests")}: {kot.guestCount}
                               </p>
                             )}
                             <div className="rounded-md border bg-background">

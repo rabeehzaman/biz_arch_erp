@@ -409,7 +409,6 @@ function POSTerminalContent() {
   const [selectedTable, setSelectedTable] = useState<{ id: string; number: number; name: string; section?: string; capacity: number } | null>(null);
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [orderType, setOrderType] = useState<"DINE_IN" | "TAKEAWAY">("DINE_IN");
-  const [guestCount, setGuestCount] = useState<number>(1);
   const [kotSentQuantities, setKotSentQuantities] = useState<Map<string, number>>(new Map());
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
   const [isKotSending, setIsKotSending] = useState(false);
@@ -419,19 +418,8 @@ function POSTerminalContent() {
     items: CartItemData[];
     kotSentQuantities: Map<string, number>;
     kotOrderIds: string[];
-    guestCount: number;
     customer: { id: string; name: string; phone: string | null } | null;
   }>>(new Map());
-
-  // Listen for guest count from table selection
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const count = (e as CustomEvent).detail;
-      if (typeof count === "number") setGuestCount(count);
-    };
-    window.addEventListener("restaurant-guest-count", handler);
-    return () => window.removeEventListener("restaurant-guest-count", handler);
-  }, []);
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null }>(
@@ -770,7 +758,6 @@ function POSTerminalContent() {
     setKotOrderIds([]);
     setSelectedTable(null);
     setOrderType("DINE_IN");
-    setGuestCount(1);
     setShowClearCartKotWarning(false);
   }, [clearCart, selectedTable, freeTable]);
 
@@ -919,7 +906,6 @@ function POSTerminalContent() {
       setKotOrderIds([]);
       setSelectedTable(null);
       setOrderType("DINE_IN");
-      setGuestCount(1);
       await mutateSession();
       setShowCloseDialog(false);
       setClosingCash("");
@@ -976,7 +962,6 @@ function POSTerminalContent() {
         kotType,
         orderType,
         serverName: authSession?.user?.name || undefined,
-        guestCount: guestCount || undefined,
         items: itemsToSend.map(item => ({
           productId: item.productId,
           name: item.name,
@@ -1007,7 +992,6 @@ function POSTerminalContent() {
         tableNumber: selectedTable?.number,
         section: selectedTable?.section || undefined,
         serverName: authSession?.user?.name || undefined,
-        guestCount: guestCount || undefined,
         timestamp: new Date(),
         items: itemsToSend.map(item => ({
           name: item.name,
@@ -1031,7 +1015,7 @@ function POSTerminalContent() {
       fetch(`/api/restaurant/tables/${selectedTable.id}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "OCCUPIED", guestCount }),
+        body: JSON.stringify({ status: "OCCUPIED" }),
       }).catch(() => {});
     }
 
@@ -1342,7 +1326,6 @@ function POSTerminalContent() {
       if (selectedTable) tableOrdersRef.current.delete(selectedTable.id);
       setSelectedTable(null);
       setOrderType("DINE_IN");
-      setGuestCount(1);
       setKotSentQuantities(new Map());
       setKotOrderIds([]);
 
@@ -1701,9 +1684,6 @@ function POSTerminalContent() {
                   <Button variant="outline" size="sm" onClick={() => setShowTableSelect(true)}>
                     {selectedTable ? `Table ${selectedTable.number}` : t("restaurant.selectTable")}
                   </Button>
-                  {selectedTable && (
-                    <Badge variant="secondary">{guestCount} guests</Badge>
-                  )}
                   {orderType === "TAKEAWAY" && (
                     <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200">
                       {t("restaurant.takeaway")}
@@ -2094,7 +2074,6 @@ function POSTerminalContent() {
                 items: cartState.items,
                 kotSentQuantities: new Map(kotSentQuantities),
                 kotOrderIds: [...kotOrderIds],
-                guestCount,
                 customer: selectedCustomer,
               });
             }
@@ -2105,7 +2084,6 @@ function POSTerminalContent() {
               dispatchCart({ type: "RESTORE", items: saved.items });
               setKotSentQuantities(saved.kotSentQuantities);
               setKotOrderIds(saved.kotOrderIds);
-              setGuestCount(saved.guestCount);
               setSelectedCustomer(saved.customer);
               tableOrdersRef.current.delete(table!.id);
             } else if (selectedTable) {
@@ -2127,7 +2105,6 @@ function POSTerminalContent() {
                 items: cartState.items,
                 kotSentQuantities: new Map(kotSentQuantities),
                 kotOrderIds: [...kotOrderIds],
-                guestCount,
                 customer: selectedCustomer,
               });
             }
