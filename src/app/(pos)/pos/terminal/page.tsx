@@ -414,6 +414,15 @@ function POSTerminalContent() {
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
   const [isKotSending, setIsKotSending] = useState(false);
 
+  // Per-table order context — saves cart + KOT state when switching tables
+  const tableOrdersRef = useRef<Map<string, {
+    items: CartItemData[];
+    kotSentQuantities: Map<string, number>;
+    kotOrderIds: string[];
+    guestCount: number;
+    customer: { id: string; name: string; phone: string | null } | null;
+  }>>(new Map());
+
   // Listen for guest count from table selection
   useEffect(() => {
     const handler = (e: Event) => {
@@ -743,6 +752,7 @@ function POSTerminalContent() {
   }, [clearCart, kotSentQuantities]);
 
   const confirmClearCartWithKot = useCallback(() => {
+    if (selectedTable) tableOrdersRef.current.delete(selectedTable.id);
     clearCart();
     setKotSentQuantities(new Map());
     setKotOrderIds([]);
@@ -750,7 +760,7 @@ function POSTerminalContent() {
     setOrderType("DINE_IN");
     setGuestCount(1);
     setShowClearCartKotWarning(false);
-  }, [clearCart]);
+  }, [clearCart, selectedTable]);
 
   const applyOptimisticCheckoutUpdates = useCallback(
     (completedCart: CartItemData[], completedTotal: number, completedHeldOrderId: string | null) => {
@@ -1288,7 +1298,8 @@ function POSTerminalContent() {
       setView("cart");
       setMobileView("products");
 
-      // Reset restaurant state
+      // Reset restaurant state — remove completed table from saved contexts
+      if (selectedTable) tableOrdersRef.current.delete(selectedTable.id);
       setSelectedTable(null);
       setOrderType("DINE_IN");
       setGuestCount(1);
@@ -2037,21 +2048,54 @@ function POSTerminalContent() {
           open={showTableSelect}
           onOpenChange={setShowTableSelect}
           onSelectTable={(table) => {
-            if (kotOrderIds.length > 0 && selectedTable && table && selectedTable.id !== table.id) {
-              toast.error("Cannot change table after sending items to kitchen");
-              setShowTableSelect(false);
-              return;
+            // Save current table's order context before switching
+            if (selectedTable && (cartState.items.length > 0 || kotSentQuantities.size > 0)) {
+              tableOrdersRef.current.set(selectedTable.id, {
+                items: cartState.items,
+                kotSentQuantities: new Map(kotSentQuantities),
+                kotOrderIds: [...kotOrderIds],
+                guestCount,
+                customer: selectedCustomer,
+              });
             }
+
+            // Restore new table's order context if it exists
+            const saved = table ? tableOrdersRef.current.get(table.id) : undefined;
+            if (saved) {
+              dispatchCart({ type: "RESTORE", items: saved.items });
+              setKotSentQuantities(saved.kotSentQuantities);
+              setKotOrderIds(saved.kotOrderIds);
+              setGuestCount(saved.guestCount);
+              setSelectedCustomer(saved.customer);
+              tableOrdersRef.current.delete(table!.id);
+            } else if (selectedTable) {
+              // Switching to a new table — start fresh
+              dispatchCart({ type: "CLEAR" });
+              setKotSentQuantities(new Map());
+              setKotOrderIds([]);
+              setSelectedCustomer(null);
+            }
+
             setSelectedTable(table);
             setOrderType("DINE_IN");
             setShowTableSelect(false);
           }}
           onTakeaway={() => {
-            if (kotOrderIds.length > 0) {
-              toast.error("Cannot switch to takeaway after sending items to kitchen");
-              setShowTableSelect(false);
-              return;
+            // Save current table's order context before switching to takeaway
+            if (selectedTable && (cartState.items.length > 0 || kotSentQuantities.size > 0)) {
+              tableOrdersRef.current.set(selectedTable.id, {
+                items: cartState.items,
+                kotSentQuantities: new Map(kotSentQuantities),
+                kotOrderIds: [...kotOrderIds],
+                guestCount,
+                customer: selectedCustomer,
+              });
             }
+
+            dispatchCart({ type: "CLEAR" });
+            setKotSentQuantities(new Map());
+            setKotOrderIds([]);
+            setSelectedCustomer(null);
             setSelectedTable(null);
             setOrderType("TAKEAWAY");
             setShowTableSelect(false);

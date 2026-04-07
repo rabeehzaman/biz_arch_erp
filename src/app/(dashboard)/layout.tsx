@@ -42,39 +42,6 @@ export default async function DashboardLayout({
     }
   }
 
-  // Pre-fetch disabled sidebar items to prevent flicker
-  let disabledSidebarItems: string[] = [];
-  try {
-    if (session.user && session.user.role !== "superadmin") {
-      let organizationId;
-      try {
-        organizationId = getOrgId(session);
-      } catch (_error) {
-        // ignore
-      }
-
-      if (organizationId) {
-        const setting = await prisma.setting.findFirst({
-          where: {
-            organizationId,
-            key: "disabledSidebarItems",
-            userId: null,
-          },
-        });
-
-        if (setting && setting.value) {
-          try {
-            disabledSidebarItems = JSON.parse(setting.value);
-          } catch (_error) {
-            // ignore
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error("Failed to pre-fetch disabled sidebar items:", error);
-  }
-
   // Pre-fetch form config (field defaults, hidden fields, sidebar mode, etc.)
   let formConfig: OrgFormConfig = {
     fields: {},
@@ -161,7 +128,6 @@ export default async function DashboardLayout({
     <ClientDashboardLayout
       session={session}
       swrFallback={{
-        "/api/sidebar": disabledSidebarItems,
         "/api/form-config": formConfig,
       }}
       initialLang={initialLang}

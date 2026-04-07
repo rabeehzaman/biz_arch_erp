@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, ArrowLeft, Scale, History, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import { CustomerCombobox } from "@/components/invoices/customer-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
@@ -114,6 +115,7 @@ export default function NewInvoicePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
   useUnsavedChanges(isDirty);
 
   const getDefaultDueDate = () => {
@@ -671,11 +673,19 @@ export default function NewInvoicePage() {
     <PageAnimation>
       <div className="space-y-6">
         <div className="flex items-start gap-3 sm:items-center sm:gap-4">
-          <Link href="/invoices">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon" onClick={() => isDirty ? setShowBackConfirm(true) : router.push("/invoices")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <ConfirmDialog
+            open={showBackConfirm}
+            onOpenChange={setShowBackConfirm}
+            title={t("common.unsavedChangesTitle")}
+            description={t("common.unsavedChangesDescription")}
+            confirmLabel={t("common.discardChanges")}
+            cancelLabel={t("common.cancel")}
+            variant="destructive"
+            onConfirm={() => router.push("/invoices")}
+          />
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("sales.newInvoice")}</h2>
             <p className="text-slate-500">{t("sales.newInvoiceDesc")}</p>

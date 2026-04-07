@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { useLanguage } from "@/lib/i18n";
 import { useState, useCallback, useMemo } from "react";
 import useSWR from "swr";
+import { useDisabledSidebarItems, useSidebarMode } from "@/hooks/use-form-config";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Users,
@@ -43,8 +44,6 @@ import {
   Wrench,
 } from "lucide-react";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 // Map from English name to nameKey for sidebar filtering
 const KEY_TO_NAME: Record<string, string> = {
   "nav.customers": "Customers",
@@ -75,6 +74,7 @@ const KEY_TO_NAME: Record<string, string> = {
   "nav.balanceSheet": "Balance Sheet",
   "nav.cashFlow": "Cash Flow",
   "nav.expenseReport": "Expense Report",
+  "nav.salesByCustomer": "Sales by Customer",
   "nav.stockSummary": "Stock Summary",
   "nav.branchPL": "Branch P&L",
   "nav.settings": "Settings",
@@ -276,15 +276,11 @@ export default function MorePage() {
   const isJewelleryEnabled = session?.user?.isJewelleryModuleEnabled;
   const isRestaurantEnabled = session?.user?.isRestaurantModuleEnabled;
   const { collapsed, toggle } = useCollapsedSections();
-
-  const { data: disabledItems = [] } = useSWR<string[]>(
-    !isSuperadmin && session?.user ? "/api/sidebar" : null,
-    fetcher
-  );
+  const disabledItems = useDisabledSidebarItems();
+  const sidebarMode = useSidebarMode();
 
   const { data: warehouseAccess } = useSWR(
     !isSuperadmin && multiBranchEnabled && session?.user ? "/api/user-warehouse-access" : null,
-    fetcher
   );
 
   const initials = session?.user?.name
@@ -301,6 +297,10 @@ export default function MorePage() {
     const defaultAccess = myAccess.find((a: { isDefault: boolean }) => a.isDefault);
     return (defaultAccess || myAccess[0])?.branch?.name ?? null;
   }, [warehouseAccess, session?.user?.id]);
+
+  if (sidebarMode === "hidden" && !isSuperadmin) {
+    return null;
+  }
 
   return (
     <div className="pb-4">

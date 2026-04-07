@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, use } from "react";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import { SupplierCombobox } from "@/components/invoices/supplier-combobox";
 import { ProductCombobox } from "@/components/invoices/product-combobox";
@@ -77,6 +79,9 @@ export default function EditPurchaseInvoicePage({
   const [products, setProducts] = useState<Product[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
+  useUnsavedChanges(isDirty);
 
   const [formData, setFormData] = useState({
     supplierId: "",
@@ -387,18 +392,26 @@ export default function EditPurchaseInvoicePage({
     <PageAnimation>
       <div className="space-y-6">
         <div className="flex items-start gap-3 sm:items-center sm:gap-4">
-          <Link href={`/purchase-invoices/${id}`}>
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon" onClick={() => isDirty ? setShowBackConfirm(true) : router.push(`/purchase-invoices/${id}`)}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <ConfirmDialog
+            open={showBackConfirm}
+            onOpenChange={setShowBackConfirm}
+            title={t("common.unsavedChangesTitle")}
+            description={t("common.unsavedChangesDescription")}
+            confirmLabel={t("common.discardChanges")}
+            cancelLabel={t("common.cancel")}
+            variant="destructive"
+            onConfirm={() => router.push(`/purchase-invoices/${id}`)}
+          />
           <div>
             <h2 className="text-2xl font-bold text-slate-900">{t("purchases.editInvoice")}</h2>
             <p className="text-slate-500">{t("purchases.updatePurchaseDesc")}</p>
           </div>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit}>
+        <form ref={formRef} onSubmit={handleSubmit} onChangeCapture={() => setIsDirty(true)}>
           <div className="space-y-6">
             <Card>
               <CardHeader>
