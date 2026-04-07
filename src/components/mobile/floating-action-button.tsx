@@ -25,13 +25,10 @@ export function FloatingActionButton({
 
   const className =
     "fixed z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 active:scale-95 sm:hidden " +
-    "end-4 bottom-[calc(6rem+var(--app-safe-area-bottom))] " +
-    (!scrolledDown ? "opacity-100" : "opacity-0 pointer-events-none");
+    "end-4 bottom-[calc(6rem+var(--app-safe-area-bottom))] opacity-100";
 
   const style = {
-    transform: scrolledDown
-      ? `translateY(calc(1rem + ${bottomOffset}px))`
-      : `translateY(${bottomOffset}px)`,
+    transform: `translateY(${bottomOffset}px)`,
   };
 
   const handlePointerDown = () => {

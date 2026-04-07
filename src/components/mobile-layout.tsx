@@ -164,7 +164,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   const contentClassName = `${baseContentClassName} pb-[calc(5.25rem+var(--app-safe-area-bottom))]`;
   const bottomNavClassName =
     "fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white shadow-[0_-10px_24px_-22px_rgba(15,23,42,0.18)]";
-  const navHidden = hideFixedUi || scrolledDown;
+  const navHidden = hideFixedUi;
 
   // Quick actions for the center plus button, filtered by disabled sidebar items
   const plusActions: ActionSheetAction[] = useMemo(() => {

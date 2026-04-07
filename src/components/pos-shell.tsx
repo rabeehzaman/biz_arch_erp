@@ -27,7 +27,7 @@ export function POSShell({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
   const { bottomOffset, hideFixedUi, scrolledDown } = useMobileFixedUi();
   const showBottomNav = pathname === "/pos";
-  const navHidden = hideFixedUi || scrolledDown;
+  const navHidden = hideFixedUi;
   const bottomNavClassName =
     "fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white shadow-[0_-10px_24px_-22px_rgba(15,23,42,0.18)] md:hidden";
   const shellClassName = pathname.startsWith("/pos/terminal")
