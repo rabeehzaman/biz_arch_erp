@@ -218,7 +218,10 @@ export function Header() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-red-600 focus:text-red-600"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onSelect={(e) => {
+            e.preventDefault();
+            signOut({ callbackUrl: "/login" });
+          }}
         >
           <LogOut className="mr-2 h-4 w-4" />
           {t("header.signOut")}

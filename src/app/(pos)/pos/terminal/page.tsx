@@ -1546,7 +1546,7 @@ function POSTerminalContent() {
               </button>
               {isRestaurantEnabled && (
                 <button
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-3 py-3.5 text-sm font-semibold text-white active:bg-amber-500"
+                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-3 py-3.5 text-sm font-semibold text-white active:bg-amber-500"
                   onClick={() => setShowTableSelect(true)}
                 >
                   <Armchair className="h-4 w-4" />
@@ -1555,12 +1555,12 @@ function POSTerminalContent() {
               )}
               {isRestaurantEnabled && (
                 <button
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-4 py-3.5 text-sm font-semibold text-white active:bg-orange-500 disabled:opacity-50"
+                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-3 py-3.5 text-sm font-semibold text-white active:bg-orange-500 disabled:opacity-50"
                   onClick={handleSendToKitchen}
                   disabled={isKotSending || cartState.items.length === 0}
                 >
                   <UtensilsCrossed className="h-4 w-4" />
-                  {t("restaurant.sendToKitchen")}
+                  KOT
                   {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(i.productId) ?? 0)) > 0) && (
                     <Badge className="min-w-5 justify-center rounded-full bg-white px-1.5 py-0 text-xs text-orange-700">
                       {cartState.items.reduce((count, i) => {
