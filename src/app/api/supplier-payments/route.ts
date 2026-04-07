@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { supplierId, purchaseInvoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountGiven: rawDiscount, adjustmentAccountId, cashBankAccountId } = body;
+    const { supplierId, purchaseInvoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountGiven: rawDiscount, adjustmentAccountId, cashBankAccountId, allocations } = body;
     const discountGiven = rawDiscount || 0;
     // Normalize paymentMethod to uppercase enum value
     let paymentMethod = (rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH") as PaymentMethod;
@@ -251,7 +251,41 @@ export async function POST(request: NextRequest) {
       });
 
       // Apply payment to purchase invoices
-      if (purchaseInvoiceId) {
+      if (allocations && Array.isArray(allocations) && allocations.length > 0) {
+        // Explicit multi-invoice allocation from create page
+        for (const alloc of allocations) {
+          const invoice = await tx.purchaseInvoice.findUnique({
+            where: { id: alloc.invoiceId, organizationId },
+            select: { id: true, total: true, amountPaid: true, balanceDue: true },
+          });
+          if (!invoice) continue;
+
+          const applyAmount = Math.min(Number(alloc.amount), Number(invoice.balanceDue));
+          if (applyAmount <= 0) continue;
+
+          const newAmountPaid = Number(invoice.amountPaid) + applyAmount;
+          const newBalanceDue = Number(invoice.total) - newAmountPaid;
+          const newStatus = newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID";
+
+          await tx.purchaseInvoice.update({
+            where: { id: invoice.id, organizationId },
+            data: {
+              amountPaid: newAmountPaid,
+              balanceDue: Math.max(0, newBalanceDue),
+              status: newStatus,
+            },
+          });
+
+          await tx.supplierPaymentAllocation.create({
+            data: {
+              supplierPaymentId: newPayment.id,
+              purchaseInvoiceId: invoice.id,
+              amount: applyAmount,
+              organizationId,
+            },
+          });
+        }
+      } else if (purchaseInvoiceId) {
         // Specific invoice selected - apply to that invoice only
         const invoice = await tx.purchaseInvoice.findUnique({
           where: { id: purchaseInvoiceId, organizationId },

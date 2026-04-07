@@ -10,7 +10,7 @@ import "@/lib/pdf-fonts";
 import { ARABIC_FONT_FAMILY } from "@/lib/pdf-fonts";
 import { translate } from "@/lib/i18n-translate";
 import type { Language } from "@/lib/i18n-translate";
-import { formatCurrency, getLocaleForCurrency } from "@/lib/currency";
+import { formatCurrencyForPdf, getLocaleForCurrency } from "@/lib/currency";
 
 interface TransferItemPDF {
   id: string;
@@ -520,12 +520,12 @@ export function StockTransferPDF({ organization, transfer, hideCost, lang = "en"
       <>
         {!hideCost && (
           <Text style={[styles.cellText, styles.colLineTotal]}>
-            {formatCurrency(item.quantity * item.unitCost, currency)}
+            {formatCurrencyForPdf(item.quantity * item.unitCost, currency)}
           </Text>
         )}
         {!hideCost && (
           <Text style={[styles.cellText, styles.colUnitCost]}>
-            {formatCurrency(item.unitCost, currency)}
+            {formatCurrencyForPdf(item.unitCost, currency)}
           </Text>
         )}
         <Text style={[styles.cellText, hideCost ? { width: "15%" } : styles.colQty]}>
@@ -555,12 +555,12 @@ export function StockTransferPDF({ organization, transfer, hideCost, lang = "en"
         </Text>
         {!hideCost && (
           <Text style={[styles.cellTextRight, styles.colUnitCost]}>
-            {formatCurrency(item.unitCost, currency)}
+            {formatCurrencyForPdf(item.unitCost, currency)}
           </Text>
         )}
         {!hideCost && (
           <Text style={[styles.cellTextRight, styles.colLineTotal]}>
-            {formatCurrency(item.quantity * item.unitCost, currency)}
+            {formatCurrencyForPdf(item.quantity * item.unitCost, currency)}
           </Text>
         )}
       </>
@@ -596,7 +596,7 @@ export function StockTransferPDF({ organization, transfer, hideCost, lang = "en"
           <>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>{formatCurrency(totalValue, currency)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrencyForPdf(totalValue, currency)}</Text>
               <Text style={styles.summaryLabel}>{t("pdf.transferValue")}</Text>
             </View>
           </>
@@ -634,7 +634,7 @@ export function StockTransferPDF({ organization, transfer, hideCost, lang = "en"
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>{t("pdf.transferValue")}</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(totalValue, currency)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrencyForPdf(totalValue, currency)}</Text>
             </View>
           </>
         )}

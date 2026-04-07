@@ -48,6 +48,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { shareContent } from "@/lib/capacitor-share";
 import { isCapacitorEnvironment } from "@/lib/capacitor-plugins";
+import { downloadBlob } from "@/lib/download";
 import { printInvoiceReceipt } from "@/lib/print-invoice-receipt";
 import type { InvoiceReceiptData } from "@/components/invoices/invoice-receipt";
 
@@ -218,23 +219,9 @@ export default function InvoiceDetailPage({
 
       const blob = await response.blob();
 
-      if (isCapacitorEnvironment()) {
-        const { capacitorDownloadPdf } = await import("@/lib/capacitor-pdf-printer");
-        await capacitorDownloadPdf(blob, `invoice-${invoice?.invoiceNumber}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
-        toast.success(t("common.savedToDownloads"));
-      } else {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `invoice-${invoice?.invoiceNumber}-${format(
-          new Date(),
-          "yyyy-MM-dd"
-        )}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
+      const filename = `invoice-${invoice?.invoiceNumber}-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      await downloadBlob(blob, filename);
+      if (isCapacitorEnvironment()) toast.success(t("common.savedToDownloads"));
     } catch (error) {
       toast.error(t("common.pdfDownloadFailed"));
       console.error(error);

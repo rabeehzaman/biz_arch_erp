@@ -39,6 +39,7 @@ import { format } from "date-fns";
 import { firstOfMonth as firstOfMonthStr, lastOfMonth } from "@/lib/date-utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { downloadBlob } from "@/lib/download";
 import { useBranchFilter } from "@/hooks/use-branch-filter";
 import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
@@ -137,7 +138,7 @@ export default function BranchSalesPage() {
     fetchData();
   }, [fetchData]);
 
-  function exportCSV() {
+  async function exportCSV() {
     if (!data) return;
     const headers = [
       t("reports.branchName"),
@@ -189,12 +190,7 @@ export default function BranchSalesPage() {
     const blob = new Blob([csvRows.join("\n")], {
       type: "text/csv;charset=utf-8",
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `branch-sales-${fromDate}-to-${toDate}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await downloadBlob(blob, `branch-sales-${fromDate}-to-${toDate}.csv`);
   }
 
   async function downloadPDF() {
@@ -204,12 +200,7 @@ export default function BranchSalesPage() {
       const res = await fetch(`/api/reports/branch-sales/pdf?${params}`);
       if (!res.ok) throw new Error("PDF generation failed");
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `branch-sales-${fromDate}-to-${toDate}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadBlob(blob, `branch-sales-${fromDate}-to-${toDate}.pdf`);
     } catch {
       toast.error("Failed to generate PDF");
     } finally {

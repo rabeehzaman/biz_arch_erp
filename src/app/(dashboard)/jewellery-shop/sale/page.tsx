@@ -16,6 +16,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
 import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
 import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
+import { downloadBlob } from "@/lib/download";
 
 const fetcher = (url: string) => fetch(url).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 
@@ -375,12 +376,7 @@ export default function JewellerySalePage() {
                           const res = await fetch(`/api/invoices/${lastInvoice.invoice.id}/pdf`);
                           if (!res.ok) { toast.error("Failed to generate PDF"); return; }
                           const blob = await res.blob();
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `${lastInvoice.invoice.invoiceNumber}.pdf`;
-                          a.click();
-                          URL.revokeObjectURL(url);
+                          await downloadBlob(blob, `${lastInvoice.invoice.invoiceNumber}.pdf`);
                         } catch { toast.error("Download failed"); }
                       }}
                     >

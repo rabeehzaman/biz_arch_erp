@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { downloadBlob } from "@/lib/download";
 import { todayStr } from "@/lib/date-utils";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { AsOfDateSelector } from "@/components/reports/as-of-date-selector";
@@ -92,14 +93,7 @@ export default function TrialBalancePage() {
       const response = await fetch(`/api/reports/trial-balance/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `trial-balance-${asOfDate}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      await downloadBlob(blob, `trial-balance-${asOfDate}.pdf`);
     } catch {
       toast.error(t("reports.pdfDownloadError"));
     } finally {

@@ -50,6 +50,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
+import { downloadBlob } from "@/lib/download";
 import { printPOSSessionReport } from "@/lib/print-session-report";
 import { PrinterSettingsDialog } from "@/components/pos/printer-settings-dialog";
 
@@ -262,14 +263,7 @@ export default function POSDashboardPage() {
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `pos-session-${sessionSummary?.session?.sessionNumber || selectedSessionId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
+      await downloadBlob(blob, `pos-session-${sessionSummary?.session?.sessionNumber || selectedSessionId}.pdf`);
       toast.success(t("pos.sessionReportDownloaded"));
     } catch (error) {
       console.error("Failed to download POS session report:", error);
@@ -844,8 +838,16 @@ export default function POSDashboardPage() {
                         </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">{t("pos.cashier")}</span>
-                          <span className="text-right">{sessionSummary.session.user?.name || sessionSummary.session.user?.email}</span>
+                          <span className="text-right">
+                            {sessionSummary.session.employee?.name || sessionSummary.session.user?.name || sessionSummary.session.user?.email}
+                          </span>
                         </div>
+                        {sessionSummary.session.employee && (
+                          <div className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">{t("common.user")}</span>
+                            <span className="text-right">{sessionSummary.session.user?.name || sessionSummary.session.user?.email}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">{t("settings.branch")}</span>
                           <span className="text-right">

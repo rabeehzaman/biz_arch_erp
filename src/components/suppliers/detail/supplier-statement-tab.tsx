@@ -17,8 +17,11 @@ import {
 } from "@/components/ui/table";
 import { Download, FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useLanguage } from "@/lib/i18n";
+import { downloadBlob } from "@/lib/download";
+import { isCapacitorEnvironment } from "@/lib/capacitor-plugins";
 
 interface StatementTransaction {
   id: string;
@@ -110,14 +113,9 @@ export function SupplierStatementTab({ supplierId }: { supplierId: string }) {
       if (!response.ok) throw new Error("Failed to generate PDF");
 
       const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = `statement-${statement?.supplier.name.replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
+      const filename = `statement-${statement?.supplier.name.replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      await downloadBlob(blob, filename);
+      if (isCapacitorEnvironment()) toast.success(t("common.savedToDownloads"));
     } catch (error) {
       console.error("Failed to download PDF:", error);
     } finally {
@@ -149,17 +147,6 @@ export function SupplierStatementTab({ supplierId }: { supplierId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={handleDownloadPDF} disabled={isDownloading} size="sm">
-          {isDownloading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
-          )}
-          {t("common.downloadPDF")}
-        </Button>
-      </div>
-
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -214,6 +201,14 @@ export function SupplierStatementTab({ supplierId }: { supplierId: string }) {
                 <Input id="toDate" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-full sm:w-40" />
               </div>
               <Button variant="outline" onClick={() => fetchStatement()} className="w-full sm:w-auto">{t("common.filter")}</Button>
+              <Button onClick={handleDownloadPDF} disabled={isDownloading} size="sm" className="w-full sm:w-auto">
+                {isDownloading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {t("common.downloadPDF")}
+              </Button>
             </div>
           </div>
         </CardHeader>

@@ -500,16 +500,18 @@ export function POSSessionReportReceipt({
       <div style={{ marginBottom: "7px" }}>
         <div style={sectionTitleStyle}>{labels.overview}</div>
         <KeyValueRow
-          label={labels.openedBy}
-          value={report.session.user.name || report.session.user.email || labels.notAvailable}
+          label={labels.cashier}
+          value={report.session.employee?.name || report.session.user.name || report.session.user.email || labels.notAvailable}
         />
+        {report.session.employee && (
+          <KeyValueRow
+            label={labels.openedBy}
+            value={report.session.user.name || report.session.user.email || labels.notAvailable}
+          />
+        )}
         <KeyValueRow
           label={labels.closedByLabel}
           value={report.session.closedBy?.name || report.session.closedBy?.email || labels.notAvailable}
-        />
-        <KeyValueRow
-          label={labels.employee}
-          value={report.session.employee?.name || labels.notAvailable}
         />
         <KeyValueRow
           label={labels.branch}

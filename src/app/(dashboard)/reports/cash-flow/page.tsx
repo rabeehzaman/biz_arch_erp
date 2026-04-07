@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { downloadCsv } from "@/lib/csv-export";
+import { downloadBlob } from "@/lib/download";
 import { firstOfYear, lastOfMonth } from "@/lib/date-utils";
 import { ReportPageLayout } from "@/components/reports/report-page-layout";
 import { DateRangePresetSelector } from "@/components/reports/date-range-preset-selector";
@@ -120,14 +121,7 @@ export default function CashFlowPage() {
       const response = await fetch(`/api/reports/cash-flow/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `cash-flow-${fromDate}-to-${toDate}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      await downloadBlob(blob, `cash-flow-${fromDate}-to-${toDate}.pdf`);
     } catch {
       toast.error(t("reports.pdfDownloadError"));
     } finally {

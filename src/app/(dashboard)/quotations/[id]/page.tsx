@@ -23,6 +23,7 @@ import { PageAnimation } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
 import { isCapacitorEnvironment } from "@/lib/capacitor-plugins";
+import { downloadBlob } from "@/lib/download";
 
 interface QuotationItem {
   id: string;
@@ -124,23 +125,9 @@ export default function QuotationDetailPage({
 
       const blob = await response.blob();
 
-      if (isCapacitorEnvironment()) {
-        const { capacitorDownloadPdf } = await import("@/lib/capacitor-pdf-printer");
-        await capacitorDownloadPdf(blob, `quotation-${quotation?.quotationNumber}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
-        toast.success(t("common.savedToDownloads"));
-      } else {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `quotation-${quotation?.quotationNumber}-${format(
-          new Date(),
-          "yyyy-MM-dd"
-        )}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
+      const filename = `quotation-${quotation?.quotationNumber}-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      await downloadBlob(blob, filename);
+      if (isCapacitorEnvironment()) toast.success(t("common.savedToDownloads"));
     } catch (error) {
       toast.error(t("common.pdfDownloadFailed"));
       console.error(error);

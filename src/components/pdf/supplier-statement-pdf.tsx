@@ -10,7 +10,7 @@ import "@/lib/pdf-fonts";
 import { ARABIC_FONT_FAMILY } from "@/lib/pdf-fonts";
 import { translate } from "@/lib/i18n-translate";
 import type { Language } from "@/lib/i18n-translate";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrencyForPdf } from "@/lib/currency";
 
 interface StatementTransaction {
   id: string;
@@ -214,7 +214,7 @@ export function SupplierStatementPDF({ statement, lang = "en", currency = "INR" 
   const t = (key: string) => translate(key, lang);
 
   const fmtCurrency = (amount: number): string => {
-    return formatCurrency(amount, currency);
+    return formatCurrencyForPdf(amount, currency);
   };
 
   const balanceSide = (amount: number): string =>

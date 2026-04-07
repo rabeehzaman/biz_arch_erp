@@ -31,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { downloadBlob } from "@/lib/download";
 
 interface StockRow {
     productId: string;
@@ -127,7 +128,7 @@ export default function StockSummaryPage() {
         ? warehouses
         : warehouses.filter((w) => w.branch.id === filterBranchId);
 
-    function exportCSV() {
+    async function exportCSV() {
         const headers = [
             t("reports.product"), "SKU", t("reports.warehouseName"), t("reports.branchName"), t("reports.qtyInStock"), t("reports.avgCost"), t("reports.totalStockValue"), t("reports.reorderAt"), t("reports.lots")
         ];
@@ -152,12 +153,7 @@ export default function StockSummaryPage() {
             })
         ];
         const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `stock-summary-${new Date().toISOString().split("T")[0]}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        await downloadBlob(blob, `stock-summary-${new Date().toISOString().split("T")[0]}.csv`);
     }
 
     return (

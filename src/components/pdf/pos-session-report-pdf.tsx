@@ -471,14 +471,26 @@ export function POSSessionReportPDF({
           </Text>
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>{bilingual("Opened By", "فتح بواسطة")}</Text>
+              <Text style={styles.infoLabel}>{bilingual("Cashier", "الكاشير")}</Text>
               <Text style={styles.infoValue}>
                 {bilingualValue(
-                  report.session.user.name || report.session.user.email,
-                  report.session.user.email
+                  report.session.employee?.name || report.session.user.name || report.session.user.email,
+                  report.session.employee ? report.session.employee.name : (report.session.user.email || undefined)
                 )}
               </Text>
             </View>
+
+            {report.session.employee && (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoLabel}>{bilingual("User", "المستخدم")}</Text>
+                <Text style={styles.infoValue}>
+                  {bilingualValue(
+                    report.session.user.name || report.session.user.email,
+                    report.session.user.email
+                  )}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.infoCard}>
               <Text style={styles.infoLabel}>{bilingual("Closed By", "أغلق بواسطة")}</Text>

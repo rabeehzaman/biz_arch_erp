@@ -20,3 +20,14 @@ export function getCurrencySymbol(currencyCode: string): string {
 export function getLocaleForCurrency(currencyCode: string): string {
   return CURRENCY_CONFIG[currencyCode]?.locale || CURRENCY_CONFIG.INR.locale;
 }
+
+/** PDF-safe currency formatter — replaces symbols that lack glyphs in Arial. */
+export function formatCurrencyForPdf(amount: number, currencyCode: string = "INR"): string {
+  const config = CURRENCY_CONFIG[currencyCode] || CURRENCY_CONFIG.INR;
+  const formatted = amount.toLocaleString(config.locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (currencyCode === "SAR") return `SAR ${formatted}`;
+  return `${config.symbol}${formatted}`;
+}

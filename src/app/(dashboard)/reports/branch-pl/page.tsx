@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { firstOfYear as firstOfYearStr, lastOfMonth } from "@/lib/date-utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
+import { downloadBlob } from "@/lib/download";
 import { useBranchFilter } from "@/hooks/use-branch-filter";
 import { BranchFilterSelect } from "@/components/reports/branch-filter-select";
 
@@ -134,7 +135,7 @@ export default function BranchPLPage() {
         });
     };
 
-    function exportCSV() {
+    async function exportCSV() {
         const headers = [t("reports.type"), t("reports.branchName"), t("common.code"), t("reports.invoiceNumber"), t("reports.totalRevenue"), t("reports.invoiced"), t("reports.collected"), t("reports.outstanding"), t("reports.purchases"), t("reports.cogs"), t("reports.grossProfit"), t("reports.margin")];
         const csvRows = [headers.join(",")];
         for (const r of rows) {
@@ -154,12 +155,7 @@ export default function BranchPLPage() {
             }
         }
         const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `branch-pl-${fromDate}-to-${toDate}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        await downloadBlob(blob, `branch-pl-${fromDate}-to-${toDate}.csv`);
     }
 
     if (!multiBranchEnabled) {

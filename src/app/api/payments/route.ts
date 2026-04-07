@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount, adjustmentAccountId, cashBankAccountId } = body;
+    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount, adjustmentAccountId, cashBankAccountId, allocations } = body;
     const discountReceived = rawDiscount || 0;
     // Normalize paymentMethod to uppercase enum value
     let paymentMethod = (rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH") as PaymentMethod;
@@ -150,7 +150,36 @@ export async function POST(request: NextRequest) {
       });
 
       // Apply payment to invoices
-      if (invoiceId) {
+      if (allocations && Array.isArray(allocations) && allocations.length > 0) {
+        // Explicit multi-invoice allocation from create page
+        for (const alloc of allocations) {
+          const invoice = await tx.invoice.findUnique({
+            where: { id: alloc.invoiceId, organizationId },
+            select: { id: true, total: true, amountPaid: true, balanceDue: true },
+          });
+          if (!invoice) continue;
+
+          const applyAmount = Math.min(Number(alloc.amount), Number(invoice.balanceDue));
+          if (applyAmount <= 0) continue;
+
+          await tx.invoice.update({
+            where: { id: invoice.id, organizationId },
+            data: {
+              amountPaid: { increment: applyAmount },
+              balanceDue: { decrement: applyAmount },
+            },
+          });
+
+          await tx.paymentAllocation.create({
+            data: {
+              paymentId: newPayment.id,
+              invoiceId: invoice.id,
+              amount: applyAmount,
+              organizationId,
+            },
+          });
+        }
+      } else if (invoiceId) {
         // Specific invoice selected - apply to that invoice only
         const invoice = await tx.invoice.findUnique({
           where: { id: invoiceId, organizationId },
