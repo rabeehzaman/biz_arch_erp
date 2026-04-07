@@ -124,6 +124,7 @@ export function ProductCombobox({
           required={required}
           onSelect={onSelect}
           onSelectFocusNext={onSelectFocusNext}
+          mobileFullScreen
         />
       </div>
       <Button

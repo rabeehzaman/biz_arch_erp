@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Search, Check, ChevronsUpDown, X } from "lucide-react";
+import { Search, Check, ChevronsUpDown, X, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { resetMobileDialogViewport, setPreserveScrollY } from "@/lib/mobile-viewport";
@@ -25,6 +25,8 @@ interface ComboboxProps<T> {
   onSelectFocusNext?: (triggerRef: React.RefObject<HTMLButtonElement | null>) => void;
   autoOpenOnFocus?: boolean;
   autoFocus?: boolean;
+  /** Render as full-screen overlay on mobile instead of bottom sheet */
+  mobileFullScreen?: boolean;
 }
 
 export function Combobox<T>({
@@ -44,6 +46,7 @@ export function Combobox<T>({
   onSelectFocusNext,
   autoOpenOnFocus = true,
   autoFocus = false,
+  mobileFullScreen = false,
 }: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -290,7 +293,7 @@ export function Combobox<T>({
     </div>
   );
 
-  // ── Mobile: full-screen bottom sheet ──
+  // ── Mobile: full-screen overlay or bottom sheet ──
   if (isMobile) {
     return (
       <>
@@ -313,23 +316,91 @@ export function Combobox<T>({
           }}
         >
           <DialogPrimitive.Portal>
-            <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[linear-gradient(180deg,rgba(2,6,23,0.62),rgba(2,6,23,0.82))] backdrop-blur-sm" />
+            <DialogPrimitive.Overlay className={cn(
+              "fixed inset-0 z-50",
+              mobileFullScreen
+                ? "bg-white data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                : "bg-[linear-gradient(180deg,rgba(2,6,23,0.62),rgba(2,6,23,0.82))] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            )} />
             <DialogPrimitive.Content
               data-slot="dialog-content"
-              className="glass-panel-strong fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-[2rem] border-t border-slate-200 outline-none overscroll-contain data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
+              className={cn(
+                mobileFullScreen
+                  ? "fixed inset-0 z-50 flex flex-col bg-white outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-200"
+                  : "glass-panel-strong fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-[2rem] border-t border-slate-200 outline-none overscroll-contain data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
+              )}
               onOpenAutoFocus={(e) => {
                 e.preventDefault();
                 setTimeout(() => inputRef.current?.focus(), 50);
               }}
             >
-              <div className="mx-auto mt-3 mb-1 h-1.5 w-14 shrink-0 rounded-full bg-slate-300/70" />
-              <DialogPrimitive.Title className="sr-only">{placeholder}</DialogPrimitive.Title>
-              <DialogPrimitive.Description className="sr-only">{placeholder}</DialogPrimitive.Description>
-              <div className="sticky top-0 z-10 bg-white">
-                {searchInput}
-              </div>
-              {itemsList}
-              <div className="h-[var(--app-safe-area-bottom)]" />
+              {mobileFullScreen ? (
+                <>
+                  <div className="flex items-center gap-3 border-b border-slate-200 px-3 pt-[var(--app-safe-area-top)]">
+                    <button
+                      type="button"
+                      onClick={() => setOpen(false)}
+                      className="shrink-0 rounded-full p-2 transition-colors hover:bg-slate-100"
+                    >
+                      <ArrowLeft className="h-5 w-5 text-slate-600" />
+                    </button>
+                    <Search className="h-4 w-4 shrink-0 text-slate-400" />
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder={placeholder}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="flex h-12 w-full bg-transparent py-3 text-sm outline-none placeholder:text-slate-500"
+                    />
+                    {searchQuery && (
+                      <button type="button" onClick={() => setSearchQuery("")} className="shrink-0 p-1">
+                        <X className="h-4 w-4 text-slate-400" />
+                      </button>
+                    )}
+                  </div>
+                  <DialogPrimitive.Title className="sr-only">{placeholder}</DialogPrimitive.Title>
+                  <DialogPrimitive.Description className="sr-only">{placeholder}</DialogPrimitive.Description>
+                  <div className="flex-1 overflow-y-auto p-2 pb-[var(--app-safe-area-bottom)]">
+                    {filteredItems.length === 0 ? (
+                      <div className="py-6 text-center text-sm text-slate-500">{emptyText}</div>
+                    ) : (
+                      filteredItems.map((item, index) => {
+                        const itemId = getId(item);
+                        const isSelected = value === itemId;
+                        return (
+                          <div
+                            key={itemId}
+                            role="option"
+                            aria-selected={isSelected}
+                            className={cn(
+                              "relative flex cursor-pointer select-none items-center rounded-xl px-3 min-h-[52px] py-3 text-sm outline-none transition-colors active:bg-slate-100",
+                              isSelected && "bg-slate-50"
+                            )}
+                            onClick={() => handleSelect(itemId)}
+                          >
+                            {isSelected && <Check className="mr-2 h-4 w-4 shrink-0" />}
+                            <div className={cn(!isSelected && "ml-6", "flex-1")}>
+                              {renderItem ? renderItem(item) : getLabel(item)}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mx-auto mt-3 mb-1 h-1.5 w-14 shrink-0 rounded-full bg-slate-300/70" />
+                  <DialogPrimitive.Title className="sr-only">{placeholder}</DialogPrimitive.Title>
+                  <DialogPrimitive.Description className="sr-only">{placeholder}</DialogPrimitive.Description>
+                  <div className="sticky top-0 z-10 bg-white">
+                    {searchInput}
+                  </div>
+                  {itemsList}
+                  <div className="h-[var(--app-safe-area-bottom)]" />
+                </>
+              )}
             </DialogPrimitive.Content>
           </DialogPrimitive.Portal>
         </DialogPrimitive.Root>
