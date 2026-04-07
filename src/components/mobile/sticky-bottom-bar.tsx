@@ -15,7 +15,7 @@ export function StickyBottomBar({ children, topContent }: StickyBottomBarProps) 
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white px-4 py-3 pb-[max(0.75rem,var(--app-safe-area-bottom))] shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.08)] sm:hidden"
+      className="fixed inset-x-0 bottom-[calc(4rem+var(--app-safe-area-bottom))] z-50 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.08)] sm:hidden"
     >
       {topContent && <div className="mb-2">{topContent}</div>}
       <div className="flex gap-3">{children}</div>

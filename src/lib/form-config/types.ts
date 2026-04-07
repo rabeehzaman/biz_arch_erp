@@ -333,10 +333,11 @@ export const ALL_REPORT_SLUGS = [
 
 // ── Sidebar menu items (for visibility config) ──────────────────
 export const SIDEBAR_ITEMS = [
-  { group: "General", items: ["Dashboard", "POS Terminal", "Products", "Inventory", "Jewellery Dashboard", "Jewellery Inventory", "Gold Rates"] },
+  { group: "General", items: ["Dashboard", "POS Terminal", "Products", "Jewellery Dashboard", "Jewellery Inventory", "Gold Rates"] },
   { group: "Sales", items: ["Customers", "Quotations", "Sales Invoices", "Credit Notes", "Customer Payments", "Price Lists", "Jewellery Sale", "Old Gold Exchange", "Customer Schemes"] },
   { group: "Purchases", items: ["Suppliers", "Purchase Invoices", "Debit Notes", "Supplier Payments", "Karigars", "Jewellery Repairs"] },
   { group: "Accounting", items: ["Expenses", "Cash & Bank", "Journal Entries", "Chart of Accounts"] },
+  { group: "Inventory", items: ["Branches", "Stock Transfers", "Opening Stock", "Stock Take"] },
   { group: "Reports", items: ["Profit by Items", "Customer Balances", "Supplier Balances", "Trial Balance", "Profit & Loss", "Balance Sheet", "Cash Flow", "Expense Report"] },
 ] as const;
 

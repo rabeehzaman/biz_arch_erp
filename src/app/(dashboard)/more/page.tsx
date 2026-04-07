@@ -367,9 +367,7 @@ export default function MorePage() {
           <MenuSection title={t("nav.purchases")} sectionKey="purchases" items={isJewelleryEnabled ? jewelleryPurchasesSection : purchasesSection} disabledItems={disabledItems} isCollapsed={!!collapsed["purchases"]} onToggle={() => toggle("purchases")} />
           <MenuSection title={t("nav.accounting")} sectionKey="accounting" items={accountingSection} disabledItems={disabledItems} isCollapsed={!!collapsed["accounting"]} onToggle={() => toggle("accounting")} />
 
-          {multiBranchEnabled && (
-            <MenuSection title={t("nav.inventory")} sectionKey="inventory" items={inventorySection} disabledItems={disabledItems} isCollapsed={!!collapsed["inventory"]} onToggle={() => toggle("inventory")} />
-          )}
+          <MenuSection title={t("nav.inventory")} sectionKey="inventory" items={multiBranchEnabled ? inventorySection : inventorySection.filter((i) => i.nameKey !== "nav.branches" && i.nameKey !== "nav.stockTransfers")} disabledItems={disabledItems} isCollapsed={!!collapsed["inventory"]} onToggle={() => toggle("inventory")} />
 
           {isMobileShopEnabled && (
             <MenuSection title={t("nav.mobileShop")} sectionKey="mobileShop" items={mobileShopSection} disabledItems={disabledItems} isCollapsed={!!collapsed["mobileShop"]} onToggle={() => toggle("mobileShop")} />
