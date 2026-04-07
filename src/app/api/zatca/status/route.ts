@@ -13,7 +13,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
-  const organizationId = getOrgId(session);
+  let organizationId: string;
+  try {
+    organizationId = getOrgId(session);
+  } catch {
+    return NextResponse.json({ error: "No organization context" }, { status: 400 });
+  }
 
   const [org, activeCert, submissionCounts] = await Promise.all([
     prisma.organization.findUniqueOrThrow({

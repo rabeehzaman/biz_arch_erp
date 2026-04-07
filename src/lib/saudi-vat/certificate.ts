@@ -1,6 +1,7 @@
 // ZATCA Phase 2 certificate management
 // Key generation, CSR creation, private key encryption/decryption, cert parsing
 
+import "reflect-metadata";
 import crypto from "crypto";
 import { Crypto } from "@peculiar/webcrypto";
 import * as x509 from "@peculiar/x509";
@@ -53,69 +54,146 @@ export interface CSRParams {
   registeredAddress: string;     // SAN registeredAddress
   businessCategory: string;      // SAN businessCategory
   isProduction: boolean;         // determines certificate template name
+  environment?: "SANDBOX" | "SIMULATION" | "PRODUCTION"; // override template name per environment
 }
 
+/**
+ * Generates a CSR for ZATCA onboarding using pkijs (pure JS, Vercel-compatible).
+ * No OpenSSL CLI dependency — builds exact ASN.1 DER via pkijs/asn1js.
+ */
 export async function generateCSR(
   params: CSRParams,
   privateKey: CryptoKey,
   publicKey: CryptoKey
 ): Promise<string> {
-  const templateName = params.isProduction
+  const pkijs = await import("pkijs");
+  const asn1js = await import("asn1js");
+
+  // Register our WebCrypto engine with pkijs
+  const pkijsCrypto = new Crypto();
+  pkijs.setEngine("peculiar", pkijsCrypto as unknown as globalThis.Crypto, pkijsCrypto.subtle as unknown as SubtleCrypto);
+
+  // Template name per environment
+  const env = params.environment || (params.isProduction ? "PRODUCTION" : "SIMULATION");
+  const templateName = env === "PRODUCTION"
     ? "ZATCA-Code-Signing"
-    : "PREZATCA-Code-Signing";
+    : env === "SANDBOX"
+      ? "TSTZATCA-Code-Signing"
+      : "PREZATCA-Code-Signing";
 
-  // Build distinguished name with custom OID 2.5.4.97
-  const name = [
-    `CN=${params.commonName}`,
-    `OU=${params.organizationUnit}`,
-    `O=${params.organizationName}`,
-    `C=SA`,
-    `2.5.4.97=${params.vatNumber}`,
-  ].join(",");
+  // 1. Build Subject DN: C=SA, OU, O, CN — each in its own RDN (SET)
+  const csr = new pkijs.CertificationRequest();
+  csr.version = 0;
 
-  const csr = await x509.Pkcs10CertificateRequestGenerator.create({
-    name,
-    keys: { privateKey, publicKey },
-    signingAlgorithm: ECDSA_ALG,
-    extensions: [
-      // Key usage
-      new x509.KeyUsagesExtension(
-        x509.KeyUsageFlags.digitalSignature | x509.KeyUsageFlags.nonRepudiation
-      ),
-      // Subject Alternative Name with ZATCA-specific fields
-      await buildSANExtension(params, templateName),
-    ],
+  // pkijs stores each RDN separately in typesAndValues, BUT serializes them
+  // all into one SET. To get separate SETs (standard X.509 DN encoding),
+  // we override toSchema() by building the raw ASN.1 SEQUENCE of SETs.
+  const subjectSets = [
+    { oid: "2.5.4.6",  value: new asn1js.PrintableString({ value: "SA" }) },
+    { oid: "2.5.4.11", value: new asn1js.Utf8String({ value: params.organizationUnit }) },
+    { oid: "2.5.4.10", value: new asn1js.Utf8String({ value: params.organizationName }) },
+    { oid: "2.5.4.3",  value: new asn1js.Utf8String({ value: params.commonName }) },
+  ];
+
+  // Build raw DER: SEQUENCE { SET { SEQUENCE { OID, value } }, SET { ... }, ... }
+  const rdnSeqDer = new asn1js.Sequence({
+    value: subjectSets.map((attr) =>
+      new asn1js.Set({
+        value: [
+          new asn1js.Sequence({
+            value: [
+              new asn1js.ObjectIdentifier({ value: attr.oid }),
+              attr.value,
+            ],
+          }),
+        ],
+      })
+    ),
+  }).toBER(false);
+
+  // Parse back — pkijs.RelativeDistinguishedNames.fromBER understands separate SETs
+  const rdnAsn1 = asn1js.fromBER(rdnSeqDer);
+  csr.subject = new pkijs.RelativeDistinguishedNames({ schema: rdnAsn1.result });
+
+  // 2. Set public key — export SPKI DER from WebCrypto and parse into pkijs
+  // (pkijs.importKey() doesn't handle secp256k1 correctly — truncates the key)
+  const spkiDer = await pkijsCrypto.subtle.exportKey("spki", publicKey);
+  const spkiAsn1 = asn1js.fromBER(spkiDer);
+  csr.subjectPublicKeyInfo = new pkijs.PublicKeyInfo({ schema: spkiAsn1.result });
+
+  // 3. Build extensions
+
+  // Extension 1: certificateTemplateName (OID 1.3.6.1.4.1.311.20.2)
+  // Value is a bare PrintableString (not wrapped in SEQUENCE)
+  const templateStr = new asn1js.PrintableString({ value: templateName });
+  const certTemplateExt = new pkijs.Extension({
+    extnID: "1.3.6.1.4.1.311.20.2",
+    critical: false,
+    extnValue: new asn1js.OctetString({ valueHex: templateStr.toBER(false) }).valueBlock.valueHexView.buffer,
   });
 
-  return Buffer.from(csr.rawData).toString("base64");
-}
+  // Extension 2: subjectAltName (OID 2.5.29.17) with DirectoryName
+  // Build the 5 SAN attributes as a DirectoryName
+  const sanDirAttrs = [
+    { oid: "2.5.4.4", value: params.serialNumber },         // SN (surname — matches OpenSSL's SN mapping)
+    { oid: "0.9.2342.19200300.100.1.1", value: params.vatNumber }, // UID
+    { oid: "2.5.4.12", value: params.title },                // title
+    { oid: "2.5.4.26", value: params.registeredAddress },    // registeredAddress
+    { oid: "2.5.4.15", value: params.businessCategory },     // businessCategory
+  ];
 
-async function buildSANExtension(
-  params: CSRParams,
-  templateName: string
-): Promise<x509.SubjectAlternativeNameExtension> {
-  // SAN directory name contains ZATCA-specific fields
-  const directoryNameAttrs: Record<string, string> = {};
+  // Build DirectoryName with each attribute in its own SET (same fix as Subject DN)
+  const dirNameSeqDer = new asn1js.Sequence({
+    value: sanDirAttrs.map((attr) =>
+      new asn1js.Set({
+        value: [
+          new asn1js.Sequence({
+            value: [
+              new asn1js.ObjectIdentifier({ value: attr.oid }),
+              new asn1js.Utf8String({ value: attr.value }),
+            ],
+          }),
+        ],
+      })
+    ),
+  }).toBER(false);
+  const dirNameAsn1 = asn1js.fromBER(dirNameSeqDer);
+  const dirName = new pkijs.RelativeDistinguishedNames({ schema: dirNameAsn1.result });
 
-  // SN = serial number (1-AppName|2-Version|3-Serial)
-  directoryNameAttrs["2.5.4.5"] = params.serialNumber;
-  // UID = VAT number
-  directoryNameAttrs["0.9.2342.19200300.100.1.1"] = params.vatNumber;
-  // title = invoice type flags
-  directoryNameAttrs["2.5.4.12"] = params.title;
-  // registeredAddress
-  directoryNameAttrs["2.5.4.26"] = params.registeredAddress;
-  // businessCategory
-  directoryNameAttrs["2.5.4.15"] = params.businessCategory;
+  // GeneralName type 4 = directoryName
+  const generalName = new pkijs.GeneralName({
+    type: 4,
+    value: dirName,
+  });
 
-  // Build the GeneralName with DirectoryName containing these attributes
-  const dirNameStr = Object.entries(directoryNameAttrs)
-    .map(([oid, val]) => `${oid}=${val}`)
-    .join(",");
+  const sanNames = new pkijs.GeneralNames({ names: [generalName] });
+  const sanExt = new pkijs.Extension({
+    extnID: "2.5.29.17",
+    critical: false,
+    extnValue: sanNames.toSchema().toBER(false),
+  });
 
-  return new x509.SubjectAlternativeNameExtension([
-    { type: "dn", value: dirNameStr } as unknown as x509.GeneralName,
-  ], false);
+  // 4. Wrap extensions in extensionRequest attribute (OID 1.2.840.113549.1.9.14)
+  const extensions = new pkijs.Extensions({
+    extensions: [certTemplateExt, sanExt],
+  });
+
+  csr.attributes = [
+    new pkijs.Attribute({
+      type: "1.2.840.113549.1.9.14", // extensionRequest
+      values: [extensions.toSchema()],
+    }),
+  ];
+
+  // 5. Sign the CSR with ECDSA-SHA256
+  await csr.sign(privateKey, "SHA-256");
+
+  // 6. Export to PEM, then double-base64 encode (ZATCA format)
+  const csrDer = csr.toSchema(true).toBER(false);
+  const csrBase64Lines = Buffer.from(csrDer).toString("base64").match(/.{1,64}/g)!.join("\n");
+  const csrPem = `-----BEGIN CERTIFICATE REQUEST-----\n${csrBase64Lines}\n-----END CERTIFICATE REQUEST-----\n`;
+
+  return Buffer.from(csrPem).toString("base64");
 }
 
 // ─── Private Key Encryption (AES-256-GCM) ─────────────────────────────────
@@ -186,23 +264,30 @@ export function parseCertificate(certBase64: string): x509.X509Certificate {
 }
 
 export function extractPublicKeyDER(cert: x509.X509Certificate): Buffer {
-  // SubjectPublicKeyInfo in DER format — used for QR Tag 8
+  // Full SubjectPublicKeyInfo in DER format (88 bytes for secp256k1)
+  // This matches @fidm/x509's cert.publicKeyRaw which also returns full SPKI
   return Buffer.from(cert.publicKey.rawData);
 }
 
 export function extractCertificateSignature(cert: x509.X509Certificate): Buffer {
   // The CA's signature on the certificate — used for QR Tag 9
+  // Return raw DER bytes as-is (30 44 02 20... format, ~70-72 bytes)
   return Buffer.from(cert.signature);
 }
 
 export function getCertificateHash(cert: x509.X509Certificate): Buffer {
-  // SHA-256 of the DER-encoded certificate — used in XAdES SignedProperties
-  const derBytes = Buffer.from(cert.rawData);
-  return crypto.createHash("sha256").update(derBytes).digest();
+  // SHA-256 of the base64-encoded certificate body — matches ZATCA SDK behavior.
+  // ZATCA SDK hashes the base64 TEXT of the cert (not the raw DER bytes).
+  const certBase64 = Buffer.from(cert.rawData).toString("base64");
+  return crypto.createHash("sha256").update(certBase64).digest();
 }
 
 export function getCertificateIssuerName(cert: x509.X509Certificate): string {
-  return cert.issuer;
+  // @peculiar/x509 returns issuer in ASN.1 order (least specific first):
+  //   DC=local, DC=gov, DC=extgazt, CN=PRZEINVOICESCA4-CA
+  // ZATCA SDK expects RFC 2253 reverse order (most specific first):
+  //   CN=PRZEINVOICESCA4-CA, DC=extgazt, DC=gov, DC=local
+  return cert.issuer.split(", ").reverse().join(", ");
 }
 
 export function getCertificateSerialNumber(cert: x509.X509Certificate): string {
@@ -293,5 +378,8 @@ function pemToDer(pem: string, label: string): ArrayBuffer {
     .replace(`-----BEGIN ${label}-----`, "")
     .replace(`-----END ${label}-----`, "")
     .replace(/\s/g, "");
-  return Buffer.from(b64, "base64").buffer;
+  const buf = Buffer.from(b64, "base64");
+  // .buffer returns the entire underlying ArrayBuffer pool; slice to get only our data
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 }
+

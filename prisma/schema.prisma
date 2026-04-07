@@ -115,6 +115,8 @@ model Organization {
 
   // Company Details (consolidated from Settings key-value table)
   address               String?
+  buildingNumber        String?   // 4-digit building number (ZATCA BR-KSA-09)
+  plotIdentification    String?   // 4-digit additional number (ZATCA BR-KSA-10)
   city                  String?
   state                 String?
   zipCode               String?

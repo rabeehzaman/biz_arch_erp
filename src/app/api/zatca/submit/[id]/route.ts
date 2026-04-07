@@ -41,10 +41,10 @@ export async function POST(
   try {
     const result = await processDocumentForZatca(prisma, id, type, organizationId);
     return NextResponse.json(result);
-  } catch (error) {
-    console.error("ZATCA manual submit error:", error);
+  } catch (err: unknown) {
+    console.error("ZATCA manual submit error:", err);
     return NextResponse.json(
-      { error: `Submission failed: ${(error as Error).message}` },
+      { error: `Submission failed: ${err instanceof Error ? err.message : String(err)}` },
       { status: 500 }
     );
   }

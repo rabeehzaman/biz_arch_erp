@@ -63,31 +63,18 @@ export async function generateQRCodeSVG(tlvBase64: string): Promise<string> {
 // ─── ZATCA Phase 2: Enhanced 9-Tag QR Code ────────────────────────────────
 
 export interface EnhancedQRCodeInput extends QRCodeInput {
-  invoiceHash: Buffer;          // Tag 6: SHA-256 raw bytes (32 bytes)
-  ecdsaSignature: Buffer;       // Tag 7: IEEE P1363 r||s (64 bytes)
-  publicKey: Buffer;            // Tag 8: DER SubjectPublicKeyInfo (~88 bytes)
-  certificateSignature: Buffer; // Tag 9: IEEE P1363 of CA signature (64 bytes)
+  invoiceHash: string;          // Tag 6: Invoice hash Base64 text (44 chars, stored as UTF-8)
+  ecdsaSignature: string;       // Tag 7: ds:SignatureValue Base64 text (stored as UTF-8, must match XML)
+  publicKey: Buffer;            // Tag 8: DER SubjectPublicKeyInfo raw binary (~88 bytes)
+  certificateSignature: Buffer; // Tag 9: CA cert signature raw DER binary (~72 bytes)
 }
 
 function encodeTLVBinary(tag: number, value: Buffer): Uint8Array {
-  // Support lengths > 127 bytes using multi-byte length encoding
-  const lenBytes = encodeTLVLength(value.length);
-  const tlv = new Uint8Array(1 + lenBytes.length + value.length);
+  const tlv = new Uint8Array(2 + value.length);
   tlv[0] = tag;
-  tlv.set(lenBytes, 1);
-  tlv.set(value, 1 + lenBytes.length);
+  tlv[1] = value.length;
+  tlv.set(new Uint8Array(value.buffer, value.byteOffset, value.byteLength), 2);
   return tlv;
-}
-
-function encodeTLVLength(length: number): Uint8Array {
-  if (length < 128) {
-    return new Uint8Array([length]);
-  }
-  // Multi-byte: 0x81 for 1 extra byte, 0x82 for 2 extra bytes
-  if (length < 256) {
-    return new Uint8Array([0x81, length]);
-  }
-  return new Uint8Array([0x82, (length >> 8) & 0xff, length & 0xff]);
 }
 
 export function generateEnhancedTLVQRCode(data: EnhancedQRCodeInput): string {
@@ -96,8 +83,9 @@ export function generateEnhancedTLVQRCode(data: EnhancedQRCodeInput): string {
   const tag3 = encodeTLV(3, data.timestamp);
   const tag4 = encodeTLV(4, data.totalWithVat);
   const tag5 = encodeTLV(5, data.totalVat);
-  const tag6 = encodeTLVBinary(6, data.invoiceHash);
-  const tag7 = encodeTLVBinary(7, data.ecdsaSignature);
+  // Tags 6-7: Base64 text as UTF-8 bytes (must match ds:DigestValue and ds:SignatureValue in XML)
+  const tag6 = encodeTLV(6, data.invoiceHash);
+  const tag7 = encodeTLV(7, data.ecdsaSignature);
   const tag8 = encodeTLVBinary(8, data.publicKey);
   const tag9 = encodeTLVBinary(9, data.certificateSignature);
 

@@ -29,10 +29,10 @@ export async function POST(req: NextRequest) {
   try {
     const result = await processSubmissionQueue(prisma, organizationId);
     return NextResponse.json(result);
-  } catch (error) {
-    console.error("ZATCA queue processing error:", error);
+  } catch (err: unknown) {
+    console.error("ZATCA queue processing error:", err);
     return NextResponse.json(
-      { error: `Queue processing failed: ${(error as Error).message}` },
+      { error: `Queue processing failed: ${err instanceof Error ? err.message : String(err)}` },
       { status: 500 }
     );
   }

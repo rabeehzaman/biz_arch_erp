@@ -3,12 +3,13 @@
 
 import type { PrismaClient, ZatcaDocumentType, ZatcaSubmissionStatus } from "@/generated/prisma/client";
 import { generateInvoiceXML, type UBLInvoiceParams, type UBLPartyInfo, type UBLLineItem } from "./ubl-xml";
-import { signInvoiceXML, embedQRInXml } from "./xml-signing";
+import { signInvoiceXML, embedQRInXml, extractQRDataFromSignedXml } from "./xml-signing";
 import { generateEnhancedTLVQRCode } from "./qr-code";
-import { decryptPrivateKey, derToP1363 } from "./certificate";
+import { decryptPrivateKey } from "./certificate";
 import {
   clearInvoice,
   reportInvoice,
+  decodeBST,
   ZatcaClearanceOffError,
   ZatcaRejectionError,
   type InvoiceSubmissionResponse,
@@ -66,6 +67,8 @@ interface OrgData {
   vatNumber: string;
   commercialRegNumber: string;
   address: string;
+  buildingNumber: string;
+  plotIdentification: string;
   city: string;
   zipCode: string;
   zatcaEnvironment: ZatcaEnvironment;
@@ -89,6 +92,58 @@ export interface SubmissionResult {
   errors?: string[];
 }
 
+// ─── Chain Lock ──────────────────────────────────────────────────────────
+
+/**
+ * Check if the submission chain is locked due to an ambiguous timeout.
+ * When a clearance request times out, we don't know if ZATCA received it,
+ * so the PIH chain state is uncertain. No new submissions should be made
+ * until the timed-out submission is resolved (retry succeeds or is manually cleared).
+ */
+export async function isChainLocked(
+  prisma: PrismaClient,
+  organizationId: string
+): Promise<{ locked: boolean; lockedSubmissionId?: string }> {
+  const timedOut = await prisma.zatcaSubmission.findFirst({
+    where: {
+      organizationId,
+      status: "FAILED",
+      submissionMode: "CLEARANCE",
+      zatcaResponse: { contains: '"chainLocked":true' },
+    },
+    select: { id: true },
+  });
+  if (timedOut) {
+    return { locked: true, lockedSubmissionId: timedOut.id };
+  }
+  return { locked: false };
+}
+
+/**
+ * Manually resolve a chain lock (e.g., after confirming with ZATCA that the
+ * submission was not received, or after successful retry).
+ */
+export async function resolveChainLock(
+  prisma: PrismaClient,
+  submissionId: string
+): Promise<void> {
+  const sub = await prisma.zatcaSubmission.findUniqueOrThrow({
+    where: { id: submissionId },
+  });
+  // Parse existing response and remove chainLocked flag
+  let response: Record<string, unknown> = {};
+  try { response = JSON.parse(sub.zatcaResponse || "{}"); } catch {}
+  delete response.chainLocked;
+
+  await prisma.zatcaSubmission.update({
+    where: { id: submissionId },
+    data: {
+      status: "REJECTED",
+      zatcaResponse: JSON.stringify(response),
+    },
+  });
+}
+
 // ─── Main Processing Functions ────────────────────────────────────────────
 
 export async function processDocumentForZatca(
@@ -97,6 +152,15 @@ export async function processDocumentForZatca(
   documentType: ZatcaDocumentType,
   organizationId: string
 ): Promise<SubmissionResult> {
+  // 0. Check chain lock — block if a previous clearance timed out
+  const chainLockStatus = await isChainLocked(prisma, organizationId);
+  if (chainLockStatus.locked) {
+    throw new Error(
+      `Submission chain is locked due to an ambiguous timeout on submission ${chainLockStatus.lockedSubmissionId}. ` +
+      `Resolve that submission before posting new invoices.`
+    );
+  }
+
   // 1. Fetch org, cert, and document data
   const org = await getOrgData(prisma, organizationId);
   const cert = await getActiveCert(prisma, organizationId);
@@ -138,33 +202,27 @@ export async function processDocumentForZatca(
     tag: cert.privateKeyTag,
   });
 
-  // 7. Sign XML
-  const signingResult = await signInvoiceXML(
-    invoiceXml,
-    privateKeyPem,
-    cert.productionCsid
-  );
+  // 7. Unified signing pipeline — same XAdES-BES flow for all doc types
+  // BST from ZATCA is double-encoded (base64(base64(DER))) — decode for cert operations
+  const signingResult = await signInvoiceXML(invoiceXml, privateKeyPem, decodeBST(cert.productionCsid));
 
-  // 8. Generate enhanced QR code (mandatory for SIMPLIFIED, optional for STANDARD)
-  const certSignatureP1363 = signingResult.certSignatureBytes.length === 64
-    ? signingResult.certSignatureBytes
-    : derToP1363(signingResult.certSignatureBytes);
-
+  // 8. Extract QR tags 6-7 from the signed XML (per ZATCA spec page 61)
+  const qrData = extractQRDataFromSignedXml(signingResult.signedXml);
   const enhancedQr = generateEnhancedTLVQRCode({
     sellerName: org.arabicName || org.name,
     vatNumber: org.vatNumber,
-    timestamp: docData.issueDate.toISOString().replace(/\.\d{3}Z$/, "Z"),
+    timestamp: docData.issueDate.toISOString().replace(/\.\d{3}Z$/, ""),
     totalWithVat: docData.total.toFixed(2),
     totalVat: docData.totalVat.toFixed(2),
-    invoiceHash: signingResult.invoiceHashBytes,
-    ecdsaSignature: signingResult.signatureBytes, // Already P1363 from WebCrypto
+    invoiceHash: qrData.digestValue,
+    ecdsaSignature: qrData.signatureValue,
     publicKey: signingResult.publicKeyDER,
-    certificateSignature: certSignatureP1363,
+    certificateSignature: signingResult.certSignatureDER,
   });
-
-  // 9. Embed QR in the signed XML
   const finalXml = embedQRInXml(signingResult.signedXml, enhancedQr);
   const finalXmlBase64 = Buffer.from(finalXml, "utf-8").toString("base64");
+  const invoiceHash = signingResult.invoiceHash;
+  const enhancedQrData = enhancedQr;
 
   // 10. Create submission record
   const submission = await prisma.zatcaSubmission.create({
@@ -176,8 +234,8 @@ export async function processDocumentForZatca(
       ...(documentType === "DEBIT_NOTE" ? { debitNoteId: documentId } : {}),
       submissionMode,
       signedXml: finalXml,
-      xmlHash: signingResult.invoiceHash,
-      enhancedQrData: enhancedQr,
+      xmlHash: invoiceHash,
+      enhancedQrData,
       certificateId: cert.id,
       status: "PENDING",
     },
@@ -193,7 +251,7 @@ export async function processDocumentForZatca(
       prisma,
       submission.id,
       finalXmlBase64,
-      signingResult.invoiceHash,
+      invoiceHash,
       docData.uuid,
       cert,
       org,
@@ -271,15 +329,34 @@ async function submitToZatca(
           ? "CLEARED"
           : "REPORTED";
 
+    // For B2B clearance, ZATCA returns the stamped XML with their QR in clearedInvoice.
+    // Use that as the authoritative final document instead of our locally signed XML.
+    const clearedXmlUtf8 = response.clearedInvoice
+      ? Buffer.from(response.clearedInvoice, "base64").toString("utf-8")
+      : null;
+
+    // Extract QR from ZATCA's cleared XML if available (replaces locally generated QR)
+    let finalQrData: string | undefined;
+    if (clearedXmlUtf8) {
+      const qrMatch = clearedXmlUtf8.match(
+        /<cbc:EmbeddedDocumentBinaryObject[^>]*>([^<]+)<\/cbc:EmbeddedDocumentBinaryObject>/
+      );
+      if (qrMatch?.[1]) {
+        finalQrData = qrMatch[1];
+      }
+    }
+
     await prisma.zatcaSubmission.update({
       where: { id: submissionId },
       data: {
         status,
         submissionMode: mode,
         zatcaResponse: JSON.stringify(response),
-        clearedXml: response.clearedInvoice
-          ? Buffer.from(response.clearedInvoice, "base64").toString("utf-8")
-          : null,
+        clearedXml: clearedXmlUtf8,
+        // For clearance: use ZATCA's stamped XML as the signed doc; for reporting: keep original
+        signedXml: clearedXmlUtf8 || undefined,
+        // Update QR with ZATCA's stamped QR for B2B clearance
+        enhancedQrData: finalQrData || undefined,
         warningMessages: JSON.stringify(response.validationResults?.warningMessages || []),
         errorMessages: JSON.stringify(response.validationResults?.errorMessages || []),
         infoMessages: JSON.stringify(response.validationResults?.infoMessages || []),
@@ -291,9 +368,7 @@ async function submitToZatca(
     return {
       submissionId,
       status,
-      clearedXml: response.clearedInvoice
-        ? Buffer.from(response.clearedInvoice, "base64").toString("utf-8")
-        : undefined,
+      clearedXml: clearedXmlUtf8 || undefined,
       warnings: response.validationResults?.warningMessages?.map((w) => w.message),
       errors: response.validationResults?.errorMessages?.map((e) => e.message),
     };
@@ -317,13 +392,18 @@ async function submitToZatca(
       };
     }
 
-    // Network/unexpected error — mark as FAILED with retry
+    // Network/unexpected error — mark as FAILED
+    // For clearance mode: lock the chain (ZATCA may have received it, PIH state uncertain)
+    const isClearance = mode === "CLEARANCE";
     const nextRetry = new Date(Date.now() + 60_000); // 1 minute initial retry
     await prisma.zatcaSubmission.update({
       where: { id: submissionId },
       data: {
         status: "FAILED",
-        zatcaResponse: JSON.stringify({ error: (e as Error).message }),
+        zatcaResponse: JSON.stringify({
+          error: (e instanceof Error ? e.message : String(e)),
+          ...(isClearance ? { chainLocked: true } : {}),
+        }),
         attemptCount: { increment: 1 },
         lastAttemptAt: new Date(),
         nextRetryAt: nextRetry,
@@ -332,7 +412,10 @@ async function submitToZatca(
     return {
       submissionId,
       status: "FAILED",
-      errors: [(e as Error).message],
+      errors: [
+        (e instanceof Error ? e.message : String(e)),
+        ...(isClearance ? ["Chain locked: resolve this submission before posting new invoices."] : []),
+      ],
     };
   }
 }
@@ -416,6 +499,8 @@ async function getOrgData(prisma: PrismaClient, orgId: string): Promise<OrgData>
       vatNumber: true,
       commercialRegNumber: true,
       address: true,
+      buildingNumber: true,
+      plotIdentification: true,
       city: true,
       zipCode: true,
       zatcaEnvironment: true,
@@ -428,6 +513,8 @@ async function getOrgData(prisma: PrismaClient, orgId: string): Promise<OrgData>
     vatNumber: org.vatNumber!,
     commercialRegNumber: org.commercialRegNumber!,
     address: org.address || "",
+    buildingNumber: org.buildingNumber || "0000",
+    plotIdentification: org.plotIdentification || "0000",
     city: org.city || "",
     zipCode: org.zipCode || "00000",
     zatcaEnvironment: org.zatcaEnvironment as ZatcaEnvironment,
@@ -480,7 +567,7 @@ async function getDocumentData(
       saudiInvoiceType: inv.saudiInvoiceType || "SIMPLIFIED",
       invoiceCounterValue: inv.invoiceCounterValue!,
       previousInvoiceHash: inv.previousInvoiceHash || ZATCA_PHASE2_INITIAL_PIH,
-      items: inv.items.map((item: any, idx: number) => ({
+      items: inv.items.map((item, idx) => ({
         name: item.product?.name || item.description || `Item ${idx + 1}`,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
@@ -511,7 +598,7 @@ async function getDocumentData(
       include: {
         items: { include: { product: true } },
         customer: true,
-        invoice: { select: { invoiceNumber: true } },
+        invoice: { select: { invoiceNumber: true, saudiInvoiceType: true } },
       },
     });
     return {
@@ -522,11 +609,11 @@ async function getDocumentData(
       total: Number(cn.total),
       subtotal: Number(cn.subtotal),
       totalVat: Number(cn.totalVat || 0),
-      saudiInvoiceType: "SIMPLIFIED", // Credit notes follow the original invoice type
+      saudiInvoiceType: cn.invoice?.saudiInvoiceType || "SIMPLIFIED",
       invoiceCounterValue: cn.invoiceCounterValue!,
       previousInvoiceHash: cn.previousInvoiceHash || ZATCA_PHASE2_INITIAL_PIH,
       billingReferenceNumber: cn.invoice?.invoiceNumber,
-      items: cn.items.map((item: any, idx: number) => ({
+      items: cn.items.map((item, idx) => ({
         name: item.product?.name || item.description || `Item ${idx + 1}`,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
@@ -567,11 +654,11 @@ async function getDocumentData(
     total: Number(dn.total),
     subtotal: Number(dn.subtotal),
     totalVat: Number(dn.totalVat || 0),
-    saudiInvoiceType: "STANDARD",
+    saudiInvoiceType: dn.supplier?.vatNumber ? "STANDARD" : "SIMPLIFIED",
     invoiceCounterValue: dn.invoiceCounterValue!,
     previousInvoiceHash: dn.previousInvoiceHash || ZATCA_PHASE2_INITIAL_PIH,
     billingReferenceNumber: dn.purchaseInvoice?.purchaseInvoiceNumber,
-    items: dn.items.map((item: any, idx: number) => ({
+    items: dn.items.map((item, idx) => ({
       name: item.product?.name || `Item ${idx + 1}`,
       quantity: Number(item.quantity),
       unitPrice: Number(item.unitCost),
@@ -626,7 +713,8 @@ function buildXMLParams(
     vatNumber: org.vatNumber,
     commercialRegNumber: org.commercialRegNumber,
     streetName: org.address,
-    buildingNumber: "0000", // TODO: extract from org address
+    buildingNumber: org.buildingNumber || "0000",
+    plotIdentification: org.plotIdentification || "0000",
     city: org.city,
     postalZone: org.zipCode,
     countryCode: "SA",

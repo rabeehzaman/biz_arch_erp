@@ -82,6 +82,24 @@ export function getZatcaBaseUrl(environment: ZatcaEnvironment): string {
   return ZATCA_ENVIRONMENTS[environment];
 }
 
+/**
+ * Validate an environment change. Once set to PRODUCTION, cannot revert.
+ * Prevents accidental mode switch that would invalidate certificates and chain.
+ */
+export function validateEnvironmentChange(
+  current: ZatcaEnvironment,
+  next: ZatcaEnvironment
+): { allowed: boolean; reason?: string } {
+  if (current === next) return { allowed: true };
+  if (current === "PRODUCTION" && next !== "PRODUCTION") {
+    return {
+      allowed: false,
+      reason: "Cannot change environment from PRODUCTION. This would invalidate all certificates and the invoice hash chain.",
+    };
+  }
+  return { allowed: true };
+}
+
 export function getEncryptionKey(): Buffer {
   const key = process.env.ZATCA_ENCRYPTION_KEY;
   if (!key) {

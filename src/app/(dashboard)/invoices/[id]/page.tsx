@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -95,6 +96,16 @@ interface Invoice {
   invoiceUuid?: string | null;
   invoiceCounterValue?: number | null;
   isTaxInclusive?: boolean | null;
+  zatcaSubmissions?: Array<{
+    id: string;
+    submissionMode: string;
+    status: string;
+    warningMessages: string | null;
+    errorMessages: string | null;
+    attemptCount: number;
+    lastAttemptAt: string | null;
+    createdAt: string;
+  }>;
 }
 
 export default function InvoiceDetailPage({
@@ -635,6 +646,68 @@ export default function InvoiceDetailPage({
                 )}
               </CardContent>
             </Card>
+
+            {/* ZATCA Phase 2 Status */}
+            {invoice.zatcaSubmissions && invoice.zatcaSubmissions.length > 0 && (() => {
+              const sub = invoice.zatcaSubmissions[0];
+              const badgeClass = sub.status === "CLEARED" || sub.status === "REPORTED"
+                ? "bg-green-100 text-green-700" : sub.status === "PENDING"
+                ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700";
+              const warnings: string[] = sub.warningMessages ? (() => { try { return JSON.parse(sub.warningMessages); } catch { return []; } })() : [];
+              const errors: string[] = sub.errorMessages ? (() => { try { return JSON.parse(sub.errorMessages); } catch { return []; } })() : [];
+              return (
+                <Card className="mt-4 print:hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-slate-900">{t("zatca.submissionStatus")}</h3>
+                      <Badge variant="outline" className={badgeClass}>{sub.status}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <span className="text-slate-500">{t("zatca.submissionMode")}</span>
+                        <p className="font-medium">{sub.submissionMode === "CLEARANCE" ? t("zatca.clearance") : t("zatca.reporting")}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">{t("zatca.attemptCount")}</span>
+                        <p className="font-medium">{sub.attemptCount}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">{t("zatca.lastAttempt")}</span>
+                        <p className="font-medium">{sub.lastAttemptAt ? new Date(sub.lastAttemptAt).toLocaleString() : "-"}</p>
+                      </div>
+                      <div className="flex items-end">
+                        {(sub.status === "FAILED" || sub.status === "REJECTED") && (
+                          <Button variant="outline" size="sm" onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/zatca/submit/${id}?type=invoice`, { method: "POST" });
+                              if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+                              toast.success(t("zatca.retrySuccess"));
+                              window.location.reload();
+                            } catch (e: unknown) {
+                              toast.error(e instanceof Error ? e.message : t("zatca.retryFailed"));
+                            }
+                          }}>
+                            {t("zatca.retry")}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {warnings.length > 0 && (
+                      <div className="mt-3 p-2 rounded bg-amber-50 text-xs text-amber-700">
+                        <p className="font-medium mb-1">{t("zatca.warnings")} ({warnings.length})</p>
+                        {warnings.slice(0, 3).map((w: string, i: number) => <p key={i} className="truncate">{w}</p>)}
+                      </div>
+                    )}
+                    {errors.length > 0 && (
+                      <div className="mt-2 p-2 rounded bg-red-50 text-xs text-red-700">
+                        <p className="font-medium mb-1">{t("zatca.errors")} ({errors.length})</p>
+                        {errors.slice(0, 3).map((e: string, i: number) => <p key={i} className="truncate">{e}</p>)}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
           </TabsContent>
 

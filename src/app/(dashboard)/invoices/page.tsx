@@ -49,6 +49,7 @@ interface Invoice {
   _count: {
     items: number;
   };
+  zatcaSubmissions?: Array<{ status: string }>;
 }
 
 function getInvoiceStatus(balanceDue: number, dueDate: string, t: (key: string) => string) {
@@ -485,10 +486,21 @@ export default function InvoicesPage() {
                             <TableCell>
                               {(() => {
                                 const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
+                                const zs = invoice.zatcaSubmissions?.[0]?.status;
+                                const zColor = zs === "CLEARED" || zs === "REPORTED" ? "bg-green-100 text-green-700"
+                                  : zs === "PENDING" ? "bg-yellow-100 text-yellow-700"
+                                  : zs ? "bg-red-100 text-red-700" : "";
                                 return (
-                                  <Badge variant="outline" className={status.className}>
-                                    {status.label}
-                                  </Badge>
+                                  <div className="flex items-center gap-1.5">
+                                    <Badge variant="outline" className={status.className}>
+                                      {status.label}
+                                    </Badge>
+                                    {zs && (
+                                      <Badge variant="outline" className={`${zColor} text-[10px] px-1.5 py-0`}>
+                                        ZATCA
+                                      </Badge>
+                                    )}
+                                  </div>
                                 );
                               })()}
                             </TableCell>

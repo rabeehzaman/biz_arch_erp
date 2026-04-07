@@ -1,12 +1,14 @@
 // POST /api/zatca/compliance-check — Submit 6 test invoices to ZATCA
+// Uses the unified custom XAdES-BES pipeline (no zatca-xml-js dependency)
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { generateInvoiceXML, type UBLInvoiceParams, type UBLPartyInfo } from "@/lib/saudi-vat/ubl-xml";
-import { signInvoiceXML } from "@/lib/saudi-vat/xml-signing";
+import { signInvoiceXML, embedQRInXml, extractQRDataFromSignedXml } from "@/lib/saudi-vat/xml-signing";
 import { decryptPrivateKey } from "@/lib/saudi-vat/certificate";
-import { submitComplianceInvoice } from "@/lib/saudi-vat/zatca-api";
+import { submitComplianceInvoice, decodeBST } from "@/lib/saudi-vat/zatca-api";
+import { generateEnhancedTLVQRCode } from "@/lib/saudi-vat/qr-code";
 import { generateInvoiceUUID } from "@/lib/saudi-vat/invoice-hash";
 import { ZATCA_DOC_TYPES, ZATCA_SUBTYPES, ZATCA_PHASE2_INITIAL_PIH, type ZatcaEnvironment } from "@/lib/saudi-vat/zatca-config";
 
@@ -20,6 +22,29 @@ const TEST_INVOICES = [
   { docType: ZATCA_DOC_TYPES.DEBIT_NOTE, subtype: ZATCA_SUBTYPES.SIMPLIFIED, label: "Simplified Debit Note" },
 ];
 
+const TEST_SELLER: UBLPartyInfo = {
+  name: "", // filled from org
+  vatNumber: "",
+  commercialRegNumber: "",
+  streetName: "",
+  buildingNumber: "1234",
+  plotIdentification: "1234",
+  city: "",
+  postalZone: "",
+  countryCode: "SA",
+};
+
+const TEST_BUYER: UBLPartyInfo = {
+  name: "Test Buyer",
+  vatNumber: "300000000000003",
+  commercialRegNumber: "1010010000",
+  streetName: "Buyer St",
+  buildingNumber: "5678",
+  city: "Jeddah",
+  postalZone: "23456",
+  countryCode: "SA",
+};
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -31,7 +56,6 @@ export async function POST(req: NextRequest) {
 
   const organizationId = getOrgId(session);
 
-  // Get active certificate
   const cert = await prisma.zatcaCertificate.findFirst({
     where: { organizationId, isActive: true, status: "COMPLIANCE_CSID_ISSUED" },
   });
@@ -59,6 +83,16 @@ export async function POST(req: NextRequest) {
     tag: cert.privateKeyTag,
   });
 
+  const seller: UBLPartyInfo = {
+    ...TEST_SELLER,
+    name: org.arabicName || org.name,
+    vatNumber: org.vatNumber!,
+    commercialRegNumber: org.commercialRegNumber || "1010010000",
+    streetName: org.address || "King Fahd Road",
+    city: org.city || "Riyadh",
+    postalZone: org.zipCode || "12345",
+  };
+
   const results: Array<{ label: string; status: string; errors?: string[] }> = [];
   let allPassed = true;
   let pih = ZATCA_PHASE2_INITIAL_PIH;
@@ -69,76 +103,66 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const issueDate = now.toISOString().split("T")[0];
     const issueTime = now.toISOString().split("T")[1]?.split(".")[0] || "00:00:00";
-
-    const seller: UBLPartyInfo = {
-      name: org.arabicName || org.name,
-      vatNumber: org.vatNumber!,
-      commercialRegNumber: org.commercialRegNumber || undefined,
-      streetName: org.address || "Test Street",
-      buildingNumber: "1234",
-      city: org.city || "Riyadh",
-      postalZone: org.zipCode || "12345",
-      countryCode: "SA",
-    };
-
     const isStandard = test.subtype === ZATCA_SUBTYPES.STANDARD;
-    const buyer: UBLPartyInfo | undefined = isStandard ? {
-      name: "Test Buyer",
-      vatNumber: "399999999900003",
-      streetName: "Buyer Street",
-      buildingNumber: "5678",
-      city: "Jeddah",
-      postalZone: "23456",
-      countryCode: "SA",
-    } : undefined;
-
-    const billingRef = test.docType !== ZATCA_DOC_TYPES.INVOICE ? "TEST-INV-001" : undefined;
-
-    const params: UBLInvoiceParams = {
-      invoiceNumber: `TEST-${i + 1}`,
-      uuid,
-      issueDate,
-      issueTime,
-      documentType: test.docType as "388" | "381" | "383",
-      invoiceSubtype: test.subtype as "0100000" | "0200000",
-      icv: i + 1,
-      previousInvoiceHash: pih,
-      billingReferenceId: billingRef,
-      seller,
-      buyer,
-      deliveryDate: issueDate,
-      paymentMeansCode: "10",
-      items: [{
-        id: "1",
-        name: "Test Product",
-        quantity: 1,
-        unitPrice: 100,
-        vatRate: 15,
-        vatCategory: "S",
-        vatAmount: 15,
-        lineExtensionAmount: 100,
-      }],
-      lineExtensionAmount: 100,
-      taxExclusiveAmount: 100,
-      taxInclusiveAmount: 115,
-      payableAmount: 115,
-      taxSubtotals: [{
-        taxableAmount: 100,
-        taxAmount: 15,
-        taxCategory: "S",
-        taxPercent: 15,
-      }],
-      totalVat: 15,
-    };
+    const isNote = test.docType !== ZATCA_DOC_TYPES.INVOICE;
 
     try {
+      const params: UBLInvoiceParams = {
+        invoiceNumber: `COMP-${i + 1}`,
+        uuid,
+        issueDate,
+        issueTime,
+        documentType: test.docType as "388" | "381" | "383",
+        invoiceSubtype: test.subtype as "0100000" | "0200000",
+        icv: i + 1,
+        previousInvoiceHash: pih,
+        billingReferenceId: isNote ? "COMP-1" : undefined,
+        instructionNote: isNote ? "Return of goods" : undefined,
+        seller,
+        buyer: isStandard ? TEST_BUYER : undefined,
+        deliveryDate: issueDate,
+        paymentMeansCode: "10",
+        items: [{
+          id: "1",
+          name: "Test Product",
+          quantity: 1,
+          unitPrice: 100,
+          vatRate: 15,
+          vatCategory: "S",
+          vatAmount: 15,
+          lineExtensionAmount: 100,
+        }],
+        lineExtensionAmount: 100,
+        taxExclusiveAmount: 100,
+        taxInclusiveAmount: 115,
+        payableAmount: 115,
+        taxSubtotals: [{ taxableAmount: 100, taxAmount: 15, taxCategory: "S", taxPercent: 15 }],
+        totalVat: 15,
+      };
+
+      // Unified pipeline: XML → sign → extract QR data from signed XML → QR → embed
       const xml = generateInvoiceXML(params);
-      const signed = await signInvoiceXML(xml, privateKeyPem, cert.complianceCsid);
-      const xmlBase64 = Buffer.from(signed.signedXml, "utf-8").toString("base64");
+      const sigResult = await signInvoiceXML(xml, privateKeyPem, decodeBST(cert.complianceCsid));
+      const qrData = extractQRDataFromSignedXml(sigResult.signedXml);
+      const enhancedQr = generateEnhancedTLVQRCode({
+        sellerName: seller.name,
+        vatNumber: seller.vatNumber,
+        timestamp: `${issueDate}T${issueTime}`,
+        totalWithVat: "115.00",
+        totalVat: "15.00",
+        invoiceHash: qrData.digestValue,
+        ecdsaSignature: qrData.signatureValue,
+        publicKey: sigResult.publicKeyDER,
+        certificateSignature: sigResult.certSignatureDER,
+      });
+      const finalXml = embedQRInXml(sigResult.signedXml, enhancedQr);
+      const xmlBase64 = Buffer.from(finalXml, "utf-8").toString("base64");
+      const invoiceHash = sigResult.invoiceHash;
+      pih = invoiceHash;
 
       const response = await submitComplianceInvoice(
         xmlBase64,
-        signed.invoiceHash,
+        invoiceHash,
         uuid,
         cert.complianceCsid,
         cert.complianceSecret,
@@ -146,29 +170,27 @@ export async function POST(req: NextRequest) {
       );
 
       const hasErrors = response.validationResults?.errorMessages?.length;
-      pih = signed.invoiceHash; // Chain for next test invoice
 
       if (hasErrors) {
         allPassed = false;
-        results.push({
-          label: test.label,
-          status: "FAILED",
-          errors: response.validationResults?.errorMessages?.map((e) => `${e.code}: ${e.message}`),
-        });
+        const allMsgs = [
+          ...(response.validationResults?.errorMessages?.map((e) => `ERROR ${e.code}: ${e.message}`) || []),
+          ...(response.validationResults?.warningMessages?.map((e) => `WARN ${e.code}: ${e.message}`) || []),
+        ];
+        results.push({ label: test.label, status: "FAILED", errors: allMsgs });
       } else {
         results.push({ label: test.label, status: "PASSED" });
       }
-    } catch (error) {
+    } catch (err: unknown) {
       allPassed = false;
       results.push({
         label: test.label,
         status: "ERROR",
-        errors: [(error as Error).message],
+        errors: [err instanceof Error ? err.message : String(err)],
       });
     }
   }
 
-  // Update certificate status if all passed
   if (allPassed) {
     await prisma.zatcaCertificate.update({
       where: { id: cert.id },

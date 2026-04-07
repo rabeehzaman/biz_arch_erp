@@ -1,10 +1,10 @@
 // ZATCA Phase 2 XML signing — 8-step XAdES-BES flow
-// ECDSA-SHA256 on secp256k1 with C14N 1.1
+// ECDSA-SHA256 on secp256k1, C14N via xmldsigjs (pure JS, Vercel-compatible)
 
 import crypto from "crypto";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import { Crypto } from "@peculiar/webcrypto";
-import * as x509 from "@peculiar/x509";
+import { XmlCanonicalizer } from "xmldsigjs";
 import { ZATCA_NAMESPACES, ZATCA_ALGORITHMS } from "./zatca-config";
 import {
   importPrivateKey,
@@ -14,7 +14,6 @@ import {
   getCertificateSerialNumber,
   extractPublicKeyDER,
   extractCertificateSignature,
-  derToP1363,
 } from "./certificate";
 
 const peculiarCrypto = new Crypto();
@@ -23,163 +22,220 @@ const peculiarCrypto = new Crypto();
 
 export interface SigningResult {
   signedXml: string;
-  invoiceHash: string;        // base64 SHA-256 of canonical invoice (for ZATCA API)
-  invoiceHashBytes: Buffer;   // raw bytes (for QR tag 6)
-  signatureBytes: Buffer;     // DER signature bytes
-  publicKeyDER: Buffer;       // SubjectPublicKeyInfo (for QR tag 8)
-  certSignatureBytes: Buffer; // CA signature from certificate (for QR tag 9)
+  invoiceHash: string;              // base64 SHA-256 (44-char string)
+  invoiceHashBytes: Buffer;         // raw 32-byte SHA-256
+  signatureValueBase64: string;     // ds:SignatureValue Base64 text (same sig used for QR tag 7)
+  signatureBytes: Buffer;           // 64-byte P1363 signature
+  publicKeyDER: Buffer;             // SubjectPublicKeyInfo raw DER (88 bytes)
+  certSignatureDER: Buffer;         // CA cert signature raw DER (~72 bytes)
+  certSignatureBytes: Buffer;       // alias for certSignatureDER
 }
 
 // ─── Main Signing Function ────────────────────────────────────────────────
 
-/**
- * Signs a ZATCA invoice XML following the 8-step flow.
- * Returns signed XML + data needed for QR code generation.
- */
 export async function signInvoiceXML(
   invoiceXml: string,
   privateKeyPem: string,
   certificateBase64: string
 ): Promise<SigningResult> {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(invoiceXml, "application/xml");
   const cert = parseCertificate(certificateBase64);
 
-  // Step 1: XML is already built with all elements except signature values
-
-  // Step 2: Compute invoice hash
-  // Remove: ext:UBLExtensions, cac:Signature, cac:AdditionalDocumentReference[QR]
-  const invoiceHashBytes = computeInvoiceHash(doc);
+  // Step 2: Compute invoice hash using C14N (pure JS)
+  const canonicalXml = stripForHashing(invoiceXml);
+  const invoiceHashBytes = crypto.createHash("sha256").update(canonicalXml, "utf-8").digest();
   const invoiceHash = invoiceHashBytes.toString("base64");
 
   // Step 3: Build SignedProperties
   const signingTime = new Date().toISOString();
   const certHash = getCertificateHash(cert);
   const certIssuer = getCertificateIssuerName(cert);
-  const certSerial = getCertificateSerialNumber(cert);
+  const certSerialHex = getCertificateSerialNumber(cert);
+  const certSerial = BigInt("0x" + certSerialHex).toString(10);
 
   // Step 4: Compute SignedProperties digest
-  const signedPropertiesXml = buildSignedPropertiesXml(
-    signingTime,
-    certHash.toString("base64"),
-    certIssuer,
-    certSerial
+  // ZATCA SDK hashes a specific "for signing" format with xmlns declarations and
+  // multi-line indentation. The embedded version in the final XML can differ.
+  const certDigestBase64 = Buffer.from(certHash.toString("hex"), "utf-8").toString("base64");
+  const signedPropertiesForHashing = buildSignedPropertiesForHashing(
+    signingTime, certDigestBase64, certIssuer, certSerial
   );
-  const signedPropsHash = sha256Base64(signedPropertiesXml);
+  const signedPropertiesXml = buildSignedPropertiesXml(
+    signingTime, certDigestBase64, certIssuer, certSerial
+  );
+  // ZATCA SDK encodes digests as base64(hex_of_sha256), not base64(raw_sha256)
+  const signedPropsHash = sha256HexBase64(signedPropertiesForHashing);
 
   // Step 5: Assemble SignedInfo
   const signedInfoXml = buildSignedInfoXml(invoiceHash, signedPropsHash);
 
-  // Step 6: Sign the SignedInfo
+  // Step 6: Sign the raw invoice hash bytes, matching the official ZATCA SDK.
+  // SDK uses createSign('sha256').update(Buffer.from(hash, "base64")).sign(key)
+  // which is equivalent to ECDSA(SHA-256(raw_32_hash_bytes)).
+  // WebCrypto subtle.sign with {hash: "SHA-256"} also does SHA-256 internally,
+  // so we pass the raw hash bytes as input.
   const privateKey = await importPrivateKey(privateKeyPem);
-  const signedInfoBytes = Buffer.from(signedInfoXml, "utf-8");
   const signatureArrayBuffer = await peculiarCrypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     privateKey,
-    signedInfoBytes
+    invoiceHashBytes
   );
-  // WebCrypto returns IEEE P1363 format; convert to DER for XML
   const signatureP1363 = Buffer.from(signatureArrayBuffer);
   const signatureDER = p1363ToDerLocal(signatureP1363);
-  const signatureBase64 = signatureDER.toString("base64");
+  const signatureValueBase64 = signatureDER.toString("base64");
 
   // Step 7: QR data extraction
   const publicKeyDER = extractPublicKeyDER(cert);
-  const certSignatureBytes = extractCertificateSignature(cert);
+  const certSignatureDER = extractCertificateSignature(cert);
 
-  // Step 8: Embed signature into XML
-  const certBase64Content = certificateBase64;
-  const signedXml = embedSignature(
-    doc,
+  // Step 8: Embed signature into XML using string replacement
+  const signedXml = embedSignatureString(
+    invoiceXml,
     signedInfoXml,
-    signatureBase64,
+    signatureValueBase64,
     signedPropertiesXml,
-    certBase64Content
+    certificateBase64
   );
 
   return {
     signedXml,
     invoiceHash,
     invoiceHashBytes,
-    signatureBytes: signatureP1363, // P1363 for QR tag 7
+    signatureValueBase64,
+    signatureBytes: signatureP1363,
     publicKeyDER,
-    certSignatureBytes,
+    certSignatureDER,
+    certSignatureBytes: certSignatureDER,
   };
 }
 
-// ─── Step 2: Invoice Hash Computation ─────────────────────────────────────
+// ─── Step 2: Invoice Hash — C14N via xmldsigjs (pure JS) ────────────────
 
-function computeInvoiceHash(doc: Document): Buffer {
-  // Clone the document to avoid modifying the original
-  const serializer = new XMLSerializer();
-  const xmlStr = serializer.serializeToString(doc);
-  const cloneDoc = new DOMParser().parseFromString(xmlStr, "application/xml");
-  const root = cloneDoc.documentElement;
+/**
+ * Remove UBLExtensions, cac:Signature, and QR AdditionalDocumentReference,
+ * then canonicalize using xmldsigjs.XmlCanonicalizer (pure JS, Vercel-compatible).
+ * Applies ZATCA whitespace patches for hash compatibility.
+ */
+function stripForHashing(xmlStr: string): string {
+  // Step 1: DOM-based removal of 3 elements
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlStr, "application/xml");
+  const root = doc.documentElement;
 
   // Remove ext:UBLExtensions
-  removeElementByTagNS(root, ZATCA_NAMESPACES.EXT, "UBLExtensions");
+  const ublExts = root.getElementsByTagNameNS(ZATCA_NAMESPACES.EXT, "UBLExtensions");
+  for (let i = ublExts.length - 1; i >= 0; i--) {
+    ublExts.item(i)?.parentNode?.removeChild(ublExts.item(i)!);
+  }
 
   // Remove cac:Signature
-  removeElementByTagNS(root, ZATCA_NAMESPACES.CAC, "Signature");
-
-  // Remove cac:AdditionalDocumentReference where cbc:ID = "QR"
-  removeAdditionalDocRef(root, "QR");
-
-  // Canonicalize (simplified C14N — serialize without extra whitespace)
-  const canonical = serializer.serializeToString(cloneDoc);
-
-  return crypto.createHash("sha256").update(canonical, "utf-8").digest();
-}
-
-function removeElementByTagNS(root: Element, ns: string, localName: string) {
-  const elements = root.getElementsByTagNameNS(ns, localName);
-  for (let i = elements.length - 1; i >= 0; i--) {
-    const el = elements.item(i);
-    if (el?.parentNode) {
-      el.parentNode.removeChild(el);
-    }
+  const cacSigs = root.getElementsByTagNameNS(ZATCA_NAMESPACES.CAC, "Signature");
+  for (let i = cacSigs.length - 1; i >= 0; i--) {
+    cacSigs.item(i)?.parentNode?.removeChild(cacSigs.item(i)!);
   }
-}
 
-function removeAdditionalDocRef(root: Element, refId: string) {
-  const refs = root.getElementsByTagNameNS(ZATCA_NAMESPACES.CAC, "AdditionalDocumentReference");
-  for (let i = refs.length - 1; i >= 0; i--) {
-    const ref = refs.item(i);
+  // Remove cac:AdditionalDocumentReference[QR]
+  const addDocRefs = root.getElementsByTagNameNS(ZATCA_NAMESPACES.CAC, "AdditionalDocumentReference");
+  for (let i = addDocRefs.length - 1; i >= 0; i--) {
+    const ref = addDocRefs.item(i);
     if (!ref) continue;
     const ids = ref.getElementsByTagNameNS(ZATCA_NAMESPACES.CBC, "ID");
-    if (ids.length > 0 && ids.item(0)?.textContent === refId) {
+    if (ids.length > 0 && ids.item(0)?.textContent?.trim() === "QR") {
       ref.parentNode?.removeChild(ref);
     }
   }
+
+  // Step 2: Canonicalize with xmldsigjs (pure JS, Vercel-compatible)
+  const canonicalizer = new XmlCanonicalizer(false, false);
+  return canonicalizer.Canonicalize(doc);
+}
+
+/**
+ * Canonicalize ds:SignedInfo XML using C14N 1.1 (via xmldsigjs).
+ * Per ZATCA spec, the ECDSA signature is over this canonical form.
+ */
+function canonicalizeSignedInfo(signedInfoXml: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(signedInfoXml, "application/xml");
+  const canonicalizer = new XmlCanonicalizer(false, false);
+  return canonicalizer.Canonicalize(doc);
+}
+
+/**
+ * Recompute the invoice hash from any XML (e.g., the final submitted XML).
+ * Strips elements and canonicalizes, then hashes.
+ */
+export function recomputeHash(xml: string): string {
+  const canonical = stripForHashing(xml);
+  return crypto.createHash("sha256").update(canonical, "utf-8").digest("base64");
 }
 
 // ─── Step 3 & 4: SignedProperties ─────────────────────────────────────────
 
+/**
+ * SignedProperties XML for hashing — must include xmlns declarations and
+ * specific indentation to match the official ZATCA SDK's expected format.
+ * The SDK hashes this exact format to compute xadesSignedPropertiesDigestValue.
+ */
+function buildSignedPropertiesForHashing(
+  signingTime: string,
+  certDigestBase64: string,
+  issuerName: string,
+  serialNumber: string
+): string {
+  const S = " ";
+  return [
+    `<xades:SignedProperties xmlns:xades="${ZATCA_NAMESPACES.XADES}" Id="xadesSignedProperties">`,
+    `${S.repeat(36)}<xades:SignedSignatureProperties>`,
+    `${S.repeat(40)}<xades:SigningTime>${signingTime}</xades:SigningTime>`,
+    `${S.repeat(40)}<xades:SigningCertificate>`,
+    `${S.repeat(44)}<xades:Cert>`,
+    `${S.repeat(48)}<xades:CertDigest>`,
+    `${S.repeat(52)}<ds:DigestMethod xmlns:ds="${ZATCA_NAMESPACES.DS}" Algorithm="${ZATCA_ALGORITHMS.DIGEST}"/>`,
+    `${S.repeat(52)}<ds:DigestValue xmlns:ds="${ZATCA_NAMESPACES.DS}">${certDigestBase64}</ds:DigestValue>`,
+    `${S.repeat(48)}</xades:CertDigest>`,
+    `${S.repeat(48)}<xades:IssuerSerial>`,
+    `${S.repeat(52)}<ds:X509IssuerName xmlns:ds="${ZATCA_NAMESPACES.DS}">${escapeXml(issuerName)}</ds:X509IssuerName>`,
+    `${S.repeat(52)}<ds:X509SerialNumber xmlns:ds="${ZATCA_NAMESPACES.DS}">${serialNumber}</ds:X509SerialNumber>`,
+    `${S.repeat(48)}</xades:IssuerSerial>`,
+    `${S.repeat(44)}</xades:Cert>`,
+    `${S.repeat(40)}</xades:SigningCertificate>`,
+    `${S.repeat(36)}</xades:SignedSignatureProperties>`,
+    `${S.repeat(32)}</xades:SignedProperties>`,
+  ].join("\n");
+}
+
+/**
+ * SignedProperties XML for embedding — same indentation as the "for hashing" version,
+ * but without xmlns declarations (they're inherited from parent elements).
+ * The SDK validator extracts this, re-adds xmlns, and hashes — so the indentation
+ * must match the "for hashing" format exactly.
+ */
 function buildSignedPropertiesXml(
   signingTime: string,
   certDigestBase64: string,
   issuerName: string,
   serialNumber: string
 ): string {
+  const S = " ";
   return [
-    `<xades:SignedProperties xmlns:xades="${ZATCA_NAMESPACES.XADES}" Id="xadesSignedProperties">`,
-    `<xades:SignedSignatureProperties>`,
-    `<xades:SigningTime>${signingTime}</xades:SigningTime>`,
-    `<xades:SigningCertificate>`,
-    `<xades:Cert>`,
-    `<xades:CertDigest>`,
-    `<ds:DigestMethod xmlns:ds="${ZATCA_NAMESPACES.DS}" Algorithm="${ZATCA_ALGORITHMS.DIGEST}"/>`,
-    `<ds:DigestValue xmlns:ds="${ZATCA_NAMESPACES.DS}">${certDigestBase64}</ds:DigestValue>`,
-    `</xades:CertDigest>`,
-    `<xades:IssuerSerial>`,
-    `<ds:X509IssuerName xmlns:ds="${ZATCA_NAMESPACES.DS}">${escapeXml(issuerName)}</ds:X509IssuerName>`,
-    `<ds:X509SerialNumber xmlns:ds="${ZATCA_NAMESPACES.DS}">${serialNumber}</ds:X509SerialNumber>`,
-    `</xades:IssuerSerial>`,
-    `</xades:Cert>`,
-    `</xades:SigningCertificate>`,
-    `</xades:SignedSignatureProperties>`,
-    `</xades:SignedProperties>`,
-  ].join("");
+    `<xades:SignedProperties Id="xadesSignedProperties">`,
+    `${S.repeat(36)}<xades:SignedSignatureProperties>`,
+    `${S.repeat(40)}<xades:SigningTime>${signingTime}</xades:SigningTime>`,
+    `${S.repeat(40)}<xades:SigningCertificate>`,
+    `${S.repeat(44)}<xades:Cert>`,
+    `${S.repeat(48)}<xades:CertDigest>`,
+    `${S.repeat(52)}<ds:DigestMethod Algorithm="${ZATCA_ALGORITHMS.DIGEST}"/>`,
+    `${S.repeat(52)}<ds:DigestValue>${certDigestBase64}</ds:DigestValue>`,
+    `${S.repeat(48)}</xades:CertDigest>`,
+    `${S.repeat(48)}<xades:IssuerSerial>`,
+    `${S.repeat(52)}<ds:X509IssuerName>${escapeXml(issuerName)}</ds:X509IssuerName>`,
+    `${S.repeat(52)}<ds:X509SerialNumber>${serialNumber}</ds:X509SerialNumber>`,
+    `${S.repeat(48)}</xades:IssuerSerial>`,
+    `${S.repeat(44)}</xades:Cert>`,
+    `${S.repeat(40)}</xades:SigningCertificate>`,
+    `${S.repeat(36)}</xades:SignedSignatureProperties>`,
+    `${S.repeat(32)}</xades:SignedProperties>`,
+  ].join("\n");
 }
 
 // ─── Step 5: SignedInfo ───────────────────────────────────────────────────
@@ -189,7 +245,7 @@ function buildSignedInfoXml(
   signedPropsDigest: string
 ): string {
   return [
-    `<ds:SignedInfo xmlns:ds="${ZATCA_NAMESPACES.DS}">`,
+    `<ds:SignedInfo>`,
     `<ds:CanonicalizationMethod Algorithm="${ZATCA_ALGORITHMS.CANONICALIZATION}"/>`,
     `<ds:SignatureMethod Algorithm="${ZATCA_ALGORITHMS.SIGNATURE}"/>`,
     `<ds:Reference Id="invoiceSignedData" URI="">`,
@@ -203,6 +259,7 @@ function buildSignedInfoXml(
     `<ds:Transform Algorithm="http://www.w3.org/TR/1999/REC-xpath-19991116">`,
     `<ds:XPath>not(//ancestor-or-self::cac:AdditionalDocumentReference[cbc:ID='QR'])</ds:XPath>`,
     `</ds:Transform>`,
+    `<ds:Transform Algorithm="${ZATCA_ALGORITHMS.CANONICALIZATION}"/>`,
     `</ds:Transforms>`,
     `<ds:DigestMethod Algorithm="${ZATCA_ALGORITHMS.DIGEST}"/>`,
     `<ds:DigestValue>${invoiceDigest}</ds:DigestValue>`,
@@ -215,16 +272,15 @@ function buildSignedInfoXml(
   ].join("");
 }
 
-// ─── Step 8: Embed Signature into XML ─────────────────────────────────────
+// ─── Step 8: Embed Signature using string replacement ────────────────────
 
-function embedSignature(
-  doc: Document,
+function embedSignatureString(
+  invoiceXml: string,
   signedInfoXml: string,
   signatureBase64: string,
   signedPropertiesXml: string,
   certBase64: string
 ): string {
-  // Build the complete ds:Signature block
   const dsSignature = [
     `<ds:Signature xmlns:ds="${ZATCA_NAMESPACES.DS}" Id="signature">`,
     signedInfoXml,
@@ -242,51 +298,64 @@ function embedSignature(
     `</ds:Signature>`,
   ].join("");
 
-  // Find the SignatureInformation element and insert ds:Signature
-  const serializer = new XMLSerializer();
-  let xmlStr = serializer.serializeToString(doc);
-
-  // Insert ds:Signature before the closing </sac:SignatureInformation>
-  const sigInfoCloseTag = "</sac:SignatureInformation>";
-  xmlStr = xmlStr.replace(sigInfoCloseTag, dsSignature + sigInfoCloseTag);
-
-  return xmlStr;
+  return invoiceXml.replace(
+    "</sac:SignatureInformation>",
+    dsSignature + "</sac:SignatureInformation>"
+  );
 }
 
-// ─── Update QR in Signed XML ──────────────────────────────────────────────
+// ─── QR Embedding ────────────────────────────────────────────────────────
+
+export function embedQRInXml(signedXml: string, qrBase64: string): string {
+  // Handle both self-closing and empty element (compact vs indented XML)
+  const selfClosing = signedXml.replace(
+    /<cbc:EmbeddedDocumentBinaryObject\s+mimeCode="text\/plain"\/>/,
+    `<cbc:EmbeddedDocumentBinaryObject mimeCode="text/plain">${qrBase64}</cbc:EmbeddedDocumentBinaryObject>`
+  );
+  if (selfClosing !== signedXml) return selfClosing;
+  // Fallback: empty element with open/close tags
+  return signedXml.replace(
+    /(<cbc:EmbeddedDocumentBinaryObject\s+mimeCode="text\/plain">)\s*(<\/cbc:EmbeddedDocumentBinaryObject>)/,
+    `$1${qrBase64}$2`
+  );
+}
+
+// ─── QR Data Extraction from Signed XML ──────────────────────────────────
 
 /**
- * Replace the empty QR placeholder in the signed XML with the actual QR data.
- * Called after enhanced QR code is generated.
+ * Extract QR tag values from the signed XML per ZATCA spec (page 61).
+ * Tags 6-7 are read from ds:SignedInfo/ds:DigestValue and ds:SignatureValue.
+ * This ensures QR content exactly matches the signed XML.
  */
-export function embedQRInXml(signedXml: string, qrBase64: string): string {
-  // The QR AdditionalDocumentReference has an empty EmbeddedDocumentBinaryObject
-  // Replace it with the actual QR data
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(signedXml, "application/xml");
-  const root = doc.documentElement;
+export function extractQRDataFromSignedXml(signedXml: string): {
+  digestValue: string;         // Tag 6: ds:DigestValue (invoice hash Base64)
+  signatureValue: string;      // Tag 7: ds:SignatureValue (ECDSA signature Base64)
+} {
+  // Extract ds:DigestValue from the first Reference (invoiceSignedData)
+  const digestMatch = signedXml.match(
+    /Id="invoiceSignedData"[\s\S]*?<ds:DigestValue>([^<]+)<\/ds:DigestValue>/
+  );
+  const digestValue = digestMatch?.[1] || "";
 
-  const refs = root.getElementsByTagNameNS(ZATCA_NAMESPACES.CAC, "AdditionalDocumentReference");
-  for (let i = 0; i < refs.length; i++) {
-    const ref = refs.item(i);
-    if (!ref) continue;
-    const ids = ref.getElementsByTagNameNS(ZATCA_NAMESPACES.CBC, "ID");
-    if (ids.length > 0 && ids.item(0)?.textContent === "QR") {
-      const binObjs = ref.getElementsByTagNameNS(ZATCA_NAMESPACES.CBC, "EmbeddedDocumentBinaryObject");
-      if (binObjs.length > 0) {
-        binObjs.item(0)!.textContent = qrBase64;
-      }
-      break;
-    }
-  }
+  // Extract ds:SignatureValue
+  const sigMatch = signedXml.match(
+    /<ds:SignatureValue>([^<]+)<\/ds:SignatureValue>/
+  );
+  const signatureValue = sigMatch?.[1] || "";
 
-  return new XMLSerializer().serializeToString(doc);
+  return { digestValue, signatureValue };
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────
 
 function sha256Base64(data: string): string {
   return crypto.createHash("sha256").update(data, "utf-8").digest("base64");
+}
+
+/** SHA-256 → hex string → Base64 encode (ZATCA SDK format for SignedProperties/cert digests) */
+function sha256HexBase64(data: string): string {
+  const hex = crypto.createHash("sha256").update(data, "utf-8").digest("hex");
+  return Buffer.from(hex, "utf-8").toString("base64");
 }
 
 function escapeXml(str: string): string {
@@ -298,17 +367,11 @@ function escapeXml(str: string): string {
     .replace(/'/g, "&apos;");
 }
 
-/**
- * Convert IEEE P1363 signature (r || s) to DER encoding.
- * WebCrypto ECDSA returns P1363; XML ds:SignatureValue needs DER.
- */
 function p1363ToDerLocal(p1363: Buffer): Buffer {
   const r = p1363.subarray(0, 32);
   const s = p1363.subarray(32, 64);
-
   const rDer = toSignedDerInt(r);
   const sDer = toSignedDerInt(s);
-
   const totalLen = 2 + rDer.length + 2 + sDer.length;
   return Buffer.concat([
     Buffer.from([0x30, totalLen]),
@@ -320,11 +383,9 @@ function p1363ToDerLocal(p1363: Buffer): Buffer {
 }
 
 function toSignedDerInt(buf: Buffer): Buffer {
-  // Strip leading zeros but keep at least one byte
   let i = 0;
   while (i < buf.length - 1 && buf[i] === 0x00) i++;
   const trimmed = buf.subarray(i);
-  // Add leading 0x00 if high bit set (DER signed integer)
   if (trimmed[0] & 0x80) {
     return Buffer.concat([Buffer.from([0x00]), trimmed]);
   }

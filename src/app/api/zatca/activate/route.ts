@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { requestProductionCsid } from "@/lib/saudi-vat/zatca-api";
+import { requestProductionCsid, decodeBST } from "@/lib/saudi-vat/zatca-api";
 import { parseCertificate, isCertificateExpiring } from "@/lib/saudi-vat/certificate";
 import type { ZatcaEnvironment } from "@/lib/saudi-vat/zatca-config";
 
@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
       org.zatcaEnvironment as ZatcaEnvironment
     );
 
-    // Parse the production certificate to get expiry
-    const prodCert = parseCertificate(response.binarySecurityToken);
+    // Parse the production certificate to get expiry (BST is double-encoded)
+    const prodCert = parseCertificate(decodeBST(response.binarySecurityToken));
     const expiresAt = prodCert.notAfter;
 
     // Update certificate with production CSID
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       where: { id: cert.id },
       data: {
         productionCsid: response.binarySecurityToken,
-        productionRequestId: response.requestID,
+        productionRequestId: String(response.requestID),
         productionSecret: response.secret,
         status: "PRODUCTION_CSID_ISSUED",
         expiresAt,
@@ -65,10 +65,10 @@ export async function POST(req: NextRequest) {
       message: "Production CSID obtained. ZATCA Phase 2 is now active.",
       expiresAt: expiresAt.toISOString(),
     });
-  } catch (error) {
-    console.error("ZATCA activation error:", error);
+  } catch (err: unknown) {
+    console.error("ZATCA activation error:", err);
     return NextResponse.json(
-      { error: `Activation failed: ${(error as Error).message}` },
+      { error: `Activation failed: ${err instanceof Error ? err.message : String(err)}` },
       { status: 500 }
     );
   }

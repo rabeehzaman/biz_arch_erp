@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
         registeredAddress: org.arabicCity || org.arabicAddress || "Riyadh",
         businessCategory: "Technology",
         isProduction,
+        environment: org.zatcaEnvironment as "SANDBOX" | "SIMULATION" | "PRODUCTION",
       },
       keyPair.privateKey,
       keyPair.publicKey
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
         privateKeyIv: encKey.iv,
         privateKeyTag: encKey.tag,
         complianceCsid: csidResponse.binarySecurityToken,
-        complianceRequestId: csidResponse.requestID,
+        complianceRequestId: String(csidResponse.requestID),
         complianceSecret: csidResponse.secret,
         status: "COMPLIANCE_CSID_ISSUED",
         isActive: true,
@@ -108,10 +109,12 @@ export async function POST(req: NextRequest) {
       status: certificate.status,
       message: "Compliance CSID obtained. Run compliance check next.",
     });
-  } catch (error) {
-    console.error("ZATCA onboarding error:", error);
+  } catch (err: unknown) {
+    console.error("ZATCA onboarding error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    const detail = (err as { responseBody?: string }).responseBody || message;
     return NextResponse.json(
-      { error: `Onboarding failed: ${(error as Error).message}` },
+      { error: `Onboarding failed: ${message}`, detail },
       { status: 500 }
     );
   }

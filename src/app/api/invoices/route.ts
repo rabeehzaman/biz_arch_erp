@@ -84,6 +84,11 @@ export async function GET(request: NextRequest) {
           _count: {
             select: { items: true },
           },
+          zatcaSubmissions: {
+            orderBy: { createdAt: "desc" as const },
+            take: 1,
+            select: { status: true },
+          },
         },
       }),
       prisma.invoice.count({ where }),

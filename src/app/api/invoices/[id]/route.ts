@@ -72,6 +72,20 @@ export async function GET(
         },
         branch: { select: { id: true, name: true, code: true } },
         warehouse: { select: { id: true, name: true, code: true } },
+        zatcaSubmissions: {
+          orderBy: { createdAt: "desc" as const },
+          take: 1,
+          select: {
+            id: true,
+            submissionMode: true,
+            status: true,
+            warningMessages: true,
+            errorMessages: true,
+            attemptCount: true,
+            lastAttemptAt: true,
+            createdAt: true,
+          },
+        },
       },
     });
 

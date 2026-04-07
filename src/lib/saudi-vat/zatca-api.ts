@@ -28,7 +28,7 @@ export interface ZatcaValidationResults {
 export interface ComplianceCsidResponse {
   requestID: string;
   dispositionMessage: string;
-  binarySecurityToken: string; // Base64-encoded certificate
+  binarySecurityToken: string; // Base64(Base64(DER)) — double-encoded from ZATCA API
   secret: string;
   errors?: string;
 }
@@ -36,9 +36,17 @@ export interface ComplianceCsidResponse {
 export interface ProductionCsidResponse {
   requestID: string;
   dispositionMessage: string;
-  binarySecurityToken: string;
+  binarySecurityToken: string; // Base64(Base64(DER)) — double-encoded from ZATCA API
   secret: string;
   errors?: string;
+}
+
+/**
+ * Decode ZATCA's binarySecurityToken which is base64(base64(DER_cert)).
+ * Returns the inner base64 of the DER certificate, suitable for parseCertificate().
+ */
+export function decodeBST(bst: string): string {
+  return Buffer.from(bst, "base64").toString("utf-8").trim();
 }
 
 export interface InvoiceSubmissionResponse {
@@ -143,6 +151,42 @@ export async function requestProductionCsid(
 }
 
 /**
+ * Renew an expiring Production CSID via PATCH.
+ * Auth: Basic (old productionCsid:secret).
+ * Per ZATCA spec, renewal uses PATCH with the old CSR — lighter than full re-onboard.
+ */
+export async function renewProductionCsid(
+  oldCsrBase64: string,
+  otp: string,
+  oldCsid: string,
+  oldSecret: string,
+  environment: ZatcaEnvironment
+): Promise<ProductionCsidResponse> {
+  const url = `${getZatcaBaseUrl(environment)}${ZATCA_API_PATHS.PRODUCTION_CSIDS}`;
+
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      ...ZATCA_HEADERS,
+      Authorization: basicAuth(oldCsid, oldSecret),
+      OTP: otp,
+    },
+    body: JSON.stringify({ csr: oldCsrBase64 }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new ZatcaApiError(
+      `Production CSID renewal failed: ${response.status}`,
+      response.status,
+      body
+    );
+  }
+
+  return response.json();
+}
+
+/**
  * Report a simplified (B2C) invoice to ZATCA.
  * Auth: Basic (productionCsid:secret).
  */
@@ -227,8 +271,15 @@ async function submitInvoice(
 
   const body: InvoiceSubmissionResponse = await response.json();
 
-  // 400 = rejected with errors
+  // 400 = rejected with errors, BUT "clearance deactivated" means fall back to reporting
   if (response.status === 400) {
+    const errorMsgs = body.validationResults?.errorMessages || [];
+    const isClearanceOff = errorMsgs.some(
+      (e) => e.message?.toLowerCase().includes("clearance") && e.message?.toLowerCase().includes("deactivat")
+    );
+    if (isClearanceOff) {
+      throw new ZatcaClearanceOffError();
+    }
     throw new ZatcaRejectionError(body);
   }
 

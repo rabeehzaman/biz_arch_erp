@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
   const data = submissions.map((s) => ({
     id: s.id,
     documentType: s.documentType,
+    documentId: s.invoiceId || s.creditNoteId || s.debitNoteId,
     documentNumber: s.invoice?.invoiceNumber || s.creditNote?.creditNoteNumber || s.debitNote?.debitNoteNumber,
     submissionMode: s.submissionMode,
     status: s.status,

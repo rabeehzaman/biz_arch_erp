@@ -37,6 +37,8 @@ export interface UBLLineItem {
   lineExtensionAmount: number; // qty * unitPrice - discount
   taxExemptionReasonCode?: string;
   taxExemptionReason?: string;
+  isDownPayment?: boolean;    // BR-KSA-80: down payment line (appears in XML but excluded from tax calc)
+  isRetention?: boolean;      // Retention/withholding tax: excluded from UBL XML entirely
 }
 
 export interface UBLInvoiceParams {
@@ -52,6 +54,7 @@ export interface UBLInvoiceParams {
   icv: number;
   previousInvoiceHash: string; // base64 SHA-256
   billingReferenceId?: string; // original invoice number (for CN/DN)
+  instructionNote?: string;    // reason for CN/DN (BR-KSA-17)
 
   // Parties
   seller: UBLPartyInfo;
@@ -65,6 +68,9 @@ export interface UBLInvoiceParams {
 
   // Document-level allowances/charges
   documentDiscount?: number;
+
+  // Down payment (BR-KSA-80)
+  prepaidAmount?: number;
 
   // Line items
   items: UBLLineItem[];
@@ -156,11 +162,18 @@ export function generateInvoiceXML(params: UBLInvoiceParams): string {
   if (params.buyer) {
     buildParty(inv, "cac:AccountingCustomerParty", params.buyer);
   } else {
-    // SIMPLIFIED: minimal buyer
+    // SIMPLIFIED (B2C): buyer party matching ZATCA SDK signed sample exactly
     const custParty = inv.ele(ZATCA_NAMESPACES.CAC, "cac:AccountingCustomerParty");
-    const party = custParty.ele(ZATCA_NAMESPACES.CAC, "cac:Party");
-    const partyId = party.ele(ZATCA_NAMESPACES.CAC, "cac:PartyIdentification");
-    partyId.ele(ZATCA_NAMESPACES.CBC, "cbc:ID").txt("NA");
+    const custInner = custParty.ele(ZATCA_NAMESPACES.CAC, "cac:Party");
+    const custAddr = custInner.ele(ZATCA_NAMESPACES.CAC, "cac:PostalAddress");
+    const custCountry = custAddr.ele(ZATCA_NAMESPACES.CAC, "cac:Country");
+    custCountry.ele(ZATCA_NAMESPACES.CBC, "cbc:IdentificationCode").txt("SA");
+    const custTaxScheme = custInner.ele(ZATCA_NAMESPACES.CAC, "cac:PartyTaxScheme");
+    const custTaxInner = custTaxScheme.ele(ZATCA_NAMESPACES.CAC, "cac:TaxScheme");
+    custTaxInner.ele(ZATCA_NAMESPACES.CBC, "cbc:ID")
+      .att("schemeID", "UN/ECE 5153")
+      .att("schemeAgencyID", "6")
+      .txt("VAT");
   }
 
   // 15. Delivery
@@ -170,6 +183,10 @@ export function generateInvoiceXML(params: UBLInvoiceParams): string {
   // 16. PaymentMeans
   const paymentMeans = inv.ele(ZATCA_NAMESPACES.CAC, "cac:PaymentMeans");
   paymentMeans.ele(ZATCA_NAMESPACES.CBC, "cbc:PaymentMeansCode").txt(params.paymentMeansCode);
+  // KSA-10: InstructionNote required for credit/debit notes (BR-KSA-17)
+  if (params.instructionNote && params.documentType !== "388") {
+    paymentMeans.ele(ZATCA_NAMESPACES.CBC, "cbc:InstructionNote").txt(params.instructionNote);
+  }
 
   // 17. Document-level AllowanceCharge (discount)
   if (params.documentDiscount && params.documentDiscount > 0) {
@@ -216,7 +233,7 @@ export function generateInvoiceXML(params: UBLInvoiceParams): string {
       .att("schemeID", "UN/ECE 5305")
       .att("schemeAgencyID", "6")
       .txt(sub.taxCategory);
-    taxCat.ele(ZATCA_NAMESPACES.CBC, "cbc:Percent").txt(String(sub.taxPercent));
+    taxCat.ele(ZATCA_NAMESPACES.CBC, "cbc:Percent").txt(formatDecimal(sub.taxPercent));
     if (sub.taxExemptionReasonCode) {
       taxCat.ele(ZATCA_NAMESPACES.CBC, "cbc:TaxExemptionReasonCode").txt(sub.taxExemptionReasonCode);
     }
@@ -224,7 +241,10 @@ export function generateInvoiceXML(params: UBLInvoiceParams): string {
       taxCat.ele(ZATCA_NAMESPACES.CBC, "cbc:TaxExemptionReason").txt(sub.taxExemptionReason);
     }
     const taxScheme = taxCat.ele(ZATCA_NAMESPACES.CAC, "cac:TaxScheme");
-    taxScheme.ele(ZATCA_NAMESPACES.CBC, "cbc:ID").txt("VAT");
+    taxScheme.ele(ZATCA_NAMESPACES.CBC, "cbc:ID")
+      .att("schemeID", "UN/ECE 5153")
+      .att("schemeAgencyID", "6")
+      .txt("VAT");
   }
 
   // 19. LegalMonetaryTotal
@@ -243,16 +263,32 @@ export function generateInvoiceXML(params: UBLInvoiceParams): string {
       .att("currencyID", "SAR")
       .txt(formatDecimal(params.allowanceTotalAmount));
   }
+  // BR-KSA-80: PrepaidAmount for down payment deductions
+  if (params.prepaidAmount != null && params.prepaidAmount > 0) {
+    lmt.ele(ZATCA_NAMESPACES.CBC, "cbc:PrepaidAmount")
+      .att("currencyID", "SAR")
+      .txt(formatDecimal(params.prepaidAmount));
+  }
   lmt.ele(ZATCA_NAMESPACES.CBC, "cbc:PayableAmount")
     .att("currencyID", "SAR")
     .txt(formatDecimal(params.payableAmount));
 
-  // 20. InvoiceLine items
+  // 20. InvoiceLine items (retention/withholding tax items excluded — they affect
+  //     accounting but not the ZATCA submission per Odoo/ZATCA practice)
   for (const item of params.items) {
+    if (item.isRetention) continue;
     buildInvoiceLine(inv, item);
   }
 
-  return doc.end({ prettyPrint: false });
+  // Pretty-print the XML body (ZATCA schematron requires indentation for XPath evaluation),
+  // then compact the UBLExtensions block (to avoid BR-CL-KSA-14 1000-char QR limit
+  // and ensure BR-KSA-28/30 can find signature IDs without indentation interference)
+  const prettyXml = doc.end({ prettyPrint: true, indent: "    " });
+  const ublStart = prettyXml.indexOf("<ext:UBLExtensions>");
+  const ublEnd = prettyXml.indexOf("</ext:UBLExtensions>") + "</ext:UBLExtensions>".length;
+  const ublBlock = prettyXml.substring(ublStart, ublEnd);
+  const compactUbl = ublBlock.replace(/>\s+</g, "><");
+  return prettyXml.substring(0, ublStart) + compactUbl + prettyXml.substring(ublEnd);
 }
 
 // ─── Helper Builders ──────────────────────────────────────────────────────
@@ -356,9 +392,12 @@ function buildInvoiceLine(parent: ReturnType<typeof create>, item: UBLLineItem) 
   // Item ClassifiedTaxCategory
   const classifiedTax = itemEl.ele(ZATCA_NAMESPACES.CAC, "cac:ClassifiedTaxCategory");
   classifiedTax.ele(ZATCA_NAMESPACES.CBC, "cbc:ID").txt(item.vatCategory);
-  classifiedTax.ele(ZATCA_NAMESPACES.CBC, "cbc:Percent").txt(String(item.vatRate));
+  classifiedTax.ele(ZATCA_NAMESPACES.CBC, "cbc:Percent").txt(formatDecimal(item.vatRate));
   const taxScheme = classifiedTax.ele(ZATCA_NAMESPACES.CAC, "cac:TaxScheme");
-  taxScheme.ele(ZATCA_NAMESPACES.CBC, "cbc:ID").txt("VAT");
+  taxScheme.ele(ZATCA_NAMESPACES.CBC, "cbc:ID")
+    .att("schemeID", "UN/ECE 5153")
+    .att("schemeAgencyID", "6")
+    .txt("VAT");
 
   // Price
   const price = line.ele(ZATCA_NAMESPACES.CAC, "cac:Price");

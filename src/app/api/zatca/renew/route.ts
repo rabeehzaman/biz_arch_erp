@@ -1,10 +1,11 @@
 // POST /api/zatca/renew — Renew expiring Production CSID
+// Per ZATCA spec: PATCH /production/csids with old CSR + old PCSID auth
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { generateKeyPair, generateCSR, encryptPrivateKey, parseCertificate } from "@/lib/saudi-vat/certificate";
-import { requestComplianceCsid, requestProductionCsid } from "@/lib/saudi-vat/zatca-api";
+import { parseCertificate, encryptPrivateKey, generateKeyPair, generateCSR } from "@/lib/saudi-vat/certificate";
+import { renewProductionCsid, requestComplianceCsid, decodeBST } from "@/lib/saudi-vat/zatca-api";
 import type { ZatcaEnvironment } from "@/lib/saudi-vat/zatca-config";
 
 export async function POST(req: NextRequest) {
@@ -39,44 +40,23 @@ export async function POST(req: NextRequest) {
   const oldCert = await prisma.zatcaCertificate.findFirst({
     where: { organizationId, isActive: true, status: "PRODUCTION_CSID_ISSUED" },
   });
-  if (!oldCert) {
+  if (!oldCert || !oldCert.productionCsid || !oldCert.productionSecret || !oldCert.csrPem) {
     return NextResponse.json({ error: "No active production certificate to renew" }, { status: 400 });
   }
 
   try {
-    const isProduction = org.zatcaEnvironment === "PRODUCTION";
-    const keyPair = await generateKeyPair();
-    const csrBase64 = await generateCSR(
-      {
-        organizationName: org.name,
-        organizationUnit: "Main Branch",
-        commonName: `EGS1-${org.vatNumber}`,
-        vatNumber: org.vatNumber!,
-        serialNumber: `1-BizArchERP|2-1.0|3-${organizationId}`,
-        title: "1100",
-        registeredAddress: org.arabicCity || org.arabicAddress || "Riyadh",
-        businessCategory: "Technology",
-        isProduction,
-      },
-      keyPair.privateKey,
-      keyPair.publicKey
-    );
-
-    const encKey = encryptPrivateKey(keyPair.privateKeyPem);
     const env = org.zatcaEnvironment as ZatcaEnvironment;
 
-    // Get new compliance CSID
-    const csidResponse = await requestComplianceCsid(csrBase64, otp, env);
-
-    // Get new production CSID
-    const prodResponse = await requestProductionCsid(
-      csidResponse.requestID,
-      csidResponse.binarySecurityToken,
-      csidResponse.secret,
+    // ZATCA spec: PATCH /production/csids with old CSR, authenticated with old PCSID
+    const prodResponse = await renewProductionCsid(
+      oldCert.csrPem,
+      otp,
+      oldCert.productionCsid,
+      oldCert.productionSecret,
       env
     );
 
-    const newCert = parseCertificate(prodResponse.binarySecurityToken);
+    const newCert = parseCertificate(decodeBST(prodResponse.binarySecurityToken));
     const expiresAt = newCert.notAfter;
 
     // Deactivate old cert
@@ -85,19 +65,16 @@ export async function POST(req: NextRequest) {
       data: { isActive: false, status: "EXPIRED" },
     });
 
-    // Create new cert
+    // Create new cert record — reuses the same keypair and CSR from the old cert
     await prisma.zatcaCertificate.create({
       data: {
         organizationId,
-        csrPem: csrBase64,
-        privateKeyEnc: encKey.encrypted,
-        privateKeyIv: encKey.iv,
-        privateKeyTag: encKey.tag,
-        complianceCsid: csidResponse.binarySecurityToken,
-        complianceRequestId: csidResponse.requestID,
-        complianceSecret: csidResponse.secret,
+        csrPem: oldCert.csrPem,
+        privateKeyEnc: oldCert.privateKeyEnc,
+        privateKeyIv: oldCert.privateKeyIv,
+        privateKeyTag: oldCert.privateKeyTag,
         productionCsid: prodResponse.binarySecurityToken,
-        productionRequestId: prodResponse.requestID,
+        productionRequestId: String(prodResponse.requestID),
         productionSecret: prodResponse.secret,
         status: "PRODUCTION_CSID_ISSUED",
         expiresAt,
@@ -108,13 +85,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Certificate renewed successfully.",
+      message: "Certificate renewed successfully via PATCH.",
       expiresAt: expiresAt.toISOString(),
     });
-  } catch (error) {
-    console.error("ZATCA renewal error:", error);
+  } catch (err: unknown) {
+    console.error("ZATCA renewal error:", err);
     return NextResponse.json(
-      { error: `Renewal failed: ${(error as Error).message}` },
+      { error: `Renewal failed: ${err instanceof Error ? err.message : String(err)}` },
       { status: 500 }
     );
   }
