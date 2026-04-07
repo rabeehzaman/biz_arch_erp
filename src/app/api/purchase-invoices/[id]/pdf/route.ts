@@ -3,8 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { InvoicePDF } from "@/components/pdf/invoice-pdf-a5";
-import { InvoiceA4VATPDF } from "@/components/pdf/invoice-pdf-a4-vat";
+import { PurchaseInvoicePDF } from "@/components/pdf/purchase-invoice-pdf";
 import { createElement } from "react";
 import { format } from "date-fns";
 
@@ -21,18 +20,11 @@ export async function GET(
     const organizationId = getOrgId(session);
     const { id } = await params;
 
-    // Fetch organization and PDF format setting
-    const [org, pdfFormatSetting] = await Promise.all([
-      prisma.organization.findUnique({
-        where: { id: organizationId },
-        select: { name: true, arabicName: true, arabicAddress: true, vatNumber: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, commercialRegNumber: true, saudiEInvoiceEnabled: true, currency: true },
-      }),
-      prisma.setting.findFirst({
-        where: { organizationId, key: "invoice_pdf_format", userId: null },
-        select: { value: true },
-      }),
-    ]);
-    const invoicePdfFormat = pdfFormatSetting?.value || "A5_LANDSCAPE";
+    // Fetch organization details
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true, arabicName: true, arabicAddress: true, vatNumber: true, pdfHeaderImageUrl: true, pdfFooterImageUrl: true, currency: true },
+    });
 
     // Fetch purchase invoice with supplier and items
     const invoice = await prisma.purchaseInvoice.findUnique({
@@ -91,107 +83,55 @@ export async function GET(
     // Transform items for PDF
     const pdfItems = invoice.items.map((item) => ({
       description: item.description,
+      arabicName: item.product?.arabicName ?? null,
       quantity: Number(item.quantity),
       unitPrice: Number(item.unitCost),
       discount: Number(item.discount),
       total: Number(item.total),
+      vatRate: Number(item.vatRate ?? 0),
+      vatAmount: Number(item.vatAmount ?? 0),
       product: item.product,
       unit: item.unit,
     }));
 
-    // Determine if this is a Saudi VAT org
-    const isSaudiVat = !!org?.saudiEInvoiceEnabled;
-
-    // Prepare invoice data for PDF
+    // Prepare purchase invoice data for PDF
     const pdfInvoice = {
       invoiceNumber: invoice.purchaseInvoiceNumber,
       issueDate: invoice.invoiceDate,
-      customer: {
+      supplier: {
         name: invoice.supplier.name,
+        arabicName: invoice.supplier.arabicName,
         address: invoice.supplier.address,
         city: invoice.supplier.city,
         state: invoice.supplier.state,
+        vatNumber: invoice.supplier.vatNumber,
+      },
+      organization: {
+        name: org?.name ?? "",
+        arabicName: org?.arabicName ?? null,
+        arabicAddress: org?.arabicAddress ?? null,
+        vatNumber: org?.vatNumber ?? null,
       },
       items: pdfItems,
       subtotal: Number(invoice.subtotal),
-      totalCgst: Number(invoice.totalCgst),
-      totalSgst: Number(invoice.totalSgst),
-      totalIgst: Number(invoice.totalIgst),
+      totalVat: Number(invoice.totalVat ?? 0),
       roundOffAmount: Number(invoice.roundOffAmount),
       total: Number(invoice.total),
-      // Saudi VAT fields
-      saudiInvoiceType: isSaudiVat ? "STANDARD" : undefined,
-      totalVat: invoice.totalVat ? Number(invoice.totalVat) : undefined,
+      amountPaid: Number(invoice.amountPaid),
+      balanceDue: Number(invoice.balanceDue),
+      notes: invoice.notes,
+      currency: org?.currency ?? null,
     };
 
-    // Generate PDF
-    let pdfBuffer: Buffer;
-
-    if (invoicePdfFormat === "A4_VAT") {
-      const vatItems = invoice.items.map((item) => ({
-        description: item.description,
-        arabicName: item.product?.arabicName ?? null,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitCost),
-        discount: Number(item.discount),
-        total: Number(item.total),
-        vatRate: Number(item.vatRate ?? 0),
-        vatAmount: Number(item.vatAmount ?? 0),
-        product: item.product,
-        unit: item.unit,
-      }));
-
-      const vatInvoice = {
-        invoiceNumber: invoice.purchaseInvoiceNumber,
-        issueDate: invoice.invoiceDate,
-        customer: {
-          name: invoice.supplier.name,
-          arabicName: invoice.supplier.arabicName,
-          address: invoice.supplier.address,
-          city: invoice.supplier.city,
-          state: invoice.supplier.state,
-          vatNumber: invoice.supplier.vatNumber,
-        },
-        organization: {
-          name: org?.name ?? "",
-          arabicName: org?.arabicName ?? null,
-          arabicAddress: org?.arabicAddress ?? null,
-          vatNumber: org?.vatNumber ?? null,
-        },
-        items: vatItems,
-        subtotal: Number(invoice.subtotal),
-        totalVat: Number(invoice.totalVat ?? 0),
-        roundOffAmount: Number(invoice.roundOffAmount),
-        total: Number(invoice.total),
-        amountPaid: Number(invoice.amountPaid),
-        balanceDue: Number(invoice.balanceDue),
-        notes: invoice.notes,
-        terms: null,
-        createdByName: null,
-        saudiInvoiceType: isSaudiVat ? "STANDARD" : undefined,
-      };
-
-       
-      pdfBuffer = await renderToBuffer(
-        createElement(InvoiceA4VATPDF, {
-          invoice: vatInvoice,
-          type: "PURCHASE",
-          balanceInfo,
-          headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
-          footerImageUrl: org?.pdfFooterImageUrl ?? undefined,
-        }) as any
-      );
-    } else {
-       
-      pdfBuffer = await renderToBuffer(
-        createElement(InvoicePDF, {
-          invoice: pdfInvoice,
-          type: "PURCHASE",
-          balanceInfo,
-          lang: (session.user as { language?: string }).language || "en",
-        }) as any
-      );
-    }
+    // Generate PDF using dedicated purchase invoice template
+    const pdfBuffer = await renderToBuffer(
+      createElement(PurchaseInvoicePDF, {
+        invoice: pdfInvoice,
+        balanceInfo,
+        headerImageUrl: org?.pdfHeaderImageUrl ?? undefined,
+        footerImageUrl: org?.pdfFooterImageUrl ?? undefined,
+      }) as any
+    );
 
     // Return PDF as response
     const filename = `purchase-invoice-${invoice.purchaseInvoiceNumber}-${format(
