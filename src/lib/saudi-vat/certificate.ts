@@ -129,7 +129,7 @@ export async function generateCSR(
   const certTemplateExt = new pkijs.Extension({
     extnID: "1.3.6.1.4.1.311.20.2",
     critical: false,
-    extnValue: new asn1js.OctetString({ valueHex: templateStr.toBER(false) }).valueBlock.valueHexView.buffer,
+    extnValue: new asn1js.OctetString({ valueHex: templateStr.toBER(false) }).valueBlock.valueHexView.buffer as ArrayBuffer,
   });
 
   // Extension 2: subjectAltName (OID 2.5.29.17) with DirectoryName

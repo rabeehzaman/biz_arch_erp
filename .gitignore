@@ -54,3 +54,11 @@ next-env.d.ts
 
 # Neon branch tracking
 .neon-branch
+
+# ZATCA SDK (local dev tools, not part of source)
+zatca-einvoicing-sdk-*/
+
+# Research/findings notes
+findings*.md
+zatcafindings*.md
+zatcafixv*.md
