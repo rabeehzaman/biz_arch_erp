@@ -270,18 +270,11 @@ export async function PUT(
           { status: 400 }
         );
       }
-      for (const item of body.disabledSidebarItems) {
-        if (
-          !ALL_SIDEBAR_ITEM_NAMES.includes(
-            item as (typeof ALL_SIDEBAR_ITEM_NAMES)[number]
-          )
-        ) {
-          return NextResponse.json(
-            { error: `Unknown sidebar item: ${item}` },
-            { status: 400 }
-          );
-        }
-      }
+      body.disabledSidebarItems = body.disabledSidebarItems.filter((item) =>
+        ALL_SIDEBAR_ITEM_NAMES.includes(
+          item as (typeof ALL_SIDEBAR_ITEM_NAMES)[number]
+        )
+      );
     }
 
     if (body.sidebarMode && !["full", "hidden"].includes(body.sidebarMode)) {

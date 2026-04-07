@@ -216,7 +216,7 @@ export async function PUT(
       }
     }
 
-    // Validate disabled sidebar items
+    // Validate disabled sidebar items — silently strip unknown legacy entries
     if (body.disabledSidebarItems) {
       if (!Array.isArray(body.disabledSidebarItems)) {
         return NextResponse.json(
@@ -224,14 +224,9 @@ export async function PUT(
           { status: 400 }
         );
       }
-      for (const item of body.disabledSidebarItems) {
-        if (!ALL_SIDEBAR_ITEM_NAMES.includes(item as typeof ALL_SIDEBAR_ITEM_NAMES[number])) {
-          return NextResponse.json(
-            { error: `Unknown sidebar item: ${item}` },
-            { status: 400 }
-          );
-        }
-      }
+      body.disabledSidebarItems = body.disabledSidebarItems.filter((item) =>
+        ALL_SIDEBAR_ITEM_NAMES.includes(item as (typeof ALL_SIDEBAR_ITEM_NAMES)[number])
+      );
     }
 
     // Validate sidebar mode
