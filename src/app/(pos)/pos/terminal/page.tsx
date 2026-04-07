@@ -2037,7 +2037,7 @@ function POSTerminalContent() {
           open={showTableSelect}
           onOpenChange={setShowTableSelect}
           onSelectTable={(table) => {
-            if (kotOrderIds.length > 0) {
+            if (kotOrderIds.length > 0 && selectedTable && selectedTable.id !== table.id) {
               toast.error("Cannot change table after sending items to kitchen");
               setShowTableSelect(false);
               return;

@@ -42,7 +42,7 @@ interface TableSelectProps {
 
 const statusColors: Record<string, string> = {
   AVAILABLE: "bg-green-50 border-green-300 hover:bg-green-100 text-green-800",
-  OCCUPIED: "bg-amber-50 border-amber-300 text-amber-800 opacity-60 cursor-not-allowed",
+  OCCUPIED: "bg-amber-50 border-amber-300 hover:bg-amber-100 text-amber-800",
   RESERVED: "bg-blue-50 border-blue-300 text-blue-800 opacity-60 cursor-not-allowed",
   CLEANING: "bg-gray-50 border-gray-300 text-gray-500 opacity-60 cursor-not-allowed",
 };
@@ -65,7 +65,18 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway }: T
   const [guestCount, setGuestCount] = useState("1");
 
   const handleTableClick = (table: RestaurantTable) => {
-    if (table.status !== "AVAILABLE") return;
+    if (table.status !== "AVAILABLE" && table.status !== "OCCUPIED") return;
+    if (table.status === "OCCUPIED") {
+      // Skip guest count prompt — guests already seated
+      onSelectTable({
+        id: table.id,
+        number: table.number,
+        name: table.name,
+        section: table.section || undefined,
+        capacity: table.capacity,
+      });
+      return;
+    }
     setPendingTable(table);
     setGuestCount("1");
   };
@@ -135,7 +146,7 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway }: T
                     <button
                       key={table.id}
                       onClick={() => handleTableClick(table)}
-                      disabled={table.status !== "AVAILABLE"}
+                      disabled={table.status !== "AVAILABLE" && table.status !== "OCCUPIED"}
                       className={`relative flex flex-col items-center justify-center rounded-lg border-2 p-3 transition-colors ${statusColors[table.status] || statusColors.CLEANING}`}
                     >
                       <span className="text-lg font-bold">{table.number}</span>
