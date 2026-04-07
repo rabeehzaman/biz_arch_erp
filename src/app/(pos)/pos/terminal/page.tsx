@@ -6,7 +6,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw, UtensilsCrossed, ChevronDown } from "lucide-react";
+import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw, UtensilsCrossed, ChevronDown, Armchair } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -402,6 +402,7 @@ function POSTerminalContent() {
   const previousCartMetricsRef = useRef({ items: 0, quantity: 0 });
   const checkoutInFlightRef = useRef(false);
   const checkoutCounterRef = useRef(0);
+  const kotInFlightRef = useRef(false);
 
   // Restaurant state
   const isRestaurantEnabled = !!(authSession?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
@@ -411,6 +412,7 @@ function POSTerminalContent() {
   const [guestCount, setGuestCount] = useState<number>(1);
   const [kotSentQuantities, setKotSentQuantities] = useState<Map<string, number>>(new Map());
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
+  const [isKotSending, setIsKotSending] = useState(false);
 
   // Listen for guest count from table selection
   useEffect(() => {
@@ -730,6 +732,26 @@ function POSTerminalContent() {
     setMobileView("products");
   }, []);
 
+  const [showClearCartKotWarning, setShowClearCartKotWarning] = useState(false);
+
+  const handleClearCart = useCallback(() => {
+    if (kotSentQuantities.size > 0) {
+      setShowClearCartKotWarning(true);
+      return;
+    }
+    clearCart();
+  }, [clearCart, kotSentQuantities]);
+
+  const confirmClearCartWithKot = useCallback(() => {
+    clearCart();
+    setKotSentQuantities(new Map());
+    setKotOrderIds([]);
+    setSelectedTable(null);
+    setOrderType("DINE_IN");
+    setGuestCount(1);
+    setShowClearCartKotWarning(false);
+  }, [clearCart]);
+
   const applyOptimisticCheckoutUpdates = useCallback(
     (completedCart: CartItemData[], completedTotal: number, completedHeldOrderId: string | null) => {
       void mutateSession(
@@ -899,6 +921,10 @@ function POSTerminalContent() {
   // ── Send to Kitchen (KOT) ─────────────────────────────────────────
 
   const handleSendToKitchen = async () => {
+    if (kotInFlightRef.current) return;
+    kotInFlightRef.current = true;
+    setIsKotSending(true);
+
     // Build list of unsent items (new items or quantity increases)
     const itemsToSend: { productId: string; name: string; quantity: number; categoryId?: string | null }[] = [];
     for (const item of cartState.items) {
@@ -910,6 +936,16 @@ function POSTerminalContent() {
     }
     if (itemsToSend.length === 0) {
       toast.info("No new items to send to kitchen");
+      kotInFlightRef.current = false;
+      setIsKotSending(false);
+      return;
+    }
+
+    if (orderType === "DINE_IN" && !selectedTable) {
+      toast.error("Please select a table for dine-in orders");
+      setShowTableSelect(true);
+      kotInFlightRef.current = false;
+      setIsKotSending(false);
       return;
     }
 
@@ -967,7 +1003,7 @@ function POSTerminalContent() {
         await printKOTMulti(kotReceiptData);
       } catch (printErr) {
         console.error("KOT print failed:", printErr);
-        // Don't fail the KOT creation just because printing failed
+        toast.warning("KOT saved but printing failed — please reprint from kitchen display", { duration: 6000 });
       }
 
       toast.success(`KOT ${kot.kotNumber} sent to kitchen`);
@@ -983,6 +1019,9 @@ function POSTerminalContent() {
     } catch (error) {
       console.error("Failed to send KOT:", error);
       toast.error("Failed to send order to kitchen");
+    } finally {
+      kotInFlightRef.current = false;
+      setIsKotSending(false);
     }
   };
 
@@ -1046,6 +1085,7 @@ function POSTerminalContent() {
         await printKOTMulti(kotReceiptData);
       } catch (printErr) {
         console.error("Void KOT print failed:", printErr);
+        toast.warning("Void KOT saved but printing failed — notify kitchen manually", { duration: 6000 });
       }
 
       // Update sent quantities
@@ -1302,6 +1342,10 @@ function POSTerminalContent() {
 
   const holdOrder = async () => {
     if (cart.length === 0) return;
+    if (kotSentQuantities.size > 0) {
+      toast.error("Cannot hold an order with items sent to kitchen. Complete or void kitchen items first.");
+      return;
+    }
     try {
       const res = await fetch("/api/pos/held-orders", {
         method: "POST",
@@ -1502,8 +1546,18 @@ function POSTerminalContent() {
               </button>
               {isRestaurantEnabled && (
                 <button
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-4 py-3.5 text-sm font-semibold text-white active:bg-orange-500"
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-3 py-3.5 text-sm font-semibold text-white active:bg-amber-500"
+                  onClick={() => setShowTableSelect(true)}
+                >
+                  <Armchair className="h-4 w-4" />
+                  {selectedTable ? `T${selectedTable.number}` : t("restaurant.selectTable").split(" ")[0]}
+                </button>
+              )}
+              {isRestaurantEnabled && (
+                <button
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-4 py-3.5 text-sm font-semibold text-white active:bg-orange-500 disabled:opacity-50"
                   onClick={handleSendToKitchen}
+                  disabled={isKotSending || cartState.items.length === 0}
                 >
                   <UtensilsCrossed className="h-4 w-4" />
                   {t("restaurant.sendToKitchen")}
@@ -1651,9 +1705,9 @@ function POSTerminalContent() {
                       variant="default"
                       className="w-full bg-orange-600 hover:bg-orange-700 text-white"
                       onClick={handleSendToKitchen}
-                      disabled={cartState.items.length === 0}
+                      disabled={cartState.items.length === 0 || isKotSending}
                     >
-                      <UtensilsCrossed className="h-4 w-4 mr-2" />
+                      {isKotSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UtensilsCrossed className="h-4 w-4 mr-2" />}
                       {t("restaurant.sendToKitchen")}
                       {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(i.productId) ?? 0)) > 0) && (
                         <Badge variant="secondary" className="ml-2">
@@ -1679,7 +1733,7 @@ function POSTerminalContent() {
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={clearCart}
+                      onClick={handleClearCart}
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
                       {t("pos.clearCart").split(" ")[0]}
@@ -1983,11 +2037,21 @@ function POSTerminalContent() {
           open={showTableSelect}
           onOpenChange={setShowTableSelect}
           onSelectTable={(table) => {
+            if (kotOrderIds.length > 0) {
+              toast.error("Cannot change table after sending items to kitchen");
+              setShowTableSelect(false);
+              return;
+            }
             setSelectedTable(table);
             setOrderType("DINE_IN");
             setShowTableSelect(false);
           }}
           onTakeaway={() => {
+            if (kotOrderIds.length > 0) {
+              toast.error("Cannot switch to takeaway after sending items to kitchen");
+              setShowTableSelect(false);
+              return;
+            }
             setSelectedTable(null);
             setOrderType("TAKEAWAY");
             setShowTableSelect(false);
@@ -2010,6 +2074,26 @@ function POSTerminalContent() {
             </Button>
             <Button variant="destructive" onClick={confirmCancelKitchenItem}>
               {t("restaurant.confirmCancel") || "Cancel & Notify Kitchen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Cart with Active KOT Warning */}
+      <Dialog open={showClearCartKotWarning} onOpenChange={setShowClearCartKotWarning}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Clear cart with sent kitchen items?</DialogTitle>
+            <DialogDescription>
+              {kotSentQuantities.size} item(s) were already sent to the kitchen. Clearing the cart will NOT cancel those kitchen tickets.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowClearCartKotWarning(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="destructive" onClick={confirmClearCartWithKot}>
+              Clear Cart
             </Button>
           </DialogFooter>
         </DialogContent>
