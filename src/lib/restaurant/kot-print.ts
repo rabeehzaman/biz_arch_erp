@@ -258,6 +258,14 @@ async function printKotElectron(data: KOTReceiptData): Promise<{ success: boolea
 
 // --- Capacitor printing ---
 
+/** Build connection target params matching capacitor-print.tsx's connectionParams */
+function kotConnectionParams(config: MobilePrinterConfig) {
+  if (config.connectionType === "bluetooth") {
+    return { connectionType: "bluetooth" as const, address: config.address };
+  }
+  return { connectionType: "tcp" as const, host: config.host, port: config.port };
+}
+
 /**
  * Raw ESC/POS text path — sharper, faster output on thermal printers.
  */
@@ -282,8 +290,7 @@ async function printKotCapacitorRaw(
   const base64Data = btoa(binary);
 
   await ThermalPrinter.printRaw({
-    host: config.host,
-    port: config.port,
+    ...kotConnectionParams(config),
     data: base64Data,
     timeoutSeconds: config.timeoutSeconds,
   });
@@ -350,8 +357,7 @@ async function printKotCapacitorImage(
     const base64Image = png.replace(/^data:image\/png;base64,/, "");
 
     await ThermalPrinter.printImage({
-      host: config.host,
-      port: config.port,
+      ...kotConnectionParams(config),
       printerDpi: 203,
       printerWidthMM: config.paperWidth === 58 ? 48 : 72,
       base64Image,
@@ -424,7 +430,7 @@ async function printKotElectronWithConfig(
 /**
  * Print a KOT to a specific printer station, auto-detecting platform.
  */
-async function printKotToStation(
+export async function printKotToStation(
   data: KOTReceiptData,
   station: KOTPrinterStation,
 ): Promise<{ success: boolean; error?: string }> {
@@ -437,8 +443,14 @@ async function printKotToStation(
 
   if (isCapacitorEnvironment()) {
     const config = station.mobileConfig;
-    if (!config?.host) {
+    if (!config) {
       return { success: false, error: `No mobile config for station "${station.name}"` };
+    }
+    const hasConnection = config.connectionType === "bluetooth"
+      ? !!config.address
+      : !!config.host;
+    if (!hasConnection) {
+      return { success: false, error: `No printer address for station "${station.name}"` };
     }
 
     // Try raw ESC/POS text first, fall back to image
@@ -476,14 +488,8 @@ export async function printKOTMulti(
 ): Promise<{ success: boolean; errors: string[] }> {
   const multiConfig = getKotMultiPrinterConfig();
 
-  // No multi config or single default with no category assignments → use simple path
-  if (
-    !multiConfig ||
-    multiConfig.stations.length === 0 ||
-    (multiConfig.stations.length === 1 &&
-      multiConfig.stations[0].isDefault &&
-      multiConfig.stations[0].categoryIds.length === 0)
-  ) {
+  // No multi config at all → use legacy single-printer path
+  if (!multiConfig || multiConfig.stations.length === 0) {
     const result = await printKOT(data);
     return { success: result.success, errors: result.error ? [result.error] : [] };
   }

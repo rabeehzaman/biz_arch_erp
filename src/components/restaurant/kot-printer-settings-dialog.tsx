@@ -38,7 +38,7 @@ import {
   getKotMultiPrinterConfig,
   saveKotMultiPrinterConfig,
   generateStationId,
-  printKOT,
+  printKotToStation,
   type KOTReceiptData,
   type KOTPrinterStation,
   type KOTMultiPrinterConfig,
@@ -356,8 +356,41 @@ export function KOTPrinterSettingsDialog({ open, onOpenChange }: KOTPrinterSetti
       specialInstructions: "Allergic to nuts - please be careful",
     };
 
+    // Build a temporary station from the current edit state so the test
+    // prints to the station being configured, not the legacy fallback.
+    const tempStation: KOTPrinterStation = {
+      id: editingStationId || "test",
+      name: editName.trim() || "Kitchen",
+      categoryIds: editCategoryIds,
+      isDefault: editIsDefault,
+      mobileConfig: isCapacitor ? {
+        connectionType: "tcp",
+        host: editMobileHost.trim(),
+        port: parseInt(editMobilePort, 10) || 9100,
+        paperWidth: editMobilePaperWidth,
+        timeoutSeconds: 10,
+        cutPaper: true,
+        openCashDrawer: false,
+        receiptMarginLeft: 2,
+        receiptMarginRight: 2,
+      } : null,
+      electronConfig: isElectron ? {
+        connectionType: editConnectionType,
+        receiptRenderMode: editConnectionType === "windows" ? "htmlDriver" : "htmlRaster",
+        arabicCodePage: "pc864",
+        networkIP: editNetworkIP.trim(),
+        networkPort: parseInt(editNetworkPort, 10) || 9100,
+        windowsPrinterName: editWindowsPrinterName,
+        usbVendorId: null,
+        usbProductId: null,
+        usbSerialNumber: "",
+        receiptMarginLeft: 2,
+        receiptMarginRight: 2,
+      } : null,
+    };
+
     try {
-      const result = await printKOT(testData);
+      const result = await printKotToStation(testData, tempStation);
       if (result.success) {
         toast.success("Test KOT printed successfully");
       } else {

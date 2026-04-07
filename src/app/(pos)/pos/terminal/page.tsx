@@ -45,7 +45,7 @@ import type { ReceiptData } from "@/components/pos/receipt";
 import { ReturnPanel } from "@/components/pos/return-panel";
 import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
 import { TableSelect } from "@/components/pos/table-select";
-import { printKOT, printKOTMulti } from "@/lib/restaurant/kot-print";
+import { printKOTMulti } from "@/lib/restaurant/kot-print";
 import type { KOTReceiptData } from "@/components/restaurant/kot-receipt";
 import {
   cacheReceiptArtifactWithConfig,
