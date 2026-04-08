@@ -157,7 +157,11 @@ function serializeTab(tab: TabContext): Record<string, unknown> {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function usePOSTabs(sessionId: string | null, onActiveTabRemoteUpdate?: (tab: TabContext) => void) {
+export function usePOSTabs(
+  sessionId: string | null,
+  onActiveTabRemoteUpdate?: (tab: TabContext) => void,
+  onActiveTabRemoved?: () => void,
+) {
   // Inactive tabs — the active tab's state lives in the component's hooks
   const [tabs, setTabs] = useState<Map<string, TabContext>>(() => new Map());
   const [activeTabId, setActiveTabId] = useState<string>(() => generateId());
@@ -168,6 +172,8 @@ export function usePOSTabs(sessionId: string | null, onActiveTabRemoteUpdate?: (
   activeTabIdRef.current = activeTabId;
   const onActiveTabRemoteUpdateRef = useRef(onActiveTabRemoteUpdate);
   onActiveTabRemoteUpdateRef.current = onActiveTabRemoteUpdate;
+  const onActiveTabRemovedRef = useRef(onActiveTabRemoved);
+  onActiveTabRemovedRef.current = onActiveTabRemoved;
 
   // DB persistence state
   const [isHydrated, setIsHydrated] = useState(false);
@@ -274,6 +280,14 @@ export function usePOSTabs(sessionId: string | null, onActiveTabRemoteUpdate?: (
 
       return hasChanges ? next : prev;
     });
+
+    // If the active tab was removed from the server (adopted by another device / checked out),
+    // reset to a fresh empty tab so auto-save doesn't re-create the deleted order
+    if (!dbMap.has(currentActiveTabId) && versionsRef.current.has(currentActiveTabId)) {
+      versionsRef.current.delete(currentActiveTabId);
+      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+      onActiveTabRemovedRef.current?.();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbOrders]);
 
@@ -385,6 +399,8 @@ export function usePOSTabs(sessionId: string | null, onActiveTabRemoteUpdate?: (
 
   const closeTab = useCallback(
     (tabId: string): { switchTo: TabContext | null; wasActive: boolean } => {
+      // Cancel any pending save so it doesn't re-create the deleted order
+      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
       // Delete from DB
       deletePersistedTab(tabId);
 
@@ -470,7 +486,9 @@ export function usePOSTabs(sessionId: string | null, onActiveTabRemoteUpdate?: (
 
   /** Replace the active tab's identity with an adopted order's ID (e.g. from another session) */
   const adoptAsActiveTab = useCallback(
-    (adoptedId: string, label: string, createdAt: number, currentSnapshot: TabContext) => {
+    (adoptedId: string, label: string, createdAt: number, version: number, currentSnapshot: TabContext) => {
+      // Cancel any pending save for the old tab
+      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
       // If current tab is empty, just replace its identity
       if (currentSnapshot.cartState.items.length === 0) {
         deletePersistedTab(currentSnapshot.id);
@@ -483,6 +501,8 @@ export function usePOSTabs(sessionId: string | null, onActiveTabRemoteUpdate?: (
         });
         persistTab(currentSnapshot);
       }
+      // Track the adopted order's version so polling doesn't overwrite local changes
+      versionsRef.current.set(adoptedId, version);
       setActiveTabId(adoptedId);
       setActiveTabLabel(label);
       setActiveTabCreatedAt(createdAt);

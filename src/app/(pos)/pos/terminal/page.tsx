@@ -431,8 +431,9 @@ function POSTerminalContent() {
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
   const [isKotSending, setIsKotSending] = useState(false);
 
-  // Callback for remote updates to the active tab (from polling)
+  // Callbacks for remote tab events (from polling)
   const remoteUpdateRef = useRef<((tab: TabContext) => void) | null>(null);
+  const activeTabRemovedRef = useRef<(() => void) | null>(null);
 
   // Tab system — generalises per-table context to unlimited concurrent orders
   const {
@@ -440,7 +441,11 @@ function POSTerminalContent() {
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
     findTabByTableId, updateActiveTabLabel, getAllTableIds, clearAllTabs,
     isHydrated, initialTabContext, persistTab, scheduleSave, mutateOpenOrders, adoptAsActiveTab,
-  } = usePOSTabs(posSession?.id ?? null, (tab) => remoteUpdateRef.current?.(tab));
+  } = usePOSTabs(
+    posSession?.id ?? null,
+    (tab) => remoteUpdateRef.current?.(tab),
+    () => activeTabRemovedRef.current?.(),
+  );
   const [showTabsSheet, setShowTabsSheet] = useState(false);
 
   // Fetch org settings for POS accounting mode
@@ -911,12 +916,15 @@ function POSTerminalContent() {
     }
   }, [isHydrated, initialTabContext, restoreTabContext, isRestaurantEnabled]);
 
-  // Wire up remote update callback — restores active tab when another device changes it
+  // Wire up remote tab event callbacks
   useEffect(() => {
     remoteUpdateRef.current = (tab: TabContext) => {
       restoreTabContext(tab);
     };
-  }, [restoreTabContext]);
+    activeTabRemovedRef.current = () => {
+      resetLiveState();
+    };
+  }, [restoreTabContext, resetLiveState]);
 
   // Auto-save active tab to DB on state changes (debounced)
   useEffect(() => {
@@ -2333,6 +2341,7 @@ function POSTerminalContent() {
                       adoptedRecord.id,
                       adoptedRecord.label || `T${table.number}`,
                       new Date(adoptedRecord.createdAt).getTime(),
+                      adoptedRecord.version ?? 0,
                       snapshotCurrentTab()
                     );
 
