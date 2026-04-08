@@ -59,7 +59,8 @@ export function OrderTabsSheet({
                 const isActive = tab.id === activeTabId;
                 const itemCount = tab.cartState.items.length;
                 const totalQty = tab.cartState.totalQuantity;
-                const canClose = !isActive || itemCount === 0;
+                const hasKotItems = tab.kotSentQuantities.size > 0;
+                const canClose = !hasKotItems && (!isActive || itemCount === 0);
 
                 return (
                   <li

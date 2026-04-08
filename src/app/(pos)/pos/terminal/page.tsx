@@ -857,6 +857,16 @@ function POSTerminalContent() {
   }, [snapshotCurrentTab, switchToNewTab, resetLiveState, isRestaurantEnabled]);
 
   const handleCloseTab = useCallback((tabId: string) => {
+    // Free the table if the closed tab had one assigned
+    if (tabId === activeTabId) {
+      // Active tab — selectedTable is in live state
+      if (selectedTable) freeTable(selectedTable.id);
+    } else {
+      // Inactive tab — check its saved state in the tabs map
+      const inactiveTab = tabs.get(tabId);
+      if (inactiveTab?.selectedTable) freeTable(inactiveTab.selectedTable.id);
+    }
+
     const { switchTo, wasActive } = closeTabAction(tabId);
     if (wasActive) {
       if (switchTo) {
@@ -865,7 +875,7 @@ function POSTerminalContent() {
         resetLiveState();
       }
     }
-  }, [closeTabAction, restoreTabContext, resetLiveState]);
+  }, [closeTabAction, restoreTabContext, resetLiveState, activeTabId, selectedTable, tabs, freeTable]);
 
   // Auto-label active tab based on customer/table/return state
   useEffect(() => {
