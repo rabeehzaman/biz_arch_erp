@@ -107,6 +107,7 @@ export async function GET() {
     const result = products.map((p) => ({
       id: p.id,
       name: p.name,
+      imageUrl: p.imageUrl || null,
       sku: p.sku,
       barcode: p.barcode,
       price: resolvedPrices && resolvedPrices.get(p.id)?.source !== "base"

@@ -113,7 +113,7 @@ export function ProductGrid({
         {Array.from({ length: 12 }).map((_, index) => (
           <div
             key={`product-skeleton-${index}`}
-            className="flex h-[120px] flex-col items-center justify-center rounded-xl bg-slate-100 p-3"
+            className="flex h-[160px] flex-col items-center justify-center rounded-xl bg-slate-100 p-3"
           >
             <Skeleton className="mb-2 h-4 w-16 rounded-md" />
             <Skeleton className="h-3 w-12 rounded-md" />

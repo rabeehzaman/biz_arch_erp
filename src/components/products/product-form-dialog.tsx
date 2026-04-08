@@ -26,7 +26,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useFormConfig } from "@/hooks/use-form-config";
 import { UnitSelect } from "@/components/units/unit-select";
 import { CategorySelect } from "@/components/products/category-select";
-import { Plus, Trash2, Package, ArrowLeftRight } from "lucide-react";
+import { Plus, Trash2, Package, ArrowLeftRight, Upload, X, Loader2 } from "lucide-react";
 
 
 interface Product {
@@ -34,6 +34,7 @@ interface Product {
     name: string;
     arabicName: string | null;
     description: string | null;
+    imageUrl: string | null;
     price: number;
     cost: number;
     categoryId: string | null;
@@ -121,6 +122,8 @@ export function ProductFormDialog({
     const [allUnits, setAllUnits] = useState<Array<{ id: string; name: string; code: string }>>([]);
     const [basePricePerUnit, setBasePricePerUnit] = useState("");
     const [baseCostPerUnit, setBaseCostPerUnit] = useState("");
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [imageUploading, setImageUploading] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         arabicName: "",
@@ -228,6 +231,7 @@ export function ProductFormDialog({
                 setBaseCostPerUnit("");
             }
 
+            setImageUrl(productToEdit.imageUrl || null);
             setFormErrors({});
         } else if (!productToEdit && open) {
             resetForm();
@@ -306,6 +310,7 @@ export function ProductFormDialog({
             isImeiTracked: formData.isImeiTracked,
             isBundle: formData.isBundle,
             weighMachineCode: formData.weighMachineCode || null,
+            imageUrl: imageUrl || null,
         };
 
         if (formData.isBundle) {
@@ -373,6 +378,7 @@ export function ProductFormDialog({
         setFormErrors({});
         setBundleItems([]);
         setUnitConversionEntries([]);
+        setImageUrl(null);
         setBasePricePerUnit("");
         setBaseCostPerUnit("");
         setFormData({
@@ -416,6 +422,78 @@ export function ProductFormDialog({
         }
 
         setBundleItems(updated);
+    };
+
+    const resizeImage = (file: File, maxDim: number, quality: number): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const img = new window.Image();
+            img.onload = () => {
+                const { width, height } = img;
+                let w = width, h = height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+                canvas.toBlob(
+                    (blob) => blob ? resolve(blob) : reject(new Error("Resize failed")),
+                    "image/webp",
+                    quality
+                );
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+        });
+    };
+
+    const handleImageUpload = async (file: File) => {
+        if (imageUploading) return;
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error(t("products.imageTooLarge") || "Image must be under 5MB");
+            return;
+        }
+        setImageUploading(true);
+        try {
+            // Resize to max 400px and convert to webp for fast POS loading
+            const resized = await resizeImage(file, 400, 0.8);
+
+            const res = await fetch("/api/upload/presigned-url", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contentType: "image/webp" }),
+            });
+            if (!res.ok) throw new Error("Failed to get upload URL");
+            const { uploadUrl, publicUrl } = await res.json();
+
+            const uploadRes = await fetch(uploadUrl, {
+                method: "PUT",
+                headers: { "Content-Type": "image/webp" },
+                body: resized,
+            });
+            if (!uploadRes.ok) throw new Error("Upload failed");
+
+            setImageUrl(publicUrl);
+        } catch {
+            toast.error(t("products.imageUploadFailed") || "Image upload failed");
+        } finally {
+            setImageUploading(false);
+        }
+    };
+
+    const handleRemoveImage = async () => {
+        if (imageUrl) {
+            const urlObj = new URL(imageUrl);
+            const key = urlObj.pathname.slice(1); // remove leading /
+            fetch("/api/upload/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key }),
+            }).catch(() => { /* best effort cleanup */ });
+            setImageUrl(null);
+        }
     };
 
     // Filter out already-selected components
@@ -489,6 +567,64 @@ export function ProductFormDialog({
                             />
                         </div>
                         )}
+                        {/* Product Image */}
+                        <div className="grid gap-2">
+                            <Label>{t("products.productImage") || "Product Image"}</Label>
+                            <div className="flex items-center gap-3">
+                                {imageUrl ? (
+                                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveImage}
+                                            className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white shadow hover:bg-red-600"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="flex h-20 w-20 shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition-colors">
+                                        {imageUploading ? (
+                                            <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                                        ) : (
+                                            <Upload className="h-5 w-5 text-slate-400" />
+                                        )}
+                                        <span className="mt-1 text-[10px] text-slate-400">
+                                            {imageUploading ? t("common.uploading") || "Uploading" : t("products.uploadImage") || "Upload"}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp,image/avif"
+                                            className="absolute h-0 w-0 opacity-0"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleImageUpload(file);
+                                                e.target.value = "";
+                                            }}
+                                            disabled={imageUploading}
+                                        />
+                                    </label>
+                                )}
+                                {imageUrl && (
+                                    <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                                        {t("products.changeImage") || "Change image"}
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp,image/avif"
+                                            className="absolute h-0 w-0 opacity-0"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleImageUpload(file);
+                                                e.target.value = "";
+                                            }}
+                                            disabled={imageUploading}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="grid gap-2">
                                 <Label htmlFor="prod-price">

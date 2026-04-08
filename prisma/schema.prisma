@@ -230,7 +230,9 @@ model Organization {
   inventoryAdjustmentItems   InventoryAdjustmentItem[]
 
   // Restaurant Module Relations
+  restaurantFloors           RestaurantFloor[]
   restaurantTables           RestaurantTable[]
+  restaurantPOSOrders        RestaurantPOSOrder[]
   kotOrders                  KOTOrder[]
 
   // Comment Relations
@@ -292,6 +294,7 @@ model User {
   warehouseAccess     UserWarehouseAccess[]
   soldDevices         MobileDevice[]     @relation("SoldDevices")
   kotOrders           KOTOrder[]
+  restaurantPOSOrders RestaurantPOSOrder[] @relation("RestaurantPOSOrderCreatedBy")
   settings            Setting[]          @relation("UserSettings")
   customerComments    CustomerComment[]  @relation("CustomerComments")
   supplierComments    SupplierComment[]  @relation("SupplierComments")
@@ -359,6 +362,7 @@ model Product {
   name           String
   arabicName     String?          // Arabic product name for Saudi invoices
   description    String?
+  imageUrl       String?
   price          Decimal          @db.Decimal(10, 2)
   cost           Decimal          @default(0) @db.Decimal(10, 2)
   unitCode       String?
@@ -397,8 +401,9 @@ model Product {
   // Jewellery relation (1:1)
   jewelleryItem        JewelleryItem?
 
-  // Restaurant KOT relation
-  kotOrderItems        KOTOrderItem[]
+  // Restaurant relations
+  kotOrderItems              KOTOrderItem[]
+  restaurantPOSOrderLines    RestaurantPOSOrderLine[]
 
   // Price List relation
   priceListItems       PriceListItem[]
@@ -515,7 +520,8 @@ model Customer {
   posHeldOrders POSHeldOrder[]
   mobileDevices MobileDevice[]
 
-  comments      CustomerComment[]
+  comments             CustomerComment[]
+  restaurantPOSOrders  RestaurantPOSOrder[]
 
   // Jewellery relations
   jewelleryRepairs   JewelleryRepair[]
@@ -1739,10 +1745,11 @@ model POSSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  invoices    Invoice[]
-  creditNotes CreditNote[]
-  heldOrders  POSHeldOrder[]
-  kotOrders   KOTOrder[]
+  invoices             Invoice[]
+  creditNotes          CreditNote[]
+  heldOrders           POSHeldOrder[]
+  kotOrders            KOTOrder[]
+  restaurantPOSOrders  RestaurantPOSOrder[]
 
   @@unique([organizationId, sessionNumber])
   @@index([organizationId])
@@ -2861,6 +2868,29 @@ enum RestaurantOrderType {
   TAKEAWAY
 }
 
+enum RestaurantPOSOrderStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model RestaurantFloor {
+  id              String             @id @default(cuid())
+  organizationId  String
+  organization    Organization       @relation(fields: [organizationId], references: [id])
+  name            String
+  sortOrder       Int                @default(0)
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  tables          RestaurantTable[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("restaurant_floors")
+}
+
 model RestaurantTable {
   id              String                @id @default(cuid())
   organizationId  String
@@ -2875,14 +2905,26 @@ model RestaurantTable {
   sortOrder       Int                   @default(0)
   guestCount      Int?
   currentOrderId  String?
+  color           String?
+  floorId         String?
+  restaurantFloor RestaurantFloor?      @relation(fields: [floorId], references: [id])
+  shape           String                @default("square")
+  posX            Float                 @default(0)
+  posY            Float                 @default(0)
+  width           Float                 @default(80)
+  height          Float                 @default(80)
+  rotation        Float                 @default(0)
+  cornerRounding  Float                 @default(0)
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
-  kotOrders       KOTOrder[]
+  kotOrders             KOTOrder[]
+  restaurantPOSOrders   RestaurantPOSOrder[]
 
   @@unique([organizationId, number])
   @@index([organizationId])
   @@index([organizationId, status])
+  @@index([floorId])
   @@map("restaurant_tables")
 }
 
@@ -2903,6 +2945,8 @@ model KOTOrder {
   guestCount          Int?
   createdById         String?
   createdBy           User?               @relation(fields: [createdById], references: [id])
+  restaurantPOSOrderId String?
+  restaurantPOSOrder   RestaurantPOSOrder? @relation(fields: [restaurantPOSOrderId], references: [id])
   printedAt           DateTime?
   completedAt         DateTime?
   cancelledAt         DateTime?
@@ -2916,6 +2960,7 @@ model KOTOrder {
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([tableId])
   @@index([posSessionId])
+  @@index([restaurantPOSOrderId])
   @@map("kot_orders")
 }
 
@@ -2935,6 +2980,67 @@ model KOTOrderItem {
 
   @@index([kotOrderId])
   @@map("kot_order_items")
+}
+
+// ==================== RESTAURANT POS ORDERS ====================
+
+model RestaurantPOSOrder {
+  id              String                    @id @default(cuid())
+  organizationId  String
+  organization    Organization              @relation(fields: [organizationId], references: [id])
+  tableId         String?
+  table           RestaurantTable?          @relation(fields: [tableId], references: [id])
+  posSessionId    String?
+  posSession      POSSession?               @relation(fields: [posSessionId], references: [id])
+  orderType       RestaurantOrderType       @default(DINE_IN)
+  orderName       String?
+  status          RestaurantPOSOrderStatus  @default(ACTIVE)
+  customerId      String?
+  customer        Customer?                 @relation(fields: [customerId], references: [id])
+  guestCount      Int?
+  serverName      String?
+  customerNote    String?
+  createdById     String?
+  createdBy       User?                     @relation("RestaurantPOSOrderCreatedBy", fields: [createdById], references: [id])
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  lines           RestaurantPOSOrderLine[]
+  kotOrders       KOTOrder[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([tableId])
+  @@index([posSessionId])
+  @@map("restaurant_pos_orders")
+}
+
+model RestaurantPOSOrderLine {
+  id          String              @id @default(cuid())
+  orderId     String
+  order       RestaurantPOSOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?            @relation(fields: [productId], references: [id])
+  name        String
+  quantity    Decimal             @db.Decimal(10, 4)
+  unitPrice   Decimal             @db.Decimal(12, 2)
+  discount    Decimal             @default(0) @db.Decimal(10, 2)
+  gstRate     Decimal             @default(0) @db.Decimal(5, 2)
+  hsnCode     String?
+  course      Int                 @default(1)
+  sentQty     Decimal             @default(0) @db.Decimal(10, 4)
+  notes       String?
+  noteChips   Json?
+  modifiers   Json?
+  categoryId  String?
+  sortOrder   Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([orderId])
+  @@map("restaurant_pos_order_lines")
 }
 
 // ==================== COMMENTS ====================

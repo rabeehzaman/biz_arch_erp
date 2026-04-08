@@ -43,10 +43,18 @@ export function ProductListItem({
       )}
     >
       <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full overflow-hidden"
         style={{ backgroundColor: (product.category?.color || "#0f172a") + "20" }}
       >
-        {product.isBundle ? (
+        {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : product.isBundle ? (
           <Layers
             className="h-5 w-5"
             style={{ color: product.category?.color || "#0f172a" }}

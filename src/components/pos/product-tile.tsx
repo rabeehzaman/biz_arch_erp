@@ -15,6 +15,7 @@ export interface ProductTileProduct {
   categoryId: string | null;
   isService?: boolean;
   isBundle?: boolean;
+  imageUrl?: string | null;
   category: { color: string | null } | null;
 }
 
@@ -67,11 +68,11 @@ export function ProductTile({
       onClick={() => onAdd(product)}
       aria-pressed={isSelected}
       className={cn(
-        "relative flex h-[120px] flex-col items-center justify-center rounded-xl p-3 text-center transition-all cursor-pointer",
+        "relative flex h-[160px] flex-col rounded-xl overflow-hidden transition-all cursor-pointer",
         isSelected && "ring-2 ring-offset-2 ring-primary",
         "active:scale-95"
       )}
-      style={{ backgroundColor: color + "20" }}
+      style={product.imageUrl ? undefined : { backgroundColor: color + "20" }}
     >
       {isSelected && (
         <Badge className="absolute right-1 top-1 z-10 min-w-5 justify-center rounded-full px-1.5 py-0 text-[10px] font-bold">
@@ -83,12 +84,38 @@ export function ProductTile({
           <Layers className="h-2.5 w-2.5 text-white" />
         </div>
       )}
-      <span className="line-clamp-2 text-sm font-bold leading-tight text-slate-800">
-        {product.name}
-      </span>
-      <span className="mt-1 text-xs font-semibold text-slate-500">
-        {fmt(Number(product.price))}
-      </span>
+
+      {product.imageUrl ? (
+        <>
+          <div className="relative flex-1 w-full overflow-hidden bg-slate-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div className="flex flex-col items-center justify-center px-2 py-1.5 bg-white">
+            <span className="line-clamp-1 text-xs font-bold leading-tight text-slate-800">
+              {product.name}
+            </span>
+            <span className="text-[11px] font-semibold text-slate-500">
+              {fmt(Number(product.price))}
+            </span>
+          </div>
+          <div className="h-1 w-full shrink-0" style={{ backgroundColor: color }} />
+        </>
+      ) : (
+        <div className="flex flex-1 flex-col items-center justify-center p-3 text-center">
+          <span className="line-clamp-2 text-sm font-bold leading-tight text-slate-800">
+            {product.name}
+          </span>
+          <span className="mt-1 text-xs font-semibold text-slate-500">
+            {fmt(Number(product.price))}
+          </span>
+        </div>
+      )}
     </button>
   );
 }

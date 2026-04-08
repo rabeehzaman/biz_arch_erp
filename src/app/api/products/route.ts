@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, description, price, cost, unitId, categoryId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions, arabicName } = body;
+    const { name, description, price, cost, unitId, categoryId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions, arabicName, imageUrl } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -259,6 +259,7 @@ export async function POST(request: NextRequest) {
           name,
           arabicName: arabicName || null,
           description: description || null,
+          imageUrl: imageUrl || null,
           price,
           cost: cost ?? 0,
           unitId,

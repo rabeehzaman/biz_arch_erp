@@ -40,6 +40,7 @@ interface Product {
   name: string;
   arabicName: string | null;
   description: string | null;
+  imageUrl: string | null;
   price: number;
   cost: number;
   categoryId: string | null;

@@ -130,6 +130,7 @@ interface POSProduct {
   weighMachineCode: string | null;
   isService?: boolean;
   isBundle?: boolean;
+  imageUrl?: string | null;
   unitConversions?: POSUnitConversion[];
   jewelleryItem?: POSJewelleryItem | null;
 }
