@@ -6,7 +6,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw, UtensilsCrossed, ChevronDown, Armchair } from "lucide-react";
+import { Loader2, ShoppingCart, PauseCircle, Trash2, ArrowLeft, RotateCcw, UtensilsCrossed, ChevronDown, Armchair, Receipt } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ import { TableSelect } from "@/components/pos/table-select";
 import { usePOSTabs, type TabContext } from "@/hooks/use-pos-tabs";
 import { OrderTabsSheet } from "@/components/pos/order-tabs-sheet";
 import { printKOTMulti } from "@/lib/restaurant/kot-print";
+import { printPreBill, type PreBillReceiptData } from "@/lib/pos/pre-bill-print";
 import type { KOTReceiptData } from "@/components/restaurant/kot-receipt";
 import {
   cacheReceiptArtifactWithConfig,
@@ -544,9 +545,15 @@ function POSTerminalContent() {
     fetcher
   );
 
+  const { data: preBillReceiptMeta } = useSWR(
+    posSession ? "/api/receipt-meta" : null,
+    fetcher
+  );
+
   const receiptPrintingEnabled = receiptSetting?.value === "true";
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
   const [isPendingReceipt, setIsPendingReceipt] = useState(false);
+  const [isPrintingPreBill, setIsPrintingPreBill] = useState(false);
   const cart = cartState.items;
   const cartQuantity = cartState.totalQuantity;
   const selectedProductQuantities = cartState.selectedProductQuantities;
@@ -1230,6 +1237,54 @@ function POSTerminalContent() {
 
     return kot.id;
   };
+
+  const handlePrintPreBill = useCallback(async () => {
+    if (isPrintingPreBill || cart.length === 0) return;
+    setIsPrintingPreBill(true);
+    try {
+      const data: PreBillReceiptData = {
+        storeName: companySettings?.companyName || "Store",
+        storeAddress: companySettings?.companyAddress,
+        storeCity: companySettings?.companyCity,
+        storeState: companySettings?.companyState,
+        storePhone: companySettings?.companyPhone,
+        logoUrl: preBillReceiptMeta?.logoUrl || undefined,
+        logoHeight: preBillReceiptMeta?.logoHeight || undefined,
+        brandColor: preBillReceiptMeta?.brandColor || undefined,
+        vatNumber: preBillReceiptMeta?.vatNumber || companySettings?.companyGstNumber || undefined,
+        secondaryName: preBillReceiptMeta?.secondaryName || undefined,
+        currency: preBillReceiptMeta?.currency || undefined,
+        taxLabel: preBillReceiptMeta?.taxLabel || undefined,
+        date: new Date(),
+        tableName: selectedTable?.name,
+        tableNumber: selectedTable?.number,
+        section: selectedTable?.section,
+        serverName: authSession?.user?.name || undefined,
+        orderType,
+        customerName: selectedCustomer?.name,
+        items: cart.map((item) => ({
+          name: item.variantName ? `${item.name} - ${item.variantName}` : item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          discount: item.discount || 0,
+          lineTotal: item.quantity * item.price * (1 - (item.discount || 0) / 100),
+          modifiers: item.modifiers,
+        })),
+        subtotal: cartTotals.subtotal,
+        taxAmount: cartTotals.taxAmount,
+        roundOffAmount: cartTotals.roundOffAmount,
+        total: cartTotals.total,
+        isTaxInclusivePrice: preBillReceiptMeta?.isTaxInclusivePrice || taxInclusive,
+      };
+      await printPreBill(data);
+      toast.success(t("pos.preBillPrinted") || "Bill printed");
+    } catch (err) {
+      console.error("Pre-bill print failed:", err);
+      toast.error(t("pos.preBillPrintFailed") || "Failed to print bill");
+    } finally {
+      setIsPrintingPreBill(false);
+    }
+  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, t]);
 
   const handleSendToKitchen = async () => {
     if (kotInFlightRef.current) return;
@@ -1966,6 +2021,17 @@ function POSTerminalContent() {
                           }, 0)} new
                         </Badge>
                       )}
+                    </Button>
+                  )}
+                  {isRestaurantEnabled && (
+                    <Button
+                      variant="outline"
+                      className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
+                      onClick={handlePrintPreBill}
+                      disabled={isPrintingPreBill || cart.length === 0}
+                    >
+                      {isPrintingPreBill ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Receipt className="h-4 w-4 mr-2" />}
+                      {t("pos.printBill") || "Print Bill"}
                     </Button>
                   )}
                   <div className="flex gap-2">
