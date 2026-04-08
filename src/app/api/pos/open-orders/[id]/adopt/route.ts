@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { posEventBus } from "@/lib/pos-event-bus";
 
 export async function POST(
   _request: NextRequest,
@@ -54,6 +55,9 @@ export async function POST(
         version: { increment: 1 },
       },
     });
+
+    // Notify other POS devices via SSE
+    posEventBus.emit(organizationId, JSON.stringify({ type: "order-adopted", id }));
 
     return NextResponse.json(updated);
   } catch (error) {

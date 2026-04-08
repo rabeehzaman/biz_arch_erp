@@ -181,12 +181,30 @@ export function usePOSTabs(
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const versionsRef = useRef<Map<string, number>>(new Map());
 
-  // Fetch open orders from DB — poll every 5s for cross-device sync
+  // Fetch open orders from DB — SSE provides instant sync, polling is a 30s fallback
   const { data: dbOrders, mutate: mutateOpenOrders } = useSWR<DBOpenOrder[]>(
     sessionId ? "/api/pos/open-orders" : null,
     fetcher,
-    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 5000 }
+    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 30000 }
   );
+
+  // SSE: listen for real-time push events from other POS devices on the local network
+  useEffect(() => {
+    if (!sessionId) return;
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/pos/events");
+      es.onmessage = () => {
+        mutateOpenOrders();
+      };
+      es.onerror = () => {
+        // SSE will auto-reconnect; no action needed
+      };
+    } catch {
+      // EventSource not supported — polling fallback handles it
+    }
+    return () => { es?.close(); };
+  }, [sessionId, mutateOpenOrders]);
 
   // Hydrate from DB — runs once when data first arrives
   useEffect(() => {

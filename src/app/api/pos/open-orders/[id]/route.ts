@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
+import { posEventBus } from "@/lib/pos-event-bus";
 
 export async function PUT(
   request: NextRequest,
@@ -69,6 +70,9 @@ export async function PUT(
       select: { id: true, version: true },
     });
 
+    // Notify other POS devices via SSE
+    posEventBus.emit(organizationId, JSON.stringify({ type: "order-updated", id: result.id }));
+
     return NextResponse.json(result);
   } catch (error) {
     console.error("Failed to save open order:", error);
@@ -110,6 +114,9 @@ export async function DELETE(
     }
 
     await prisma.pOSOpenOrder.delete({ where: { id } });
+
+    // Notify other POS devices via SSE
+    posEventBus.emit(organizationId, JSON.stringify({ type: "order-deleted", id }));
 
     return NextResponse.json({ success: true });
   } catch (error) {
