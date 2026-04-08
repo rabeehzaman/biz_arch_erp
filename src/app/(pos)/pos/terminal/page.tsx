@@ -898,10 +898,15 @@ function POSTerminalContent() {
   // Restore active tab from DB on initial hydration
   const hydrationDoneRef = useRef(false);
   useEffect(() => {
-    if (!isHydrated || hydrationDoneRef.current || !initialTabContext) return;
+    if (!isHydrated || hydrationDoneRef.current) return;
     hydrationDoneRef.current = true;
-    restoreTabContext(initialTabContext);
-  }, [isHydrated, initialTabContext, restoreTabContext]);
+    if (initialTabContext) {
+      restoreTabContext(initialTabContext);
+    } else if (isRestaurantEnabled) {
+      // Fresh session in restaurant mode — prompt for table
+      setShowTableSelect(true);
+    }
+  }, [isHydrated, initialTabContext, restoreTabContext, isRestaurantEnabled]);
 
   // Auto-save active tab to DB on state changes (debounced)
   useEffect(() => {

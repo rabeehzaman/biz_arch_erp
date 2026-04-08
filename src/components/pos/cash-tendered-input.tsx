@@ -78,7 +78,7 @@ export function CashTenderedInput({
       <div className="mt-2.5 space-y-0.5">
         <Input
           type="text"
-          inputMode="decimal"
+          inputMode="none"
           value={value}
           onChange={(e) => onChange(sanitizeAmountInput(e.target.value))}
           onFocus={(e) => e.currentTarget.select()}
