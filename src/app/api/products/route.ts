@@ -80,6 +80,10 @@ export async function GET(request: NextRequest) {
               isDefaultUnit: true,
             },
           },
+          variants: {
+            select: { id: true, name: true, price: true, barcode: true, sortOrder: true },
+            orderBy: { sortOrder: "asc" },
+          },
           jewelleryItem: {
             select: {
               id: true,
@@ -177,6 +181,10 @@ export async function GET(request: NextRequest) {
               isDefaultUnit: true,
             },
           },
+          variants: {
+            select: { id: true, name: true, price: true, barcode: true, sortOrder: true },
+            orderBy: { sortOrder: "asc" },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -216,7 +224,7 @@ export async function POST(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const body = await request.json();
-    const { name, description, price, cost, unitId, categoryId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions, arabicName, imageUrl } = body;
+    const { name, description, price, cost, unitId, categoryId, sku, barcode, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions, variants, modifiers, arabicName, imageUrl } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -269,6 +277,7 @@ export async function POST(request: NextRequest) {
           isService: isService ?? false,
           isImeiTracked: isImeiTracked ?? false,
           isBundle: isBundle ?? false,
+          modifiers: Array.isArray(modifiers) ? modifiers.filter(Boolean) : [],
           weighMachineCode: weighMachineCode || null,
           hsnCode: hsnCode || null,
           gstRate: gstRate ?? 0,
@@ -313,6 +322,25 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Create variants if provided
+      if (Array.isArray(variants) && variants.length > 0) {
+        for (const [idx, v] of variants.entries()) {
+          if (v.name && v.price != null) {
+            await tx.productVariant.create({
+              data: {
+                productId: newProduct.id,
+                name: v.name,
+                price: v.price,
+                cost: v.cost ?? 0,
+                barcode: v.barcode || null,
+                sortOrder: idx,
+                organizationId,
+              },
+            });
+          }
+        }
+      }
+
       // Re-fetch with all relations included
       const fullProduct = await tx.product.findUnique({
         where: { id: newProduct.id },
@@ -335,6 +363,10 @@ export async function POST(request: NextRequest) {
               price: true,
               isDefaultUnit: true,
             },
+          },
+          variants: {
+            select: { id: true, name: true, price: true, barcode: true, sortOrder: true },
+            orderBy: { sortOrder: "asc" },
           },
         },
       });

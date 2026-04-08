@@ -35,6 +35,9 @@ export interface CartItemData {
   conversionFactor: number;
   jewellery?: CartItemJewelleryData | null;
   categoryId?: string | null;
+  variantId?: string;
+  variantName?: string;
+  modifiers?: string[];
 }
 
 interface CartItemProps {
@@ -56,8 +59,13 @@ export function CartItem({
       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-2">
         <div className="min-w-0 overflow-hidden">
           <p className="text-sm font-medium leading-tight whitespace-normal break-words [overflow-wrap:anywhere]">
-            {item.name}{item.unitName ? ` (${item.unitName})` : ""}
+            {item.name}{item.variantName ? ` - ${item.variantName}` : ""}{item.unitName ? ` (${item.unitName})` : ""}
           </p>
+          {item.modifiers && item.modifiers.length > 0 && (
+            <p className="text-[11px] text-orange-600 leading-tight">
+              {item.modifiers.join(", ")}
+            </p>
+          )}
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span>{fmt(Number(item.price))}</span>
             {item.jewellery && (

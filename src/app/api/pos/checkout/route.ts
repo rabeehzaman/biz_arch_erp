@@ -78,6 +78,8 @@ interface CheckoutItem {
   hsnCode?: string;
   unitId?: string;
   conversionFactor?: number;
+  variantId?: string;
+  variantName?: string;
   jewellery?: {
     jewelleryItemId: string;
     goldRate: number;
@@ -503,6 +505,9 @@ export async function POST(request: NextRequest) {
           discount: item.discount || 0,
           total: lineAmounts[idx].taxableAmount,
           costOfGoodsSold: 0,
+          // Variant fields
+          variantId: item.variantId || null,
+          variantName: item.variantName || null,
           // Jewellery fields
           jewelleryItemId: jw?.jewelleryItemId ?? null,
           goldRate: jw?.goldRate ?? null,

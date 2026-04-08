@@ -37,6 +37,10 @@ export async function GET(
             isDefaultUnit: true,
           },
         },
+        variants: {
+          select: { id: true, name: true, price: true, cost: true, barcode: true, sortOrder: true },
+          orderBy: { sortOrder: "asc" },
+        },
       },
     });
 
@@ -70,7 +74,7 @@ export async function PUT(
     const organizationId = getOrgId(session);
     const { id } = await params;
     const body = await request.json();
-    const { name, description, price, cost, unitId, categoryId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions, arabicName, imageUrl } = body;
+    const { name, description, price, cost, unitId, categoryId, sku, barcode, isActive, isService, isImeiTracked, gstRate, hsnCode, weighMachineCode, isBundle, bundleItems, unitConversions, variants, modifiers, arabicName, imageUrl } = body;
 
     // Check for duplicate product name (exclude current product)
     if (name) {
@@ -112,6 +116,7 @@ export async function PUT(
           ...(isService !== undefined && { isService }),
           ...(isImeiTracked !== undefined && { isImeiTracked }),
           ...(isBundle !== undefined && { isBundle }),
+          ...(modifiers !== undefined && { modifiers: Array.isArray(modifiers) ? modifiers.filter(Boolean) : [] }),
           ...(weighMachineCode !== undefined && { weighMachineCode: weighMachineCode || null }),
           ...(hsnCode !== undefined && { hsnCode: hsnCode || null }),
           ...(gstRate !== undefined && { gstRate }),
@@ -168,6 +173,26 @@ export async function PUT(
         }
       }
 
+      // Update variants if provided (delete-and-recreate)
+      if (Array.isArray(variants)) {
+        await tx.productVariant.deleteMany({ where: { productId: id } });
+        for (const [idx, v] of variants.entries()) {
+          if (v.name && v.price != null) {
+            await tx.productVariant.create({
+              data: {
+                productId: id,
+                name: v.name,
+                price: v.price,
+                cost: v.cost ?? 0,
+                barcode: v.barcode || null,
+                sortOrder: idx,
+                organizationId,
+              },
+            });
+          }
+        }
+      }
+
       // Re-fetch with all relations
       return tx.product.findUnique({
         where: { id },
@@ -189,6 +214,10 @@ export async function PUT(
               barcode: true,
               price: true,
             },
+          },
+          variants: {
+            select: { id: true, name: true, price: true, cost: true, barcode: true, sortOrder: true },
+            orderBy: { sortOrder: "asc" },
           },
         },
       });

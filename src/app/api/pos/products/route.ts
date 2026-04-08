@@ -38,6 +38,11 @@ export async function GET() {
             isDefaultUnit: true,
           },
         },
+        variants: {
+          where: { isActive: true },
+          select: { id: true, name: true, price: true, barcode: true, sortOrder: true },
+          orderBy: { sortOrder: "asc" },
+        },
         stockLots: {
           where: { remainingQuantity: { gt: 0 } },
           select: { remainingQuantity: true },
@@ -147,6 +152,13 @@ export async function GET() {
         barcode: uc.barcode,
         price: uc.price != null ? Number(uc.price) : null,
         isDefaultUnit: uc.isDefaultUnit,
+      })),
+      modifiers: p.modifiers || [],
+      variants: (p.variants || []).map((v) => ({
+        id: v.id,
+        name: v.name,
+        price: Number(v.price),
+        barcode: v.barcode,
       })),
       jewelleryItem: p.jewelleryItem ? {
         id: p.jewelleryItem.id,

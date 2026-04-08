@@ -20,6 +20,9 @@ export function setOrgElectronDefaultMode(mode: ElectronRenderMode | null) {
   _orgElectronDefaultMode = mode;
 }
 
+export function getOrgMobileRenderMode() { return _orgMobileRenderMode; }
+export function getOrgElectronDefaultMode() { return _orgElectronDefaultMode; }
+
 export function isElectronEnvironment(): boolean {
   return typeof window !== "undefined" && !!window.electronPOS?.isElectron;
 }

@@ -77,6 +77,15 @@ interface Product {
         price: number | null;
         isDefaultUnit: boolean;
     }>;
+    modifiers?: string[];
+    variants?: Array<{
+        id: string;
+        name: string;
+        price: number;
+        cost?: number;
+        barcode: string | null;
+        sortOrder: number;
+    }>;
 }
 
 interface BundleItemEntry {
@@ -92,6 +101,13 @@ interface UnitConversionEntry {
     barcode: string;
     price: string;
     isDefaultUnit: boolean;
+}
+
+interface VariantEntry {
+    name: string;
+    price: string;
+    cost: string;
+    barcode: string;
 }
 
 interface ProductFormDialogProps {
@@ -119,6 +135,9 @@ export function ProductFormDialog({
     const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; unit?: { code: string; name: string } | null }>>([]);
     const [bundleItems, setBundleItems] = useState<BundleItemEntry[]>([]);
     const [unitConversionEntries, setUnitConversionEntries] = useState<UnitConversionEntry[]>([]);
+    const [variantEntries, setVariantEntries] = useState<VariantEntry[]>([]);
+    const [modifierEntries, setModifierEntries] = useState<string[]>([]);
+    const [newModifier, setNewModifier] = useState("");
     const [allUnits, setAllUnits] = useState<Array<{ id: string; name: string; code: string }>>([]);
     const [basePricePerUnit, setBasePricePerUnit] = useState("");
     const [baseCostPerUnit, setBaseCostPerUnit] = useState("");
@@ -222,6 +241,21 @@ export function ProductFormDialog({
                 setUnitConversionEntries([]);
             }
 
+            // Load existing modifiers
+            setModifierEntries(productToEdit.modifiers || []);
+
+            // Load existing variants
+            if (productToEdit.variants && productToEdit.variants.length > 0) {
+                setVariantEntries(productToEdit.variants.map(v => ({
+                    name: v.name,
+                    price: Number(v.price).toString(),
+                    cost: v.cost != null ? Number(v.cost).toString() : "0",
+                    barcode: v.barcode || "",
+                })));
+            } else {
+                setVariantEntries([]);
+            }
+
             // Set base unit price/cost for editing
             if (defaultUc) {
                 setBasePricePerUnit(Number(productToEdit.price).toString());
@@ -311,6 +345,7 @@ export function ProductFormDialog({
             isBundle: formData.isBundle,
             weighMachineCode: formData.weighMachineCode || null,
             imageUrl: imageUrl || null,
+            modifiers: modifierEntries.filter(Boolean),
         };
 
         if (formData.isBundle) {
@@ -334,6 +369,19 @@ export function ProductFormDialog({
         } else if (productToEdit) {
             // Send empty array to clear existing conversions
             payload.unitConversions = [];
+        }
+
+        if (variantEntries.length > 0) {
+            payload.variants = variantEntries
+                .filter(v => v.name && v.price)
+                .map(v => ({
+                    name: v.name,
+                    price: parseFloat(v.price),
+                    cost: v.cost ? parseFloat(v.cost) : 0,
+                    barcode: v.barcode || null,
+                }));
+        } else if (productToEdit) {
+            payload.variants = [];
         }
 
         try {
@@ -378,6 +426,9 @@ export function ProductFormDialog({
         setFormErrors({});
         setBundleItems([]);
         setUnitConversionEntries([]);
+        setVariantEntries([]);
+        setModifierEntries([]);
+        setNewModifier("");
         setImageUrl(null);
         setBasePricePerUnit("");
         setBaseCostPerUnit("");
@@ -1036,6 +1087,167 @@ export function ProductFormDialog({
                                 ))}
                             </div>
                         )}
+
+                        {/* Product Variants (sizes/types with different prices) */}
+                        <div className="space-y-3 rounded-xl border border-slate-200 bg-muted/30 p-3 sm:p-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <Label className="flex items-center gap-2 text-sm font-semibold">
+                                    <Package className="h-4 w-4" />
+                                    {t("products.variants")}
+                                </Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full sm:w-auto"
+                                    onClick={() => setVariantEntries([...variantEntries, { name: "", price: "", cost: "", barcode: "" }])}
+                                >
+                                    <Plus className="h-3 w-3 mr-1" /> {t("products.addVariant")}
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {t("products.variantsDescription")}
+                            </p>
+                            {variantEntries.length === 0 && (
+                                <p className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded">
+                                    {t("products.noVariantsYet")}
+                                </p>
+                            )}
+                            {variantEntries.map((v, index) => (
+                                <div key={index} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_100px_auto] sm:items-start">
+                                        <div className="min-w-0">
+                                            <Label className="mb-1 block text-xs text-slate-500">{t("products.variantName")}</Label>
+                                            <Input
+                                                placeholder="e.g. Medium, Large"
+                                                value={v.name}
+                                                onChange={(e) => {
+                                                    const updated = [...variantEntries];
+                                                    updated[index] = { ...updated[index], name: e.target.value };
+                                                    setVariantEntries(updated);
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label className="mb-1 block text-xs text-slate-500">{t("products.variantPrice")}</Label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                value={v.price}
+                                                onChange={(e) => {
+                                                    const updated = [...variantEntries];
+                                                    updated[index] = { ...updated[index], price: e.target.value };
+                                                    setVariantEntries(updated);
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="flex justify-end sm:pt-5">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-10 w-10 shrink-0"
+                                                onClick={() => setVariantEntries(variantEntries.filter((_, i) => i !== index))}
+                                            >
+                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <Label className="mb-1 block text-xs text-slate-500">{t("products.barcode")}</Label>
+                                            <Input
+                                                placeholder={t("common.optional")}
+                                                value={v.barcode}
+                                                onChange={(e) => {
+                                                    const updated = [...variantEntries];
+                                                    updated[index] = { ...updated[index], barcode: e.target.value };
+                                                    setVariantEntries(updated);
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label className="mb-1 block text-xs text-slate-500">{t("products.cost")}</Label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder={t("common.optional")}
+                                                value={v.cost}
+                                                onChange={(e) => {
+                                                    const updated = [...variantEntries];
+                                                    updated[index] = { ...updated[index], cost: e.target.value };
+                                                    setVariantEntries(updated);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Predefined Modifiers (kitchen instructions) */}
+                        <div className="space-y-3 rounded-xl border border-slate-200 bg-muted/30 p-3 sm:p-4">
+                            <Label className="flex items-center gap-2 text-sm font-semibold">
+                                {t("products.modifiers")}
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                                {t("products.modifiersDescription")}
+                            </p>
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder={t("products.modifierPlaceholder")}
+                                    value={newModifier}
+                                    onChange={(e) => setNewModifier(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            const val = newModifier.trim();
+                                            if (val && !modifierEntries.includes(val)) {
+                                                setModifierEntries([...modifierEntries, val]);
+                                                setNewModifier("");
+                                            }
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="shrink-0"
+                                    onClick={() => {
+                                        const val = newModifier.trim();
+                                        if (val && !modifierEntries.includes(val)) {
+                                            setModifierEntries([...modifierEntries, val]);
+                                            setNewModifier("");
+                                        }
+                                    }}
+                                >
+                                    <Plus className="h-3 w-3 mr-1" /> {t("common.add")}
+                                </Button>
+                            </div>
+                            {modifierEntries.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {modifierEntries.map((mod, index) => (
+                                        <span
+                                            key={index}
+                                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm"
+                                        >
+                                            {mod}
+                                            <button
+                                                type="button"
+                                                onClick={() => setModifierEntries(modifierEntries.filter((_, i) => i !== index))}
+                                                className="text-slate-400 hover:text-red-500"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         {sessionUser?.isMobileShopModuleEnabled && !formData.isService && !formData.isBundle && (
                             <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">

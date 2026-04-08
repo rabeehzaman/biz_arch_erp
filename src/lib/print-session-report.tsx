@@ -10,7 +10,7 @@ import {
   ThermalPrinter,
   type MobilePrinterConfig,
 } from "@/lib/capacitor-print";
-import { isElectronEnvironment } from "@/lib/electron-print";
+import { isElectronEnvironment, getOrgMobileRenderMode, getOrgElectronDefaultMode } from "@/lib/electron-print";
 import { printReceipt as browserPrintReceipt } from "@/lib/print-receipt";
 import {
   POSSessionReportReceipt,
@@ -225,13 +225,18 @@ async function printSessionReportWithElectron(
       marginRight: resolvedConfig?.receiptMarginRight,
     });
 
-    const useStyledDriver = resolvedConfig?.connectionType === "windows"
-      && resolvedConfig?.receiptRenderMode !== "htmlRaster";
+    // Determine effective render mode: device config > org default > connection-based default
+    const renderMode = resolvedConfig?.receiptRenderMode
+      ?? getOrgElectronDefaultMode()
+      ?? (resolvedConfig?.connectionType === "windows" ? "htmlDriver" : "htmlRaster");
 
-    if (useStyledDriver && window.electronPOS.printStyledReceipt) {
+    // htmlDriver: send styled HTML via Windows spooler
+    if (renderMode === "htmlDriver" && resolvedConfig?.connectionType === "windows" && window.electronPOS.printStyledReceipt) {
       return window.electronPOS.printStyledReceipt(html, resolvedConfig);
     }
 
+    // htmlRaster / bitmapCanvas / escposText: all fall back to raster for session reports
+    // (no canvas or text ESC/POS builder exists for session reports)
     if (window.electronPOS.printRasterizedReceipt) {
       return window.electronPOS.printRasterizedReceipt(html, {
         ...resolvedConfig,
@@ -267,18 +272,52 @@ async function printSessionReportWithCapacitor(
       ...(config ?? {}),
     };
 
-    if (!resolved.host) {
-      throw new Error("No mobile printer host configured");
+    const hasConnection = resolved.connectionType === "bluetooth"
+      ? !!resolved.address
+      : !!resolved.host;
+    if (!hasConnection) {
+      throw new Error("No mobile printer configured");
     }
 
-    const base64Image = await renderSessionReportToBase64Image(
-      input,
-      resolved
-    );
+    // Build connection params (supports both TCP and Bluetooth)
+    const conn = resolved.connectionType === "bluetooth"
+      ? { connectionType: "bluetooth" as const, address: resolved.address }
+      : { connectionType: "tcp" as const, host: resolved.host, port: resolved.port };
+
+    const mode = getOrgMobileRenderMode();
+
+    // ESC/POS text mode: use raw text builder
+    if (mode === "escposText") {
+      try {
+        const { buildSessionReportEscPos } = await import("@/lib/session-report-escpos");
+        const paperWidth = resolved.paperWidth === 58 ? 32 : 48;
+        const escposBytes = buildSessionReportEscPos(
+          input.report,
+          input.company,
+          input.language,
+          { paperWidth: paperWidth as 48 | 32, cutPaper: resolved.cutPaper },
+        );
+        let binary = "";
+        for (let i = 0; i < escposBytes.length; i++) {
+          binary += String.fromCharCode(escposBytes[i]);
+        }
+        await ThermalPrinter.printRaw({
+          ...conn,
+          data: btoa(binary),
+          timeoutSeconds: resolved.timeoutSeconds,
+        });
+        return { success: true };
+      } catch (err) {
+        console.error("Session report ESC/POS failed:", err, "— falling back to image");
+        // fall through to image rendering
+      }
+    }
+
+    // htmlImage / bitmapCanvas: both use image rendering
+    const base64Image = await renderSessionReportToBase64Image(input, resolved);
 
     await ThermalPrinter.printImage({
-      host: resolved.host,
-      port: resolved.port,
+      ...conn,
       printerDpi: 203,
       printerWidthMM: resolved.paperWidth === 58 ? 48 : 72,
       base64Image,

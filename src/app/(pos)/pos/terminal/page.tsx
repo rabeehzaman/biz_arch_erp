@@ -37,6 +37,7 @@ import { ProductGrid } from "@/components/pos/product-grid";
 import { ViewModeToggle } from "@/components/pos/view-mode-toggle";
 import { usePosViewMode } from "@/hooks/use-pos-view-mode";
 import { CartItem, type CartItemData } from "@/components/pos/cart-item";
+import { VariantPickerDialog } from "@/components/pos/variant-picker-dialog";
 import { CartSummary, calculateCartTotal } from "@/components/pos/cart-summary";
 import { CustomerSelect } from "@/components/pos/customer-select";
 import { PaymentPanel } from "@/components/pos/payment-panel";
@@ -118,6 +119,13 @@ interface POSUnitConversion {
   isDefaultUnit?: boolean;
 }
 
+interface POSVariant {
+  id: string;
+  name: string;
+  price: number;
+  barcode?: string | null;
+}
+
 interface POSProduct {
   id: string;
   name: string;
@@ -134,6 +142,8 @@ interface POSProduct {
   isBundle?: boolean;
   imageUrl?: string | null;
   unitConversions?: POSUnitConversion[];
+  variants?: POSVariant[];
+  modifiers?: string[];
   jewelleryItem?: POSJewelleryItem | null;
 }
 
@@ -168,7 +178,7 @@ interface CheckoutTimingPayload {
 }
 
 type CartAction =
-  | { type: "ADD"; product: any; quantity?: number; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null }
+  | { type: "ADD"; product: any; quantity?: number; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null; variantId?: string; variantName?: string; modifiers?: string[] }
   | { type: "REMOVE"; productId: string }
   | { type: "CLEAR" }
   | { type: "RESTORE"; items: CartItemData[] };
@@ -243,7 +253,7 @@ function buildCartState(items: CartItemData[], previousRevision = -1): CartState
     items,
     totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
     selectedProductQuantities: items.reduce<Record<string, number>>((acc, item) => {
-      acc[item.productId] = item.quantity;
+      acc[item.productId] = (acc[item.productId] || 0) + item.quantity;
       return acc;
     }, {}),
     revision: previousRevision + 1,
@@ -253,11 +263,11 @@ function buildCartState(items: CartItemData[], previousRevision = -1): CartState
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD": {
-      const { product, quantity, unitId, unitName, conversionFactor: cf, price: altPrice } = action;
+      const { product, quantity, unitId, unitName, conversionFactor: cf, price: altPrice, variantId, variantName, modifiers: actionModifiers } = action;
       const effectiveConversionFactor = cf ?? 1;
       const effectivePrice = altPrice != null ? altPrice : Number(product.price);
-      // Match existing cart line by productId + unitId so the same product in different units gets separate lines
-      const idx = state.items.findIndex((item) => item.productId === product.id && (item.unitId || undefined) === (unitId || undefined));
+      // Match existing cart line by productId + variantId + unitId so the same product in different variants/units gets separate lines
+      const idx = state.items.findIndex((item) => item.productId === product.id && (item.variantId || undefined) === (variantId || undefined) && (item.unitId || undefined) === (unitId || undefined));
       if (idx >= 0) {
         const newItems = [...state.items];
         const currentItem = newItems[idx];
@@ -302,6 +312,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           conversionFactor: effectiveConversionFactor,
           jewellery: jewelleryData,
           categoryId: product.categoryId ?? null,
+          variantId,
+          variantName,
+          modifiers: actionModifiers,
         },
       ];
       return buildCartState(newItems, state.revision);
@@ -618,13 +631,25 @@ function POSTerminalContent() {
     );
   }, []);
 
-  const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null) => {
-    dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price });
+  const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string) => {
+    dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName });
   }, []);
 
-  // Wrapper for product tile clicks — applies default unit if set
+  // State for variant picker dialog
+  const [variantPickerProduct, setVariantPickerProduct] = useState<POSProduct | null>(null);
+
+  // Wrapper for product tile clicks — applies default unit if set, or shows variant/modifier picker
   const addToCartWithDefault = useCallback((tileProduct: any) => {
     const fullProduct = products.find(p => p.id === tileProduct.id);
+    const hasVariants = fullProduct?.variants && fullProduct.variants.length > 0;
+    const hasModifiers = fullProduct?.modifiers && fullProduct.modifiers.length > 0;
+
+    // If product has variants or modifiers, show the picker dialog
+    if (hasVariants || hasModifiers) {
+      setVariantPickerProduct(fullProduct!);
+      return;
+    }
+
     const defaultUc = fullProduct?.unitConversions?.find((uc: any) => uc.isDefaultUnit);
     if (defaultUc) {
       addToCart(tileProduct, 1, defaultUc.unitId, defaultUc.unit?.name, Number(defaultUc.conversionFactor), defaultUc.price != null ? Number(defaultUc.price) : null);
@@ -953,13 +978,16 @@ function POSTerminalContent() {
   // ── Send to Kitchen (KOT) ─────────────────────────────────────────
 
   /** Core KOT send logic — returns the created KOT id, or null if nothing to send */
+  const cartLineKey = (productId: string, variantId?: string) => variantId ? `${productId}::${variantId}` : productId;
+
   const sendKotForUnsentItems = async (opts?: { silent?: boolean }): Promise<string | null> => {
-    const itemsToSend: { productId: string; name: string; quantity: number; categoryId?: string | null }[] = [];
+    const itemsToSend: { productId: string; name: string; variantName?: string; modifiers?: string[]; quantity: number; categoryId?: string | null; lineKey: string }[] = [];
     for (const item of cartState.items) {
-      const sentQty = kotSentQuantities.get(item.productId) ?? 0;
+      const key = cartLineKey(item.productId, item.variantId);
+      const sentQty = kotSentQuantities.get(key) ?? 0;
       const diff = item.quantity - sentQty;
       if (diff > 0) {
-        itemsToSend.push({ productId: item.productId, name: item.name, quantity: diff, categoryId: item.categoryId });
+        itemsToSend.push({ productId: item.productId, name: item.name, variantName: item.variantName, modifiers: item.modifiers, quantity: diff, categoryId: item.categoryId, lineKey: key });
       }
     }
     if (itemsToSend.length === 0) return null;
@@ -976,7 +1004,9 @@ function POSTerminalContent() {
         serverName: authSession?.user?.name || undefined,
         items: itemsToSend.map(item => ({
           productId: item.productId,
-          name: item.name,
+          name: item.variantName ? `${item.name} - ${item.variantName}` : item.name,
+          variantName: item.variantName || undefined,
+          modifiers: item.modifiers || undefined,
           quantity: item.quantity,
           isNew: kotType === "FOLLOWUP",
         })),
@@ -989,7 +1019,8 @@ function POSTerminalContent() {
     // Update sent quantities to current cart quantities
     const newSentQtys = new Map(kotSentQuantities);
     for (const item of cartState.items) {
-      newSentQtys.set(item.productId, item.quantity);
+      const key = cartLineKey(item.productId, item.variantId);
+      newSentQtys.set(key, item.quantity);
     }
     setKotSentQuantities(newSentQtys);
     setKotOrderIds(prev => [...prev, kot.id]);
@@ -1202,7 +1233,7 @@ function POSTerminalContent() {
           customerId: selectedCustomer?.id || undefined,
           items: completedCart.map((item) => ({
             productId: item.productId,
-            name: item.name,
+            name: item.variantName ? `${item.name} - ${item.variantName}` : item.name,
             quantity: item.quantity,
             unitPrice: item.price,
             discount: item.discount,
@@ -1210,6 +1241,8 @@ function POSTerminalContent() {
             hsnCode: item.hsnCode || undefined,
             unitId: item.unitId || undefined,
             conversionFactor: item.conversionFactor || 1,
+            variantId: item.variantId || undefined,
+            variantName: item.variantName || undefined,
           })),
           payments: payments.map((p) => ({
             method: p.method,
@@ -1607,10 +1640,10 @@ function POSTerminalContent() {
                 >
                   <UtensilsCrossed className="h-4 w-4" />
                   KOT
-                  {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(i.productId) ?? 0)) > 0) && (
+                  {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0)) > 0) && (
                     <Badge className="min-w-5 justify-center rounded-full bg-white px-1.5 py-0 text-xs text-orange-700">
                       {cartState.items.reduce((count, i) => {
-                        const diff = i.quantity - (kotSentQuantities.get(i.productId) ?? 0);
+                        const diff = i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0);
                         return diff > 0 ? count + 1 : count;
                       }, 0)}
                     </Badge>
@@ -1727,10 +1760,10 @@ function POSTerminalContent() {
                 ) : (
                   cart.map((item) => (
                     <CartItem
-                      key={`${item.productId}:${item.quantity}:${item.discount}`}
+                      key={`${item.productId}:${item.variantId || ""}:${item.quantity}:${item.discount}`}
                       item={item}
                       onRemove={isRestaurantEnabled ? handleCartItemRemove : removeFromCart}
-                      kotSentQty={isRestaurantEnabled ? (kotSentQuantities.get(item.productId) ?? 0) : undefined}
+                      kotSentQty={isRestaurantEnabled ? (kotSentQuantities.get(cartLineKey(item.productId, item.variantId)) ?? 0) : undefined}
                     />
                   ))
                 )}
@@ -1752,10 +1785,10 @@ function POSTerminalContent() {
                     >
                       {isKotSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UtensilsCrossed className="h-4 w-4 mr-2" />}
                       {t("restaurant.sendToKitchen")}
-                      {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(i.productId) ?? 0)) > 0) && (
+                      {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0)) > 0) && (
                         <Badge variant="secondary" className="ml-2">
                           {cartState.items.reduce((count, i) => {
-                            const diff = i.quantity - (kotSentQuantities.get(i.productId) ?? 0);
+                            const diff = i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0);
                             return diff > 0 ? count + 1 : count;
                           }, 0)} new
                         </Badge>
@@ -2171,6 +2204,27 @@ function POSTerminalContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Variant & Modifier Picker Dialog */}
+      <VariantPickerDialog
+        open={!!variantPickerProduct}
+        onOpenChange={(open) => { if (!open) setVariantPickerProduct(null); }}
+        productName={variantPickerProduct?.name || ""}
+        variants={variantPickerProduct?.variants || []}
+        modifiers={variantPickerProduct?.modifiers || []}
+        onSelect={(variant, selectedModifiers) => {
+          if (variantPickerProduct) {
+            dispatchCart({
+              type: "ADD",
+              product: variantPickerProduct,
+              quantity: 1,
+              price: variant ? variant.price : null,
+              variantId: variant?.id,
+              variantName: variant?.name,
+              modifiers: selectedModifiers.length > 0 ? selectedModifiers : undefined,
+            });
+          }
+        }}
+      />
     </PageAnimation>
   );
 }

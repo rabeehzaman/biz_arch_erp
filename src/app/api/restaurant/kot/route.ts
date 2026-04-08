@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
                     productId?: string;
                     name: string;
                     nameAr?: string;
+                    variantName?: string;
                     quantity: number;
                     modifiers?: string[];
                     notes?: string;
@@ -152,6 +153,7 @@ export async function POST(request: NextRequest) {
                     productId: item.productId || undefined,
                     name: item.name,
                     nameAr: item.nameAr || undefined,
+                    variantName: item.variantName || undefined,
                     quantity: new Decimal(item.quantity),
                     modifiers: item.modifiers ?? undefined,
                     notes: item.notes || undefined,

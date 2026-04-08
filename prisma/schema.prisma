@@ -245,6 +245,7 @@ model Organization {
 
   // Product Unit Conversion Relations
   productUnitConversions     ProductUnitConversion[]
+  productVariants            ProductVariant[]
 
   // Multi-org membership
   memberships                UserOrganization[] @relation("OrgMemberships")
@@ -380,6 +381,7 @@ model Product {
   isImeiTracked     Boolean          @default(false)
   weighMachineCode  String?          // 5-digit code embedded in weight barcode label
   isBundle          Boolean          @default(false)  // Bundle/Kit product: stock deducted from components
+  modifiers         String[]         @default([])     // Predefined modifier options e.g. ["Extra Sugar", "Thin Crust"]
   isActive          Boolean          @default(true)
   organizationId    String
   organization   Organization     @relation(fields: [organizationId], references: [id])
@@ -414,6 +416,9 @@ model Product {
 
   // Product-level unit conversions
   unitConversions      ProductUnitConversion[]
+
+  // Product variants (e.g. Medium/Large sizes with different prices)
+  variants             ProductVariant[]
 
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])
@@ -484,6 +489,27 @@ model ProductUnitConversion {
   @@index([organizationId])
   @@index([productId])
   @@map("product_unit_conversions")
+}
+
+model ProductVariant {
+  id             String       @id @default(cuid())
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name           String
+  price          Decimal      @db.Decimal(10, 2)
+  cost           Decimal      @default(0) @db.Decimal(10, 2)
+  barcode        String?
+  sortOrder      Int          @default(0)
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([productId, name])
+  @@index([productId])
+  @@index([organizationId])
+  @@map("product_variants")
 }
 
 // ==================== CUSTOMERS ====================
@@ -701,6 +727,8 @@ model InvoiceItem {
   product   Product? @relation(fields: [productId], references: [id])
   unitId    String?
   unit      Unit?    @relation(fields: [unitId], references: [id])
+  variantId   String?
+  variantName String?
 
   conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
@@ -2976,6 +3004,7 @@ model KOTOrderItem {
   product      Product?  @relation(fields: [productId], references: [id])
   name         String
   nameAr       String?
+  variantName  String?
   quantity     Decimal   @db.Decimal(10, 4)
   modifiers    Json?
   notes        String?
@@ -3028,6 +3057,8 @@ model RestaurantPOSOrderLine {
   productId   String?
   product     Product?            @relation(fields: [productId], references: [id])
   name        String
+  variantId   String?
+  variantName String?
   quantity    Decimal             @db.Decimal(10, 4)
   unitPrice   Decimal             @db.Decimal(12, 2)
   discount    Decimal             @default(0) @db.Decimal(10, 2)
