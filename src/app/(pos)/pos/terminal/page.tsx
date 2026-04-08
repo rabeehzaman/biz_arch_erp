@@ -926,12 +926,12 @@ function POSTerminalContent() {
     };
   }, [restoreTabContext, resetLiveState]);
 
-  // Auto-save active tab to DB on state changes (debounced)
+  // Auto-save active tab to DB on KOT/metadata changes only (not live cart edits)
   useEffect(() => {
     if (!isHydrated || !posSession) return;
     scheduleSave(snapshotCurrentTab());
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartState.revision, selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view]);
+  }, [selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view]);
 
   // Persist immediately when page becomes hidden (browser tab close / app switch)
   useEffect(() => {
@@ -1182,6 +1182,13 @@ function POSTerminalContent() {
     }
     setKotSentQuantities(newSentQtys);
     setKotOrderIds(prev => [...prev, kot.id]);
+
+    // Persist immediately after KOT (the auto-save effect will also fire, but this ensures no delay)
+    persistTab({
+      ...snapshotCurrentTab(),
+      kotSentQuantities: newSentQtys,
+      kotOrderIds: [...kotOrderIds, kot.id],
+    });
 
     // Print KOT
     try {
