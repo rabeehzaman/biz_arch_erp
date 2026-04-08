@@ -1037,8 +1037,9 @@ function POSTerminalContent() {
         serverName: authSession?.user?.name || undefined,
         timestamp: new Date(),
         items: itemsToSend.map(item => ({
-          name: item.name,
+          name: item.variantName ? `${item.name} - ${item.variantName}` : item.name,
           quantity: item.quantity,
+          modifiers: item.modifiers,
           categoryId: item.categoryId,
           isNew: kotType === "FOLLOWUP",
         })),
@@ -1147,7 +1148,7 @@ function POSTerminalContent() {
           section: selectedTable?.section || undefined,
           serverName: authSession?.user?.name || undefined,
           timestamp: new Date(),
-          items: [{ name: item.name, quantity: sentQty, categoryId: item.categoryId }],
+          items: [{ name: item.variantName ? `${item.name} - ${item.variantName}` : item.name, quantity: sentQty, modifiers: item.modifiers, categoryId: item.categoryId }],
         };
         await printKOTMulti(kotReceiptData);
       } catch (printErr) {
@@ -1286,11 +1287,12 @@ function POSTerminalContent() {
           const lineTotal = item.quantity * item.price * (1 - (item.discount || 0) / 100);
           const invoiceItem = result.invoice?.items?.[idx] as Record<string, unknown> | undefined;
           return {
-            name: item.name,
+            name: item.variantName ? `${item.name} - ${item.variantName}` : item.name,
             quantity: item.quantity,
             unitPrice: item.price,
             discount: item.discount || 0,
             lineTotal,
+            modifiers: item.modifiers,
             hsnCode: (invoiceItem?.hsnCode as string) || undefined,
             gstRate: Number(invoiceItem?.gstRate || 0) || undefined,
             cgstRate: Number(invoiceItem?.cgstRate || 0) || undefined,

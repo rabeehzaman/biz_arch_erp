@@ -90,6 +90,12 @@ export function buildIndianGSTReceiptEscPos(
     p.println(item.name || "");
     p.bold(false);
 
+    if (item.modifiers && item.modifiers.length > 0) {
+      for (const mod of item.modifiers) {
+        p.println(`  >> ${mod}`);
+      }
+    }
+
     const hsnPart = item.hsnCode ? `HSN:${item.hsnCode}` : "";
     const qtyPart = `${item.quantity} x ${item.unitPrice.toFixed(2)}`;
     const detailLeft = [hsnPart, qtyPart].filter(Boolean).join("  ");

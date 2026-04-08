@@ -109,6 +109,7 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
     items: data.items.map((item) => ({
       name: item.name,
       nameAr: item.nameAr,
+      modifiers: item.modifiers || [],
       qty: item.quantity,
       price: item.unitPrice,
       total: item.lineTotal,

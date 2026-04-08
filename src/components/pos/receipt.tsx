@@ -10,6 +10,7 @@ export interface ReceiptItem {
   unitPrice: number;
   discount: number;
   lineTotal: number;
+  modifiers?: string[];
   // Indian GST per-item fields
   hsnCode?: string;
   gstRate?: number;
@@ -294,6 +295,11 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
                 {formatCurrency(item.lineTotal, cur)}
               </span>
             </div>
+            {item.modifiers && item.modifiers.length > 0 && (
+              <div style={{ fontSize: "10px", color: "#e67e22", marginTop: "1px" }}>
+                {item.modifiers.join(", ")}
+              </div>
+            )}
             {item.discount > 0 && (
               <div style={{ fontSize: "10px", color: "#e74c3c", marginTop: "1px" }}>
                 {isZatca ? `خصم / Disc: ${item.discount}%` : `Disc: ${item.discount}%`}
