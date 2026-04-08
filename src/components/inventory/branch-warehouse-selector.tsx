@@ -26,6 +26,8 @@ interface BranchWarehouseSelectorProps {
     onWarehouseChange: (warehouseId: string) => void;
     disabled?: boolean;
     focusNextFocusable?: (el: HTMLElement | null) => void;
+    hideBranch?: boolean;
+    hideWarehouse?: boolean;
 }
 
 export function BranchWarehouseSelector({
@@ -35,6 +37,8 @@ export function BranchWarehouseSelector({
     onWarehouseChange,
     disabled = false,
     focusNextFocusable,
+    hideBranch = false,
+    hideWarehouse = false,
 }: BranchWarehouseSelectorProps) {
     const { data: session } = useSession();
     const { t } = useLanguage();
@@ -115,9 +119,11 @@ export function BranchWarehouseSelector({
     const warehouseTriggerRef = useRef<HTMLButtonElement>(null);
 
     if (!multiBranchEnabled) return null;
+    if (hideBranch && hideWarehouse) return null;
 
     return (
         <div className="mb-4 grid grid-cols-1 gap-4 rounded-lg border bg-slate-50 p-4 sm:grid-cols-2">
+            {!hideBranch && (
             <div className="space-y-2">
                 <Label>{t("inventory.branch")}</Label>
                 <Select
@@ -143,7 +149,9 @@ export function BranchWarehouseSelector({
                     </SelectContent>
                 </Select>
             </div>
+            )}
 
+            {!hideWarehouse && (
             <div className="space-y-2">
                 <Label>{t("inventory.warehouse")}</Label>
                 <Select
@@ -166,6 +174,7 @@ export function BranchWarehouseSelector({
                     </SelectContent>
                 </Select>
             </div>
+            )}
         </div>
     );
 }

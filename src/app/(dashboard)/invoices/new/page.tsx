@@ -726,6 +726,8 @@ export default function NewInvoicePage() {
                   onBranchChange={(id) => setFormData(prev => ({ ...prev, branchId: id }))}
                   onWarehouseChange={(id) => setFormData(prev => ({ ...prev, warehouseId: id }))}
                   focusNextFocusable={focusNextFocusable}
+                  hideBranch={isFieldHidden("branchId")}
+                  hideWarehouse={isFieldHidden("warehouseId")}
                 />
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="grid gap-2">

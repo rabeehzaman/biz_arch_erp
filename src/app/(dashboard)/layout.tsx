@@ -117,6 +117,47 @@ export default async function DashboardLayout({
     console.error("Failed to pre-fetch form config:", error);
   }
 
+  // Pre-fetch theme configs to prevent flash of default colors
+  const swrFallback: Record<string, any> = {
+    "/api/form-config": formConfig,
+  };
+  try {
+    const user = session.user as { isRestaurantModuleEnabled?: boolean; isJewelleryModuleEnabled?: boolean };
+    if (user && session.user?.role !== "superadmin") {
+      let orgId: string | undefined;
+      try { orgId = getOrgId(session); } catch { /* ignore */ }
+      if (orgId) {
+        const themeOrg = await prisma.organization.findUnique({
+          where: { id: orgId },
+          select: {
+            restaurantThemeEnabled: true,
+            restaurantThemePreset: true,
+            restaurantThemeColor: true,
+            jewelleryThemeEnabled: true,
+            jewelleryThemePreset: true,
+            jewelleryThemeColor: true,
+          },
+        });
+        if (user.isRestaurantModuleEnabled && themeOrg) {
+          swrFallback["/api/settings/restaurant-theme"] = {
+            restaurantThemeEnabled: themeOrg.restaurantThemeEnabled ?? true,
+            restaurantThemePreset: themeOrg.restaurantThemePreset ?? "bistro",
+            restaurantThemeColor: themeOrg.restaurantThemeColor ?? null,
+          };
+        }
+        if (user.isJewelleryModuleEnabled && themeOrg) {
+          swrFallback["/api/settings/jewellery-theme"] = {
+            jewelleryThemeEnabled: themeOrg.jewelleryThemeEnabled ?? true,
+            jewelleryThemePreset: themeOrg.jewelleryThemePreset ?? "gold",
+            jewelleryThemeColor: themeOrg.jewelleryThemeColor ?? null,
+          };
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Failed to pre-fetch theme config:", error);
+  }
+
   // Prefer the browser-stored language so Arabic loads immediately on refresh.
   const cookieLanguage = cookieStore.get("preferred-language")?.value;
   const initialLang =
@@ -127,9 +168,7 @@ export default async function DashboardLayout({
   return (
     <ClientDashboardLayout
       session={session}
-      swrFallback={{
-        "/api/form-config": formConfig,
-      }}
+      swrFallback={swrFallback}
       initialLang={initialLang}
     >
       {children}

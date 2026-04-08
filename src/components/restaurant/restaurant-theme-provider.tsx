@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { getRestaurantThemeVars } from "@/lib/restaurant/theme";
 
 interface RestaurantThemeProviderProps {
@@ -11,7 +11,9 @@ interface RestaurantThemeProviderProps {
 }
 
 export function RestaurantThemeProvider({ enabled, preset, customColor, children }: RestaurantThemeProviderProps) {
-  useEffect(() => {
+  // useLayoutEffect runs synchronously before browser paint, preventing
+  // the flash of default (cyan) colors before the theme is applied.
+  useLayoutEffect(() => {
     if (!enabled) return;
 
     const vars = getRestaurantThemeVars(preset, customColor);

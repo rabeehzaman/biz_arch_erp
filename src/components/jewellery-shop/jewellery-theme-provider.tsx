@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { getJewelleryThemeVars } from "@/lib/jewellery/theme";
 
 interface JewelleryThemeProviderProps {
@@ -11,7 +11,7 @@ interface JewelleryThemeProviderProps {
 }
 
 export function JewelleryThemeProvider({ enabled, preset, customColor, children }: JewelleryThemeProviderProps) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!enabled) return;
 
     const vars = getJewelleryThemeVars(preset, customColor);

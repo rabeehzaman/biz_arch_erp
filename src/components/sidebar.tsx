@@ -65,7 +65,7 @@ import {
 import { useState, useEffect, useCallback, Fragment, useMemo } from "react";
 import { useLanguage } from "@/lib/i18n";
 import { useEdition } from "@/hooks/use-edition";
-import { useSidebarSectionOrder, useDisabledSidebarItems } from "@/hooks/use-form-config";
+import { useSidebarSectionOrder, useDisabledSidebarItems, useFormConfigLoaded } from "@/hooks/use-form-config";
 import { SIDEBAR_SECTIONS } from "@/lib/form-config/types";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 
@@ -334,6 +334,7 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
   const isSuperadmin = session?.user?.role === "superadmin";
 
   const disabledItems = useDisabledSidebarItems();
+  const isConfigLoaded = useFormConfigLoaded();
 
   // disabledItems come from API as English names; filter by matching English name + edition
   const filterItems = (items: NavItem[]) =>
@@ -438,8 +439,9 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
 
       {/* Main Navigation */}
       <nav className={cn(
-        "min-h-0 flex-1 space-y-1.5 overflow-y-auto py-4 overscroll-contain",
-        collapsed ? "px-2" : "px-3"
+        "min-h-0 flex-1 space-y-1.5 overflow-y-auto py-4 overscroll-contain transition-opacity duration-150",
+        collapsed ? "px-2" : "px-3",
+        !isSuperadmin && !isConfigLoaded && "opacity-0"
       )}>
         {isSuperadmin ? (
           superadminNavigation.map((item) => (
@@ -464,7 +466,11 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
       </nav>
 
       {/* Bottom Navigation */}
-      <div className={cn("shrink-0 py-4", collapsed ? "px-2" : "px-3")}>
+      <div className={cn(
+        "shrink-0 py-4 transition-opacity duration-150",
+        collapsed ? "px-2" : "px-3",
+        !isSuperadmin && !isConfigLoaded && "opacity-0"
+      )}>
         <Separator className="mb-4 bg-white/10" />
         {!isSuperadmin && visibleBottom.map((item) => {
           const isActive = pathname === item.href;

@@ -24,7 +24,7 @@ import {
   CircleDollarSign,
   type LucideIcon,
 } from "lucide-react";
-import { useMobileNavConfig, useSidebarMode, useDisabledSidebarItems } from "@/hooks/use-form-config";
+import { useMobileNavConfig, useSidebarMode, useDisabledSidebarItems, useFormConfigLoaded } from "@/hooks/use-form-config";
 import { MOBILE_TAB_TO_SIDEBAR_NAMES, PLUS_ACTION_ROUTE_TO_SIDEBAR_NAME } from "@/lib/form-config/types";
 import { GlobalScanner } from "@/components/scanner/global-scanner";
 import { MobileLanguageSwitcher } from "@/components/mobile-language-switcher";
@@ -98,6 +98,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   const mobileNavConfig = useMobileNavConfig();
   const sidebarMode = useSidebarMode();
   const disabledSidebarItems = useDisabledSidebarItems();
+  const isConfigLoaded = useFormConfigLoaded();
 
   const router = useRouter();
 
@@ -257,7 +258,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
         }}
       />
       <nav
-        className={`${bottomNavClassName} transition-transform duration-300 ease-out`}
+        className={`${bottomNavClassName} transition-[transform,opacity] duration-300 ease-out${!isConfigLoaded ? " opacity-0" : ""}`}
         style={{
           transform: navHidden ? "translateY(100%)" : `translateY(${bottomOffset}px)`,
           pointerEvents: navHidden ? "none" : undefined,

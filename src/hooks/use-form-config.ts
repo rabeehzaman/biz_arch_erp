@@ -61,6 +61,12 @@ export function useDisabledSidebarItems(): string[] {
   return ctx?.disabledSidebarItems ?? [];
 }
 
+/** Returns true once the form config has loaded (prevents flash of hidden items) */
+export function useFormConfigLoaded(): boolean {
+  const ctx = useContext(FormConfigContext);
+  return ctx !== null;
+}
+
 /** Returns the sidebar display mode: "full" or "hidden" */
 export function useSidebarMode(): "full" | "hidden" {
   const ctx = useContext(FormConfigContext);

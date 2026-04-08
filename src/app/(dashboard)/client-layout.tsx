@@ -17,7 +17,7 @@ import { SubscriptionBanner } from "@/components/subscription-banner";
 import { RestaurantThemeProvider } from "@/components/restaurant/restaurant-theme-provider";
 import { JewelleryThemeProvider } from "@/components/jewellery-shop/jewellery-theme-provider";
 import { FormConfigProvider } from "@/lib/form-config/context";
-import { useSidebarMode } from "@/hooks/use-form-config";
+import { useSidebarMode, useFormConfigLoaded } from "@/hooks/use-form-config";
 
 function DesktopLayout({ children }: { children: React.ReactNode }) {
     const { dir } = useLanguage();

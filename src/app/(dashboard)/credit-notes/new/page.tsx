@@ -409,6 +409,8 @@ export default function NewCreditNotePage() {
                 onBranchChange={setBranchId}
                 onWarehouseChange={setWarehouseId}
                 focusNextFocusable={focusNextFocusable}
+                hideBranch={isFieldHidden("branchId")}
+                hideWarehouse={isFieldHidden("warehouseId")}
               />
               <div className="grid gap-4 sm:grid-cols-2 mt-4">
                 <div className="space-y-2">
