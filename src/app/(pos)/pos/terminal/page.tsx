@@ -431,13 +431,16 @@ function POSTerminalContent() {
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
   const [isKotSending, setIsKotSending] = useState(false);
 
+  // Callback for remote updates to the active tab (from polling)
+  const remoteUpdateRef = useRef<((tab: TabContext) => void) | null>(null);
+
   // Tab system — generalises per-table context to unlimited concurrent orders
   const {
     tabs, activeTabId, activeTabLabel, activeTabCreatedAt, tabCount,
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
     findTabByTableId, updateActiveTabLabel, getAllTableIds, clearAllTabs,
-    isHydrated, initialTabContext, persistTab, scheduleSave,
-  } = usePOSTabs(posSession?.id ?? null);
+    isHydrated, initialTabContext, persistTab, scheduleSave, mutateOpenOrders, adoptAsActiveTab,
+  } = usePOSTabs(posSession?.id ?? null, (tab) => remoteUpdateRef.current?.(tab));
   const [showTabsSheet, setShowTabsSheet] = useState(false);
 
   // Fetch org settings for POS accounting mode
@@ -908,6 +911,13 @@ function POSTerminalContent() {
     }
   }, [isHydrated, initialTabContext, restoreTabContext, isRestaurantEnabled]);
 
+  // Wire up remote update callback — restores active tab when another device changes it
+  useEffect(() => {
+    remoteUpdateRef.current = (tab: TabContext) => {
+      restoreTabContext(tab);
+    };
+  }, [restoreTabContext]);
+
   // Auto-save active tab to DB on state changes (debounced)
   useEffect(() => {
     if (!isHydrated || !posSession) return;
@@ -1002,7 +1012,7 @@ function POSTerminalContent() {
   );
 
   const revalidateCheckoutDataInBackground = useCallback(() => {
-    void Promise.allSettled([mutateSession(), mutateHeldOrders(), mutateProducts()]).then((results) => {
+    void Promise.allSettled([mutateSession(), mutateHeldOrders(), mutateProducts(), mutateOpenOrders()]).then((results) => {
       const rejected = results.filter(
         (result): result is PromiseRejectedResult => result.status === "rejected"
       );
@@ -1014,7 +1024,7 @@ function POSTerminalContent() {
         );
       }
     });
-  }, [mutateHeldOrders, mutateProducts, mutateSession]);
+  }, [mutateHeldOrders, mutateProducts, mutateSession, mutateOpenOrders]);
 
   // ── Session Handlers ───────────────────────────────────────────────
 
@@ -2272,13 +2282,13 @@ function POSTerminalContent() {
         <TableSelect
           open={showTableSelect}
           onOpenChange={setShowTableSelect}
-          onSelectTable={(table) => {
+          onSelectTable={async (table) => {
             if (!table) {
               setShowTableSelect(false);
               return;
             }
 
-            // Check if a tab already exists for this table
+            // Check if a tab already exists for this table locally
             const existingTabId = findTabByTableId(table.id, selectedTable?.id);
             if (existingTabId && existingTabId !== activeTabId) {
               // Switch to existing tab for this table
@@ -2293,7 +2303,61 @@ function POSTerminalContent() {
               return;
             }
 
-            // No existing tab for this table
+            // Check if another session/device has an open order for this table
+            try {
+              const res = await fetch(`/api/pos/open-orders/by-table/${table.id}`);
+              if (res.ok) {
+                const { order: remoteOrder } = await res.json();
+                if (remoteOrder) {
+                  // Adopt the order from the other session
+                  const adoptRes = await fetch(`/api/pos/open-orders/${remoteOrder.id}/adopt`, { method: "POST" });
+                  if (adoptRes.ok) {
+                    const adoptedRecord = await adoptRes.json();
+                    // Build tab context from the adopted order
+                    const items = Array.isArray(adoptedRecord.items) ? adoptedRecord.items : [];
+                    const adoptedCustomer = adoptedRecord.customerId
+                      ? { id: adoptedRecord.customerId, name: adoptedRecord.customerName || "", phone: null }
+                      : null;
+                    const adoptedTable = adoptedRecord.tableId
+                      ? {
+                          id: adoptedRecord.tableId,
+                          number: adoptedRecord.tableNumber || table.number,
+                          name: adoptedRecord.tableName || table.name,
+                          section: adoptedRecord.tableSection || table.section,
+                          capacity: adoptedRecord.tableCapacity || table.capacity,
+                        }
+                      : table;
+
+                    // Switch active tab identity to the adopted order's DB id
+                    adoptAsActiveTab(
+                      adoptedRecord.id,
+                      adoptedRecord.label || `T${table.number}`,
+                      new Date(adoptedRecord.createdAt).getTime(),
+                      snapshotCurrentTab()
+                    );
+
+                    // Restore adopted order state
+                    dispatchCart({ type: "RESTORE", items });
+                    setSelectedCustomer(adoptedCustomer);
+                    setSelectedTable(adoptedTable);
+                    setOrderType(adoptedRecord.orderType || "DINE_IN");
+                    setIsReturnMode(adoptedRecord.isReturnMode || false);
+                    setKotSentQuantities(
+                      new Map(Object.entries(adoptedRecord.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)]))
+                    );
+                    setKotOrderIds(Array.isArray(adoptedRecord.kotOrderIds) ? adoptedRecord.kotOrderIds : []);
+                    if (mutateOpenOrders) mutateOpenOrders();
+                    toast.success(`Resumed order for Table ${table.number}`);
+                    setShowTableSelect(false);
+                    return;
+                  }
+                }
+              }
+            } catch {
+              // Cross-session check failed — fall through to create new order
+            }
+
+            // No existing order for this table anywhere
             if (selectedTable) {
               // Current tab already has a DIFFERENT table — open new tab
               const snapshot = snapshotCurrentTab();

@@ -1865,6 +1865,7 @@ model POSOpenOrder {
 
   @@index([sessionId])
   @@index([organizationId])
+  @@index([organizationId, tableId])
   @@map("pos_open_orders")
 }
 
