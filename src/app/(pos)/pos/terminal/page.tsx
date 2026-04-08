@@ -433,7 +433,7 @@ function POSTerminalContent() {
 
   // Tab system — generalises per-table context to unlimited concurrent orders
   const {
-    activeTabId, activeTabLabel, activeTabCreatedAt, tabCount,
+    tabs, activeTabId, activeTabLabel, activeTabCreatedAt, tabCount,
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
     findTabByTableId, updateActiveTabLabel, getAllTableIds, clearAllTabs,
     isHydrated, initialTabContext, persistTab, scheduleSave,
