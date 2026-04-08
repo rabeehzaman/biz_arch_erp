@@ -529,6 +529,11 @@ export async function PUT(
         }
       }
 
+      // ── Clean up open orders (tabs) ───────────────────────────────────
+      await tx.pOSOpenOrder.deleteMany({
+        where: { sessionId: id, organizationId },
+      });
+
       // ── Update session ──────────────────────────────────────────────────
       const updatedSession = await tx.pOSSession.update({
         where: { id, organizationId },

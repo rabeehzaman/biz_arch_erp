@@ -46,6 +46,8 @@ import type { ReceiptData } from "@/components/pos/receipt";
 import { ReturnPanel } from "@/components/pos/return-panel";
 import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
 import { TableSelect } from "@/components/pos/table-select";
+import { usePOSTabs, type TabContext } from "@/hooks/use-pos-tabs";
+import { OrderTabsSheet } from "@/components/pos/order-tabs-sheet";
 import { printKOTMulti } from "@/lib/restaurant/kot-print";
 import type { KOTReceiptData } from "@/components/restaurant/kot-receipt";
 import {
@@ -429,13 +431,14 @@ function POSTerminalContent() {
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
   const [isKotSending, setIsKotSending] = useState(false);
 
-  // Per-table order context — saves cart + KOT state when switching tables
-  const tableOrdersRef = useRef<Map<string, {
-    items: CartItemData[];
-    kotSentQuantities: Map<string, number>;
-    kotOrderIds: string[];
-    customer: { id: string; name: string; phone: string | null } | null;
-  }>>(new Map());
+  // Tab system — generalises per-table context to unlimited concurrent orders
+  const {
+    activeTabId, activeTabLabel, activeTabCreatedAt, tabCount,
+    allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
+    findTabByTableId, updateActiveTabLabel, getAllTableIds, clearAllTabs,
+    isHydrated, initialTabContext, persistTab, scheduleSave,
+  } = usePOSTabs(posSession?.id ?? null);
+  const [showTabsSheet, setShowTabsSheet] = useState(false);
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null; posReceiptRenderConfig?: { electron: { allowedModes: string[]; defaultMode: string | null }; mobile: { renderMode: string } } }>(
@@ -785,9 +788,132 @@ function POSTerminalContent() {
     }).catch(() => {});
   }, []);
 
+  /** Mark a table as OCCUPIED in the database */
+  const occupyTable = useCallback((tableId: string) => {
+    fetch(`/api/restaurant/tables/${tableId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "OCCUPIED" }),
+    }).catch(() => {});
+  }, []);
+
+  // ── Tab helpers ───────────────────────────────────────────────────
+
+  const snapshotCurrentTab = useCallback((): TabContext => ({
+    id: activeTabId,
+    label: activeTabLabel,
+    cartState,
+    selectedCustomer,
+    selectedTable,
+    heldOrderId,
+    isReturnMode,
+    orderType,
+    kotSentQuantities,
+    kotOrderIds,
+    view,
+    createdAt: activeTabCreatedAt,
+  }), [activeTabId, activeTabLabel, cartState, selectedCustomer, selectedTable, heldOrderId, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, activeTabCreatedAt]);
+
+  const restoreTabContext = useCallback((tab: TabContext) => {
+    dispatchCart({ type: "RESTORE", items: tab.cartState.items });
+    setSelectedCustomer(tab.selectedCustomer);
+    setSelectedTable(tab.selectedTable);
+    setHeldOrderId(tab.heldOrderId);
+    setIsReturnMode(tab.isReturnMode);
+    setOrderType(tab.orderType);
+    setKotSentQuantities(tab.kotSentQuantities);
+    setKotOrderIds(tab.kotOrderIds);
+    setView(tab.view);
+  }, []);
+
+  const resetLiveState = useCallback(() => {
+    dispatchCart({ type: "CLEAR" });
+    setSelectedCustomer(null);
+    setSelectedTable(null);
+    setHeldOrderId(null);
+    setIsReturnMode(false);
+    setOrderType("DINE_IN");
+    setKotSentQuantities(new Map());
+    setKotOrderIds([]);
+    setView("cart");
+    setMobileView("products");
+  }, []);
+
+  const handleTabSwitch = useCallback((targetId: string) => {
+    if (targetId === activeTabId) return;
+    const snapshot = snapshotCurrentTab();
+    const target = switchTab(targetId, snapshot);
+    if (target) restoreTabContext(target);
+  }, [activeTabId, snapshotCurrentTab, switchTab, restoreTabContext]);
+
+  const handleNewTab = useCallback(() => {
+    const snapshot = snapshotCurrentTab();
+    switchToNewTab(snapshot);
+    resetLiveState();
+    // In restaurant mode, auto-open table select for the new order
+    if (isRestaurantEnabled) {
+      setShowTableSelect(true);
+    }
+  }, [snapshotCurrentTab, switchToNewTab, resetLiveState, isRestaurantEnabled]);
+
+  const handleCloseTab = useCallback((tabId: string) => {
+    const { switchTo, wasActive } = closeTabAction(tabId);
+    if (wasActive) {
+      if (switchTo) {
+        restoreTabContext(switchTo);
+      } else {
+        resetLiveState();
+      }
+    }
+  }, [closeTabAction, restoreTabContext, resetLiveState]);
+
+  // Auto-label active tab based on customer/table/return state
+  useEffect(() => {
+    let label = activeTabLabel;
+    if (isReturnMode) {
+      label = "Return";
+    } else if (selectedTable && selectedCustomer) {
+      label = `T${selectedTable.number} - ${selectedCustomer.name}`;
+    } else if (selectedTable) {
+      label = `T${selectedTable.number}`;
+    } else if (selectedCustomer) {
+      label = selectedCustomer.name;
+    }
+    // Only update if changed and not a generic "Order N" being overridden back
+    if (label !== activeTabLabel) {
+      updateActiveTabLabel(label);
+    }
+  }, [selectedCustomer, selectedTable, isReturnMode, activeTabLabel, updateActiveTabLabel]);
+
+  // Restore active tab from DB on initial hydration
+  const hydrationDoneRef = useRef(false);
+  useEffect(() => {
+    if (!isHydrated || hydrationDoneRef.current || !initialTabContext) return;
+    hydrationDoneRef.current = true;
+    restoreTabContext(initialTabContext);
+  }, [isHydrated, initialTabContext, restoreTabContext]);
+
+  // Auto-save active tab to DB on state changes (debounced)
+  useEffect(() => {
+    if (!isHydrated || !posSession) return;
+    scheduleSave(snapshotCurrentTab());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartState.revision, selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view]);
+
+  // Persist immediately when page becomes hidden (browser tab close / app switch)
+  useEffect(() => {
+    if (!isHydrated) return;
+    const handler = () => {
+      if (document.visibilityState === "hidden") {
+        persistTab(snapshotCurrentTab());
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [isHydrated, snapshotCurrentTab, persistTab]);
+
   const confirmClearCartWithKot = useCallback(() => {
     if (selectedTable) {
-      tableOrdersRef.current.delete(selectedTable.id);
       freeTable(selectedTable.id);
     }
     clearCart();
@@ -931,13 +1057,12 @@ function POSTerminalContent() {
           : t("pos.failedToPrintSessionReport");
       }
 
-      // Free all occupied tables from this session before clearing
-      if (selectedTable) freeTable(selectedTable.id);
-      for (const tableId of tableOrdersRef.current.keys()) {
+      // Free all occupied tables across all tabs before clearing
+      for (const tableId of getAllTableIds(selectedTable?.id)) {
         freeTable(tableId);
       }
-      tableOrdersRef.current.clear();
 
+      clearAllTabs();
       clearCart();
       setKotSentQuantities(new Map());
       setKotOrderIds([]);
@@ -1364,17 +1489,8 @@ function POSTerminalContent() {
       applyOptimisticCheckoutUpdates(completedCart, completedTotal, completedHeldOrderId);
       revalidateCheckoutDataInBackground();
 
-      // Server confirmed — now clear cart and navigate to products
-      clearCart();
-      setView("cart");
-      setMobileView("products");
-
-      // Reset restaurant state — remove completed table from saved contexts
-      if (selectedTable) tableOrdersRef.current.delete(selectedTable.id);
-      setSelectedTable(null);
-      setOrderType("DINE_IN");
-      setKotSentQuantities(new Map());
-      setKotOrderIds([]);
+      // Server confirmed — close this tab and switch to next (or reset if last)
+      handleCloseTab(activeTabId);
 
       const syncSuccessWorkMs = roundTimingMs(performance.now() - responseParsedAt);
       const clientTimings = {
@@ -1442,7 +1558,8 @@ function POSTerminalContent() {
         const data = await res.json();
         throw new Error(data.error || t("pos.failedToHoldOrder"));
       }
-      clearCart();
+      // After successful hold, close this tab (or reset if last)
+      handleCloseTab(activeTabId);
       await mutateHeldOrders();
       toast.success(t("pos.orderHeldSuccess"));
     } catch (err) {
@@ -1460,6 +1577,18 @@ function POSTerminalContent() {
         conversionFactor: item.conversionFactor ?? 1,
       };
     });
+
+    // Always open restored order in a new tab
+    const customerName = order.customer?.name;
+    const snapshot = snapshotCurrentTab();
+    switchToNewTab(snapshot, {
+      label: customerName || `Held #${order.id.slice(-4)}`,
+      heldOrderId: order.id,
+      selectedCustomer: order.customerId && order.customer
+        ? { id: order.customerId, name: order.customer.name, phone: null }
+        : null,
+    });
+    // Restore into the new (now active) live state
     dispatchCart({ type: "RESTORE", items: restoredItems });
     setHeldOrderId(order.id);
     if (order.customerId && order.customer) {
@@ -1547,7 +1676,7 @@ function POSTerminalContent() {
   }
 
   // No session → redirect handled by useEffect above
-  if (!posSession) {
+  if (!posSession || !isHydrated) {
     return (
       <div className="flex h-dvh items-center justify-center bg-slate-100">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1565,8 +1694,8 @@ function POSTerminalContent() {
         branchName={posSession.branch?.name}
         warehouseName={posSession.warehouse?.name}
         employeeName={posSession.employee?.name}
-        heldOrdersCount={heldOrders.length}
-        onHeldOrdersClick={openHeldOrders}
+        heldOrdersCount={isRestaurantEnabled ? 0 : heldOrders.length}
+        onHeldOrdersClick={isRestaurantEnabled ? undefined : openHeldOrders}
         onCloseSession={openCloseSessionDialog}
         onBackToSessions={backToSessions}
         onReprintReceipt={lastReceiptData && !isPendingReceipt ? reprintReceipt : undefined}
@@ -1577,6 +1706,8 @@ function POSTerminalContent() {
         selectedTable={selectedTable}
         isRestaurantMode={isRestaurantEnabled}
         onTableClick={() => setShowTableSelect(true)}
+        tabCount={tabCount}
+        onTabsClick={() => setShowTabsSheet(true)}
       />
 
       {/* Main Content */}
@@ -1798,7 +1929,7 @@ function POSTerminalContent() {
                     </Button>
                   )}
                   <div className="flex gap-2">
-                    {!isReturnMode && (
+                    {!isReturnMode && !isRestaurantEnabled && (
                       <Button
                         variant="outline"
                         className="flex-1"
@@ -2038,7 +2169,8 @@ function POSTerminalContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Held Orders Sheet */}
+      {/* Held Orders Sheet — hidden when restaurant module is enabled (tabs replace it) */}
+      {!isRestaurantEnabled && (
       <Sheet open={showHeldSheet} onOpenChange={setShowHeldSheet}>
         <SheetContent side="right" className="w-full sm:w-[400px] sm:max-w-[450px] p-0">
           <SheetHeader className="p-4 border-b">
@@ -2102,6 +2234,7 @@ function POSTerminalContent() {
           </div>
         </SheetContent>
       </Sheet>
+      )}
 
       <PreviousOrdersSheet
         open={showPreviousOrdersSheet}
@@ -2110,56 +2243,76 @@ function POSTerminalContent() {
         companySettings={companySettings}
       />
 
+      <OrderTabsSheet
+        open={showTabsSheet}
+        onOpenChange={setShowTabsSheet}
+        tabs={allTabs(snapshotCurrentTab())}
+        activeTabId={activeTabId}
+        onSwitch={handleTabSwitch}
+        onClose={handleCloseTab}
+        onNew={handleNewTab}
+      />
+
       {isRestaurantEnabled && (
         <TableSelect
           open={showTableSelect}
           onOpenChange={setShowTableSelect}
           onSelectTable={(table) => {
-            // Save current table's order context before switching
-            if (selectedTable && (cartState.items.length > 0 || kotSentQuantities.size > 0)) {
-              tableOrdersRef.current.set(selectedTable.id, {
-                items: cartState.items,
-                kotSentQuantities: new Map(kotSentQuantities),
-                kotOrderIds: [...kotOrderIds],
-                customer: selectedCustomer,
-              });
+            if (!table) {
+              setShowTableSelect(false);
+              return;
             }
 
-            // Restore new table's order context if it exists
-            const saved = table ? tableOrdersRef.current.get(table.id) : undefined;
-            if (saved) {
-              dispatchCart({ type: "RESTORE", items: saved.items });
-              setKotSentQuantities(saved.kotSentQuantities);
-              setKotOrderIds(saved.kotOrderIds);
-              setSelectedCustomer(saved.customer);
-              tableOrdersRef.current.delete(table!.id);
-            } else if (selectedTable) {
-              // Switching to a new table — start fresh
+            // Check if a tab already exists for this table
+            const existingTabId = findTabByTableId(table.id, selectedTable?.id);
+            if (existingTabId && existingTabId !== activeTabId) {
+              // Switch to existing tab for this table
+              handleTabSwitch(existingTabId);
+              setShowTableSelect(false);
+              return;
+            }
+
+            if (existingTabId === activeTabId) {
+              // Already on this table's tab
+              setShowTableSelect(false);
+              return;
+            }
+
+            // No existing tab for this table
+            if (selectedTable) {
+              // Current tab already has a DIFFERENT table — open new tab
+              const snapshot = snapshotCurrentTab();
+              switchToNewTab(snapshot, {
+                label: `T${table.number}`,
+                selectedTable: table,
+                orderType: "DINE_IN",
+              });
               dispatchCart({ type: "CLEAR" });
               setKotSentQuantities(new Map());
               setKotOrderIds([]);
               setSelectedCustomer(null);
             }
 
+            // Assign table to the current tab and mark it OCCUPIED in DB
             setSelectedTable(table);
             setOrderType("DINE_IN");
+            occupyTable(table.id);
             setShowTableSelect(false);
           }}
           onTakeaway={() => {
-            // Save current table's order context before switching to takeaway
-            if (selectedTable && (cartState.items.length > 0 || kotSentQuantities.size > 0)) {
-              tableOrdersRef.current.set(selectedTable.id, {
-                items: cartState.items,
-                kotSentQuantities: new Map(kotSentQuantities),
-                kotOrderIds: [...kotOrderIds],
-                customer: selectedCustomer,
+            // If current tab has a table/work, open new takeaway tab
+            if (cartState.items.length > 0 || kotSentQuantities.size > 0 || selectedTable) {
+              const snapshot = snapshotCurrentTab();
+              switchToNewTab(snapshot, {
+                label: "Takeaway",
+                orderType: "TAKEAWAY",
               });
+              dispatchCart({ type: "CLEAR" });
+              setKotSentQuantities(new Map());
+              setKotOrderIds([]);
+              setSelectedCustomer(null);
             }
 
-            dispatchCart({ type: "CLEAR" });
-            setKotSentQuantities(new Map());
-            setKotOrderIds([]);
-            setSelectedCustomer(null);
             setSelectedTable(null);
             setOrderType("TAKEAWAY");
             setShowTableSelect(false);

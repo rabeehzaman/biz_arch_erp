@@ -200,6 +200,7 @@ model Organization {
   employees                  Employee[]
   posSessions                POSSession[]
   posHeldOrders              POSHeldOrder[]
+  posOpenOrders              POSOpenOrder[]
   posRegisterConfigs         POSRegisterConfig[]
   unitConversions            UnitConversion[]
   branches                   Branch[]
@@ -548,6 +549,7 @@ model Customer {
   assignments   CustomerAssignment[]
   creditNotes   CreditNote[]
   posHeldOrders POSHeldOrder[]
+  posOpenOrders POSOpenOrder[]
   mobileDevices MobileDevice[]
 
   comments             CustomerComment[]
@@ -713,6 +715,10 @@ model Invoice {
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, issueDate(sort: Desc)])
   @@index([organizationId, customerId])
+  @@index([organizationId, branchId])
+  @@index([organizationId, warehouseId])
+  @@index([posSessionId])
+  @@index([createdById])
   @@map("invoices")
 }
 
@@ -834,6 +840,8 @@ model Quotation {
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
   @@index([customerId])
+  @@index([organizationId, branchId])
+  @@index([organizationId, warehouseId])
   @@map("quotations")
 }
 
@@ -960,6 +968,8 @@ model PurchaseInvoice {
   @@index([organizationId, invoiceDate(sort: Desc)])
   @@index([organizationId, supplierId])
   @@index([organizationId, status])
+  @@index([organizationId, branchId])
+  @@index([organizationId, warehouseId])
   @@map("purchase_invoices")
 }
 
@@ -1094,6 +1104,10 @@ model CreditNote {
   @@index([organizationId])
   @@index([organizationId, customerId])
   @@index([invoiceId])
+  @@index([organizationId, branchId])
+  @@index([organizationId, warehouseId])
+  @@index([posSessionId])
+  @@index([createdById])
   @@map("credit_notes")
 }
 
@@ -1217,6 +1231,8 @@ model DebitNote {
   @@index([organizationId])
   @@index([organizationId, supplierId])
   @@index([purchaseInvoiceId])
+  @@index([organizationId, branchId])
+  @@index([organizationId, warehouseId])
   @@map("debit_notes")
 }
 
@@ -1343,6 +1359,7 @@ model Payment {
   @@index([organizationId, paymentDate(sort: Desc)])
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([customerId])
+  @@index([organizationId, branchId])
   @@map("payments")
 }
 
@@ -1400,6 +1417,7 @@ model SupplierPayment {
   @@index([organizationId, paymentDate(sort: Desc)])
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([supplierId])
+  @@index([organizationId, branchId])
   @@map("supplier_payments")
 }
 
@@ -1674,6 +1692,9 @@ model CustomerTransaction {
   @@index([customerId, transactionDate])
   @@index([organizationId])
   @@index([organizationId, transactionDate(sort: Desc)])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@index([creditNoteId])
   @@map("customer_transactions")
 }
 
@@ -1711,6 +1732,9 @@ model SupplierTransaction {
   @@index([supplierId, transactionDate])
   @@index([organizationId])
   @@index([organizationId, transactionDate(sort: Desc)])
+  @@index([purchaseInvoiceId])
+  @@index([supplierPaymentId])
+  @@index([debitNoteId])
   @@map("supplier_transactions")
 }
 
@@ -1780,6 +1804,7 @@ model POSSession {
   invoices             Invoice[]
   creditNotes          CreditNote[]
   heldOrders           POSHeldOrder[]
+  openOrders           POSOpenOrder[]
   kotOrders            KOTOrder[]
   restaurantPOSOrders  RestaurantPOSOrder[]
 
@@ -1810,6 +1835,37 @@ model POSHeldOrder {
   @@index([organizationId])
   @@index([sessionId])
   @@map("pos_held_orders")
+}
+
+model POSOpenOrder {
+  id             String               @id // client-generated UUID
+  organizationId String
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  sessionId      String
+  session        POSSession           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  label          String               @default("Order")
+  orderType      RestaurantOrderType  @default(DINE_IN)
+  isReturnMode   Boolean              @default(false)
+  items          Json                 @default("[]")
+  customerId     String?
+  customer       Customer?            @relation(fields: [customerId], references: [id])
+  customerName   String?
+  tableId        String?
+  table          RestaurantTable?     @relation(fields: [tableId], references: [id])
+  tableNumber    Int?
+  tableName      String?
+  tableSection   String?
+  tableCapacity  Int?
+  heldOrderId    String?
+  kotSentQuantities Json              @default("{}")
+  kotOrderIds       Json              @default("[]")
+  version        Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([sessionId])
+  @@index([organizationId])
+  @@map("pos_open_orders")
 }
 
 // ==================== SETTINGS ====================
@@ -1990,6 +2046,7 @@ model CashBankTransaction {
   @@index([cashBankAccountId, transactionDate])
   @@index([organizationId])
   @@index([organizationId, transactionDate(sort: Desc)])
+  @@index([createdById])
   @@map("cash_bank_transactions")
 }
 
@@ -2037,6 +2094,7 @@ model Expense {
   @@index([organizationId, status])
   @@index([supplierId])
   @@index([cashBankAccountId])
+  @@index([organizationId, branchId])
   @@map("expenses")
 }
 
@@ -2704,6 +2762,7 @@ model KarigarTransaction {
   @@index([karigarId])
   @@index([organizationId])
   @@index([organizationId, date(sort: Desc)])
+  @@index([jewelleryItemId])
   @@map("karigar_transactions")
 }
 
@@ -2870,6 +2929,8 @@ model MetalLedgerEntry {
   @@index([organizationId, sourceType])
   @@index([karigarId])
   @@index([jewelleryItemId])
+  @@index([customerId])
+  @@index([supplierId])
   @@map("metal_ledger_entries")
 }
 
@@ -2952,6 +3013,7 @@ model RestaurantTable {
 
   kotOrders             KOTOrder[]
   restaurantPOSOrders   RestaurantPOSOrder[]
+  posOpenOrders         POSOpenOrder[]
 
   @@unique([organizationId, number])
   @@index([organizationId])

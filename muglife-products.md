@@ -1,15 +1,9 @@
 # MUG LIFE LLP - Product Catalog
 
-**Organization:** MUG LIFE LLP (gst-kot-test)
-**Total Products:** 87
+**Organization:** MUG LIFE LLP (mug-life-llp)
+**Total Products:** 69
 
 ---
-
-## Beverages (1 item)
-
-| Product | Price |
-|---------|-------|
-| Watermelon Juice | 60 |
 
 ## Fried Rice (5 items)
 
@@ -105,7 +99,7 @@
 | Sweet Corn Veg Soup | 70 |
 | Veg Manchow Soup | 80 |
 
-## Chicken Pizza (17 items)
+## Chicken Pizza (9 items)
 
 | Product | Medium | Large |
 |---------|--------|-------|
@@ -117,9 +111,9 @@
 | Family Chicken Pizza | 380 | 440 |
 | Grilled Chicken Pizza | 320 | 380 |
 | Mushroom Chicken Pizza | 320 | 380 |
-| Mexican Hot & Spicy Pizza | — | 480 |
+| Mexican Hot & Spicy Pizza | 480 | — |
 
-## Veg Pizza (12 items)
+## Veg Pizza (6 items)
 
 | Product | Medium | Large |
 |---------|--------|-------|
@@ -130,14 +124,6 @@
 | Margarita Pizza | 220 | 260 |
 | Veggie Mushroom Pizza | 260 | 300 |
 
-## Uncategorized (3 items)
-
-| Product | Price |
-|---------|-------|
-| Cutlet | 15 |
-| Poratto | 12 |
-| Tea | 20 |
-
 ---
 
-*All prices in INR. GST @ 5% applicable.*
+*All prices in INR (tax-inclusive). GST @ 5%. Pizzas use product variants (Medium/Large) with separate pricing.*

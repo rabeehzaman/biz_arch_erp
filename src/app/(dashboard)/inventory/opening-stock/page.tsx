@@ -17,7 +17,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Pencil, Package, Search, Warehouse } from "lucide-react";
+import { Plus, Trash2, Pencil, Package, Search, Warehouse, FileDown, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { PageAnimation, StaggerContainer, StaggerItem } from "@/components/ui/page-animation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useLanguage } from "@/lib/i18n";
+import { downloadBlob } from "@/lib/download";
 
 interface WarehouseItem {
   id: string;
@@ -56,7 +57,7 @@ interface OpeningStock {
 export default function OpeningStockPage() {
   const { data: session } = useSession();
   const { symbol, locale } = useCurrency();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const multiBranchEnabled = session?.user?.multiBranchEnabled;
 
   const [openingStocks, setOpeningStocks] = useState<OpeningStock[]>([]);
@@ -69,6 +70,7 @@ export default function OpeningStockPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [_deleting, setDeleting] = useState(false);
 
+  const [isDownloading, setIsDownloading] = useState(false);
   const [editStock, setEditStock] = useState<OpeningStock | null>(null);
   const [editForm, setEditForm] = useState({ quantity: "", unitCost: "", stockDate: "", notes: "" });
   const [saving, setSaving] = useState(false);
@@ -177,6 +179,24 @@ export default function OpeningStockPage() {
     }
   }
 
+  async function handleDownloadPdf() {
+    setIsDownloading(true);
+    try {
+      let url = `/api/opening-stocks/pdf?lang=${lang}`;
+      if (filterWarehouse !== "all") {
+        url += `&warehouseId=${filterWarehouse}`;
+      }
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to generate PDF");
+      const blob = await res.blob();
+      await downloadBlob(blob, `opening-stock-report-${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch {
+      toast.error(t("inventory.failedToLoadData2"));
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
   return (
     <PageAnimation>
       <div className="space-y-6">
@@ -186,12 +206,27 @@ export default function OpeningStockPage() {
             <h2 className="text-2xl font-bold text-slate-900">{t("inventory.openingStock")}</h2>
             <p className="text-slate-500">{t("inventory.openingStockDesc")}</p>
           </div>
-          <Link href="/inventory/opening-stock/new">
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              {t("inventory.addOpeningStock")}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleDownloadPdf}
+              disabled={isDownloading || openingStocks.length === 0}
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="h-4 w-4" />
+              )}
+              {t("inventory.downloadPdf")}
             </Button>
-          </Link>
+            <Link href="/inventory/opening-stock/new">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                {t("inventory.addOpeningStock")}
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}

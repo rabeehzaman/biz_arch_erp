@@ -1,6 +1,6 @@
 "use client";
 
-import { Armchair, ArrowLeft, Clock, History, Languages, Loader2, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
+import { Armchair, ArrowLeft, Clock, CopyPlus, History, Languages, Loader2, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -19,8 +19,8 @@ interface POSHeaderProps {
   branchName?: string;
   warehouseName?: string;
   employeeName?: string | null;
-  heldOrdersCount: number;
-  onHeldOrdersClick: () => void;
+  heldOrdersCount?: number;
+  onHeldOrdersClick?: () => void;
   onCloseSession: () => void;
   onBackToSessions?: () => void;
   onReprintReceipt?: () => void;
@@ -31,6 +31,8 @@ interface POSHeaderProps {
   selectedTable?: { number: number; name: string } | null;
   isRestaurantMode?: boolean;
   onTableClick?: () => void;
+  tabCount?: number;
+  onTabsClick?: () => void;
 }
 
 function POSClock() {
@@ -61,6 +63,8 @@ export function POSHeader({
   selectedTable,
   isRestaurantMode,
   onTableClick,
+  tabCount,
+  onTabsClick,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
@@ -173,23 +177,44 @@ export function POSHeader({
           </Button>
         )}
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-slate-300 hover:text-white hover:bg-slate-800 relative px-2"
-          onClick={onHeldOrdersClick}
-          aria-label={t("pos.heldOrders")}
-          title={t("pos.heldOrders")}
-        >
-          <PauseCircle className="h-4 w-4" />
-          <span className="hidden sm:inline ml-1">{t("pos.heldOrders").split(" ")[0]}</span>
-          <span className="sr-only">{t("pos.heldOrders")}</span>
-          {heldOrdersCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold">
-              {heldOrdersCount}
-            </span>
-          )}
-        </Button>
+        {onTabsClick && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 relative px-2"
+            onClick={onTabsClick}
+            aria-label={t("pos.openOrders")}
+            title={t("pos.openOrders")}
+          >
+            <CopyPlus className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">{t("pos.orders")}</span>
+            {(tabCount ?? 0) > 1 && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-bold">
+                {tabCount}
+              </span>
+            )}
+          </Button>
+        )}
+
+        {onHeldOrdersClick && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 relative px-2"
+            onClick={onHeldOrdersClick}
+            aria-label={t("pos.heldOrders")}
+            title={t("pos.heldOrders")}
+          >
+            <PauseCircle className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">{t("pos.heldOrders").split(" ")[0]}</span>
+            <span className="sr-only">{t("pos.heldOrders")}</span>
+            {(heldOrdersCount ?? 0) > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold">
+                {heldOrdersCount}
+              </span>
+            )}
+          </Button>
+        )}
 
         <div className="hidden sm:block text-sm text-slate-300 truncate max-w-[100px]">
           {employeeName || authSession?.user?.name}
