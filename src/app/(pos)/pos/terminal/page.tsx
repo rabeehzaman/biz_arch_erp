@@ -55,6 +55,8 @@ import {
   printAndCacheReceiptWithConfig,
   printLatestCachedReceipt,
   smartPrintReceipt,
+  setOrgMobileRenderMode,
+  setOrgElectronDefaultMode,
 } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
 import { INDIAN_STATES } from "@/lib/gst/constants";
@@ -423,7 +425,7 @@ function POSTerminalContent() {
   }>>(new Map());
 
   // Fetch org settings for POS accounting mode
-  const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null }>(
+  const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null; posReceiptRenderConfig?: { electron: { allowedModes: string[]; defaultMode: string | null }; mobile: { renderMode: string } } }>(
     posSession ? "/api/pos/org-settings" : null,
     fetcher
   );
@@ -433,6 +435,15 @@ function POSTerminalContent() {
   );
   const isClearingMode = orgSettings?.posAccountingMode === "CLEARING_ACCOUNT";
   const roundOffMode = normalizeRoundOffMode(orgSettings?.roundOffMode);
+
+  // Sync org-level render mode config into the print module
+  useEffect(() => {
+    const rc = orgSettings?.posReceiptRenderConfig;
+    if (rc) {
+      setOrgMobileRenderMode((rc.mobile?.renderMode as "htmlImage" | "bitmapCanvas" | "escposText") || null);
+      setOrgElectronDefaultMode((rc.electron?.defaultMode as "htmlDriver" | "htmlRaster" | "escposText" | "bitmapCanvas") || null);
+    }
+  }, [orgSettings?.posReceiptRenderConfig]);
   const enabledPaymentMethods = paymentMethodsData?.methods?.length
     ? paymentMethodsData.methods
     : DEFAULT_ENABLED_POS_PAYMENT_METHODS;

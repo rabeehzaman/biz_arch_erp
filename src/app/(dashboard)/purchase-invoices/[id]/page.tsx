@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { AttachmentDialog } from "@/components/attachments/attachment-dialog";
 import {
   Select,
   SelectContent,
@@ -362,6 +363,7 @@ export default function PurchaseInvoiceDetailPage({
                 : <Printer className="h-4 w-4 sm:mr-2" />}
               <span>{isPrinting ? "..." : t("common.print")}</span>
             </Button>
+            <AttachmentDialog documentType="purchase_invoice" documentId={invoice.id} />
           </div>
         </div>
 

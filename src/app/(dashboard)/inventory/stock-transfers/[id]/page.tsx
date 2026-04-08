@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { AttachmentDialog } from "@/components/attachments/attachment-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -229,6 +230,7 @@ export default function StockTransferDetailPage({
                                 {t("inventory.printPdf")}
                             </Link>
                         </Button>
+                        <AttachmentDialog documentType="stock_transfer" documentId={transfer.id} />
                     </div>
                 </div>
 

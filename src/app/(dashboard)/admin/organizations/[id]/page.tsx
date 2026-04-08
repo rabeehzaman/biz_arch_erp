@@ -19,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed, FileText, UserPlus, UserMinus } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed, FileText, UserPlus, UserMinus, Printer } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -127,6 +127,10 @@ interface OrganizationDetails {
     posDefaultBankAccountId: string | null;
     isTaxInclusivePrice: boolean;
     assignedInvoiceTemplates: string[];
+    posReceiptRenderConfig?: {
+        electron: { allowedModes: string[]; defaultMode: string | null };
+        mobile: { renderMode: string };
+    } | null;
     createdAt: string;
     users: Array<{
         id: string;
@@ -155,6 +159,8 @@ export default function OrganizationDetailsPage() {
     // Dialog states
 
     // Inline settings state
+    const [orgName, setOrgName] = useState("");
+    const [orgSlug, setOrgSlug] = useState("");
     const [edition, setEditionState] = useState("INDIA");
     const [gstEnabled, setGstEnabled] = useState(false);
     const [eInvoicingEnabled, setEInvoicingEnabled] = useState(false);
@@ -235,6 +241,9 @@ export default function OrganizationDetailsPage() {
     const [posDefaultCashAccountId, setPosDefaultCashAccountId] = useState("");
     const [posDefaultBankAccountId, setPosDefaultBankAccountId] = useState("");
     const [isTaxInclusivePrice, setIsTaxInclusivePrice] = useState(false);
+    const [electronAllowedModes, setElectronAllowedModes] = useState<string[]>(["htmlDriver", "htmlRaster", "escposText", "bitmapCanvas"]);
+    const [electronDefaultMode, setElectronDefaultMode] = useState<string | null>(null);
+    const [mobileRenderMode, setMobileRenderMode] = useState("htmlImage");
     const [companyAddress, setCompanyAddress] = useState("");
     const [companyCity, setCompanyCity] = useState("");
     const [companyState, setCompanyState] = useState("");
@@ -303,6 +312,8 @@ export default function OrganizationDetailsPage() {
     const [orgCashBankAccounts, setOrgCashBankAccounts] = useState<Array<{ id: string; name: string; accountSubType: string }>>([]);
 
     const populateSettingsState = (data: OrganizationDetails) => {
+        setOrgName(data.name || "");
+        setOrgSlug(data.slug || "");
         setEditionState(data.edition || "INDIA");
         setGstEnabled(data.gstEnabled || false);
         setEInvoicingEnabled(data.eInvoicingEnabled || false);
@@ -383,6 +394,11 @@ export default function OrganizationDetailsPage() {
         setPosDefaultCashAccountId(data.posDefaultCashAccountId || "");
         setPosDefaultBankAccountId(data.posDefaultBankAccountId || "");
         setIsTaxInclusivePrice(data.isTaxInclusivePrice || false);
+        if (data.posReceiptRenderConfig) {
+            setElectronAllowedModes(data.posReceiptRenderConfig.electron?.allowedModes || ["htmlDriver", "htmlRaster", "escposText", "bitmapCanvas"]);
+            setElectronDefaultMode(data.posReceiptRenderConfig.electron?.defaultMode || null);
+            setMobileRenderMode(data.posReceiptRenderConfig.mobile?.renderMode || "htmlImage");
+        }
         setCompanyAddress(data.address || "");
         setCompanyCity(data.city || "");
         setCompanyState(data.state || "");
@@ -450,6 +466,18 @@ export default function OrganizationDetailsPage() {
     const handleSaveSettings = async () => {
         setSaving(true);
 
+        if (!orgName.trim()) {
+            toast.error(t("admin.orgNameRequired"));
+            setSaving(false);
+            return;
+        }
+
+        if (!orgSlug.trim()) {
+            toast.error(t("admin.slugRequired"));
+            setSaving(false);
+            return;
+        }
+
         if (gstEnabled && !gstin) {
             toast.error(t("admin.gstinRequired"));
             setSaving(false);
@@ -488,6 +516,8 @@ export default function OrganizationDetailsPage() {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    name: orgName,
+                    slug: orgSlug,
                     edition,
                     gstEnabled,
                     eInvoicingEnabled: gstEnabled ? eInvoicingEnabled : false,
@@ -568,6 +598,10 @@ export default function OrganizationDetailsPage() {
                     posDefaultCashAccountId: posAccountingMode === "CLEARING_ACCOUNT" ? posDefaultCashAccountId || null : null,
                     posDefaultBankAccountId: posAccountingMode === "CLEARING_ACCOUNT" ? posDefaultBankAccountId || null : null,
                     isTaxInclusivePrice,
+                    posReceiptRenderConfig: {
+                        electron: { allowedModes: electronAllowedModes, defaultMode: electronDefaultMode },
+                        mobile: { renderMode: mobileRenderMode },
+                    },
                     address: companyAddress || null,
                     city: companyCity || null,
                     state: companyState || null,
@@ -837,8 +871,8 @@ export default function OrganizationDetailsPage() {
                         </Button>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                                <h1 className="break-words text-2xl font-bold tracking-tight">{organization.name}</h1>
-                                <Badge variant="secondary" className="max-w-full break-all">{organization.slug}</Badge>
+                                <h1 className="break-words text-2xl font-bold tracking-tight">{orgName || organization.name}</h1>
+                                <Badge variant="secondary" className="max-w-full break-all">{orgSlug || organization.slug}</Badge>
                                 {organization.gstEnabled && <Badge variant="default">{t("admin.gstEnabled")}</Badge>}
                                 {organization.saudiEInvoiceEnabled && <Badge variant="default">{t("admin.zatca")}</Badge>}
                             </div>
@@ -978,11 +1012,19 @@ export default function OrganizationDetailsPage() {
                                                 <div className="grid gap-2">
                                                     <Label>{t("settings.companyName")} <span className="text-red-500">*</span></Label>
                                                     <Input
-                                                        value={organization?.name || ""}
-                                                        disabled
-                                                        className="bg-muted"
+                                                        value={orgName}
+                                                        onChange={(e) => setOrgName(e.target.value)}
+                                                        placeholder={t("settings.companyName")}
                                                     />
-                                                    <p className="text-xs text-muted-foreground">{t("admin.orgNameManagedAbove")}</p>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>{t("admin.slug")}</Label>
+                                                    <Input
+                                                        value={orgSlug}
+                                                        onChange={(e) => setOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                                                        placeholder="organization-slug"
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">{t("admin.slugHint")}</p>
                                                 </div>
                                                 {edition === "SAUDI" && (
                                                     <div className="grid gap-2">
@@ -1616,6 +1658,96 @@ export default function OrganizationDetailsPage() {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Receipt Print Modes */}
+                                    <div className="flex flex-col gap-4 border-t border-border pt-6">
+                                        <div className="space-y-0.5">
+                                            <Label className="flex items-center gap-2">
+                                                <Printer className="h-4 w-4" />
+                                                {t("admin.receiptPrintModes")}
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground max-w-md">
+                                                {t("admin.receiptPrintModesDesc")}
+                                            </p>
+                                        </div>
+
+                                        {/* Electron (Desktop) */}
+                                        <div className="space-y-3 border-l-2 border-muted pl-4 ml-2">
+                                            <Label className="text-sm font-medium">{t("admin.electronDesktop")}</Label>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground mb-2">{t("admin.electronAllowedModes")}</p>
+                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                    {[
+                                                        { key: "htmlDriver", label: t("pos.htmlDriverSpooler") },
+                                                        { key: "htmlRaster", label: t("pos.htmlRasterEscpos") },
+                                                        { key: "escposText", label: t("pos.escposTextRaw") },
+                                                        { key: "bitmapCanvas", label: t("pos.bitmapCanvas") },
+                                                    ].map((mode) => (
+                                                        <label key={mode.key} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="h-4 w-4 rounded border-gray-300"
+                                                                checked={electronAllowedModes.includes(mode.key)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setElectronAllowedModes((prev) => [...prev, mode.key]);
+                                                                    } else {
+                                                                        setElectronAllowedModes((prev) => prev.filter((k) => k !== mode.key));
+                                                                        if (electronDefaultMode === mode.key) setElectronDefaultMode(null);
+                                                                    }
+                                                                }}
+                                                            />
+                                                            {mode.label}
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <Label className="text-xs">{t("admin.electronDefaultMode")}</Label>
+                                                <Select value={electronDefaultMode || "__auto__"} onValueChange={(v) => setElectronDefaultMode(v === "__auto__" ? null : v)}>
+                                                    <SelectTrigger className="w-full sm:w-56">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="__auto__">{t("admin.electronDefaultModeAuto")}</SelectItem>
+                                                        {electronAllowedModes.map((mode) => (
+                                                            <SelectItem key={mode} value={mode}>
+                                                                {mode === "htmlDriver" ? t("pos.htmlDriverSpooler")
+                                                                    : mode === "htmlRaster" ? t("pos.htmlRasterEscpos")
+                                                                    : mode === "escposText" ? t("pos.escposTextRaw")
+                                                                    : t("pos.bitmapCanvas")}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+
+                                        {/* Capacitor (Mobile) */}
+                                        <div className="space-y-3 border-l-2 border-muted pl-4 ml-2">
+                                            <Label className="text-sm font-medium">{t("admin.capacitorMobile")}</Label>
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="space-y-0.5">
+                                                    <Label className="text-xs">{t("admin.mobileRenderMode")}</Label>
+                                                </div>
+                                                <Select value={mobileRenderMode} onValueChange={setMobileRenderMode}>
+                                                    <SelectTrigger className="w-full sm:w-56">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="htmlImage">{t("admin.mobileHtmlImage")}</SelectItem>
+                                                        <SelectItem value="bitmapCanvas">{t("admin.mobileBitmapCanvas")}</SelectItem>
+                                                        <SelectItem value="escposText">{t("admin.mobileEscposText")}</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {mobileRenderMode === "htmlImage" ? t("admin.mobileHtmlImageDesc")
+                                                    : mobileRenderMode === "bitmapCanvas" ? t("admin.mobileBitmapCanvasDesc")
+                                                    : t("admin.mobileEscposTextDesc")}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </TabsContent>
 
                                 {/* INVOICE & PDF TAB */}

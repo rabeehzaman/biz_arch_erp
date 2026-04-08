@@ -6,6 +6,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { AttachmentDialog } from "@/components/attachments/attachment-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -315,6 +316,7 @@ export default function QuotationDetailPage({
                 </Button>
               </>
             )}
+            <AttachmentDialog documentType="quotation" documentId={quotation.id} />
           </div>
         </div>
 

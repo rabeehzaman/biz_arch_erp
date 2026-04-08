@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { AttachmentDialog } from "@/components/attachments/attachment-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -276,6 +277,7 @@ export default function StockTakeDetailPage({
               )}
               {t("common.delete")}
             </Button>
+            <AttachmentDialog documentType="inventory_adjustment" documentId={adjustment.id} />
           </div>
         </div>
 

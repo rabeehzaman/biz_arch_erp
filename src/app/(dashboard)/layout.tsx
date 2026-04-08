@@ -6,6 +6,8 @@ import ClientDashboardLayout from "./client-layout";
 import { getOrgId } from "@/lib/auth-utils";
 import { isSubscriptionExpired } from "@/lib/subscription";
 import { SETTING_KEYS, type OrgFormConfig } from "@/lib/form-config/types";
+import { getRestaurantThemeVars } from "@/lib/restaurant/theme";
+import { getJewelleryThemeVars } from "@/lib/jewellery/theme";
 
 export default async function DashboardLayout({
   children,
@@ -158,6 +160,31 @@ export default async function DashboardLayout({
     console.error("Failed to pre-fetch theme config:", error);
   }
 
+  // Build server-side theme CSS to prevent flash of default colors on first paint.
+  // This inline <style> is part of the HTML and applies before any JS runs.
+  let themeCSS = "";
+  try {
+    const user = session.user as { isRestaurantModuleEnabled?: boolean; isJewelleryModuleEnabled?: boolean };
+    const restaurantFallback = swrFallback["/api/settings/restaurant-theme"];
+    const jewelleryFallback = swrFallback["/api/settings/jewellery-theme"];
+
+    if (user?.isRestaurantModuleEnabled && restaurantFallback?.restaurantThemeEnabled !== false) {
+      const vars = getRestaurantThemeVars(
+        restaurantFallback?.restaurantThemePreset ?? "bistro",
+        restaurantFallback?.restaurantThemeColor ?? null,
+      );
+      themeCSS = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(";");
+    } else if (user?.isJewelleryModuleEnabled && jewelleryFallback?.jewelleryThemeEnabled !== false) {
+      const vars = getJewelleryThemeVars(
+        jewelleryFallback?.jewelleryThemePreset ?? "gold",
+        jewelleryFallback?.jewelleryThemeColor ?? null,
+      );
+      themeCSS = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(";");
+    }
+  } catch {
+    // Non-critical — fall through to client-side theme application
+  }
+
   // Prefer the browser-stored language so Arabic loads immediately on refresh.
   const cookieLanguage = cookieStore.get("preferred-language")?.value;
   const initialLang =
@@ -166,12 +193,17 @@ export default async function DashboardLayout({
       : (session.user as { language?: string })?.language || "en";
 
   return (
-    <ClientDashboardLayout
-      session={session}
-      swrFallback={swrFallback}
-      initialLang={initialLang}
-    >
-      {children}
-    </ClientDashboardLayout>
+    <>
+      {themeCSS && (
+        <style dangerouslySetInnerHTML={{ __html: `:root{${themeCSS}}` }} />
+      )}
+      <ClientDashboardLayout
+        session={session}
+        swrFallback={swrFallback}
+        initialLang={initialLang}
+      >
+        {children}
+      </ClientDashboardLayout>
+    </>
   );
 }

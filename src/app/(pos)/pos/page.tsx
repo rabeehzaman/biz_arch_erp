@@ -146,6 +146,11 @@ export default function POSDashboardPage() {
     fetcher
   );
 
+  const { data: orgSettingsData } = useSWR<{ posReceiptRenderConfig?: { electron: { allowedModes: string[]; defaultMode: string | null }; mobile: { renderMode: string } } }>(
+    "/api/pos/org-settings",
+    fetcher
+  );
+
   // Parse branchId/warehouseId from the location key for session history
   const sessionsBranchId = sessionsLocationKey?.split("-")[0] ?? null;
   const sessionsWarehouseId = sessionsLocationKey?.split("-")[1] ?? null;
@@ -746,7 +751,7 @@ export default function POSDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      <PrinterSettingsDialog open={printerSettingsOpen} onOpenChange={setPrinterSettingsOpen} />
+      <PrinterSettingsDialog open={printerSettingsOpen} onOpenChange={setPrinterSettingsOpen} orgRenderConfig={orgSettingsData?.posReceiptRenderConfig ?? null} />
 
       {/* Session History Dialog */}
       <Dialog

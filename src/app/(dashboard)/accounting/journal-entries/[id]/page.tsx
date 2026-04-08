@@ -28,6 +28,7 @@ import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { AttachmentDialog } from "@/components/attachments/attachment-dialog";
 import { useLanguage } from "@/lib/i18n";
 
 interface JournalLine {
@@ -160,6 +161,7 @@ export default function JournalEntryDetailPage({
                   {t("common.void")}
                 </Button>
               )}
+              <AttachmentDialog documentType="journal_entry" documentId={entry.id} />
             </div>
           </div>
 

@@ -2,10 +2,23 @@ import type { ReceiptData } from "@/components/pos/receipt";
 import { generateReceiptHtml, printReceipt as browserPrintReceipt, type ReceiptHtmlOptions } from "@/lib/print-receipt";
 import { capacitorPrintWithConfig, isCapacitorEnvironment, getSecondaryMobilePrinterConfig, getReceiptMultiPrinterConfig, type MobilePrinterConfig } from "@/lib/capacitor-print";
 import { toast } from "sonner";
+import type { MobileRenderMode, ElectronRenderMode } from "@/lib/validations/settings";
 
 type SerializedReceiptData = Omit<ReceiptData, "date"> & {
   date: string;
 } & Record<string, unknown>;
+
+// Org-level render mode overrides (set by POS terminal on org-settings load)
+let _orgMobileRenderMode: MobileRenderMode | null = null;
+let _orgElectronDefaultMode: ElectronRenderMode | null = null;
+
+export function setOrgMobileRenderMode(mode: MobileRenderMode | null) {
+  _orgMobileRenderMode = mode;
+}
+
+export function setOrgElectronDefaultMode(mode: ElectronRenderMode | null) {
+  _orgElectronDefaultMode = mode;
+}
 
 export function isElectronEnvironment(): boolean {
   return typeof window !== "undefined" && !!window.electronPOS?.isElectron;
@@ -50,6 +63,7 @@ async function resolvePrinterConfig(
 
 function getReceiptRenderMode(config?: Partial<ElectronPrinterConfig>) {
   return config?.receiptRenderMode
+    ?? _orgElectronDefaultMode
     ?? (config?.connectionType === "windows" ? "htmlDriver" : "escposText");
 }
 
@@ -312,19 +326,30 @@ export function openCashDrawerIfEnabled(): void {
  * Uses raw ESC/POS for Indian GST, image otherwise.
  * If config is omitted, uses the saved primary printer config.
  */
+function inferMobileRenderMode(data: ReceiptData): MobileRenderMode {
+  const isIndianGST = data.taxLabel === "GST" || !!(data.totalCgst || data.totalSgst || data.totalIgst);
+  return isIndianGST ? "escposText" : "htmlImage";
+}
+
 async function capacitorPrintToConfig(
   data: ReceiptData,
   config?: Partial<MobilePrinterConfig>,
 ): Promise<{ success: boolean; error?: string }> {
-  const isIndianGST = data.taxLabel === "GST" || !!(data.totalCgst || data.totalSgst || data.totalIgst);
+  const mode = _orgMobileRenderMode || inferMobileRenderMode(data);
 
-  if (isIndianGST) {
+  if (mode === "escposText") {
     const { capacitorRawPrintWithConfig } = await import("@/lib/capacitor-print");
     const result = await capacitorRawPrintWithConfig(data, config);
     if (result.success) return result;
     console.error("Raw ESC/POS failed:", result.error, "— falling back to image");
   }
 
+  if (mode === "bitmapCanvas") {
+    const { capacitorBitmapPrintWithConfig } = await import("@/lib/capacitor-print");
+    return capacitorBitmapPrintWithConfig(data, config);
+  }
+
+  // htmlImage (default)
   return capacitorPrintWithConfig(data, config);
 }
 

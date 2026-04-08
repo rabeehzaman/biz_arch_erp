@@ -44,6 +44,7 @@ import { ArrowLeft, CheckCircle, Wallet, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
+import { AttachmentDialog } from "@/components/attachments/attachment-dialog";
 import { useLanguage } from "@/lib/i18n";
 
 interface ExpenseItem {
@@ -224,6 +225,7 @@ export default function ExpenseDetailPage({
                   {t("common.void")}
                 </Button>
               )}
+              <AttachmentDialog documentType="expense" documentId={expense.id} />
             </div>
           </div>
 

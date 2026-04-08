@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { seedGSTAccounts, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedPOSClearingAccounts, seedJewelleryAccounts } from "@/lib/accounting/seed-coa";
 import { validateTRN } from "@/lib/saudi-vat/calculator";
 import { provisionPOSRegisterSetup } from "@/lib/pos/store-safe";
+import { POS_RECEIPT_RENDER_CONFIG_KEY, parsePosReceiptRenderConfig } from "@/lib/validations/settings";
 
 export async function GET(
   request: NextRequest,
@@ -57,11 +58,12 @@ export async function GET(
       }));
     }
 
-    const [pdfFormatSetting, transferPdfFormatSetting, transferHideCostSetting, assignedTemplatesSetting] = await Promise.all([
+    const [pdfFormatSetting, transferPdfFormatSetting, transferHideCostSetting, assignedTemplatesSetting, renderConfigSetting] = await Promise.all([
       prisma.setting.findFirst({ where: { organizationId: id, key: "invoice_pdf_format", userId: null } }),
       prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_format", userId: null } }),
       prisma.setting.findFirst({ where: { organizationId: id, key: "transfer_pdf_hide_cost", userId: null } }),
       prisma.setting.findFirst({ where: { organizationId: id, key: "assigned_invoice_templates", userId: null } }),
+      prisma.setting.findFirst({ where: { organizationId: id, key: POS_RECEIPT_RENDER_CONFIG_KEY, userId: null } }),
     ]);
 
     let assignedInvoiceTemplates: string[] = [];
@@ -73,6 +75,7 @@ export async function GET(
       transferPdfFormat: transferPdfFormatSetting?.value || "DEFAULT",
       transferPdfHideCost: transferHideCostSetting?.value === "true",
       assignedInvoiceTemplates,
+      posReceiptRenderConfig: parsePosReceiptRenderConfig(renderConfigSetting?.value),
     });
   } catch (error) {
     console.error("Failed to fetch organization:", error);
@@ -127,6 +130,7 @@ export async function PUT(
       assignedInvoiceTemplates,
       transferPdfFormat,
       transferPdfHideCost,
+      posReceiptRenderConfig,
       language,
       currency,
       pdfHeaderImageUrl,
@@ -529,6 +533,19 @@ export async function PUT(
             await tx.setting.update({ where: { id: existingHideCost.id }, data: { value: String(transferPdfHideCost) } });
           } else {
             await tx.setting.create({ data: { organizationId: id, key: "transfer_pdf_hide_cost", value: String(transferPdfHideCost) } });
+          }
+        }
+
+        // Upsert POS receipt render config
+        if (posReceiptRenderConfig !== undefined) {
+          const renderConfigValue = JSON.stringify(posReceiptRenderConfig);
+          const existingRenderConfig = await tx.setting.findFirst({
+            where: { organizationId: id, key: POS_RECEIPT_RENDER_CONFIG_KEY, userId: null },
+          });
+          if (existingRenderConfig) {
+            await tx.setting.update({ where: { id: existingRenderConfig.id }, data: { value: renderConfigValue } });
+          } else {
+            await tx.setting.create({ data: { organizationId: id, key: POS_RECEIPT_RENDER_CONFIG_KEY, value: renderConfigValue } });
           }
         }
 

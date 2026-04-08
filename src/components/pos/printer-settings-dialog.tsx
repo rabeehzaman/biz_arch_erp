@@ -42,9 +42,10 @@ type ArabicCodePage = ElectronPrinterConfig["arabicCodePage"];
 interface PrinterSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  orgRenderConfig?: { electron: { allowedModes: string[]; defaultMode: string | null }; mobile: { renderMode: string } } | null;
 }
 
-export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDialogProps) {
+export function PrinterSettingsDialog({ open, onOpenChange, orgRenderConfig }: PrinterSettingsDialogProps) {
   const { t } = useLanguage();
   const [receiptPrinting, setReceiptPrinting] = useState(false);
   const [isLoadingReceiptPrinting, setIsLoadingReceiptPrinting] = useState(true);
@@ -138,7 +139,13 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
       window.electronPOS.getPrinterConfig().then((res) => {
         if (res.success && res.config) {
           setConnectionType(res.config.connectionType || "windows");
-          setReceiptRenderMode(res.config.receiptRenderMode || "htmlDriver");
+          const savedMode = res.config.receiptRenderMode || "htmlDriver";
+          const allowed = orgRenderConfig?.electron?.allowedModes;
+          if (allowed && allowed.length > 0 && !allowed.includes(savedMode)) {
+            setReceiptRenderMode((orgRenderConfig?.electron?.defaultMode || allowed[0]) as ReceiptRenderMode);
+          } else {
+            setReceiptRenderMode(savedMode);
+          }
           setArabicCodePage(res.config.arabicCodePage || "pc864");
           setNetworkIP(res.config.networkIP || "");
           setNetworkPort(String(res.config.networkPort || 9100));
@@ -538,18 +545,26 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
       <div className="space-y-3">
         <Label>{t("pos.receiptMode")}</Label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Button variant={receiptRenderMode === "htmlDriver" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("htmlDriver")}>
-            {t("pos.htmlDriverSpooler")}
-          </Button>
-          <Button variant={receiptRenderMode === "htmlRaster" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("htmlRaster")}>
-            {t("pos.htmlRasterEscpos")}
-          </Button>
-          <Button variant={receiptRenderMode === "escposText" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("escposText")}>
-            {t("pos.escposTextRaw")}
-          </Button>
-          <Button variant={receiptRenderMode === "bitmapCanvas" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("bitmapCanvas")}>
-            {t("pos.bitmapCanvas")}
-          </Button>
+          {(!orgRenderConfig || orgRenderConfig.electron.allowedModes.includes("htmlDriver")) && (
+            <Button variant={receiptRenderMode === "htmlDriver" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("htmlDriver")}>
+              {t("pos.htmlDriverSpooler")}
+            </Button>
+          )}
+          {(!orgRenderConfig || orgRenderConfig.electron.allowedModes.includes("htmlRaster")) && (
+            <Button variant={receiptRenderMode === "htmlRaster" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("htmlRaster")}>
+              {t("pos.htmlRasterEscpos")}
+            </Button>
+          )}
+          {(!orgRenderConfig || orgRenderConfig.electron.allowedModes.includes("escposText")) && (
+            <Button variant={receiptRenderMode === "escposText" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("escposText")}>
+              {t("pos.escposTextRaw")}
+            </Button>
+          )}
+          {(!orgRenderConfig || orgRenderConfig.electron.allowedModes.includes("bitmapCanvas")) && (
+            <Button variant={receiptRenderMode === "bitmapCanvas" ? "default" : "outline"} className="w-full" onClick={() => setReceiptRenderMode("bitmapCanvas")}>
+              {t("pos.bitmapCanvas")}
+            </Button>
+          )}
         </div>
         <p className="text-xs text-muted-foreground">
           {receiptRenderMode === "htmlDriver"
@@ -880,6 +895,15 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
 
   const renderCapacitorContent = () => (
     <div className="space-y-6">
+      {orgRenderConfig?.mobile?.renderMode && (
+        <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          {t("admin.mobileRenderMode")}: <span className="font-medium text-foreground">
+            {orgRenderConfig.mobile.renderMode === "htmlImage" ? t("admin.mobileHtmlImage")
+              : orgRenderConfig.mobile.renderMode === "bitmapCanvas" ? t("admin.mobileBitmapCanvas")
+              : t("admin.mobileEscposText")}
+          </span>
+        </div>
+      )}
       {editingStationId ? renderStationEdit() : (
         <>
           {/* Station list */}

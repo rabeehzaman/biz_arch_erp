@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { getOrganizationRoundOffMode } from "@/lib/round-off";
+import { POS_RECEIPT_RENDER_CONFIG_KEY, parsePosReceiptRenderConfig } from "@/lib/validations/settings";
 
 export async function GET() {
     try {
@@ -13,12 +14,13 @@ export async function GET() {
 
         const organizationId = getOrgId(session);
 
-        const [org, roundOffMode] = await Promise.all([
+        const [org, roundOffMode, renderConfigSetting] = await Promise.all([
             prisma.organization.findUnique({
                 where: { id: organizationId },
                 select: { posAccountingMode: true, saudiEInvoiceEnabled: true, posDefaultCashAccountId: true, posDefaultBankAccountId: true, posEmployeePinRequired: true },
             }),
             getOrganizationRoundOffMode(prisma, organizationId),
+            prisma.setting.findFirst({ where: { organizationId, key: POS_RECEIPT_RENDER_CONFIG_KEY, userId: null } }),
         ]);
 
         return NextResponse.json({
@@ -28,6 +30,7 @@ export async function GET() {
             posDefaultBankAccountId: org?.posDefaultBankAccountId || null,
             posEmployeePinRequired: org?.posEmployeePinRequired ?? false,
             roundOffMode,
+            posReceiptRenderConfig: parsePosReceiptRenderConfig(renderConfigSetting?.value),
         });
     } catch (error) {
         console.error("Failed to fetch POS org settings:", error);

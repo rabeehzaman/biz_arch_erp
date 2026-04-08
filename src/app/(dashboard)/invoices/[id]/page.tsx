@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { AttachmentDialog } from "@/components/attachments/attachment-dialog";
 import {
   Dialog,
   DialogContent,
@@ -556,6 +557,7 @@ export default function InvoiceDetailPage({
               <Share2 className="h-4 w-4 sm:mr-2" />
               <span className="sm:inline">{t("common.share")}</span>
             </Button>
+            <AttachmentDialog documentType="invoice" documentId={invoice.id} />
           </div>
         </div>
 

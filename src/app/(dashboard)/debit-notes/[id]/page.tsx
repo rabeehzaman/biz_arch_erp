@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AttachmentDialog } from "@/components/attachments/attachment-dialog";
 import {
   Table,
   TableBody,
@@ -168,6 +169,7 @@ export default function DebitNoteDetailPage() {
               <Trash2 className="h-4 w-4 sm:mr-2" />
               {t("common.delete")}
             </Button>
+            <AttachmentDialog documentType="debit_note" documentId={debitNote.id} />
           </div>
         </div>
 

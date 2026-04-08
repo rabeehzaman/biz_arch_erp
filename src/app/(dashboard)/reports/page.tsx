@@ -29,7 +29,24 @@ import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useState, useMemo } from "react";
-import { useDisabledReports } from "@/hooks/use-form-config";
+import { useDisabledReports, useDisabledSidebarItems } from "@/hooks/use-form-config";
+
+// Map report hrefs to sidebar item names so disabling via Menu Item Visibility
+// also hides the report from this landing page
+const REPORT_HREF_TO_SIDEBAR_NAME: Record<string, string> = {
+  "/reports/profit-by-items": "Profit by Items",
+  "/reports/sales-by-customer": "Sales by Customer",
+  "/reports/customer-balances": "Customer Balances",
+  "/reports/supplier-balances": "Supplier Balances",
+  "/reports/ledger": "Unified Ledger",
+  "/reports/trial-balance": "Trial Balance",
+  "/reports/profit-loss": "Profit & Loss",
+  "/reports/balance-sheet": "Balance Sheet",
+  "/reports/cash-flow": "Cash Flow",
+  "/reports/expense-report": "Expense Report",
+  "/reports/stock-summary": "Stock Summary",
+  "/reports/branch-pl": "Branch P&L",
+};
 
 interface ReportLink {
   titleKey: string;
@@ -160,6 +177,7 @@ export default function ReportsPage() {
   const multiBranch = !!(session?.user as any)?.multiBranchEnabled;
   const isJewelleryEnabled = !!(session?.user as any)?.isJewelleryModuleEnabled;
   const disabledReports = useDisabledReports();
+  const disabledSidebarItems = useDisabledSidebarItems();
 
   // Include jewellery category when module is enabled
   const allCategories = useMemo(
@@ -180,6 +198,9 @@ export default function ReportsPage() {
           // Check if report is disabled by org config
           const slug = r.href.replace("/reports/", "");
           if (disabledReports.includes(slug)) return false;
+          // Also check sidebar-level disabling
+          const sidebarName = REPORT_HREF_TO_SIDEBAR_NAME[r.href];
+          if (sidebarName && disabledSidebarItems.includes(sidebarName)) return false;
           if (!query) return true;
           const title = t(r.titleKey).toLowerCase();
           const desc = t(r.descKey).toLowerCase();
@@ -188,7 +209,7 @@ export default function ReportsPage() {
         return { ...cat, reports: filtered };
       })
       .filter((cat) => cat.reports.length > 0);
-  }, [search, edition, multiBranch, isJewelleryEnabled, disabledReports, allCategories, t]);
+  }, [search, edition, multiBranch, isJewelleryEnabled, disabledReports, disabledSidebarItems, allCategories, t]);
 
   return (
     <PageAnimation>

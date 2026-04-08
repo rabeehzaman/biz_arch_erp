@@ -249,6 +249,9 @@ model Organization {
   // Multi-org membership
   memberships                UserOrganization[] @relation("OrgMemberships")
 
+  // Attachments
+  attachments                Attachment[]
+
   @@map("organizations")
 }
 
@@ -302,6 +305,7 @@ model User {
   organizations       UserOrganization[]
   cashBankAccess      UserCashBankAccess[]
   cashBankTransactions CashBankTransaction[] @relation("CashBankTransactionCreator")
+  attachments          Attachment[]
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -3154,4 +3158,26 @@ model UserOrganization {
   @@index([userId])
   @@index([organizationId])
   @@map("user_organizations")
+}
+
+// ==================== ATTACHMENTS ====================
+
+model Attachment {
+  id             String   @id @default(cuid())
+  organizationId String
+  documentType   String   // "invoice", "purchase_invoice", "quotation", "credit_note", "debit_note", "expense", "journal_entry", "inventory_adjustment", "stock_transfer"
+  documentId     String
+  fileName       String
+  fileKey        String   // R2 object key
+  fileSize       Int      // bytes
+  fileType       String   // MIME type
+  uploadedById   String
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy     User         @relation(fields: [uploadedById], references: [id])
+
+  @@index([organizationId, documentType, documentId])
+  @@index([organizationId])
+  @@map("attachments")
 }
