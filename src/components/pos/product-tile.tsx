@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
@@ -38,6 +38,9 @@ function formatSelectedQuantity(quantity: number) {
   return quantity.toFixed(2).replace(/\.?0+$/, "");
 }
 
+// Track URLs that have successfully loaded so remounted tiles skip the placeholder
+export const loadedImages = new Set<string>();
+
 const TILE_COLORS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e",
   "#f97316", "#eab308", "#22c55e", "#14b8a6",
@@ -62,6 +65,11 @@ export const ProductTile = memo(function ProductTile({
   const { fmt } = useCurrency();
   const { t } = useLanguage();
   const isSelected = selectedQuantity > 0;
+  const [imgLoaded, setImgLoaded] = useState(() => !!product.imageUrl && loadedImages.has(product.imageUrl));
+  const onImgLoad = useCallback(() => {
+    setImgLoaded(true);
+    if (product.imageUrl) loadedImages.add(product.imageUrl);
+  }, [product.imageUrl]);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on stable fields only
   const color = useMemo(() => getTileColor(product), [product.id, product.category?.color]);
 
@@ -89,13 +97,13 @@ export const ProductTile = memo(function ProductTile({
 
       {product.imageUrl ? (
         <>
-          <div className="relative flex-1 w-full overflow-hidden bg-slate-100">
+          <div className={cn("relative flex-1 w-full overflow-hidden", !imgLoaded && "bg-slate-100")}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.imageUrl}
               alt={product.name}
-              className="h-full w-full object-contain"
-              loading="lazy"
+              className={cn("h-full w-full object-contain", !imgLoaded && "opacity-0")}
+              onLoad={onImgLoad}
             />
           </div>
           <div className="flex flex-col items-center justify-center px-2 py-1.5 bg-white">

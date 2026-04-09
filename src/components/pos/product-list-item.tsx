@@ -1,12 +1,12 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Package, Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/i18n";
-import type { ProductTileProduct } from "./product-tile";
+import { type ProductTileProduct, loadedImages } from "./product-tile";
 
 interface ProductListItemProps {
   product: ProductTileProduct;
@@ -32,6 +32,11 @@ export const ProductListItem = memo(function ProductListItem({
   const { fmt } = useCurrency();
   const { t } = useLanguage();
   const isSelected = selectedQuantity > 0;
+  const [imgLoaded, setImgLoaded] = useState(() => !!product.imageUrl && loadedImages.has(product.imageUrl));
+  const onImgLoad = useCallback(() => {
+    setImgLoaded(true);
+    if (product.imageUrl) loadedImages.add(product.imageUrl);
+  }, [product.imageUrl]);
 
   return (
     <button
@@ -52,8 +57,8 @@ export const ProductListItem = memo(function ProductListItem({
           <img
             src={product.imageUrl}
             alt={product.name}
-            className="h-full w-full object-contain"
-            loading="lazy"
+            className={cn("h-full w-full object-contain", !imgLoaded && "opacity-0")}
+            onLoad={onImgLoad}
           />
         ) : product.isBundle ? (
           <Layers
