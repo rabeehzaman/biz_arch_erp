@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { posEventBus } from "@/lib/pos-event-bus";
-import { publishOrderUpdate, publishOrderDeleted } from "@/lib/pos/ably-server";
+import { publishOrderDeleted } from "@/lib/pos/ably-server";
 
 export async function PUT(
   request: NextRequest,
@@ -71,15 +71,9 @@ export async function PUT(
       select: { id: true, version: true },
     });
 
-    // Notify other POS devices via SSE (legacy) and Ably
+    // Notify other POS devices via SSE (legacy).
+    // Real-time Ably sync is handled by the /ops route — PUT is just persistence.
     posEventBus.emit(organizationId, JSON.stringify({ type: "order-updated", id: result.id }));
-    await publishOrderUpdate(
-      organizationId,
-      result.id,
-      [{ op: "REPLACE_STATE", state: { ...data, items: data.items } }],
-      result.version,
-      "api",
-    );
 
     return NextResponse.json(result);
   } catch (error) {

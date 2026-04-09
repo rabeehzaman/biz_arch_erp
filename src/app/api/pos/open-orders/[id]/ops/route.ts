@@ -41,20 +41,44 @@ export async function POST(
       );
     }
 
-    // Read current state
-    const record = await prisma.pOSOpenOrder.findFirst({
+    // Read current state — or auto-create if this is a new tab
+    let record = await prisma.pOSOpenOrder.findFirst({
       where: { id: orderId, organizationId },
     });
 
     if (!record) {
-      return NextResponse.json(
-        { ok: false, reason: "NOT_FOUND" } satisfies MutationResult,
-        { status: 404 },
-      );
+      // Order doesn't exist yet (new tab). Create it, then apply ops.
+      const userId = session.user.id;
+      const posSession = await prisma.pOSSession.findFirst({
+        where: { organizationId, userId, status: "OPEN" },
+      });
+
+      if (!posSession) {
+        return NextResponse.json(
+          { ok: false, reason: "ERROR", message: "No open POS session" } satisfies MutationResult,
+          { status: 400 },
+        );
+      }
+
+      record = await prisma.pOSOpenOrder.create({
+        data: {
+          id: orderId,
+          organizationId,
+          sessionId: posSession.id,
+          label: "Order",
+          orderType: "DINE_IN",
+          isReturnMode: false,
+          items: [],
+          kotSentQuantities: {},
+          kotOrderIds: [],
+          deviceId: deviceId || null,
+          version: 0,
+        },
+      });
     }
 
-    // Optimistic lock check
-    if (record.version !== expectedVersion) {
+    // Optimistic lock check (skip for freshly created orders where expectedVersion is 0)
+    if (record.version !== expectedVersion && !(record.version === 0 && expectedVersion === 0)) {
       const result: MutationResult = {
         ok: false,
         reason: "VERSION_CONFLICT",
