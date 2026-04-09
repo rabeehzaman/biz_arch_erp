@@ -175,7 +175,7 @@ export function usePOSTabs(
   // Inactive tabs — the active tab's state lives in the component's hooks
   const [tabs, setTabs] = useState<Map<string, TabContext>>(() => new Map());
   const [activeTabId, setActiveTabId] = useState<string>(() => generateId());
-  const [activeTabLabel, setActiveTabLabel] = useState("Order 1");
+  const [activeTabLabel, setActiveTabLabel] = useState("#1");
   const [activeTabOrderNumber, setActiveTabOrderNumber] = useState(1);
   const [activeTabCreatedAt, setActiveTabCreatedAt] = useState(() => Date.now());
   const orderCounterRef = useRef(1);
@@ -399,7 +399,7 @@ export function usePOSTabs(
       orderCounterRef.current += 1;
       const id = generateId();
       const orderNumber = orderCounterRef.current;
-      const label = initialOverrides?.label ?? `Order ${orderNumber}`;
+      const label = initialOverrides?.label ?? `#${orderNumber}`;
       return { id, label, orderNumber };
     },
     []
@@ -475,7 +475,7 @@ export function usePOSTabs(
         orderCounterRef.current += 1;
         const newId = generateId();
         setActiveTabId(newId);
-        setActiveTabLabel(`Order ${orderCounterRef.current}`);
+        setActiveTabLabel(`#${orderCounterRef.current}`);
         setActiveTabOrderNumber(orderCounterRef.current);
         setActiveTabCreatedAt(Date.now());
         return { switchTo: null, wasActive: true };
@@ -577,7 +577,7 @@ export function usePOSTabs(
     orderCounterRef.current = 1;
     const id = generateId();
     setActiveTabId(id);
-    setActiveTabLabel("Order 1");
+    setActiveTabLabel("#1");
     setActiveTabOrderNumber(1);
     setActiveTabCreatedAt(Date.now());
   }, []);
