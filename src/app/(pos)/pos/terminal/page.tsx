@@ -507,7 +507,7 @@ function POSTerminalContent() {
     posSession?.id ?? null,
     (tab) => remoteUpdateRef.current?.(tab),
     () => activeTabRemovedRef.current?.(),
-    organizationId,
+    isRestaurantEnabled ? organizationId : null,
   );
   const [showTabsSheet, setShowTabsSheet] = useState(false);
 
@@ -531,7 +531,7 @@ function POSTerminalContent() {
   }), [cartState.items, activeTabLabel, orderType, isReturnMode, selectedCustomer, selectedTable, heldOrderId, kotSentQuantities, kotOrderIds]);
 
   const { sendOps, isConnected: isSocketConnected, setVersion: setRealtimeVersion } = useRealtimeOrder(
-    isHydrated ? activeTabId : null,
+    isHydrated && isRestaurantEnabled ? activeTabId : null,
     {
       organizationId,
       onRemoteUpdate: useCallback((items: CartItemData[], version: number, state: SerializedOrderState) => {
@@ -765,12 +765,14 @@ function POSTerminalContent() {
     // Optimistic local update via pending-ops buffer
     dispatchCart({ type: "LOCAL_OP", op, clientSeq: seq });
     // Send to server — response will be handled by SERVER_STATE dispatch
-    sendOps([op], seq).then((result) => {
-      if (result.ok && "items" in result) {
-        dispatchCart({ type: "SERVER_STATE", snapshot: (result as any).items, version: result.version, ackClientSeq: seq });
-      }
-    });
-  }, [sendOps, cartState.nextClientSeq]);
+    if (isRestaurantEnabled) {
+      sendOps([op], seq).then((result) => {
+        if (result.ok && "items" in result) {
+          dispatchCart({ type: "SERVER_STATE", snapshot: (result as any).items, version: result.version, ackClientSeq: seq });
+        }
+      });
+    }
+  }, [sendOps, cartState.nextClientSeq, isRestaurantEnabled]);
 
   // State for variant picker dialog
   const [variantPickerProduct, setVariantPickerProduct] = useState<POSProduct | null>(null);
@@ -860,12 +862,14 @@ function POSTerminalContent() {
     const op: OrderOperation = { op: "REMOVE_ITEM", lineKey };
     const seq = cartState.nextClientSeq;
     dispatchCart({ type: "LOCAL_OP", op, clientSeq: seq });
-    sendOps([op], seq).then((result) => {
-      if (result.ok && "items" in result) {
-        dispatchCart({ type: "SERVER_STATE", snapshot: (result as any).items, version: result.version, ackClientSeq: seq });
-      }
-    });
-  }, [cartState.items, cartState.nextClientSeq, sendOps]);
+    if (isRestaurantEnabled) {
+      sendOps([op], seq).then((result) => {
+        if (result.ok && "items" in result) {
+          dispatchCart({ type: "SERVER_STATE", snapshot: (result as any).items, version: result.version, ackClientSeq: seq });
+        }
+      });
+    }
+  }, [cartState.items, cartState.nextClientSeq, sendOps, isRestaurantEnabled]);
 
   const scrollCartToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = cartItemsContainerRef.current;
@@ -911,8 +915,10 @@ function POSTerminalContent() {
     setHeldOrderId(null);
     setSelectedCustomer(null);
     setMobileView("products");
-    sendOps([{ op: "CLEAR_ITEMS" }], cartState.nextClientSeq);
-  }, [sendOps, cartState.nextClientSeq]);
+    if (isRestaurantEnabled) {
+      sendOps([{ op: "CLEAR_ITEMS" }], cartState.nextClientSeq);
+    }
+  }, [sendOps, cartState.nextClientSeq, isRestaurantEnabled]);
 
   const [showClearCartKotWarning, setShowClearCartKotWarning] = useState(false);
 
@@ -1936,7 +1942,7 @@ function POSTerminalContent() {
         onTableClick={() => setShowTableSelect(true)}
         tabCount={tabCount}
         onTabsClick={() => setShowTabsSheet(true)}
-        isSocketConnected={isSocketConnected}
+        isSocketConnected={isRestaurantEnabled ? isSocketConnected : undefined}
       />
 
       {/* Main Content */}

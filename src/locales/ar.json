@@ -2200,7 +2200,10 @@
     "noCachedReceipt": "لا يوجد إيصال مخزن مؤقتاً",
     "cashRefund": "استرداد نقدي",
     "failedToProcessReturn": "فشل في معالجة المرتجع",
-    "printReceipt": "طباعة الإيصال"
+    "printReceipt": "طباعة الإيصال",
+    "printBill": "طباعة الفاتورة",
+    "preBillPrinted": "تمت طباعة الفاتورة",
+    "preBillPrintFailed": "فشل في طباعة الفاتورة"
   },
   "pdf": {
     "transferOrder": "أمر تحويل",

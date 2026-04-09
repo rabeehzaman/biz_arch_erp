@@ -2313,7 +2313,10 @@
     "noCachedReceipt": "No cached receipt available",
     "cashRefund": "Cash Refund",
     "failedToProcessReturn": "Failed to process return",
-    "printReceipt": "Print receipt"
+    "printReceipt": "Print receipt",
+    "printBill": "Print Bill",
+    "preBillPrinted": "Bill printed",
+    "preBillPrintFailed": "Failed to print bill"
   },
   "pdf": {
     "transferOrder": "TRANSFER ORDER",
