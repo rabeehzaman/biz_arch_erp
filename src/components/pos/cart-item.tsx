@@ -2,7 +2,7 @@
 
 import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
-import { Trash2, ChefHat } from "lucide-react";
+import { Trash2, ChefHat, Minus, Plus } from "lucide-react";
 
 export interface CartItemJewelleryData {
   jewelleryItemId: string;
@@ -44,12 +44,14 @@ interface CartItemProps {
   item: CartItemData;
   onRemove: (productId: string) => void;
   kotSentQty?: number;
+  onQuantityChange?: (productId: string, variantId: string | undefined, newQty: number) => void;
 }
 
 export function CartItem({
   item,
   onRemove,
   kotSentQty,
+  onQuantityChange,
 }: CartItemProps) {
   const { fmt } = useCurrency();
   const lineTotal = item.quantity * item.price * (1 - item.discount / 100);
@@ -75,8 +77,38 @@ export function CartItem({
             )}
           </div>
         </div>
-        <div className="flex min-w-[3rem] shrink-0 flex-col items-center justify-center self-center gap-0.5">
-          <span className="text-sm font-medium">x{item.quantity}</span>
+        <div className="flex shrink-0 flex-col items-center justify-center self-center gap-0.5">
+          {onQuantityChange ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => {
+                  const minQty = kotSentQty ?? 0;
+                  if (item.quantity <= 1 && minQty === 0) {
+                    onRemove(item.productId);
+                  } else if (item.quantity > minQty) {
+                    onQuantityChange(item.productId, item.variantId, item.quantity - 1);
+                  }
+                }}
+                disabled={kotSentQty != null && item.quantity <= kotSentQty}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="min-w-[1.5rem] text-center text-sm font-semibold">{item.quantity}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => onQuantityChange(item.productId, item.variantId, item.quantity + 1)}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <span className="text-sm font-medium">x{item.quantity}</span>
+          )}
           {kotSentQty != null && kotSentQty > 0 && (
             <span className="flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0 text-[10px] font-medium text-green-700">
               <ChefHat className="h-2.5 w-2.5" />

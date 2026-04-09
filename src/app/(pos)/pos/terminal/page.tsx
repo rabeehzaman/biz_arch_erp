@@ -187,6 +187,7 @@ interface CheckoutTimingPayload {
 type CartAction =
   | { type: "ADD"; product: any; quantity?: number; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null; variantId?: string; variantName?: string; modifiers?: string[] }
   | { type: "REMOVE"; productId: string }
+  | { type: "SET_QUANTITY"; productId: string; variantId?: string; quantity: number }
   | { type: "CLEAR" }
   | { type: "RESTORE"; items: CartItemData[] };
 
@@ -312,6 +313,18 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
     case "REMOVE": {
       const items = state.items.filter(i => i.productId !== action.productId);
+      return computeDerived(items, state.revision);
+    }
+
+    case "SET_QUANTITY": {
+      const lineKey = makeLineKey(action.productId, action.variantId);
+      if (action.quantity <= 0) {
+        const items = state.items.filter(i => makeLineKey(i.productId, i.variantId) !== lineKey);
+        return computeDerived(items, state.revision);
+      }
+      const items = state.items.map(i =>
+        makeLineKey(i.productId, i.variantId) === lineKey ? { ...i, quantity: action.quantity } : i
+      );
       return computeDerived(items, state.revision);
     }
 
@@ -2130,6 +2143,9 @@ function POSTerminalContent() {
                       item={item}
                       onRemove={isRestaurantEnabled ? handleCartItemRemove : removeFromCart}
                       kotSentQty={isRestaurantEnabled ? (kotSentQuantities.get(cartLineKey(item.productId, item.variantId)) ?? 0) : undefined}
+                      onQuantityChange={isRestaurantEnabled ? (productId, variantId, qty) => {
+                        dispatchCart({ type: "SET_QUANTITY", productId, variantId, quantity: qty });
+                      } : undefined}
                     />
                   ))
                 )}
@@ -2575,9 +2591,10 @@ function POSTerminalContent() {
             }
 
             // No existing order for this table anywhere
-            if (selectedTable) {
+            const oldTable = selectedTable;
+            if (oldTable) {
               // Free the old table before reassigning
-              freeTable(selectedTable.id);
+              freeTable(oldTable.id);
             }
 
             // Assign table to the current tab and mark it OCCUPIED in DB
@@ -2589,6 +2606,38 @@ function POSTerminalContent() {
             requestAnimationFrame(() => {
               persistTab(snapshotCurrentTab());
             });
+
+            // If KOTs were already sent, update them and notify kitchen
+            if (oldTable && kotOrderIds.length > 0) {
+              // Update KOT records in DB to new table
+              for (const kotId of kotOrderIds) {
+                fetch(`/api/restaurant/kot/${kotId}/move`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ tableId: table.id }),
+                }).catch(() => {});
+              }
+              // Print table move notification to kitchen
+              printKOTMulti({
+                kotNumber: "TABLE MOVE",
+                kotType: "STANDARD",
+                orderType: "DINE_IN",
+                tableName: table.name,
+                tableNumber: table.number,
+                section: table.section,
+                serverName: authSession?.user?.name || undefined,
+                timestamp: new Date(),
+                specialInstructions: `MOVED FROM TABLE ${oldTable.number} → TABLE ${table.number}`,
+                items: cartState.items
+                  .filter(i => (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0) > 0)
+                  .map(i => ({
+                    name: i.variantName ? `${i.name} - ${i.variantName}` : i.name,
+                    quantity: kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? i.quantity,
+                    modifiers: i.modifiers,
+                    categoryId: i.categoryId,
+                  })),
+              }).catch(() => {});
+            }
           }}
           onTakeaway={() => {
             // Free the old table if switching from dine-in
