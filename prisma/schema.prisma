@@ -1791,6 +1791,7 @@ model POSSession {
   totalTransactions       Int              @default(0)
   totalReturns            Decimal          @default(0) @db.Decimal(12, 2)
   totalReturnTransactions Int              @default(0)
+  orderCounter            Int              @default(0)
   notes             String?
 
   branchId    String?
@@ -1859,6 +1860,7 @@ model POSOpenOrder {
   heldOrderId    String?
   kotSentQuantities Json              @default("{}")
   kotOrderIds       Json              @default("[]")
+  orderNumber    Int                  @default(0)
   version        Int                  @default(0)
   deviceId       String?
   createdAt      DateTime             @default(now())

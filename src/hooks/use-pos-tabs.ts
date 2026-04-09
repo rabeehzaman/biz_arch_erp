@@ -56,6 +56,7 @@ interface DBOpenOrder {
   heldOrderId: string | null;
   kotSentQuantities: Record<string, number>;
   kotOrderIds: string[];
+  orderNumber: number;
   version: number;
   createdAt: string;
 }
@@ -115,7 +116,7 @@ function makeDefaultTab(id: string, label: string, orderNumber: number): TabCont
 
 function deserializeTab(record: DBOpenOrder, index: number): TabContext {
   const items = Array.isArray(record.items) ? record.items : [];
-  const orderNumber = parseOrderNumber(record.label) || (index + 1);
+  const orderNumber = record.orderNumber || parseOrderNumber(record.label) || (index + 1);
   return {
     id: record.id,
     label: record.label,
@@ -363,6 +364,36 @@ export function usePOSTabs(
       .then((result) => {
         if (result?.version != null) {
           versionsRef.current.set(tab.id, result.version);
+        }
+        // Adopt server-assigned order number if local tab has a provisional one
+        if (result?.orderNumber && result.orderNumber > 0) {
+          const serverNum = result.orderNumber as number;
+          // Update active tab
+          if (tab.id === activeTabIdRef.current) {
+            setActiveTabOrderNumber((prev) => {
+              if (prev !== serverNum) {
+                // Also update the label to reflect the server number
+                setActiveTabLabel((lbl) => lbl.replace(/#\d+/, `#${serverNum}`));
+                return serverNum;
+              }
+              return prev;
+            });
+          } else {
+            // Update inactive tab
+            setTabs((prev) => {
+              const existing = prev.get(tab.id);
+              if (existing && existing.orderNumber !== serverNum) {
+                const next = new Map(prev);
+                next.set(tab.id, {
+                  ...existing,
+                  orderNumber: serverNum,
+                  label: existing.label.replace(/#\d+/, `#${serverNum}`),
+                });
+                return next;
+              }
+              return prev;
+            });
+          }
         }
       })
       .catch(() => {}); // fire-and-forget

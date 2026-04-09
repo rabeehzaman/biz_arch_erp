@@ -87,6 +87,24 @@ export async function PUT(
       kotOrderIds: kotOrderIds ?? [],
     };
 
+    // Check if this is a new order (needs server-assigned orderNumber)
+    const existing = await prisma.pOSOpenOrder.findUnique({
+      where: { id },
+      select: { id: true, orderNumber: true },
+    });
+
+    let orderNumber = existing?.orderNumber ?? 0;
+
+    if (!existing) {
+      // Atomically increment session counter and assign order number
+      const updated = await prisma.pOSSession.update({
+        where: { id: posSession.id },
+        data: { orderCounter: { increment: 1 } },
+        select: { orderCounter: true },
+      });
+      orderNumber = updated.orderCounter;
+    }
+
     const result = await prisma.pOSOpenOrder.upsert({
       where: { id },
       create: {
@@ -94,13 +112,14 @@ export async function PUT(
         organizationId,
         sessionId: posSession.id,
         ...data,
+        orderNumber,
         version: 0,
       },
       update: {
         ...data,
         version: { increment: 1 },
       },
-      select: { id: true, version: true },
+      select: { id: true, version: true, orderNumber: true },
     });
 
     // Notify other POS devices via SSE (legacy — tab list refresh)
