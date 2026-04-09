@@ -33,6 +33,7 @@ interface POSHeaderProps {
   onTableClick?: () => void;
   tabCount?: number;
   onTabsClick?: () => void;
+  isSocketConnected?: boolean;
 }
 
 function POSClock() {
@@ -65,6 +66,7 @@ export function POSHeader({
   onTableClick,
   tabCount,
   onTabsClick,
+  isSocketConnected,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
@@ -121,6 +123,15 @@ export function POSHeader({
 
       <div className="flex items-center gap-1 sm:gap-3 shrink-0">
         <div className="hidden md:flex items-center gap-2 text-sm text-slate-300">
+          {isSocketConnected != null && (
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full shrink-0",
+                isSocketConnected ? "bg-green-400" : "bg-red-400 animate-pulse"
+              )}
+              title={isSocketConnected ? "Real-time sync active" : "Real-time sync disconnected"}
+            />
+          )}
           <Clock className="h-4 w-4" />
           <POSClock />
         </div>

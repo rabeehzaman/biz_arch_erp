@@ -161,6 +161,7 @@ export function usePOSTabs(
   sessionId: string | null,
   onActiveTabRemoteUpdate?: (tab: TabContext) => void,
   onActiveTabRemoved?: () => void,
+  organizationId?: string | null,
 ) {
   // Inactive tabs — the active tab's state lives in the component's hooks
   const [tabs, setTabs] = useState<Map<string, TabContext>>(() => new Map());
@@ -181,30 +182,54 @@ export function usePOSTabs(
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const versionsRef = useRef<Map<string, number>>(new Map());
 
-  // Fetch open orders from DB — SSE provides instant sync, polling is a 30s fallback
+  // Fetch open orders from DB — Ably provides instant sync, polling is a 5s safety-net fallback
   const { data: dbOrders, mutate: mutateOpenOrders } = useSWR<DBOpenOrder[]>(
     sessionId ? "/api/pos/open-orders" : null,
     fetcher,
-    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 30000 }
+    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 5000 }
   );
 
-  // SSE: listen for real-time push events from other POS devices on the local network
+  // Ably: listen for org-level order create/delete events to refresh the tab list.
+  // Per-order content sync is handled by useRealtimeOrder in the terminal page.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !organizationId) return;
+
+    let channel: import("ably").RealtimeChannel | null = null;
+    let cleanup: (() => void) | null = null;
+
+    // Dynamic import to avoid SSR issues with Ably client
+    import("@/lib/pos/ably-client").then(({ getAblyClient }) => {
+      const ably = getAblyClient();
+      channel = ably.channels.get(`pos:${organizationId}`);
+      const handler = () => { mutateOpenOrders(); };
+      channel.subscribe("order:created", handler);
+      channel.subscribe("order:deleted", handler);
+      channel.subscribe("order:updated", handler);
+      cleanup = () => {
+        channel?.unsubscribe("order:created", handler);
+        channel?.unsubscribe("order:deleted", handler);
+        channel?.unsubscribe("order:updated", handler);
+        channel?.detach().catch(() => {});
+      };
+    }).catch(() => {
+      // Ably not available — polling fallback handles it
+    });
+
+    // Also keep SSE as a fallback for dev mode
     let es: EventSource | null = null;
     try {
       es = new EventSource("/api/pos/events");
-      es.onmessage = () => {
-        mutateOpenOrders();
-      };
-      es.onerror = () => {
-        // SSE will auto-reconnect; no action needed
-      };
+      es.onmessage = () => { mutateOpenOrders(); };
+      es.onerror = () => {};
     } catch {
       // EventSource not supported — polling fallback handles it
     }
-    return () => { es?.close(); };
-  }, [sessionId, mutateOpenOrders]);
+
+    return () => {
+      cleanup?.();
+      es?.close();
+    };
+  }, [sessionId, organizationId, mutateOpenOrders]);
 
   // Hydrate from DB — runs once when data first arrives
   useEffect(() => {

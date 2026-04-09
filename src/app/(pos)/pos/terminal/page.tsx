@@ -47,6 +47,9 @@ import { ReturnPanel } from "@/components/pos/return-panel";
 import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
 import { TableSelect } from "@/components/pos/table-select";
 import { usePOSTabs, type TabContext } from "@/hooks/use-pos-tabs";
+import { useRealtimeOrder } from "@/hooks/use-realtime-order";
+import type { OrderOperation, SerializedOrderState } from "@/lib/pos/realtime-types";
+import { cartLineKey as makeLineKey } from "@/lib/pos/realtime-types";
 import { OrderTabsSheet } from "@/components/pos/order-tabs-sheet";
 import { printKOTMulti } from "@/lib/restaurant/kot-print";
 import { printPreBill, type PreBillReceiptData } from "@/lib/pos/pre-bill-print";
@@ -340,6 +343,7 @@ function POSTerminalContent() {
   const { fmt } = useCurrency();
   const { t } = useLanguage();
   const { data: authSession } = useSession();
+  const organizationId = (authSession?.user as { organizationId?: string } | undefined)?.organizationId ?? null;
   const taxInclusive = !!(authSession?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
   const isSaudiOrg = !!(authSession?.user as { saudiEInvoiceEnabled?: boolean } | undefined)?.saudiEInvoiceEnabled;
 
@@ -446,8 +450,74 @@ function POSTerminalContent() {
     posSession?.id ?? null,
     (tab) => remoteUpdateRef.current?.(tab),
     () => activeTabRemovedRef.current?.(),
+    organizationId,
   );
   const [showTabsSheet, setShowTabsSheet] = useState(false);
+
+  // ── Real-time sync via Socket.IO ──────────────────────────────────
+  // Memoize current state for the realtime hook (avoids re-renders)
+  const currentSerializedState = useMemo((): SerializedOrderState => ({
+    items: cartState.items,
+    label: activeTabLabel,
+    orderType,
+    isReturnMode,
+    customerId: selectedCustomer?.id ?? null,
+    customerName: selectedCustomer?.name ?? null,
+    tableId: selectedTable?.id ?? null,
+    tableNumber: selectedTable?.number ?? null,
+    tableName: selectedTable?.name ?? null,
+    tableSection: selectedTable?.section ?? null,
+    tableCapacity: selectedTable?.capacity ?? null,
+    heldOrderId,
+    kotSentQuantities: Object.fromEntries(kotSentQuantities),
+    kotOrderIds,
+  }), [cartState.items, activeTabLabel, orderType, isReturnMode, selectedCustomer, selectedTable, heldOrderId, kotSentQuantities, kotOrderIds]);
+
+  const { sendOps, isConnected: isSocketConnected, setVersion: setRealtimeVersion } = useRealtimeOrder(
+    isHydrated ? activeTabId : null,
+    {
+      organizationId,
+      currentState: currentSerializedState,
+      onRemoteOps: useCallback((_ops: OrderOperation[], newVersion: number, newState: SerializedOrderState) => {
+        // Another device changed this order — apply to local state
+        dispatchCart({ type: "RESTORE", items: newState.items });
+        if (newState.customerId !== selectedCustomer?.id) {
+          setSelectedCustomer(newState.customerId
+            ? { id: newState.customerId, name: newState.customerName || "", phone: null }
+            : null);
+        }
+        if (newState.tableId !== selectedTable?.id) {
+          setSelectedTable(newState.tableId
+            ? { id: newState.tableId, number: newState.tableNumber || 0, name: newState.tableName || "", section: newState.tableSection || undefined, capacity: newState.tableCapacity || 4 }
+            : null);
+        }
+        if (newState.orderType !== orderType) setOrderType(newState.orderType);
+        if (newState.isReturnMode !== isReturnMode) setIsReturnMode(newState.isReturnMode);
+        setKotSentQuantities(new Map(Object.entries(newState.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
+        setKotOrderIds(newState.kotOrderIds || []);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []),
+      onConflict: useCallback((serverState: SerializedOrderState) => {
+        // Version conflict or reconnection — server wins
+        dispatchCart({ type: "RESTORE", items: serverState.items });
+        setSelectedCustomer(serverState.customerId
+          ? { id: serverState.customerId, name: serverState.customerName || "", phone: null }
+          : null);
+        setSelectedTable(serverState.tableId
+          ? { id: serverState.tableId, number: serverState.tableNumber || 0, name: serverState.tableName || "", section: serverState.tableSection || undefined, capacity: serverState.tableCapacity || 4 }
+          : null);
+        setOrderType(serverState.orderType);
+        setIsReturnMode(serverState.isReturnMode);
+        setKotSentQuantities(new Map(Object.entries(serverState.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
+        setKotOrderIds(serverState.kotOrderIds || []);
+      }, []),
+      onRemoteDelete: useCallback(() => {
+        // Order deleted by another device — reset
+        resetLiveState();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []),
+    },
+  );
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null; posReceiptRenderConfig?: { electron: { allowedModes: string[]; defaultMode: string | null }; mobile: { renderMode: string } } }>(
@@ -651,7 +721,26 @@ function POSTerminalContent() {
 
   const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string) => {
     dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName });
-  }, []);
+    // Send real-time op — build a CartItemData matching what the reducer creates
+    const effectivePrice = price != null ? price : Number(product.price);
+    const item: CartItemData = {
+      productId: product.id,
+      name: product.name,
+      price: effectivePrice,
+      quantity: quantity ?? 1,
+      discount: 0,
+      stockQuantity: product.stockQuantity ?? 0,
+      gstRate: Number(product.gstRate) || 0,
+      hsnCode: product.hsnCode || undefined,
+      unitId,
+      unitName,
+      conversionFactor: conversionFactor ?? 1,
+      categoryId: product.categoryId ?? null,
+      variantId,
+      variantName,
+    };
+    sendOps([{ op: "ADD_ITEM", item, quantity: quantity ?? 1 }]);
+  }, [sendOps]);
 
   // State for variant picker dialog
   const [variantPickerProduct, setVariantPickerProduct] = useState<POSProduct | null>(null);
@@ -735,8 +824,13 @@ function POSTerminalContent() {
   }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex, setSearchQuery]);
 
   const removeFromCart = useCallback((productId: string) => {
+    // Find the item to get its variantId/unitId for the line key
+    const item = cartState.items.find(i => i.productId === productId);
     dispatchCart({ type: "REMOVE", productId });
-  }, []);
+    if (item) {
+      sendOps([{ op: "REMOVE_ITEM", lineKey: makeLineKey(productId, item.variantId, item.unitId) }]);
+    }
+  }, [cartState.items, sendOps]);
 
   const scrollCartToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = cartItemsContainerRef.current;
@@ -782,7 +876,8 @@ function POSTerminalContent() {
     setHeldOrderId(null);
     setSelectedCustomer(null);
     setMobileView("products");
-  }, []);
+    sendOps([{ op: "CLEAR_ITEMS" }]);
+  }, [sendOps]);
 
   const [showClearCartKotWarning, setShowClearCartKotWarning] = useState(false);
 
@@ -1191,11 +1286,14 @@ function POSTerminalContent() {
     setKotOrderIds(prev => [...prev, kot.id]);
 
     // Persist immediately after KOT (the auto-save effect will also fire, but this ensures no delay)
+    const updatedKotOrderIds = [...kotOrderIds, kot.id];
     persistTab({
       ...snapshotCurrentTab(),
       kotSentQuantities: newSentQtys,
-      kotOrderIds: [...kotOrderIds, kot.id],
+      kotOrderIds: updatedKotOrderIds,
     });
+    // Broadcast KOT update to other devices via Socket.IO
+    sendOps([{ op: "UPDATE_KOT", kotSentQuantities: Object.fromEntries(newSentQtys), kotOrderIds: updatedKotOrderIds }]);
 
     // Print KOT
     try {
@@ -1803,6 +1901,7 @@ function POSTerminalContent() {
         onTableClick={() => setShowTableSelect(true)}
         tabCount={tabCount}
         onTabsClick={() => setShowTabsSheet(true)}
+        isSocketConnected={isSocketConnected}
       />
 
       {/* Main Content */}
@@ -2390,49 +2489,46 @@ function POSTerminalContent() {
               if (res.ok) {
                 const { order: remoteOrder } = await res.json();
                 if (remoteOrder) {
-                  // Adopt the order from the other session
-                  const adoptRes = await fetch(`/api/pos/open-orders/${remoteOrder.id}/adopt`, { method: "POST" });
-                  if (adoptRes.ok) {
-                    const adoptedRecord = await adoptRes.json();
-                    // Build tab context from the adopted order
-                    const items = Array.isArray(adoptedRecord.items) ? adoptedRecord.items : [];
-                    const adoptedCustomer = adoptedRecord.customerId
-                      ? { id: adoptedRecord.customerId, name: adoptedRecord.customerName || "", phone: null }
-                      : null;
-                    const adoptedTable = adoptedRecord.tableId
-                      ? {
-                          id: adoptedRecord.tableId,
-                          number: adoptedRecord.tableNumber || table.number,
-                          name: adoptedRecord.tableName || table.name,
-                          section: adoptedRecord.tableSection || table.section,
-                          capacity: adoptedRecord.tableCapacity || table.capacity,
-                        }
-                      : table;
+                  // Join the remote order's room via Socket.IO (no ownership transfer)
+                  const items = Array.isArray(remoteOrder.items) ? remoteOrder.items : [];
+                  const joinedCustomer = remoteOrder.customerId
+                    ? { id: remoteOrder.customerId, name: remoteOrder.customerName || "", phone: null }
+                    : null;
+                  const joinedTable = remoteOrder.tableId
+                    ? {
+                        id: remoteOrder.tableId,
+                        number: remoteOrder.tableNumber || table.number,
+                        name: remoteOrder.tableName || table.name,
+                        section: remoteOrder.tableSection || table.section,
+                        capacity: remoteOrder.tableCapacity || table.capacity,
+                      }
+                    : table;
 
-                    // Switch active tab identity to the adopted order's DB id
-                    adoptAsActiveTab(
-                      adoptedRecord.id,
-                      adoptedRecord.label || `T${table.number}`,
-                      new Date(adoptedRecord.createdAt).getTime(),
-                      adoptedRecord.version ?? 0,
-                      snapshotCurrentTab()
-                    );
+                  // Switch active tab identity to the remote order's DB id
+                  adoptAsActiveTab(
+                    remoteOrder.id,
+                    remoteOrder.label || `T${table.number}`,
+                    new Date(remoteOrder.createdAt).getTime(),
+                    remoteOrder.version ?? 0,
+                    snapshotCurrentTab()
+                  );
 
-                    // Restore adopted order state
-                    dispatchCart({ type: "RESTORE", items });
-                    setSelectedCustomer(adoptedCustomer);
-                    setSelectedTable(adoptedTable);
-                    setOrderType(adoptedRecord.orderType || "DINE_IN");
-                    setIsReturnMode(adoptedRecord.isReturnMode || false);
-                    setKotSentQuantities(
-                      new Map(Object.entries(adoptedRecord.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)]))
-                    );
-                    setKotOrderIds(Array.isArray(adoptedRecord.kotOrderIds) ? adoptedRecord.kotOrderIds : []);
-                    if (mutateOpenOrders) mutateOpenOrders();
-                    toast.success(`Resumed order for Table ${table.number}`);
-                    setShowTableSelect(false);
-                    return;
-                  }
+                  // Restore remote order state — Socket.IO room join happens
+                  // automatically via the useRealtimeOrder hook when activeTabId changes
+                  dispatchCart({ type: "RESTORE", items });
+                  setSelectedCustomer(joinedCustomer);
+                  setSelectedTable(joinedTable);
+                  setOrderType(remoteOrder.orderType || "DINE_IN");
+                  setIsReturnMode(remoteOrder.isReturnMode || false);
+                  setKotSentQuantities(
+                    new Map(Object.entries(remoteOrder.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)]))
+                  );
+                  setKotOrderIds(Array.isArray(remoteOrder.kotOrderIds) ? remoteOrder.kotOrderIds : []);
+                  setRealtimeVersion(remoteOrder.version ?? 0);
+                  if (mutateOpenOrders) mutateOpenOrders();
+                  toast.success(`Joined order for Table ${table.number}`);
+                  setShowTableSelect(false);
+                  return;
                 }
               }
             } catch {
@@ -2529,15 +2625,16 @@ function POSTerminalContent() {
         modifiers={variantPickerProduct?.modifiers || []}
         onSelect={(variant, selectedModifiers) => {
           if (variantPickerProduct) {
-            dispatchCart({
-              type: "ADD",
-              product: variantPickerProduct,
-              quantity: 1,
-              price: variant ? variant.price : null,
-              variantId: variant?.id,
-              variantName: variant?.name,
-              modifiers: selectedModifiers.length > 0 ? selectedModifiers : undefined,
-            });
+            addToCart(
+              variantPickerProduct,
+              1,
+              undefined,
+              undefined,
+              undefined,
+              variant ? variant.price : null,
+              variant?.id,
+              variant?.name,
+            );
           }
         }}
       />

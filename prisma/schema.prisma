@@ -1860,6 +1860,7 @@ model POSOpenOrder {
   kotSentQuantities Json              @default("{}")
   kotOrderIds       Json              @default("[]")
   version        Int                  @default(0)
+  deviceId       String?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 

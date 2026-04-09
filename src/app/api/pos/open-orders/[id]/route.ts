@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { posEventBus } from "@/lib/pos-event-bus";
+import { publishOrderUpdate, publishOrderDeleted } from "@/lib/pos/ably-server";
 
 export async function PUT(
   request: NextRequest,
@@ -70,8 +71,15 @@ export async function PUT(
       select: { id: true, version: true },
     });
 
-    // Notify other POS devices via SSE
+    // Notify other POS devices via SSE (legacy) and Ably
     posEventBus.emit(organizationId, JSON.stringify({ type: "order-updated", id: result.id }));
+    await publishOrderUpdate(
+      organizationId,
+      result.id,
+      [{ op: "REPLACE_STATE", state: { ...data, items: data.items } }],
+      result.version,
+      "api",
+    );
 
     return NextResponse.json(result);
   } catch (error) {
@@ -115,8 +123,9 @@ export async function DELETE(
 
     await prisma.pOSOpenOrder.delete({ where: { id } });
 
-    // Notify other POS devices via SSE
+    // Notify other POS devices via SSE (legacy) and Ably
     posEventBus.emit(organizationId, JSON.stringify({ type: "order-deleted", id }));
+    await publishOrderDeleted(organizationId, id, "api");
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { posEventBus } from "@/lib/pos-event-bus";
 
+/**
+ * POST /api/pos/open-orders/[id]/adopt
+ *
+ * Previously transferred sessionId (ownership) from one device to another.
+ * Now returns the order state without transferring ownership — multi-device
+ * collaboration is handled via Socket.IO rooms instead.
+ *
+ * Kept as a read-only endpoint for backward compatibility with older clients.
+ */
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,22 +23,9 @@ export async function POST(
     }
 
     const organizationId = getOrgId(session);
-    const userId = session.user.id;
     const { id } = await params;
 
-    // Find the caller's open POS session
-    const posSession = await prisma.pOSSession.findFirst({
-      where: { organizationId, userId, status: "OPEN" },
-    });
-
-    if (!posSession) {
-      return NextResponse.json(
-        { error: "No open POS session found" },
-        { status: 400 }
-      );
-    }
-
-    // Find the order to adopt
+    // Find the order (no ownership transfer needed)
     const order = await prisma.pOSOpenOrder.findFirst({
       where: { id, organizationId },
     });
@@ -42,28 +37,11 @@ export async function POST(
       );
     }
 
-    // Already belongs to this session — nothing to do
-    if (order.sessionId === posSession.id) {
-      return NextResponse.json(order);
-    }
-
-    // Transfer the order to the caller's session
-    const updated = await prisma.pOSOpenOrder.update({
-      where: { id },
-      data: {
-        sessionId: posSession.id,
-        version: { increment: 1 },
-      },
-    });
-
-    // Notify other POS devices via SSE
-    posEventBus.emit(organizationId, JSON.stringify({ type: "order-adopted", id }));
-
-    return NextResponse.json(updated);
+    return NextResponse.json(order);
   } catch (error) {
-    console.error("Failed to adopt open order:", error);
+    console.error("Failed to read open order for adopt:", error);
     return NextResponse.json(
-      { error: "Failed to adopt open order" },
+      { error: "Failed to read open order" },
       { status: 500 }
     );
   }

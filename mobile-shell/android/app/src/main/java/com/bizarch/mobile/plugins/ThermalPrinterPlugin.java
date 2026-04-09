@@ -709,10 +709,12 @@ public class ThermalPrinterPlugin extends Plugin {
     @SuppressLint("MissingPermission")
     @PluginMethod
     public void openCashDrawer(PluginCall call) {
-        withBluetoothPermission(call, () -> printExecutor.execute(() -> {
-            DeviceConnection connection = null;
-            EscPosPrinter printer = null;
+        // Send only the raw ESC/POS cash drawer pulse — no paper feed or cut.
+        // DantSu's printFormattedTextAndOpenCashBox includes a paper cut which
+        // causes an unwanted extra cut when the drawer is opened before printing.
+        byte[] drawerPulse = new byte[]{0x1B, 0x70, 0x00, 0x19, (byte) 0xFA};
 
+        withBluetoothPermission(call, () -> printExecutor.execute(() -> {
             try {
                 if (isBluetooth(call)) {
                     String address = call.getString("address", "").trim();
@@ -720,29 +722,22 @@ public class ThermalPrinterPlugin extends Plugin {
                         call.reject("Bluetooth address is required", "MISSING_ADDRESS");
                         return;
                     }
-                    BluetoothDevice device = BluetoothAdapter.getDefaultAdapter()
-                            .getRemoteDevice(address);
-                    connection = new BluetoothConnection(device);
+                    sendRawBluetooth(address, drawerPulse);
                 } else {
-                    connection = createConnection(call);
+                    String host = call.getString("host", "").trim();
+                    int port = call.getInt("port", DEFAULT_PORT);
+                    if (host.isEmpty()) {
+                        call.reject("Printer host is required", "MISSING_HOST");
+                        return;
+                    }
+                    sendOnce(host, port, drawerPulse);
                 }
-                printer = createPrinter(call, connection);
-            printer.printFormattedTextAndOpenCashBox("\n", 20f);
 
-            JSObject result = new JSObject();
-            result.put("success", true);
-            call.resolve(result);
+                JSObject result = new JSObject();
+                result.put("success", true);
+                call.resolve(result);
             } catch (Exception e) {
                 call.reject("Cash drawer failed: " + e.getMessage());
-            } finally {
-                try {
-                    if (printer != null) {
-                        printer.disconnectPrinter();
-                    } else if (connection != null) {
-                        connection.disconnect();
-                    }
-                } catch (Exception ignored) {
-                }
             }
         }));
     }
