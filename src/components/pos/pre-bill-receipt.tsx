@@ -28,6 +28,7 @@ export interface PreBillReceiptData {
   currency?: string;
   taxLabel?: string;
   // Order context
+  orderNumber?: number;
   date: Date;
   tableName?: string;
   tableNumber?: number;
@@ -180,7 +181,10 @@ export function PreBillReceipt({ data }: { data: PreBillReceiptData }) {
       {/* Order Info */}
       <div style={{ padding: "0 1px" }}>
         <div style={{ ...rowStyle, fontWeight: 700, fontSize: "12px" }}>
-          <span>{data.orderType === "DINE_IN" ? bl("Dine-In", "تناول الطعام") : bl("Takeaway", "سفري")}</span>
+          <span>
+            {data.orderType === "DINE_IN" ? bl("Dine-In", "تناول الطعام") : bl("Takeaway", "سفري")}
+            {data.orderNumber ? ` #${data.orderNumber}` : ""}
+          </span>
           <span>{format(data.date, "dd MMM yyyy")}</span>
         </div>
         <div style={{ ...rowStyle, fontSize: "11px", color: "#000" }}>

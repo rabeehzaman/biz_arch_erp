@@ -473,7 +473,7 @@ function POSTerminalContent() {
 
   // Tab system — generalises per-table context to unlimited concurrent orders
   const {
-    tabs, activeTabId, activeTabLabel, activeTabCreatedAt, tabCount,
+    tabs, activeTabId, activeTabLabel, activeTabOrderNumber, activeTabCreatedAt, tabCount,
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
     findTabByTableId, updateActiveTabLabel, getAllTableIds, clearAllTabs,
     isHydrated, initialTabContext, persistTab, scheduleSave, mutateOpenOrders, adoptAsActiveTab,
@@ -906,6 +906,7 @@ function POSTerminalContent() {
   const snapshotCurrentTab = useCallback((): TabContext => ({
     id: activeTabId,
     label: activeTabLabel,
+    orderNumber: activeTabOrderNumber,
     cartState,
     selectedCustomer,
     selectedTable,
@@ -916,7 +917,7 @@ function POSTerminalContent() {
     kotOrderIds,
     view,
     createdAt: activeTabCreatedAt,
-  }), [activeTabId, activeTabLabel, cartState, selectedCustomer, selectedTable, heldOrderId, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, activeTabCreatedAt]);
+  }), [activeTabId, activeTabLabel, activeTabOrderNumber, cartState, selectedCustomer, selectedTable, heldOrderId, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, activeTabCreatedAt]);
 
   const restoreTabContext = useCallback((tab: TabContext) => {
     dispatchCart({ type: "RESTORE", items: tab.cartState.items });
@@ -986,12 +987,13 @@ function POSTerminalContent() {
   // Auto-label active tab based on customer/table/return state
   useEffect(() => {
     let label = activeTabLabel;
+    const n = activeTabOrderNumber;
     if (isReturnMode) {
       label = "Return";
     } else if (selectedTable && selectedCustomer) {
-      label = `T${selectedTable.number} - ${selectedCustomer.name}`;
+      label = `#${n} · T${selectedTable.number} - ${selectedCustomer.name}`;
     } else if (selectedTable) {
-      label = `T${selectedTable.number}`;
+      label = `#${n} · T${selectedTable.number}`;
     } else if (selectedCustomer) {
       label = selectedCustomer.name;
     }
@@ -999,7 +1001,7 @@ function POSTerminalContent() {
     if (label !== activeTabLabel) {
       updateActiveTabLabel(label);
     }
-  }, [selectedCustomer, selectedTable, isReturnMode, activeTabLabel, updateActiveTabLabel]);
+  }, [selectedCustomer, selectedTable, isReturnMode, activeTabLabel, activeTabOrderNumber, updateActiveTabLabel]);
 
   // Restore active tab from DB on initial hydration
   const hydrationDoneRef = useRef(false);
@@ -1436,6 +1438,7 @@ function POSTerminalContent() {
         secondaryName: preBillReceiptMeta?.secondaryName || undefined,
         currency: preBillReceiptMeta?.currency || undefined,
         taxLabel: preBillReceiptMeta?.taxLabel || undefined,
+        orderNumber: activeTabOrderNumber,
         date: new Date(),
         tableName: selectedTable?.name,
         tableNumber: selectedTable?.number,
@@ -1466,7 +1469,7 @@ function POSTerminalContent() {
     } finally {
       setIsPrintingPreBill(false);
     }
-  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, t]);
+  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, activeTabOrderNumber, t]);
 
   const handleSendToKitchen = async () => {
     if (kotInFlightRef.current) return;
@@ -2652,8 +2655,8 @@ function POSTerminalContent() {
             setOrderType("DINE_IN");
             // Update tab label immediately (don't wait for auto-label effect)
             const newLabel = selectedCustomer
-              ? `T${table.number} - ${selectedCustomer.name}`
-              : `T${table.number}`;
+              ? `#${activeTabOrderNumber} · T${table.number} - ${selectedCustomer.name}`
+              : `#${activeTabOrderNumber} · T${table.number}`;
             updateActiveTabLabel(newLabel);
             occupyTable(table.id);
             setShowTableSelect(false);
@@ -2704,7 +2707,7 @@ function POSTerminalContent() {
 
             setSelectedTable(null);
             setOrderType("TAKEAWAY");
-            updateActiveTabLabel("Takeaway");
+            updateActiveTabLabel(`#${activeTabOrderNumber} · Takeaway`);
             setShowTableSelect(false);
             // Sync change to server
             requestAnimationFrame(() => {

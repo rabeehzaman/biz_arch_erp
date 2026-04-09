@@ -55,7 +55,7 @@ export function buildPreBillEscPos(
   // ═══ ORDER INFO ════════════════════════════════════════
   p.alignLeft();
   p.leftRight(
-    data.orderType === "DINE_IN" ? "Dine-In" : "Takeaway",
+    (data.orderType === "DINE_IN" ? "Dine-In" : "Takeaway") + (data.orderNumber ? ` #${data.orderNumber}` : ""),
     format(data.date, "dd/MM/yyyy"),
   );
 

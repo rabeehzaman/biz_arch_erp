@@ -26,6 +26,7 @@ interface TableRef {
 export interface TabContext {
   id: string;
   label: string;
+  orderNumber: number;
   cartState: CartState;
   selectedCustomer: Customer | null;
   selectedTable: TableRef | null;
@@ -89,10 +90,16 @@ function buildCartState(items: CartItemData[]): CartState {
   };
 }
 
-function makeDefaultTab(id: string, label: string): TabContext {
+function parseOrderNumber(label: string): number {
+  const m = label.match(/^Order\s+(\d+)/i) || label.match(/^#(\d+)/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+function makeDefaultTab(id: string, label: string, orderNumber: number): TabContext {
   return {
     id,
     label,
+    orderNumber,
     cartState: EMPTY_CART,
     selectedCustomer: null,
     selectedTable: null,
@@ -106,11 +113,13 @@ function makeDefaultTab(id: string, label: string): TabContext {
   };
 }
 
-function deserializeTab(record: DBOpenOrder): TabContext {
+function deserializeTab(record: DBOpenOrder, index: number): TabContext {
   const items = Array.isArray(record.items) ? record.items : [];
+  const orderNumber = parseOrderNumber(record.label) || (index + 1);
   return {
     id: record.id,
     label: record.label,
+    orderNumber,
     cartState: buildCartState(items),
     selectedCustomer: record.customerId
       ? { id: record.customerId, name: record.customerName || "", phone: null }
@@ -167,6 +176,7 @@ export function usePOSTabs(
   const [tabs, setTabs] = useState<Map<string, TabContext>>(() => new Map());
   const [activeTabId, setActiveTabId] = useState<string>(() => generateId());
   const [activeTabLabel, setActiveTabLabel] = useState("Order 1");
+  const [activeTabOrderNumber, setActiveTabOrderNumber] = useState(1);
   const [activeTabCreatedAt, setActiveTabCreatedAt] = useState(() => Date.now());
   const orderCounterRef = useRef(1);
   const activeTabIdRef = useRef(activeTabId);
@@ -241,12 +251,13 @@ export function usePOSTabs(
       return;
     }
 
-    const deserialized = dbOrders.map(deserializeTab);
+    const deserialized = dbOrders.map((r, i) => deserializeTab(r, i));
 
     // First tab becomes active, rest go into inactive Map
     const [first, ...rest] = deserialized;
     setActiveTabId(first.id);
     setActiveTabLabel(first.label);
+    setActiveTabOrderNumber(first.orderNumber);
     setActiveTabCreatedAt(first.createdAt);
     setInitialTabContext(first);
 
@@ -292,14 +303,14 @@ export function usePOSTabs(
           // Active tab — only update if no local save is pending
           if (!saveTimerRef.current && onActiveTabRemoteUpdateRef.current) {
             versionsRef.current.set(record.id, record.version);
-            onActiveTabRemoteUpdateRef.current(deserializeTab(record));
+            onActiveTabRemoteUpdateRef.current(deserializeTab(record, 0));
           }
           continue;
         }
 
         // Inactive tab or new tab from another device
         versionsRef.current.set(record.id, record.version);
-        next.set(record.id, deserializeTab(record));
+        next.set(record.id, deserializeTab(record, 0));
         hasChanges = true;
       }
 
@@ -316,7 +327,7 @@ export function usePOSTabs(
       for (const record of dbOrders) {
         if (record.id !== currentActiveTabId && !prev.has(record.id) && !versionsRef.current.has(record.id)) {
           versionsRef.current.set(record.id, record.version);
-          next.set(record.id, deserializeTab(record));
+          next.set(record.id, deserializeTab(record, 0));
           hasChanges = true;
         }
       }
@@ -384,11 +395,12 @@ export function usePOSTabs(
   );
 
   const newTab = useCallback(
-    (initialOverrides?: Partial<TabContext>): { id: string; label: string } => {
+    (initialOverrides?: Partial<TabContext>): { id: string; label: string; orderNumber: number } => {
       orderCounterRef.current += 1;
       const id = generateId();
-      const label = initialOverrides?.label ?? `Order ${orderCounterRef.current}`;
-      return { id, label };
+      const orderNumber = orderCounterRef.current;
+      const label = initialOverrides?.label ?? `Order ${orderNumber}`;
+      return { id, label, orderNumber };
     },
     []
   );
@@ -409,6 +421,7 @@ export function usePOSTabs(
       if (target) {
         setActiveTabId(target.id);
         setActiveTabLabel(target.label);
+        setActiveTabOrderNumber(target.orderNumber);
         setActiveTabCreatedAt(target.createdAt);
         return target;
       }
@@ -422,9 +435,9 @@ export function usePOSTabs(
       // Persist outgoing tab immediately
       persistTab(currentSnapshot);
 
-      const { id, label } = newTab(overrides);
-      const freshTab = makeDefaultTab(id, label);
-      const merged = { ...freshTab, ...overrides, id, label };
+      const { id, label, orderNumber } = newTab(overrides);
+      const freshTab = makeDefaultTab(id, label, orderNumber);
+      const merged = { ...freshTab, ...overrides, id, label, orderNumber };
 
       setTabs((prev) => {
         const next = new Map(prev);
@@ -434,6 +447,7 @@ export function usePOSTabs(
 
       setActiveTabId(id);
       setActiveTabLabel(label);
+      setActiveTabOrderNumber(orderNumber);
       setActiveTabCreatedAt(merged.createdAt);
       return merged;
     },
@@ -462,6 +476,7 @@ export function usePOSTabs(
         const newId = generateId();
         setActiveTabId(newId);
         setActiveTabLabel(`Order ${orderCounterRef.current}`);
+        setActiveTabOrderNumber(orderCounterRef.current);
         setActiveTabCreatedAt(Date.now());
         return { switchTo: null, wasActive: true };
       }
@@ -481,6 +496,7 @@ export function usePOSTabs(
         });
         setActiveTabId(newest.id);
         setActiveTabLabel(newest.label);
+        setActiveTabOrderNumber(newest.orderNumber);
         setActiveTabCreatedAt(newest.createdAt);
       }
 
@@ -548,6 +564,7 @@ export function usePOSTabs(
       versionsRef.current.set(adoptedId, version);
       setActiveTabId(adoptedId);
       setActiveTabLabel(label);
+      setActiveTabOrderNumber(parseOrderNumber(label) || orderCounterRef.current);
       setActiveTabCreatedAt(createdAt);
     },
     [deletePersistedTab, persistTab]
@@ -561,6 +578,7 @@ export function usePOSTabs(
     const id = generateId();
     setActiveTabId(id);
     setActiveTabLabel("Order 1");
+    setActiveTabOrderNumber(1);
     setActiveTabCreatedAt(Date.now());
   }, []);
 
@@ -568,6 +586,7 @@ export function usePOSTabs(
     tabs,
     activeTabId,
     activeTabLabel,
+    activeTabOrderNumber,
     activeTabCreatedAt,
     tabCount,
     allTabs,
