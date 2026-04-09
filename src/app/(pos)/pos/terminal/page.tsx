@@ -2136,25 +2136,13 @@ function POSTerminalContent() {
 
           {view === "cart" ? (
             <>
-              {/* Customer Select */}
-              <div className="border-b p-3">
-                <CustomerSelect
-                  selectedCustomer={selectedCustomer}
-                  onSelect={setSelectedCustomer}
-                />
-              </div>
-
-              {/* Restaurant Table Selection */}
-              {isRestaurantEnabled && (
-                <div className="border-b p-3 flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setShowTableSelect(true)}>
-                    {selectedTable ? `Table ${selectedTable.number}` : t("restaurant.selectTable")}
-                  </Button>
-                  {orderType === "TAKEAWAY" && (
-                    <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200">
-                      {t("restaurant.takeaway")}
-                    </Badge>
-                  )}
+              {/* Customer Select — hidden in restaurant mode */}
+              {!isRestaurantEnabled && (
+                <div className="border-b p-3">
+                  <CustomerSelect
+                    selectedCustomer={selectedCustomer}
+                    onSelect={setSelectedCustomer}
+                  />
                 </div>
               )}
 
@@ -2170,7 +2158,7 @@ function POSTerminalContent() {
               {/* Cart Items */}
               <div
                 ref={cartItemsContainerRef}
-                className="flex-1 overflow-x-hidden overflow-y-auto p-3 space-y-2"
+                className="flex-1 overflow-x-hidden overflow-y-auto divide-y divide-slate-100"
               >
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -2197,62 +2185,82 @@ function POSTerminalContent() {
               {cart.length > 0 && (
                 <div
                   key={`cart-summary-${cartState.revision}`}
-                  className="border-t p-3 space-y-3"
+                  className="border-t p-2 space-y-1.5"
                 >
-                  <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
-                  {isRestaurantEnabled && (
-                    <Button
-                      variant="default"
-                      className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                      onClick={handleSendToKitchen}
-                      disabled={cartState.items.length === 0 || isKotSending}
-                    >
-                      {isKotSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UtensilsCrossed className="h-4 w-4 mr-2" />}
-                      {t("restaurant.sendToKitchen")}
-                      {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0)) > 0) && (
-                        <Badge variant="secondary" className="ml-2">
-                          {cartState.items.reduce((count, i) => {
-                            const diff = i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0);
-                            return diff > 0 ? count + 1 : count;
-                          }, 0)} new
-                        </Badge>
-                      )}
-                    </Button>
-                  )}
-                  {isRestaurantEnabled && (
-                    <Button
-                      variant="outline"
-                      className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
-                      onClick={handlePrintPreBill}
-                      disabled={isPrintingPreBill || cart.length === 0}
-                    >
-                      {isPrintingPreBill ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Receipt className="h-4 w-4 mr-2" />}
-                      {t("pos.printBill") || "Print Bill"}
-                    </Button>
-                  )}
-                  <div className="flex gap-2">
-                    {!isReturnMode && !isRestaurantEnabled && (
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
+                    </div>
+                    {isRestaurantEnabled && (
                       <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={holdOrder}
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={handleClearCart}
                       >
-                        <PauseCircle className="h-4 w-4 mr-1" />
-                        {t("pos.holdOrder").split(" ")[0]}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={handleClearCart}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      {t("pos.clearCart").split(" ")[0]}
-                    </Button>
                   </div>
+                  {isRestaurantEnabled && (
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                        onClick={handleSendToKitchen}
+                        disabled={cartState.items.length === 0 || isKotSending}
+                      >
+                        {isKotSending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <UtensilsCrossed className="h-4 w-4 mr-1" />}
+                        KOT
+                        {kotSentQuantities.size > 0 && cartState.items.some(i => (i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0)) > 0) && (
+                          <Badge variant="secondary" className="ml-1">
+                            {cartState.items.reduce((count, i) => {
+                              const diff = i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0);
+                              return diff > 0 ? count + 1 : count;
+                            }, 0)}
+                          </Badge>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                        onClick={handlePrintPreBill}
+                        disabled={isPrintingPreBill || cart.length === 0}
+                      >
+                        {isPrintingPreBill ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Receipt className="h-4 w-4 mr-1" />}
+                        Bill
+                      </Button>
+                    </div>
+                  )}
+                  {!isRestaurantEnabled && (
+                    <div className="flex gap-2">
+                      {!isReturnMode && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={holdOrder}
+                        >
+                          <PauseCircle className="h-4 w-4 mr-1" />
+                          {t("pos.holdOrder").split(" ")[0]}
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleClearCart}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        {t("pos.clearCart").split(" ")[0]}
+                      </Button>
+                    </div>
+                  )}
                   <Button
                     className={cn(
-                      "w-full h-12 text-lg font-bold",
+                      "w-full h-10 text-base font-bold",
                       isReturnMode && "bg-red-600 hover:bg-red-700"
                     )}
                     onClick={() => {

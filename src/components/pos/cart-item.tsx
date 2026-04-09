@@ -58,8 +58,8 @@ export const CartItem = memo(function CartItem({
   const lineTotal = item.quantity * item.price * (1 - item.discount / 100);
 
   return (
-    <div className="max-w-full rounded-lg border bg-white p-2">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-2">
+    <div className="px-3 py-2 md:py-1.5">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-1.5">
         <div className="min-w-0 overflow-hidden">
           <p className="text-sm font-medium leading-tight whitespace-normal break-words [overflow-wrap:anywhere]">
             {item.name}{item.variantName ? ` - ${item.variantName}` : ""}{item.unitName ? ` (${item.unitName})` : ""}
@@ -84,7 +84,7 @@ export const CartItem = memo(function CartItem({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-7 w-7"
+                className="h-7 w-7 md:h-6 md:w-6"
                 onClick={() => {
                   const minQty = kotSentQty ?? 0;
                   if (item.quantity <= 1 && minQty === 0) {
@@ -101,7 +101,7 @@ export const CartItem = memo(function CartItem({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-7 w-7"
+                className="h-7 w-7 md:h-6 md:w-6"
                 onClick={() => onQuantityChange(item.productId, item.variantId, item.quantity + 1)}
               >
                 <Plus className="h-3 w-3" />
@@ -118,13 +118,13 @@ export const CartItem = memo(function CartItem({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1 self-center">
-          <span className="w-16 text-right text-sm font-semibold sm:w-20">
+          <span className="w-14 text-right text-xs font-semibold sm:w-[72px]">
             {fmt(lineTotal)}
           </span>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+            className="h-7 w-7 md:h-6 md:w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
             onClick={() => onRemove(item.productId)}
           >
             <Trash2 className="h-3 w-3" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { Separator } from "@/components/ui/separator";
+
 import type { CartItemData } from "./cart-item";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/lib/i18n";
@@ -18,7 +18,7 @@ export function CartSummary({ items, isTaxInclusivePrice, roundOffMode }: CartSu
   const { subtotal, taxAmount, roundOffAmount, total } = calculateCartTotal(items, isTaxInclusivePrice, roundOffMode);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {isTaxInclusivePrice && (
         <div className="text-xs text-blue-600 text-right font-medium">{t("common.pricesIncludeTax")}</div>
       )}
@@ -38,8 +38,7 @@ export function CartSummary({ items, isTaxInclusivePrice, roundOffMode }: CartSu
           <span>{roundOffAmount > 0 ? "+" : ""}{formatCurrency(roundOffAmount)}</span>
         </div>
       )}
-      <Separator />
-      <div className="flex justify-between text-lg font-bold">
+      <div className="flex justify-between text-base font-bold border-t pt-1">
         <span>{t("common.total")}</span>
         <span>{formatCurrency(total)}</span>
       </div>
