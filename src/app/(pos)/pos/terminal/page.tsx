@@ -974,6 +974,10 @@ function POSTerminalContent() {
     hydrationDoneRef.current = true;
     if (initialTabContext) {
       restoreTabContext(initialTabContext);
+      // Continued session in restaurant mode — show table select if no table/order in progress
+      if (isRestaurantEnabled && !initialTabContext.selectedTable && initialTabContext.cartState.items.length === 0) {
+        setShowTableSelect(true);
+      }
     } else if (isRestaurantEnabled) {
       // Fresh session in restaurant mode — prompt for table
       setShowTableSelect(true);
