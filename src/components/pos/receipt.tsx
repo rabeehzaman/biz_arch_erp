@@ -37,6 +37,10 @@ export interface ReceiptData {
   invoiceNumber: string;
   date: Date;
   customerName?: string;
+  orderType?: "DINE_IN" | "TAKEAWAY";
+  tableNumber?: number;
+  tableName?: string;
+  orderNumber?: number;
   items: ReceiptItem[];
   subtotal: number;
   taxRate: number;
@@ -250,6 +254,18 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
           )}
           <span>{format(data.date, "hh:mm a")}</span>
         </div>
+        {data.orderType === "DINE_IN" && (data.tableName || data.tableNumber != null) && (
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "#000" }}>
+            {bl("Table", "الطاولة")}: {data.tableName || `#${data.tableNumber}`}
+            {data.orderNumber ? ` · ${bl("Order", "طلب")} #${data.orderNumber}` : ""}
+          </div>
+        )}
+        {data.orderType === "TAKEAWAY" && (
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "#000" }}>
+            {bl("Takeaway", "سفري")}
+            {data.orderNumber ? ` · ${bl("Order", "طلب")} #${data.orderNumber}` : ""}
+          </div>
+        )}
       </div>
 
       {/* Thin Divider */}

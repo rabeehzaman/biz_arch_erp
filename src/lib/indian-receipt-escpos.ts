@@ -63,6 +63,16 @@ export function buildIndianGSTReceiptEscPos(
   if (data.invoiceNumber) p.println(`Invoice: ${data.invoiceNumber}`);
   if (data.date) p.println(`Date: ${format(data.date, "dd/MM/yyyy hh:mm a")}`);
   if (data.customerName) p.println(`Customer: ${data.customerName}`);
+  if (data.orderType === "DINE_IN" && (data.tableName || data.tableNumber != null)) {
+    p.bold(true);
+    p.println(`Table: ${data.tableName || `#${data.tableNumber}`}${data.orderNumber ? ` · Order #${data.orderNumber}` : ""}`);
+    p.bold(false);
+  }
+  if (data.orderType === "TAKEAWAY") {
+    p.bold(true);
+    p.println(`Takeaway${data.orderNumber ? ` · Order #${data.orderNumber}` : ""}`);
+    p.bold(false);
+  }
 
   if (data.placeOfSupplyName || data.placeOfSupply) {
     const posText =

@@ -1698,6 +1698,10 @@ function POSTerminalContent() {
         invoiceNumber: result.invoice?.invoiceNumber || "",
         date: new Date(),
         customerName: selectedCustomer?.name,
+        orderType: isRestaurantEnabled ? orderType : undefined,
+        tableNumber: selectedTable?.number,
+        tableName: selectedTable?.name || undefined,
+        orderNumber: isRestaurantEnabled ? activeTabOrderNumber : undefined,
         items: completedCart.map((item, idx) => {
           const lineTotal = item.quantity * item.price * (1 - (item.discount || 0) / 100);
           const invoiceItem = result.invoice?.items?.[idx] as Record<string, unknown> | undefined;

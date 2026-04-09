@@ -106,6 +106,10 @@ export function mapReceiptToElectronFormat(data: ReceiptData): Record<string, un
       ? data.date.toLocaleString()
       : String(data.date),
     customerName: data.customerName,
+    orderType: data.orderType || null,
+    tableNumber: data.tableNumber ?? null,
+    tableName: data.tableName || null,
+    orderNumber: data.orderNumber ?? null,
     items: data.items.map((item) => ({
       name: item.name,
       nameAr: item.nameAr,

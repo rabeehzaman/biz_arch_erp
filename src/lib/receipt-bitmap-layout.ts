@@ -148,6 +148,21 @@ export async function buildReceiptBitmap(
   } else {
     builder.drawRightText(format(data.date, "hh:mm a"), 20, 400);
   }
+  if (data.orderType === "DINE_IN" && (data.tableName || data.tableNumber != null)) {
+    builder.drawLeftRightRow(
+      `${bl("Table", "الطاولة")}: ${data.tableName || `#${data.tableNumber}`}${data.orderNumber ? ` · ${bl("Order", "طلب")} #${data.orderNumber}` : ""}`,
+      "",
+      20,
+      700,
+    );
+  } else if (data.orderType === "TAKEAWAY") {
+    builder.drawLeftRightRow(
+      `${bl("Takeaway", "سفري")}${data.orderNumber ? ` · ${bl("Order", "طلب")} #${data.orderNumber}` : ""}`,
+      "",
+      20,
+      700,
+    );
+  }
 
   // ── Thin Divider ──────────────────────────────────────────────
   builder.drawSolidLine("#dddddd");
