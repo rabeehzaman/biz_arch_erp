@@ -42,20 +42,25 @@ export function OrderTabsSheet({
             <ShoppingCart className="h-5 w-5" />
             {t("pos.openOrders")}
             <Badge variant="secondary" className="text-xs">
-              {tabs.length}
+              {tabs.filter(t => t.id === activeTabId || t.kotSentQuantities.size > 0 || t.cartState.items.length > 0).length}
             </Badge>
           </SheetTitle>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
-          {tabs.length === 0 ? (
+          {(() => {
+            // Only show tabs that have KOT-sent items, cart items, or are the active tab
+            const visibleTabs = tabs.filter(
+              (tab) => tab.id === activeTabId || tab.kotSentQuantities.size > 0 || tab.cartState.items.length > 0
+            );
+            return visibleTabs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
               <ShoppingCart className="h-8 w-8" />
               <span className="text-sm">{t("pos.noOpenOrders")}</span>
             </div>
           ) : (
             <ul className="divide-y">
-              {tabs.map((tab) => {
+              {visibleTabs.map((tab) => {
                 const isActive = tab.id === activeTabId;
                 const itemCount = tab.cartState.items.length;
                 const totalQty = tab.cartState.totalQuantity;
@@ -167,7 +172,8 @@ export function OrderTabsSheet({
                 );
               })}
             </ul>
-          )}
+          );
+          })()}
         </div>
 
         {/* New order button */}

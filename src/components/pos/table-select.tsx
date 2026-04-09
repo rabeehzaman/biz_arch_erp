@@ -51,7 +51,8 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway, req
   const { t } = useLanguage();
   const { data: tables, isLoading } = useSWR<RestaurantTable[]>(
     open ? "/api/restaurant/tables" : null,
-    fetcher
+    fetcher,
+    { revalidateOnMount: true, dedupingInterval: 0 }
   );
 
   const handleTableClick = (table: RestaurantTable) => {
