@@ -29,6 +29,8 @@ interface TableSelectProps {
   onOpenChange: (open: boolean) => void;
   onSelectTable: (table: { id: string; number: number; name: string; section?: string; capacity: number } | null) => void;
   onTakeaway: () => void;
+  /** When true, the sheet cannot be dismissed by tapping outside — user must pick a table or takeaway */
+  required?: boolean;
 }
 
 const statusColors: Record<string, string> = {
@@ -45,7 +47,7 @@ const statusLabels: Record<string, string> = {
   CLEANING: "Cleaning",
 };
 
-export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway }: TableSelectProps) {
+export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway, required }: TableSelectProps) {
   const { t } = useLanguage();
   const { data: tables, isLoading } = useSWR<RestaurantTable[]>(
     open ? "/api/restaurant/tables" : null,
@@ -78,8 +80,8 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway }: T
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="left" className="w-full sm:max-w-lg overflow-y-auto">
+      <Sheet open={open} onOpenChange={required ? undefined : onOpenChange}>
+        <SheetContent side="left" className="w-full sm:max-w-lg overflow-y-auto" onInteractOutside={required ? (e) => e.preventDefault() : undefined} onEscapeKeyDown={required ? (e) => e.preventDefault() : undefined}>
           <SheetHeader>
             <SheetTitle>{t("restaurant.selectTable")}</SheetTitle>
           </SheetHeader>

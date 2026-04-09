@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 
 // This is the edge-compatible auth config (no DB access)
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [
     Credentials({
       name: "credentials",

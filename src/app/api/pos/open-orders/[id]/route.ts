@@ -3,7 +3,38 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { posEventBus } from "@/lib/pos-event-bus";
-import { publishOrderDeleted } from "@/lib/pos/ably-server";
+import { publishOrderDeleted, publishOrderUpdate } from "@/lib/pos/ably-server";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const organizationId = getOrgId(session);
+    const { id } = await params;
+
+    const order = await prisma.pOSOpenOrder.findFirst({
+      where: { id, organizationId },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(order);
+  } catch (error) {
+    console.error("Failed to fetch open order:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch open order" },
+      { status: 500 },
+    );
+  }
+}
 
 export async function PUT(
   request: NextRequest,
@@ -36,6 +67,7 @@ export async function PUT(
       customerId, customerName,
       tableId, tableNumber, tableName, tableSection, tableCapacity,
       heldOrderId, kotSentQuantities, kotOrderIds,
+      broadcast,
     } = body;
 
     const data = {
@@ -71,9 +103,28 @@ export async function PUT(
       select: { id: true, version: true },
     });
 
-    // Notify other POS devices via SSE (legacy).
-    // Real-time Ably sync is handled by the /ops route — PUT is just persistence.
+    // Notify other POS devices via SSE (legacy — tab list refresh)
     posEventBus.emit(organizationId, JSON.stringify({ type: "order-updated", id: result.id }));
+
+    // Broadcast via Ably only on KOT saves (broadcast: true), not draft saves
+    if (broadcast) {
+      await publishOrderUpdate(organizationId, result.id, [], result.version, "api", {
+        items: data.items,
+        label: data.label,
+        orderType: data.orderType,
+        isReturnMode: data.isReturnMode,
+        customerId: data.customerId,
+        customerName: data.customerName,
+        tableId: data.tableId,
+        tableNumber: data.tableNumber,
+        tableName: data.tableName,
+        tableSection: data.tableSection,
+        tableCapacity: data.tableCapacity,
+        heldOrderId: data.heldOrderId,
+        kotSentQuantities: data.kotSentQuantities,
+        kotOrderIds: data.kotOrderIds,
+      });
+    }
 
     return NextResponse.json(result);
   } catch (error) {

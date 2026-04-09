@@ -7,6 +7,10 @@ import { publishOrderUpdate } from "@/lib/pos/ably-server";
 import type { OrderOperation, MutationResult } from "@/lib/pos/realtime-types";
 
 /**
+ * @deprecated This route is no longer called by the client.
+ * Cart items are now saved on KOT send via the PUT route instead of per-tap ops.
+ * Kept for backward compatibility during rollout — can be deleted later.
+ *
  * POST /api/pos/open-orders/[id]/ops
  *
  * Apply operations to an order with optimistic locking.

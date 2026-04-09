@@ -184,24 +184,14 @@ interface CheckoutTimingPayload {
   transactionStages: Record<string, number>;
 }
 
-interface PendingCartOp {
-  clientSeq: number;
-  op: OrderOperation;
-}
-
 type CartAction =
   | { type: "ADD"; product: any; quantity?: number; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null; variantId?: string; variantName?: string; modifiers?: string[] }
   | { type: "REMOVE"; productId: string }
   | { type: "CLEAR" }
-  | { type: "RESTORE"; items: CartItemData[] }
-  | { type: "LOCAL_OP"; op: OrderOperation; clientSeq: number }
-  | { type: "SERVER_STATE"; snapshot: CartItemData[]; version: number; ackClientSeq?: number };
+  | { type: "RESTORE"; items: CartItemData[] };
 
 interface CartState {
-  items: CartItemData[];              // DISPLAY: rebase of serverSnapshot + pendingOps
-  serverSnapshot: CartItemData[];     // Last confirmed state from server
-  pendingOps: PendingCartOp[];        // Locally applied, not yet acknowledged
-  nextClientSeq: number;
+  items: CartItemData[];
   totalQuantity: number;
   selectedProductQuantities: Record<string, number>;
   revision: number;
@@ -278,25 +268,8 @@ function computeDerived(items: CartItemData[], previousRevision: number): Pick<C
   };
 }
 
-/** Rebase: apply pending ops on top of server snapshot to produce display items */
-function rebase(serverSnapshot: CartItemData[], pendingOps: PendingCartOp[]): CartItemData[] {
-  if (pendingOps.length === 0) return serverSnapshot;
-  const baseState: SerializedOrderState = {
-    items: serverSnapshot, label: "", orderType: "DINE_IN", isReturnMode: false,
-    customerId: null, customerName: null, tableId: null, tableNumber: null,
-    tableName: null, tableSection: null, tableCapacity: null, heldOrderId: null,
-    kotSentQuantities: {}, kotOrderIds: [],
-  };
-  return applyOperations(baseState, pendingOps.map(p => p.op)).items;
-}
-
 function buildCartState(items: CartItemData[], previousRevision = -1): CartState {
-  return {
-    ...computeDerived(items, previousRevision),
-    serverSnapshot: items,
-    pendingOps: [],
-    nextClientSeq: 0,
-  };
+  return computeDerived(items, previousRevision);
 }
 
 function buildCartItemFromProduct(product: any, quantity?: number, unitId?: string, unitName?: string, cf?: number, altPrice?: number | null, variantId?: string, variantName?: string, modifiers?: string[]): CartItemData {
@@ -321,73 +294,30 @@ function buildCartItemFromProduct(product: any, quantity?: number, unitId?: stri
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
-    // ── Legacy ADD (used by barcode scanner, variant picker) ──────
     case "ADD": {
       const item = buildCartItemFromProduct(
         action.product, action.quantity, action.unitId, action.unitName,
         action.conversionFactor, action.price, action.variantId, action.variantName, action.modifiers,
       );
-      const op: OrderOperation = { op: "ADD_ITEM", item, quantity: action.quantity ?? 1 };
-      const newPending = [...state.pendingOps, { clientSeq: state.nextClientSeq, op }];
-      const displayItems = rebase(state.serverSnapshot, newPending);
-      return {
-        ...computeDerived(displayItems, state.revision),
-        serverSnapshot: state.serverSnapshot,
-        pendingOps: newPending,
-        nextClientSeq: state.nextClientSeq + 1,
-      };
-    }
-
-    // ── Legacy REMOVE ─────────────────────────────────────────────
-    case "REMOVE": {
-      const item = state.items.find(i => i.productId === action.productId);
-      if (!item) return state;
       const lineKey = makeLineKey(item.productId, item.variantId, item.unitId);
-      const op: OrderOperation = { op: "REMOVE_ITEM", lineKey };
-      const newPending = [...state.pendingOps, { clientSeq: state.nextClientSeq, op }];
-      const displayItems = rebase(state.serverSnapshot, newPending);
-      return {
-        ...computeDerived(displayItems, state.revision),
-        serverSnapshot: state.serverSnapshot,
-        pendingOps: newPending,
-        nextClientSeq: state.nextClientSeq + 1,
-      };
+      const items = [...state.items];
+      const idx = items.findIndex(i => makeLineKey(i.productId, i.variantId, i.unitId) === lineKey);
+      if (idx >= 0) {
+        items[idx] = { ...items[idx], quantity: items[idx].quantity + (action.quantity ?? 1) };
+      } else {
+        items.push({ ...item, quantity: action.quantity ?? 1 });
+      }
+      return computeDerived(items, state.revision);
     }
 
-    // ── LOCAL_OP (new: explicit operation from addToCart/removeFromCart) ──
-    case "LOCAL_OP": {
-      const newPending = [...state.pendingOps, { clientSeq: action.clientSeq, op: action.op }];
-      const displayItems = rebase(state.serverSnapshot, newPending);
-      return {
-        ...computeDerived(displayItems, state.revision),
-        serverSnapshot: state.serverSnapshot,
-        pendingOps: newPending,
-        nextClientSeq: Math.max(state.nextClientSeq, action.clientSeq + 1),
-      };
-    }
-
-    // ── SERVER_STATE (server snapshot: discard ack'd ops, rebase remaining) ──
-    case "SERVER_STATE": {
-      const ackSeq = action.ackClientSeq ?? -1;
-      const remainingPending = state.pendingOps.filter(p => p.clientSeq > ackSeq);
-      const displayItems = rebase(action.snapshot, remainingPending);
-      return {
-        ...computeDerived(displayItems, state.revision),
-        serverSnapshot: action.snapshot,
-        pendingOps: remainingPending,
-        nextClientSeq: state.nextClientSeq,
-      };
+    case "REMOVE": {
+      const items = state.items.filter(i => i.productId !== action.productId);
+      return computeDerived(items, state.revision);
     }
 
     case "CLEAR":
-      return {
-        ...computeDerived([], state.revision),
-        serverSnapshot: [],
-        pendingOps: [],
-        nextClientSeq: state.nextClientSeq,
-      };
+      return computeDerived([], state.revision);
 
-    // ── RESTORE (tab switch / hydration: sets serverSnapshot, clears pending) ──
     case "RESTORE":
       return buildCartState(action.items, state.revision);
 
@@ -453,8 +383,10 @@ function POSTerminalContent() {
     fetcher
   );
 
-  // Cart state
+  // Cart state — local only, saved to server on KOT send
   const [cartState, dispatchCart] = useReducer(cartReducer, undefined, () => buildCartState([]));
+  const cartStateRef = useRef(cartState);
+  cartStateRef.current = cartState;
   const [heldOrderId, setHeldOrderId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -490,6 +422,8 @@ function POSTerminalContent() {
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [orderType, setOrderType] = useState<"DINE_IN" | "TAKEAWAY">("DINE_IN");
   const [kotSentQuantities, setKotSentQuantities] = useState<Map<string, number>>(new Map());
+  const kotSentQuantitiesRef = useRef(kotSentQuantities);
+  kotSentQuantitiesRef.current = kotSentQuantities;
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
   const [isKotSending, setIsKotSending] = useState(false);
 
@@ -512,46 +446,45 @@ function POSTerminalContent() {
   const [showTabsSheet, setShowTabsSheet] = useState(false);
 
   // ── Real-time sync via Socket.IO ──────────────────────────────────
-  // Memoize current state for the realtime hook (avoids re-renders)
-  const currentSerializedState = useMemo((): SerializedOrderState => ({
-    items: cartState.items,
-    label: activeTabLabel,
-    orderType,
-    isReturnMode,
-    customerId: selectedCustomer?.id ?? null,
-    customerName: selectedCustomer?.name ?? null,
-    tableId: selectedTable?.id ?? null,
-    tableNumber: selectedTable?.number ?? null,
-    tableName: selectedTable?.name ?? null,
-    tableSection: selectedTable?.section ?? null,
-    tableCapacity: selectedTable?.capacity ?? null,
-    heldOrderId,
-    kotSentQuantities: Object.fromEntries(kotSentQuantities),
-    kotOrderIds,
-  }), [cartState.items, activeTabLabel, orderType, isReturnMode, selectedCustomer, selectedTable, heldOrderId, kotSentQuantities, kotOrderIds]);
-
-  const { sendOps, isConnected: isSocketConnected, setVersion: setRealtimeVersion } = useRealtimeOrder(
+  const { isConnected: isSocketConnected } = useRealtimeOrder(
     isHydrated && isRestaurantEnabled ? activeTabId : null,
     {
       organizationId,
-      onRemoteUpdate: useCallback((items: CartItemData[], version: number, state: SerializedOrderState) => {
-        // Another device changed this order — rebase preserves our pending ops
-        dispatchCart({ type: "SERVER_STATE", snapshot: items, version });
-        // Update metadata from the full state
-        setSelectedCustomer(state.customerId
-          ? { id: state.customerId, name: state.customerName || "", phone: null }
-          : null);
-        setSelectedTable(state.tableId
-          ? { id: state.tableId, number: state.tableNumber || 0, name: state.tableName || "", section: state.tableSection || undefined, capacity: state.tableCapacity || 4 }
-          : null);
-        setOrderType(state.orderType);
-        setIsReturnMode(state.isReturnMode);
+      onRemoteUpdate: useCallback((serverItems: CartItemData[], _version: number, state: SerializedOrderState) => {
+        // Another device sent a KOT — merge server items with our local unsent items
+        const localItems = cartStateRef.current.items;
+        const localSentQtys = kotSentQuantitiesRef.current;
+        const lineKey = (item: CartItemData) => item.variantId ? `${item.productId}::${item.variantId}` : item.productId;
+
+        // Find local items that have unsent quantities (added locally but not yet KOT'd)
+        const unsentOps: OrderOperation[] = [];
+        for (const item of localItems) {
+          const key = lineKey(item);
+          const sentQty = localSentQtys.get(key) ?? 0;
+          const unsent = item.quantity - sentQty;
+          if (unsent > 0) {
+            unsentOps.push({ op: "ADD_ITEM", item, quantity: unsent });
+          }
+        }
+
+        // Merge: server items (committed) + our unsent local items on top
+        let mergedItems = serverItems;
+        if (unsentOps.length > 0) {
+          const baseState: SerializedOrderState = {
+            items: serverItems, label: "", orderType: "DINE_IN", isReturnMode: false,
+            customerId: null, customerName: null, tableId: null, tableNumber: null,
+            tableName: null, tableSection: null, tableCapacity: null, heldOrderId: null,
+            kotSentQuantities: {}, kotOrderIds: [],
+          };
+          mergedItems = applyOperations(baseState, unsentOps).items;
+        }
+
+        dispatchCart({ type: "RESTORE", items: mergedItems });
         setKotSentQuantities(new Map(Object.entries(state.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
         setKotOrderIds(state.kotOrderIds || []);
       // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []),
       onRemoteDelete: useCallback(() => {
-        // Order deleted by another device — reset
         resetLiveState();
       // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []),
@@ -759,20 +692,8 @@ function POSTerminalContent() {
   }, []);
 
   const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string) => {
-    const item = buildCartItemFromProduct(product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName);
-    const op: OrderOperation = { op: "ADD_ITEM", item, quantity: quantity ?? 1 };
-    const seq = cartState.nextClientSeq;
-    // Optimistic local update via pending-ops buffer
-    dispatchCart({ type: "LOCAL_OP", op, clientSeq: seq });
-    // Send to server — response will be handled by SERVER_STATE dispatch
-    if (isRestaurantEnabled) {
-      sendOps([op], seq).then((result) => {
-        if (result.ok && "items" in result) {
-          dispatchCart({ type: "SERVER_STATE", snapshot: (result as any).items, version: result.version, ackClientSeq: seq });
-        }
-      });
-    }
-  }, [sendOps, cartState.nextClientSeq, isRestaurantEnabled]);
+    dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName });
+  }, []);
 
   // State for variant picker dialog
   const [variantPickerProduct, setVariantPickerProduct] = useState<POSProduct | null>(null);
@@ -856,20 +777,8 @@ function POSTerminalContent() {
   }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex, setSearchQuery]);
 
   const removeFromCart = useCallback((productId: string) => {
-    const item = cartState.items.find(i => i.productId === productId);
-    if (!item) return;
-    const lineKey = makeLineKey(productId, item.variantId, item.unitId);
-    const op: OrderOperation = { op: "REMOVE_ITEM", lineKey };
-    const seq = cartState.nextClientSeq;
-    dispatchCart({ type: "LOCAL_OP", op, clientSeq: seq });
-    if (isRestaurantEnabled) {
-      sendOps([op], seq).then((result) => {
-        if (result.ok && "items" in result) {
-          dispatchCart({ type: "SERVER_STATE", snapshot: (result as any).items, version: result.version, ackClientSeq: seq });
-        }
-      });
-    }
-  }, [cartState.items, cartState.nextClientSeq, sendOps, isRestaurantEnabled]);
+    dispatchCart({ type: "REMOVE", productId });
+  }, []);
 
   const scrollCartToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = cartItemsContainerRef.current;
@@ -915,20 +824,17 @@ function POSTerminalContent() {
     setHeldOrderId(null);
     setSelectedCustomer(null);
     setMobileView("products");
-    if (isRestaurantEnabled) {
-      sendOps([{ op: "CLEAR_ITEMS" }], cartState.nextClientSeq);
-    }
-  }, [sendOps, cartState.nextClientSeq, isRestaurantEnabled]);
+  }, []);
 
   const [showClearCartKotWarning, setShowClearCartKotWarning] = useState(false);
 
-  const handleClearCart = useCallback(() => {
-    if (kotSentQuantities.size > 0) {
+  const handleClearCart = () => {
+    if (isRestaurantEnabled) {
       setShowClearCartKotWarning(true);
       return;
     }
     clearCart();
-  }, [clearCart, kotSentQuantities]);
+  };
 
   /** Reset a table back to AVAILABLE in the database */
   const freeTable = useCallback((tableId: string) => {
@@ -988,6 +894,8 @@ function POSTerminalContent() {
     setKotOrderIds([]);
     setView("cart");
     setMobileView("products");
+    // Restaurant resting state: always prompt for next table/order
+    setShowTableSelect(true);
   }, []);
 
   const handleTabSwitch = useCallback((targetId: string) => {
@@ -1062,12 +970,15 @@ function POSTerminalContent() {
   // Wire up remote tab event callbacks
   useEffect(() => {
     remoteUpdateRef.current = (tab: TabContext) => {
-      restoreTabContext(tab);
+      // Polling detected a server-side change on the active tab.
+      // Only update KOT metadata — never overwrite local cart items.
+      setKotSentQuantities(tab.kotSentQuantities);
+      setKotOrderIds(tab.kotOrderIds);
     };
     activeTabRemovedRef.current = () => {
       resetLiveState();
     };
-  }, [restoreTabContext, resetLiveState]);
+  }, [resetLiveState]);
 
   // Auto-save active tab to DB on KOT/metadata changes only (not live cart edits)
   useEffect(() => {
@@ -1088,7 +999,64 @@ function POSTerminalContent() {
     return () => document.removeEventListener("visibilitychange", handler);
   }, [isHydrated, snapshotCurrentTab, persistTab]);
 
-  const confirmClearCartWithKot = useCallback(() => {
+  const confirmClearCartWithKot = async () => {
+    // Send VOID KOT to kitchen for all already-sent items
+    const voidItems = cartState.items
+      .map((item) => {
+        const key = cartLineKey(item.productId, item.variantId);
+        const sentQty = kotSentQuantities.get(key) ?? 0;
+        return sentQty > 0 ? { item, sentQty } : null;
+      })
+      .filter(Boolean) as { item: CartItemData; sentQty: number }[];
+
+    if (voidItems.length > 0) {
+      try {
+        const res = await fetch("/api/restaurant/kot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tableId: selectedTable?.id || null,
+            posSessionId: posSession?.id || null,
+            kotType: "VOID",
+            orderType,
+            serverName: authSession?.user?.name || undefined,
+            items: voidItems.map(({ item, sentQty }) => ({
+              productId: item.productId,
+              name: item.variantName ? `${item.name} - ${item.variantName}` : item.name,
+              quantity: sentQty,
+            })),
+          }),
+        });
+
+        if (res.ok) {
+          const kot = await res.json();
+          try {
+            await printKOTMulti({
+              kotNumber: kot.kotNumber,
+              kotType: "VOID",
+              orderType,
+              tableName: selectedTable?.name,
+              tableNumber: selectedTable?.number,
+              section: selectedTable?.section || undefined,
+              serverName: authSession?.user?.name || undefined,
+              timestamp: new Date(),
+              items: voidItems.map(({ item, sentQty }) => ({
+                name: item.variantName ? `${item.name} - ${item.variantName}` : item.name,
+                quantity: sentQty,
+                modifiers: item.modifiers,
+                categoryId: item.categoryId,
+              })),
+            });
+          } catch {
+            toast.warning("Void KOT saved but printing failed — notify kitchen manually", { duration: 6000 });
+          }
+          toast.success(`Void KOT sent to kitchen for ${voidItems.length} item(s)`);
+        }
+      } catch {
+        toast.error("Failed to send void KOT — notify kitchen manually");
+      }
+    }
+
     if (selectedTable) {
       freeTable(selectedTable.id);
     }
@@ -1098,7 +1066,8 @@ function POSTerminalContent() {
     setSelectedTable(null);
     setOrderType("DINE_IN");
     setShowClearCartKotWarning(false);
-  }, [clearCart, selectedTable, freeTable]);
+    setShowTableSelect(true);
+  };
 
   const applyOptimisticCheckoutUpdates = useCallback(
     (completedCart: CartItemData[], completedTotal: number, completedHeldOrderId: string | null) => {
@@ -1233,11 +1202,6 @@ function POSTerminalContent() {
           : t("pos.failedToPrintSessionReport");
       }
 
-      // Free all occupied tables across all tabs before clearing
-      for (const tableId of getAllTableIds(selectedTable?.id)) {
-        freeTable(tableId);
-      }
-
       clearAllTabs();
       clearCart();
       setKotSentQuantities(new Map());
@@ -1281,7 +1245,8 @@ function POSTerminalContent() {
   /** Core KOT send logic — returns the created KOT id, or null if nothing to send */
   const cartLineKey = (productId: string, variantId?: string) => variantId ? `${productId}::${variantId}` : productId;
 
-  const sendKotForUnsentItems = async (opts?: { silent?: boolean }): Promise<string | null> => {
+  const sendKotForUnsentItems = async (opts?: { silent?: boolean }): Promise<{ kotId: string; kotSentQuantities: Map<string, number>; kotOrderIds: string[] } | null> => {
+    // 1. Compute unsent items from LOCAL cart
     const itemsToSend: { productId: string; name: string; variantName?: string; modifiers?: string[]; quantity: number; categoryId?: string | null; lineKey: string }[] = [];
     for (const item of cartState.items) {
       const key = cartLineKey(item.productId, item.variantId);
@@ -1293,6 +1258,28 @@ function POSTerminalContent() {
     }
     if (itemsToSend.length === 0) return null;
 
+    // 2. Merge any server-only items (added by other devices) into local cart
+    let mergedItems = cartState.items;
+    try {
+      const serverRes = await fetch(`/api/pos/open-orders/${activeTabId}`);
+      if (serverRes.ok) {
+        const serverOrder = await serverRes.json();
+        const serverItems: CartItemData[] = Array.isArray(serverOrder.items) ? serverOrder.items : [];
+        if (serverItems.length > 0) {
+          // Only add items from server that don't exist in local cart (from other devices)
+          const localKeys = new Set(cartState.items.map(i => cartLineKey(i.productId, i.variantId)));
+          const serverOnlyItems = serverItems.filter(i => !localKeys.has(cartLineKey(i.productId, i.variantId)));
+          if (serverOnlyItems.length > 0) {
+            mergedItems = [...cartState.items, ...serverOnlyItems];
+            dispatchCart({ type: "RESTORE", items: mergedItems });
+          }
+        }
+      }
+    } catch {
+      // If server fetch fails, proceed with local items only
+    }
+
+    // 3. Create KOT record
     const kotType = kotOrderIds.length === 0 ? "STANDARD" : "FOLLOWUP";
     const res = await fetch("/api/restaurant/kot", {
       method: "POST",
@@ -1317,26 +1304,24 @@ function POSTerminalContent() {
     if (!res.ok) throw new Error("Failed to create KOT");
     const kot = await res.json();
 
-    // Update sent quantities to current cart quantities
+    // 4. Update sent quantities for the MERGED items
     const newSentQtys = new Map(kotSentQuantities);
-    for (const item of cartState.items) {
+    for (const item of mergedItems) {
       const key = cartLineKey(item.productId, item.variantId);
       newSentQtys.set(key, item.quantity);
     }
     setKotSentQuantities(newSentQtys);
     setKotOrderIds(prev => [...prev, kot.id]);
 
-    // Persist immediately after KOT (the auto-save effect will also fire, but this ensures no delay)
+    // 5. Persist merged state + KOT info to server (Ably notification via PUT route)
     const updatedKotOrderIds = [...kotOrderIds, kot.id];
     persistTab({
       ...snapshotCurrentTab(),
       kotSentQuantities: newSentQtys,
       kotOrderIds: updatedKotOrderIds,
-    });
-    // Broadcast KOT update to other devices via Ably
-    sendOps([{ op: "UPDATE_KOT", kotSentQuantities: Object.fromEntries(newSentQtys), kotOrderIds: updatedKotOrderIds }], cartState.nextClientSeq);
+    }, { broadcast: true });
 
-    // Print KOT
+    // 6. Print KOT (only the unsent diff items)
     try {
       const kotReceiptData: KOTReceiptData = {
         kotNumber: kot.kotNumber,
@@ -1374,7 +1359,7 @@ function POSTerminalContent() {
       }).catch(() => {});
     }
 
-    return kot.id;
+    return { kotId: kot.id, kotSentQuantities: newSentQtys, kotOrderIds: updatedKotOrderIds };
   };
 
   const handlePrintPreBill = useCallback(async () => {
@@ -1439,9 +1424,18 @@ function POSTerminalContent() {
     }
 
     try {
-      const kotId = await sendKotForUnsentItems();
-      if (!kotId) {
+      const result = await sendKotForUnsentItems();
+      if (!result) {
         toast.info("No new items to send to kitchen");
+      } else if (isRestaurantEnabled) {
+        // Snapshot with correct KOT data (React state hasn't batched yet)
+        const snapshot = {
+          ...snapshotCurrentTab(),
+          kotSentQuantities: result.kotSentQuantities,
+          kotOrderIds: result.kotOrderIds,
+        };
+        switchToNewTab(snapshot);
+        resetLiveState();
       }
     } catch (error) {
       console.error("Failed to send KOT:", error);
@@ -1725,6 +1719,8 @@ function POSTerminalContent() {
 
       // Server confirmed — close this tab and switch to next (or reset if last)
       handleCloseTab(activeTabId);
+      // Always prompt for next order after payment
+      if (isRestaurantEnabled) setShowTableSelect(true);
 
       const syncSuccessWorkMs = roundTimingMs(performance.now() - responseParsedAt);
       const clientTimings = {
@@ -1874,6 +1870,7 @@ function POSTerminalContent() {
     setHeldOrderId(null);
     setView("cart");
     setMobileView("products");
+    setShowTableSelect(true);
     void Promise.all([mutateSession(), mutateProducts()]);
   }, [mutateSession, mutateProducts]);
 
@@ -1938,6 +1935,7 @@ function POSTerminalContent() {
         isReturnMode={isReturnMode}
         onPreviousOrders={openPreviousOrders}
         selectedTable={selectedTable}
+        orderType={orderType}
         isRestaurantMode={isRestaurantEnabled}
         onTableClick={() => setShowTableSelect(true)}
         tabCount={tabCount}
@@ -2503,6 +2501,7 @@ function POSTerminalContent() {
         <TableSelect
           open={showTableSelect}
           onOpenChange={setShowTableSelect}
+          required={!selectedTable && cart.length === 0}
           onSelectTable={async (table) => {
             if (!table) {
               setShowTableSelect(false);
@@ -2565,7 +2564,6 @@ function POSTerminalContent() {
                     new Map(Object.entries(remoteOrder.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)]))
                   );
                   setKotOrderIds(Array.isArray(remoteOrder.kotOrderIds) ? remoteOrder.kotOrderIds : []);
-                  setRealtimeVersion(remoteOrder.version ?? 0);
                   if (mutateOpenOrders) mutateOpenOrders();
                   toast.success(`Joined order for Table ${table.number}`);
                   setShowTableSelect(false);
@@ -2578,17 +2576,8 @@ function POSTerminalContent() {
 
             // No existing order for this table anywhere
             if (selectedTable) {
-              // Current tab already has a DIFFERENT table — open new tab
-              const snapshot = snapshotCurrentTab();
-              switchToNewTab(snapshot, {
-                label: `T${table.number}`,
-                selectedTable: table,
-                orderType: "DINE_IN",
-              });
-              dispatchCart({ type: "CLEAR" });
-              setKotSentQuantities(new Map());
-              setKotOrderIds([]);
-              setSelectedCustomer(null);
+              // Free the old table before reassigning
+              freeTable(selectedTable.id);
             }
 
             // Assign table to the current tab and mark it OCCUPIED in DB
@@ -2596,24 +2585,24 @@ function POSTerminalContent() {
             setOrderType("DINE_IN");
             occupyTable(table.id);
             setShowTableSelect(false);
+            // Sync table change to server
+            requestAnimationFrame(() => {
+              persistTab(snapshotCurrentTab());
+            });
           }}
           onTakeaway={() => {
-            // If current tab has a table/work, open new takeaway tab
-            if (cartState.items.length > 0 || kotSentQuantities.size > 0 || selectedTable) {
-              const snapshot = snapshotCurrentTab();
-              switchToNewTab(snapshot, {
-                label: "Takeaway",
-                orderType: "TAKEAWAY",
-              });
-              dispatchCart({ type: "CLEAR" });
-              setKotSentQuantities(new Map());
-              setKotOrderIds([]);
-              setSelectedCustomer(null);
+            // Free the old table if switching from dine-in
+            if (selectedTable) {
+              freeTable(selectedTable.id);
             }
 
             setSelectedTable(null);
             setOrderType("TAKEAWAY");
             setShowTableSelect(false);
+            // Sync change to server
+            requestAnimationFrame(() => {
+              persistTab(snapshotCurrentTab());
+            });
           }}
         />
       )}
@@ -2642,9 +2631,11 @@ function POSTerminalContent() {
       <Dialog open={showClearCartKotWarning} onOpenChange={setShowClearCartKotWarning}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Clear cart with sent kitchen items?</DialogTitle>
+            <DialogTitle>{kotSentQuantities.size > 0 ? "Clear cart with sent kitchen items?" : "Clear cart without sending to kitchen?"}</DialogTitle>
             <DialogDescription>
-              {kotSentQuantities.size} item(s) were already sent to the kitchen. Clearing the cart will NOT cancel those kitchen tickets.
+              {kotSentQuantities.size > 0
+                ? `${kotSentQuantities.size} item(s) were already sent to the kitchen. Clearing the cart will NOT cancel those kitchen tickets.`
+                : "Items in the cart have not been sent to the kitchen yet. They will be lost if you clear."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">

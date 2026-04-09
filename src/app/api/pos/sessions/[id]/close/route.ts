@@ -529,6 +529,23 @@ export async function PUT(
         }
       }
 
+      // ── Free restaurant tables tied to open orders ─────────────────────
+      const openOrdersWithTables = await tx.pOSOpenOrder.findMany({
+        where: { sessionId: id, organizationId, tableId: { not: null } },
+        select: { tableId: true },
+      });
+
+      const tableIds = [...new Set(
+        openOrdersWithTables.map((o) => o.tableId).filter((tid): tid is string => tid !== null)
+      )];
+
+      if (tableIds.length > 0) {
+        await tx.restaurantTable.updateMany({
+          where: { id: { in: tableIds } },
+          data: { status: "AVAILABLE", guestCount: null, currentOrderId: null },
+        });
+      }
+
       // ── Clean up open orders (tabs) ───────────────────────────────────
       await tx.pOSOpenOrder.deleteMany({
         where: { sessionId: id, organizationId },

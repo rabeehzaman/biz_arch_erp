@@ -32,7 +32,7 @@ function orgChannel(orgId: string): string {
 export async function publishOrderUpdate(
   orgId: string,
   orderId: string,
-  ops: OrderOperation[],
+  ops: OrderOperation[] = [],
   version: number,
   deviceId: string,
   /** Full state for other devices to use as server snapshot (rebase pattern) */

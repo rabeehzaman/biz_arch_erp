@@ -338,9 +338,9 @@ export function usePOSTabs(
 
   // ── Persistence functions ─────────────────────────────────────────
 
-  const persistTab = useCallback((tab: TabContext) => {
+  const persistTab = useCallback((tab: TabContext, opts?: { broadcast?: boolean }) => {
     if (!sessionId) return;
-    const body = serializeTab(tab);
+    const body = { ...serializeTab(tab), ...(opts?.broadcast ? { broadcast: true } : {}) };
     fetch(`/api/pos/open-orders/${tab.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

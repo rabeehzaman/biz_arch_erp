@@ -15,7 +15,9 @@ function getDeviceId(): string {
     deviceId = stored;
     return stored;
   }
-  const id = crypto.randomUUID();
+  const id = typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
   if (typeof sessionStorage !== "undefined") {
     sessionStorage.setItem("pos-device-id", id);
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Armchair, ArrowLeft, Clock, CopyPlus, History, Languages, Loader2, LogOut, MapPin, PauseCircle, Printer, RotateCcw } from "lucide-react";
+import { Armchair, ArrowLeft, Clock, CopyPlus, History, Languages, Loader2, LogOut, MapPin, Package, PauseCircle, Printer, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -29,6 +29,7 @@ interface POSHeaderProps {
   isReturnMode?: boolean;
   onPreviousOrders?: () => void;
   selectedTable?: { number: number; name: string } | null;
+  orderType?: "DINE_IN" | "TAKEAWAY";
   isRestaurantMode?: boolean;
   onTableClick?: () => void;
   tabCount?: number;
@@ -62,6 +63,7 @@ export function POSHeader({
   isReturnMode,
   onPreviousOrders,
   selectedTable,
+  orderType,
   isRestaurantMode,
   onTableClick,
   tabCount,
@@ -112,11 +114,17 @@ export function POSHeader({
               "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
               selectedTable
                 ? "bg-orange-500 text-white hover:bg-orange-400"
-                : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
+                : orderType === "TAKEAWAY"
+                  ? "bg-orange-600 text-white hover:bg-orange-500"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
             )}
           >
-            <Armchair className="h-3.5 w-3.5" />
-            {selectedTable ? `T${selectedTable.number}` : "Table"}
+            {orderType === "TAKEAWAY" ? (
+              <Package className="h-3.5 w-3.5" />
+            ) : (
+              <Armchair className="h-3.5 w-3.5" />
+            )}
+            {selectedTable ? `T${selectedTable.number}` : orderType === "TAKEAWAY" ? "Takeaway" : "Table"}
           </button>
         )}
       </div>
