@@ -56,6 +56,9 @@ export function useRealtimeOrder(
   const orgIdRef = useRef(options.organizationId);
   orgIdRef.current = options.organizationId;
 
+  // Queue to serialize sendOps — prevents version conflicts from rapid additions
+  const queueRef = useRef<Promise<MutationResult>>(Promise.resolve({ ok: true, version: 0 }));
+
   const setVersion = useCallback((v: number) => {
     versionRef.current = v;
     setVersionState(v);
@@ -118,46 +121,65 @@ export function useRealtimeOrder(
     return () => {
       channel?.unsubscribe(onMessage);
       ably?.connection.off(onConnectionStateChange);
-      // Detach channel to free resources
       channel?.detach().catch(() => {});
     };
   }, [orderId, options.organizationId]);
 
-  // ── Send operations via HTTP (works on Vercel serverless) ─────────
+  // ── Send operations via HTTP (serialized queue) ───────────────────
+  // Each sendOps call waits for the previous one to complete so it always
+  // has the correct version. On VERSION_CONFLICT, it retries automatically.
 
   const sendOps = useCallback(
-    async (ops: OrderOperation[]): Promise<MutationResult> => {
-      const currentOrderId = orderIdRef.current;
-      if (!currentOrderId) {
-        return { ok: false, reason: "NOT_FOUND", message: "No active order" };
-      }
-
-      try {
-        const res = await fetch(`/api/pos/open-orders/${currentOrderId}/ops`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ops,
-            expectedVersion: versionRef.current,
-            deviceId: getPosDeviceId(),
-          }),
-        });
-
-        const result: MutationResult = await res.json();
-
-        if (result.ok) {
-          versionRef.current = result.version;
-          setVersionState(result.version);
-        } else if (result.reason === "VERSION_CONFLICT") {
-          versionRef.current = result.currentVersion;
-          setVersionState(result.currentVersion);
-          onConflictRef.current?.(result.currentState, result.currentVersion);
+    (ops: OrderOperation[]): Promise<MutationResult> => {
+      const task = queueRef.current.then(async (): Promise<MutationResult> => {
+        const currentOrderId = orderIdRef.current;
+        if (!currentOrderId) {
+          return { ok: false, reason: "NOT_FOUND", message: "No active order" };
         }
 
-        return result;
-      } catch {
-        return { ok: false, reason: "ERROR", message: "Network error" };
-      }
+        // Retry up to 3 times on version conflict
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const res = await fetch(`/api/pos/open-orders/${currentOrderId}/ops`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ops,
+                expectedVersion: versionRef.current,
+                deviceId: getPosDeviceId(),
+              }),
+            });
+
+            const result: MutationResult = await res.json();
+
+            if (result.ok) {
+              versionRef.current = result.version;
+              setVersionState(result.version);
+              return result;
+            }
+
+            if (result.reason === "VERSION_CONFLICT") {
+              // Update our version and retry with the new version
+              versionRef.current = result.currentVersion;
+              setVersionState(result.currentVersion);
+              // Don't call onConflict — just retry the ops with the correct version
+              continue;
+            }
+
+            // Other errors (NOT_FOUND, ERROR) — don't retry
+            return result;
+          } catch {
+            return { ok: false, reason: "ERROR", message: "Network error" };
+          }
+        }
+
+        // Exhausted retries — fetch current state and report conflict
+        return { ok: false, reason: "ERROR", message: "Too many version conflicts" };
+      });
+
+      // Chain: next sendOps waits for this one
+      queueRef.current = task.catch(() => ({ ok: false, reason: "ERROR" as const }));
+      return task;
     },
     [],
   );
