@@ -123,20 +123,6 @@ export function OrderTabsSheet({
                         ) : (
                           <span>{t("pos.noCustomer")}</span>
                         )}
-                        {tab.selectedTable && (
-                          <>
-                            <span>·</span>
-                            <span className="shrink-0">
-                              {tab.selectedTable.name || `Table ${tab.selectedTable.number}`}
-                            </span>
-                          </>
-                        )}
-                        {tab.orderType === "TAKEAWAY" && (
-                          <>
-                            <span>·</span>
-                            <span className="shrink-0">{t("restaurant.takeaway")}</span>
-                          </>
-                        )}
                       </div>
                     </div>
 
