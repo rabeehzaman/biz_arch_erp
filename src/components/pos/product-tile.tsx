@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
@@ -53,7 +54,7 @@ function getTileColor(product: ProductTileProduct): string {
   return TILE_COLORS[Math.abs(hash) % TILE_COLORS.length];
 }
 
-export function ProductTile({
+export const ProductTile = memo(function ProductTile({
   product,
   selectedQuantity = 0,
   onAdd,
@@ -61,7 +62,8 @@ export function ProductTile({
   const { fmt } = useCurrency();
   const { t } = useLanguage();
   const isSelected = selectedQuantity > 0;
-  const color = getTileColor(product);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on stable fields only
+  const color = useMemo(() => getTileColor(product), [product.id, product.category?.color]);
 
   return (
     <button
@@ -118,4 +120,4 @@ export function ProductTile({
       )}
     </button>
   );
-}
+});

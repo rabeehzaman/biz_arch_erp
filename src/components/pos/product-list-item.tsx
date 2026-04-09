@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { Package, Layers } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
@@ -23,7 +24,7 @@ function formatSelectedQuantity(quantity: number) {
   return quantity.toFixed(2).replace(/\.?0+$/, "");
 }
 
-export function ProductListItem({
+export const ProductListItem = memo(function ProductListItem({
   product,
   selectedQuantity = 0,
   onAdd,
@@ -92,4 +93,4 @@ export function ProductListItem({
       )}
     </button>
   );
-}
+});

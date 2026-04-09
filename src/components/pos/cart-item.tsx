@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
 import { Trash2, ChefHat, Minus, Plus } from "lucide-react";
@@ -47,7 +48,7 @@ interface CartItemProps {
   onQuantityChange?: (productId: string, variantId: string | undefined, newQty: number) => void;
 }
 
-export function CartItem({
+export const CartItem = memo(function CartItem({
   item,
   onRemove,
   kotSentQty,
@@ -132,4 +133,13 @@ export function CartItem({
       </div>
     </div>
   );
-}
+}, (prev, next) =>
+  prev.item.productId === next.item.productId &&
+  prev.item.variantId === next.item.variantId &&
+  prev.item.quantity === next.item.quantity &&
+  prev.item.price === next.item.price &&
+  prev.item.discount === next.item.discount &&
+  prev.kotSentQty === next.kotSentQty &&
+  prev.onRemove === next.onRemove &&
+  prev.onQuantityChange === next.onQuantityChange
+);

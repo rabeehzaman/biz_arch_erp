@@ -43,10 +43,6 @@ export async function GET() {
           select: { id: true, name: true, price: true, barcode: true, sortOrder: true },
           orderBy: { sortOrder: "asc" },
         },
-        stockLots: {
-          where: { remainingQuantity: { gt: 0 } },
-          select: { remainingQuantity: true },
-        },
         bundleItems: {
           include: {
             componentProduct: {
@@ -54,10 +50,6 @@ export async function GET() {
                 id: true,
                 name: true,
                 unit: { select: { code: true, name: true } },
-                stockLots: {
-                  where: { remainingQuantity: { gt: 0 } },
-                  select: { remainingQuantity: true },
-                },
               },
             },
           },
@@ -84,6 +76,28 @@ export async function GET() {
         },
       },
     });
+
+    // Aggregate stock quantities in a single SQL query instead of fetching all lot rows
+    const allProductIds = new Set<string>();
+    for (const p of products) {
+      allProductIds.add(p.id);
+      if (p.isBundle) {
+        for (const bi of p.bundleItems) {
+          allProductIds.add(bi.componentProductId);
+        }
+      }
+    }
+    const stockAggregation: { productId: string; stock: number }[] =
+      allProductIds.size > 0
+        ? await prisma.$queryRawUnsafe(
+            `SELECT "productId", SUM("remainingQuantity")::float as stock
+             FROM "StockLot"
+             WHERE "productId" = ANY($1) AND "remainingQuantity" > 0
+             GROUP BY "productId"`,
+            [...allProductIds]
+          )
+        : [];
+    const stockMap = new Map(stockAggregation.map(r => [r.productId, r.stock]));
 
     // Resolve price list prices if enabled
     // Fetch the assignment fresh from DB instead of relying on the JWT-cached value,
@@ -128,20 +142,14 @@ export async function GET() {
       weighMachineCode: p.weighMachineCode || null,
       stockQuantity: p.isBundle
         ? null // Bundles don't have their own stock
-        : p.stockLots.reduce(
-          (sum, lot) => sum + Number(lot.remainingQuantity),
-          0
-        ),
+        : (stockMap.get(p.id) ?? 0),
       bundleItems: p.isBundle
         ? p.bundleItems.map((bi) => ({
           componentProductId: bi.componentProductId,
           componentName: bi.componentProduct.name,
           componentUnit: bi.componentProduct.unit,
           quantity: Number(bi.quantity),
-          componentStock: bi.componentProduct.stockLots.reduce(
-            (sum, lot) => sum + Number(lot.remainingQuantity),
-            0
-          ),
+          componentStock: stockMap.get(bi.componentProductId) ?? 0,
         }))
         : [],
       unitConversions: (p.unitConversions || []).map((uc) => ({

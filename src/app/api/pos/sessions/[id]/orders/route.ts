@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { generateQRCodeDataURL } from "@/lib/saudi-vat/qr-code";
 
 export async function GET(
   _request: NextRequest,
@@ -86,19 +85,27 @@ export async function GET(
       }),
     ]);
 
-    const ordersWithQR = await Promise.all(
-      orders.map(async (order) => {
-        let qrCodeDataURL: string | null = null;
-        if (org?.saudiEInvoiceEnabled && order.qrCodeData) {
-          try {
-            qrCodeDataURL = await generateQRCodeDataURL(order.qrCodeData);
-          } catch {
-            // ignore QR generation failure
+    let ordersWithQR;
+    if (org?.saudiEInvoiceEnabled) {
+      // Import once, generate for all orders that have QR data
+      const { generateQRCodeDataURL } = await import("@/lib/saudi-vat/qr-code");
+      ordersWithQR = await Promise.all(
+        orders.map(async (order) => {
+          let qrCodeDataURL: string | null = null;
+          if (order.qrCodeData) {
+            try {
+              qrCodeDataURL = await generateQRCodeDataURL(order.qrCodeData);
+            } catch {
+              // ignore QR generation failure
+            }
           }
-        }
-        return { ...order, qrCodeDataURL };
-      })
-    );
+          return { ...order, qrCodeDataURL };
+        })
+      );
+    } else {
+      // Non-Saudi orgs: skip QR generation entirely
+      ordersWithQR = orders.map((order) => ({ ...order, qrCodeDataURL: null }));
+    }
 
     const taxLabel = org?.saudiEInvoiceEnabled ? "VAT" : org?.gstEnabled ? "GST" : "Tax";
 

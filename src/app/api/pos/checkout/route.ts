@@ -373,11 +373,10 @@ export async function POST(request: NextRequest) {
       markTransactionStage("totals");
 
       // ── 3b. Validate stock availability ─────────────────────────────
-      const stockWarnings: string[] = [];
-      for (const item of items) {
-        if (item.productId) {
-          const product = await tx.product.findUnique({
-            where: { id: item.productId },
+      const productIds = [...new Set(items.map(i => i.productId).filter(Boolean))] as string[];
+      const stockProducts = productIds.length > 0
+        ? await tx.product.findMany({
+            where: { id: { in: productIds } },
             include: {
               stockLots: {
                 where: { remainingQuantity: { gt: 0 } },
@@ -396,7 +395,14 @@ export async function POST(request: NextRequest) {
                 },
               },
             },
-          });
+          })
+        : [];
+      const productMap = new Map(stockProducts.map((p: any) => [p.id, p]));
+
+      const stockWarnings: string[] = [];
+      for (const item of items) {
+        if (item.productId) {
+          const product = productMap.get(item.productId);
           if (product) {
             const stockConversionFactor = item.conversionFactor || 1;
             if (product.isBundle && product.bundleItems.length > 0) {
@@ -609,19 +615,8 @@ export async function POST(request: NextRequest) {
             }
             continue;
           }
-          // Check if this is a bundle product
-          const product = await tx.product.findUnique({
-            where: { id: invoiceItem.productId },
-            select: {
-              isBundle: true,
-              bundleItems: {
-                select: {
-                  componentProductId: true,
-                  quantity: true,
-                },
-              },
-            },
-          });
+          // Check if this is a bundle product (reuse batch-fetched productMap)
+          const product = productMap.get(invoiceItem.productId);
 
           if (product?.isBundle && product.bundleItems.length > 0) {
             // Bundle: consume stock from each component product

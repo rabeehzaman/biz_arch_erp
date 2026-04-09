@@ -52,8 +52,7 @@ import type { OrderOperation, SerializedOrderState } from "@/lib/pos/realtime-ty
 import { cartLineKey as makeLineKey } from "@/lib/pos/realtime-types";
 import { applyOperations } from "@/lib/pos/apply-operations";
 import { OrderTabsSheet } from "@/components/pos/order-tabs-sheet";
-import { printKOTMulti } from "@/lib/restaurant/kot-print";
-import { printPreBill, type PreBillReceiptData } from "@/lib/pos/pre-bill-print";
+import type { PreBillReceiptData } from "@/lib/pos/pre-bill-print";
 import type { KOTReceiptData } from "@/components/restaurant/kot-receipt";
 import {
   cacheReceiptArtifactWithConfig,
@@ -67,8 +66,6 @@ import {
   setOrgElectronDefaultMode,
 } from "@/lib/electron-print";
 import { useLanguage } from "@/lib/i18n";
-import { INDIAN_STATES } from "@/lib/gst/constants";
-import { printPOSSessionReport } from "@/lib/print-session-report";
 import {
   DEFAULT_ENABLED_POS_PAYMENT_METHODS,
   type POSPaymentMethod,
@@ -378,13 +375,14 @@ function POSTerminalContent() {
 
   // Products & categories
   const {
-    data: products = [],
+    data: rawProducts,
     mutate: mutateProducts,
     isLoading: productsLoading,
   } = useSWR<POSProduct[]>(
     posSession ? "/api/pos/products" : null,
     fetcher
   );
+  const products = Array.isArray(rawProducts) ? rawProducts : [];
   const { data: categories = [] } = useSWR<Category[]>(
     posSession ? "/api/product-categories" : null,
     fetcher
@@ -615,6 +613,13 @@ function POSTerminalContent() {
   const cartTotals = useMemo(
     () => calculateCartTotal(cartState.items, taxInclusive, roundOffMode),
     [cartState.items, taxInclusive, roundOffMode]
+  );
+  const productsWithDefaultPrice = useMemo(() =>
+    products.map(p => {
+      const du = p.unitConversions?.find(uc => uc.isDefaultUnit);
+      return du?.price != null ? { ...p, price: Number(du.price) } : p;
+    }),
+    [products]
   );
   const scanCodeIndex = useMemo(() => {
     const index = new Map<string, { product: POSProduct; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null }>();
@@ -1050,6 +1055,7 @@ function POSTerminalContent() {
         if (res.ok) {
           const kot = await res.json();
           try {
+            const { printKOTMulti } = await import("@/lib/restaurant/kot-print");
             await printKOTMulti({
               kotNumber: kot.kotNumber,
               kotType: "VOID",
@@ -1199,6 +1205,7 @@ function POSTerminalContent() {
         }
 
         const report = await reportRes.json();
+        const { printPOSSessionReport } = await import("@/lib/print-session-report");
         const printResult = await printPOSSessionReport({
           report,
           company: {
@@ -1359,6 +1366,7 @@ function POSTerminalContent() {
           isNew: kotType === "FOLLOWUP",
         })),
       };
+      const { printKOTMulti } = await import("@/lib/restaurant/kot-print");
       await printKOTMulti(kotReceiptData);
     } catch (printErr) {
       console.error("KOT print failed:", printErr);
@@ -1419,6 +1427,7 @@ function POSTerminalContent() {
         total: cartTotals.total,
         isTaxInclusivePrice: preBillReceiptMeta?.isTaxInclusivePrice || taxInclusive,
       };
+      const { printPreBill } = await import("@/lib/pos/pre-bill-print");
       await printPreBill(data);
       toast.success(t("pos.preBillPrinted") || "Bill printed");
     } catch (err) {
@@ -1522,6 +1531,7 @@ function POSTerminalContent() {
           timestamp: new Date(),
           items: [{ name: item.variantName ? `${item.name} - ${item.variantName}` : item.name, quantity: sentQty, modifiers: item.modifiers, categoryId: item.categoryId }],
         };
+        const { printKOTMulti } = await import("@/lib/restaurant/kot-print");
         await printKOTMulti(kotReceiptData);
       } catch (printErr) {
         console.error("Void KOT print failed:", printErr);
@@ -1704,9 +1714,11 @@ function POSTerminalContent() {
         totalIgst: Number(result.invoice?.totalIgst || 0) || undefined,
         isInterState: (result.invoice as Record<string, unknown>)?.isInterState as boolean || false,
         placeOfSupply: (result.invoice as Record<string, unknown>)?.placeOfSupply as string || undefined,
-        placeOfSupplyName: (() => {
+        placeOfSupplyName: await (async () => {
           const pos = (result.invoice as Record<string, unknown>)?.placeOfSupply as string | undefined;
-          return pos ? (INDIAN_STATES[pos] || pos) : undefined;
+          if (!pos) return undefined;
+          const { INDIAN_STATES } = await import("@/lib/gst/constants");
+          return INDIAN_STATES[pos] || pos;
         })(),
       };
       setLastReceiptData(receiptData);
@@ -1983,10 +1995,7 @@ function POSTerminalContent() {
           />
           <ProductGrid
             viewMode={viewMode}
-            products={products.map(p => {
-              const du = p.unitConversions?.find(uc => uc.isDefaultUnit);
-              return du?.price != null ? { ...p, price: Number(du.price) } : p;
-            })}
+            products={productsWithDefaultPrice}
             isLoading={productsLoading}
             searchQuery={deferredSearchQuery}
             selectedCategory={selectedCategory}
@@ -1997,20 +2006,19 @@ function POSTerminalContent() {
           </div>
 
           {/* Bottom bar — mobile only */}
-          <div className="flex shrink-0 gap-3 bg-slate-900 p-3 pb-[max(0.75rem,var(--app-safe-area-bottom))] md:hidden">
+          <div className="flex shrink-0 gap-2 bg-slate-900 p-2 pb-[max(0.5rem,var(--app-safe-area-bottom))] sm:gap-3 sm:p-3 sm:pb-[max(0.75rem,var(--app-safe-area-bottom))] md:hidden">
               <button
-                className="flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-5 py-3.5 text-sm font-semibold text-white active:bg-slate-600"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-700 px-3 py-3.5 text-sm font-semibold text-white active:bg-slate-600"
                 onClick={() => setMobileView("cart")}
               >
                 <ShoppingCart className="h-5 w-5" />
-                {t("pos.cart")}
                 <Badge className="min-w-5 justify-center rounded-full bg-white px-1.5 py-0 text-xs text-slate-900">
                   {cartQuantity}
                 </Badge>
               </button>
               {isRestaurantEnabled && (
                 <button
-                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-3 py-3.5 text-sm font-semibold text-white active:bg-amber-500"
+                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-2 py-3.5 text-sm font-semibold text-white active:bg-amber-500"
                   onClick={() => setShowTableSelect(true)}
                 >
                   <Armchair className="h-4 w-4" />
@@ -2019,7 +2027,7 @@ function POSTerminalContent() {
               )}
               {isRestaurantEnabled && (
                 <button
-                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-3 py-3.5 text-sm font-semibold text-white active:bg-orange-500 disabled:opacity-50"
+                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-2 py-3.5 text-sm font-semibold text-white active:bg-orange-500 disabled:opacity-50"
                   onClick={handleSendToKitchen}
                   disabled={isKotSending || cartState.items.length === 0}
                 >
@@ -2037,7 +2045,7 @@ function POSTerminalContent() {
               )}
               <button
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white active:opacity-90 disabled:opacity-50",
+                  "flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white active:opacity-90 disabled:opacity-50",
                   isReturnMode ? "bg-red-600" : "bg-primary"
                 )}
                 disabled={cart.length === 0}
@@ -2049,13 +2057,11 @@ function POSTerminalContent() {
               >
                 {isReturnMode ? (
                   <>
-                    <RotateCcw className="h-4 w-4" />
-                    {t("pos.processReturn")} {fmt(cartTotals.total)}
+                    <RotateCcw className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t("pos.processReturn")} {fmt(cartTotals.total)}</span>
                   </>
                 ) : (
-                  <>
-                    {t("pos.charge")} {fmt(cartTotals.total)}
-                  </>
+                  <span className="truncate">{t("pos.charge")} {fmt(cartTotals.total)}</span>
                 )}
               </button>
           </div>
@@ -2629,25 +2635,27 @@ function POSTerminalContent() {
                 }).catch(() => {});
               }
               // Print table move notification to kitchen
-              printKOTMulti({
-                kotNumber: "TABLE MOVE",
-                kotType: "STANDARD",
-                orderType: "DINE_IN",
-                tableName: table.name,
-                tableNumber: table.number,
-                section: table.section,
-                serverName: authSession?.user?.name || undefined,
-                timestamp: new Date(),
-                specialInstructions: `MOVED FROM TABLE ${oldTable.number} → TABLE ${table.number}`,
-                items: cartState.items
-                  .filter(i => (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0) > 0)
-                  .map(i => ({
-                    name: i.variantName ? `${i.name} - ${i.variantName}` : i.name,
-                    quantity: kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? i.quantity,
-                    modifiers: i.modifiers,
-                    categoryId: i.categoryId,
-                  })),
-              }).catch(() => {});
+              import("@/lib/restaurant/kot-print").then(({ printKOTMulti }) =>
+                printKOTMulti({
+                  kotNumber: "TABLE MOVE",
+                  kotType: "STANDARD",
+                  orderType: "DINE_IN",
+                  tableName: table.name,
+                  tableNumber: table.number,
+                  section: table.section,
+                  serverName: authSession?.user?.name || undefined,
+                  timestamp: new Date(),
+                  specialInstructions: `MOVED FROM TABLE ${oldTable.number} → TABLE ${table.number}`,
+                  items: cartState.items
+                    .filter(i => (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0) > 0)
+                    .map(i => ({
+                      name: i.variantName ? `${i.name} - ${i.variantName}` : i.name,
+                      quantity: kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? i.quantity,
+                      modifiers: i.modifiers,
+                      categoryId: i.categoryId,
+                    })),
+                })
+              ).catch(() => {});
             }
           }}
           onTakeaway={() => {
