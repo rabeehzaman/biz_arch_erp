@@ -241,6 +241,12 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // ── Reset occupied tables from previous sessions ────────────────────
+      await tx.restaurantTable.updateMany({
+        where: { organizationId, status: "OCCUPIED" },
+        data: { status: "AVAILABLE", guestCount: null, currentOrderId: null },
+      });
+
       // ── Float journal (clearing mode only) ──────────────────────────────
       // DR Clearing (Undeposited Funds) / CR Store Safe
       // This puts the opening float "in transit" through the clearing account

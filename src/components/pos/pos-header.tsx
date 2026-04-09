@@ -200,7 +200,12 @@ export function POSHeader({
           <Button
             variant="ghost"
             size="sm"
-            className="text-slate-300 hover:text-white hover:bg-slate-800 relative px-2"
+            className={cn(
+              "relative px-2",
+              (tabCount ?? 0) > 1
+                ? "bg-blue-600 text-white hover:bg-blue-500 hover:text-white"
+                : "text-slate-300 hover:text-white hover:bg-slate-800"
+            )}
             onClick={onTabsClick}
             aria-label={t("pos.openOrders")}
             title={t("pos.openOrders")}
