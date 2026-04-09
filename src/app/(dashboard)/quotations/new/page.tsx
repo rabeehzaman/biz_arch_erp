@@ -629,7 +629,7 @@ export default function NewQuotationPage() {
                                 }}
                                 type="number"
                                 onFocus={(e) => e.target.select()}
-                                min="1"
+                                min="0.001"
                                 step="0.001"
                                 value={item.quantity || ""}
                                 onChange={(e) =>
@@ -840,7 +840,7 @@ export default function NewQuotationPage() {
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
-                              min="1"
+                              min="0.001"
                               step="0.001"
                               value={item.quantity || ""}
                               onChange={(e) =>

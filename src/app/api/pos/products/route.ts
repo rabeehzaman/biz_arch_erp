@@ -91,7 +91,7 @@ export async function GET() {
       allProductIds.size > 0
         ? await prisma.$queryRawUnsafe(
             `SELECT "productId", SUM("remainingQuantity")::float as stock
-             FROM "StockLot"
+             FROM "stock_lots"
              WHERE "productId" = ANY($1) AND "remainingQuantity" > 0
              GROUP BY "productId"`,
             [...allProductIds]

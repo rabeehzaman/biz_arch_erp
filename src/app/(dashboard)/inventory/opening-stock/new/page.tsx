@@ -472,7 +472,7 @@ export default function NewOpeningStockPage() {
                                   }}
                                   type="number"
                                   onFocus={(e) => e.target.select()}
-                                  min="0.01"
+                                  min="0.001"
                                   step="0.001"
                                   value={item.quantity || ""}
                                   onChange={(e) => updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)}
@@ -641,7 +641,7 @@ export default function NewOpeningStockPage() {
                               }}
                               type="number"
                               onFocus={(e) => e.target.select()}
-                              min="0.01"
+                              min="0.001"
                               step="0.001"
                               value={item.quantity || ""}
                               onChange={(e) => updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)}

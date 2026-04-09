@@ -72,6 +72,7 @@ import {
 } from "@/lib/pos/payment-methods";
 import { normalizeRoundOffMode, roundCurrency } from "@/lib/round-off";
 import { parseWeightBarcode, type WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
+import { useAndroidBackButton } from "@/hooks/use-android-back-button";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const USE_CASH_ACCOUNT_VALUE = "__use_cash_account__";
@@ -437,6 +438,34 @@ function POSTerminalContent() {
   kotSentQuantitiesRef.current = kotSentQuantities;
   const [kotOrderIds, setKotOrderIds] = useState<string[]>([]);
   const [isKotSending, setIsKotSending] = useState(false);
+
+  // Android hardware back button — navigate POS views or close dialogs
+  useAndroidBackButton(useCallback(() => {
+    // Close any open dialog/sheet first
+    if (showCloseDialog) { setShowCloseDialog(false); return true; }
+    if (showHeldSheet) { setShowHeldSheet(false); return true; }
+    if (showPreviousOrdersSheet) { setShowPreviousOrdersSheet(false); return true; }
+    if (showTableSelect) { setShowTableSelect(false); return true; }
+
+    // Navigate mobile views: payment → cart → products
+    if (mobileView === "payment") {
+      if (chargedFromProducts) {
+        setChargedFromProducts(false);
+        setView("cart");
+        setMobileView("products");
+      } else {
+        setMobileView("cart");
+      }
+      return true;
+    }
+    if (mobileView === "cart") {
+      setMobileView("products");
+      return true;
+    }
+
+    // On products view — don't consume, let default behavior (history.back) handle
+    return false;
+  }, [mobileView, chargedFromProducts, showCloseDialog, showHeldSheet, showPreviousOrdersSheet, showTableSelect]));
 
   // Callbacks for remote tab events (from polling)
   const remoteUpdateRef = useRef<((tab: TabContext) => void) | null>(null);
@@ -979,8 +1008,9 @@ function POSTerminalContent() {
     hydrationDoneRef.current = true;
     if (initialTabContext) {
       restoreTabContext(initialTabContext);
-      // Continued session in restaurant mode — show table select if no table/order in progress
-      if (isRestaurantEnabled && !initialTabContext.selectedTable && initialTabContext.cartState.items.length === 0) {
+      // Continued session in restaurant mode — always land on table select so staff
+      // can pick a new customer/table instead of resuming the last cart automatically.
+      if (isRestaurantEnabled) {
         setShowTableSelect(true);
       }
     } else if (isRestaurantEnabled) {

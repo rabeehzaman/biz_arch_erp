@@ -29,6 +29,24 @@ export async function initCapacitorPlugins() {
     const { Keyboard, KeyboardResize } = await import("@capacitor/keyboard");
     await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
   } catch {}
+
+  try {
+    const { App } = await import("@capacitor/app");
+    await App.addListener("backButton", ({ canGoBack }) => {
+      // Dispatch custom event — components use useAndroidBackButton hook to handle
+      const event = new Event("capacitor-back-button", { cancelable: true });
+      const consumed = !window.dispatchEvent(event); // returns false if preventDefault was called
+
+      if (!consumed) {
+        // No component handled it — use default behavior
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          App.minimizeApp();
+        }
+      }
+    });
+  } catch {}
 }
 
 export async function getHaptics() {

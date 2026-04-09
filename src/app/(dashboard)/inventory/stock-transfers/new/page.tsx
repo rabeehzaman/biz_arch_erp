@@ -334,7 +334,8 @@ export default function NewStockTransferPage() {
                                                     <Label className="text-xs">{t("common.quantity")}</Label>
                                                     <Input
                                                         type="number"
-                                                        min={1}
+                                                        min="0.001"
+                                                        step="0.001"
                                                         value={item.quantity}
                                                         onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
                                                     />

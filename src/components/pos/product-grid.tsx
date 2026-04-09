@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, type UIEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ProductTile, type ProductTileProduct } from "./product-tile";
 import { ProductListItem } from "./product-list-item";
 import { PackageX } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 interface ProductGridProps {
   products: ProductTileProduct[];
@@ -17,6 +17,19 @@ interface ProductGridProps {
   selectionRevision: number;
   onAddToCart: (product: ProductTileProduct) => void;
   viewMode?: "grid" | "list";
+}
+
+const GAP = 12; // gap-3 = 12px
+const TILE_HEIGHT = 160;
+const LIST_ITEM_HEIGHT = 56;
+
+/** Compute column count from container width, matching the CSS breakpoints. */
+function getColumnCount(width: number): number {
+  if (width >= 1280) return 6; // xl
+  if (width >= 1024) return 5; // lg
+  if (width >= 768) return 4;  // md
+  if (width >= 640) return 3;  // sm
+  return 2;                     // default
 }
 
 export function ProductGrid({
@@ -35,6 +48,7 @@ export function ProductGrid({
   const previousSelectionRevisionRef = useRef(selectionRevision);
   const previousViewModeRef = useRef(viewMode);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
   const filtered = useMemo(() => {
     return products.filter((product) => {
       const matchesSearch =
@@ -46,17 +60,41 @@ export function ProductGrid({
     });
   }, [products, normalizedSearchQuery, selectedCategory]);
 
-  useLayoutEffect(() => {
-    if (previousSelectionRevisionRef.current === selectionRevision) {
-      return;
-    }
+  // Track column count from container width
+  const [columnCount, setColumnCount] = useState(4);
 
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || viewMode !== "grid") return;
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      if (width > 0) setColumnCount(getColumnCount(width));
+    });
+    observer.observe(container);
+    // Set initial value
+    setColumnCount(getColumnCount(container.clientWidth));
+    return () => observer.disconnect();
+  }, [viewMode]);
+
+  const rowCount = viewMode === "grid"
+    ? Math.ceil(filtered.length / columnCount)
+    : filtered.length;
+
+  const virtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => viewMode === "grid" ? TILE_HEIGHT + GAP : LIST_ITEM_HEIGHT,
+    overscan: 5,
+  });
+
+  // Scroll restoration after cart add (selectionRevision changes)
+  useLayoutEffect(() => {
+    if (previousSelectionRevisionRef.current === selectionRevision) return;
     previousSelectionRevisionRef.current = selectionRevision;
 
     const container = scrollContainerRef.current;
-    if (!container) {
-      return;
-    }
+    if (!container) return;
 
     const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
     const nextScrollTop = Math.min(savedScrollTopRef.current, maxScrollTop);
@@ -69,16 +107,13 @@ export function ProductGrid({
     if (previousViewModeRef.current !== viewMode) {
       previousViewModeRef.current = viewMode;
       savedScrollTopRef.current = 0;
-      const container = scrollContainerRef.current;
-      if (container) {
-        container.scrollTop = 0;
-      }
+      virtualizer.scrollToOffset(0);
     }
-  }, [viewMode]);
+  }, [viewMode, virtualizer]);
 
-  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
-    savedScrollTopRef.current = event.currentTarget.scrollTop;
-  };
+  const handleScroll = useCallback(() => {
+    savedScrollTopRef.current = scrollContainerRef.current?.scrollTop ?? 0;
+  }, []);
 
   if (isLoading) {
     if (viewMode === "list") {
@@ -86,7 +121,6 @@ export function ProductGrid({
         <div
           data-testid="pos-product-grid"
           ref={scrollContainerRef}
-          onScroll={handleScroll}
           className="flex flex-1 flex-col divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200 bg-white"
         >
           {Array.from({ length: 10 }).map((_, index) => (
@@ -107,7 +141,6 @@ export function ProductGrid({
       <div
         data-testid="pos-product-grid"
         ref={scrollContainerRef}
-        onScroll={handleScroll}
         className="grid flex-1 grid-cols-2 gap-3 overflow-y-auto content-start sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
       >
         {Array.from({ length: 12 }).map((_, index) => (
@@ -135,35 +168,89 @@ export function ProductGrid({
     );
   }
 
+  const virtualItems = virtualizer.getVirtualItems();
+
+  if (viewMode === "list") {
+    return (
+      <div
+        data-testid="pos-product-grid"
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white"
+      >
+        <div
+          style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+        >
+          {virtualItems.map((virtualRow) => {
+            const product = filtered[virtualRow.index];
+            if (!product) return null;
+            return (
+              <div
+                key={product.id}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <ProductListItem
+                  product={product}
+                  selectedQuantity={selectedQuantities[product.id] ?? 0}
+                  onAdd={onAddToCart}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Grid mode
   return (
     <div
       data-testid="pos-product-grid"
       ref={scrollContainerRef}
       onScroll={handleScroll}
-      className={cn(
-        "flex-1 overflow-y-auto",
-        viewMode === "grid"
-          ? "grid grid-cols-2 gap-3 content-start sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-          : "flex flex-col divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white content-start"
-      )}
+      className="flex-1 overflow-y-auto"
     >
-      {filtered.map((product) =>
-        viewMode === "grid" ? (
-          <ProductTile
-            key={product.id}
-            product={product}
-            selectedQuantity={selectedQuantities[product.id] ?? 0}
-            onAdd={onAddToCart}
-          />
-        ) : (
-          <ProductListItem
-            key={product.id}
-            product={product}
-            selectedQuantity={selectedQuantities[product.id] ?? 0}
-            onAdd={onAddToCart}
-          />
-        )
-      )}
+      <div
+        style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+      >
+        {virtualItems.map((virtualRow) => {
+          const startIdx = virtualRow.index * columnCount;
+          return (
+            <div
+              key={virtualRow.index}
+              className="grid gap-3"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+                height: TILE_HEIGHT,
+                gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+              }}
+            >
+              {Array.from({ length: columnCount }).map((_, colIdx) => {
+                const product = filtered[startIdx + colIdx];
+                if (!product) return <div key={`empty-${colIdx}`} />;
+                return (
+                  <ProductTile
+                    key={product.id}
+                    product={product}
+                    selectedQuantity={selectedQuantities[product.id] ?? 0}
+                    onAdd={onAddToCart}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -720,7 +720,7 @@ export default function NewPurchaseInvoicePage() {
                                 }}
                                 type="number"
                                 onFocus={(e) => e.target.select()}
-                                min="0.01"
+                                min="0.001"
                                 step="0.001"
                                 value={item.quantity || ""}
                                 onChange={(e) =>
@@ -1108,7 +1108,7 @@ export default function NewPurchaseInvoicePage() {
                             <Input
                               type="number"
                               onFocus={(e) => e.target.select()}
-                              min="0.01"
+                              min="0.001"
                               step="0.001"
                               value={item.quantity || ""}
                               onChange={(e) =>
