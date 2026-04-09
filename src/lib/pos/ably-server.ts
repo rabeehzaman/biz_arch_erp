@@ -106,14 +106,14 @@ export async function createTokenRequest(
   try {
     const tokenRequest = await client.auth.createTokenRequest({
       clientId: userId,
-      capability: {
+      capability: JSON.stringify({
         [`pos:${orgId}:*`]: ["subscribe", "publish"],
         [`pos:${orgId}`]: ["subscribe"],
-      },
+      }),
     });
     return tokenRequest;
   } catch (err) {
     console.error("[Ably] Failed to create token request:", err);
-    return null;
+    throw err;
   }
 }

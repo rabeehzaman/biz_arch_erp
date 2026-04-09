@@ -29,9 +29,10 @@ export async function GET() {
 
     return NextResponse.json(tokenRequest);
   } catch (error) {
-    console.error("Ably auth error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Ably auth error:", msg, error);
     return NextResponse.json(
-      { error: "Failed to create token" },
+      { error: "Failed to create token", detail: msg },
       { status: 500 },
     );
   }
