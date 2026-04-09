@@ -1000,6 +1000,8 @@ function POSTerminalContent() {
   // Auto-save active tab to DB on KOT/metadata changes only (not live cart edits)
   useEffect(() => {
     if (!isHydrated || !posSession) return;
+    // Don't persist blank tabs (no table, no items) — avoids ghost orders after checkout/reset
+    if (!selectedTable && cartState.items.length === 0 && kotSentQuantities.size === 0) return;
     scheduleSave(snapshotCurrentTab());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view]);
@@ -2604,6 +2606,11 @@ function POSTerminalContent() {
             // Assign table to the current tab and mark it OCCUPIED in DB
             setSelectedTable(table);
             setOrderType("DINE_IN");
+            // Update tab label immediately (don't wait for auto-label effect)
+            const newLabel = selectedCustomer
+              ? `T${table.number} - ${selectedCustomer.name}`
+              : `T${table.number}`;
+            updateActiveTabLabel(newLabel);
             occupyTable(table.id);
             setShowTableSelect(false);
             // Sync table change to server
@@ -2651,6 +2658,7 @@ function POSTerminalContent() {
 
             setSelectedTable(null);
             setOrderType("TAKEAWAY");
+            updateActiveTabLabel("Takeaway");
             setShowTableSelect(false);
             // Sync change to server
             requestAnimationFrame(() => {
