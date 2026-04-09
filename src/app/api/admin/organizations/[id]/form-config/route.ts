@@ -7,6 +7,7 @@ import {
   SIDEBAR_SECTIONS,
   ALL_REPORT_SLUGS,
   ALL_SIDEBAR_ITEM_NAMES,
+  ALL_POS_COMPONENT_SLUGS,
   type FormFieldConfig,
   type MobileNavTab,
   type OrgFormConfig,
@@ -47,6 +48,7 @@ export async function GET(
             SETTING_KEYS.SIDEBAR_SECTION_ORDER,
             SETTING_KEYS.MOBILE_NAV_CONFIG,
             SETTING_KEYS.DEFAULT_LANDING_PAGE,
+            SETTING_KEYS.POS_HIDDEN_COMPONENTS,
           ],
         },
       },
@@ -82,6 +84,10 @@ export async function GET(
       defaultLandingPage: parseSettingJSON<string | null>(
         settingMap.get(SETTING_KEYS.DEFAULT_LANDING_PAGE),
         null
+      ),
+      posHiddenComponents: parseSettingJSON<string[]>(
+        settingMap.get(SETTING_KEYS.POS_HIDDEN_COMPONENTS),
+        []
       ),
     };
 
@@ -255,6 +261,19 @@ export async function PUT(
       }
     }
 
+    // Validate POS hidden components — silently strip unknown slugs
+    if (body.posHiddenComponents) {
+      if (!Array.isArray(body.posHiddenComponents)) {
+        return NextResponse.json(
+          { error: "posHiddenComponents must be an array" },
+          { status: 400 }
+        );
+      }
+      body.posHiddenComponents = body.posHiddenComponents.filter((item) =>
+        ALL_POS_COMPONENT_SLUGS.includes(item)
+      );
+    }
+
     // Validate mobile nav tabs
     if (body.mobileNavTabs) {
       if (!Array.isArray(body.mobileNavTabs)) {
@@ -314,6 +333,12 @@ export async function PUT(
       upserts.push({
         key: SETTING_KEYS.DEFAULT_LANDING_PAGE,
         value: JSON.stringify(body.defaultLandingPage),
+      });
+    }
+    if (body.posHiddenComponents !== undefined) {
+      upserts.push({
+        key: SETTING_KEYS.POS_HIDDEN_COMPONENTS,
+        value: JSON.stringify(body.posHiddenComponents),
       });
     }
 

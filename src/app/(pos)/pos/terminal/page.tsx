@@ -73,6 +73,7 @@ import {
 import { normalizeRoundOffMode, roundCurrency } from "@/lib/round-off";
 import { parseWeightBarcode, type WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
 import { useAndroidBackButton } from "@/hooks/use-android-back-button";
+import { usePosHiddenComponents } from "@/hooks/use-pos-hidden-components";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const USE_CASH_ACCOUNT_VALUE = "__use_cash_account__";
@@ -366,6 +367,7 @@ function POSTerminalContent() {
     fetcher
   );
   const posSession: POSSessionData | null = sessionData?.session ?? null;
+  const { isHidden: isPosComponentHidden, hiddenComponents: posHiddenSet } = usePosHiddenComponents(!!posSession);
 
   // Redirect to dashboard if no session found (after loading)
   useEffect(() => {
@@ -2000,6 +2002,7 @@ function POSTerminalContent() {
         onReprintReceipt={lastReceiptData && !isPendingReceipt ? reprintReceipt : undefined}
         isReprintLoading={isPendingReceipt}
         onReturn={toggleReturnMode}
+        hiddenComponents={posHiddenSet}
         isReturnMode={isReturnMode}
         onPreviousOrders={openPreviousOrders}
         selectedTable={selectedTable}
@@ -2019,17 +2022,25 @@ function POSTerminalContent() {
           mobileView === "products" ? "flex" : "hidden md:flex"
         )}>
           <div className="flex flex-col gap-3 flex-1 overflow-hidden px-4 md:px-0">
+          {(!isPosComponentHidden("product-search") || !isPosComponentHidden("view-mode-toggle")) && (
           <div className="flex items-center gap-2">
+            {!isPosComponentHidden("product-search") && (
             <div className="flex-1">
               <ProductSearch value={searchQuery} onChange={setSearchQuery} />
             </div>
+            )}
+            {!isPosComponentHidden("view-mode-toggle") && (
             <ViewModeToggle viewMode={viewMode} onChange={setViewMode} />
+            )}
           </div>
+          )}
+          {!isPosComponentHidden("category-tabs") && (
           <CategoryTabs
             categories={categories}
             selected={selectedCategory}
             onSelect={setSelectedCategory}
           />
+          )}
           <ProductGrid
             viewMode={viewMode}
             products={productsWithDefaultPrice}
@@ -2053,7 +2064,7 @@ function POSTerminalContent() {
                   {cartQuantity}
                 </Badge>
               </button>
-              {isRestaurantEnabled && (
+              {isRestaurantEnabled && !isPosComponentHidden("table-select") && (
                 <button
                   className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-2 py-3.5 text-sm font-semibold text-white active:bg-amber-500"
                   onClick={() => setShowTableSelect(true)}
@@ -2062,7 +2073,7 @@ function POSTerminalContent() {
                   {selectedTable ? `T${selectedTable.number}` : t("restaurant.selectTable").split(" ")[0]}
                 </button>
               )}
-              {isRestaurantEnabled && (
+              {isRestaurantEnabled && !isPosComponentHidden("kot-button") && (
                 <button
                   className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-orange-600 px-2 py-3.5 text-sm font-semibold text-white active:bg-orange-500 disabled:opacity-50"
                   onClick={handleSendToKitchen}
@@ -2080,6 +2091,7 @@ function POSTerminalContent() {
                   )}
                 </button>
               )}
+              {!isPosComponentHidden("pay-now-button") && (
               <button
                 className={cn(
                   "flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white active:opacity-90 disabled:opacity-50",
@@ -2101,6 +2113,7 @@ function POSTerminalContent() {
                   <span className="truncate">{t("pos.charge")} {fmt(cartTotals.total)}</span>
                 )}
               </button>
+              )}
           </div>
         </div>
 
@@ -2143,8 +2156,8 @@ function POSTerminalContent() {
 
           {view === "cart" ? (
             <>
-              {/* Customer Select — hidden in restaurant mode */}
-              {!isRestaurantEnabled && (
+              {/* Customer Select — hidden in restaurant mode or by admin config */}
+              {!isRestaurantEnabled && !isPosComponentHidden("customer-select") && (
                 <div className="border-b p-3">
                   <CustomerSelect
                     selectedCustomer={selectedCustomer}
@@ -2195,10 +2208,12 @@ function POSTerminalContent() {
                   className="border-t p-2 space-y-1.5"
                 >
                   <div className="flex items-end gap-2">
+                    {!isPosComponentHidden("cart-summary") && (
                     <div className="flex-1">
                       <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
                     </div>
-                    {isRestaurantEnabled && (
+                    )}
+                    {isRestaurantEnabled && !isPosComponentHidden("clear-cart-button") && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -2209,8 +2224,9 @@ function POSTerminalContent() {
                       </Button>
                     )}
                   </div>
-                  {isRestaurantEnabled && (
+                  {isRestaurantEnabled && (!isPosComponentHidden("kot-button") || !isPosComponentHidden("pre-bill-button")) && (
                     <div className="flex gap-1.5">
+                      {!isPosComponentHidden("kot-button") && (
                       <Button
                         variant="default"
                         size="sm"
@@ -2229,6 +2245,8 @@ function POSTerminalContent() {
                           </Badge>
                         )}
                       </Button>
+                      )}
+                      {!isPosComponentHidden("pre-bill-button") && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -2239,11 +2257,12 @@ function POSTerminalContent() {
                         {isPrintingPreBill ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Receipt className="h-4 w-4 mr-1" />}
                         Bill
                       </Button>
+                      )}
                     </div>
                   )}
                   {!isRestaurantEnabled && (
                     <div className="flex gap-2">
-                      {!isReturnMode && (
+                      {!isReturnMode && !isPosComponentHidden("hold-order-button") && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -2254,6 +2273,7 @@ function POSTerminalContent() {
                           {t("pos.holdOrder").split(" ")[0]}
                         </Button>
                       )}
+                      {!isPosComponentHidden("clear-cart-button") && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -2263,8 +2283,10 @@ function POSTerminalContent() {
                         <Trash2 className="h-4 w-4 mr-1" />
                         {t("pos.clearCart").split(" ")[0]}
                       </Button>
+                      )}
                     </div>
                   )}
+                  {!isPosComponentHidden("pay-now-button") && (
                   <Button
                     className={cn(
                       "w-full h-10 text-base font-bold",
@@ -2286,6 +2308,7 @@ function POSTerminalContent() {
                       </>
                     )}
                   </Button>
+                  )}
                 </div>
               )}
             </>
@@ -2325,6 +2348,7 @@ function POSTerminalContent() {
               onComplete={handleCheckout}
               isProcessing={isProcessing}
               hasCustomer={!!selectedCustomer}
+              hiddenComponents={posHiddenSet}
             />
           )}
         </div>

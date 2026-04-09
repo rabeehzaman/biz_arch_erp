@@ -62,6 +62,7 @@ export interface OrgFormConfig {
   sidebarSectionOrder: string[] | null;
   mobileNavTabs: MobileNavTab[] | null;
   defaultLandingPage: string | null;
+  posHiddenComponents: string[];
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -368,6 +369,58 @@ export const PLUS_ACTION_ROUTE_TO_SIDEBAR_NAME: Record<string, string> = {
   "/accounting/expenses/new": "Expenses",
 };
 
+// ── POS component visibility registry ─────────────────────────
+export const POS_COMPONENT_CATEGORIES: { label: string; items: { slug: string; label: string }[] }[] = [
+  {
+    label: "Header",
+    items: [
+      { slug: "customer-select", label: "Customer Selection" },
+      { slug: "held-orders-button", label: "Held Orders Button" },
+      { slug: "return-mode-toggle", label: "Return Mode Toggle" },
+      { slug: "previous-orders-button", label: "Previous Orders Button" },
+      { slug: "reprint-receipt-button", label: "Reprint Receipt Button" },
+      { slug: "order-tabs-button", label: "Order Tabs Button (Restaurant)" },
+      { slug: "table-select", label: "Table Selection (Restaurant)" },
+      { slug: "language-switcher", label: "Language Switcher" },
+    ],
+  },
+  {
+    label: "Products",
+    items: [
+      { slug: "product-search", label: "Product Search Bar" },
+      { slug: "category-tabs", label: "Category Tabs" },
+      { slug: "view-mode-toggle", label: "View Mode Toggle (Grid/List)" },
+    ],
+  },
+  {
+    label: "Cart",
+    items: [
+      { slug: "cart-summary", label: "Cart Summary (Subtotal/Tax/Total)" },
+    ],
+  },
+  {
+    label: "Payment",
+    items: [
+      { slug: "split-payment", label: "Split Payment Option" },
+      { slug: "credit-sale", label: "Credit Sale Checkbox" },
+    ],
+  },
+  {
+    label: "Actions",
+    items: [
+      { slug: "hold-order-button", label: "Hold Order Button" },
+      { slug: "clear-cart-button", label: "Clear Cart Button" },
+      { slug: "kot-button", label: "KOT Button (Restaurant)" },
+      { slug: "pre-bill-button", label: "Pre-Bill Button (Restaurant)" },
+      { slug: "pay-now-button", label: "Pay Now / Charge Button" },
+    ],
+  },
+];
+
+export const ALL_POS_COMPONENT_SLUGS = POS_COMPONENT_CATEGORIES.flatMap(
+  (cat) => cat.items.map((i) => i.slug)
+);
+
 // ── Setting keys used in the Setting table ─────────────────────
 export const SETTING_KEYS = {
   FORM_FIELD_CONFIG: "form_field_config",
@@ -377,4 +430,5 @@ export const SETTING_KEYS = {
   SIDEBAR_SECTION_ORDER: "sidebar_section_order",
   MOBILE_NAV_CONFIG: "mobile_nav_config",
   DEFAULT_LANDING_PAGE: "default_landing_page",
+  POS_HIDDEN_COMPONENTS: "pos_hidden_components",
 } as const;

@@ -22,6 +22,7 @@ interface PaymentPanelProps {
   onComplete: (payments: PaymentEntry[], isCreditSale?: boolean) => void;
   isProcessing: boolean;
   hasCustomer: boolean;
+  hiddenComponents?: Set<string>;
 }
 
 export function PaymentPanel({
@@ -31,6 +32,7 @@ export function PaymentPanel({
   onComplete,
   isProcessing,
   hasCustomer,
+  hiddenComponents,
 }: PaymentPanelProps) {
   const { fmt: formatCurrency } = useCurrency();
   const { t } = useLanguage();
@@ -145,6 +147,7 @@ export function PaymentPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 pb-4 md:overflow-hidden">
+        {!hiddenComponents?.has("split-payment") && (
         <div className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
           <Button
             variant={mode === "single" ? "secondary" : "ghost"}
@@ -176,6 +179,7 @@ export function PaymentPanel({
             {t("pos.split")}
           </Button>
         </div>
+        )}
 
         {mode === "single" ? (
           <div className="flex flex-col gap-2 sm:grid sm:items-start sm:gap-2 sm:grid-cols-[minmax(220px,0.92fr)_minmax(0,1.08fr)]">
@@ -210,6 +214,7 @@ export function PaymentPanel({
                 </div>
               </div>
 
+              {!hiddenComponents?.has("credit-sale") && (
               <div className="order-3 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]">
                 <div className="flex items-center gap-2">
                   <input
@@ -255,6 +260,7 @@ export function PaymentPanel({
                   </div>
                 )}
               </div>
+              )}
             </div>
 
             <div className="order-2">

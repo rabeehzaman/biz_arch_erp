@@ -44,6 +44,7 @@ import {
   RotateCcw,
   AlertTriangle,
   X,
+  Monitor,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -54,6 +55,7 @@ import {
   MOBILE_NAV_TAB_POOL,
   LANDING_PAGE_OPTIONS,
   ALL_REPORT_SLUGS,
+  POS_COMPONENT_CATEGORIES,
   type FormName,
   type OrgFormConfig,
   type MobileNavTab,
@@ -202,6 +204,7 @@ function defaultConfig(): OrgFormConfig {
     sidebarSectionOrder: null,
     mobileNavTabs: null,
     defaultLandingPage: null,
+    posHiddenComponents: [],
   };
 }
 
@@ -250,6 +253,7 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
             sidebarSectionOrder: activeConfig.sidebarSectionOrder ?? null,
             mobileNavTabs: activeConfig.mobileNavTabs ?? null,
             defaultLandingPage: activeConfig.defaultLandingPage ?? null,
+            posHiddenComponents: activeConfig.posHiddenComponents ?? [],
           });
         } else {
           toast.error("Failed to load user form configuration");
@@ -268,6 +272,7 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
             sidebarSectionOrder: data.sidebarSectionOrder ?? null,
             mobileNavTabs: data.mobileNavTabs ?? null,
             defaultLandingPage: data.defaultLandingPage ?? null,
+            posHiddenComponents: data.posHiddenComponents ?? [],
           });
         } else {
           toast.error("Failed to load form configuration");
@@ -347,6 +352,7 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
       sidebarSectionOrder: orgConfig.sidebarSectionOrder ?? null,
       mobileNavTabs: orgConfig.mobileNavTabs ?? null,
       defaultLandingPage: orgConfig.defaultLandingPage ?? null,
+      posHiddenComponents: orgConfig.posHiddenComponents ?? [],
     });
     toast.success("Loaded org configuration — make changes and save");
   };
@@ -446,6 +452,20 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
         ? prev.disabledReports.filter((s) => s !== slug)
         : [...prev.disabledReports, slug];
       return { ...prev, disabledReports: disabled };
+    });
+  };
+
+  // ── POS component helpers ──────────────────────────────────
+  const isPosComponentHidden = (slug: string): boolean => {
+    return config.posHiddenComponents.includes(slug);
+  };
+
+  const togglePosComponent = (slug: string) => {
+    setConfig((prev) => {
+      const hidden = prev.posHiddenComponents.includes(slug)
+        ? prev.posHiddenComponents.filter((s) => s !== slug)
+        : [...prev.posHiddenComponents, slug];
+      return { ...prev, posHiddenComponents: hidden };
     });
   };
 
@@ -844,6 +864,56 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
               </div>
               {category !==
                 REPORT_CATEGORIES[REPORT_CATEGORIES.length - 1] && (
+                <Separator className="mt-4" />
+              )}
+            </div>
+          ))}
+        </div>
+      </CollapsibleSection>
+
+      {/* ═══════════════════════════════════════════════════════════
+          Section B2: POS Component Visibility
+          ═══════════════════════════════════════════════════════════ */}
+      <CollapsibleSection
+        title="POS Component Visibility"
+        description="Show or hide individual POS terminal UI components"
+        icon={<Monitor className="h-5 w-5 text-cyan-600" />}
+      >
+        <div className="space-y-6">
+          {POS_COMPONENT_CATEGORIES.map((category) => (
+            <div key={category.label}>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-3">
+                {category.label}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {category.items.map(({ slug, label }) => {
+                  const hidden = isPosComponentHidden(slug);
+                  return (
+                    <div
+                      key={slug}
+                      className="flex items-center justify-between rounded-lg border px-3 py-2"
+                    >
+                      <Label
+                        htmlFor={`pos-${slug}`}
+                        className={`text-sm cursor-pointer ${
+                          hidden
+                            ? "text-muted-foreground line-through"
+                            : ""
+                        }`}
+                      >
+                        {label}
+                      </Label>
+                      <Switch
+                        id={`pos-${slug}`}
+                        checked={!hidden}
+                        onCheckedChange={() => togglePosComponent(slug)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              {category !==
+                POS_COMPONENT_CATEGORIES[POS_COMPONENT_CATEGORIES.length - 1] && (
                 <Separator className="mt-4" />
               )}
             </div>

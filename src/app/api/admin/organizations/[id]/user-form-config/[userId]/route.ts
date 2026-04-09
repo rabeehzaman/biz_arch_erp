@@ -30,6 +30,7 @@ const ALL_KEYS = [
   SETTING_KEYS.SIDEBAR_SECTION_ORDER,
   SETTING_KEYS.MOBILE_NAV_CONFIG,
   SETTING_KEYS.DEFAULT_LANDING_PAGE,
+  SETTING_KEYS.POS_HIDDEN_COMPONENTS,
 ];
 
 function buildConfigFromSettings(
@@ -63,6 +64,10 @@ function buildConfigFromSettings(
     defaultLandingPage: parseJSON<string | null>(
       settingMap.get(SETTING_KEYS.DEFAULT_LANDING_PAGE),
       null
+    ),
+    posHiddenComponents: parseJSON<string[]>(
+      settingMap.get(SETTING_KEYS.POS_HIDDEN_COMPONENTS),
+      []
     ),
   };
 }

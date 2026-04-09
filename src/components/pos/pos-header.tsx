@@ -35,6 +35,7 @@ interface POSHeaderProps {
   tabCount?: number;
   onTabsClick?: () => void;
   isSocketConnected?: boolean;
+  hiddenComponents?: Set<string>;
 }
 
 function POSClock() {
@@ -69,6 +70,7 @@ export function POSHeader({
   tabCount,
   onTabsClick,
   isSocketConnected,
+  hiddenComponents,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
@@ -107,7 +109,7 @@ export function POSHeader({
             <span className="truncate">{locationLabel}</span>
           </div>
         )}
-        {isRestaurantMode && (
+        {isRestaurantMode && !hiddenComponents?.has("table-select") && (
           <button
             onClick={onTableClick}
             className={cn(
@@ -144,7 +146,7 @@ export function POSHeader({
           <POSClock />
         </div>
 
-        {onReturn && (
+        {onReturn && !hiddenComponents?.has("return-mode-toggle") && (
           <Button
             variant="ghost"
             size="sm"
@@ -165,7 +167,7 @@ export function POSHeader({
           </Button>
         )}
 
-        {onPreviousOrders && (
+        {onPreviousOrders && !hiddenComponents?.has("previous-orders-button") && (
           <Button
             variant="ghost"
             size="sm"
@@ -179,7 +181,7 @@ export function POSHeader({
           </Button>
         )}
 
-        {(onReprintReceipt || isReprintLoading) && (
+        {(onReprintReceipt || isReprintLoading) && !hiddenComponents?.has("reprint-receipt-button") && (
           <Button
             variant="ghost"
             size="sm"
@@ -196,7 +198,7 @@ export function POSHeader({
           </Button>
         )}
 
-        {onTabsClick && (
+        {onTabsClick && !hiddenComponents?.has("order-tabs-button") && (
           <Button
             variant="ghost"
             size="sm"
@@ -220,7 +222,7 @@ export function POSHeader({
           </Button>
         )}
 
-        {onHeldOrdersClick && (
+        {onHeldOrdersClick && !hiddenComponents?.has("held-orders-button") && (
           <Button
             variant="ghost"
             size="sm"
@@ -244,7 +246,7 @@ export function POSHeader({
           {employeeName || authSession?.user?.name}
         </div>
 
-        {editionConfig.isLanguageSwitchable && (
+        {editionConfig.isLanguageSwitchable && !hiddenComponents?.has("language-switcher") && (
         <Button
           variant="ghost"
           size="sm"

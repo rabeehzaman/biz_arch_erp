@@ -53,6 +53,7 @@ export default async function DashboardLayout({
     sidebarSectionOrder: null,
     mobileNavTabs: null,
     defaultLandingPage: null,
+    posHiddenComponents: [],
   };
   try {
     if (session.user && session.user.role !== "superadmin") {
@@ -77,6 +78,7 @@ export default async function DashboardLayout({
                 SETTING_KEYS.SIDEBAR_SECTION_ORDER,
                 SETTING_KEYS.MOBILE_NAV_CONFIG,
                 SETTING_KEYS.DEFAULT_LANDING_PAGE,
+                SETTING_KEYS.POS_HIDDEN_COMPONENTS,
               ],
             },
           },
@@ -96,6 +98,7 @@ export default async function DashboardLayout({
           sidebarSectionOrder: p(map.get(SETTING_KEYS.SIDEBAR_SECTION_ORDER), null),
           mobileNavTabs: p(map.get(SETTING_KEYS.MOBILE_NAV_CONFIG), null),
           defaultLandingPage: p(map.get(SETTING_KEYS.DEFAULT_LANDING_PAGE), null),
+          posHiddenComponents: p(map.get(SETTING_KEYS.POS_HIDDEN_COMPONENTS), []),
         };
 
         // Merge per-user defaults

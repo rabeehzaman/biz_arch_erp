@@ -27,6 +27,7 @@ const EMPTY_CONFIG: OrgFormConfig = {
   sidebarSectionOrder: null,
   mobileNavTabs: null,
   defaultLandingPage: null,
+  posHiddenComponents: [],
 };
 
 const ALL_KEYS = [
@@ -37,6 +38,7 @@ const ALL_KEYS = [
   SETTING_KEYS.SIDEBAR_SECTION_ORDER,
   SETTING_KEYS.MOBILE_NAV_CONFIG,
   SETTING_KEYS.DEFAULT_LANDING_PAGE,
+  SETTING_KEYS.POS_HIDDEN_COMPONENTS,
 ];
 
 /** Merge user-level field config over org-level, per form */
@@ -144,6 +146,10 @@ export async function GET() {
       defaultLandingPage: resolve<string | null>(
         SETTING_KEYS.DEFAULT_LANDING_PAGE,
         null
+      ),
+      posHiddenComponents: resolve<string[]>(
+        SETTING_KEYS.POS_HIDDEN_COMPONENTS,
+        []
       ),
     };
 
