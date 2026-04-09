@@ -274,7 +274,9 @@ export function usePOSTabs(
       versionsRef.current.set(record.id, record.version);
     }
 
-    orderCounterRef.current = dbOrders.length;
+    // Use the max order number found (not count) to avoid duplicates after deletions
+    const maxOrderNum = deserialized.reduce((max, t) => Math.max(max, t.orderNumber), 0);
+    orderCounterRef.current = Math.max(maxOrderNum, dbOrders.length);
     setIsHydrated(true);
   }, [dbOrders, isHydrated]);
 
