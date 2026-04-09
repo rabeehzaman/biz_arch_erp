@@ -30,7 +30,7 @@ export function getAblyClient(): Ably.Realtime {
     authUrl: "/api/pos/ably-auth",
     authMethod: "GET",
     autoConnect: true,
-    // Ably handles reconnection automatically with exponential backoff
+    echoMessages: false,  // Don't echo our own messages back
   });
 
   return ablyClient;

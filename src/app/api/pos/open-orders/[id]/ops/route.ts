@@ -28,10 +28,11 @@ export async function POST(
     const organizationId = getOrgId(session);
     const { id: orderId } = await params;
     const body = await request.json();
-    const { ops, expectedVersion, deviceId } = body as {
+    const { ops, expectedVersion, deviceId, clientSeq } = body as {
       ops: OrderOperation[];
       expectedVersion: number;
       deviceId?: string;
+      clientSeq?: number;
     };
 
     if (!Array.isArray(ops) || ops.length === 0) {
@@ -126,17 +127,23 @@ export async function POST(
       throw err;
     }
 
-    // Broadcast to other devices via Ably
+    // Broadcast to other devices via Ably (include full state for rebase)
     await publishOrderUpdate(
       organizationId,
       orderId,
       ops,
       newVersion,
       deviceId || "api",
+      newState,
     );
 
-    const result: MutationResult = { ok: true, version: newVersion };
-    return NextResponse.json(result);
+    // Return items + ackClientSeq so the caller can dispatch SERVER_STATE
+    return NextResponse.json({
+      ok: true,
+      version: newVersion,
+      items: newState.items,
+      ackClientSeq: clientSeq ?? -1,
+    });
   } catch (error) {
     console.error("Failed to apply order operations:", error);
     return NextResponse.json(

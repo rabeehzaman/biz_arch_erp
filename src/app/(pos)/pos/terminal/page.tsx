@@ -50,6 +50,7 @@ import { usePOSTabs, type TabContext } from "@/hooks/use-pos-tabs";
 import { useRealtimeOrder } from "@/hooks/use-realtime-order";
 import type { OrderOperation, SerializedOrderState } from "@/lib/pos/realtime-types";
 import { cartLineKey as makeLineKey } from "@/lib/pos/realtime-types";
+import { applyOperations } from "@/lib/pos/apply-operations";
 import { OrderTabsSheet } from "@/components/pos/order-tabs-sheet";
 import { printKOTMulti } from "@/lib/restaurant/kot-print";
 import { printPreBill, type PreBillReceiptData } from "@/lib/pos/pre-bill-print";
@@ -183,14 +184,24 @@ interface CheckoutTimingPayload {
   transactionStages: Record<string, number>;
 }
 
+interface PendingCartOp {
+  clientSeq: number;
+  op: OrderOperation;
+}
+
 type CartAction =
   | { type: "ADD"; product: any; quantity?: number; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null; variantId?: string; variantName?: string; modifiers?: string[] }
   | { type: "REMOVE"; productId: string }
   | { type: "CLEAR" }
-  | { type: "RESTORE"; items: CartItemData[] };
+  | { type: "RESTORE"; items: CartItemData[] }
+  | { type: "LOCAL_OP"; op: OrderOperation; clientSeq: number }
+  | { type: "SERVER_STATE"; snapshot: CartItemData[]; version: number; ackClientSeq?: number };
 
 interface CartState {
-  items: CartItemData[];
+  items: CartItemData[];              // DISPLAY: rebase of serverSnapshot + pendingOps
+  serverSnapshot: CartItemData[];     // Last confirmed state from server
+  pendingOps: PendingCartOp[];        // Locally applied, not yet acknowledged
+  nextClientSeq: number;
   totalQuantity: number;
   selectedProductQuantities: Record<string, number>;
   revision: number;
@@ -254,7 +265,8 @@ function roundTimingMs(value: number) {
   return Number(value.toFixed(2));
 }
 
-function buildCartState(items: CartItemData[], previousRevision = -1): CartState {
+/** Compute derived fields (totalQuantity, selectedProductQuantities) from items */
+function computeDerived(items: CartItemData[], previousRevision: number): Pick<CartState, "items" | "totalQuantity" | "selectedProductQuantities" | "revision"> {
   return {
     items,
     totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
@@ -266,74 +278,119 @@ function buildCartState(items: CartItemData[], previousRevision = -1): CartState
   };
 }
 
+/** Rebase: apply pending ops on top of server snapshot to produce display items */
+function rebase(serverSnapshot: CartItemData[], pendingOps: PendingCartOp[]): CartItemData[] {
+  if (pendingOps.length === 0) return serverSnapshot;
+  const baseState: SerializedOrderState = {
+    items: serverSnapshot, label: "", orderType: "DINE_IN", isReturnMode: false,
+    customerId: null, customerName: null, tableId: null, tableNumber: null,
+    tableName: null, tableSection: null, tableCapacity: null, heldOrderId: null,
+    kotSentQuantities: {}, kotOrderIds: [],
+  };
+  return applyOperations(baseState, pendingOps.map(p => p.op)).items;
+}
+
+function buildCartState(items: CartItemData[], previousRevision = -1): CartState {
+  return {
+    ...computeDerived(items, previousRevision),
+    serverSnapshot: items,
+    pendingOps: [],
+    nextClientSeq: 0,
+  };
+}
+
+function buildCartItemFromProduct(product: any, quantity?: number, unitId?: string, unitName?: string, cf?: number, altPrice?: number | null, variantId?: string, variantName?: string, modifiers?: string[]): CartItemData {
+  const effectivePrice = altPrice != null ? altPrice : Number(product.price);
+  const ji = product.jewelleryItem;
+  const jewelleryData = ji ? {
+    jewelleryItemId: ji.id, goldRate: 0, purity: ji.purity, metalType: ji.metalType,
+    grossWeight: ji.grossWeight, stoneWeight: ji.stoneWeight, netWeight: ji.netWeight,
+    fineWeight: ji.fineWeight, wastagePercent: ji.wastagePercent,
+    makingChargeType: ji.makingChargeType, makingChargeValue: ji.makingChargeValue,
+    stoneValue: ji.stoneValue, tagNumber: ji.tagNumber, huidNumber: ji.huidNumber,
+  } : null;
+  return {
+    productId: product.id, name: product.name, price: effectivePrice,
+    quantity: quantity ?? 1, discount: 0, stockQuantity: product.stockQuantity ?? 0,
+    gstRate: Number(product.gstRate) || 0,
+    hsnCode: product.hsnCode || (ji ? "7113" : undefined),
+    unitId, unitName, conversionFactor: cf ?? 1, jewellery: jewelleryData,
+    categoryId: product.categoryId ?? null, variantId, variantName, modifiers,
+  };
+}
+
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
+    // ── Legacy ADD (used by barcode scanner, variant picker) ──────
     case "ADD": {
-      const { product, quantity, unitId, unitName, conversionFactor: cf, price: altPrice, variantId, variantName, modifiers: actionModifiers } = action;
-      const effectiveConversionFactor = cf ?? 1;
-      const effectivePrice = altPrice != null ? altPrice : Number(product.price);
-      // Match existing cart line by productId + variantId + unitId so the same product in different variants/units gets separate lines
-      const idx = state.items.findIndex((item) => item.productId === product.id && (item.variantId || undefined) === (variantId || undefined) && (item.unitId || undefined) === (unitId || undefined));
-      if (idx >= 0) {
-        const newItems = [...state.items];
-        const currentItem = newItems[idx];
-        newItems[idx] = {
-          ...currentItem,
-          quantity: quantity != null ? currentItem.quantity + quantity : currentItem.quantity + 1,
-        };
-        return buildCartState(newItems, state.revision);
-      }
-      // Build jewellery data if product is jewellery-linked
-      const ji = product.jewelleryItem;
-      const jewelleryData = ji ? {
-        jewelleryItemId: ji.id,
-        goldRate: 0, // Will be set from live rate
-        purity: ji.purity,
-        metalType: ji.metalType,
-        grossWeight: ji.grossWeight,
-        stoneWeight: ji.stoneWeight,
-        netWeight: ji.netWeight,
-        fineWeight: ji.fineWeight,
-        wastagePercent: ji.wastagePercent,
-        makingChargeType: ji.makingChargeType,
-        makingChargeValue: ji.makingChargeValue,
-        stoneValue: ji.stoneValue,
-        tagNumber: ji.tagNumber,
-        huidNumber: ji.huidNumber,
-      } : null;
-
-      const newItems = [
-        ...state.items,
-        {
-          productId: product.id,
-          name: product.name,
-          price: effectivePrice,
-          quantity: quantity ?? 1,
-          discount: 0,
-          stockQuantity: product.stockQuantity ?? 0,
-          gstRate: Number(product.gstRate) || 0,
-          hsnCode: product.hsnCode || (ji ? "7113" : undefined),
-          unitId,
-          unitName,
-          conversionFactor: effectiveConversionFactor,
-          jewellery: jewelleryData,
-          categoryId: product.categoryId ?? null,
-          variantId,
-          variantName,
-          modifiers: actionModifiers,
-        },
-      ];
-      return buildCartState(newItems, state.revision);
-    }
-    case "REMOVE":
-      return buildCartState(
-        state.items.filter((item) => item.productId !== action.productId),
-        state.revision
+      const item = buildCartItemFromProduct(
+        action.product, action.quantity, action.unitId, action.unitName,
+        action.conversionFactor, action.price, action.variantId, action.variantName, action.modifiers,
       );
+      const op: OrderOperation = { op: "ADD_ITEM", item, quantity: action.quantity ?? 1 };
+      const newPending = [...state.pendingOps, { clientSeq: state.nextClientSeq, op }];
+      const displayItems = rebase(state.serverSnapshot, newPending);
+      return {
+        ...computeDerived(displayItems, state.revision),
+        serverSnapshot: state.serverSnapshot,
+        pendingOps: newPending,
+        nextClientSeq: state.nextClientSeq + 1,
+      };
+    }
+
+    // ── Legacy REMOVE ─────────────────────────────────────────────
+    case "REMOVE": {
+      const item = state.items.find(i => i.productId === action.productId);
+      if (!item) return state;
+      const lineKey = makeLineKey(item.productId, item.variantId, item.unitId);
+      const op: OrderOperation = { op: "REMOVE_ITEM", lineKey };
+      const newPending = [...state.pendingOps, { clientSeq: state.nextClientSeq, op }];
+      const displayItems = rebase(state.serverSnapshot, newPending);
+      return {
+        ...computeDerived(displayItems, state.revision),
+        serverSnapshot: state.serverSnapshot,
+        pendingOps: newPending,
+        nextClientSeq: state.nextClientSeq + 1,
+      };
+    }
+
+    // ── LOCAL_OP (new: explicit operation from addToCart/removeFromCart) ──
+    case "LOCAL_OP": {
+      const newPending = [...state.pendingOps, { clientSeq: action.clientSeq, op: action.op }];
+      const displayItems = rebase(state.serverSnapshot, newPending);
+      return {
+        ...computeDerived(displayItems, state.revision),
+        serverSnapshot: state.serverSnapshot,
+        pendingOps: newPending,
+        nextClientSeq: Math.max(state.nextClientSeq, action.clientSeq + 1),
+      };
+    }
+
+    // ── SERVER_STATE (server snapshot: discard ack'd ops, rebase remaining) ──
+    case "SERVER_STATE": {
+      const ackSeq = action.ackClientSeq ?? -1;
+      const remainingPending = state.pendingOps.filter(p => p.clientSeq > ackSeq);
+      const displayItems = rebase(action.snapshot, remainingPending);
+      return {
+        ...computeDerived(displayItems, state.revision),
+        serverSnapshot: action.snapshot,
+        pendingOps: remainingPending,
+        nextClientSeq: state.nextClientSeq,
+      };
+    }
+
     case "CLEAR":
-      return buildCartState([], state.revision);
+      return {
+        ...computeDerived([], state.revision),
+        serverSnapshot: [],
+        pendingOps: [],
+        nextClientSeq: state.nextClientSeq,
+      };
+
+    // ── RESTORE (tab switch / hydration: sets serverSnapshot, clears pending) ──
     case "RESTORE":
       return buildCartState(action.items, state.revision);
+
     default:
       return state;
   }
@@ -477,39 +534,21 @@ function POSTerminalContent() {
     isHydrated ? activeTabId : null,
     {
       organizationId,
-      currentState: currentSerializedState,
-      onRemoteOps: useCallback((_ops: OrderOperation[], newVersion: number, newState: SerializedOrderState) => {
-        // Another device changed this order — apply to local state
-        dispatchCart({ type: "RESTORE", items: newState.items });
-        if (newState.customerId !== selectedCustomer?.id) {
-          setSelectedCustomer(newState.customerId
-            ? { id: newState.customerId, name: newState.customerName || "", phone: null }
-            : null);
-        }
-        if (newState.tableId !== selectedTable?.id) {
-          setSelectedTable(newState.tableId
-            ? { id: newState.tableId, number: newState.tableNumber || 0, name: newState.tableName || "", section: newState.tableSection || undefined, capacity: newState.tableCapacity || 4 }
-            : null);
-        }
-        if (newState.orderType !== orderType) setOrderType(newState.orderType);
-        if (newState.isReturnMode !== isReturnMode) setIsReturnMode(newState.isReturnMode);
-        setKotSentQuantities(new Map(Object.entries(newState.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
-        setKotOrderIds(newState.kotOrderIds || []);
+      onRemoteUpdate: useCallback((items: CartItemData[], version: number, state: SerializedOrderState) => {
+        // Another device changed this order — rebase preserves our pending ops
+        dispatchCart({ type: "SERVER_STATE", snapshot: items, version });
+        // Update metadata from the full state
+        setSelectedCustomer(state.customerId
+          ? { id: state.customerId, name: state.customerName || "", phone: null }
+          : null);
+        setSelectedTable(state.tableId
+          ? { id: state.tableId, number: state.tableNumber || 0, name: state.tableName || "", section: state.tableSection || undefined, capacity: state.tableCapacity || 4 }
+          : null);
+        setOrderType(state.orderType);
+        setIsReturnMode(state.isReturnMode);
+        setKotSentQuantities(new Map(Object.entries(state.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
+        setKotOrderIds(state.kotOrderIds || []);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, []),
-      onConflict: useCallback((serverState: SerializedOrderState) => {
-        // Version conflict or reconnection — server wins
-        dispatchCart({ type: "RESTORE", items: serverState.items });
-        setSelectedCustomer(serverState.customerId
-          ? { id: serverState.customerId, name: serverState.customerName || "", phone: null }
-          : null);
-        setSelectedTable(serverState.tableId
-          ? { id: serverState.tableId, number: serverState.tableNumber || 0, name: serverState.tableName || "", section: serverState.tableSection || undefined, capacity: serverState.tableCapacity || 4 }
-          : null);
-        setOrderType(serverState.orderType);
-        setIsReturnMode(serverState.isReturnMode);
-        setKotSentQuantities(new Map(Object.entries(serverState.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
-        setKotOrderIds(serverState.kotOrderIds || []);
       }, []),
       onRemoteDelete: useCallback(() => {
         // Order deleted by another device — reset
@@ -720,27 +759,18 @@ function POSTerminalContent() {
   }, []);
 
   const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string) => {
-    dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName });
-    // Send real-time op — build a CartItemData matching what the reducer creates
-    const effectivePrice = price != null ? price : Number(product.price);
-    const item: CartItemData = {
-      productId: product.id,
-      name: product.name,
-      price: effectivePrice,
-      quantity: quantity ?? 1,
-      discount: 0,
-      stockQuantity: product.stockQuantity ?? 0,
-      gstRate: Number(product.gstRate) || 0,
-      hsnCode: product.hsnCode || undefined,
-      unitId,
-      unitName,
-      conversionFactor: conversionFactor ?? 1,
-      categoryId: product.categoryId ?? null,
-      variantId,
-      variantName,
-    };
-    sendOps([{ op: "ADD_ITEM", item, quantity: quantity ?? 1 }]);
-  }, [sendOps]);
+    const item = buildCartItemFromProduct(product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName);
+    const op: OrderOperation = { op: "ADD_ITEM", item, quantity: quantity ?? 1 };
+    const seq = cartState.nextClientSeq;
+    // Optimistic local update via pending-ops buffer
+    dispatchCart({ type: "LOCAL_OP", op, clientSeq: seq });
+    // Send to server — response will be handled by SERVER_STATE dispatch
+    sendOps([op], seq).then((result) => {
+      if (result.ok && "items" in result) {
+        dispatchCart({ type: "SERVER_STATE", snapshot: (result as any).items, version: result.version, ackClientSeq: seq });
+      }
+    });
+  }, [sendOps, cartState.nextClientSeq]);
 
   // State for variant picker dialog
   const [variantPickerProduct, setVariantPickerProduct] = useState<POSProduct | null>(null);
@@ -824,13 +854,18 @@ function POSTerminalContent() {
   }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex, setSearchQuery]);
 
   const removeFromCart = useCallback((productId: string) => {
-    // Find the item to get its variantId/unitId for the line key
     const item = cartState.items.find(i => i.productId === productId);
-    dispatchCart({ type: "REMOVE", productId });
-    if (item) {
-      sendOps([{ op: "REMOVE_ITEM", lineKey: makeLineKey(productId, item.variantId, item.unitId) }]);
-    }
-  }, [cartState.items, sendOps]);
+    if (!item) return;
+    const lineKey = makeLineKey(productId, item.variantId, item.unitId);
+    const op: OrderOperation = { op: "REMOVE_ITEM", lineKey };
+    const seq = cartState.nextClientSeq;
+    dispatchCart({ type: "LOCAL_OP", op, clientSeq: seq });
+    sendOps([op], seq).then((result) => {
+      if (result.ok && "items" in result) {
+        dispatchCart({ type: "SERVER_STATE", snapshot: (result as any).items, version: result.version, ackClientSeq: seq });
+      }
+    });
+  }, [cartState.items, cartState.nextClientSeq, sendOps]);
 
   const scrollCartToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = cartItemsContainerRef.current;
@@ -876,8 +911,8 @@ function POSTerminalContent() {
     setHeldOrderId(null);
     setSelectedCustomer(null);
     setMobileView("products");
-    sendOps([{ op: "CLEAR_ITEMS" }]);
-  }, [sendOps]);
+    sendOps([{ op: "CLEAR_ITEMS" }], cartState.nextClientSeq);
+  }, [sendOps, cartState.nextClientSeq]);
 
   const [showClearCartKotWarning, setShowClearCartKotWarning] = useState(false);
 
@@ -1292,8 +1327,8 @@ function POSTerminalContent() {
       kotSentQuantities: newSentQtys,
       kotOrderIds: updatedKotOrderIds,
     });
-    // Broadcast KOT update to other devices via Socket.IO
-    sendOps([{ op: "UPDATE_KOT", kotSentQuantities: Object.fromEntries(newSentQtys), kotOrderIds: updatedKotOrderIds }]);
+    // Broadcast KOT update to other devices via Ably
+    sendOps([{ op: "UPDATE_KOT", kotSentQuantities: Object.fromEntries(newSentQtys), kotOrderIds: updatedKotOrderIds }], cartState.nextClientSeq);
 
     // Print KOT
     try {

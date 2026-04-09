@@ -35,6 +35,8 @@ export async function publishOrderUpdate(
   ops: OrderOperation[],
   version: number,
   deviceId: string,
+  /** Full state for other devices to use as server snapshot (rebase pattern) */
+  state?: import("./realtime-types").SerializedOrderState,
 ): Promise<void> {
   const client = getAblyRest();
   if (!client) return;
@@ -45,12 +47,27 @@ export async function publishOrderUpdate(
       orderId,
       ops,
       version,
-      deviceId,
+      sourceDeviceId: deviceId,  // renamed for clarity — used by client to filter self-messages
+      // Include full state so other devices can use as server snapshot
+      items: state?.items,
+      label: state?.label,
+      orderType: state?.orderType,
+      isReturnMode: state?.isReturnMode,
+      customerId: state?.customerId,
+      customerName: state?.customerName,
+      tableId: state?.tableId,
+      tableNumber: state?.tableNumber,
+      tableName: state?.tableName,
+      tableSection: state?.tableSection,
+      tableCapacity: state?.tableCapacity,
+      heldOrderId: state?.heldOrderId,
+      kotSentQuantities: state?.kotSentQuantities,
+      kotOrderIds: state?.kotOrderIds,
     });
 
     // Also notify org channel for tab-list sync
     const org = client.channels.get(orgChannel(orgId));
-    await org.publish("order:updated", { orderId, deviceId });
+    await org.publish("order:updated", { orderId, sourceDeviceId: deviceId });
   } catch (err) {
     console.error("[Ably] Failed to publish order update:", err);
   }
