@@ -2885,6 +2885,7 @@ function POSTerminalContent() {
         modifiers={variantPickerProduct?.modifiers || []}
         onSelect={(variant, selectedModifiers) => {
           if (variantPickerProduct) {
+            feedbackAddItem();
             addToCart(
               variantPickerProduct,
               1,
