@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/client";
 import { getProductStock } from "@/lib/inventory/fifo";
+import { resolveQuantity } from "./quantity-utils";
 
 const MAX_DEPTH = 10;
 
@@ -92,6 +93,7 @@ async function resolveComponents(
     productId: string;
     product: { id: string; name: string; cost: Decimal };
     quantity: Decimal;
+    quantityType: string;
     wastagePercent: Decimal;
     isPhantom: boolean;
   }>,
@@ -116,7 +118,8 @@ async function resolveComponents(
       continue;
     }
 
-    const baseQty = Number(item.quantity) * parentMultiplier;
+    const resolvedQty = resolveQuantity(Number(item.quantity), item.quantityType as "ABSOLUTE" | "PERCENTAGE", outputQuantity);
+    const baseQty = resolvedQty * parentMultiplier;
     const wastage = Number(item.wastagePercent);
     const effectiveQty = baseQty * (1 + wastage / 100);
 

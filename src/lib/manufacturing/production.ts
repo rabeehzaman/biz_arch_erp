@@ -1,5 +1,6 @@
 import { Decimal } from "@prisma/client/runtime/client";
 import { consumeStockFIFO, restoreStockFromConsumptions } from "@/lib/inventory/fifo";
+import { resolveQuantity } from "./quantity-utils";
 
 // Type for transaction client
 type PrismaTransaction = Parameters<Parameters<typeof import("@/lib/prisma").prisma.$transaction>[0]>[0];

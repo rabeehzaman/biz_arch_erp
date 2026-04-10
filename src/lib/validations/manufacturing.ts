@@ -5,6 +5,7 @@ import { z } from "zod";
 export const bomItemSchema = z.object({
   productId: z.string().min(1, "Component product is required"),
   quantity: z.number().positive("Quantity must be positive"),
+  quantityType: z.enum(["ABSOLUTE", "PERCENTAGE"]).default("ABSOLUTE"),
   unitId: z.string().optional().nullable(),
   wastagePercent: z.number().min(0).max(100).default(0),
   issueMethod: z.enum(["BACKFLUSH", "MANUAL"]).default("BACKFLUSH"),

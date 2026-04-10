@@ -133,6 +133,7 @@ export async function PUT(
             organizationId,
             productId: item.productId,
             quantity: item.quantity,
+            quantityType: item.quantityType ?? "ABSOLUTE",
             unitId: item.unitId ?? null,
             wastagePercent: item.wastagePercent ?? 0,
             issueMethod: item.issueMethod ?? "BACKFLUSH",

@@ -5,6 +5,7 @@ import { getOrgId, isManufacturingModuleEnabled } from "@/lib/auth-utils";
 import { createProductionOrderSchema } from "@/lib/validations/manufacturing";
 import { generateAutoNumber } from "@/lib/accounting/auto-number";
 import { toMidnightUTC } from "@/lib/date-utils";
+import { resolveQuantity } from "@/lib/manufacturing/quantity-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -103,13 +104,16 @@ export async function POST(request: NextRequest) {
         outputWarehouseId: data.outputWarehouseId ?? null,
         notes: data.notes ?? null,
         items: {
-          create: bom.items.map((bomItem) => ({
-            organizationId,
-            productId: bomItem.productId,
-            requiredQuantity: (Number(bomItem.quantity) / bomOutputQty) * plannedQty * (1 + Number(bomItem.wastagePercent) / 100),
-            issueMethod: bomItem.issueMethod,
-            unitId: bomItem.unitId,
-          })),
+          create: bom.items.map((bomItem) => {
+            const resolvedQty = resolveQuantity(Number(bomItem.quantity), bomItem.quantityType, bomOutputQty);
+            return {
+              organizationId,
+              productId: bomItem.productId,
+              requiredQuantity: (resolvedQty / bomOutputQty) * plannedQty * (1 + Number(bomItem.wastagePercent) / 100),
+              issueMethod: bomItem.issueMethod,
+              unitId: bomItem.unitId,
+            };
+          }),
         },
       },
       include: {

@@ -24,6 +24,7 @@ interface Product {
 interface BOMItemRow {
   productId: string;
   quantity: number;
+  quantityType: "ABSOLUTE" | "PERCENTAGE";
   wastagePercent: number;
   issueMethod: "BACKFLUSH" | "MANUAL";
   isPhantom: boolean;
@@ -44,7 +45,7 @@ export default function NewBOMPage() {
   const [processLossPercent, setProcessLossPercent] = useState(0);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<BOMItemRow[]>([
-    { productId: "", quantity: 1, wastagePercent: 0, issueMethod: "BACKFLUSH", isPhantom: false },
+    { productId: "", quantity: 1, quantityType: "ABSOLUTE" as const, wastagePercent: 0, issueMethod: "BACKFLUSH" as const, isPhantom: false },
   ]);
 
   useEffect(() => {
@@ -233,9 +234,29 @@ export default function NewBOMPage() {
                     emptyText={t("manufacturing.noBOMFound")}
                   />
                 </div>
-                <div className="w-24">
-                  <Label>{t("common.quantity")}</Label>
-                  <Input type="number" min="0.0001" step="any" value={item.quantity} onChange={(e) => updateItem(index, "quantity", Number(e.target.value))} />
+                <div className="w-32">
+                  <Label>{item.quantityType === "PERCENTAGE" ? "%" : t("common.quantity")}</Label>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0.0001"
+                      max={item.quantityType === "PERCENTAGE" ? 100 : undefined}
+                      step="any"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant={item.quantityType === "PERCENTAGE" ? "default" : "outline"}
+                      size="sm"
+                      className="h-9 w-9 shrink-0 px-0 text-xs font-bold"
+                      onClick={() => updateItem(index, "quantityType", item.quantityType === "PERCENTAGE" ? "ABSOLUTE" : "PERCENTAGE")}
+                      title={item.quantityType === "PERCENTAGE" ? "Switch to absolute quantity" : "Switch to percentage of output"}
+                    >
+                      %
+                    </Button>
+                  </div>
                 </div>
                 <div className="w-20">
                   <Label>{t("manufacturing.wastagePercent")}</Label>

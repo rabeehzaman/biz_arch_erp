@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
             organizationId,
             productId: item.productId,
             quantity: item.quantity,
+            quantityType: item.quantityType ?? "ABSOLUTE",
             unitId: item.unitId ?? null,
             wastagePercent: item.wastagePercent,
             issueMethod: item.issueMethod,

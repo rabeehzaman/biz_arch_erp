@@ -1,5 +1,6 @@
 import { Decimal } from "@prisma/client/runtime/client";
 import { consumeStockFIFO, getProductStock } from "@/lib/inventory/fifo";
+import { resolveQuantity } from "./quantity-utils";
 
 // Type for transaction client
 type PrismaTransaction = Parameters<Parameters<typeof import("@/lib/prisma").prisma.$transaction>[0]>[0];
@@ -51,7 +52,8 @@ export async function consumeBOMIngredientsForSale(
   // Check consumption policy for BLOCK mode
   if (bom.consumptionPolicy === "BLOCK") {
     for (const item of bom.items) {
-      const effectiveQty = (Number(item.quantity) / bomOutputQty) * qty * (1 + Number(item.wastagePercent) / 100);
+      const resolvedQty = resolveQuantity(Number(item.quantity), (item as any).quantityType || "ABSOLUTE", bomOutputQty);
+      const effectiveQty = (resolvedQty / bomOutputQty) * qty * (1 + Number(item.wastagePercent) / 100);
       const stock = await getProductStock(item.productId, tx, warehouseId);
       const available = stock ? Number(stock.totalQuantity) : 0;
       if (available < effectiveQty) {
@@ -64,7 +66,8 @@ export async function consumeBOMIngredientsForSale(
 
   // Consume each ingredient
   for (const item of bom.items) {
-    const effectiveQty = (Number(item.quantity) / bomOutputQty) * qty * (1 + Number(item.wastagePercent) / 100);
+    const resolvedQty = resolveQuantity(Number(item.quantity), (item as any).quantityType || "ABSOLUTE", bomOutputQty);
+    const effectiveQty = (resolvedQty / bomOutputQty) * qty * (1 + Number(item.wastagePercent) / 100);
 
     // Warn mode: check availability and warn
     if (bom.consumptionPolicy === "WARN") {

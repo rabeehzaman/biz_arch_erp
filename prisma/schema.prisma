@@ -1575,6 +1575,11 @@ enum ConsumptionPolicy {
   BLOCK
 }
 
+enum QuantityType {
+  ABSOLUTE
+  PERCENTAGE
+}
+
 enum AdjustmentType {
   INCREASE
   DECREASE
@@ -3396,6 +3401,7 @@ model BOMItem {
   product           Product         @relation("BOMComponent", fields: [productId], references: [id])
 
   quantity          Decimal         @db.Decimal(10, 4)
+  quantityType      QuantityType    @default(ABSOLUTE)
   unitId            String?
   unit              Unit?           @relation(fields: [unitId], references: [id])
   wastagePercent    Decimal         @default(0) @db.Decimal(5, 2)
