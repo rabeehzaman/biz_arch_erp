@@ -62,7 +62,7 @@ export default function NewBOMPage() {
   }, [bomType]);
 
   function addItem() {
-    setItems([...items, { productId: "", quantity: 1, wastagePercent: 0, issueMethod: "BACKFLUSH", isPhantom: false }]);
+    setItems([...items, { productId: "", quantity: 1, quantityType: "ABSOLUTE" as const, wastagePercent: 0, issueMethod: "BACKFLUSH" as const, isPhantom: false }]);
   }
 
   function removeItem(index: number) {
