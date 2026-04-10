@@ -41,6 +41,7 @@ import {
   Gem,
   Wrench,
   UtensilsCrossed,
+  Cog,
   Grid3X3,
   ClipboardList,
   Tags,
@@ -134,6 +135,11 @@ const restaurantNavigation = [
   { nameKey: "nav.restaurantKotHistory", href: "/restaurant/kot-history", icon: ClipboardList },
 ];
 
+const manufacturingNavigation = [
+  { nameKey: "nav.bomList", href: "/manufacturing/bom", icon: ClipboardList },
+  { nameKey: "nav.productionOrders", href: "/manufacturing/production-orders", icon: Cog },
+];
+
 // When jewellery module is enabled, items integrate into existing sections
 const jewelleryGeneralNav: NavItem[] = [
   { nameKey: "nav.jewelleryDashboard", href: "/jewellery-shop/dashboard", icon: LayoutDashboard },
@@ -197,6 +203,8 @@ const NAME_TO_KEY: Record<string, string> = {
   "Restaurant Dashboard": "nav.restaurantDashboard",
   "Tables": "nav.restaurantTables",
   "KOT History": "nav.restaurantKotHistory",
+  "Bill of Materials": "nav.bomList",
+  "Production Orders": "nav.productionOrders",
   "Profit by Items": "nav.profitByItems",
   "Sales by Customer": "nav.salesByCustomer",
   "Sales by Item": "nav.salesByItem",
@@ -348,6 +356,7 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
   const isMobileShopEnabled = session?.user?.isMobileShopModuleEnabled;
   const isJewelleryEnabled = session?.user?.isJewelleryModuleEnabled;
   const isRestaurantEnabled = (session?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
+  const isManufacturingEnabled = (session?.user as { isManufacturingModuleEnabled?: boolean })?.isManufacturingModuleEnabled;
   const isPriceListEnabled = (session?.user as { isPriceListEnabled?: boolean })?.isPriceListEnabled;
 
   // When jewellery is enabled, integrate jewellery items into existing sections
@@ -361,6 +370,7 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
   const visibleInventory = filterItems(inventoryNavigation);
   const visibleMobileShop = filterItems(mobileShopNavigation);
   const visibleRestaurant = filterItems(restaurantNavigation);
+  const visibleManufacturing = filterItems(manufacturingNavigation);
   const sidebarOrder = useSidebarSectionOrder();
 
   // Data-driven section rendering — allows configurable order
@@ -404,9 +414,13 @@ function SidebarContent({ onNavigate, collapsed }: { onNavigate?: () => void; co
         isRestaurantEnabled && visibleRestaurant.length > 0 ? (
           <CollapsibleSection title="nav.restaurant" icon={UtensilsCrossed} items={visibleRestaurant} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ) : null,
+      manufacturing: () =>
+        isManufacturingEnabled && visibleManufacturing.length > 0 ? (
+          <CollapsibleSection title="nav.manufacturing" icon={Cog} items={visibleManufacturing} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
+        ) : null,
     };
     return map;
-  }, [visibleNav, visibleSales, visiblePurchases, visibleAccounting, visibleInventory, visibleMobileShop, visibleRestaurant, multiBranchEnabled, isMobileShopEnabled, isJewelleryEnabled, isRestaurantEnabled, pathname, onNavigate, collapsed]);
+  }, [visibleNav, visibleSales, visiblePurchases, visibleAccounting, visibleInventory, visibleMobileShop, visibleRestaurant, visibleManufacturing, multiBranchEnabled, isMobileShopEnabled, isJewelleryEnabled, isRestaurantEnabled, isManufacturingEnabled, pathname, onNavigate, collapsed]);
 
   const orderedSections = sidebarOrder ?? [...SIDEBAR_SECTIONS];
 

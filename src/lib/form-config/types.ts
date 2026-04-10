@@ -265,6 +265,7 @@ export const SIDEBAR_SECTIONS = [
   "purchases",
   "accounting",
   "inventory",
+  "manufacturing",
   "mobileShop",
   "jewellery",
   "restaurant",
@@ -339,6 +340,7 @@ export const SIDEBAR_ITEMS = [
   { group: "Purchases", items: ["Suppliers", "Purchase Invoices", "Debit Notes", "Supplier Payments", "Karigars", "Jewellery Repairs"] },
   { group: "Accounting", items: ["Expenses", "Cash & Bank", "Journal Entries", "Chart of Accounts"] },
   { group: "Inventory", items: ["Branches", "Stock Transfers", "Opening Stock", "Stock Take"] },
+  { group: "Manufacturing", items: ["Bill of Materials", "Production Orders"] },
   { group: "Reports", items: ["Profit by Items", "Sales by Customer", "Customer Balances", "Supplier Balances", "Unified Ledger", "Trial Balance", "Profit & Loss", "Balance Sheet", "Cash Flow", "Expense Report", "Stock Summary", "Branch P&L"] },
 ] as const;
 

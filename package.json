@@ -6,7 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "next dev --turbopack --hostname 0.0.0.0",
+    "dev": "next dev --turbopack",
     "build": "prisma generate && NODE_OPTIONS='--max-old-space-size=8192' next build",
     "start": "node server.mjs",
     "start:next": "next start",

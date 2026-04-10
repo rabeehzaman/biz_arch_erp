@@ -20,6 +20,7 @@ import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
+import { consumeBOMIngredientsForSale } from "@/lib/manufacturing/auto-consume";
 
 
 type Tx = any;
@@ -643,8 +644,35 @@ export async function POST(request: NextRequest) {
               data: { costOfGoodsSold: bundleTotalCOGS },
             });
           } else {
-            // Standard product: consume stock directly
             const baseQuantity = Number(invoiceItem.quantity) * itemConversionFactor;
+
+            // BOM auto-consume: check if manufacturing module enabled and product has recipe BOM
+            const org = await tx.organization.findUnique({
+              where: { id: organizationId },
+              select: { isManufacturingModuleEnabled: true },
+            });
+            if (org?.isManufacturingModuleEnabled) {
+              try {
+                const bomResult = await consumeBOMIngredientsForSale(
+                  invoiceItem.productId, baseQuantity, invoiceItem.id,
+                  now, tx, organizationId, posSession.warehouseId
+                );
+                if (bomResult) {
+                  await tx.invoiceItem.update({
+                    where: { id: invoiceItem.id },
+                    data: { costOfGoodsSold: bomResult.totalCOGS },
+                  });
+                  if (bomResult.warnings.length > 0) {
+                    warnings.push(...bomResult.warnings);
+                  }
+                  continue;
+                }
+              } catch (bomError) {
+                warnings.push((bomError as Error).message);
+              }
+            }
+
+            // Standard product: consume stock directly
             const fifoResult = await consumeStockFIFO(
               invoiceItem.productId,
               baseQuantity,

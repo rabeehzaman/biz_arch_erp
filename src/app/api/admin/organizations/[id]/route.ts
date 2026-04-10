@@ -181,6 +181,7 @@ export async function PUT(
       jewelleryEnabledPurities,
       jewelleryEnabledMetals,
       isRestaurantModuleEnabled,
+      isManufacturingModuleEnabled,
       restaurantTablesEnabled,
       restaurantKotPrintingEnabled,
       restaurantThemeEnabled,
@@ -450,6 +451,9 @@ export async function PUT(
 
     // Price list module
     if (isPriceListEnabled !== undefined) updateData.isPriceListEnabled = isPriceListEnabled;
+
+    // Manufacturing / BOM module
+    if (isManufacturingModuleEnabled !== undefined) updateData.isManufacturingModuleEnabled = isManufacturingModuleEnabled;
 
     // Restaurant module settings
     if (isRestaurantModuleEnabled !== undefined) updateData.isRestaurantModuleEnabled = isRestaurantModuleEnabled;

@@ -79,6 +79,9 @@ export async function GET(
         case "STOCK_TRANSFER":
           sourceReference = "Stock Transfer";
           break;
+        case "PRODUCTION":
+          sourceReference = "Production";
+          break;
         default:
           sourceReference = lot.sourceType;
       }

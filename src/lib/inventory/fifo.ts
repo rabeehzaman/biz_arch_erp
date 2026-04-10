@@ -181,7 +181,7 @@ export async function consumeStockFIFO(
   tx: PrismaTransaction,
   organizationId?: string,
   warehouseId?: string | null,
-  referenceType: "INVOICE" | "STOCK_TRANSFER" | "INVENTORY_ADJUSTMENT" = "INVOICE"
+  referenceType: "INVOICE" | "STOCK_TRANSFER" | "INVENTORY_ADJUSTMENT" | "PRODUCTION" = "INVOICE"
 ): Promise<FIFOConsumptionResult> {
   const qty =
     quantityNeeded instanceof Decimal
@@ -235,6 +235,8 @@ export async function consumeStockFIFO(
       consumptionData.invoiceItemId = referenceId;
     } else if (referenceType === "STOCK_TRANSFER") {
       consumptionData.stockTransferItemId = referenceId;
+    } else if (referenceType === "PRODUCTION") {
+      consumptionData.productionOrderItemId = referenceId;
     } else {
       consumptionData.inventoryAdjustmentItemId = referenceId;
     }
@@ -297,13 +299,15 @@ export async function consumeStockFIFO(
 export async function restoreStockFromConsumptions(
   referenceId: string,
   tx: PrismaTransaction,
-  referenceType: "INVOICE" | "STOCK_TRANSFER" | "INVENTORY_ADJUSTMENT" = "INVOICE"
+  referenceType: "INVOICE" | "STOCK_TRANSFER" | "INVENTORY_ADJUSTMENT" | "PRODUCTION" = "INVOICE"
 ): Promise<void> {
   // Get all consumptions for this item
   const whereClause = referenceType === "INVOICE"
     ? { invoiceItemId: referenceId }
     : referenceType === "STOCK_TRANSFER"
     ? { stockTransferItemId: referenceId }
+    : referenceType === "PRODUCTION"
+    ? { productionOrderItemId: referenceId }
     : { inventoryAdjustmentItemId: referenceId };
 
   const consumptions = await tx.stockLotConsumption.findMany({

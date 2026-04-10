@@ -38,6 +38,7 @@ export async function GET() {
         roundOffMode: true,
         isPriceListEnabled: true,
         isRestaurantModuleEnabled: true,
+        isManufacturingModuleEnabled: true,
       },
     });
 
@@ -45,7 +46,7 @@ export async function GET() {
       return NextResponse.json(DEFAULT_SETTINGS);
     }
 
-    const result: CompanySettingsFormData & { isPriceListEnabled?: boolean; isRestaurantModuleEnabled?: boolean } = {
+    const result: CompanySettingsFormData & { isPriceListEnabled?: boolean; isRestaurantModuleEnabled?: boolean; isManufacturingModuleEnabled?: boolean } = {
       companyName: org.name || "",
       companyAddress: org.address || "",
       companyCity: org.city || "",
@@ -62,6 +63,7 @@ export async function GET() {
       roundOffMode: normalizeRoundOffMode(org.roundOffMode),
       isPriceListEnabled: org.isPriceListEnabled ?? false,
       isRestaurantModuleEnabled: org.isRestaurantModuleEnabled ?? false,
+      isManufacturingModuleEnabled: org.isManufacturingModuleEnabled ?? false,
     };
 
     return NextResponse.json(result);

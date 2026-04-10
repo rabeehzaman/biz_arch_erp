@@ -51,6 +51,10 @@ export function isTaxInclusivePrice(session: Session): boolean {
   return (session.user as { isTaxInclusivePrice?: boolean }).isTaxInclusivePrice === true;
 }
 
+export function isManufacturingModuleEnabled(session: Session): boolean {
+  return (session.user as { isManufacturingModuleEnabled?: boolean }).isManufacturingModuleEnabled === true;
+}
+
 export function isPriceListEnabled(session: Session): boolean {
   return (session.user as { isPriceListEnabled?: boolean }).isPriceListEnabled === true;
 }

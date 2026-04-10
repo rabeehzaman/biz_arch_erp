@@ -94,6 +94,9 @@ model Organization {
   restaurantThemeColor              String?  @default("#c0392b")
   restaurantThemePreset             String?  @default("bistro")
 
+  // Manufacturing / BOM Module
+  isManufacturingModuleEnabled      Boolean  @default(false)
+
   weighMachineBarcodePrefix    String?  @default("77")
   weighMachineProductCodeLen   Int?     @default(5)
   weighMachineWeightDigits     Int?     @default(5)
@@ -248,6 +251,13 @@ model Organization {
   productUnitConversions     ProductUnitConversion[]
   productVariants            ProductVariant[]
 
+  // Manufacturing / BOM Module Relations
+  billOfMaterials            BillOfMaterials[]
+  bomItems                   BOMItem[]
+  productionOrders           ProductionOrder[]
+  productionOrderItems       ProductionOrderItem[]
+  productionConsumptions     ProductionConsumption[]
+
   // Multi-org membership
   memberships                UserOrganization[] @relation("OrgMemberships")
 
@@ -356,6 +366,11 @@ model Unit {
   productUnitConversions ProductUnitConversion[]
   priceListItems         PriceListItem[]
 
+  // Manufacturing / BOM Relations
+  bomOutputUnits         BillOfMaterials[]
+  bomItems               BOMItem[]
+  productionOrderItems   ProductionOrderItem[]
+
   @@unique([organizationId, code])
   @@index([organizationId])
   @@map("units")
@@ -420,6 +435,12 @@ model Product {
 
   // Product variants (e.g. Medium/Large sizes with different prices)
   variants             ProductVariant[]
+
+  // Manufacturing / BOM Relations
+  boms                    BillOfMaterials[]   @relation("ProductBOM")
+  bomComponentOf          BOMItem[]           @relation("BOMComponent")
+  productionOrders        ProductionOrder[]   @relation("ProductionProduct")
+  productionComponents    ProductionOrderItem[] @relation("ProductionComponent")
 
   @@unique([organizationId, sku])
   @@unique([organizationId, barcode])
@@ -1482,6 +1503,10 @@ model StockLot {
 
   stockTransferId String?
 
+  // Manufacturing: production order that created this lot
+  productionOrderId String?
+  productionOrder   ProductionOrder? @relation(fields: [productionOrderId], references: [id])
+
   warehouseId String?
   warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
 
@@ -1493,8 +1518,9 @@ model StockLot {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  consumptions          StockLotConsumption[]
-  debitNoteConsumptions DebitNoteLotConsumption[]
+  consumptions            StockLotConsumption[]
+  debitNoteConsumptions   DebitNoteLotConsumption[]
+  productionConsumptions  ProductionConsumption[]
 
   @@index([productId, lotDate])
   @@index([productId, remainingQuantity])
@@ -1503,6 +1529,7 @@ model StockLot {
   @@index([organizationId, productId])
   @@index([warehouseId])
   @@index([purchaseInvoiceId])
+  @@index([productionOrderId])
   @@map("stock_lots")
 }
 
@@ -1512,6 +1539,40 @@ enum StockSourceType {
   ADJUSTMENT
   CREDIT_NOTE
   STOCK_TRANSFER
+  PRODUCTION
+}
+
+// ==================== MANUFACTURING / BOM ENUMS ====================
+
+enum BOMStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BOMType {
+  MANUFACTURING
+  RECIPE
+  KIT
+}
+
+enum ProductionOrderStatus {
+  DRAFT
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum IssueMethod {
+  BACKFLUSH
+  MANUAL
+}
+
+enum ConsumptionPolicy {
+  ALLOW_NEGATIVE
+  WARN
+  BLOCK
 }
 
 enum AdjustmentType {
@@ -1540,6 +1601,10 @@ model StockLotConsumption {
   inventoryAdjustmentItemId String?
   inventoryAdjustmentItem   InventoryAdjustmentItem? @relation(fields: [inventoryAdjustmentItemId], references: [id], onDelete: Cascade)
 
+  // Manufacturing: production order item that consumed this lot
+  productionOrderItemId String?
+  productionOrderItem   ProductionOrderItem? @relation(fields: [productionOrderItemId], references: [id], onDelete: Cascade)
+
   quantityConsumed Decimal @db.Decimal(10, 4)
   unitCost         Decimal @db.Decimal(10, 2)
   totalCost        Decimal @db.Decimal(12, 2)
@@ -1550,6 +1615,7 @@ model StockLotConsumption {
   @@index([invoiceItemId])
   @@index([stockTransferItemId])
   @@index([inventoryAdjustmentItemId])
+  @@index([productionOrderItemId])
   @@index([organizationId])
   @@map("stock_lot_consumptions")
 }
@@ -2243,6 +2309,10 @@ model Warehouse {
   userAccess              UserWarehouseAccess[]
   posRegisterConfigs      POSRegisterConfig[]
   inventoryAdjustments    InventoryAdjustment[]
+
+  // Manufacturing Relations
+  productionSourceOrders  ProductionOrder[] @relation("ProductionSourceWarehouse")
+  productionOutputOrders  ProductionOrder[] @relation("ProductionOutputWarehouse")
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -3277,4 +3347,171 @@ model Attachment {
   @@index([organizationId, documentType, documentId])
   @@index([organizationId])
   @@map("attachments")
+}
+
+// ==================== MANUFACTURING / BOM ====================
+
+model BillOfMaterials {
+  id                String            @id @default(cuid())
+  organizationId    String
+  organization      Organization      @relation(fields: [organizationId], references: [id])
+
+  productId         String
+  product           Product           @relation("ProductBOM", fields: [productId], references: [id])
+
+  version           Int               @default(1)
+  name              String
+  status            BOMStatus         @default(DRAFT)
+  bomType           BOMType           @default(MANUFACTURING)
+  isDefault         Boolean           @default(true)
+  outputQuantity    Decimal           @default(1) @db.Decimal(10, 4)
+  autoConsumeOnSale Boolean           @default(false)
+  consumptionPolicy ConsumptionPolicy @default(WARN)
+  processLossPercent Decimal          @default(0) @db.Decimal(5, 2)
+  totalMaterialCost Decimal?          @db.Decimal(12, 2)
+  unitId            String?
+  unit              Unit?             @relation(fields: [unitId], references: [id])
+  notes             String?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  items             BOMItem[]
+  productionOrders  ProductionOrder[]
+
+  @@unique([organizationId, productId, version])
+  @@index([organizationId, productId, isDefault, status])
+  @@index([organizationId, status])
+  @@map("bill_of_materials")
+}
+
+model BOMItem {
+  id                String          @id @default(cuid())
+  bomId             String
+  bom               BillOfMaterials @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  organizationId    String
+  organization      Organization    @relation(fields: [organizationId], references: [id])
+
+  productId         String
+  product           Product         @relation("BOMComponent", fields: [productId], references: [id])
+
+  quantity          Decimal         @db.Decimal(10, 4)
+  unitId            String?
+  unit              Unit?           @relation(fields: [unitId], references: [id])
+  wastagePercent    Decimal         @default(0) @db.Decimal(5, 2)
+  issueMethod       IssueMethod     @default(BACKFLUSH)
+  isPhantom         Boolean         @default(false)
+  sortOrder         Int             @default(0)
+  notes             String?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([bomId, productId])
+  @@index([bomId])
+  @@index([productId])
+  @@index([organizationId])
+  @@map("bom_items")
+}
+
+model ProductionOrder {
+  id                  String                @id @default(cuid())
+  productionNumber    String
+  organizationId      String
+  organization        Organization          @relation(fields: [organizationId], references: [id])
+
+  bomId               String
+  bom                 BillOfMaterials       @relation(fields: [bomId], references: [id])
+  productId           String
+  product             Product               @relation("ProductionProduct", fields: [productId], references: [id])
+
+  plannedQuantity     Decimal               @db.Decimal(10, 4)
+  completedQuantity   Decimal               @default(0) @db.Decimal(10, 4)
+  scrapQuantity       Decimal               @default(0) @db.Decimal(10, 4)
+
+  status              ProductionOrderStatus @default(DRAFT)
+  plannedDate         DateTime?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+
+  sourceWarehouseId   String?
+  sourceWarehouse     Warehouse?            @relation("ProductionSourceWarehouse", fields: [sourceWarehouseId], references: [id])
+  outputWarehouseId   String?
+  outputWarehouse     Warehouse?            @relation("ProductionOutputWarehouse", fields: [outputWarehouseId], references: [id])
+
+  totalMaterialCost   Decimal               @default(0) @db.Decimal(12, 2)
+  unitProductionCost  Decimal               @default(0) @db.Decimal(10, 2)
+  notes               String?
+
+  // V2 extensibility
+  workCenterId        String?
+  routingId           String?
+
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  items               ProductionOrderItem[]
+  consumptions        ProductionConsumption[]
+  outputLots          StockLot[]
+
+  @@unique([organizationId, productionNumber])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, plannedDate(sort: Desc)])
+  @@index([bomId])
+  @@index([productId])
+  @@map("production_orders")
+}
+
+model ProductionOrderItem {
+  id                  String          @id @default(cuid())
+  productionOrderId   String
+  productionOrder     ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  organizationId      String
+  organization        Organization    @relation(fields: [organizationId], references: [id])
+
+  productId           String
+  product             Product         @relation("ProductionComponent", fields: [productId], references: [id])
+  requiredQuantity    Decimal         @db.Decimal(10, 4)
+  consumedQuantity    Decimal         @default(0) @db.Decimal(10, 4)
+  issueMethod         IssueMethod     @default(BACKFLUSH)
+  unitCost            Decimal         @default(0) @db.Decimal(10, 2)
+  totalCost           Decimal         @default(0) @db.Decimal(12, 2)
+  unitId              String?
+  unit                Unit?           @relation(fields: [unitId], references: [id])
+
+  createdAt           DateTime        @default(now())
+
+  consumptions        ProductionConsumption[]
+  lotConsumptions     StockLotConsumption[]
+
+  @@index([productionOrderId])
+  @@index([productId])
+  @@index([organizationId])
+  @@map("production_order_items")
+}
+
+model ProductionConsumption {
+  id                    String              @id @default(cuid())
+  productionOrderId     String
+  productionOrder       ProductionOrder     @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  productionOrderItemId String
+  productionOrderItem   ProductionOrderItem @relation(fields: [productionOrderItemId], references: [id], onDelete: Cascade)
+  organizationId        String
+  organization          Organization        @relation(fields: [organizationId], references: [id])
+
+  stockLotId            String
+  stockLot              StockLot            @relation(fields: [stockLotId], references: [id])
+  quantityConsumed      Decimal             @db.Decimal(10, 4)
+  unitCost              Decimal             @db.Decimal(10, 2)
+  totalCost             Decimal             @db.Decimal(12, 2)
+
+  createdAt             DateTime            @default(now())
+
+  @@index([productionOrderId])
+  @@index([productionOrderItemId])
+  @@index([stockLotId])
+  @@index([organizationId])
+  @@map("production_consumptions")
 }

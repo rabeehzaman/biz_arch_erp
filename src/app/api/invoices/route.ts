@@ -13,6 +13,7 @@ import { generateInvoiceUUID, computeInvoiceHash, getNextICV, getLastInvoiceHash
 import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
+import { consumeBOMIngredientsForSale } from "@/lib/manufacturing/auto-consume";
 import { isAdminRole } from "@/lib/access-control";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
@@ -513,6 +514,32 @@ export async function POST(request: NextRequest) {
                 data: { costOfGoodsSold: bundleTotalCOGS },
               });
             } else {
+              // BOM auto-consume: if manufacturing module enabled and product has active recipe BOM
+              const org = await tx.organization.findUnique({
+                where: { id: organizationId },
+                select: { isManufacturingModuleEnabled: true },
+              });
+              if (org?.isManufacturingModuleEnabled) {
+                try {
+                  const bomResult = await consumeBOMIngredientsForSale(
+                    invoiceItem.productId, baseQuantity, invoiceItem.id,
+                    invoiceDate, tx, organizationId, warehouseId || null
+                  );
+                  if (bomResult) {
+                    await tx.invoiceItem.update({
+                      where: { id: invoiceItem.id },
+                      data: { costOfGoodsSold: bomResult.totalCOGS },
+                    });
+                    if (bomResult.warnings.length > 0) {
+                      warnings.push(...bomResult.warnings);
+                    }
+                    continue;
+                  }
+                } catch (bomError) {
+                  warnings.push((bomError as Error).message);
+                }
+              }
+
               // Normal flow: consume stock and update COGS
               const fifoResult = await consumeStockFIFO(
                 invoiceItem.productId,
