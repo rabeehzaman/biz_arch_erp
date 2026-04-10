@@ -49,7 +49,7 @@ export default function NewBOMPage() {
   useEffect(() => {
     fetch("/api/products?limit=1000")
       .then((r) => r.json())
-      .then((data) => setProducts(Array.isArray(data) ? data : data.products || []))
+      .then((data) => setProducts(Array.isArray(data) ? data : data.data || []))
       .catch(() => {});
   }, []);
 
