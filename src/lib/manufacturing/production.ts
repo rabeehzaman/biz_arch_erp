@@ -157,7 +157,7 @@ export async function completeProductionOrder(
   });
 
   return {
-    completedQuantity,
+    completedQuantity: completionQuantity,
     scrapQuantity,
     totalMaterialCost: Math.round(totalMaterialCost * 100) / 100,
     unitProductionCost: Math.round(unitProductionCost * 100) / 100,

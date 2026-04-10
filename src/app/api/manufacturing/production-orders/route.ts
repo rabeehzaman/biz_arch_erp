@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     const parsed = createProductionOrderSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0]?.message || "Invalid input" },
+        { error: parsed.error.issues[0]?.message || "Invalid input" },
         { status: 400 }
       );
     }
@@ -81,9 +81,10 @@ export async function POST(request: NextRequest) {
 
     // Generate auto-number
     const productionNumber = await generateAutoNumber(
-      organizationId,
+      prisma.productionOrder as never,
       "productionNumber",
-      "MFG"
+      "MFG",
+      organizationId
     );
 
     // Create production order with items derived from BOM
