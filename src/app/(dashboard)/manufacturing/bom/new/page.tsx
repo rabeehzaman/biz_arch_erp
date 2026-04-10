@@ -69,7 +69,7 @@ export default function NewBOMPage() {
 
   function updateItem(index: number, field: keyof BOMItemRow, value: unknown) {
     const updated = [...items];
-    (updated[index] as Record<string, unknown>)[field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setItems(updated);
   }
 
