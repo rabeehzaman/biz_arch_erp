@@ -198,7 +198,7 @@ export default function QuotationsPage() {
                         </div>
 
                         <div className="mt-4 min-w-0">
-                          <p className="font-medium text-slate-900">{quotation.customer.name}</p>
+                          <Link href={`/customers/${quotation.customer.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-slate-900 hover:underline">{quotation.customer.name}</Link>
                           {quotation.customer.email && (
                             <p className="mt-1 break-all text-sm text-slate-500">{quotation.customer.email}</p>
                           )}
@@ -263,7 +263,7 @@ export default function QuotationsPage() {
                             </TableCell>
                             <TableCell>
                               <div>
-                                <div className="font-medium">{quotation.customer.name}</div>
+                                <Link href={`/customers/${quotation.customer.id}`} className="font-medium hover:underline">{quotation.customer.name}</Link>
                                 {quotation.customer.email && (
                                   <div className="text-sm text-slate-500">
                                     {quotation.customer.email}

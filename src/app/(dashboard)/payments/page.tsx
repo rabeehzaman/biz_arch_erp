@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -556,7 +557,7 @@ export default function PaymentsPage() {
                       </div>
 
                       <div className="mt-4 min-w-0">
-                        <p className="font-medium text-slate-900">{payment.customer.name}</p>
+                        <Link href={`/customers/${payment.customer.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-slate-900 hover:underline">{payment.customer.name}</Link>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Badge variant="outline">{methodLabels(t)[payment.paymentMethod]}</Badge>
                           {payment.invoice?.invoiceNumber && (
@@ -606,7 +607,7 @@ export default function PaymentsPage() {
                             <TableCell className="font-medium">
                               {payment.paymentNumber}
                             </TableCell>
-                            <TableCell>{payment.customer.name}</TableCell>
+                            <TableCell><Link href={`/customers/${payment.customer.id}`} className="hover:underline">{payment.customer.name}</Link></TableCell>
                             <TableCell className="hidden sm:table-cell">
                               {payment.invoice?.invoiceNumber || "-"}
                             </TableCell>

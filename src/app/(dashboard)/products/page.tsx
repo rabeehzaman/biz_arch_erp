@@ -119,6 +119,7 @@ function ProductsPageContent() {
   const [isBulkConversionOpen, setIsBulkConversionOpen] = useState(false);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [localSearch, setLocalSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const toggleSort = (field: string) => {
@@ -422,8 +423,14 @@ function ProductsPageContent() {
                         <Input
                           ref={searchInputRef}
                           placeholder={t("products.searchProducts")}
-                          value={productSearch}
-                          onChange={(e) => { setProductSearch(e.target.value); setSelectedIds(new Set()); }}
+                          value={localSearch}
+                          onChange={(e) => setLocalSearch(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              setProductSearch(localSearch);
+                              setSelectedIds(new Set());
+                            }
+                          }}
                           className="pl-10"
                         />
                       </div>

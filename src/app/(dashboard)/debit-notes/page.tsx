@@ -172,7 +172,7 @@ export default function DebitNotesPage() {
                       </div>
 
                       <div className="mt-4 min-w-0">
-                        <p className="font-medium text-slate-900">{debitNote.supplier.name}</p>
+                        <Link href={`/suppliers/${debitNote.supplier.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-slate-900 hover:underline">{debitNote.supplier.name}</Link>
                         {debitNote.supplier.email && (
                           <p className="mt-1 break-all text-sm text-slate-500">{debitNote.supplier.email}</p>
                         )}
@@ -230,9 +230,9 @@ export default function DebitNotesPage() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium">
+                              <Link href={`/suppliers/${debitNote.supplier.id}`} className="font-medium hover:underline">
                                 {debitNote.supplier.name}
-                              </div>
+                              </Link>
                               {debitNote.supplier.email && (
                                 <div className="text-sm text-slate-500">
                                   {debitNote.supplier.email}

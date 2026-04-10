@@ -181,7 +181,7 @@ export default function DebitNoteDetailPage() {
             <CardContent className="space-y-2">
               <div>
                 <div className="text-sm text-slate-500">{t("suppliers.supplierName")}</div>
-                <div className="font-medium">{debitNote.supplier.name}</div>
+                <Link href={`/suppliers/${debitNote.supplier.id}`} className="font-medium hover:underline">{debitNote.supplier.name}</Link>
               </div>
               {debitNote.supplier.email && (
                 <div>
@@ -259,7 +259,7 @@ export default function DebitNoteDetailPage() {
                     <TableRow key={item.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{item.description}</div>
+                          <div className="font-medium">{item.product?.id ? <Link href={`/products/${item.product.id}`} className="hover:underline">{item.description}</Link> : item.description}</div>
                           {item.product?.sku && (
                             <div className="text-sm text-slate-500">
                               {t("products.sku")}: {item.product.sku}
@@ -284,7 +284,7 @@ export default function DebitNoteDetailPage() {
             <div className="sm:hidden divide-y divide-slate-200 border rounded-lg">
               {debitNote.items.map((item) => (
                 <div key={item.id} className="p-3 space-y-1">
-                  <div className="font-medium text-sm">{item.description}</div>
+                  <div className="font-medium text-sm">{item.product?.id ? <Link href={`/products/${item.product.id}`} className="hover:underline">{item.description}</Link> : item.description}</div>
                   {item.product?.sku && (
                     <div className="text-xs text-slate-500">{t("products.sku")}: {item.product.sku}</div>
                   )}

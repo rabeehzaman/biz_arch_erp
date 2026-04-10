@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
@@ -36,6 +36,32 @@ export function SupplierCombobox({
 }: SupplierComboboxProps) {
   const { t } = useLanguage();
   const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editSupplier, setEditSupplier] = useState<any>(null);
+  const [isLoadingSupplier, setIsLoadingSupplier] = useState(false);
+
+  const handleEditSupplier = async () => {
+    if (!value) return;
+    setIsLoadingSupplier(true);
+    try {
+      const response = await fetch(`/api/suppliers/${value}`);
+      if (!response.ok) throw new Error("Failed to fetch supplier");
+      const supplier = await response.json();
+      setEditSupplier(supplier);
+      setIsEditDialogOpen(true);
+    } catch {
+      // silently fail
+    } finally {
+      setIsLoadingSupplier(false);
+    }
+  };
+
+  const handleSupplierEdited = (updatedSupplier: Supplier) => {
+    onValueChange(updatedSupplier.id);
+    if (onSupplierCreated) {
+      onSupplierCreated(updatedSupplier);
+    }
+  };
 
   const handleSupplierCreated = (newSupplier: Supplier) => {
     // Auto-select the newly created supplier
@@ -74,6 +100,18 @@ export function SupplierCombobox({
           autoFocus={autoFocus}
         />
       </div>
+      {value && (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={handleEditSupplier}
+          disabled={isLoadingSupplier}
+          title={t("suppliers.editSupplier")}
+        >
+          {isLoadingSupplier ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+        </Button>
+      )}
       <Button
         type="button"
         variant="outline"
@@ -88,6 +126,13 @@ export function SupplierCombobox({
         open={isSupplierDialogOpen}
         onOpenChange={setIsSupplierDialogOpen}
         onSuccess={handleSupplierCreated}
+      />
+
+      <SupplierFormDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={handleSupplierEdited}
+        supplierToEdit={editSupplier}
       />
     </div>
   );

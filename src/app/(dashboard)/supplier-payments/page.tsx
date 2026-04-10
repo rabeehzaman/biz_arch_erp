@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { LoadMoreTrigger } from "@/components/load-more-trigger";
 import {
@@ -546,7 +547,7 @@ export default function SupplierPaymentsPage() {
                       </div>
 
                       <div className="mt-4 min-w-0">
-                        <p className="font-medium text-slate-900">{payment.supplier.name}</p>
+                        <Link href={`/suppliers/${payment.supplier.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-slate-900 hover:underline">{payment.supplier.name}</Link>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Badge variant="outline">{methodLabels[payment.paymentMethod]}</Badge>
                           {payment.purchaseInvoice?.purchaseInvoiceNumber && (
@@ -597,7 +598,7 @@ export default function SupplierPaymentsPage() {
                           <TableCell className="font-medium">
                             {payment.paymentNumber}
                           </TableCell>
-                          <TableCell>{payment.supplier.name}</TableCell>
+                          <TableCell><Link href={`/suppliers/${payment.supplier.id}`} className="hover:underline">{payment.supplier.name}</Link></TableCell>
                           <TableCell className="hidden sm:table-cell">
                             {payment.purchaseInvoice?.purchaseInvoiceNumber || "-"}
                           </TableCell>

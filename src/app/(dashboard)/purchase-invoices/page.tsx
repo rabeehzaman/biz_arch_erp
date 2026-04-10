@@ -314,7 +314,7 @@ export default function PurchaseInvoicesPage() {
                       </div>
 
                       <div className="mt-4 min-w-0">
-                        <p className="font-medium text-slate-900">{invoice.supplier.name}</p>
+                        <Link href={`/suppliers/${invoice.supplier.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-slate-900 hover:underline">{invoice.supplier.name}</Link>
                         {invoice.supplier.email && (
                           <p className="mt-1 break-all text-sm text-slate-500">{invoice.supplier.email}</p>
                         )}
@@ -435,7 +435,7 @@ export default function PurchaseInvoicesPage() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{invoice.supplier.name}</div>
+                              <Link href={`/suppliers/${invoice.supplier.id}`} className="font-medium hover:underline">{invoice.supplier.name}</Link>
                               {invoice.supplier.email && (
                                 <div className="text-sm text-slate-500">
                                   {invoice.supplier.email}

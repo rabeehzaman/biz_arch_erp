@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, Pencil, Printer, Receipt, CreditCard, Send, Share2 } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, Pencil, Printer, Receipt, CreditCard, Share2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +66,9 @@ interface InvoiceItem {
   cgstAmount?: number | null;
   sgstAmount?: number | null;
   igstAmount?: number | null;
+  productId: string | null;
   product: {
+    id: string;
     name: string;
   } | null;
 }
@@ -143,7 +145,7 @@ export default function InvoiceDetailPage({
     reference: "",
   });
   const [cashBankAccounts, setCashBankAccounts] = useState<Array<{ id: string; name: string; accountSubType: string; isDefault: boolean }>>([]);
-  const [isMarkingSent, setIsMarkingSent] = useState(false);
+
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
@@ -264,23 +266,6 @@ export default function InvoiceDetailPage({
     }
   };
 
-  const handleMarkAsSent = async () => {
-    if (!invoice) return;
-    setIsMarkingSent(true);
-    try {
-      const response = await fetch(`/api/invoices/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "markSent" }),
-      });
-      if (!response.ok) throw new Error("Failed to mark as sent");
-      fetchInvoice();
-    } catch {
-      toast.error(t("sales.failedToMarkAsSent"));
-    } finally {
-      setIsMarkingSent(false);
-    }
-  };
 
   const handlePrint = async () => {
     setIsPrinting(true);
@@ -462,24 +447,6 @@ export default function InvoiceDetailPage({
                 <span className="hidden sm:inline">{t("sales.recordPayment")}</span>
               </Button>
             )}
-            {invoice && !invoice.sentAt && Number(invoice.balanceDue) > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleMarkAsSent}
-                disabled={isMarkingSent}
-                className="col-span-1 h-9 w-full sm:h-10 sm:w-auto"
-              >
-                <Send className="h-4 w-4 sm:mr-2" />
-                <span className="sm:hidden">{t("common.sent2")}</span>
-                <span className="hidden sm:inline">{t("sales.markAsSent")}</span>
-              </Button>
-            )}
-            {invoice?.sentAt && (
-              <span className="col-span-2 text-xs text-slate-500 sm:w-auto sm:text-sm">
-                {t("sales.sentOn")} {format(new Date(invoice.sentAt), "dd MMM yyyy")}
-              </span>
-            )}
             <div className="col-span-1 flex w-full sm:w-auto">
               <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} disabled={isDownloading} className="h-9 flex-1 rounded-r-none border-r-0 sm:h-10 sm:flex-initial">
                 {isDownloading
@@ -603,7 +570,7 @@ export default function InvoiceDetailPage({
                       {t("common.billTo")}
                     </h3>
                     <div>
-                      <p className="font-semibold">{invoice.customer.name}</p>
+                      <Link href={`/customers/${invoice.customer.id}`} className="font-semibold hover:underline">{invoice.customer.name}</Link>
                       {invoice.customer.email && (
                         <p className="text-sm text-slate-600">{invoice.customer.email}</p>
                       )}
@@ -688,7 +655,7 @@ export default function InvoiceDetailPage({
                         const itemTax = getItemTax(item);
                         return (
                         <TableRow key={item.id}>
-                          <TableCell>{item.description}</TableCell>
+                          <TableCell>{item.productId ? <Link href={`/products/${item.productId}`} className="hover:underline">{item.description}</Link> : item.description}</TableCell>
                           <TableCell className="text-right">{Number(item.quantity)}</TableCell>
                           <TableCell className="text-right">
                             {symbol}{Number(item.unitPrice).toLocaleString(locale)}
@@ -732,7 +699,7 @@ export default function InvoiceDetailPage({
                     const itemTax = getItemTax(item);
                     return (
                     <div key={item.id} className="p-3 space-y-1">
-                      <div className="font-medium text-sm">{item.description}</div>
+                      <div className="font-medium text-sm">{item.productId ? <Link href={`/products/${item.productId}`} className="hover:underline">{item.description}</Link> : item.description}</div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                         <span>{t("common.qty")}: {Number(item.quantity)}</span>
                         <span>{t("common.price")}: {symbol}{Number(item.unitPrice).toLocaleString(locale)}</span>

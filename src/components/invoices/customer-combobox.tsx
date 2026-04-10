@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
@@ -36,7 +36,33 @@ export function CustomerCombobox({
 }: CustomerComboboxProps) {
   const { t } = useLanguage();
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editCustomer, setEditCustomer] = useState<any>(null);
+  const [isLoadingCustomer, setIsLoadingCustomer] = useState(false);
   const [localCustomer, setLocalCustomer] = useState<Customer | null>(null);
+
+  const handleEditCustomer = async () => {
+    if (!value) return;
+    setIsLoadingCustomer(true);
+    try {
+      const response = await fetch(`/api/customers/${value}`);
+      if (!response.ok) throw new Error("Failed to fetch customer");
+      const customer = await response.json();
+      setEditCustomer(customer);
+      setIsEditDialogOpen(true);
+    } catch {
+      // silently fail
+    } finally {
+      setIsLoadingCustomer(false);
+    }
+  };
+
+  const handleCustomerEdited = (updatedCustomer: Customer) => {
+    setLocalCustomer(updatedCustomer);
+    if (onCustomerCreated) {
+      onCustomerCreated(updatedCustomer);
+    }
+  };
 
   const handleCustomerCreated = (newCustomer: Customer) => {
     setLocalCustomer(newCustomer);
@@ -80,6 +106,18 @@ export function CustomerCombobox({
           autoFocus={autoFocus}
         />
       </div>
+      {value && (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={handleEditCustomer}
+          disabled={isLoadingCustomer}
+          title={t("customers.editCustomer")}
+        >
+          {isLoadingCustomer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+        </Button>
+      )}
       <Button
         type="button"
         variant="outline"
@@ -94,6 +132,13 @@ export function CustomerCombobox({
         open={isCustomerDialogOpen}
         onOpenChange={setIsCustomerDialogOpen}
         onSuccess={handleCustomerCreated}
+      />
+
+      <CustomerFormDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={handleCustomerEdited}
+        customerToEdit={editCustomer}
       />
     </div>
   );

@@ -39,7 +39,9 @@ interface QuotationItem {
   cgstAmount?: number | null;
   sgstAmount?: number | null;
   igstAmount?: number | null;
+  productId: string | null;
   product: {
+    id: string;
     name: string;
   } | null;
 }
@@ -377,7 +379,7 @@ export default function QuotationDetailPage({
                   {t("quotations.quotationTo")}
                 </h3>
                 <div className="text-slate-900">
-                  <div className="font-semibold">{quotation.customer.name}</div>
+                  <Link href={`/customers/${quotation.customer.id}`} className="font-semibold hover:underline">{quotation.customer.name}</Link>
                   {quotation.customer.email && (
                     <div className="text-sm text-slate-600">
                       {quotation.customer.email}
@@ -457,7 +459,7 @@ export default function QuotationDetailPage({
                     const itemTax = getItemTax(item);
                     return (
                     <TableRow key={item.id}>
-                      <TableCell>{item.description}</TableCell>
+                      <TableCell>{item.productId ? <Link href={`/products/${item.productId}`} className="hover:underline">{item.description}</Link> : item.description}</TableCell>
                       <TableCell className="text-right">
                         {Number(item.quantity).toLocaleString(locale)}
                       </TableCell>
@@ -499,7 +501,7 @@ export default function QuotationDetailPage({
                 const itemTax = getItemTax(item);
                 return (
                 <div key={item.id} className="p-3 space-y-1">
-                  <div className="font-medium text-sm">{item.description}</div>
+                  <div className="font-medium text-sm">{item.productId ? <Link href={`/products/${item.productId}`} className="hover:underline">{item.description}</Link> : item.description}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>{t("common.qty")}: {Number(item.quantity).toLocaleString(locale)}</span>
                     <span>{t("common.price")}: {symbol}{Number(item.unitPrice).toLocaleString(locale)}</span>

@@ -179,7 +179,7 @@ export default function CreditNotesPage() {
                       </div>
 
                       <div className="mt-4 min-w-0">
-                        <p className="font-medium text-slate-900">{creditNote.customer.name}</p>
+                        <Link href={`/customers/${creditNote.customer.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-slate-900 hover:underline">{creditNote.customer.name}</Link>
                         {creditNote.customer.email && (
                           <p className="mt-1 break-all text-sm text-slate-500">{creditNote.customer.email}</p>
                         )}
@@ -237,9 +237,9 @@ export default function CreditNotesPage() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium">
+                              <Link href={`/customers/${creditNote.customer.id}`} className="font-medium hover:underline">
                                 {creditNote.customer.name}
-                              </div>
+                              </Link>
                               {creditNote.customer.email && (
                                 <div className="text-sm text-slate-500">
                                   {creditNote.customer.email}

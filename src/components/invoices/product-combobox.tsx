@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
@@ -43,7 +43,33 @@ export function ProductCombobox({
   const { t } = useLanguage();
   const { symbol, locale } = useCurrency();
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<any>(null);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [localProduct, setLocalProduct] = useState<Product | null>(null);
+
+  const handleEditProduct = async () => {
+    if (!value) return;
+    setIsLoadingProduct(true);
+    try {
+      const response = await fetch(`/api/products/${value}`);
+      if (!response.ok) throw new Error("Failed to fetch product");
+      const product = await response.json();
+      setEditProduct(product);
+      setIsEditDialogOpen(true);
+    } catch {
+      // silently fail
+    } finally {
+      setIsLoadingProduct(false);
+    }
+  };
+
+  const handleProductEdited = (updatedProduct: any) => {
+    setLocalProduct(updatedProduct);
+    if (onProductCreated) {
+      onProductCreated(updatedProduct);
+    }
+  };
 
   const handleProductCreated = (newProduct: any) => {
     setLocalProduct(newProduct);
@@ -127,6 +153,18 @@ export function ProductCombobox({
           mobileFullScreen
         />
       </div>
+      {value && (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={handleEditProduct}
+          disabled={isLoadingProduct}
+          title={t("products.editProduct")}
+        >
+          {isLoadingProduct ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+        </Button>
+      )}
       <Button
         type="button"
         variant="outline"
@@ -141,6 +179,13 @@ export function ProductCombobox({
         open={isProductDialogOpen}
         onOpenChange={setIsProductDialogOpen}
         onSuccess={handleProductCreated}
+      />
+
+      <ProductFormDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={handleProductEdited}
+        productToEdit={editProduct}
       />
     </div>
   );

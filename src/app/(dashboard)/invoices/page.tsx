@@ -325,7 +325,7 @@ export default function InvoicesPage() {
                                     {status.label}
                                   </Badge>
                                 </div>
-                                <p className="truncate text-sm font-medium text-slate-800">{invoice.customer.name}</p>
+                                <Link href={`/customers/${invoice.customer.id}`} onClick={(e) => e.stopPropagation()} className="truncate text-sm font-medium text-slate-800 hover:underline">{invoice.customer.name}</Link>
                               </div>
                               <div className="shrink-0 text-right">
                                 <p className="text-sm font-semibold text-slate-900">{fmt(Number(invoice.total))}</p>
@@ -384,9 +384,9 @@ export default function InvoicesPage() {
                                   <p className="text-sm font-semibold text-slate-900">
                                     {invoice.invoiceNumber}
                                   </p>
-                                  <p className="truncate text-sm text-slate-700">
+                                  <Link href={`/customers/${invoice.customer.id}`} onClick={(e) => e.stopPropagation()} className="truncate text-sm text-slate-700 hover:underline">
                                     {invoice.customer.name}
-                                  </p>
+                                  </Link>
                                   {invoice.customer.email && (
                                     <p className="truncate text-xs text-slate-500">
                                       {invoice.customer.email}
@@ -528,7 +528,7 @@ export default function InvoicesPage() {
                             </TableCell>
                             <TableCell>
                               <div>
-                                <div className="font-medium">{invoice.customer.name}</div>
+                                <Link href={`/customers/${invoice.customer.id}`} className="font-medium hover:underline">{invoice.customer.name}</Link>
                                 {invoice.customer.email && (
                                   <div className="text-sm text-slate-500">
                                     {invoice.customer.email}

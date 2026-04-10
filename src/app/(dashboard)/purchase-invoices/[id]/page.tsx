@@ -56,7 +56,9 @@ interface PurchaseInvoiceItem {
   cgstAmount?: number | null;
   sgstAmount?: number | null;
   igstAmount?: number | null;
+  productId: string | null;
   product: {
+    id: string;
     name: string;
   } | null;
   stockLot: {
@@ -408,7 +410,7 @@ export default function PurchaseInvoiceDetailPage({
                   {t("common.supplier")}
                 </h3>
                 <div>
-                  <p className="font-semibold">{invoice.supplier.name}</p>
+                  <Link href={`/suppliers/${invoice.supplier.id}`} className="font-semibold hover:underline">{invoice.supplier.name}</Link>
                   {invoice.supplier.email && (
                     <p className="text-sm text-slate-600">{invoice.supplier.email}</p>
                   )}
@@ -488,7 +490,7 @@ export default function PurchaseInvoiceDetailPage({
                     const itemTax = getItemTax(item);
                     return (
                     <TableRow key={item.id}>
-                      <TableCell>{item.description}</TableCell>
+                      <TableCell>{item.productId ? <Link href={`/products/${item.productId}`} className="hover:underline">{item.description}</Link> : item.description}</TableCell>
                       <TableCell className="text-right">{Number(item.quantity)}</TableCell>
                       <TableCell className="text-right">
                         {symbol}{Number(item.unitCost).toLocaleString(locale)}
@@ -542,7 +544,7 @@ export default function PurchaseInvoiceDetailPage({
                 const itemTax = getItemTax(item);
                 return (
                 <div key={item.id} className="p-3 space-y-1">
-                  <div className="font-medium text-sm">{item.description}</div>
+                  <div className="font-medium text-sm">{item.productId ? <Link href={`/products/${item.productId}`} className="hover:underline">{item.description}</Link> : item.description}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
                     <span>{t("common.qty")}: {Number(item.quantity)}</span>
                     <span>{t("common.cost")}: {symbol}{Number(item.unitCost).toLocaleString(locale)}</span>
