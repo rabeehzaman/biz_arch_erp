@@ -43,7 +43,7 @@ export interface CartItemData {
 
 interface CartItemProps {
   item: CartItemData;
-  onRemove: (productId: string) => void;
+  onRemove: (productId: string, variantId?: string) => void;
   kotSentQty?: number;
   onQuantityChange?: (productId: string, variantId: string | undefined, newQty: number) => void;
 }
@@ -88,7 +88,7 @@ export const CartItem = memo(function CartItem({
                 onClick={() => {
                   const minQty = kotSentQty ?? 0;
                   if (item.quantity <= 1 && minQty === 0) {
-                    onRemove(item.productId);
+                    onRemove(item.productId, item.variantId);
                   } else if (item.quantity > minQty) {
                     onQuantityChange(item.productId, item.variantId, item.quantity - 1);
                   }
@@ -125,7 +125,7 @@ export const CartItem = memo(function CartItem({
             variant="ghost"
             size="icon"
             className="h-7 w-7 md:h-6 md:w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
-            onClick={() => onRemove(item.productId)}
+            onClick={() => onRemove(item.productId, item.variantId)}
           >
             <Trash2 className="h-3 w-3" />
           </Button>

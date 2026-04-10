@@ -1,6 +1,6 @@
 "use client";
 
-import { Armchair, ArrowLeft, Clock, CopyPlus, History, Languages, Loader2, LogOut, MapPin, Package, PauseCircle, Printer, RotateCcw } from "lucide-react";
+import { Armchair, ArrowLeft, Clock, CopyPlus, History, Languages, Loader2, LogOut, MapPin, Package, PauseCircle, Printer, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -36,6 +36,8 @@ interface POSHeaderProps {
   onTabsClick?: () => void;
   isSocketConnected?: boolean;
   hiddenComponents?: Set<string>;
+  soundEnabled?: boolean;
+  onToggleSound?: () => void;
 }
 
 function POSClock() {
@@ -71,6 +73,8 @@ export function POSHeader({
   onTabsClick,
   isSocketConnected,
   hiddenComponents,
+  soundEnabled,
+  onToggleSound,
 }: POSHeaderProps) {
   const { data: authSession } = useSession();
   const { t, lang, setLanguage } = useLanguage();
@@ -245,6 +249,19 @@ export function POSHeader({
         <div className="hidden sm:block text-sm text-slate-300 truncate max-w-[100px]">
           {employeeName || authSession?.user?.name}
         </div>
+
+        {onToggleSound && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
+            onClick={onToggleSound}
+            title={soundEnabled ? "Sound on" : "Sound off"}
+            aria-label={soundEnabled ? "Sound on" : "Sound off"}
+          >
+            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
+        )}
 
         {editionConfig.isLanguageSwitchable && !hiddenComponents?.has("language-switcher") && (
         <Button

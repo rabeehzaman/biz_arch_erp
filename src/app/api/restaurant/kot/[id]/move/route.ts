@@ -17,7 +17,7 @@ export async function PUT(
     const { id } = await params;
     const { tableId } = await request.json();
 
-    if (!tableId) {
+    if (tableId === undefined) {
       return NextResponse.json({ error: "tableId is required" }, { status: 400 });
     }
 

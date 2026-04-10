@@ -65,12 +65,20 @@ export async function POST(
         );
       }
 
+      // Atomically increment orderCounter to get a unique order number
+      const updated = await prisma.pOSSession.update({
+        where: { id: posSession.id },
+        data: { orderCounter: { increment: 1 } },
+        select: { orderCounter: true },
+      });
+
       record = await prisma.pOSOpenOrder.create({
         data: {
           id: orderId,
           organizationId,
           sessionId: posSession.id,
-          label: "Order",
+          label: `Order #${updated.orderCounter}`,
+          orderNumber: updated.orderCounter,
           orderType: "DINE_IN",
           isReturnMode: false,
           items: [],

@@ -277,7 +277,7 @@ export function usePOSTabs(
 
     // Use the max order number found (not count) to avoid duplicates after deletions
     const maxOrderNum = deserialized.reduce((max, t) => Math.max(max, t.orderNumber), 0);
-    orderCounterRef.current = Math.max(maxOrderNum, dbOrders.length);
+    orderCounterRef.current = maxOrderNum;
     setIsHydrated(true);
   }, [dbOrders, isHydrated]);
 

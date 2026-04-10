@@ -74,6 +74,7 @@ import { normalizeRoundOffMode, roundCurrency } from "@/lib/round-off";
 import { parseWeightBarcode, type WeighMachineConfig } from "@/lib/weigh-machine/barcode-parser";
 import { useAndroidBackButton } from "@/hooks/use-android-back-button";
 import { usePosHiddenComponents } from "@/hooks/use-pos-hidden-components";
+import { usePosFeedback } from "@/hooks/use-pos-feedback";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const USE_CASH_ACCOUNT_VALUE = "__use_cash_account__";
@@ -185,7 +186,7 @@ interface CheckoutTimingPayload {
 
 type CartAction =
   | { type: "ADD"; product: any; quantity?: number; unitId?: string; unitName?: string; conversionFactor?: number; price?: number | null; variantId?: string; variantName?: string; modifiers?: string[] }
-  | { type: "REMOVE"; productId: string }
+  | { type: "REMOVE"; productId: string; variantId?: string }
   | { type: "SET_QUANTITY"; productId: string; variantId?: string; quantity: number }
   | { type: "CLEAR" }
   | { type: "RESTORE"; items: CartItemData[] };
@@ -311,7 +312,8 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
 
     case "REMOVE": {
-      const items = state.items.filter(i => i.productId !== action.productId);
+      const removeKey = makeLineKey(action.productId, action.variantId);
+      const items = state.items.filter(i => makeLineKey(i.productId, i.variantId) !== removeKey);
       return computeDerived(items, state.revision);
     }
 
@@ -368,6 +370,18 @@ function POSTerminalContent() {
   );
   const posSession: POSSessionData | null = sessionData?.session ?? null;
   const { isHidden: isPosComponentHidden, hiddenComponents: posHiddenSet } = usePosHiddenComponents(!!posSession);
+  const {
+    soundEnabled,
+    toggleSound,
+    feedbackAddItem,
+    feedbackQuantity,
+    feedbackRemoveItem,
+    feedbackCompleteSale,
+    feedbackKotSent,
+    feedbackError,
+    feedbackScan,
+    feedbackNavTap,
+  } = usePosFeedback();
 
   // Redirect to dashboard if no session found (after loading)
   useEffect(() => {
@@ -759,13 +773,14 @@ function POSTerminalContent() {
       return;
     }
 
+    feedbackAddItem();
     const defaultUc = fullProduct?.unitConversions?.find((uc: any) => uc.isDefaultUnit);
     if (defaultUc) {
       addToCart(tileProduct, 1, defaultUc.unitId, defaultUc.unit?.name, Number(defaultUc.conversionFactor), defaultUc.price != null ? Number(defaultUc.price) : null);
     } else {
       addToCart(tileProduct);
     }
-  }, [products, addToCart]);
+  }, [products, addToCart, feedbackAddItem]);
 
   // ── Barcode Scanner Listener ───────────────────────────────────────
   useEffect(() => {
@@ -792,6 +807,7 @@ function POSTerminalContent() {
             if (parsed) {
               const weightProduct = weighCodeIndex.get(parsed.productCode);
               if (weightProduct) {
+                feedbackScan();
                 addToCart(weightProduct, parsed.weightKg);
                 setSearchQuery("");
                 toast.success(`${weightProduct.name} — ${parsed.weightKg} kg`);
@@ -806,11 +822,13 @@ function POSTerminalContent() {
           const match = scanCodeIndex.get(barcodeBuffer);
 
           if (match) {
+            feedbackScan();
             addToCart(match.product, undefined, match.unitId, match.unitName, match.conversionFactor, match.price);
             setSearchQuery("");
             const displayName = match.unitName ? `${match.product.name} (${match.unitName})` : match.product.name;
             toast.success(`Added ${displayName}`);
           } else {
+            feedbackError();
             toast.error(`Product not found for barcode: ${barcodeBuffer}`);
           }
 
@@ -823,10 +841,10 @@ function POSTerminalContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex, setSearchQuery]);
+  }, [posSession, showCloseDialog, showHeldSheet, view, addToCart, weighMachineEnabled, weighMachineConfig, weighCodeIndex, scanCodeIndex, setSearchQuery, feedbackScan, feedbackError]);
 
-  const removeFromCart = useCallback((productId: string) => {
-    dispatchCart({ type: "REMOVE", productId });
+  const removeFromCart = useCallback((productId: string, variantId?: string) => {
+    dispatchCart({ type: "REMOVE", productId, variantId });
   }, []);
 
   const scrollCartToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -885,22 +903,46 @@ function POSTerminalContent() {
     clearCart();
   };
 
-  /** Reset a table back to AVAILABLE in the database */
-  const freeTable = useCallback((tableId: string) => {
-    fetch(`/api/restaurant/tables/${tableId}/status`, {
+  /** Reset a table back to AVAILABLE in the database (retry once on failure) */
+  const freeTable = useCallback(async (tableId: string) => {
+    const doFetch = () => fetch(`/api/restaurant/tables/${tableId}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "AVAILABLE" }),
-    }).catch(() => {});
+    });
+    try {
+      const res = await doFetch();
+      if (!res.ok) throw new Error();
+    } catch {
+      try {
+        await new Promise(r => setTimeout(r, 1000));
+        const res = await doFetch();
+        if (!res.ok) throw new Error();
+      } catch {
+        toast.error("Failed to free table — check table status manually");
+      }
+    }
   }, []);
 
-  /** Mark a table as OCCUPIED in the database */
-  const occupyTable = useCallback((tableId: string) => {
-    fetch(`/api/restaurant/tables/${tableId}/status`, {
+  /** Mark a table as OCCUPIED in the database (retry once on failure) */
+  const occupyTable = useCallback(async (tableId: string) => {
+    const doFetch = () => fetch(`/api/restaurant/tables/${tableId}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "OCCUPIED" }),
-    }).catch(() => {});
+    });
+    try {
+      const res = await doFetch();
+      if (!res.ok) throw new Error();
+    } catch {
+      try {
+        await new Promise(r => setTimeout(r, 1000));
+        const res = await doFetch();
+        if (!res.ok) throw new Error();
+      } catch {
+        toast.error("Failed to update table status — check table status manually");
+      }
+    }
   }, []);
 
   // ── Tab helpers ───────────────────────────────────────────────────
@@ -1305,6 +1347,10 @@ function POSTerminalContent() {
   /** Core KOT send logic — returns the created KOT id, or null if nothing to send */
   const cartLineKey = (productId: string, variantId?: string) => variantId ? `${productId}::${variantId}` : productId;
 
+  const hasUnsentKotItems = cart.length > 0 && cart.some(
+    (i) => (i.quantity - (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0)) > 0
+  );
+
   const sendKotForUnsentItems = async (opts?: { silent?: boolean }): Promise<{ kotId: string; kotSentQuantities: Map<string, number>; kotOrderIds: string[] } | null> => {
     // 1. Compute unsent items from LOCAL cart
     const itemsToSend: { productId: string; name: string; variantName?: string; modifiers?: string[]; quantity: number; categoryId?: string | null; lineKey: string }[] = [];
@@ -1424,7 +1470,7 @@ function POSTerminalContent() {
   };
 
   const handlePrintPreBill = useCallback(async () => {
-    if (isPrintingPreBill || cart.length === 0) return;
+    if (isPrintingPreBill || cart.length === 0 || hasUnsentKotItems) return;
     setIsPrintingPreBill(true);
     try {
       const data: PreBillReceiptData = {
@@ -1471,7 +1517,7 @@ function POSTerminalContent() {
     } finally {
       setIsPrintingPreBill(false);
     }
-  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, activeTabOrderNumber, t]);
+  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, activeTabOrderNumber, hasUnsentKotItems, t]);
 
   const handleSendToKitchen = async () => {
     if (kotInFlightRef.current) return;
@@ -1500,8 +1546,10 @@ function POSTerminalContent() {
         switchToNewTab(snapshot);
         resetLiveState();
       }
+      feedbackKotSent();
     } catch (error) {
       console.error("Failed to send KOT:", error);
+      feedbackError();
       toast.error("Failed to send order to kitchen");
     } finally {
       kotInFlightRef.current = false;
@@ -1511,27 +1559,29 @@ function POSTerminalContent() {
 
   // ── Cancel Sent Kitchen Item (Void KOT) ────────────────────────────
 
-  const [pendingCancelProductId, setPendingCancelProductId] = useState<string | null>(null);
+  const [pendingCancelItem, setPendingCancelItem] = useState<{ productId: string; variantId?: string } | null>(null);
 
-  const handleCartItemRemove = (productId: string) => {
-    const sentQty = kotSentQuantities.get(productId) ?? 0;
+  const handleCartItemRemove = (productId: string, variantId?: string) => {
+    const key = cartLineKey(productId, variantId);
+    const sentQty = kotSentQuantities.get(key) ?? 0;
     if (sentQty > 0) {
       // Item was sent to kitchen — need confirmation + void KOT
-      setPendingCancelProductId(productId);
+      setPendingCancelItem({ productId, variantId });
     } else {
       // Not sent to kitchen — remove normally
-      removeFromCart(productId);
+      removeFromCart(productId, variantId);
     }
   };
 
   const confirmCancelKitchenItem = async () => {
-    if (!pendingCancelProductId) return;
-    const productId = pendingCancelProductId;
-    const sentQty = kotSentQuantities.get(productId) ?? 0;
-    const item = cartState.items.find((i) => i.productId === productId);
+    if (!pendingCancelItem) return;
+    const { productId, variantId } = pendingCancelItem;
+    const key = cartLineKey(productId, variantId);
+    const sentQty = kotSentQuantities.get(key) ?? 0;
+    const item = cartState.items.find((i) => makeLineKey(i.productId, i.variantId) === makeLineKey(productId, variantId));
     if (!item || sentQty <= 0) {
-      removeFromCart(productId);
-      setPendingCancelProductId(null);
+      removeFromCart(productId, variantId);
+      setPendingCancelItem(null);
       return;
     }
 
@@ -1545,7 +1595,7 @@ function POSTerminalContent() {
           kotType: "VOID",
           orderType,
           serverName: authSession?.user?.name || undefined,
-          items: [{ productId: item.productId, name: item.name, quantity: sentQty }],
+          items: [{ productId: item.productId, name: item.variantName ? `${item.name} - ${item.variantName}` : item.name, quantity: sentQty }],
         }),
       });
 
@@ -1575,17 +1625,17 @@ function POSTerminalContent() {
 
       // Update sent quantities
       const newSentQtys = new Map(kotSentQuantities);
-      newSentQtys.delete(productId);
+      newSentQtys.delete(key);
       setKotSentQuantities(newSentQtys);
 
       // Remove from cart
-      removeFromCart(productId);
-      toast.success(`Cancelled: ${item.name} (void KOT sent to kitchen)`);
+      removeFromCart(productId, variantId);
+      toast.success(`Cancelled: ${item.variantName ? `${item.name} - ${item.variantName}` : item.name} (void KOT sent to kitchen)`);
     } catch (error) {
       console.error("Failed to cancel kitchen item:", error);
       toast.error("Failed to cancel kitchen item");
     } finally {
-      setPendingCancelProductId(null);
+      setPendingCancelItem(null);
     }
   };
 
@@ -1823,6 +1873,7 @@ function POSTerminalContent() {
       }
 
     } catch (err) {
+      feedbackError();
       toast.error(err instanceof Error ? err.message : t("pos.checkoutFailed"));
       // Restore cart so user can retry
       dispatchCart({ type: "RESTORE", items: completedCart });
@@ -2012,6 +2063,8 @@ function POSTerminalContent() {
         tabCount={tabCount}
         onTabsClick={() => setShowTabsSheet(true)}
         isSocketConnected={isRestaurantEnabled ? isSocketConnected : undefined}
+        soundEnabled={soundEnabled}
+        onToggleSound={toggleSound}
       />
 
       {/* Main Content */}
@@ -2057,7 +2110,7 @@ function POSTerminalContent() {
           <div className="flex shrink-0 gap-2 bg-slate-900 p-2 pb-[max(0.5rem,var(--app-safe-area-bottom))] sm:gap-3 sm:p-3 sm:pb-[max(0.75rem,var(--app-safe-area-bottom))] md:hidden">
               <button
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-700 px-3 py-3.5 text-sm font-semibold text-white active:bg-slate-600"
-                onClick={() => setMobileView("cart")}
+                onClick={() => { feedbackNavTap(); setMobileView("cart"); }}
               >
                 <ShoppingCart className="h-5 w-5" />
                 <Badge className="min-w-5 justify-center rounded-full bg-white px-1.5 py-0 text-xs text-slate-900">
@@ -2067,7 +2120,7 @@ function POSTerminalContent() {
               {isRestaurantEnabled && !isPosComponentHidden("table-select") && (
                 <button
                   className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-2 py-3.5 text-sm font-semibold text-white active:bg-amber-500"
-                  onClick={() => setShowTableSelect(true)}
+                  onClick={() => { feedbackNavTap(); setShowTableSelect(true); }}
                 >
                   <Armchair className="h-4 w-4" />
                   {selectedTable ? `T${selectedTable.number}` : t("restaurant.selectTable").split(" ")[0]}
@@ -2099,6 +2152,7 @@ function POSTerminalContent() {
                 )}
                 disabled={cart.length === 0}
                 onClick={() => {
+                  feedbackNavTap();
                   setChargedFromProducts(true);
                   setView("payment");
                   setMobileView("payment");
@@ -2191,9 +2245,10 @@ function POSTerminalContent() {
                     <CartItem
                       key={`${item.productId}:${item.variantId || ""}:${item.quantity}:${item.discount}`}
                       item={item}
-                      onRemove={isRestaurantEnabled ? handleCartItemRemove : removeFromCart}
+                      onRemove={(productId) => { feedbackRemoveItem(); (isRestaurantEnabled ? handleCartItemRemove : removeFromCart)(productId); }}
                       kotSentQty={isRestaurantEnabled ? (kotSentQuantities.get(cartLineKey(item.productId, item.variantId)) ?? 0) : undefined}
                       onQuantityChange={isRestaurantEnabled ? (productId, variantId, qty) => {
+                        feedbackQuantity();
                         dispatchCart({ type: "SET_QUANTITY", productId, variantId, quantity: qty });
                       } : undefined}
                     />
@@ -2252,7 +2307,7 @@ function POSTerminalContent() {
                         size="sm"
                         className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
                         onClick={handlePrintPreBill}
-                        disabled={isPrintingPreBill || cart.length === 0}
+                        disabled={isPrintingPreBill || cart.length === 0 || hasUnsentKotItems}
                       >
                         {isPrintingPreBill ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Receipt className="h-4 w-4 mr-1" />}
                         Bill
@@ -2728,9 +2783,10 @@ function POSTerminalContent() {
             }
           }}
           onTakeaway={() => {
+            const oldTable = selectedTable;
             // Free the old table if switching from dine-in
-            if (selectedTable) {
-              freeTable(selectedTable.id);
+            if (oldTable) {
+              freeTable(oldTable.id);
             }
 
             setSelectedTable(null);
@@ -2741,12 +2797,46 @@ function POSTerminalContent() {
             requestAnimationFrame(() => {
               persistTab(snapshotCurrentTab());
             });
+
+            // Notify kitchen if KOTs were already sent for this table
+            if (kotOrderIds.length > 0 && oldTable) {
+              // Update KOT records to clear table reference
+              for (const kotId of kotOrderIds) {
+                fetch(`/api/restaurant/kot/${kotId}/move`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ tableId: null }),
+                }).catch(() => {});
+              }
+              // Print kitchen notification
+              import("@/lib/restaurant/kot-print").then(({ printKOTMulti }) =>
+                printKOTMulti({
+                  kotNumber: "ORDER TYPE CHANGE",
+                  kotType: "STANDARD",
+                  orderType: "TAKEAWAY",
+                  tableName: oldTable.name,
+                  tableNumber: oldTable.number,
+                  section: oldTable.section || undefined,
+                  serverName: authSession?.user?.name || undefined,
+                  timestamp: new Date(),
+                  specialInstructions: `TABLE ${oldTable.number} → TAKEAWAY`,
+                  items: cartState.items
+                    .filter(i => (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0) > 0)
+                    .map(i => ({
+                      name: i.variantName ? `${i.name} - ${i.variantName}` : i.name,
+                      quantity: kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? i.quantity,
+                      modifiers: i.modifiers,
+                      categoryId: i.categoryId,
+                    })),
+                })
+              ).catch(() => {});
+            }
           }}
         />
       )}
 
       {/* Cancel Kitchen Item Confirmation Dialog */}
-      <Dialog open={!!pendingCancelProductId} onOpenChange={(open) => { if (!open) setPendingCancelProductId(null); }}>
+      <Dialog open={!!pendingCancelItem} onOpenChange={(open) => { if (!open) setPendingCancelItem(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{t("restaurant.cancelKitchenOrder") || "Cancel Kitchen Order?"}</DialogTitle>
@@ -2755,7 +2845,7 @@ function POSTerminalContent() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setPendingCancelProductId(null)}>
+            <Button variant="outline" onClick={() => setPendingCancelItem(null)}>
               {t("common.cancel")}
             </Button>
             <Button variant="destructive" onClick={confirmCancelKitchenItem}>

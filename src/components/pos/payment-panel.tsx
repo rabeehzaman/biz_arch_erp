@@ -14,6 +14,7 @@ import {
   DEFAULT_ENABLED_POS_PAYMENT_METHODS,
   type POSPaymentMethod,
 } from "@/lib/pos/payment-methods";
+import { usePosFeedback } from "@/hooks/use-pos-feedback";
 
 interface PaymentPanelProps {
   total: number;
@@ -36,6 +37,7 @@ export function PaymentPanel({
 }: PaymentPanelProps) {
   const { fmt: formatCurrency } = useCurrency();
   const { t } = useLanguage();
+  const { feedbackSelectMethod, feedbackCompleteSale } = usePosFeedback();
   const checkoutMethods = useMemo(
     () =>
       availableMethods.length > 0
@@ -75,6 +77,7 @@ export function PaymentPanel({
   );
 
   const handleComplete = () => {
+    feedbackCompleteSale();
     if (mode === "single") {
       const amount =
         selectedMethod === "CASH" || isCreditSale
@@ -204,6 +207,7 @@ export function PaymentPanel({
                       isSelected={selectedMethod === method}
                       compact
                       onClick={() => {
+                        feedbackSelectMethod();
                         setPreferredMethod(method);
                         if (method !== "CASH") {
                           setCashTendered(total.toFixed(2));
