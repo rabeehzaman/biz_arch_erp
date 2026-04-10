@@ -130,7 +130,7 @@ export default function ProductionOrderDetailPage() {
     : 0;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/manufacturing/production-orders">
           <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
