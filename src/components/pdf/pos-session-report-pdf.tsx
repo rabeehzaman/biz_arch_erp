@@ -678,6 +678,13 @@ export function POSSessionReportPDF({
               </Text>
             )}
           </View>
+          {report.session.settlementBankAccount && (
+            <View style={{ marginTop: 6 }}>
+              <Text style={[styles.cellText, { color: "#64748b" }]}>
+                {bilingual("Settled To", "تمت التسوية إلى")}: {report.session.settlementBankAccount}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>

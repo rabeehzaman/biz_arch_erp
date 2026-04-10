@@ -12,6 +12,18 @@ import {
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 import { roundCurrency } from "@/lib/round-off";
 
+const NON_CASH_METHOD_LABELS: Record<string, string> = {
+  CREDIT_CARD: "Card",
+  BANK_TRANSFER: "Bank Transfer",
+  UPI: "UPI",
+  CHECK: "Check",
+  OTHER: "Other",
+};
+
+function formatNonCashMethodLabel(method: string): string {
+  return NON_CASH_METHOD_LABELS[method] || method.replace(/_/g, " ");
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -178,6 +190,29 @@ export async function PUT(
       });
       const nonCashTotal = roundCurrency(Number(nonCashPayments._sum.amount || 0));
 
+      // Per-method breakdown for descriptive CashBankTransactions
+      const nonCashByMethod = nonCashTotal > 0
+        ? await tx.payment.groupBy({
+            by: ["paymentMethod"],
+            where: {
+              organizationId,
+              invoice: { posSessionId: id },
+              paymentMethod: { not: "CASH" },
+            },
+            _sum: { amount: true },
+            _count: { _all: true },
+          })
+        : [];
+
+      // Fetch branch name for CashBankTransaction descriptions
+      const branch = posSession.branchId
+        ? await tx.branch.findUnique({
+            where: { id: posSession.branchId },
+            select: { name: true },
+          })
+        : null;
+      const branchLabel = branch?.name ?? "";
+
       // Aggregate totals from invoices in this session
       const invoiceAggregates = await tx.invoice.aggregate({
         where: { organizationId, posSessionId: id },
@@ -292,7 +327,7 @@ export async function PUT(
                 transactionType: "DEPOSIT",
                 amount: depositAmount,
                 runningBalance: Number(updatedCB?.balance ?? 0),
-                description: `POS Session Close - Cash to Store Safe (${posSession.sessionNumber})`,
+                description: `POS Cash${branchLabel ? ` - ${branchLabel}` : ""} (${posSession.sessionNumber})`,
                 referenceType: "POS_SESSION",
                 referenceId: id,
                 transactionDate: now,
@@ -341,19 +376,43 @@ export async function PUT(
           });
 
           const updatedBank = await tx.cashBankAccount.findUnique({ where: { id: bankCBA.id } });
-          await tx.cashBankTransaction.create({
-            data: {
-              cashBankAccountId: bankCBA.id,
-              transactionType: "DEPOSIT",
-              amount: nonCashTotal,
-              runningBalance: Number(updatedBank?.balance ?? 0),
-              description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
-              referenceType: "POS_SESSION",
-              referenceId: id,
-              transactionDate: now,
-              organizationId,
-            },
-          });
+
+          // Create per-method CashBankTransactions for bank ledger clarity
+          if (nonCashByMethod.length > 0) {
+            for (const group of nonCashByMethod) {
+              const methodAmount = roundCurrency(Number(group._sum.amount || 0));
+              if (methodAmount <= 0) continue;
+              const methodLabel = formatNonCashMethodLabel(group.paymentMethod);
+              const txnCount = group._count._all;
+              await tx.cashBankTransaction.create({
+                data: {
+                  cashBankAccountId: bankCBA.id,
+                  transactionType: "DEPOSIT",
+                  amount: methodAmount,
+                  runningBalance: Number(updatedBank?.balance ?? 0),
+                  description: `POS ${methodLabel}${branchLabel ? ` - ${branchLabel}` : ""} (${txnCount} txn, ${posSession.sessionNumber})`,
+                  referenceType: "POS_SESSION",
+                  referenceId: id,
+                  transactionDate: now,
+                  organizationId,
+                },
+              });
+            }
+          } else {
+            await tx.cashBankTransaction.create({
+              data: {
+                cashBankAccountId: bankCBA.id,
+                transactionType: "DEPOSIT",
+                amount: nonCashTotal,
+                runningBalance: Number(updatedBank?.balance ?? 0),
+                description: `POS Non-Cash${branchLabel ? ` - ${branchLabel}` : ""} (${posSession.sessionNumber})`,
+                referenceType: "POS_SESSION",
+                referenceId: id,
+                transactionDate: now,
+                organizationId,
+              },
+            });
+          }
         } else if (nonCashTotal > 0 && effectiveSettleCashAccountId && !effectiveSettleBankAccountId) {
           // Fallback: no separate bank account configured — deposit non-cash to Store Safe
           const fallbackCBA = await tx.cashBankAccount.findFirst({
@@ -393,19 +452,43 @@ export async function PUT(
           });
 
           const updatedFallback = await tx.cashBankAccount.findUnique({ where: { id: fallbackCBA.id } });
-          await tx.cashBankTransaction.create({
-            data: {
-              cashBankAccountId: fallbackCBA.id,
-              transactionType: "DEPOSIT",
-              amount: nonCashTotal,
-              runningBalance: Number(updatedFallback?.balance ?? 0),
-              description: `POS Session Close - Non-Cash Deposit (${posSession.sessionNumber})`,
-              referenceType: "POS_SESSION",
-              referenceId: id,
-              transactionDate: now,
-              organizationId,
-            },
-          });
+
+          // Per-method CashBankTransactions (fallback to cash account)
+          if (nonCashByMethod.length > 0) {
+            for (const group of nonCashByMethod) {
+              const methodAmount = roundCurrency(Number(group._sum.amount || 0));
+              if (methodAmount <= 0) continue;
+              const methodLabel = formatNonCashMethodLabel(group.paymentMethod);
+              const txnCount = group._count._all;
+              await tx.cashBankTransaction.create({
+                data: {
+                  cashBankAccountId: fallbackCBA.id,
+                  transactionType: "DEPOSIT",
+                  amount: methodAmount,
+                  runningBalance: Number(updatedFallback?.balance ?? 0),
+                  description: `POS ${methodLabel}${branchLabel ? ` - ${branchLabel}` : ""} (${txnCount} txn, ${posSession.sessionNumber})`,
+                  referenceType: "POS_SESSION",
+                  referenceId: id,
+                  transactionDate: now,
+                  organizationId,
+                },
+              });
+            }
+          } else {
+            await tx.cashBankTransaction.create({
+              data: {
+                cashBankAccountId: fallbackCBA.id,
+                transactionType: "DEPOSIT",
+                amount: nonCashTotal,
+                runningBalance: Number(updatedFallback?.balance ?? 0),
+                description: `POS Non-Cash${branchLabel ? ` - ${branchLabel}` : ""} (${posSession.sessionNumber})`,
+                referenceType: "POS_SESSION",
+                referenceId: id,
+                transactionDate: now,
+                organizationId,
+              },
+            });
+          }
         }
 
         // Step C: Cash shortage/overage (legacy flow only — new flow embeds it in Step A)

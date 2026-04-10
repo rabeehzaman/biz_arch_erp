@@ -98,6 +98,7 @@ export interface POSSessionReportData {
       name: string;
       code: string;
     } | null;
+    settlementBankAccount: string | null;
   };
   invoices: POSSessionReportInvoice[];
   paymentBreakdown: POSSessionPaymentBreakdown[];
@@ -138,6 +139,22 @@ export async function getPOSSessionReportData(
 
   if (!posSession) {
     return null;
+  }
+
+  // Fetch settlement bank account name (for closed sessions)
+  let settlementBankAccount: string | null = null;
+  if (posSession.status === "CLOSED") {
+    const bankDeposit = await prisma.cashBankTransaction.findFirst({
+      where: {
+        organizationId,
+        referenceType: "POS_SESSION",
+        referenceId: id,
+        transactionType: "DEPOSIT",
+        cashBankAccount: { accountSubType: "BANK" },
+      },
+      select: { cashBankAccount: { select: { name: true } } },
+    });
+    settlementBankAccount = bankDeposit?.cashBankAccount.name ?? null;
   }
 
   const invoices = await prisma.invoice.findMany({
@@ -336,6 +353,7 @@ export async function getPOSSessionReportData(
         : null,
       branch: posSession.branch,
       warehouse: posSession.warehouse,
+      settlementBankAccount,
     },
     invoices: normalizedInvoices,
     paymentBreakdown,

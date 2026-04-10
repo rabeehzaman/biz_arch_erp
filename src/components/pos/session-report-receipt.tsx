@@ -118,6 +118,7 @@ export interface SessionReportData {
       name: string;
       code: string;
     } | null;
+    settlementBankAccount?: string | null;
   };
   invoices: SessionReportInvoiceData[];
   paymentBreakdown: SessionReportPaymentBreakdownData[];
@@ -192,6 +193,7 @@ type Labels = {
   totalReturns: string;
   returnTransactions: string;
   netSales: string;
+  settledTo: string;
 };
 
 const LABELS: Record<SessionReportLanguage, Labels> = {
@@ -249,6 +251,7 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     totalReturns: "Total Returns",
     returnTransactions: "Return Transactions",
     netSales: "Net Sales",
+    settledTo: "Settled To",
   },
   ar: {
     title: "تقرير جلسة نقطة البيع",
@@ -304,6 +307,7 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     totalReturns: "إجمالي المرتجعات",
     returnTransactions: "عمليات الإرجاع",
     netSales: "صافي المبيعات",
+    settledTo: "تمت التسوية إلى",
   },
 };
 
@@ -626,6 +630,14 @@ export function POSSessionReportReceipt({
           </div>
         )) : (
           <div style={{ color: "#64748b" }}>{labels.noPayments}</div>
+        )}
+        {report.session.settlementBankAccount && (
+          <div style={{ marginTop: "4px" }}>
+            <KeyValueRow
+              label={labels.settledTo}
+              value={report.session.settlementBankAccount}
+            />
+          </div>
         )}
       </div>
 

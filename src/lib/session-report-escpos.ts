@@ -201,6 +201,9 @@ export function buildSessionReportEscPos(
   } else {
     p.println("No payments recorded.");
   }
+  if (report.session.settlementBankAccount) {
+    p.leftRight("Settled To:", report.session.settlementBankAccount);
+  }
 
   p.drawLine();
 
