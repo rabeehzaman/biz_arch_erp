@@ -19,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed, FileText, UserPlus, UserMinus, Printer } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Settings, Trash2, Shield, Receipt, Wrench, RefreshCw, Globe, Scale, Save, Users, KeyRound, Eye, EyeOff, UserCog, Gem, UtensilsCrossed, FileText, UserPlus, UserMinus, Printer, ClipboardList } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -86,6 +86,7 @@ interface OrganizationDetails {
     restaurantThemeEnabled: boolean;
     restaurantThemeColor: string | null;
     restaurantThemePreset: string | null;
+    isManufacturingModuleEnabled: boolean;
     weighMachineBarcodePrefix: string;
     weighMachineProductCodeLen: number;
     weighMachineWeightDigits: number;
@@ -207,6 +208,7 @@ export default function OrganizationDetailsPage() {
     const [jewelleryEnabledMetals, setJewelleryEnabledMetals] = useState<string[]>(["GOLD", "SILVER", "PLATINUM"]);
     const [isPriceListEnabled, setIsPriceListEnabled] = useState(false);
     const [isRestaurantModuleEnabled, setIsRestaurantModuleEnabled] = useState(false);
+    const [isManufacturingModuleEnabled, setIsManufacturingModuleEnabled] = useState(false);
     const [restaurantTablesEnabled, setRestaurantTablesEnabled] = useState(true);
     const [restaurantKotPrintingEnabled, setRestaurantKotPrintingEnabled] = useState(true);
     const [restaurantThemeEnabled, setRestaurantThemeEnabled] = useState(true);
@@ -360,6 +362,7 @@ export default function OrganizationDetailsPage() {
         setJewelleryEnabledMetals(data.jewelleryEnabledMetals || ["GOLD", "SILVER", "PLATINUM"]);
         setIsPriceListEnabled(data.isPriceListEnabled || false);
         setIsRestaurantModuleEnabled(data.isRestaurantModuleEnabled || false);
+        setIsManufacturingModuleEnabled(data.isManufacturingModuleEnabled || false);
         setRestaurantTablesEnabled(data.restaurantTablesEnabled ?? true);
         setRestaurantKotPrintingEnabled(data.restaurantKotPrintingEnabled ?? true);
         setRestaurantThemeEnabled(data.restaurantThemeEnabled ?? true);
@@ -564,6 +567,7 @@ export default function OrganizationDetailsPage() {
                     jewelleryEnabledMetals,
                     isPriceListEnabled,
                     isRestaurantModuleEnabled,
+                    isManufacturingModuleEnabled,
                     restaurantTablesEnabled,
                     restaurantKotPrintingEnabled,
                     restaurantThemeEnabled,
@@ -2360,6 +2364,26 @@ export default function OrganizationDetailsPage() {
                                         </div>
                                     )}
                                 </TabsContent>
+
+                                {/* MANUFACTURING MODULE - simple toggle inside restaurant tab area */}
+                                <div className="mt-6 border-t pt-6">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="isManufacturingModuleEnabled" className="flex items-center gap-2">
+                                                <ClipboardList className="h-4 w-4" />
+                                                Enable Manufacturing / BOM Module
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Activate Bill of Materials, production orders, and recipe-based auto-consumption on sale
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isManufacturingModuleEnabled"
+                                            checked={isManufacturingModuleEnabled}
+                                            onCheckedChange={setIsManufacturingModuleEnabled}
+                                        />
+                                    </div>
+                                </div>
 
                                 {/* FORM CONFIG TAB */}
                                 <TabsContent value="formConfig" className="mt-0">
