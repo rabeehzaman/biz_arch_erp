@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -115,6 +116,15 @@ export default function NewBOMPage() {
     }
   }
 
+  // Searchable product filter function
+  const productFilterFn = (product: Product, query: string) => {
+    const q = query.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(q) ||
+      (product.sku?.toLowerCase().includes(q) ?? false)
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -134,16 +144,22 @@ export default function NewBOMPage() {
             </div>
             <div>
               <Label>{t("manufacturing.outputProduct")}</Label>
-              <Select value={productId} onValueChange={setProductId}>
-                <SelectTrigger><SelectValue placeholder={t("common.select")} /></SelectTrigger>
-                <SelectContent>
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} {p.sku ? `(${p.sku})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                items={products}
+                value={productId}
+                onValueChange={setProductId}
+                getId={(p) => p.id}
+                getLabel={(p) => p.name}
+                filterFn={productFilterFn}
+                renderItem={(p) => (
+                  <div className="flex flex-col">
+                    <span className="font-medium">{p.name}</span>
+                    {p.sku && <span className="text-xs text-muted-foreground">SKU: {p.sku}</span>}
+                  </div>
+                )}
+                placeholder={t("common.search") + "..."}
+                emptyText={t("manufacturing.noBOMFound")}
+              />
             </div>
             <div>
               <Label>{t("manufacturing.bomType")}</Label>
@@ -198,20 +214,24 @@ export default function NewBOMPage() {
           <div className="space-y-3">
             {items.map((item, index) => (
               <div key={index} className="flex items-end gap-3 rounded-lg border p-3">
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <Label>{t("common.product")}</Label>
-                  <Select value={item.productId} onValueChange={(v) => updateItem(index, "productId", v)}>
-                    <SelectTrigger><SelectValue placeholder={t("common.select")} /></SelectTrigger>
-                    <SelectContent>
-                      {products
-                        .filter((p) => p.id !== productId)
-                        .map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name} {p.sku ? `(${p.sku})` : ""}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    items={products.filter((p) => p.id !== productId)}
+                    value={item.productId}
+                    onValueChange={(v) => updateItem(index, "productId", v)}
+                    getId={(p) => p.id}
+                    getLabel={(p) => p.name}
+                    filterFn={productFilterFn}
+                    renderItem={(p) => (
+                      <div className="flex flex-col">
+                        <span className="font-medium">{p.name}</span>
+                        {p.sku && <span className="text-xs text-muted-foreground">SKU: {p.sku}</span>}
+                      </div>
+                    )}
+                    placeholder={t("common.search") + "..."}
+                    emptyText={t("manufacturing.noBOMFound")}
+                  />
                 </div>
                 <div className="w-24">
                   <Label>{t("common.quantity")}</Label>
