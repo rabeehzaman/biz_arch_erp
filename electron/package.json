@@ -43,6 +43,7 @@
       "receipt-spool.js",
       "winspool-raw.js",
       "loading.html",
+      "error.html",
       "node_modules/**/*",
       "package.json"
     ],

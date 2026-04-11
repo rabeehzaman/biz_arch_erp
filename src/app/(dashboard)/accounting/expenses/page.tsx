@@ -80,7 +80,8 @@ export default function ExpensesPage() {
       const qs = params.toString();
       const response = await fetch(`/api/expenses${qs ? `?${qs}` : ""}`);
       if (!response.ok) throw new Error("Failed to fetch");
-      setExpenses(await response.json());
+      const json = await response.json();
+      setExpenses(json.data ?? json);
     } catch {
       toast.error(t("accounting.failedToLoadExpenses"));
     } finally {

@@ -515,6 +515,7 @@ function createWindow() {
     width: 1280,
     height: 800,
     show: false,
+    backgroundColor: '#09090b',
     title: 'BizArch ERP',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -543,6 +544,9 @@ function createWindow() {
 
   // ── Transition: splash → main ──
   let transitioned = false;
+  let retryCount = 0;
+  const MAX_RETRIES = 3;
+
   function showMainWindow() {
     if (transitioned) return;
     transitioned = true;
@@ -553,11 +557,56 @@ function createWindow() {
     }
   }
 
-  mainWindow.webContents.on('did-finish-load', showMainWindow);
+  // Wait for Next.js to actually render before dismissing splash
+  mainWindow.webContents.on('did-finish-load', () => {
+    const currentURL = mainWindow.webContents.getURL();
+    // If showing the error page, inject retry handler and reveal
+    if (currentURL.startsWith('file://')) {
+      mainWindow.webContents.executeJavaScript(
+        `(() => {
+          const btn = document.querySelector('.retry-btn');
+          if (btn) btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            btn.textContent = 'Connecting...';
+            btn.disabled = true;
+            window.location.href = ${JSON.stringify(ERP_URL)};
+          });
+        })()`
+      ).catch(() => {});
+      showMainWindow();
+      return;
+    }
+    // Poll until Next.js has mounted (max 10s, then show anyway)
+    let attempts = 0;
+    const checkReady = setInterval(() => {
+      attempts++;
+      if (transitioned) { clearInterval(checkReady); return; }
+      mainWindow.webContents.executeJavaScript(
+        `!!(document.getElementById('__next') && document.getElementById('__next').children.length > 0)`
+      ).then((ready) => {
+        if (ready || attempts >= 40) {
+          clearInterval(checkReady);
+          showMainWindow();
+        }
+      }).catch(() => {
+        clearInterval(checkReady);
+        showMainWindow();
+      });
+    }, 250);
+  });
 
-  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDesc) => {
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDesc, validatedURL, isMainFrame) => {
+    if (!isMainFrame) return;
     console.error(`Page failed to load: ${errorCode} - ${errorDesc}`);
-    showMainWindow();
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      console.log(`Retrying load (${retryCount}/${MAX_RETRIES})...`);
+      setTimeout(() => mainWindow.loadURL(ERP_URL), 1500);
+    } else {
+      // Reset retry counter so user-initiated retry gets fresh attempts
+      retryCount = 0;
+      mainWindow.loadFile(path.join(__dirname, 'error.html'));
+    }
   });
 
   // Fallback: show main after 30 seconds no matter what
@@ -895,11 +944,6 @@ app.on('web-contents-created', (_event, contents) => {
 
 // ─── App Lifecycle ──────────────────────────────────────────────
 app.whenReady().then(async () => {
-  // Clear cached web content so updated CSS/JS takes effect immediately
-  const ses = require('electron').session.defaultSession;
-  await ses.clearCache();
-  await ses.clearStorageData({ storages: ['cachestorage'] });
-
   createWindow();
   setupAutoUpdater();
 

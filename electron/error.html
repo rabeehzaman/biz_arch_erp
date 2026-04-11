@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=400, height=300">
+  <title>BizArch ERP — Connection Error</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #09090b;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #e0e0e0;
+      user-select: none;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .brand {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 32px;
+      color: #ffffff;
+    }
+
+    .brand span {
+      color: #6c63ff;
+    }
+
+    .icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+      opacity: 0.6;
+    }
+
+    .message {
+      font-size: 16px;
+      color: #a1a1aa;
+      margin-bottom: 8px;
+    }
+
+    .sub-message {
+      font-size: 13px;
+      color: #71717a;
+      margin-bottom: 32px;
+    }
+
+    .retry-btn {
+      padding: 10px 32px;
+      background: #6c63ff;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .retry-btn:hover {
+      background: #5b52e0;
+    }
+
+    .retry-btn:active {
+      background: #4a43c7;
+    }
+  </style>
+</head>
+<body>
+  <div class="brand">Biz<span>Arch</span> ERP</div>
+  <div class="icon">&#x26A0;</div>
+  <div class="message">Unable to connect to server</div>
+  <div class="sub-message">Please check your internet connection and try again.</div>
+  <button class="retry-btn">Retry</button>
+</body>
+</html>

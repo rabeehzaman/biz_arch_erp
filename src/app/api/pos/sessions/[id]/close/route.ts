@@ -53,14 +53,6 @@ export async function PUT(
       );
     }
 
-    // Only the user who opened the session can close it
-    if (posSession.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Only the user who opened this session can close it" },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     const { closingCash, notes, settleCashAccountId, settleBankAccountId, pinCode } = body;
 
