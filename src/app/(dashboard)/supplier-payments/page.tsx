@@ -36,7 +36,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, Wallet, Trash2, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, Wallet, Trash2, SlidersHorizontal, Columns3 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -103,6 +103,9 @@ import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
 import { SUPPLIER_PAYMENT_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
 import { SUPPLIER_PAYMENT_SYSTEM_VIEWS } from "@/lib/system-views";
 import { useCustomViews } from "@/hooks/use-custom-views";
+import { ColumnCustomizer } from "@/components/list-page/column-customizer";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { SUPPLIER_PAYMENT_COLUMNS } from "@/lib/column-configs";
 
 // methodLabels moved inside component to use t()
 
@@ -129,6 +132,8 @@ export default function SupplierPaymentsPage() {
     filtersForSave, sortFieldForSave, sortDirectionForSave,
     viewsRefreshKey, handleViewSaved, editingView, handleEditView,
   } = useCustomViews({ module: "supplier-payments", systemViews: SUPPLIER_PAYMENT_SYSTEM_VIEWS });
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const { visibleColumns, setVisibleColumns, isColumnVisible } = useColumnVisibility("supplier-payments", SUPPLIER_PAYMENT_COLUMNS);
 
   const {
     items: payments,
@@ -528,6 +533,9 @@ export default function SupplierPaymentsPage() {
                   onEditView={handleEditView}
                   refreshKey={viewsRefreshKey}
                 />
+                <Button variant="outline" size="icon" className="shrink-0" onClick={() => setColumnsOpen(true)} title={t("views.customizeColumns")}>
+                  <Columns3 className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
                   <SlidersHorizontal className="h-4 w-4" />
                   {activeFilterCount > 0 && (
@@ -615,12 +623,12 @@ export default function SupplierPaymentsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t("payments.paymentNo")}</TableHead>
-                        <TableHead>{t("common.supplier")}</TableHead>
-                        <TableHead className="hidden sm:table-cell">{t("purchases.purchaseInvoiceNumber")}</TableHead>
-                        <TableHead className="hidden sm:table-cell">{t("common.date")}</TableHead>
-                        <TableHead className="hidden sm:table-cell">{t("payments.paymentMethod")}</TableHead>
-                        <TableHead className="text-right">{t("common.amount")}</TableHead>
-                        <TableHead className="text-right">{t("common.discount")}</TableHead>
+                        {isColumnVisible("supplier") && <TableHead>{t("common.supplier")}</TableHead>}
+                        {isColumnVisible("purchaseInvoice") && <TableHead className="hidden sm:table-cell">{t("purchases.purchaseInvoiceNumber")}</TableHead>}
+                        {isColumnVisible("paymentDate") && <TableHead className="hidden sm:table-cell">{t("common.date")}</TableHead>}
+                        {isColumnVisible("paymentMethod") && <TableHead className="hidden sm:table-cell">{t("payments.paymentMethod")}</TableHead>}
+                        {isColumnVisible("amount") && <TableHead className="text-right">{t("common.amount")}</TableHead>}
+                        {isColumnVisible("discount") && <TableHead className="text-right">{t("common.discount")}</TableHead>}
                         <TableHead className="w-[80px]">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -630,26 +638,26 @@ export default function SupplierPaymentsPage() {
                           <TableCell className="font-medium">
                             {payment.paymentNumber}
                           </TableCell>
-                          <TableCell><Link href={`/suppliers/${payment.supplier.id}`} className="hover:underline">{payment.supplier.name}</Link></TableCell>
-                          <TableCell className="hidden sm:table-cell">
+                          {isColumnVisible("supplier") && <TableCell><Link href={`/suppliers/${payment.supplier.id}`} className="hover:underline">{payment.supplier.name}</Link></TableCell>}
+                          {isColumnVisible("purchaseInvoice") && <TableCell className="hidden sm:table-cell">
                             {payment.purchaseInvoice?.purchaseInvoiceNumber || "-"}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
+                          </TableCell>}
+                          {isColumnVisible("paymentDate") && <TableCell className="hidden sm:table-cell">
                             {format(new Date(payment.paymentDate), "dd MMM yyyy")}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
+                          </TableCell>}
+                          {isColumnVisible("paymentMethod") && <TableCell className="hidden sm:table-cell">
                             <Badge variant="outline">
                               {methodLabels[payment.paymentMethod]}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-orange-600">
+                          </TableCell>}
+                          {isColumnVisible("amount") && <TableCell className="text-right font-medium text-orange-600">
                             {symbol}{Number(payment.amount).toLocaleString(locale)}
-                          </TableCell>
-                          <TableCell className="text-right text-slate-500">
+                          </TableCell>}
+                          {isColumnVisible("discount") && <TableCell className="text-right text-slate-500">
                             {Number(payment.discountGiven) > 0
                               ? `${symbol}${Number(payment.discountGiven).toLocaleString(locale)}`
                               : "-"}
-                          </TableCell>
+                          </TableCell>}
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="ghost"
@@ -710,6 +718,13 @@ export default function SupplierPaymentsPage() {
         sortDirection={sortDirectionForSave}
         onSaved={handleViewSaved}
         editingView={editingView}
+      />
+      <ColumnCustomizer
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        columns={SUPPLIER_PAYMENT_COLUMNS}
+        visibleColumns={visibleColumns}
+        onSave={setVisibleColumns}
       />
     </PageAnimation>
   );

@@ -15,6 +15,7 @@ export const INVOICE_SEARCH_FIELDS: AdvancedSearchField[] = [
     { value: "CASH", labelKey: "common.cash" },
     { value: "CREDIT", labelKey: "payments.credit" },
   ]},
+  { type: "combobox", key: "createdById", labelKey: "common.createdBy", entityUrl: "/api/users" },
   { type: "combobox", key: "branchId", labelKey: "common.branch", entityUrl: "/api/branches" },
   { type: "combobox", key: "warehouseId", labelKey: "common.warehouse", entityUrl: "/api/warehouses" },
   { type: "text", key: "notes", labelKey: "common.notes" },
@@ -34,6 +35,7 @@ export const PURCHASE_INVOICE_SEARCH_FIELDS: AdvancedSearchField[] = [
     { value: "CANCELLED", labelKey: "common.cancelled" },
   ]},
   { type: "numberRange", key: "total", labelKey: "common.total", fromKey: "totalMin", toKey: "totalMax" },
+  { type: "combobox", key: "createdById", labelKey: "common.createdBy", entityUrl: "/api/users" },
   { type: "combobox", key: "branchId", labelKey: "common.branch", entityUrl: "/api/branches" },
   { type: "combobox", key: "warehouseId", labelKey: "common.warehouse", entityUrl: "/api/warehouses" },
 ];
@@ -50,6 +52,7 @@ export const QUOTATION_SEARCH_FIELDS: AdvancedSearchField[] = [
     { value: "EXPIRED", labelKey: "common.expired" },
   ]},
   { type: "numberRange", key: "total", labelKey: "common.total", fromKey: "totalMin", toKey: "totalMax" },
+  { type: "combobox", key: "createdById", labelKey: "common.createdBy", entityUrl: "/api/users" },
   { type: "combobox", key: "branchId", labelKey: "common.branch", entityUrl: "/api/branches" },
   { type: "combobox", key: "warehouseId", labelKey: "common.warehouse", entityUrl: "/api/warehouses" },
 ];
@@ -60,6 +63,7 @@ export const CREDIT_NOTE_SEARCH_FIELDS: AdvancedSearchField[] = [
   { type: "dateRange", key: "issueDate", labelKey: "sales.issueDate", fromKey: "issueDateFrom", toKey: "issueDateTo" },
   { type: "numberRange", key: "total", labelKey: "common.total", fromKey: "totalMin", toKey: "totalMax" },
   { type: "text", key: "reason", labelKey: "creditNotes.reason" },
+  { type: "combobox", key: "createdById", labelKey: "common.createdBy", entityUrl: "/api/users" },
   { type: "combobox", key: "branchId", labelKey: "common.branch", entityUrl: "/api/branches" },
   { type: "combobox", key: "warehouseId", labelKey: "common.warehouse", entityUrl: "/api/warehouses" },
 ];
@@ -70,6 +74,7 @@ export const DEBIT_NOTE_SEARCH_FIELDS: AdvancedSearchField[] = [
   { type: "dateRange", key: "issueDate", labelKey: "sales.issueDate", fromKey: "issueDateFrom", toKey: "issueDateTo" },
   { type: "numberRange", key: "total", labelKey: "common.total", fromKey: "totalMin", toKey: "totalMax" },
   { type: "text", key: "reason", labelKey: "debitNotes.reason" },
+  { type: "combobox", key: "createdById", labelKey: "common.createdBy", entityUrl: "/api/users" },
   { type: "combobox", key: "branchId", labelKey: "common.branch", entityUrl: "/api/branches" },
   { type: "combobox", key: "warehouseId", labelKey: "common.warehouse", entityUrl: "/api/warehouses" },
 ];

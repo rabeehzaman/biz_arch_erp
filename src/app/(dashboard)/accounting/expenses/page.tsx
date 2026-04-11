@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, Receipt, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, Receipt, SlidersHorizontal, Columns3 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -28,6 +28,9 @@ import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
 import { EXPENSE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
 import { EXPENSE_SYSTEM_VIEWS } from "@/lib/system-views";
 import { useCustomViews } from "@/hooks/use-custom-views";
+import { ColumnCustomizer } from "@/components/list-page/column-customizer";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { EXPENSE_COLUMNS } from "@/lib/column-configs";
 
 interface Expense {
   id: string;
@@ -60,6 +63,8 @@ export default function ExpensesPage() {
     filtersForSave, sortFieldForSave, sortDirectionForSave,
     viewsRefreshKey, handleViewSaved, editingView, handleEditView,
   } = useCustomViews({ module: "expenses", systemViews: EXPENSE_SYSTEM_VIEWS });
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const { visibleColumns, setVisibleColumns, isColumnVisible } = useColumnVisibility("expenses", EXPENSE_COLUMNS);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,6 +133,9 @@ export default function ExpensesPage() {
                     onEditView={handleEditView}
                     refreshKey={viewsRefreshKey}
                   />
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => setColumnsOpen(true)} title={t("views.customizeColumns")}>
+                    <Columns3 className="h-4 w-4" />
+                  </Button>
                   <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
                     <SlidersHorizontal className="h-4 w-4" />
                     {activeFilterCount > 0 && (
@@ -201,11 +209,11 @@ export default function ExpensesPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t("common.number")}</TableHead>
-                          <TableHead>{t("common.date")}</TableHead>
-                          <TableHead>{t("common.description")}</TableHead>
-                          <TableHead>{t("common.supplier")}</TableHead>
-                          <TableHead>{t("common.status")}</TableHead>
-                          <TableHead className="text-right">{t("common.amount")}</TableHead>
+                          {isColumnVisible("expenseDate") && <TableHead>{t("common.date")}</TableHead>}
+                          {isColumnVisible("description") && <TableHead>{t("common.description")}</TableHead>}
+                          {isColumnVisible("supplier") && <TableHead>{t("common.supplier")}</TableHead>}
+                          {isColumnVisible("status") && <TableHead>{t("common.status")}</TableHead>}
+                          {isColumnVisible("total") && <TableHead className="text-right">{t("common.amount")}</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -219,21 +227,21 @@ export default function ExpensesPage() {
                                 {expense.expenseNumber}
                               </Link>
                             </TableCell>
-                            <TableCell>
+                            {isColumnVisible("expenseDate") && <TableCell>
                               {format(new Date(expense.expenseDate), "dd MMM yyyy")}
-                            </TableCell>
-                            <TableCell className="max-w-[200px] truncate">
+                            </TableCell>}
+                            {isColumnVisible("description") && <TableCell className="max-w-[200px] truncate">
                               {expense.description || "-"}
-                            </TableCell>
-                            <TableCell>{expense.supplier?.name || "-"}</TableCell>
-                            <TableCell>
+                            </TableCell>}
+                            {isColumnVisible("supplier") && <TableCell>{expense.supplier?.name || "-"}</TableCell>}
+                            {isColumnVisible("status") && <TableCell>
                               <Badge className={statusColors[expense.status]}>
                                 {expense.status}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
+                            </TableCell>}
+                            {isColumnVisible("total") && <TableCell className="text-right font-medium">
                               {fmt(Number(expense.total))}
-                            </TableCell>
+                            </TableCell>}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -261,6 +269,13 @@ export default function ExpensesPage() {
           sortDirection={sortDirectionForSave}
           onSaved={handleViewSaved}
           editingView={editingView}
+        />
+        <ColumnCustomizer
+          open={columnsOpen}
+          onOpenChange={setColumnsOpen}
+          columns={EXPENSE_COLUMNS}
+          visibleColumns={visibleColumns}
+          onSave={setVisibleColumns}
         />
         </PageAnimation>
       );

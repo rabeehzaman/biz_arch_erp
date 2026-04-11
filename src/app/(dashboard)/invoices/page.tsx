@@ -38,7 +38,10 @@ import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
 import { INVOICE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
 import { INVOICE_SYSTEM_VIEWS } from "@/lib/system-views";
 import { useCustomViews } from "@/hooks/use-custom-views";
-import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { ColumnCustomizer } from "@/components/list-page/column-customizer";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { INVOICE_COLUMNS } from "@/lib/column-configs";
+import { ArrowUp, ArrowDown, ArrowUpDown, Columns3 } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -89,6 +92,8 @@ export default function InvoicesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [mobileCompact, setMobileCompact] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const { visibleColumns, setVisibleColumns, isColumnVisible } = useColumnVisibility("invoices", INVOICE_COLUMNS);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
   const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: refresh });
@@ -235,6 +240,9 @@ export default function InvoicesPage() {
                     onEditView={handleEditView}
                     refreshKey={viewsRefreshKey}
                   />
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => setColumnsOpen(true)} title={t("views.customizeColumns")}>
+                    <Columns3 className="h-4 w-4" />
+                  </Button>
                   <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
                     <SlidersHorizontal className="h-4 w-4" />
                     {activeFilterCount > 0 && (
@@ -525,37 +533,37 @@ export default function InvoicesPage() {
                               <SortIcon field="invoiceNumber" />
                             </span>
                           </TableHead>
-                          <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("customer")}>
+                          {isColumnVisible("customer") && <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("customer")}>
                             <span className="inline-flex items-center gap-1.5">
                               {t("sales.customer")}
                               <SortIcon field="customer" />
                             </span>
-                          </TableHead>
-                          <TableHead>{t("common.status")}</TableHead>
-                          <TableHead className="hidden sm:table-cell cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("issueDate")}>
+                          </TableHead>}
+                          {isColumnVisible("status") && <TableHead>{t("common.status")}</TableHead>}
+                          {isColumnVisible("issueDate") && <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("issueDate")}>
                             <span className="inline-flex items-center gap-1.5">
                               {t("sales.issueDate")}
                               <SortIcon field="issueDate" />
                             </span>
-                          </TableHead>
-                          <TableHead className="hidden sm:table-cell cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("dueDate")}>
+                          </TableHead>}
+                          {isColumnVisible("dueDate") && <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("dueDate")}>
                             <span className="inline-flex items-center gap-1.5">
                               {t("sales.dueDate")}
                               <SortIcon field="dueDate" />
                             </span>
-                          </TableHead>
-                          <TableHead className="hidden sm:table-cell text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("total")}>
+                          </TableHead>}
+                          {isColumnVisible("total") && <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("total")}>
                             <span className="inline-flex items-center gap-1.5 justify-end w-full">
                               {t("common.total")}
                               <SortIcon field="total" />
                             </span>
-                          </TableHead>
-                          <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("balance")}>
+                          </TableHead>}
+                          {isColumnVisible("balance") && <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("balance")}>
                             <span className="inline-flex items-center gap-1.5 justify-end w-full">
                               {t("common.balance")}
                               <SortIcon field="balance" />
                             </span>
-                          </TableHead>
+                          </TableHead>}
                           <TableHead className="text-right">{t("common.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -582,7 +590,7 @@ export default function InvoicesPage() {
                             <TableCell className="font-medium">
                               {invoice.invoiceNumber}
                             </TableCell>
-                            <TableCell>
+                            {isColumnVisible("customer") && <TableCell>
                               <div>
                                 <Link href={`/customers/${invoice.customer.id}`} className="font-medium hover:underline">{invoice.customer.name}</Link>
                                 {invoice.customer.email && (
@@ -591,8 +599,8 @@ export default function InvoicesPage() {
                                   </div>
                                 )}
                               </div>
-                            </TableCell>
-                            <TableCell>
+                            </TableCell>}
+                            {isColumnVisible("status") && <TableCell>
                               {(() => {
                                 const status = getInvoiceStatus(Number(invoice.balanceDue), invoice.dueDate, t);
                                 return (
@@ -601,8 +609,8 @@ export default function InvoicesPage() {
                                   </Badge>
                                 );
                               })()}
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
+                            </TableCell>}
+                            {isColumnVisible("issueDate") && <TableCell>
                               <span title={format(new Date(invoice.issueDate), "dd MMM yyyy")}>
                                 {format(new Date(invoice.issueDate), "dd MMM yyyy")}
                               </span>
@@ -611,14 +619,14 @@ export default function InvoicesPage() {
                                   {formatRelativeDate(invoice.issueDate)}
                                 </span>
                               )}
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
+                            </TableCell>}
+                            {isColumnVisible("dueDate") && <TableCell>
                               {format(new Date(invoice.dueDate), "dd MMM yyyy")}
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell text-right">
+                            </TableCell>}
+                            {isColumnVisible("total") && <TableCell className="text-right">
                               {fmt(Number(invoice.total))}
-                            </TableCell>
-                            <TableCell className="text-right">
+                            </TableCell>}
+                            {isColumnVisible("balance") && <TableCell className="text-right">
                               <span
                                 className={
                                   Number(invoice.balanceDue) > 0
@@ -628,7 +636,7 @@ export default function InvoicesPage() {
                               >
                                 {fmt(Number(invoice.balanceDue))}
                               </span>
-                            </TableCell>
+                            </TableCell>}
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               <Link href={`/invoices/${invoice.id}`}>
                                 <Button variant="ghost" size="icon" title={t("common.details") || "Details"}>
@@ -683,6 +691,13 @@ export default function InvoicesPage() {
         sortDirection={sortDirectionForSave}
         onSaved={handleViewSaved}
         editingView={editingView}
+      />
+      <ColumnCustomizer
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        columns={INVOICE_COLUMNS}
+        visibleColumns={visibleColumns}
+        onSave={setVisibleColumns}
       />
     </PageAnimation>
   );

@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, FileText, Eye, Trash2, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, FileText, Eye, Trash2, SlidersHorizontal, Columns3 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -35,6 +35,9 @@ import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
 import { QUOTATION_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
 import { QUOTATION_SYSTEM_VIEWS } from "@/lib/system-views";
 import { useCustomViews } from "@/hooks/use-custom-views";
+import { ColumnCustomizer } from "@/components/list-page/column-customizer";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { QUOTATION_COLUMNS } from "@/lib/column-configs";
 
 interface Quotation {
   id: string;
@@ -63,6 +66,8 @@ export default function QuotationsPage() {
     filtersForSave, sortFieldForSave, sortDirectionForSave,
     viewsRefreshKey, handleViewSaved, editingView, handleEditView,
   } = useCustomViews({ module: "quotations", systemViews: QUOTATION_SYSTEM_VIEWS });
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const { visibleColumns, setVisibleColumns, isColumnVisible } = useColumnVisibility("quotations", QUOTATION_COLUMNS);
   const {
     items: quotations,
     isLoading,
@@ -166,6 +171,9 @@ export default function QuotationsPage() {
                   onEditView={handleEditView}
                   refreshKey={viewsRefreshKey}
                 />
+                <Button variant="outline" size="icon" className="shrink-0" onClick={() => setColumnsOpen(true)} title={t("views.customizeColumns")}>
+                  <Columns3 className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
                   <SlidersHorizontal className="h-4 w-4" />
                   {activeFilterCount > 0 && (
@@ -274,11 +282,11 @@ export default function QuotationsPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t("quotations.quotationNumber")}</TableHead>
-                          <TableHead>{t("sales.customer")}</TableHead>
-                          <TableHead>{t("sales.issueDate")}</TableHead>
-                          <TableHead>{t("quotations.validUntil")}</TableHead>
-                          <TableHead>{t("common.status")}</TableHead>
-                          <TableHead className="text-right">{t("common.total")}</TableHead>
+                          {isColumnVisible("customer") && <TableHead>{t("sales.customer")}</TableHead>}
+                          {isColumnVisible("issueDate") && <TableHead>{t("sales.issueDate")}</TableHead>}
+                          {isColumnVisible("validUntil") && <TableHead>{t("quotations.validUntil")}</TableHead>}
+                          {isColumnVisible("status") && <TableHead>{t("common.status")}</TableHead>}
+                          {isColumnVisible("total") && <TableHead className="text-right">{t("common.total")}</TableHead>}
                           <TableHead className="text-right">{t("common.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -292,7 +300,7 @@ export default function QuotationsPage() {
                             <TableCell className="font-medium">
                               {quotation.quotationNumber}
                             </TableCell>
-                            <TableCell>
+                            {isColumnVisible("customer") && <TableCell>
                               <div>
                                 <Link href={`/customers/${quotation.customer.id}`} className="font-medium hover:underline">{quotation.customer.name}</Link>
                                 {quotation.customer.email && (
@@ -301,17 +309,17 @@ export default function QuotationsPage() {
                                   </div>
                                 )}
                               </div>
-                            </TableCell>
-                            <TableCell>
+                            </TableCell>}
+                            {isColumnVisible("issueDate") && <TableCell>
                               {format(new Date(quotation.issueDate), "dd MMM yyyy")}
-                            </TableCell>
-                            <TableCell>
+                            </TableCell>}
+                            {isColumnVisible("validUntil") && <TableCell>
                               {format(new Date(quotation.validUntil), "dd MMM yyyy")}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(quotation.status)}</TableCell>
-                            <TableCell className="text-right">
+                            </TableCell>}
+                            {isColumnVisible("status") && <TableCell>{getStatusBadge(quotation.status)}</TableCell>}
+                            {isColumnVisible("total") && <TableCell className="text-right">
                               {fmt(Number(quotation.total))}
-                            </TableCell>
+                            </TableCell>}
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               <Link href={`/quotations/${quotation.id}`}>
                                 <Button variant="ghost" size="icon">
@@ -366,6 +374,13 @@ export default function QuotationsPage() {
         sortDirection={sortDirectionForSave}
         onSaved={handleViewSaved}
         editingView={editingView}
+      />
+      <ColumnCustomizer
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        columns={QUOTATION_COLUMNS}
+        visibleColumns={visibleColumns}
+        onSave={setVisibleColumns}
       />
     </PageAnimation>
   );

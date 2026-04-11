@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, FileText, Eye, Trash2, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, FileText, Eye, Trash2, SlidersHorizontal, Columns3 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -34,6 +34,9 @@ import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
 import { DEBIT_NOTE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
 import { DEBIT_NOTE_SYSTEM_VIEWS } from "@/lib/system-views";
 import { useCustomViews } from "@/hooks/use-custom-views";
+import { ColumnCustomizer } from "@/components/list-page/column-customizer";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { DEBIT_NOTE_COLUMNS } from "@/lib/column-configs";
 
 interface DebitNote {
   id: string;
@@ -65,6 +68,8 @@ export default function DebitNotesPage() {
     filtersForSave, sortFieldForSave, sortDirectionForSave,
     viewsRefreshKey, handleViewSaved, editingView, handleEditView,
   } = useCustomViews({ module: "debit-notes", systemViews: DEBIT_NOTE_SYSTEM_VIEWS });
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const { visibleColumns, setVisibleColumns, isColumnVisible } = useColumnVisibility("debit-notes", DEBIT_NOTE_COLUMNS);
   const {
     items: debitNotes,
     isLoading,
@@ -139,6 +144,9 @@ export default function DebitNotesPage() {
                 onEditView={handleEditView}
                 refreshKey={viewsRefreshKey}
               />
+              <Button variant="outline" size="icon" className="shrink-0" onClick={() => setColumnsOpen(true)} title={t("views.customizeColumns")}>
+                <Columns3 className="h-4 w-4" />
+              </Button>
               <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
                 <SlidersHorizontal className="h-4 w-4" />
                 {activeFilterCount > 0 && (
@@ -242,10 +250,10 @@ export default function DebitNotesPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t("debitNotes.dnNo")}</TableHead>
-                        <TableHead>{t("suppliers.supplier")}</TableHead>
-                        <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>
-                        <TableHead>{t("sales.issueDate")}</TableHead>
-                        <TableHead className="text-right">{t("common.total")}</TableHead>
+                        {isColumnVisible("supplier") && <TableHead>{t("suppliers.supplier")}</TableHead>}
+                        {isColumnVisible("purchaseInvoice") && <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>}
+                        {isColumnVisible("issueDate") && <TableHead>{t("sales.issueDate")}</TableHead>}
+                        {isColumnVisible("total") && <TableHead className="text-right">{t("common.total")}</TableHead>}
                         <TableHead className="text-right">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -259,7 +267,7 @@ export default function DebitNotesPage() {
                           <TableCell className="font-medium">
                             {debitNote.debitNoteNumber}
                           </TableCell>
-                          <TableCell>
+                          {isColumnVisible("supplier") && <TableCell>
                             <div>
                               <Link href={`/suppliers/${debitNote.supplier.id}`} className="font-medium hover:underline">
                                 {debitNote.supplier.name}
@@ -270,8 +278,8 @@ export default function DebitNotesPage() {
                                 </div>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
+                          </TableCell>}
+                          {isColumnVisible("purchaseInvoice") && <TableCell>
                             {debitNote.purchaseInvoice ? (
                               <Link
                                 href={`/purchase-invoices/${debitNote.purchaseInvoice.id}`}
@@ -283,13 +291,13 @@ export default function DebitNotesPage() {
                             ) : (
                               <span className="text-slate-400">-</span>
                             )}
-                          </TableCell>
-                          <TableCell>
+                          </TableCell>}
+                          {isColumnVisible("issueDate") && <TableCell>
                             {format(new Date(debitNote.issueDate), "dd MMM yyyy")}
-                          </TableCell>
-                          <TableCell className="text-right text-orange-600 font-medium">
+                          </TableCell>}
+                          {isColumnVisible("total") && <TableCell className="text-right text-orange-600 font-medium">
                             {fmt(Number(debitNote.total))}
-                          </TableCell>
+                          </TableCell>}
                           <TableCell
                             className="text-right"
                             onClick={(e) => e.stopPropagation()}
@@ -345,6 +353,13 @@ export default function DebitNotesPage() {
         sortDirection={sortDirectionForSave}
         onSaved={handleViewSaved}
         editingView={editingView}
+      />
+      <ColumnCustomizer
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        columns={DEBIT_NOTE_COLUMNS}
+        visibleColumns={visibleColumns}
+        onSave={setVisibleColumns}
       />
     </PageAnimation>
   );

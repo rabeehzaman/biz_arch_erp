@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, Receipt, Eye, Trash2, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, Receipt, Eye, Trash2, SlidersHorizontal, Columns3 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
@@ -42,6 +42,9 @@ import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
 import { PURCHASE_INVOICE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
 import { PURCHASE_INVOICE_SYSTEM_VIEWS } from "@/lib/system-views";
 import { useCustomViews } from "@/hooks/use-custom-views";
+import { ColumnCustomizer } from "@/components/list-page/column-customizer";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { PURCHASE_INVOICE_COLUMNS } from "@/lib/column-configs";
 
 interface PurchaseInvoice {
   id: string;
@@ -81,6 +84,8 @@ export default function PurchaseInvoicesPage() {
     handleSaveView, filtersForSave, sortFieldForSave, sortDirectionForSave,
     viewsRefreshKey, handleViewSaved, editingView, handleEditView,
   } = useCustomViews({ module: "purchase-invoices", systemViews: PURCHASE_INVOICE_SYSTEM_VIEWS });
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const { visibleColumns, setVisibleColumns, isColumnVisible } = useColumnVisibility("purchase-invoices", PURCHASE_INVOICE_COLUMNS);
 
   // Merge status filter into API params
   const paginationParams = useMemo(
@@ -221,6 +226,9 @@ export default function PurchaseInvoicesPage() {
                   onEditView={handleEditView}
                   refreshKey={viewsRefreshKey}
                 />
+                <Button variant="outline" size="icon" className="shrink-0" onClick={() => setColumnsOpen(true)} title={t("views.customizeColumns")}>
+                  <Columns3 className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
                   <SlidersHorizontal className="h-4 w-4" />
                   {activeFilterCount > 0 && (
@@ -437,38 +445,38 @@ export default function PurchaseInvoicesPage() {
                             {sortField === "invoiceNumber" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
                           </span>
                         </TableHead>
-                        <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("supplier")}>
+                        {isColumnVisible("supplier") && <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("supplier")}>
                           <span className="inline-flex items-center gap-1">
                             {t("suppliers.supplier")}
                             {sortField === "supplier" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
                           </span>
-                        </TableHead>
-                        <TableHead>{t("common.supplierRef")}</TableHead>
-                        <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("invoiceDate")}>
+                        </TableHead>}
+                        {isColumnVisible("supplierRef") && <TableHead>{t("common.supplierRef")}</TableHead>}
+                        {isColumnVisible("invoiceDate") && <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("invoiceDate")}>
                           <span className="inline-flex items-center gap-1">
                             {t("common.date")}
                             {sortField === "invoiceDate" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
                           </span>
-                        </TableHead>
-                        <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("dueDate")}>
+                        </TableHead>}
+                        {isColumnVisible("dueDate") && <TableHead className="cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("dueDate")}>
                           <span className="inline-flex items-center gap-1">
                             {t("sales.dueDate")}
                             {sortField === "dueDate" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
                           </span>
-                        </TableHead>
-                        <TableHead>{t("common.status")}</TableHead>
-                        <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("total")}>
+                        </TableHead>}
+                        {isColumnVisible("status") && <TableHead>{t("common.status")}</TableHead>}
+                        {isColumnVisible("total") && <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("total")}>
                           <span className="inline-flex items-center gap-1 justify-end w-full">
                             {t("common.total")}
                             {sortField === "total" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
                           </span>
-                        </TableHead>
-                        <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("balance")}>
+                        </TableHead>}
+                        {isColumnVisible("balance") && <TableHead className="text-right cursor-pointer select-none hover:text-slate-900" onClick={() => toggleSort("balance")}>
                           <span className="inline-flex items-center gap-1 justify-end w-full">
                             {t("common.balance")}
                             {sortField === "balance" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
                           </span>
-                        </TableHead>
+                        </TableHead>}
                         <TableHead className="text-right">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -491,7 +499,7 @@ export default function PurchaseInvoicesPage() {
                           <TableCell className="font-medium">
                             {invoice.purchaseInvoiceNumber}
                           </TableCell>
-                          <TableCell>
+                          {isColumnVisible("supplier") && <TableCell>
                             <div>
                               <Link href={`/suppliers/${invoice.supplier.id}`} className="font-medium hover:underline">{invoice.supplier.name}</Link>
                               {invoice.supplier.email && (
@@ -500,25 +508,25 @@ export default function PurchaseInvoicesPage() {
                                 </div>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
+                          </TableCell>}
+                          {isColumnVisible("supplierRef") && <TableCell>
                             {invoice.supplierInvoiceRef || "-"}
-                          </TableCell>
-                          <TableCell>
+                          </TableCell>}
+                          {isColumnVisible("invoiceDate") && <TableCell>
                             {format(new Date(invoice.invoiceDate), "dd MMM yyyy")}
-                          </TableCell>
-                          <TableCell>
+                          </TableCell>}
+                          {isColumnVisible("dueDate") && <TableCell>
                             {format(new Date(invoice.dueDate), "dd MMM yyyy")}
-                          </TableCell>
-                          <TableCell>
+                          </TableCell>}
+                          {isColumnVisible("status") && <TableCell>
                             <Badge className={statusColors[invoice.status]}>
                               {statusLabels[invoice.status]}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
+                          </TableCell>}
+                          {isColumnVisible("total") && <TableCell className="text-right">
                             {fmt(Number(invoice.total))}
-                          </TableCell>
-                          <TableCell className="text-right">
+                          </TableCell>}
+                          {isColumnVisible("balance") && <TableCell className="text-right">
                             <span
                               className={
                                 Number(invoice.balanceDue) > 0
@@ -528,7 +536,7 @@ export default function PurchaseInvoicesPage() {
                             >
                               {fmt(Number(invoice.balanceDue))}
                             </span>
-                          </TableCell>
+                          </TableCell>}
                           <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <Link href={`/purchase-invoices/${invoice.id}`}>
                               <Button variant="ghost" size="icon" title={t("common.details") || "Details"}>
@@ -582,6 +590,13 @@ export default function PurchaseInvoicesPage() {
         sortDirection={sortDirectionForSave}
         onSaved={handleViewSaved}
         editingView={editingView}
+      />
+      <ColumnCustomizer
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        columns={PURCHASE_INVOICE_COLUMNS}
+        visibleColumns={visibleColumns}
+        onSave={setVisibleColumns}
       />
     </PageAnimation>
   );

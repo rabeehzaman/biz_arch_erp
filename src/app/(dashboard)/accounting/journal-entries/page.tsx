@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, BookOpen, MoreHorizontal, Edit, Trash2, Eye, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, BookOpen, MoreHorizontal, Edit, Trash2, Eye, SlidersHorizontal, Columns3 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -34,6 +34,9 @@ import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
 import { JOURNAL_ENTRY_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
 import { JOURNAL_ENTRY_SYSTEM_VIEWS } from "@/lib/system-views";
 import { useCustomViews } from "@/hooks/use-custom-views";
+import { ColumnCustomizer } from "@/components/list-page/column-customizer";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { JOURNAL_ENTRY_COLUMNS } from "@/lib/column-configs";
 
 interface JournalLine {
   id: string;
@@ -85,6 +88,8 @@ export default function JournalEntriesPage() {
     filtersForSave, sortFieldForSave, sortDirectionForSave,
     viewsRefreshKey, handleViewSaved, editingView, handleEditView,
   } = useCustomViews({ module: "journal-entries", systemViews: JOURNAL_ENTRY_SYSTEM_VIEWS });
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const { visibleColumns, setVisibleColumns, isColumnVisible } = useColumnVisibility("journal-entries", JOURNAL_ENTRY_COLUMNS);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -188,6 +193,9 @@ export default function JournalEntriesPage() {
                   onEditView={handleEditView}
                   refreshKey={viewsRefreshKey}
                 />
+                <Button variant="outline" size="icon" className="shrink-0" onClick={() => setColumnsOpen(true)} title={t("views.customizeColumns")}>
+                  <Columns3 className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
                   <SlidersHorizontal className="h-4 w-4" />
                   {activeFilterCount > 0 && (
@@ -301,12 +309,12 @@ export default function JournalEntriesPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t("common.number")}</TableHead>
-                          <TableHead>{t("common.date")}</TableHead>
-                          <TableHead>{t("common.description")}</TableHead>
-                          <TableHead className="hidden sm:table-cell">{t("common.source")}</TableHead>
-                          <TableHead className="hidden sm:table-cell">{t("common.status")}</TableHead>
-                          <TableHead className="text-right">{t("accounting.debit")}</TableHead>
-                          <TableHead className="hidden sm:table-cell text-right">{t("accounting.credit")}</TableHead>
+                          {isColumnVisible("date") && <TableHead>{t("common.date")}</TableHead>}
+                          {isColumnVisible("description") && <TableHead>{t("common.description")}</TableHead>}
+                          {isColumnVisible("source") && <TableHead className="hidden sm:table-cell">{t("common.source")}</TableHead>}
+                          {isColumnVisible("status") && <TableHead className="hidden sm:table-cell">{t("common.status")}</TableHead>}
+                          {isColumnVisible("debit") && <TableHead className="text-right">{t("accounting.debit")}</TableHead>}
+                          {isColumnVisible("credit") && <TableHead className="hidden sm:table-cell text-right">{t("accounting.credit")}</TableHead>}
                           <TableHead className="w-[80px]"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -323,32 +331,32 @@ export default function JournalEntriesPage() {
                                   {entry.journalNumber}
                                 </Link>
                               </TableCell>
-                              <TableCell>
+                              {isColumnVisible("date") && <TableCell>
                                 {format(new Date(entry.date), "dd MMM yyyy")}
-                              </TableCell>
-                              <TableCell className="max-w-[120px] truncate">
+                              </TableCell>}
+                              {isColumnVisible("description") && <TableCell className="max-w-[120px] truncate">
                                 {entry.description}
-                              </TableCell>
-                              <TableCell className="hidden sm:table-cell">
+                              </TableCell>}
+                              {isColumnVisible("source") && <TableCell className="hidden sm:table-cell">
                                 <Badge variant="outline">
                                   {srcLabels[entry.sourceType] || entry.sourceType}
                                 </Badge>
-                              </TableCell>
-                              <TableCell className="hidden sm:table-cell">
+                              </TableCell>}
+                              {isColumnVisible("status") && <TableCell className="hidden sm:table-cell">
                                 <Badge className={statusColors[entry.status]}>
                                   {entry.status}
                                 </Badge>
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
+                              </TableCell>}
+                              {isColumnVisible("debit") && <TableCell className="text-right font-mono">
                                 {totals.debit.toLocaleString(locale, {
                                   minimumFractionDigits: 2,
                                 })}
-                              </TableCell>
-                              <TableCell className="hidden sm:table-cell text-right font-mono">
+                              </TableCell>}
+                              {isColumnVisible("credit") && <TableCell className="hidden sm:table-cell text-right font-mono">
                                 {totals.credit.toLocaleString(locale, {
                                   minimumFractionDigits: 2,
                                 })}
-                              </TableCell>
+                              </TableCell>}
                               <TableCell onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -402,6 +410,13 @@ export default function JournalEntriesPage() {
         sortDirection={sortDirectionForSave}
         onSaved={handleViewSaved}
         editingView={editingView}
+      />
+      <ColumnCustomizer
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        columns={JOURNAL_ENTRY_COLUMNS}
+        visibleColumns={visibleColumns}
+        onSave={setVisibleColumns}
       />
     </PageAnimation>
   );

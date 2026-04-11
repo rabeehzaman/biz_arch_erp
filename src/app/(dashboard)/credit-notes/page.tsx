@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, FileText, Eye, Edit, Trash2, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, FileText, Eye, Edit, Trash2, SlidersHorizontal, Columns3 } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -34,6 +34,9 @@ import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
 import { CREDIT_NOTE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
 import { CREDIT_NOTE_SYSTEM_VIEWS } from "@/lib/system-views";
 import { useCustomViews } from "@/hooks/use-custom-views";
+import { ColumnCustomizer } from "@/components/list-page/column-customizer";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { CREDIT_NOTE_COLUMNS } from "@/lib/column-configs";
 
 interface CreditNote {
   id: string;
@@ -65,6 +68,8 @@ export default function CreditNotesPage() {
     filtersForSave, sortFieldForSave, sortDirectionForSave,
     viewsRefreshKey, handleViewSaved, editingView, handleEditView,
   } = useCustomViews({ module: "credit-notes", systemViews: CREDIT_NOTE_SYSTEM_VIEWS });
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const { visibleColumns, setVisibleColumns, isColumnVisible } = useColumnVisibility("credit-notes", CREDIT_NOTE_COLUMNS);
   const {
     items: creditNotes,
     isLoading,
@@ -139,6 +144,9 @@ export default function CreditNotesPage() {
                 onEditView={handleEditView}
                 refreshKey={viewsRefreshKey}
               />
+              <Button variant="outline" size="icon" className="shrink-0" onClick={() => setColumnsOpen(true)} title={t("views.customizeColumns")}>
+                <Columns3 className="h-4 w-4" />
+              </Button>
               <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
                 <SlidersHorizontal className="h-4 w-4" />
                 {activeFilterCount > 0 && (
@@ -249,10 +257,10 @@ export default function CreditNotesPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t("creditNotes.cnNo")}</TableHead>
-                        <TableHead>{t("sales.customer")}</TableHead>
-                        <TableHead>{t("sales.invoiceNumber")}</TableHead>
-                        <TableHead>{t("sales.issueDate")}</TableHead>
-                        <TableHead className="text-right">{t("common.total")}</TableHead>
+                        {isColumnVisible("customer") && <TableHead>{t("sales.customer")}</TableHead>}
+                        {isColumnVisible("invoice") && <TableHead>{t("sales.invoiceNumber")}</TableHead>}
+                        {isColumnVisible("issueDate") && <TableHead>{t("sales.issueDate")}</TableHead>}
+                        {isColumnVisible("total") && <TableHead className="text-right">{t("common.total")}</TableHead>}
                         <TableHead className="text-right">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -266,7 +274,7 @@ export default function CreditNotesPage() {
                           <TableCell className="font-medium">
                             {creditNote.creditNoteNumber}
                           </TableCell>
-                          <TableCell>
+                          {isColumnVisible("customer") && <TableCell>
                             <div>
                               <Link href={`/customers/${creditNote.customer.id}`} className="font-medium hover:underline">
                                 {creditNote.customer.name}
@@ -277,8 +285,8 @@ export default function CreditNotesPage() {
                                 </div>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
+                          </TableCell>}
+                          {isColumnVisible("invoice") && <TableCell>
                             {creditNote.invoice ? (
                               <Link
                                 href={`/invoices/${creditNote.invoice.id}`}
@@ -290,13 +298,13 @@ export default function CreditNotesPage() {
                             ) : (
                               <span className="text-slate-400">-</span>
                             )}
-                          </TableCell>
-                          <TableCell>
+                          </TableCell>}
+                          {isColumnVisible("issueDate") && <TableCell>
                             {format(new Date(creditNote.issueDate), "dd MMM yyyy")}
-                          </TableCell>
-                          <TableCell className="text-right text-green-600 font-medium">
+                          </TableCell>}
+                          {isColumnVisible("total") && <TableCell className="text-right text-green-600 font-medium">
                             {fmt(Number(creditNote.total))}
-                          </TableCell>
+                          </TableCell>}
                           <TableCell
                             className="text-right"
                             onClick={(e) => e.stopPropagation()}
@@ -358,6 +366,13 @@ export default function CreditNotesPage() {
         sortDirection={sortDirectionForSave}
         onSaved={handleViewSaved}
         editingView={editingView}
+      />
+      <ColumnCustomizer
+        open={columnsOpen}
+        onOpenChange={setColumnsOpen}
+        columns={CREDIT_NOTE_COLUMNS}
+        visibleColumns={visibleColumns}
+        onSave={setVisibleColumns}
       />
     </PageAnimation>
   );

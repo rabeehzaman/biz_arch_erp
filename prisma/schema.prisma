@@ -3591,6 +3591,7 @@ model CustomView {
   name           String
   module         String   // e.g. "invoices", "payments", "expenses"
   filters        Json     // Saved filter criteria as key-value pairs
+  columns        Json?    // Array of visible column keys, e.g. ["invoiceNumber", "customer", "total"]
   sortField      String?
   sortDirection  String?  // "asc" or "desc"
   isDefault      Boolean  @default(false)
