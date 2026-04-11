@@ -51,7 +51,7 @@ export default function ProductionOrdersPage() {
       const res = await fetch(`/api/manufacturing/production-orders?${params}`);
       if (res.ok) setOrders(await res.json());
     } catch {
-      toast.error("Failed to load production orders");
+      toast.error(t("manufacturing.failedToLoadOrders"));
     } finally {
       setLoading(false);
     }

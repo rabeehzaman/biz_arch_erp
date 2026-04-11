@@ -67,7 +67,7 @@ export async function PUT(
       customerId, customerName,
       tableId, tableNumber, tableName, tableSection, tableCapacity,
       heldOrderId, kotSentQuantities, kotOrderIds,
-      broadcast,
+      preBillPrinted, broadcast,
     } = body;
 
     const data = {
@@ -85,6 +85,7 @@ export async function PUT(
       heldOrderId: heldOrderId || null,
       kotSentQuantities: kotSentQuantities ?? {},
       kotOrderIds: kotOrderIds ?? [],
+      preBillPrinted: preBillPrinted ?? false,
     };
 
     // Check if this is a new order (needs server-assigned orderNumber)

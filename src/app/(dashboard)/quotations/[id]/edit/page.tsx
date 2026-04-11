@@ -117,10 +117,37 @@ export default function EditQuotationPage({
   }, [id]);
 
   useEffect(() => {
-    fetchProducts();
-    // Refresh product options from the selected warehouse.
+    const controller = new AbortController();
+    const url = formData.warehouseId
+      ? `/api/products?warehouseId=${formData.warehouseId}&compact=true`
+      : "/api/products?compact=true";
+    fetch(url, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => setProducts(data))
+      .catch(() => {});
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
+
+  // Resolve customer-specific price list prices when customer changes
+  const isPriceListOn = (session?.user as { isPriceListEnabled?: boolean })?.isPriceListEnabled ?? false;
+  useEffect(() => {
+    if (!isPriceListOn || !formData.customerId) return;
+    fetch(`/api/products/resolved-prices?customerId=${formData.customerId}`)
+      .then((r) => r.json())
+      .then((resolved: Record<string, { price: number; basePrice: number }>) => {
+        if (!resolved || Object.keys(resolved).length === 0) return;
+        setProducts((prev) =>
+          prev.map((p) => {
+            const rp = resolved[p.id];
+            if (rp) return { ...p, price: rp.price, basePrice: rp.basePrice };
+            return p;
+          })
+        );
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.customerId, isPriceListOn]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -144,15 +171,6 @@ export default function EditQuotationPage({
     const response = await fetch("/api/customers?compact=true");
     const data = await response.json();
     setCustomers(data);
-  };
-
-  const fetchProducts = async () => {
-    const url = formData.warehouseId
-      ? `/api/products?warehouseId=${formData.warehouseId}&compact=true`
-      : "/api/products?compact=true";
-    const response = await fetch(url);
-    const data = await response.json();
-    setProducts(data);
   };
 
   const fetchQuotation = async () => {
@@ -229,6 +247,7 @@ export default function EditQuotationPage({
       if (item.id !== id) return item;
 
       if (field === "productId") {
+        if (value === item.productId) return item;
         const product = products.find((p) => p.id === value);
         if (product) {
           if (isLastItem) {
@@ -249,6 +268,7 @@ export default function EditQuotationPage({
       }
 
       if (field === "unitId") {
+        if (value === item.unitId) return item;
         const product = products.find((p) => p.id === item.productId);
         if (product) {
           const resolved = resolveUnitPrice(Number(product.price), value as string, product.unitId!, product.unitConversions);

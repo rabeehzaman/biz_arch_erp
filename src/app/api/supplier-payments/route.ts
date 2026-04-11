@@ -90,6 +90,9 @@ export async function GET(request: NextRequest) {
           purchaseInvoice: {
             select: { id: true, purchaseInvoiceNumber: true },
           },
+          branch: {
+            select: { id: true, name: true },
+          },
         },
       }),
       prisma.supplierPayment.count({ where }),

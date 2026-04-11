@@ -61,6 +61,9 @@ export interface ReceiptData {
   currency?: string;
   isTaxInclusivePrice?: boolean;
   isReturn?: boolean;
+  // Global discount
+  globalDiscountPercent?: number;
+  globalDiscountAmount?: number;
   // Indian GST document-level fields
   totalCgst?: number;
   totalSgst?: number;
@@ -349,6 +352,16 @@ export function PosReceipt({ data }: { data: ReceiptData }) {
         {data.isTaxInclusivePrice && (
           <div style={{ fontSize: "10px", color: "#000", textAlign: "center", marginTop: "2px" }}>
             {isZatca ? "الأسعار شاملة الضريبة / Prices include tax" : "Prices include tax"}
+          </div>
+        )}
+        {data.globalDiscountAmount != null && data.globalDiscountAmount > 0 && (
+          <div style={{ ...rowStyle, fontSize: "12px", color: "#000", marginTop: "2px" }}>
+            <span>
+              {data.globalDiscountPercent && data.globalDiscountPercent > 0
+                ? bl(`Discount (${Math.round(data.globalDiscountPercent * 100) / 100}%)`, `خصم (${Math.round(data.globalDiscountPercent * 100) / 100}%)`)
+                : bl("Discount", "خصم")}
+            </span>
+            <span>-{formatCurrency(data.globalDiscountAmount, cur)}</span>
           </div>
         )}
         {data.roundOffAmount !== undefined && data.roundOffAmount !== 0 && (

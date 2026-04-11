@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -29,11 +30,14 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel: confirmLabelProp,
+  cancelLabel: cancelLabelProp,
   variant = "destructive",
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useLanguage();
+  const confirmLabel = confirmLabelProp ?? t("common.confirm");
+  const cancelLabel = cancelLabelProp ?? t("common.cancel");
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>

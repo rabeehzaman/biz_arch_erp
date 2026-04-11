@@ -126,6 +126,12 @@ export async function GET(request: NextRequest) {
           createdBy: {
             select: { id: true, name: true },
           },
+          branch: {
+            select: { id: true, name: true },
+          },
+          warehouse: {
+            select: { id: true, name: true },
+          },
           _count: {
             select: { items: true },
           },

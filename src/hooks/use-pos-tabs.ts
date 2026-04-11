@@ -36,6 +36,7 @@ export interface TabContext {
   kotSentQuantities: Map<string, number>;
   kotOrderIds: string[];
   view: "cart" | "payment";
+  preBillPrinted: boolean;
   createdAt: number;
 }
 
@@ -57,6 +58,7 @@ interface DBOpenOrder {
   kotSentQuantities: Record<string, number>;
   kotOrderIds: string[];
   orderNumber: number;
+  preBillPrinted: boolean;
   version: number;
   createdAt: string;
 }
@@ -110,6 +112,7 @@ function makeDefaultTab(id: string, label: string, orderNumber: number): TabCont
     kotSentQuantities: new Map(),
     kotOrderIds: [],
     view: "cart",
+    preBillPrinted: false,
     createdAt: Date.now(),
   };
 }
@@ -142,6 +145,7 @@ function deserializeTab(record: DBOpenOrder, index: number): TabContext {
     ),
     kotOrderIds: Array.isArray(record.kotOrderIds) ? record.kotOrderIds : [],
     view: "cart",
+    preBillPrinted: record.preBillPrinted ?? false,
     createdAt: new Date(record.createdAt).getTime(),
   };
 }
@@ -162,6 +166,7 @@ function serializeTab(tab: TabContext): Record<string, unknown> {
     heldOrderId: tab.heldOrderId,
     kotSentQuantities: Object.fromEntries(tab.kotSentQuantities),
     kotOrderIds: tab.kotOrderIds,
+    preBillPrinted: tab.preBillPrinted,
   };
 }
 

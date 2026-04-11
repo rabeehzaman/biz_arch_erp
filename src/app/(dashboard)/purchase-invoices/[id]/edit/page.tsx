@@ -117,8 +117,15 @@ export default function EditPurchaseInvoicePage({
   }, [id]);
 
   useEffect(() => {
-    fetchProducts();
-    // Refresh product options from the selected warehouse.
+    const controller = new AbortController();
+    const url = formData.warehouseId
+      ? `/api/products?warehouseId=${formData.warehouseId}&compact=true`
+      : "/api/products?compact=true";
+    fetch(url, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => setProducts(data))
+      .catch(() => {});
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.warehouseId]);
 
@@ -144,15 +151,6 @@ export default function EditPurchaseInvoicePage({
     const response = await fetch("/api/suppliers?compact=true");
     const data = await response.json();
     setSuppliers(data);
-  };
-
-  const fetchProducts = async () => {
-    const url = formData.warehouseId
-      ? `/api/products?warehouseId=${formData.warehouseId}&compact=true`
-      : "/api/products?compact=true";
-    const response = await fetch(url);
-    const data = await response.json();
-    setProducts(data);
   };
 
   const fetchInvoice = async () => {
@@ -232,6 +230,7 @@ export default function EditPurchaseInvoicePage({
       if (item.id !== id) return item;
 
       if (field === "productId") {
+        if (value === item.productId) return item;
         const product = products.find((p) => p.id === value);
         if (product) {
           if (isLastItem) {
@@ -265,6 +264,7 @@ export default function EditPurchaseInvoicePage({
       }
 
       if (field === "unitId") {
+        if (value === item.unitId) return item;
         const product = products.find((p) => p.id === item.productId);
         if (product) {
           let baseCost = Number(product.cost) || Number(product.price);

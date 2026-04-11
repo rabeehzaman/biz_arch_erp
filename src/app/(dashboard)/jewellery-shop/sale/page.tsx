@@ -14,6 +14,7 @@ import { Loader2, ShoppingCart, Trash2, Gem, Receipt, Search, Download, Printer 
 import { Input } from "@/components/ui/input";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/lib/i18n";
 import { useJewelleryRates } from "@/hooks/use-jewellery-rates";
 import { calculateJewelleryLinePrice } from "@/lib/jewellery/client-pricing";
 import { downloadBlob } from "@/lib/download";
@@ -47,6 +48,7 @@ export default function JewellerySalePage() {
   useEffect(() => { setMounted(true); }, []);
 
   const { fmt } = useCurrency();
+  const { t } = useLanguage();
   const { data: stockData, mutate: mutateStock } = useSWR(mounted ? "/api/jewellery/items?status=IN_STOCK" : null, fetcher);
   const { data: customerData } = useSWR(mounted ? "/api/customers" : null, fetcher);
   const { data: oldGoldData, mutate: mutateOldGold } = useSWR(mounted ? "/api/jewellery/old-gold?unadjusted=true" : null, fetcher);
@@ -78,8 +80,8 @@ export default function JewellerySalePage() {
   }, []);
 
   const handleSale = useCallback(async () => {
-    if (!customerId) { toast.error("Please select a customer"); return; }
-    if (selectedItems.length === 0) { toast.error("Please select at least one item"); return; }
+    if (!customerId) { toast.error(t("jewellery.selectCustomer")); return; }
+    if (selectedItems.length === 0) { toast.error(t("jewellery.selectAtLeastOneItem")); return; }
 
     setProcessing(true);
     try {
@@ -105,7 +107,7 @@ export default function JewellerySalePage() {
         toast.error(err.error || "Sale failed");
       }
     } catch {
-      toast.error("Sale failed");
+      toast.error(t("jewellery.saleFailed"));
     } finally {
       setProcessing(false);
     }
@@ -374,10 +376,10 @@ export default function JewellerySalePage() {
                       onClick={async () => {
                         try {
                           const res = await fetch(`/api/invoices/${lastInvoice.invoice.id}/pdf`);
-                          if (!res.ok) { toast.error("Failed to generate PDF"); return; }
+                          if (!res.ok) { toast.error(t("jewellery.failedToGeneratePdf")); return; }
                           const blob = await res.blob();
                           await downloadBlob(blob, `${lastInvoice.invoice.invoiceNumber}.pdf`);
-                        } catch { toast.error("Download failed"); }
+                        } catch { toast.error(t("jewellery.downloadFailed")); }
                       }}
                     >
                       <Download className="h-3 w-3 mr-1" />
@@ -390,12 +392,12 @@ export default function JewellerySalePage() {
                       onClick={async () => {
                         try {
                           const res = await fetch(`/api/invoices/${lastInvoice.invoice.id}/pdf`);
-                          if (!res.ok) { toast.error("Failed to generate PDF"); return; }
+                          if (!res.ok) { toast.error(t("jewellery.failedToGeneratePdf")); return; }
                           const blob = await res.blob();
                           const url = URL.createObjectURL(blob);
                           const win = window.open(url, "_blank");
                           if (win) setTimeout(() => win.print(), 500);
-                        } catch { toast.error("Print failed"); }
+                        } catch { toast.error(t("jewellery.printFailed")); }
                       }}
                     >
                       <Printer className="h-3 w-3 mr-1" />

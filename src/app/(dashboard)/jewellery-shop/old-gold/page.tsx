@@ -49,7 +49,7 @@ export default function OldGoldPage() {
   };
 
   const handleCreate = useCallback(async () => {
-    if (!form.weight || !form.rate) { toast.error("Weight and rate are required"); return; }
+    if (!form.weight || !form.rate) { toast.error(t("jewellery.weightAndRateRequired")); return; }
     setSaving(true);
     try {
       const testReadings = [form.reading1, form.reading2, form.reading3]
@@ -72,15 +72,15 @@ export default function OldGoldPage() {
         }),
       });
       if (res.ok) {
-        toast.success("Old gold purchase recorded");
+        toast.success(t("jewellery.oldGoldRecorded"));
         setDialogOpen(false);
         setForm({ customerName: "", weight: "", testedPurity: "K22", purityPercentage: "91.67", reading1: "", reading2: "", reading3: "", testMethod: "XRF", meltingLossPercent: "2", rate: "", panNumber: "", notes: "" });
         mutate();
       } else {
         const d = await res.json();
-        toast.error(d.error || "Failed to record purchase");
+        toast.error(d.error || t("jewellery.failedToRecordPurchase"));
       }
-    } catch { toast.error("Failed to record purchase"); }
+    } catch { toast.error(t("jewellery.failedToRecordPurchase")); }
     finally { setSaving(false); }
   }, [form, mutate]);
 
@@ -90,26 +90,26 @@ export default function OldGoldPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{t("nav.oldGoldExchange")}</h1>
-            <p className="text-muted-foreground">Purchase and exchange old gold from customers</p>
+            <p className="text-muted-foreground">{t("jewellery.oldGoldPurchase")}</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" /> Record Purchase</Button>
+              <Button><Plus className="mr-2 h-4 w-4" /> {t("jewellery.recordPurchase")}</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Old Gold Purchase</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t("jewellery.oldGoldPurchase")}</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label>Customer Name (walk-in)</Label>
-                  <Input value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} placeholder="Customer name" />
+                  <Label>{t("jewellery.customerNameWalkIn")}</Label>
+                  <Input value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} placeholder={t("jewellery.customerName")} />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Weight (g) *</Label>
+                    <Label>{t("jewellery.weightGrams")} *</Label>
                     <Input type="number" step="0.001" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Tested Purity</Label>
+                    <Label>{t("jewellery.testedPurity")}</Label>
                     <Select value={form.testedPurity} onValueChange={(v) => setForm({ ...form, testedPurity: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -123,7 +123,7 @@ export default function OldGoldPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Test Method</Label>
+                    <Label>{t("jewellery.testMethod")}</Label>
                     <Select value={form.testMethod} onValueChange={(v) => setForm({ ...form, testMethod: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -136,42 +136,42 @@ export default function OldGoldPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Purity Readings (3 XRF readings)</Label>
+                  <Label>{t("jewellery.purityReadings")}</Label>
                   <div className="grid grid-cols-4 gap-2">
-                    <Input type="number" step="0.001" placeholder="Reading 1" value={form.reading1} onChange={(e) => setForm({ ...form, reading1: e.target.value })} />
-                    <Input type="number" step="0.001" placeholder="Reading 2" value={form.reading2} onChange={(e) => setForm({ ...form, reading2: e.target.value })} />
-                    <Input type="number" step="0.001" placeholder="Reading 3" value={form.reading3} onChange={(e) => setForm({ ...form, reading3: e.target.value })} />
-                    <Button variant="outline" type="button" onClick={handleAvgReadings}>Avg</Button>
+                    <Input type="number" step="0.001" placeholder={`${t("jewellery.reading")} 1`} value={form.reading1} onChange={(e) => setForm({ ...form, reading1: e.target.value })} />
+                    <Input type="number" step="0.001" placeholder={`${t("jewellery.reading")} 2`} value={form.reading2} onChange={(e) => setForm({ ...form, reading2: e.target.value })} />
+                    <Input type="number" step="0.001" placeholder={`${t("jewellery.reading")} 3`} value={form.reading3} onChange={(e) => setForm({ ...form, reading3: e.target.value })} />
+                    <Button variant="outline" type="button" onClick={handleAvgReadings}>{t("jewellery.avg")}</Button>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Purity % (averaged)</Label>
+                    <Label>{t("jewellery.purityAverage")}</Label>
                     <Input type="number" step="0.001" value={form.purityPercentage} onChange={(e) => setForm({ ...form, purityPercentage: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Melting Loss %</Label>
+                    <Label>{t("jewellery.meltingLoss")}</Label>
                     <Input type="number" step="0.001" value={form.meltingLossPercent} onChange={(e) => setForm({ ...form, meltingLossPercent: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Rate (per g) *</Label>
+                    <Label>{t("jewellery.ratePerGram")} *</Label>
                     <Input type="number" step="0.001" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
                   </div>
                 </div>
                 <div className="rounded-md bg-muted p-3">
-                  <p className="text-sm font-medium">Total Value: <span className="text-lg">{fmt(Number(calcTotal()))}</span></p>
+                  <p className="text-sm font-medium">{t("jewellery.totalValue")}: <span className="text-lg">{fmt(Number(calcTotal()))}</span></p>
                 </div>
                 <div className="space-y-2">
-                  <Label>PAN Number</Label>
+                  <Label>{t("jewellery.panNumber")}</Label>
                   <Input value={form.panNumber} onChange={(e) => setForm({ ...form, panNumber: e.target.value.toUpperCase() })} placeholder="ABCDE1234F" maxLength={10} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Notes</Label>
+                  <Label>{t("common.notes")}</Label>
                   <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
                 </div>
                 <Button onClick={handleCreate} disabled={saving} className="w-full">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Record Purchase
+                  {t("jewellery.recordPurchase")}
                 </Button>
               </div>
             </DialogContent>
@@ -187,13 +187,13 @@ export default function OldGoldPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead className="text-right">Weight (g)</TableHead>
-                      <TableHead>Purity</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">Total Value</TableHead>
-                      <TableHead>PAN</TableHead>
+                      <TableHead>{t("common.date")}</TableHead>
+                      <TableHead>{t("jewellery.customerName")}</TableHead>
+                      <TableHead className="text-right">{t("jewellery.weightGrams")}</TableHead>
+                      <TableHead>{t("jewellery.purity")}</TableHead>
+                      <TableHead className="text-right">{t("common.rate")}</TableHead>
+                      <TableHead className="text-right">{t("jewellery.totalValue")}</TableHead>
+                      <TableHead>{t("jewellery.pan")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -214,7 +214,7 @@ export default function OldGoldPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12">
                 <ArrowRightLeft className="h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-4 text-sm text-muted-foreground">No old gold purchases yet</p>
+                <p className="mt-4 text-sm text-muted-foreground">{t("jewellery.noOldGoldPurchases")}</p>
               </div>
             )}
           </CardContent>

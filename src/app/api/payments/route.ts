@@ -93,6 +93,9 @@ export async function GET(request: NextRequest) {
           invoice: {
             select: { id: true, invoiceNumber: true },
           },
+          branch: {
+            select: { id: true, name: true },
+          },
         },
       }),
       prisma.payment.count({ where }),

@@ -96,8 +96,13 @@ export default function EditCreditNotePage({
     }, [id]);
 
     useEffect(() => {
-        fetchProducts();
-        // Product options are refreshed from the selected warehouse.
+        const controller = new AbortController();
+        const url = warehouseId ? `/api/products?warehouseId=${warehouseId}&compact=true` : "/api/products?compact=true";
+        fetch(url, { signal: controller.signal })
+            .then((r) => r.json())
+            .then((data) => setProducts(data))
+            .catch(() => {});
+        return () => controller.abort();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [warehouseId]);
 
@@ -177,6 +182,7 @@ export default function EditCreditNotePage({
                 if (item.id !== id) return item;
 
                 if (field === "productId") {
+                    if (value === item.productId) return item;
                     const product = products.find((p) => p.id === value);
                     if (product) {
                         const defaultUnit = getDefaultUnit(product, product.unitConversions);
@@ -193,6 +199,7 @@ export default function EditCreditNotePage({
                 }
 
                 if (field === "unitId") {
+                    if (value === item.unitId) return item;
                     const product = products.find((p) => p.id === item.productId);
                     if (product) {
                         const resolved = resolveUnitPrice(Number(product.price), value as string, product.unitId!, product.unitConversions);

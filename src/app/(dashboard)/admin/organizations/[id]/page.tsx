@@ -765,13 +765,13 @@ export default function OrganizationDetailsPage() {
                 setAddMemberEmail("");
                 setAddMemberRole("user");
                 fetchOrganization();
-                toast.success("User added to organization");
+                toast.success(t("admin.userAddedToOrg"));
             } else {
                 const data = await res.json();
                 toast.error(data.error || "Failed to add user");
             }
         } catch {
-            toast.error("Failed to add user");
+            toast.error(t("admin.failedToAddUser"));
         } finally {
             setIsAddingMember(false);
         }
@@ -787,13 +787,13 @@ export default function OrganizationDetailsPage() {
             if (res.ok) {
                 setRemoveMemberUser(null);
                 fetchOrganization();
-                toast.success("User removed from organization");
+                toast.success(t("admin.userRemovedFromOrg"));
             } else {
                 const data = await res.json();
                 toast.error(data.error || "Failed to remove user");
             }
         } catch {
-            toast.error("Failed to remove user");
+            toast.error(t("admin.failedToRemoveUser"));
         } finally {
             setIsRemovingMember(false);
         }

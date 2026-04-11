@@ -42,7 +42,7 @@ export default function SchemesPage() {
   const [payAmount, setPayAmount] = useState("");
 
   const handleCreate = useCallback(async () => {
-    if (!form.schemeName || !form.customerId || !form.monthlyAmount) { toast.error("All fields are required"); return; }
+    if (!form.schemeName || !form.customerId || !form.monthlyAmount) { toast.error(t("jewellery.allFieldsRequired")); return; }
     setSaving(true);
     try {
       const res = await fetch("/api/jewellery/schemes", {
@@ -51,11 +51,11 @@ export default function SchemesPage() {
       });
       if (res.ok) { toast.success("Scheme created"); setDialogOpen(false); setForm({ schemeName: "", customerId: "", monthlyAmount: "", durationMonths: "11", startDate: new Date().toISOString().split("T")[0] }); mutate(); }
       else { const d = await res.json(); toast.error(d.error || "Failed"); }
-    } catch { toast.error("Failed"); } finally { setSaving(false); }
+    } catch { toast.error(t("jewellery.failed")); } finally { setSaving(false); }
   }, [form, mutate]);
 
   const handlePayment = useCallback(async () => {
-    if (!payAmount || !selectedScheme) { toast.error("Amount is required"); return; }
+    if (!payAmount || !selectedScheme) { toast.error(t("jewellery.amountIsRequired")); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/jewellery/schemes/${selectedScheme.id}/payments`, {
@@ -64,7 +64,7 @@ export default function SchemesPage() {
       });
       if (res.ok) { toast.success("Payment recorded"); setPayDialogOpen(false); setPayAmount(""); mutate(); }
       else { const d = await res.json(); toast.error(d.error || "Failed"); }
-    } catch { toast.error("Failed"); } finally { setSaving(false); }
+    } catch { toast.error(t("jewellery.failed")); } finally { setSaving(false); }
   }, [payAmount, selectedScheme, mutate]);
 
   return (

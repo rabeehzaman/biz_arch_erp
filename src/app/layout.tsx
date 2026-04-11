@@ -92,6 +92,12 @@ const standaloneShellBootstrap = `
     viewportMeta.setAttribute("content", isStandalone ? standaloneViewport : baseViewport);
     document.documentElement.dataset.appDisplayMode = isStandalone ? "standalone" : "browser";
     document.documentElement.dataset.appOrientation = isLandscape ? "landscape" : "portrait";
+
+    if (window.matchMedia) {
+      window.matchMedia("(orientation: landscape)").addEventListener("change", function(e) {
+        document.documentElement.dataset.appOrientation = e.matches ? "landscape" : "portrait";
+      });
+    }
   })();
 `;
 

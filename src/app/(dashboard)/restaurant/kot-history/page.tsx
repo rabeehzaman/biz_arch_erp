@@ -194,7 +194,7 @@ export default function KOTHistoryPage() {
         const data = await res.json();
         throw new Error(data.error || "Failed to update status");
       }
-      toast.success("KOT status updated");
+      toast.success(t("restaurant.kotStatusUpdated"));
       mutate();
     } catch (error) {
       toast.error(
@@ -235,7 +235,7 @@ export default function KOTHistoryPage() {
               <label className="text-sm font-medium">{t("Status")}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder={t("restaurant.allStatuses")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("All Statuses")}</SelectItem>
@@ -250,7 +250,7 @@ export default function KOTHistoryPage() {
               <label className="text-sm font-medium">{t("Table")}</label>
               <Select value={tableFilter} onValueChange={setTableFilter}>
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="All tables" />
+                  <SelectValue placeholder={t("restaurant.allTables")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("All Tables")}</SelectItem>

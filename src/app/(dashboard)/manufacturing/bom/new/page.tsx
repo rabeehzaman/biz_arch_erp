@@ -77,7 +77,7 @@ export default function NewBOMPage() {
 
   async function handleSubmit() {
     if (!name || !productId || items.some((i) => !i.productId)) {
-      toast.error("Fill all required fields");
+      toast.error(t("manufacturing.fillAllRequired"));
       return;
     }
 
@@ -111,7 +111,7 @@ export default function NewBOMPage() {
         toast.error(data.error || "Failed to create BOM");
       }
     } catch {
-      toast.error("Failed to create BOM");
+      toast.error(t("manufacturing.failedToCreateBom"));
     } finally {
       setSubmitting(false);
     }

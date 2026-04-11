@@ -389,6 +389,7 @@ export const POS_COMPONENT_CATEGORIES: { label: string; items: { slug: string; l
   {
     label: "Products",
     items: [
+      { slug: "quick-sale-tile", label: "Quick Sale Tile" },
       { slug: "product-search", label: "Product Search Bar" },
       { slug: "category-tabs", label: "Category Tabs" },
       { slug: "view-mode-toggle", label: "View Mode Toggle (Grid/List)" },
@@ -398,6 +399,7 @@ export const POS_COMPONENT_CATEGORIES: { label: string; items: { slug: string; l
     label: "Cart",
     items: [
       { slug: "cart-summary", label: "Cart Summary (Subtotal/Tax/Total)" },
+      { slug: "global-discount", label: "Global Discount" },
     ],
   },
   {

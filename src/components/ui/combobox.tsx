@@ -5,6 +5,7 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search, Check, ChevronsUpDown, X, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { resetMobileDialogViewport, setPreserveScrollY } from "@/lib/mobile-viewport";
 
@@ -37,8 +38,8 @@ export function Combobox<T>({
   getLabel,
   filterFn,
   renderItem,
-  placeholder = "Select an item...",
-  emptyText = "No items found.",
+  placeholder: placeholderProp,
+  emptyText: emptyTextProp,
   required = false,
   disabled = false,
   className,
@@ -48,6 +49,9 @@ export function Combobox<T>({
   autoFocus = false,
   mobileFullScreen = false,
 }: ComboboxProps<T>) {
+  const { t } = useLanguage();
+  const placeholder = placeholderProp ?? t("common.selectAnItem");
+  const emptyText = emptyTextProp ?? t("common.noItemsFound");
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
@@ -241,7 +245,7 @@ export function Combobox<T>({
       <input
         ref={inputRef}
         type="text"
-        placeholder="Search..."
+        placeholder={t("common.search")}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-slate-500"

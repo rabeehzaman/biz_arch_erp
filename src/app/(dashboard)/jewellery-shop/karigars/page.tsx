@@ -31,29 +31,29 @@ export default function KarigarsPage() {
   const [txForm, setTxForm] = useState({ type: "ISSUE", weight: "", purity: "K22", notes: "" });
 
   const handleCreate = useCallback(async () => {
-    if (!form.name || !form.phone) { toast.error("Name and phone are required"); return; }
+    if (!form.name || !form.phone) { toast.error(t("jewellery.nameAndPhoneRequired")); return; }
     setSaving(true);
     try {
       const res = await fetch("/api/jewellery/karigars", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, wastageAllowancePercent: Number(form.wastageAllowancePercent) }),
       });
-      if (res.ok) { toast.success("Karigar added"); setDialogOpen(false); setForm({ name: "", phone: "", specialization: "", address: "", wastageAllowancePercent: "3" }); mutate(); }
+      if (res.ok) { toast.success(t("jewellery.karigarAdded")); setDialogOpen(false); setForm({ name: "", phone: "", specialization: "", address: "", wastageAllowancePercent: "3" }); mutate(); }
       else { const d = await res.json(); toast.error(d.error || "Failed"); }
-    } catch { toast.error("Failed"); } finally { setSaving(false); }
+    } catch { toast.error(t("jewellery.failed")); } finally { setSaving(false); }
   }, [form, mutate]);
 
   const handleTransaction = useCallback(async () => {
-    if (!txForm.weight || !selectedKarigar) { toast.error("Weight is required"); return; }
+    if (!txForm.weight || !selectedKarigar) { toast.error(t("jewellery.weightIsRequired")); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/jewellery/karigars/${selectedKarigar.id}/transactions`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...txForm, weight: Number(txForm.weight) }),
       });
-      if (res.ok) { toast.success("Transaction recorded"); setTxDialogOpen(false); setTxForm({ type: "ISSUE", weight: "", purity: "K22", notes: "" }); mutate(); }
+      if (res.ok) { toast.success(t("jewellery.transactionRecorded")); setTxDialogOpen(false); setTxForm({ type: "ISSUE", weight: "", purity: "K22", notes: "" }); mutate(); }
       else { const d = await res.json(); toast.error(d.error || "Failed"); }
-    } catch { toast.error("Failed"); } finally { setSaving(false); }
+    } catch { toast.error(t("jewellery.failed")); } finally { setSaving(false); }
   }, [txForm, selectedKarigar, mutate]);
 
   return (

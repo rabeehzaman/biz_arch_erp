@@ -54,6 +54,7 @@ export function useMobileFixedUi() {
   const [scrolledDown, setScrolledDown] = useState(false);
   const previousBusyRef = useRef(false);
   const recoveryTimeoutsRef = useRef<number[]>([]);
+  const recoveryInProgressRef = useRef(false);
   const lastScrollYRef = useRef(0);
 
   useEffect(() => {
@@ -82,10 +83,12 @@ export function useMobileFixedUi() {
     const clearRecoveryTimeouts = () => {
       recoveryTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
       recoveryTimeoutsRef.current = [];
+      recoveryInProgressRef.current = false;
     };
 
     const scheduleRecoveryPasses = () => {
       clearRecoveryTimeouts();
+      recoveryInProgressRef.current = true;
 
       // Check if a combobox/select requested scroll preservation.
       const targetScrollY = getPreserveScrollY();
@@ -105,8 +108,11 @@ export function useMobileFixedUi() {
           // When preserveScroll was requested, restore to that position instead.
           if (!scrollRestored) {
             window.scrollTo(0, targetScrollY ?? 0);
-            // Once position matches target, stop future scrollTo calls
-            if (targetScrollY != null && Math.abs(window.scrollY - targetScrollY) < 5) {
+            if (targetScrollY == null) {
+              // No scroll position to restore — one nudge is enough.
+              // Don't keep calling scrollTo(0,0) for 1.5s fighting user scroll.
+              scrollRestored = true;
+            } else if (Math.abs(window.scrollY - targetScrollY) < 5) {
               scrollRestored = true;
               clearPreserveScrollY();
             }
@@ -119,8 +125,9 @@ export function useMobileFixedUi() {
           applyViewportState(viewportState, { allowBottomOffset: true });
 
           // Fallback: always clear at the last delay
-          if (delay === lastDelay && targetScrollY != null) {
-            clearPreserveScrollY();
+          if (delay === lastDelay) {
+            if (targetScrollY != null) clearPreserveScrollY();
+            recoveryInProgressRef.current = false;
           }
         }, delay)
       );
@@ -136,7 +143,7 @@ export function useMobileFixedUi() {
 
       if (isBusy) {
         clearRecoveryTimeouts();
-      } else if (previousBusyRef.current) {
+      } else if (previousBusyRef.current && !recoveryInProgressRef.current) {
         scheduleRecoveryPasses();
       }
 
@@ -211,6 +218,9 @@ export function useMobileFixedUi() {
           }
         });
         const hideHandle = Keyboard.addListener("keyboardWillHide", () => {
+          // If recovery passes are already scheduled (from dialog viewport reset),
+          // don't trigger another round — avoid duplicate cascade on Android.
+          if (recoveryTimeoutsRef.current.length > 0) return;
           previousBusyRef.current = true;
           sync();
         });

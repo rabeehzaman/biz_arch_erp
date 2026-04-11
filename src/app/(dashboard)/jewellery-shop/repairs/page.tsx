@@ -41,16 +41,16 @@ export default function RepairsPage() {
   });
 
   const handleCreate = useCallback(async () => {
-    if (!form.customerId || !form.itemDescription) { toast.error("Customer and description are required"); return; }
+    if (!form.customerId || !form.itemDescription) { toast.error(t("jewellery.customerAndDescRequired")); return; }
     setSaving(true);
     try {
       const res = await fetch("/api/jewellery/repairs", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, estimatedCost: Number(form.estimatedCost) || null }),
       });
-      if (res.ok) { toast.success("Repair created"); setDialogOpen(false); setForm({ customerId: "", itemDescription: "", repairType: "", estimatedCost: "", notes: "" }); mutate(); }
+      if (res.ok) { toast.success(t("jewellery.repairCreated")); setDialogOpen(false); setForm({ customerId: "", itemDescription: "", repairType: "", estimatedCost: "", notes: "" }); mutate(); }
       else { const d = await res.json(); toast.error(d.error || "Failed"); }
-    } catch { toast.error("Failed"); } finally { setSaving(false); }
+    } catch { toast.error(t("jewellery.failed")); } finally { setSaving(false); }
   }, [form, mutate]);
 
   const handleStatusChange = useCallback(async (id: string, status: string) => {
@@ -61,7 +61,7 @@ export default function RepairsPage() {
       });
       if (res.ok) { toast.success(`Status updated to ${status}`); mutate(); }
       else { const d = await res.json(); toast.error(d.error || "Failed"); }
-    } catch { toast.error("Failed"); }
+    } catch { toast.error(t("jewellery.failed")); }
   }, [mutate]);
 
   return (

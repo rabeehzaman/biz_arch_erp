@@ -65,6 +65,9 @@ export async function GET(request: NextRequest) {
             },
             orderBy: { createdAt: "asc" },
           },
+          branch: {
+            select: { id: true, name: true },
+          },
         },
       }),
       prisma.journalEntry.count({ where }),

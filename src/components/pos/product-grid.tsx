@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ProductTile, type ProductTileProduct } from "./product-tile";
 import { ProductListItem } from "./product-list-item";
-import { PackageX } from "lucide-react";
+import { PackageX, Plus } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -17,6 +17,8 @@ interface ProductGridProps {
   selectionRevision: number;
   onAddToCart: (product: ProductTileProduct) => void;
   viewMode?: "grid" | "list";
+  showQuickSale?: boolean;
+  onQuickSale?: () => void;
 }
 
 const GAP = 12; // gap-3 = 12px
@@ -41,6 +43,8 @@ export function ProductGrid({
   selectionRevision,
   onAddToCart,
   viewMode = "grid",
+  showQuickSale = false,
+  onQuickSale,
 }: ProductGridProps) {
   const { t } = useLanguage();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -158,12 +162,28 @@ export function ProductGrid({
 
   if (filtered.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center py-12 text-muted-foreground">
-        <PackageX className="mb-3 h-12 w-12 opacity-50" />
-        <p className="text-lg font-medium">{t("pos.noProductsFound")}</p>
-        <p className="text-sm">
-          {normalizedSearchQuery ? t("pos.tryAdjustingSearch") : t("pos.addProducts")}
-        </p>
+      <div className="flex flex-1 flex-col overflow-y-auto">
+        {showQuickSale && (
+          <div className="px-0 pb-3">
+            <button
+              type="button"
+              onClick={onQuickSale}
+              className="flex h-[160px] w-full max-w-[180px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 transition-all active:scale-95 cursor-pointer hover:bg-amber-100"
+            >
+              <Plus className="h-8 w-8 text-amber-600 mb-1" />
+              <span className="text-sm font-bold text-amber-700">
+                {t("pos.quickSale") ?? "Quick Sale"}
+              </span>
+            </button>
+          </div>
+        )}
+        <div className="flex flex-1 flex-col items-center justify-center py-12 text-muted-foreground">
+          <PackageX className="mb-3 h-12 w-12 opacity-50" />
+          <p className="text-lg font-medium">{t("pos.noProductsFound")}</p>
+          <p className="text-sm">
+            {normalizedSearchQuery ? t("pos.tryAdjustingSearch") : t("pos.addProducts")}
+          </p>
+        </div>
       </div>
     );
   }
@@ -178,6 +198,20 @@ export function ProductGrid({
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white"
       >
+        {showQuickSale && (
+          <button
+            type="button"
+            onClick={onQuickSale}
+            className="flex w-full items-center gap-3 px-3 py-3 border-b border-slate-100 transition-colors hover:bg-amber-50 active:bg-amber-100 cursor-pointer"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <Plus className="h-5 w-5 text-amber-600" />
+            </div>
+            <span className="text-sm font-bold text-amber-700">
+              {t("pos.quickSale") ?? "Quick Sale"}
+            </span>
+          </button>
+        )}
         <div
           style={{ height: virtualizer.getTotalSize(), position: "relative" }}
         >
@@ -216,6 +250,23 @@ export function ProductGrid({
       onScroll={handleScroll}
       className="flex-1 overflow-y-auto"
     >
+      {showQuickSale && (
+        <div
+          className="grid gap-3 mb-3"
+          style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+        >
+          <button
+            type="button"
+            onClick={onQuickSale}
+            className="flex h-[160px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 transition-all active:scale-95 cursor-pointer hover:bg-amber-100"
+          >
+            <Plus className="h-8 w-8 text-amber-600 mb-1" />
+            <span className="text-sm font-bold text-amber-700">
+              {t("pos.quickSale") ?? "Quick Sale"}
+            </span>
+          </button>
+        </div>
+      )}
       <div
         style={{ height: virtualizer.getTotalSize(), position: "relative" }}
       >

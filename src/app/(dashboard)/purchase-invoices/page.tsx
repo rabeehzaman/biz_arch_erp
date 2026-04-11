@@ -60,6 +60,11 @@ interface PurchaseInvoice {
   supplierInvoiceRef: string | null;
   total: number;
   balanceDue: number;
+  branch?: { id: string; name: string } | null;
+  warehouse?: { id: string; name: string } | null;
+  subtotal?: number;
+  amountPaid?: number;
+  notes?: string | null;
   _count: {
     items: number;
   };
@@ -477,6 +482,12 @@ export default function PurchaseInvoicesPage() {
                             {sortField === "balance" && <span className="text-xs">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>}
                           </span>
                         </TableHead>}
+                        {isColumnVisible("branch") && <TableHead>{t("common.branch")}</TableHead>}
+                        {isColumnVisible("warehouse") && <TableHead>{t("common.warehouse")}</TableHead>}
+                        {isColumnVisible("subtotal") && <TableHead className="text-right">{t("common.subtotal")}</TableHead>}
+                        {isColumnVisible("amountPaid") && <TableHead className="text-right">{t("common.amountPaid") || "Amount Paid"}</TableHead>}
+                        {isColumnVisible("notes") && <TableHead>{t("common.notes")}</TableHead>}
+                        {isColumnVisible("itemCount") && <TableHead className="text-right">{t("common.items")}</TableHead>}
                         <TableHead className="text-right">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -537,6 +548,12 @@ export default function PurchaseInvoicesPage() {
                               {fmt(Number(invoice.balanceDue))}
                             </span>
                           </TableCell>}
+                          {isColumnVisible("branch") && <TableCell className="text-sm text-slate-600">{invoice.branch?.name || "-"}</TableCell>}
+                          {isColumnVisible("warehouse") && <TableCell className="text-sm text-slate-600">{invoice.warehouse?.name || "-"}</TableCell>}
+                          {isColumnVisible("subtotal") && <TableCell className="text-right">{fmt(Number(invoice.subtotal || 0))}</TableCell>}
+                          {isColumnVisible("amountPaid") && <TableCell className="text-right">{fmt(Number(invoice.amountPaid || 0))}</TableCell>}
+                          {isColumnVisible("notes") && <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{invoice.notes || "-"}</TableCell>}
+                          {isColumnVisible("itemCount") && <TableCell className="text-right">{invoice._count?.items || 0}</TableCell>}
                           <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <Link href={`/purchase-invoices/${invoice.id}`}>
                               <Button variant="ghost" size="icon" title={t("common.details") || "Details"}>

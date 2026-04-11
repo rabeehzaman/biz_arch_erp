@@ -51,6 +51,10 @@ interface Quotation {
   validUntil: string;
   status: "SENT" | "CONVERTED" | "CANCELLED" | "EXPIRED";
   total: number;
+  branch?: { id: string; name: string } | null;
+  warehouse?: { id: string; name: string } | null;
+  subtotal?: number;
+  notes?: string | null;
   _count: {
     items: number;
   };
@@ -287,6 +291,11 @@ export default function QuotationsPage() {
                           {isColumnVisible("validUntil") && <TableHead>{t("quotations.validUntil")}</TableHead>}
                           {isColumnVisible("status") && <TableHead>{t("common.status")}</TableHead>}
                           {isColumnVisible("total") && <TableHead className="text-right">{t("common.total")}</TableHead>}
+                          {isColumnVisible("branch") && <TableHead>{t("common.branch")}</TableHead>}
+                          {isColumnVisible("warehouse") && <TableHead>{t("common.warehouse")}</TableHead>}
+                          {isColumnVisible("subtotal") && <TableHead className="text-right">{t("common.subtotal")}</TableHead>}
+                          {isColumnVisible("notes") && <TableHead>{t("common.notes")}</TableHead>}
+                          {isColumnVisible("itemCount") && <TableHead className="text-right">{t("common.items")}</TableHead>}
                           <TableHead className="text-right">{t("common.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -320,6 +329,11 @@ export default function QuotationsPage() {
                             {isColumnVisible("total") && <TableCell className="text-right">
                               {fmt(Number(quotation.total))}
                             </TableCell>}
+                            {isColumnVisible("branch") && <TableCell className="text-sm text-slate-600">{quotation.branch?.name || "-"}</TableCell>}
+                            {isColumnVisible("warehouse") && <TableCell className="text-sm text-slate-600">{quotation.warehouse?.name || "-"}</TableCell>}
+                            {isColumnVisible("subtotal") && <TableCell className="text-right">{fmt(Number(quotation.subtotal || 0))}</TableCell>}
+                            {isColumnVisible("notes") && <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{quotation.notes || "-"}</TableCell>}
+                            {isColumnVisible("itemCount") && <TableCell className="text-right">{quotation._count?.items || 0}</TableCell>}
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               <Link href={`/quotations/${quotation.id}`}>
                                 <Button variant="ghost" size="icon">

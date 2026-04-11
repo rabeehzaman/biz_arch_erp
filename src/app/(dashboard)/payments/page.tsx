@@ -85,6 +85,8 @@ interface Payment {
   paymentMethod: string;
   reference: string | null;
   notes: string | null;
+  branch?: { id: string; name: string } | null;
+  isAdvance?: boolean;
 }
 
 interface Customer {
@@ -637,6 +639,10 @@ export default function PaymentsPage() {
                           {isColumnVisible("paymentMethod") && <TableHead className="hidden sm:table-cell">{t("payments.paymentMethod")}</TableHead>}
                           {isColumnVisible("amount") && <TableHead className="text-right">{t("common.amount")}</TableHead>}
                           {isColumnVisible("discount") && <TableHead className="hidden sm:table-cell text-right">{t("common.discount")}</TableHead>}
+                          {isColumnVisible("reference") && <TableHead>{t("common.reference")}</TableHead>}
+                          {isColumnVisible("branch") && <TableHead>{t("common.branch")}</TableHead>}
+                          {isColumnVisible("notes") && <TableHead>{t("common.notes")}</TableHead>}
+                          {isColumnVisible("isAdvance") && <TableHead>{t("payments.advance") || "Advance"}</TableHead>}
                           <TableHead className="w-[80px]">{t("common.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -666,6 +672,10 @@ export default function PaymentsPage() {
                                 ? fmt(Number(payment.discountReceived))
                                 : "-"}
                             </TableCell>}
+                            {isColumnVisible("reference") && <TableCell className="text-sm text-slate-600">{payment.reference || "-"}</TableCell>}
+                            {isColumnVisible("branch") && <TableCell className="text-sm text-slate-600">{payment.branch?.name || "-"}</TableCell>}
+                            {isColumnVisible("notes") && <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{payment.notes || "-"}</TableCell>}
+                            {isColumnVisible("isAdvance") && <TableCell className="text-sm text-slate-600">{payment.isAdvance ? "Yes" : "No"}</TableCell>}
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <Button
                                 variant="ghost"

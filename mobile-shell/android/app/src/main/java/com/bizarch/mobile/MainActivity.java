@@ -51,7 +51,7 @@ public class MainActivity extends BridgeActivity {
         settings.setDomStorageEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setDatabaseEnabled(true);
-        wv.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        wv.setLayerType(View.LAYER_TYPE_NONE, null);
 
         injectSafeArea();
     }

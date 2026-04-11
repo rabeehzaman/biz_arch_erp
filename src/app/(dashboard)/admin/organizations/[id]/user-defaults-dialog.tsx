@@ -20,6 +20,7 @@ import {
 import { LANDING_PAGE_OPTIONS } from "@/lib/form-config/types";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 interface UserDefaultsDialogProps {
   orgId: string;
@@ -51,6 +52,7 @@ export function UserDefaultsDialog({
   open,
   onOpenChange,
 }: UserDefaultsDialogProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -80,7 +82,7 @@ export function UserDefaultsDialog({
         setBranches(data.branches ?? []);
         setWarehouses(data.warehouses ?? []);
       } catch {
-        toast.error("Failed to load user defaults");
+        toast.error(t("admin.failedToLoadUserDefaults"));
       } finally {
         setLoading(false);
       }

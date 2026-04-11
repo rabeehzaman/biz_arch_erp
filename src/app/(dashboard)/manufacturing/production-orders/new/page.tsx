@@ -57,7 +57,7 @@ export default function NewProductionOrderPage() {
 
   async function handleSubmit() {
     if (!bomId || plannedQuantity <= 0) {
-      toast.error("Select a BOM and enter a valid quantity");
+      toast.error(t("manufacturing.selectBomAndQuantity"));
       return;
     }
 
@@ -85,7 +85,7 @@ export default function NewProductionOrderPage() {
         toast.error(data.error || "Failed to create production order");
       }
     } catch {
-      toast.error("Failed to create production order");
+      toast.error(t("manufacturing.failedToCreateOrder"));
     } finally {
       setSubmitting(false);
     }

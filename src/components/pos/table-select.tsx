@@ -40,11 +40,11 @@ const statusColors: Record<string, string> = {
   CLEANING: "bg-gray-50 border-gray-300 text-gray-500 opacity-60 cursor-not-allowed",
 };
 
-const statusLabels: Record<string, string> = {
-  AVAILABLE: "Available",
-  OCCUPIED: "Occupied",
-  RESERVED: "Reserved",
-  CLEANING: "Cleaning",
+const statusLabelKeys: Record<string, string> = {
+  AVAILABLE: "restaurant.available",
+  OCCUPIED: "restaurant.occupied",
+  RESERVED: "restaurant.reserved",
+  CLEANING: "restaurant.cleaning",
 };
 
 export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway, required }: TableSelectProps) {
@@ -130,7 +130,7 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway, req
                           variant="secondary"
                           className="absolute -top-1 -right-1 text-[10px] px-1 py-0"
                         >
-                          {statusLabels[table.status]}
+                          {t(statusLabelKeys[table.status])}
                         </Badge>
                       )}
                     </button>
@@ -142,8 +142,8 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway, req
             {/* No tables */}
             {!isLoading && (!tables || tables.length === 0) && (
               <div className="text-center py-12 text-muted-foreground">
-                <p className="text-sm">No tables configured</p>
-                <p className="text-xs mt-1">Add tables in Restaurant settings</p>
+                <p className="text-sm">{t("restaurant.noTablesConfigured")}</p>
+                <p className="text-xs mt-1">{t("restaurant.addTablesInSettings")}</p>
               </div>
             )}
           </div>

@@ -74,7 +74,7 @@ export default function BOMDetailPage() {
       if (bomRes.ok) setBom(await bomRes.json());
       if (costRes.ok) setCostRollup(await costRes.json());
     } catch {
-      toast.error("Failed to load BOM");
+      toast.error(t("manufacturing.failedToLoadBom"));
     } finally {
       setLoading(false);
     }

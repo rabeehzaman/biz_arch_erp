@@ -115,6 +115,8 @@ interface CheckoutBody {
   idempotencyKey?: string;
   tableId?: string;
   kotOrderIds?: string[];
+  globalDiscount?: number;
+  globalDiscountType?: "percent" | "amount";
 }
 
 function roundTimingMs(value: number) {
@@ -146,7 +148,11 @@ export async function POST(request: NextRequest) {
 
     const body: CheckoutBody = await request.json();
     markRequestStage("request_body");
-    const { customerId, items, payments, heldOrderId, notes, sessionId, idempotencyKey, tableId, kotOrderIds } = body;
+    const { customerId, items, payments, heldOrderId, notes, sessionId, idempotencyKey, tableId, kotOrderIds, globalDiscount: rawGlobalDiscount, globalDiscountType: rawGlobalDiscountType } = body;
+    const globalDiscountValue = Math.max(Number(rawGlobalDiscount) || 0, 0);
+    const globalDiscountTypeResolved: "percent" | "amount" = rawGlobalDiscountType === "amount" ? "amount" : "percent";
+    // Factor will be computed after subtotal is known for amount mode; for percent mode, compute now
+    let globalDiscountFactor = globalDiscountTypeResolved === "percent" ? 1 - Math.min(globalDiscountValue, 100) / 100 : 1;
 
     // Validate required fields
     if (!items || items.length === 0) {
@@ -272,15 +278,32 @@ export async function POST(request: NextRequest) {
       // ── 3. Calculate totals ──────────────────────────────────────────
       const now = new Date();
 
-      // Build per-line gross amounts and taxable amounts (for tax-inclusive pricing)
+      // Build per-line amounts. For percent mode, discount reduces the taxable base.
+      // For amount mode, discount is deducted from the total after tax (flat bill discount).
+      const isAmountMode = globalDiscountTypeResolved === "amount";
+
       const lineAmounts = items.map((item) => {
         const grossAmount = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+        const discountedGross = isAmountMode ? grossAmount : grossAmount * globalDiscountFactor;
         const taxRate = saudiEnabled ? SAUDI_VAT_RATE : (item.gstRate || 0);
-        const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(grossAmount, taxRate) : grossAmount;
-        return { grossAmount, taxableAmount };
+        const taxableAmount = taxInclusive ? extractTaxExclusiveAmount(discountedGross, taxRate) : discountedGross;
+        return { grossAmount, discountedGross, taxableAmount };
       });
 
       const subtotal = lineAmounts.reduce((sum: number, la: { taxableAmount: number }) => sum + la.taxableAmount, 0);
+
+      // For amount mode: globalDiscountAmount is deducted from total after tax
+      // For percent mode: already baked into subtotal via discountFactor
+      let globalDiscountAmount: number;
+      let globalDiscountPercent: number;
+      if (isAmountMode) {
+        globalDiscountAmount = Math.min(Math.max(globalDiscountValue, 0), subtotal * 10); // will be clamped to total later
+        globalDiscountPercent = 0;
+      } else {
+        const fullSubtotal = lineAmounts.reduce((sum, la) => sum + (taxInclusive ? extractTaxExclusiveAmount(la.grossAmount, saudiEnabled ? SAUDI_VAT_RATE : 0) : la.grossAmount), 0);
+        globalDiscountAmount = fullSubtotal - subtotal;
+        globalDiscountPercent = Math.min(Math.max(globalDiscountValue, 0), 100);
+      }
 
       // Tax calculation — branch between Saudi VAT and GST
       let totalTax = 0;
@@ -363,8 +386,16 @@ export async function POST(request: NextRequest) {
       }
 
       const shouldApplyRoundOff = roundOffMode !== "NONE";
+      // For amount mode, deduct discount from total after tax (flat bill discount)
+      const preRoundTotal = isAmountMode
+        ? Math.max(0, subtotal + totalTax - globalDiscountAmount)
+        : subtotal + totalTax;
+      // Clamp amount-mode discount to actual total
+      if (isAmountMode) {
+        globalDiscountAmount = Math.min(globalDiscountAmount, subtotal + totalTax);
+      }
       const { roundOffAmount, roundedTotal } = calculateRoundOff(
-        subtotal + totalTax,
+        preRoundTotal,
         roundOffMode,
         shouldApplyRoundOff
       );
@@ -474,6 +505,8 @@ export async function POST(request: NextRequest) {
         applyRoundOff: shouldApplyRoundOff,
         notes: notes || null,
         idempotencyKey: idempotencyKey || null,
+        globalDiscountPercent: globalDiscountPercent,
+        globalDiscountAmount: globalDiscountAmount,
         isJewellerySale: items.some((item) => !!item.jewellery),
       };
 
@@ -740,6 +773,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // For amount-mode global discount, reduce the revenue credit so the
+      // journal balances.  In percent mode the discount is already baked into
+      // subtotal via discountedGross, so no adjustment is needed.
+      const revenueCredit = isAmountMode && globalDiscountAmount > 0
+        ? subtotal - globalDiscountAmount
+        : subtotal;
+
       const revenueLines: Array<{
         accountId: string;
         description: string;
@@ -756,7 +796,7 @@ export async function POST(request: NextRequest) {
             accountId: revenueAccount.id,
             description: "Sales Revenue",
             debit: 0,
-            credit: subtotal,
+            credit: revenueCredit,
           },
         ];
 

@@ -117,15 +117,15 @@ export default function RestaurantTablesPage() {
     const capacity = parseInt(formData.capacity);
 
     if (!formData.number || !formData.name) {
-      toast.error("Table number and name are required");
+      toast.error(t("restaurant.tableNumberRequired"));
       return;
     }
     if (isNaN(number) || number < 1) {
-      toast.error("Table number must be a positive integer");
+      toast.error(t("restaurant.tableNumberPositive"));
       return;
     }
     if (isNaN(capacity) || capacity < 1) {
-      toast.error("Capacity must be a positive integer");
+      toast.error(t("restaurant.capacityPositive"));
       return;
     }
 
@@ -147,7 +147,7 @@ export default function RestaurantTablesPage() {
           const data = await res.json();
           throw new Error(data.error || "Failed to update table");
         }
-        toast.success("Table updated successfully");
+        toast.success(t("restaurant.tableUpdated"));
       } else {
         // Create new
         const res = await fetch("/api/restaurant/tables", {
@@ -165,12 +165,12 @@ export default function RestaurantTablesPage() {
           const data = await res.json();
           throw new Error(data.error || "Failed to create table");
         }
-        toast.success("Table created successfully");
+        toast.success(t("restaurant.tableCreated"));
       }
       mutate();
       setFormDialog(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "An error occurred");
+      toast.error(error instanceof Error ? error.message : t("restaurant.anErrorOccurred"));
     } finally {
       setIsSaving(false);
     }
@@ -187,11 +187,11 @@ export default function RestaurantTablesPage() {
         const data = await res.json();
         throw new Error(data.error || "Failed to delete table");
       }
-      toast.success("Table deleted successfully");
+      toast.success(t("restaurant.tableDeleted"));
       mutate();
       setDeleteDialog({ open: false, table: null });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "An error occurred");
+      toast.error(error instanceof Error ? error.message : t("restaurant.anErrorOccurred"));
     } finally {
       setIsDeleting(false);
     }
@@ -201,12 +201,12 @@ export default function RestaurantTablesPage() {
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Table Management</h1>
-          <p className="text-muted-foreground">Manage your restaurant tables and seating layout</p>
+          <h1 className="text-2xl font-bold">{t("restaurant.tableManagement")}</h1>
+          <p className="text-muted-foreground">{t("restaurant.tableManagementDesc")}</p>
         </div>
         <Button onClick={openAddDialog}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Table
+          {t("restaurant.addTable")}
         </Button>
       </div>
 
@@ -217,26 +217,26 @@ export default function RestaurantTablesPage() {
           ) : !tables || tables.length === 0 ? (
             <div className="p-12 text-center">
               <Armchair className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No tables yet</h3>
+              <h3 className="text-lg font-semibold mb-2">{t("restaurant.noTablesYet")}</h3>
               <p className="text-muted-foreground mb-4">
-                Get started by adding your first restaurant table.
+                {t("restaurant.noTablesYetDesc")}
               </p>
               <Button onClick={openAddDialog}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Table
+                {t("restaurant.addTable")}
               </Button>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px]">Number</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="w-[100px]">Capacity</TableHead>
-                  <TableHead>Floor</TableHead>
-                  <TableHead>Section</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead className="w-[100px] text-right">Actions</TableHead>
+                  <TableHead className="w-[80px]">{t("restaurant.number")}</TableHead>
+                  <TableHead>{t("common.name")}</TableHead>
+                  <TableHead className="w-[100px]">{t("restaurant.capacity")}</TableHead>
+                  <TableHead>{t("restaurant.floor")}</TableHead>
+                  <TableHead>{t("restaurant.section")}</TableHead>
+                  <TableHead className="w-[120px]">{t("common.status")}</TableHead>
+                  <TableHead className="w-[100px] text-right">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -288,19 +288,19 @@ export default function RestaurantTablesPage() {
         <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
             <DialogTitle>
-              {editingTable ? "Edit Table" : "Add New Table"}
+              {editingTable ? t("restaurant.editTable") : t("restaurant.addNewTable")}
             </DialogTitle>
             <DialogDescription>
               {editingTable
-                ? "Update the table details below."
-                : "Fill in the details to add a new table."}
+                ? t("restaurant.editTableDesc")
+                : t("restaurant.addTableDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="table-number">
-                  Table Number <span className="text-destructive">*</span>
+                  {t("restaurant.tableNumber")} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="table-number"
@@ -310,13 +310,13 @@ export default function RestaurantTablesPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, number: e.target.value })
                   }
-                  placeholder="e.g. 1"
+                  placeholder={t("restaurant.placeholderTableNum")}
                   disabled={!!editingTable}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="table-capacity">
-                  Capacity <span className="text-destructive">*</span>
+                  {t("restaurant.capacity")} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="table-capacity"
@@ -326,13 +326,13 @@ export default function RestaurantTablesPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, capacity: e.target.value })
                   }
-                  placeholder="e.g. 4"
+                  placeholder={t("restaurant.placeholderCapacity")}
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="table-name">
-                Name <span className="text-destructive">*</span>
+                {t("common.name")} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="table-name"
@@ -340,44 +340,44 @@ export default function RestaurantTablesPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="e.g. Window Table, VIP Booth"
+                placeholder={t("restaurant.placeholderTableName")}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="table-floor">Floor</Label>
+                <Label htmlFor="table-floor">{t("restaurant.floor")}</Label>
                 <Input
                   id="table-floor"
                   value={formData.floor}
                   onChange={(e) =>
                     setFormData({ ...formData, floor: e.target.value })
                   }
-                  placeholder="e.g. Ground Floor"
+                  placeholder={t("restaurant.placeholderFloor")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="table-section">Section</Label>
+                <Label htmlFor="table-section">{t("restaurant.section")}</Label>
                 <Input
                   id="table-section"
                   value={formData.section}
                   onChange={(e) =>
                     setFormData({ ...formData, section: e.target.value })
                   }
-                  placeholder="e.g. Outdoor, Main Hall"
+                  placeholder={t("restaurant.placeholderSection")}
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormDialog(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving
-                ? "Saving..."
+                ? t("restaurant.saving")
                 : editingTable
-                ? "Update Table"
-                : "Add Table"}
+                ? t("restaurant.updateTable")
+                : t("restaurant.addTable")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -392,11 +392,10 @@ export default function RestaurantTablesPage() {
       >
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Delete Table</DialogTitle>
+            <DialogTitle>{t("restaurant.deleteTable")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete table #{deleteDialog.table?.number}{" "}
-              - {deleteDialog.table?.name}? This action will deactivate the
-              table.
+              {t("restaurant.deleteTableConfirm")} #{deleteDialog.table?.number}{" "}
+              - {deleteDialog.table?.name}? {t("restaurant.deactivateNote")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -404,14 +403,14 @@ export default function RestaurantTablesPage() {
               variant="outline"
               onClick={() => setDeleteDialog({ open: false, table: null })}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? t("restaurant.deleting") : t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

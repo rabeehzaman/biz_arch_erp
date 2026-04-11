@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useLanguage } from "@/lib/i18n";
 
 /**
  * Hook to warn users about unsaved changes when navigating away.
  * Uses beforeunload for tab close and intercepts Next.js navigation.
  */
 export function useUnsavedChanges(isDirty: boolean) {
+  const { t } = useLanguage();
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
 
@@ -27,7 +28,7 @@ export function useUnsavedChanges(isDirty: boolean) {
     const handlePopState = () => {
       if (!isDirtyRef.current) return;
       const confirmed = window.confirm(
-        "You have unsaved changes. Are you sure you want to leave?"
+        t("common.unsavedChangesWarning")
       );
       if (!confirmed) {
         // Push state back to cancel navigation

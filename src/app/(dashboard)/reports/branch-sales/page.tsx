@@ -202,7 +202,7 @@ export default function BranchSalesPage() {
       const blob = await res.blob();
       await downloadBlob(blob, `branch-sales-${fromDate}-to-${toDate}.pdf`);
     } catch {
-      toast.error("Failed to generate PDF");
+      toast.error(t("common.failedToGeneratePdf"));
     } finally {
       setIsDownloading(false);
     }

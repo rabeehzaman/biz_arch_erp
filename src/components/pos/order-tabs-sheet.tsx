@@ -139,6 +139,16 @@ export function OrderTabsSheet({
                       </Badge>
                     )}
 
+                    {/* Billed indicator */}
+                    {tab.preBillPrinted && (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 text-xs bg-green-50 text-green-700 border-green-200"
+                      >
+                        {t("pos.preBillPrinted")}
+                      </Badge>
+                    )}
+
                     {/* Close button */}
                     {canClose && tabs.length > 1 && (
                       <Button

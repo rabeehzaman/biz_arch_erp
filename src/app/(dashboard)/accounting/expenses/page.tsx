@@ -41,6 +41,8 @@ interface Expense {
   total: number;
   supplier: { id: string; name: string } | null;
   cashBankAccount: { id: string; name: string } | null;
+  branch?: { id: string; name: string } | null;
+  notes?: string | null;
   _count: { items: number };
 }
 
@@ -215,6 +217,8 @@ export default function ExpensesPage() {
                           {isColumnVisible("supplier") && <TableHead>{t("common.supplier")}</TableHead>}
                           {isColumnVisible("status") && <TableHead>{t("common.status")}</TableHead>}
                           {isColumnVisible("total") && <TableHead className="text-right">{t("common.amount")}</TableHead>}
+                          {isColumnVisible("branch") && <TableHead>{t("common.branch")}</TableHead>}
+                          {isColumnVisible("notes") && <TableHead>{t("common.notes")}</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -243,6 +247,8 @@ export default function ExpensesPage() {
                             {isColumnVisible("total") && <TableCell className="text-right font-medium">
                               {fmt(Number(expense.total))}
                             </TableCell>}
+                            {isColumnVisible("branch") && <TableCell className="text-sm text-slate-600">{expense.branch?.name || "-"}</TableCell>}
+                            {isColumnVisible("notes") && <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{expense.notes || "-"}</TableCell>}
                           </TableRow>
                         ))}
                       </TableBody>

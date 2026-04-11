@@ -116,6 +116,12 @@ export async function GET(request: NextRequest) {
           invoice: {
             select: { id: true, invoiceNumber: true },
           },
+          branch: {
+            select: { id: true, name: true },
+          },
+          warehouse: {
+            select: { id: true, name: true },
+          },
           createdBy: {
             select: { id: true, name: true },
           },

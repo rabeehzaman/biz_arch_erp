@@ -63,16 +63,21 @@ export function resetMobileDialogViewport({ preserveScroll = false, scrollY }: {
 
     const RESET_DELAYS = [0, 50, 150, 300, 500, 800]
 
-    const fireReset = () => {
+    const fireScroll = () => {
       window.scrollTo(0, 0)
       window.dispatchEvent(new Event("resize"))
-      window.dispatchEvent(new Event("mobile-dialog-viewport-reset"))
     }
 
     requestAnimationFrame(() => {
-      fireReset()
-      RESET_DELAYS.forEach((delay) => {
-        setTimeout(fireReset, delay)
+      fireScroll()
+      RESET_DELAYS.forEach((delay, i) => {
+        setTimeout(() => {
+          fireScroll()
+          // Only trigger recovery schedule once, on the last pass
+          if (i === RESET_DELAYS.length - 1) {
+            window.dispatchEvent(new Event("mobile-dialog-viewport-reset"))
+          }
+        }, delay)
       })
     })
   } else {

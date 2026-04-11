@@ -70,6 +70,7 @@ interface SupplierPayment {
   paymentMethod: string;
   reference: string | null;
   notes: string | null;
+  branch?: { id: string; name: string } | null;
 }
 
 interface Supplier {
@@ -629,6 +630,9 @@ export default function SupplierPaymentsPage() {
                         {isColumnVisible("paymentMethod") && <TableHead className="hidden sm:table-cell">{t("payments.paymentMethod")}</TableHead>}
                         {isColumnVisible("amount") && <TableHead className="text-right">{t("common.amount")}</TableHead>}
                         {isColumnVisible("discount") && <TableHead className="text-right">{t("common.discount")}</TableHead>}
+                        {isColumnVisible("reference") && <TableHead>{t("common.reference")}</TableHead>}
+                        {isColumnVisible("branch") && <TableHead>{t("common.branch")}</TableHead>}
+                        {isColumnVisible("notes") && <TableHead>{t("common.notes")}</TableHead>}
                         <TableHead className="w-[80px]">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -658,6 +662,9 @@ export default function SupplierPaymentsPage() {
                               ? `${symbol}${Number(payment.discountGiven).toLocaleString(locale)}`
                               : "-"}
                           </TableCell>}
+                          {isColumnVisible("reference") && <TableCell className="text-sm text-slate-600">{payment.reference || "-"}</TableCell>}
+                          {isColumnVisible("branch") && <TableCell className="text-sm text-slate-600">{payment.branch?.name || "-"}</TableCell>}
+                          {isColumnVisible("notes") && <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{payment.notes || "-"}</TableCell>}
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="ghost"

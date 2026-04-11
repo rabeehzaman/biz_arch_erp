@@ -681,6 +681,8 @@ model Invoice {
   balanceDue Decimal @db.Decimal(12, 2)
   roundOffAmount    Decimal @default(0) @db.Decimal(12, 2)
   applyRoundOff     Boolean @default(false)
+  globalDiscountPercent Decimal @default(0) @db.Decimal(5, 2)
+  globalDiscountAmount  Decimal @default(0) @db.Decimal(12, 2)
 
   totalCgst     Decimal @default(0) @db.Decimal(12, 2)
   totalSgst     Decimal @default(0) @db.Decimal(12, 2)
@@ -1944,6 +1946,7 @@ model POSOpenOrder {
   kotSentQuantities Json              @default("{}")
   kotOrderIds       Json              @default("[]")
   orderNumber    Int                  @default(0)
+  preBillPrinted Boolean              @default(false)
   version        Int                  @default(0)
   deviceId       String?
   createdAt      DateTime             @default(now())

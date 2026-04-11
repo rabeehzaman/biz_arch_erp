@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { POSHeader } from "@/components/pos/pos-header";
 import { CashMovementDialog } from "@/components/pos/cash-movement-dialog";
+import { QuickSaleDialog } from "@/components/pos/quick-sale-dialog";
 import { ProductSearch } from "@/components/pos/product-search";
 import { CategoryTabs } from "@/components/pos/category-tabs";
 import { ProductGrid } from "@/components/pos/product-grid";
@@ -39,7 +40,7 @@ import { ViewModeToggle } from "@/components/pos/view-mode-toggle";
 import { usePosViewMode } from "@/hooks/use-pos-view-mode";
 import { CartItem, type CartItemData } from "@/components/pos/cart-item";
 import { VariantPickerDialog } from "@/components/pos/variant-picker-dialog";
-import { CartSummary, calculateCartTotal } from "@/components/pos/cart-summary";
+import { CartSummary, calculateCartTotal, type GlobalDiscountType } from "@/components/pos/cart-summary";
 import { CustomerSelect } from "@/components/pos/customer-select";
 import { PaymentPanel } from "@/components/pos/payment-panel";
 import type { PaymentEntry } from "@/components/pos/split-payment-form";
@@ -425,6 +426,8 @@ function POSTerminalContent() {
   const [view, setView] = useState<"cart" | "payment">("cart");
   const [mobileView, setMobileView] = useState<"products" | "cart" | "payment">("products");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [globalDiscount, setGlobalDiscount] = useState(0);
+  const [globalDiscountType, setGlobalDiscountType] = useState<GlobalDiscountType>("percent");
 
   // Dialog state
   const [showCloseDialog, setShowCloseDialog] = useState(false);
@@ -432,6 +435,7 @@ function POSTerminalContent() {
   const [isReturnMode, setIsReturnMode] = useState(false);
   const [showPreviousOrdersSheet, setShowPreviousOrdersSheet] = useState(false);
   const [showCashMovementDialog, setShowCashMovementDialog] = useState(false);
+  const [showQuickSaleDialog, setShowQuickSaleDialog] = useState(false);
   const [closingCash, setClosingCash] = useState("");
   const [closePinCode, setClosePinCode] = useState("");
   const [countedClosingCash, setCountedClosingCash] = useState<number | null>(null);
@@ -669,12 +673,13 @@ function POSTerminalContent() {
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
   const [isPendingReceipt, setIsPendingReceipt] = useState(false);
   const [isPrintingPreBill, setIsPrintingPreBill] = useState(false);
+  const [preBillPrinted, setPreBillPrinted] = useState(false);
   const cart = cartState.items;
   const cartQuantity = cartState.totalQuantity;
   const selectedProductQuantities = cartState.selectedProductQuantities;
   const cartTotals = useMemo(
-    () => calculateCartTotal(cartState.items, taxInclusive, roundOffMode),
-    [cartState.items, taxInclusive, roundOffMode]
+    () => calculateCartTotal(cartState.items, taxInclusive, roundOffMode, globalDiscount, globalDiscountType),
+    [cartState.items, taxInclusive, roundOffMode, globalDiscount, globalDiscountType]
   );
   const productsWithDefaultPrice = useMemo(() =>
     products.map(p => {
@@ -771,9 +776,68 @@ function POSTerminalContent() {
     );
   }, []);
 
+  /** Reset a table back to AVAILABLE in the database (retry once on failure) */
+  const freeTable = useCallback(async (tableId: string) => {
+    const doFetch = () => fetch(`/api/restaurant/tables/${tableId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "AVAILABLE" }),
+    });
+    try {
+      const res = await doFetch();
+      if (!res.ok) throw new Error();
+    } catch {
+      try {
+        await new Promise(r => setTimeout(r, 1000));
+        const res = await doFetch();
+        if (!res.ok) throw new Error();
+      } catch {
+        toast.error(t("pos.failedToFreeTable"));
+      }
+    }
+  }, []);
+
+  /** Mark a table as OCCUPIED in the database (retry once on failure) */
+  const occupyTable = useCallback(async (tableId: string) => {
+    const doFetch = () => fetch(`/api/restaurant/tables/${tableId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "OCCUPIED" }),
+    });
+    try {
+      const res = await doFetch();
+      if (!res.ok) throw new Error();
+    } catch {
+      try {
+        await new Promise(r => setTimeout(r, 1000));
+        const res = await doFetch();
+        if (!res.ok) throw new Error();
+      } catch {
+        toast.error(t("pos.failedToUpdateTableStatus"));
+      }
+    }
+  }, []);
+
   const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string) => {
     dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName });
-  }, []);
+    // If items are added after bill was printed, reset billed state and re-occupy the table
+    if (preBillPrinted && selectedTable) {
+      setPreBillPrinted(false);
+      occupyTable(selectedTable.id);
+    }
+  }, [preBillPrinted, selectedTable, occupyTable]);
+
+  // Quick Sale handler — adds an ad-hoc item with no inventory record
+  const handleQuickSale = useCallback((price: number, description: string) => {
+    const uniqueId = `qs_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    feedbackAddItem();
+    dispatchCart({
+      type: "ADD",
+      product: { id: "", name: description || "Quick Sale", price, stockQuantity: 0, categoryId: null },
+      quantity: 1,
+      variantId: uniqueId,
+    });
+  }, [feedbackAddItem]);
 
   // State for variant picker dialog
   const [variantPickerProduct, setVariantPickerProduct] = useState<POSProduct | null>(null);
@@ -907,6 +971,8 @@ function POSTerminalContent() {
     dispatchCart({ type: "CLEAR" });
     setHeldOrderId(null);
     setSelectedCustomer(null);
+    setGlobalDiscount(0);
+    setGlobalDiscountType("percent");
     setMobileView("products");
   }, []);
 
@@ -919,48 +985,6 @@ function POSTerminalContent() {
     }
     clearCart();
   };
-
-  /** Reset a table back to AVAILABLE in the database (retry once on failure) */
-  const freeTable = useCallback(async (tableId: string) => {
-    const doFetch = () => fetch(`/api/restaurant/tables/${tableId}/status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "AVAILABLE" }),
-    });
-    try {
-      const res = await doFetch();
-      if (!res.ok) throw new Error();
-    } catch {
-      try {
-        await new Promise(r => setTimeout(r, 1000));
-        const res = await doFetch();
-        if (!res.ok) throw new Error();
-      } catch {
-        toast.error("Failed to free table — check table status manually");
-      }
-    }
-  }, []);
-
-  /** Mark a table as OCCUPIED in the database (retry once on failure) */
-  const occupyTable = useCallback(async (tableId: string) => {
-    const doFetch = () => fetch(`/api/restaurant/tables/${tableId}/status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "OCCUPIED" }),
-    });
-    try {
-      const res = await doFetch();
-      if (!res.ok) throw new Error();
-    } catch {
-      try {
-        await new Promise(r => setTimeout(r, 1000));
-        const res = await doFetch();
-        if (!res.ok) throw new Error();
-      } catch {
-        toast.error("Failed to update table status — check table status manually");
-      }
-    }
-  }, []);
 
   // ── Tab helpers ───────────────────────────────────────────────────
 
@@ -977,8 +1001,9 @@ function POSTerminalContent() {
     kotSentQuantities,
     kotOrderIds,
     view,
+    preBillPrinted,
     createdAt: activeTabCreatedAt,
-  }), [activeTabId, activeTabLabel, activeTabOrderNumber, cartState, selectedCustomer, selectedTable, heldOrderId, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, activeTabCreatedAt]);
+  }), [activeTabId, activeTabLabel, activeTabOrderNumber, cartState, selectedCustomer, selectedTable, heldOrderId, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, preBillPrinted, activeTabCreatedAt]);
 
   const restoreTabContext = useCallback((tab: TabContext) => {
     dispatchCart({ type: "RESTORE", items: tab.cartState.items });
@@ -990,6 +1015,7 @@ function POSTerminalContent() {
     setKotSentQuantities(tab.kotSentQuantities);
     setKotOrderIds(tab.kotOrderIds);
     setView(tab.view);
+    setPreBillPrinted(tab.preBillPrinted);
   }, []);
 
   const resetLiveState = useCallback(() => {
@@ -998,11 +1024,14 @@ function POSTerminalContent() {
     setSelectedTable(null);
     setHeldOrderId(null);
     setIsReturnMode(false);
+    setGlobalDiscount(0);
+    setGlobalDiscountType("percent");
     setOrderType("DINE_IN");
     setKotSentQuantities(new Map());
     setKotOrderIds([]);
     setView("cart");
     setMobileView("products");
+    setPreBillPrinted(false);
     // Restaurant resting state: always prompt for next table/order
     setShowTableSelect(true);
   }, []);
@@ -1016,6 +1045,19 @@ function POSTerminalContent() {
 
   const handleNewTab = useCallback(() => {
     const snapshot = snapshotCurrentTab();
+    // If current tab is completely empty (no items, no KOT, no table), just reset it
+    // instead of creating a new tab and wasting an order number
+    const isEmpty = snapshot.cartState.items.length === 0
+      && snapshot.kotSentQuantities.size === 0
+      && !snapshot.selectedTable;
+    if (isEmpty) {
+      resetLiveState();
+      if (isRestaurantEnabled) {
+        setShowTableSelect(true);
+      }
+      return;
+    }
+
     switchToNewTab(snapshot);
     resetLiveState();
     // In restaurant mode, auto-open table select for the new order
@@ -1025,14 +1067,14 @@ function POSTerminalContent() {
   }, [snapshotCurrentTab, switchToNewTab, resetLiveState, isRestaurantEnabled]);
 
   const handleCloseTab = useCallback((tabId: string) => {
-    // Free the table if the closed tab had one assigned
+    // Free the table if the closed tab had one assigned (skip if bill already freed it)
     if (tabId === activeTabId) {
       // Active tab — selectedTable is in live state
-      if (selectedTable) freeTable(selectedTable.id);
+      if (selectedTable && !preBillPrinted) freeTable(selectedTable.id);
     } else {
       // Inactive tab — check its saved state in the tabs map
       const inactiveTab = tabs.get(tabId);
-      if (inactiveTab?.selectedTable) freeTable(inactiveTab.selectedTable.id);
+      if (inactiveTab?.selectedTable && !inactiveTab.preBillPrinted) freeTable(inactiveTab.selectedTable.id);
     }
 
     const { switchTo, wasActive } = closeTabAction(tabId);
@@ -1043,7 +1085,7 @@ function POSTerminalContent() {
         resetLiveState();
       }
     }
-  }, [closeTabAction, restoreTabContext, resetLiveState, activeTabId, selectedTable, tabs, freeTable]);
+  }, [closeTabAction, restoreTabContext, resetLiveState, activeTabId, selectedTable, preBillPrinted, tabs, freeTable]);
 
   // Auto-label active tab based on customer/table/return state
   useEffect(() => {
@@ -1166,12 +1208,12 @@ function POSTerminalContent() {
               })),
             });
           } catch {
-            toast.warning("Void KOT saved but printing failed — notify kitchen manually", { duration: 6000 });
+            toast.warning(t("pos.voidKotPrintFailed"), { duration: 6000 });
           }
           toast.success(`Void KOT sent to kitchen for ${voidItems.length} item(s)`);
         }
       } catch {
-        toast.error("Failed to send void KOT — notify kitchen manually");
+        toast.error(t("pos.failedToSendVoidKot"));
       }
     }
 
@@ -1467,7 +1509,7 @@ function POSTerminalContent() {
       await printKOTMulti(kotReceiptData);
     } catch (printErr) {
       console.error("KOT print failed:", printErr);
-      toast.warning("KOT saved but printing failed — please reprint from kitchen display", { duration: 6000 });
+      toast.warning(t("pos.kotPrintFailed"), { duration: 6000 });
     }
 
     if (!opts?.silent) {
@@ -1527,6 +1569,13 @@ function POSTerminalContent() {
       };
       const { printPreBill } = await import("@/lib/pos/pre-bill-print");
       await printPreBill(data);
+      // Mark order as billed and free the table for new guests
+      setPreBillPrinted(true);
+      if (selectedTable) {
+        freeTable(selectedTable.id);
+      }
+      // Persist the billed state immediately (spread to avoid stale closure on preBillPrinted)
+      persistTab({ ...snapshotCurrentTab(), preBillPrinted: true });
       toast.success(t("pos.preBillPrinted") || "Bill printed");
     } catch (err) {
       console.error("Pre-bill print failed:", err);
@@ -1534,7 +1583,7 @@ function POSTerminalContent() {
     } finally {
       setIsPrintingPreBill(false);
     }
-  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, activeTabOrderNumber, hasUnsentKotItems, t]);
+  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, activeTabOrderNumber, hasUnsentKotItems, t, freeTable, persistTab, snapshotCurrentTab]);
 
   const handleSendToKitchen = async () => {
     if (kotInFlightRef.current) return;
@@ -1542,7 +1591,7 @@ function POSTerminalContent() {
     setIsKotSending(true);
 
     if (orderType === "DINE_IN" && !selectedTable) {
-      toast.error("Please select a table for dine-in orders");
+      toast.error(t("pos.selectTableForDineIn"));
       setShowTableSelect(true);
       kotInFlightRef.current = false;
       setIsKotSending(false);
@@ -1552,7 +1601,7 @@ function POSTerminalContent() {
     try {
       const result = await sendKotForUnsentItems();
       if (!result) {
-        toast.info("No new items to send to kitchen");
+        toast.info(t("pos.noNewKitchenItems"));
       } else if (isRestaurantEnabled) {
         // Snapshot with correct KOT data (React state hasn't batched yet)
         const snapshot = {
@@ -1567,7 +1616,7 @@ function POSTerminalContent() {
     } catch (error) {
       console.error("Failed to send KOT:", error);
       feedbackError();
-      toast.error("Failed to send order to kitchen");
+      toast.error(t("pos.failedToSendToKitchen"));
     } finally {
       kotInFlightRef.current = false;
       setIsKotSending(false);
@@ -1637,7 +1686,7 @@ function POSTerminalContent() {
         await printKOTMulti(kotReceiptData);
       } catch (printErr) {
         console.error("Void KOT print failed:", printErr);
-        toast.warning("Void KOT saved but printing failed — notify kitchen manually", { duration: 6000 });
+        toast.warning(t("pos.voidKotPrintFailed"), { duration: 6000 });
       }
 
       // Update sent quantities
@@ -1650,7 +1699,7 @@ function POSTerminalContent() {
       toast.success(`Cancelled: ${item.variantName ? `${item.name} - ${item.variantName}` : item.name} (void KOT sent to kitchen)`);
     } catch (error) {
       console.error("Failed to cancel kitchen item:", error);
-      toast.error("Failed to cancel kitchen item");
+      toast.error(t("pos.failedToCancelKitchenItem"));
     } finally {
       setPendingCancelItem(null);
     }
@@ -1694,6 +1743,8 @@ function POSTerminalContent() {
         n: checkoutCounterRef.current,
         i: completedCart.map(item => `${item.productId}:${item.quantity}:${item.price}:${item.discount}`).sort(),
         p: payments.map(p => `${p.method}:${parseFloat(p.amount)}`).sort(),
+        gd: globalDiscount,
+        gdt: globalDiscountType,
       });
       let idempotencyKey: string;
       if (crypto?.subtle) {
@@ -1739,6 +1790,8 @@ function POSTerminalContent() {
           idempotencyKey,
           tableId: selectedTable?.id || undefined,
           kotOrderIds: kotOrderIds.length > 0 ? kotOrderIds : undefined,
+          globalDiscount: globalDiscount > 0 ? globalDiscount : undefined,
+          globalDiscountType: globalDiscount > 0 ? globalDiscountType : undefined,
         }),
       });
       const responseReceivedAt = performance.now();
@@ -1791,12 +1844,14 @@ function POSTerminalContent() {
             igstAmount: Number(invoiceItem?.igstAmount || 0) || undefined,
           };
         }),
-        subtotal: Number(result.invoice?.subtotal) || snapshotTotals.subtotal,
+        subtotal: (Number(result.invoice?.subtotal) || snapshotTotals.subtotal) + (Number(result.invoice?.globalDiscountAmount) || snapshotTotals.globalDiscountAmount || 0),
         taxRate: receiptMeta?.taxLabel === "VAT" ? 15 : 0,
         taxAmount: receiptMeta?.taxLabel === "VAT"
           ? Number(result.invoice?.totalVat || 0)
           : (Number(result.invoice?.totalCgst || 0) + Number(result.invoice?.totalSgst || 0) + Number(result.invoice?.totalIgst || 0)) || snapshotTotals.taxAmount,
         roundOffAmount: Number(result.invoice?.roundOffAmount || 0) || snapshotTotals.roundOffAmount,
+        globalDiscountPercent: Number(result.invoice?.globalDiscountPercent || 0) || globalDiscount,
+        globalDiscountAmount: Number(result.invoice?.globalDiscountAmount || 0) || snapshotTotals.globalDiscountAmount,
         total: Number(result.invoice?.total) || snapshotTotals.total,
         payments: payments.map((p) => ({
           method: p.method,
@@ -1908,7 +1963,7 @@ function POSTerminalContent() {
   const holdOrder = async () => {
     if (cart.length === 0) return;
     if (kotSentQuantities.size > 0) {
-      toast.error("Cannot hold an order with items sent to kitchen. Complete or void kitchen items first.");
+      toast.error(t("pos.cannotHoldKotOrder"));
       return;
     }
     try {
@@ -2121,6 +2176,8 @@ function POSTerminalContent() {
             selectedQuantities={selectedProductQuantities}
             selectionRevision={cartState.revision}
             onAddToCart={addToCartWithDefault}
+            showQuickSale={!isPosComponentHidden("quick-sale-tile")}
+            onQuickSale={() => setShowQuickSaleDialog(true)}
           />
           </div>
 
@@ -2280,10 +2337,66 @@ function POSTerminalContent() {
                   key={`cart-summary-${cartState.revision}`}
                   className="border-t p-2 space-y-1.5"
                 >
+                  {!isPosComponentHidden("global-discount") && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        className={cn(
+                          "h-6 rounded-md border text-[10px] font-bold px-1.5 transition-colors shrink-0",
+                          globalDiscountType === "percent"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                        )}
+                        onClick={() => {
+                          setGlobalDiscountType(globalDiscountType === "percent" ? "amount" : "percent");
+                          setGlobalDiscount(0);
+                        }}
+                      >
+                        {globalDiscountType === "percent" ? "%" : "#"}
+                      </button>
+                      <div className="flex items-center gap-1 flex-1">
+                        {globalDiscountType === "percent" && [5, 10, 15, 20].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            className={cn(
+                              "h-6 min-w-[36px] rounded-md border text-xs font-medium transition-colors",
+                              globalDiscount === pct
+                                ? "border-primary bg-primary text-white"
+                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                            )}
+                            onClick={() => setGlobalDiscount(globalDiscount === pct ? 0 : pct)}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                        <input
+                          type="number"
+                          min={0}
+                          max={globalDiscountType === "percent" ? 100 : undefined}
+                          step={globalDiscountType === "percent" ? "0.01" : "0.01"}
+                          value={globalDiscount || ""}
+                          placeholder={globalDiscountType === "percent" ? "%" : t("pos.globalDiscount")}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            if (globalDiscountType === "percent") {
+                              setGlobalDiscount(isNaN(v) ? 0 : Math.min(Math.max(v, 0), 100));
+                            } else {
+                              setGlobalDiscount(isNaN(v) ? 0 : Math.max(v, 0));
+                            }
+                          }}
+                          className={cn(
+                            "h-6 rounded-md border border-slate-200 bg-white px-1.5 text-xs text-right tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary",
+                            globalDiscountType === "percent" ? "w-14" : "flex-1"
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-end gap-2">
                     {!isPosComponentHidden("cart-summary") && (
                     <div className="flex-1">
-                      <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} />
+                      <CartSummary items={cart} isTaxInclusivePrice={taxInclusive} roundOffMode={roundOffMode} globalDiscount={globalDiscount} globalDiscountType={globalDiscountType} />
                     </div>
                     )}
                     {isRestaurantEnabled && !isPosComponentHidden("clear-cart-button") && (
@@ -2684,6 +2797,12 @@ function POSTerminalContent() {
         />
       )}
 
+      <QuickSaleDialog
+        open={showQuickSaleDialog}
+        onOpenChange={setShowQuickSaleDialog}
+        onAdd={handleQuickSale}
+      />
+
       <OrderTabsSheet
         open={showTabsSheet}
         onOpenChange={setShowTabsSheet}
@@ -2762,7 +2881,7 @@ function POSTerminalContent() {
                   );
                   setKotOrderIds(Array.isArray(remoteOrder.kotOrderIds) ? remoteOrder.kotOrderIds : []);
                   if (mutateOpenOrders) mutateOpenOrders();
-                  toast.success(`Joined order for Table ${table.number}`);
+                  toast.success(`${t("pos.joinedOrderForTable")} ${table.number}`);
                   setShowTableSelect(false);
                   return;
                 }

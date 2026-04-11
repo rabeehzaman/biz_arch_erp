@@ -60,7 +60,7 @@ export default function JewelleryInventoryPage() {
 
   const handleCreate = useCallback(async () => {
     if (!form.tagNumber || !form.grossWeight) {
-      toast.error("Tag number and gross weight are required");
+      toast.error(t("jewellery.tagAndWeightRequired"));
       return;
     }
     setSaving(true);
@@ -80,7 +80,7 @@ export default function JewelleryInventoryPage() {
         }),
       });
       if (res.ok) {
-        toast.success("Item added");
+        toast.success(t("jewellery.itemAdded"));
         setDialogOpen(false);
         setForm({ tagNumber: "", categoryId: "", metalType: "GOLD", purity: "K22", grossWeight: "", stoneWeight: "0", makingChargeType: "PER_GRAM", makingChargeValue: "", wastagePercent: "5", costPrice: "", goldRateAtPurchase: "", stoneValue: "0", huidNumber: "", notes: "" });
         mutate();
@@ -89,7 +89,7 @@ export default function JewelleryInventoryPage() {
         toast.error(d.error || "Failed to add item");
       }
     } catch {
-      toast.error("Failed to add item");
+      toast.error(t("jewellery.failedToAddItem"));
     } finally {
       setSaving(false);
     }

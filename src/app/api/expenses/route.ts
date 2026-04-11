@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
         include: {
           supplier: { select: { id: true, name: true } },
           cashBankAccount: { select: { id: true, name: true } },
+          branch: { select: { id: true, name: true } },
           items: {
             include: {
               account: { select: { id: true, code: true, name: true } },

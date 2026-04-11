@@ -110,6 +110,12 @@ export async function GET(request: NextRequest) {
           supplier: {
             select: { id: true, name: true, email: true },
           },
+          branch: {
+            select: { id: true, name: true },
+          },
+          warehouse: {
+            select: { id: true, name: true },
+          },
           _count: {
             select: { items: true },
           },

@@ -47,6 +47,7 @@ import {
   Monitor,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 import {
   FORM_REGISTRY,
@@ -221,6 +222,7 @@ interface FormConfigTabProps {
 }
 
 export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTabProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -256,7 +258,7 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
             posHiddenComponents: activeConfig.posHiddenComponents ?? [],
           });
         } else {
-          toast.error("Failed to load user form configuration");
+          toast.error(t("admin.failedToLoadUserFormConfig"));
         }
       } else {
         const res = await fetch(
@@ -275,11 +277,11 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
             posHiddenComponents: data.posHiddenComponents ?? [],
           });
         } else {
-          toast.error("Failed to load form configuration");
+          toast.error(t("admin.failedToLoadFormConfig"));
         }
       }
     } catch {
-      toast.error("Failed to load form configuration");
+      toast.error(t("admin.failedToLoadFormConfig"));
     } finally {
       setLoading(false);
     }
@@ -312,7 +314,7 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
         toast.error(err.error || "Failed to save configuration");
       }
     } catch {
-      toast.error("Failed to save configuration");
+      toast.error(t("admin.failedToSaveConfig"));
     } finally {
       setSaving(false);
     }
@@ -333,10 +335,10 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
         setLoading(true);
         fetchConfig();
       } else {
-        toast.error("Failed to reset configuration");
+        toast.error(t("admin.failedToResetConfig"));
       }
     } catch {
-      toast.error("Failed to reset configuration");
+      toast.error(t("admin.failedToResetConfig"));
     } finally {
       setResetting(false);
     }
@@ -354,7 +356,7 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
       defaultLandingPage: orgConfig.defaultLandingPage ?? null,
       posHiddenComponents: orgConfig.posHiddenComponents ?? [],
     });
-    toast.success("Loaded org configuration — make changes and save");
+    toast.success(t("admin.loadedOrgConfig"));
   };
 
   // ── Field helpers ───────────────────────────────────────────
@@ -502,14 +504,14 @@ export function FormConfigTab({ orgId, edition, userId, userName }: FormConfigTa
     if (existingIndex >= 0) {
       // Removing — enforce min 2
       if (current.length <= 2) {
-        toast.error("Minimum 2 tabs required");
+        toast.error(t("admin.minTabsRequired"));
         return;
       }
       current.splice(existingIndex, 1);
     } else {
       // Adding — enforce max 5
       if (current.length >= 5) {
-        toast.error("Maximum 5 tabs allowed");
+        toast.error(t("admin.maxTabsAllowed"));
         return;
       }
       current.push(tab);

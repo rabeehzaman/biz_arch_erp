@@ -4,6 +4,7 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n"
 import { resetMobileDialogViewport } from "@/lib/mobile-viewport"
 import { useHaptics } from "@/hooks/use-haptics"
 
@@ -29,8 +30,10 @@ export function ActionSheet({
   title,
   description,
   actions,
-  cancelLabel = "Cancel",
+  cancelLabel: cancelLabelProp,
 }: ActionSheetProps) {
+  const { t } = useLanguage()
+  const cancelLabel = cancelLabelProp ?? t("common.cancel")
   const { selectionChanged } = useHaptics()
 
   const handleOpenChange = React.useCallback(

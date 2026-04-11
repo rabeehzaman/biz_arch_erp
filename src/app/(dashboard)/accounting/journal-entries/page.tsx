@@ -54,6 +54,8 @@ interface JournalEntry {
   status: string;
   sourceType: string;
   lines: JournalLine[];
+  branch?: { id: string; name: string } | null;
+  notes?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -117,8 +119,8 @@ export default function JournalEntriesPage() {
       const qs = params.toString();
       const response = await fetch(`/api/journal-entries${qs ? `?${qs}` : ""}`);
       if (!response.ok) throw new Error("Failed to fetch");
-      const data = await response.json();
-      setEntries(data);
+      const json = await response.json();
+      setEntries(json.data ?? json);
     } catch {
       toast.error(t("accounting.failedToLoadJournalEntries"));
     } finally {
@@ -315,6 +317,8 @@ export default function JournalEntriesPage() {
                           {isColumnVisible("status") && <TableHead className="hidden sm:table-cell">{t("common.status")}</TableHead>}
                           {isColumnVisible("debit") && <TableHead className="text-right">{t("accounting.debit")}</TableHead>}
                           {isColumnVisible("credit") && <TableHead className="hidden sm:table-cell text-right">{t("accounting.credit")}</TableHead>}
+                          {isColumnVisible("branch") && <TableHead>{t("common.branch")}</TableHead>}
+                          {isColumnVisible("notes") && <TableHead>{t("common.notes")}</TableHead>}
                           <TableHead className="w-[80px]"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -357,6 +361,8 @@ export default function JournalEntriesPage() {
                                   minimumFractionDigits: 2,
                                 })}
                               </TableCell>}
+                              {isColumnVisible("branch") && <TableCell className="text-sm text-slate-600">{entry.branch?.name || "-"}</TableCell>}
+                              {isColumnVisible("notes") && <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{entry.notes || entry.description || "-"}</TableCell>}
                               <TableCell onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>

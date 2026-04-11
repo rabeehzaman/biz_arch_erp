@@ -252,6 +252,7 @@ export default function EditDebitNotePage({
         if (item.id !== itemId) return item;
 
         if (field === "unitId") {
+          if (value === item.unitId) return item;
           const product = products.find((p) => p.id === item.productId);
           if (product) {
             const resolved = resolveUnitPrice(Number(product.cost) || Number(product.price), value as string, product.unitId!, product.unitConversions, { ignoreOverridePrice: true });

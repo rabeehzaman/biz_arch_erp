@@ -73,7 +73,7 @@ export default function ProductionOrderDetailPage() {
         setCompletionQty(Number(data.plannedQuantity) - Number(data.completedQuantity));
       }
     } catch {
-      toast.error("Failed to load order");
+      toast.error(t("manufacturing.failedToLoadOrder"));
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ export default function ProductionOrderDetailPage() {
         toast.error(data.error);
       }
     } catch {
-      toast.error("Action failed");
+      toast.error(t("manufacturing.actionFailed"));
     } finally {
       setProcessing(false);
     }
@@ -109,7 +109,7 @@ export default function ProductionOrderDetailPage() {
     if (!confirm("Delete this draft order?")) return;
     const res = await fetch(`/api/manufacturing/production-orders/${params.id}`, { method: "DELETE" });
     if (res.ok) {
-      toast.success("Order deleted");
+      toast.success(t("manufacturing.orderDeleted"));
       router.push("/manufacturing/production-orders");
     } else {
       const data = await res.json();

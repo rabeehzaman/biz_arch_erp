@@ -39,7 +39,7 @@ export default function GoldRatesPage() {
 
   const handleSetRate = useCallback(async () => {
     if (!sellRate || Number(sellRate) <= 0) {
-      toast.error("Please enter a valid sell rate");
+      toast.error(t("jewellery.enterValidSellRate"));
       return;
     }
     setSaving(true);
@@ -55,7 +55,7 @@ export default function GoldRatesPage() {
         }),
       });
       if (res.ok) {
-        toast.success("Gold rate updated");
+        toast.success(t("jewellery.goldRateUpdated"));
         setSellRate("");
         mutateTodayRates();
         mutateHistory();
@@ -64,7 +64,7 @@ export default function GoldRatesPage() {
         toast.error(data.error || "Failed to set rate");
       }
     } catch {
-      toast.error("Failed to set rate");
+      toast.error(t("jewellery.failedToSetRate"));
     } finally {
       setSaving(false);
     }

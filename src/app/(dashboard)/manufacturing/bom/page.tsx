@@ -57,7 +57,7 @@ export default function BOMListPage() {
         setBoms(await res.json());
       }
     } catch {
-      toast.error("Failed to load BOMs");
+      toast.error(t("manufacturing.failedToLoadBoms"));
     } finally {
       setLoading(false);
     }

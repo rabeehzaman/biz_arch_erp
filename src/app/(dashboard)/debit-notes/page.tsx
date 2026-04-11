@@ -53,6 +53,9 @@ interface DebitNote {
   issueDate: string;
   total: number;
   reason: string | null;
+  branch?: { id: string; name: string } | null;
+  warehouse?: { id: string; name: string } | null;
+  notes?: string | null;
   _count: {
     items: number;
   };
@@ -254,6 +257,9 @@ export default function DebitNotesPage() {
                         {isColumnVisible("purchaseInvoice") && <TableHead>{t("purchases.purchaseInvoiceNumber")}</TableHead>}
                         {isColumnVisible("issueDate") && <TableHead>{t("sales.issueDate")}</TableHead>}
                         {isColumnVisible("total") && <TableHead className="text-right">{t("common.total")}</TableHead>}
+                        {isColumnVisible("branch") && <TableHead>{t("common.branch")}</TableHead>}
+                        {isColumnVisible("warehouse") && <TableHead>{t("common.warehouse")}</TableHead>}
+                        {isColumnVisible("notes") && <TableHead>{t("common.notes")}</TableHead>}
                         <TableHead className="text-right">{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -298,6 +304,9 @@ export default function DebitNotesPage() {
                           {isColumnVisible("total") && <TableCell className="text-right text-orange-600 font-medium">
                             {fmt(Number(debitNote.total))}
                           </TableCell>}
+                          {isColumnVisible("branch") && <TableCell className="text-sm text-slate-600">{debitNote.branch?.name || "-"}</TableCell>}
+                          {isColumnVisible("warehouse") && <TableCell className="text-sm text-slate-600">{debitNote.warehouse?.name || "-"}</TableCell>}
+                          {isColumnVisible("notes") && <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{debitNote.notes || "-"}</TableCell>}
                           <TableCell
                             className="text-right"
                             onClick={(e) => e.stopPropagation()}

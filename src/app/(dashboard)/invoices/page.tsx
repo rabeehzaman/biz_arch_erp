@@ -51,10 +51,17 @@ interface Invoice {
     name: string;
     email: string | null;
   };
+  createdBy?: { id: string; name: string } | null;
+  branch?: { id: string; name: string } | null;
+  warehouse?: { id: string; name: string } | null;
   issueDate: string;
   dueDate: string;
+  subtotal?: number;
   total: number;
+  amountPaid?: number;
   balanceDue: number;
+  paymentType?: string;
+  notes?: string | null;
   _count: {
     items: number;
   };
@@ -564,6 +571,14 @@ export default function InvoicesPage() {
                               <SortIcon field="balance" />
                             </span>
                           </TableHead>}
+                          {isColumnVisible("createdBy") && <TableHead>{t("common.createdBy")}</TableHead>}
+                          {isColumnVisible("branch") && <TableHead>{t("common.branch")}</TableHead>}
+                          {isColumnVisible("warehouse") && <TableHead>{t("common.warehouse")}</TableHead>}
+                          {isColumnVisible("subtotal") && <TableHead className="text-right">{t("common.subtotal")}</TableHead>}
+                          {isColumnVisible("amountPaid") && <TableHead className="text-right">{t("common.amountPaid")}</TableHead>}
+                          {isColumnVisible("paymentType") && <TableHead>{t("sales.paymentType")}</TableHead>}
+                          {isColumnVisible("notes") && <TableHead>{t("common.notes")}</TableHead>}
+                          {isColumnVisible("itemCount") && <TableHead className="text-right">{t("common.items")}</TableHead>}
                           <TableHead className="text-right">{t("common.actions")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -637,6 +652,14 @@ export default function InvoicesPage() {
                                 {fmt(Number(invoice.balanceDue))}
                               </span>
                             </TableCell>}
+                            {isColumnVisible("createdBy") && <TableCell className="text-sm text-slate-600">{invoice.createdBy?.name || "-"}</TableCell>}
+                            {isColumnVisible("branch") && <TableCell className="text-sm text-slate-600">{invoice.branch?.name || "-"}</TableCell>}
+                            {isColumnVisible("warehouse") && <TableCell className="text-sm text-slate-600">{invoice.warehouse?.name || "-"}</TableCell>}
+                            {isColumnVisible("subtotal") && <TableCell className="text-right">{fmt(Number(invoice.subtotal || 0))}</TableCell>}
+                            {isColumnVisible("amountPaid") && <TableCell className="text-right">{fmt(Number(invoice.amountPaid || 0))}</TableCell>}
+                            {isColumnVisible("paymentType") && <TableCell><Badge variant="outline">{invoice.paymentType || "-"}</Badge></TableCell>}
+                            {isColumnVisible("notes") && <TableCell className="text-sm text-slate-500 max-w-[200px] truncate">{invoice.notes || "-"}</TableCell>}
+                            {isColumnVisible("itemCount") && <TableCell className="text-right">{invoice._count?.items || 0}</TableCell>}
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               <Link href={`/invoices/${invoice.id}`}>
                                 <Button variant="ghost" size="icon" title={t("common.details") || "Details"}>

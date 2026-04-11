@@ -48,33 +48,33 @@ const STATUS_CONFIG = {
   AVAILABLE: {
     color: "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700",
     badge: "bg-green-500 text-white",
-    label: "Available",
+    labelKey: "restaurant.available",
     icon: Armchair,
   },
   OCCUPIED: {
     color: "bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700",
     badge: "bg-amber-500 text-white",
-    label: "Occupied",
+    labelKey: "restaurant.occupied",
     icon: UtensilsCrossed,
   },
   RESERVED: {
     color: "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700",
     badge: "bg-blue-500 text-white",
-    label: "Reserved",
+    labelKey: "restaurant.reserved",
     icon: Clock,
   },
   CLEANING: {
     color: "bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600",
     badge: "bg-gray-500 text-white",
-    label: "Cleaning",
+    labelKey: "restaurant.cleaning",
     icon: SparklesIcon,
   },
 };
 
-function getTimeElapsed(updatedAt: string): string {
+function getTimeElapsed(updatedAt: string): string | null {
   const diff = Date.now() - new Date(updatedAt).getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "Just now";
+  if (minutes < 1) return null; // handled by caller
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
   const remainingMins = minutes % 60;
@@ -121,11 +121,11 @@ export default function RestaurantDashboardPage() {
         const data = await res.json();
         throw new Error(data.error || "Failed to update status");
       }
-      toast.success("Table status updated");
+      toast.success(t("restaurant.tableStatusUpdated"));
       mutate();
       setStatusDialog({ open: false, table: null });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update status");
+      toast.error(error instanceof Error ? error.message : t("restaurant.failedToUpdateStatus"));
     } finally {
       setIsUpdating(false);
     }
@@ -134,8 +134,8 @@ export default function RestaurantDashboardPage() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Restaurant Dashboard</h1>
-        <p className="text-muted-foreground">Table overview and quick status management</p>
+        <h1 className="text-2xl font-bold">{t("restaurant.dashboard")}</h1>
+        <p className="text-muted-foreground">{t("restaurant.tableOverview")}</p>
       </div>
 
       {/* Summary Stats */}
@@ -147,7 +147,7 @@ export default function RestaurantDashboardPage() {
                 <Armchair className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Tables</p>
+                <p className="text-sm text-muted-foreground">{t("restaurant.totalTables")}</p>
                 <p className="text-2xl font-bold">{isLoading ? "-" : totalTables}</p>
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function RestaurantDashboardPage() {
                 <Armchair className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Available</p>
+                <p className="text-sm text-muted-foreground">{t("restaurant.available")}</p>
                 <p className="text-2xl font-bold text-green-600">{isLoading ? "-" : availableCount}</p>
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function RestaurantDashboardPage() {
                 <UtensilsCrossed className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Occupied</p>
+                <p className="text-sm text-muted-foreground">{t("restaurant.occupied")}</p>
                 <p className="text-2xl font-bold text-amber-600">{isLoading ? "-" : occupiedCount}</p>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function RestaurantDashboardPage() {
                 <Clock className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Reserved</p>
+                <p className="text-sm text-muted-foreground">{t("restaurant.reserved")}</p>
                 <p className="text-2xl font-bold text-blue-600">{isLoading ? "-" : reservedCount}</p>
               </div>
             </div>
@@ -209,9 +209,9 @@ export default function RestaurantDashboardPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <Armchair className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No tables configured</h3>
+            <h3 className="text-lg font-semibold mb-2">{t("restaurant.noTablesConfigured")}</h3>
             <p className="text-muted-foreground">
-              Go to Restaurant &gt; Table Management to add tables.
+              {t("restaurant.goToTableManagement")}
             </p>
           </CardContent>
         </Card>
@@ -234,19 +234,19 @@ export default function RestaurantDashboardPage() {
                   <p className="text-sm font-medium truncate mb-2">{table.name}</p>
                   <div className="flex items-center justify-between">
                     <Badge className={`text-xs ${config.badge}`}>
-                      {config.label}
+                      {t(config.labelKey)}
                     </Badge>
                   </div>
                   <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <Users className="h-3 w-3" />
                     <span>
-                      {table.capacity} seats
+                      {table.capacity} {t("restaurant.seats")}
                     </span>
                   </div>
                   {table.status === "OCCUPIED" && (
                     <div className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                       <Clock className="h-3 w-3" />
-                      <span>{getTimeElapsed(table.updatedAt)}</span>
+                      <span>{getTimeElapsed(table.updatedAt) ?? t("restaurant.justNow")}</span>
                     </div>
                   )}
                 </CardContent>
@@ -269,21 +269,21 @@ export default function RestaurantDashboardPage() {
               Update Table #{statusDialog.table?.number} - {statusDialog.table?.name}
             </DialogTitle>
             <DialogDescription>
-              Change the table status.
+              {t("restaurant.changeTableStatus")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t("common.status")}</Label>
               <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder={t("restaurant.selectStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="AVAILABLE">Available</SelectItem>
-                  <SelectItem value="OCCUPIED">Occupied</SelectItem>
-                  <SelectItem value="RESERVED">Reserved</SelectItem>
-                  <SelectItem value="CLEANING">Cleaning</SelectItem>
+                  <SelectItem value="AVAILABLE">{t("restaurant.available")}</SelectItem>
+                  <SelectItem value="OCCUPIED">{t("restaurant.occupied")}</SelectItem>
+                  <SelectItem value="RESERVED">{t("restaurant.reserved")}</SelectItem>
+                  <SelectItem value="CLEANING">{t("restaurant.cleaning")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -293,10 +293,10 @@ export default function RestaurantDashboardPage() {
               variant="outline"
               onClick={() => setStatusDialog({ open: false, table: null })}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleStatusUpdate} disabled={isUpdating}>
-              {isUpdating ? "Updating..." : "Update Status"}
+              {isUpdating ? t("restaurant.updating") : t("restaurant.updateStatus")}
             </Button>
           </DialogFooter>
         </DialogContent>
