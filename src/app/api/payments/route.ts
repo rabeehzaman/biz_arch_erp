@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const organizationId = getOrgId(session);
 
     const body = await request.json();
-    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount, adjustmentAccountId, cashBankAccountId, allocations } = body;
+    const { customerId, invoiceId, amount, paymentDate, paymentMethod: rawMethod, reference, notes, discountReceived: rawDiscount, adjustmentAccountId, cashBankAccountId, allocations, isAdvance } = body;
     const discountReceived = rawDiscount || 0;
     // Normalize paymentMethod to uppercase enum value
     let paymentMethod = (rawMethod ? String(rawMethod).toUpperCase().replace(/\s+/g, "_") : "CASH") as PaymentMethod;
@@ -116,6 +116,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (isAdvance && (invoiceId || (allocations && allocations.length > 0))) {
+      return NextResponse.json(
+        { error: "Advance payments cannot be allocated to invoices" },
+        { status: 400 }
+      );
+    }
+
     const paymentNumber = await generatePaymentNumber(organizationId);
     const parsedPaymentDate = paymentDate ? new Date(paymentDate) : new Date();
 
@@ -126,13 +133,14 @@ export async function POST(request: NextRequest) {
         data: {
           paymentNumber,
           customerId,
-          invoiceId: invoiceId || null,
+          invoiceId: isAdvance ? null : (invoiceId || null),
           amount,
           discountReceived,
           paymentDate: parsedPaymentDate,
           paymentMethod: paymentMethod,
           reference: reference || null,
           notes: notes || null,
+          isAdvance: !!isAdvance,
           adjustmentAccountId: paymentMethod === "ADJUSTMENT" ? adjustmentAccountId : null,
           organizationId,
         },
@@ -141,15 +149,26 @@ export async function POST(request: NextRequest) {
       // Total settlement = cash received + discount
       const totalSettlement = Number(amount) + Number(discountReceived);
 
-      // Update customer balance (amount + discount settles the balance)
-      await tx.customer.update({
-        where: { id: customerId, organizationId },
-        data: {
-          balance: { decrement: totalSettlement },
-        },
-      });
+      // Update customer balance
+      if (isAdvance) {
+        // Advance: increase advance balance (liability), do NOT touch AR balance
+        await tx.customer.update({
+          where: { id: customerId, organizationId },
+          data: {
+            advanceBalance: { increment: totalSettlement },
+          },
+        });
+      } else {
+        // Regular: amount + discount settles the AR balance
+        await tx.customer.update({
+          where: { id: customerId, organizationId },
+          data: {
+            balance: { decrement: totalSettlement },
+          },
+        });
+      }
 
-      // Apply payment to invoices
+      // Apply payment to invoices (skip for advance payments)
       if (allocations && Array.isArray(allocations) && allocations.length > 0) {
         // Explicit multi-invoice allocation from create page
         for (const alloc of allocations) {

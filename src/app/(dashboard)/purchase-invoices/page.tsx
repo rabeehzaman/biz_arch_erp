@@ -67,6 +67,7 @@ const statusColors: Record<string, string> = {
 export default function PurchaseInvoicesPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<string | null>(null);
@@ -120,9 +121,25 @@ export default function PurchaseInvoicesPage() {
     }
   };
 
+  const dateFilteredInvoices = useMemo(() => {
+    if (dateFilter === "all") return invoices;
+    const now = new Date();
+    let cutoff: Date;
+    if (dateFilter === "today") {
+      cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    } else if (dateFilter === "thisMonth") {
+      cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (dateFilter === "last30") {
+      cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else {
+      cutoff = new Date(0);
+    }
+    return invoices.filter((inv) => new Date(inv.invoiceDate) >= cutoff);
+  }, [invoices, dateFilter]);
+
   const sortedInvoices = useMemo(() => {
-    if (!sortField) return invoices;
-    return [...invoices].sort((a, b) => {
+    if (!sortField) return dateFilteredInvoices;
+    return [...dateFilteredInvoices].sort((a, b) => {
       let aVal: any, bVal: any;
       switch (sortField) {
         case "invoiceNumber": aVal = a.purchaseInvoiceNumber; bVal = b.purchaseInvoiceNumber; break;
@@ -185,6 +202,22 @@ export default function PurchaseInvoicesPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
+              </div>
+              <div className="flex gap-1">
+                {[
+                  { value: "all", label: t("common.all") },
+                  { value: "today", label: t("common.today") },
+                  { value: "thisMonth", label: t("common.thisMonth") },
+                  { value: "last30", label: t("common.last30Days") },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setDateFilter(opt.value)}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${dateFilter === opt.value ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">

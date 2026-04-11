@@ -67,6 +67,8 @@ export async function GET(request: NextRequest) {
             { purchaseInvoiceNumber: { contains: search, mode: "insensitive" as const } },
             { supplier: { name: { contains: search, mode: "insensitive" as const } } },
             { supplierInvoiceRef: { contains: search, mode: "insensitive" as const } },
+            { supplier: { phone: { contains: search } } },
+            { notes: { contains: search, mode: "insensitive" as const } },
           ],
         }
       : baseWhere;

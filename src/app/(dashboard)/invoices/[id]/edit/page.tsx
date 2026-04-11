@@ -675,8 +675,13 @@ export default function EditInvoicePage({
                                 className={`border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100 ${hasStockShortfall ? "border border-yellow-500 bg-yellow-50 focus-visible:ring-yellow-500" : ""}`}
                                 required
                               />
+                              {item.productId && formData.warehouseId && !product?.isService && (
+                                <p className={`text-[10px] mt-0.5 px-1 ${availableStock === 0 ? "text-red-500 font-medium" : availableStock <= 5 ? "text-yellow-600 font-medium" : "text-slate-400"}`}>
+                                  {t("products.stockLabel")} {availableStock}{product?.unit?.name ? ` ${product.unit.name}` : ""}
+                                </p>
+                              )}
                               {hasStockShortfall && (
-                                <p className="text-[10px] text-yellow-600 mt-1 absolute bottom-[-5px] left-2">
+                                <p className="text-[10px] text-yellow-600 mt-0.5 px-1">
                                   {availableStock === 0
                                     ? `⚠ ${t("sales.noStock")}`
                                     : `⚠ ${t("sales.onlyNInStock").replace("{n}", String(availableStock))}`}
@@ -885,6 +890,11 @@ export default function EditInvoicePage({
                               className={hasStockShortfall ? "border-yellow-500 bg-yellow-50" : ""}
                               required
                             />
+                            {item.productId && formData.warehouseId && !product?.isService && (
+                              <p className={`text-[10px] mt-0.5 ${availableStock === 0 ? "text-red-500 font-medium" : availableStock <= 5 ? "text-yellow-600 font-medium" : "text-slate-400"}`}>
+                                {t("products.stockLabel")} {availableStock}{product?.unit?.name ? ` ${product.unit.name}` : ""}
+                              </p>
+                            )}
                             {hasStockShortfall && (
                               <p className="text-[10px] text-yellow-600 mt-0.5">
                                 {availableStock === 0 ? `⚠ ${t("sales.noStock")}` : `⚠ ${t("sales.onlyNInStock").replace("{n}", String(availableStock))}`}

@@ -72,6 +72,7 @@ export default function ProductDetailPage({
   const [loadedTabs, setLoadedTabs] = useState<DetailTab[]>([defaultTab]);
 
   const [product, setProduct] = useState<ProductBasic | null>(null);
+  const [stockLevel, setStockLevel] = useState<number | null>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -84,6 +85,13 @@ export default function ProductDetailPage({
         if (!res.ok) throw new Error("Not found");
         const data = await res.json();
         setProduct(data);
+        if (!data.isService) {
+          const stockRes = await fetch(`/api/products/${id}/stock`);
+          if (stockRes.ok) {
+            const stockData = await stockRes.json();
+            setStockLevel(stockData.summary?.totalOnHand ?? 0);
+          }
+        }
       } catch {
         router.push("/products");
       } finally {
@@ -156,6 +164,14 @@ export default function ProductDetailPage({
                 </Badge>
                 {product.isService && (
                   <Badge variant="info" className="shrink-0">Service</Badge>
+                )}
+                {!product.isService && stockLevel !== null && (
+                  <Badge
+                    variant={stockLevel === 0 ? "destructive" : stockLevel <= 5 ? "warning" : "success"}
+                    className="shrink-0"
+                  >
+                    {stockLevel === 0 ? t("products.outOfStock2") : `${t("products.stockLabel")} ${stockLevel}`}
+                  </Badge>
                 )}
               </div>
               {product.sku && (

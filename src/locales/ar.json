@@ -416,6 +416,7 @@
     "thisYear": "هذه السنة",
     "lastMonth": "الشهر الماضي",
     "lastYear": "السنة الماضية",
+    "last30Days": "آخر 30 يوم",
     "custom": "مخصص",
     "period": "الفترة",
     "startDate": "تاريخ البداية",
@@ -547,7 +548,7 @@
     "allInvoices": "جميع الفواتير",
     "paidInvoices": "فواتير مدفوعة",
     "unpaidInvoices": "فواتير غير مدفوعة",
-    "searchInvoices": "بحث في الفواتير...",
+    "searchInvoices": "بحث برقم الفاتورة، العميل، أو الهاتف...",
     "invoiceTotal": "إجمالي الفاتورة",
     "amountPaid": "المبلغ المدفوع",
     "amountDue": "المبلغ المستحق",
@@ -666,7 +667,7 @@
     "left": "متبقي",
     "recordPaymentForInvoice": "تسجيل دفعة لفاتورة الشراء",
     "vatLabel": "ضريبة القيمة المضافة (15%)",
-    "searchPurchases": "بحث في المشتريات..."
+    "searchPurchases": "بحث برقم الفاتورة، المورد، المرجع، أو الهاتف..."
   },
   "customers": {
     "title": "العملاء",
@@ -2934,6 +2935,7 @@
     "converting": "جاري التحويل...",
     "convertedToInvoice": "تم تحويل عرض السعر إلى فاتورة",
     "convertedAlert": "تم تحويل عرض السعر هذا إلى فاتورة",
+    "viewInvoice": "عرض الفاتورة",
     "expiredAlert": "انتهت صلاحية عرض السعر هذا",
     "notFound": "عرض السعر غير موجود",
     "failedToLoad": "فشل في تحميل عرض السعر",

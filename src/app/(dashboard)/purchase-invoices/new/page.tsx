@@ -38,6 +38,7 @@ interface Supplier {
   id: string;
   name: string;
   email: string | null;
+  vatNumber?: string | null;
 }
 
 interface Product {
@@ -176,6 +177,20 @@ export default function NewPurchaseInvoicePage() {
               hsnCode: item.hsnCode || "",
               vatRate: Number(item.vatRate) ?? 15,
               imeiNumbers: [],
+              jewellery: item.jewelleryItemId ? {
+                jewelleryItemId: item.jewelleryItemId,
+                goldRate: Number(item.goldRate) || 0,
+                purity: item.purity || "",
+                metalType: item.metalType || "",
+                grossWeight: Number(item.grossWeight) || 0,
+                stoneWeight: Number(item.stoneWeight) || 0,
+                wastagePercent: Number(item.wastagePercent) || 0,
+                makingChargeType: (item.makingChargeType as "PER_GRAM" | "PERCENTAGE" | "FIXED") || "PER_GRAM",
+                makingChargeValue: Number(item.makingChargeValue) || 0,
+                stoneValue: Number(item.stoneValue) || 0,
+                tagNumber: item.tagNumber || "",
+                huidNumber: item.huidNumber || "",
+              } : undefined,
             }))
           );
         }
@@ -425,6 +440,16 @@ export default function NewPurchaseInvoicePage() {
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const taxEnabled = session?.user?.gstEnabled || saudiEnabled;
+
+  // Determine default VAT rate based on whether the selected supplier has a VAT number
+  const getDefaultVatRate = useCallback(() => {
+    if (!saudiEnabled || !formData.supplierId) return 15;
+    const supplier = suppliers.find(s => s.id === formData.supplierId);
+    return supplier?.vatNumber ? 15 : 0;
+  }, [saudiEnabled, suppliers, formData.supplierId]);
+  const defaultVatRateRef = useRef(15);
+  useEffect(() => { defaultVatRateRef.current = getDefaultVatRate(); }, [getDefaultVatRate]);
+
   const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
   const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
   const { roundOffMode, roundOffEnabled } = useRoundOffSettings();
@@ -444,6 +469,23 @@ export default function NewPurchaseInvoicePage() {
     roundOffMode,
     applyRoundOff
   );
+
+  const handleSupplierChange = (supplierId: string) => {
+    setFormData(prev => ({ ...prev, supplierId }));
+    if (saudiEnabled) {
+      const supplier = suppliers.find(s => s.id === supplierId);
+      const newVatRate = supplier?.vatNumber ? 15 : 0;
+      setLineItems(prev => prev.map(item => ({ ...item, vatRate: newVatRate })));
+    }
+  };
+
+  const handleSupplierUpdated = (supplier: Supplier) => {
+    fetchSuppliers();
+    if (saudiEnabled && supplier.id === formData.supplierId) {
+      const newVatRate = supplier.vatNumber ? 15 : 0;
+      setLineItems(prev => prev.map(item => ({ ...item, vatRate: newVatRate })));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

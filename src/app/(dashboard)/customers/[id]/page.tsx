@@ -193,6 +193,9 @@ export default function CustomerDetailPage({
               {customer.email && (
                 <p className="truncate text-sm text-slate-500">{customer.email}</p>
               )}
+              {Number(customer.balance) > 0 && (
+                <p className="text-sm font-medium text-red-600">{t("customers.outstanding")}: {fmt(Number(customer.balance))}</p>
+              )}
             </div>
           </div>
 

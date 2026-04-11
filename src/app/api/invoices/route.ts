@@ -73,6 +73,8 @@ export async function GET(request: NextRequest) {
           OR: [
             { invoiceNumber: { contains: search, mode: "insensitive" as const } },
             { customer: { name: { contains: search, mode: "insensitive" as const } } },
+            { customer: { phone: { contains: search } } },
+            { notes: { contains: search, mode: "insensitive" as const } },
           ],
         }
       : baseWhere;

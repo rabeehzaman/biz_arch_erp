@@ -11,6 +11,7 @@ interface Supplier {
   id: string;
   name: string;
   email: string | null;
+  vatNumber?: string | null;
 }
 
 interface SupplierComboboxProps {

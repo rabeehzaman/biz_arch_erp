@@ -34,7 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, Copy, CreditCard, Download, Loader2, Package, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, Building2, Copy, CreditCard, Download, Loader2, Package, Pencil, Printer, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
@@ -352,6 +352,12 @@ export default function PurchaseInvoiceDetailPage({
               <Copy className="h-4 w-4 sm:mr-2" />
               <span className="sm:inline">{t("common.duplicate")}</span>
             </Button>
+            <Link href={`/debit-notes/new?purchaseInvoiceId=${invoice.id}`}>
+              <Button variant="outline" size="sm" className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+                <FileDown className="h-4 w-4 sm:mr-2" />
+                {t("purchases.createDebitNote")}
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
               {isDownloading
                 ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />

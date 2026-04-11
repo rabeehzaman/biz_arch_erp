@@ -556,6 +556,7 @@ model Customer {
   addNo          String?
   district       String?
   balance        Decimal      @default(0) @db.Decimal(12, 2)
+  advanceBalance Decimal      @default(0) @db.Decimal(12, 2)
   notes          String?
   isActive       Boolean      @default(true)
   organizationId String
@@ -1363,6 +1364,7 @@ model Payment {
   paymentMethod    PaymentMethod @default(CASH)
   reference        String?
   notes            String?
+  isAdvance        Boolean       @default(false)
 
   adjustmentAccountId String?
   adjustmentAccount   Account? @relation("PaymentAdjustmentAccount", fields: [adjustmentAccountId], references: [id])
@@ -1775,6 +1777,8 @@ enum CustomerTransactionType {
   PAYMENT
   CREDIT_NOTE
   ADJUSTMENT
+  ADVANCE_PAYMENT
+  ADVANCE_UTILIZATION
 }
 
 // ==================== SUPPLIER TRANSACTIONS (FOR STATEMENT) ====================

@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n";
 import { useFormConfig } from "@/hooks/use-form-config";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export interface Supplier {
     id: string;
@@ -61,6 +62,7 @@ export function SupplierFormDialog({
     const isSaudi = !!(session?.user as any)?.saudiEInvoiceEnabled;
     const defaultCountry = isSaudi ? "Saudi Arabia" : "India";
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showNoVatConfirm, setShowNoVatConfirm] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         email: getDefault("email", ""),
@@ -134,9 +136,19 @@ export function SupplierFormDialog({
         }
     }, [defaultCountry, open, resetForm, supplierToEdit]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
+
+        if (isSaudi && !formData.vatNumber.trim()) {
+            setShowNoVatConfirm(true);
+            return;
+        }
+
+        doSubmit();
+    };
+
+    const doSubmit = async () => {
         setIsSubmitting(true);
 
         const payload = {
@@ -435,6 +447,16 @@ export function SupplierFormDialog({
                     </DialogFooter>
                 </form>
             </DialogContent>
+            <ConfirmDialog
+                open={showNoVatConfirm}
+                onOpenChange={setShowNoVatConfirm}
+                title={t("suppliers.noVatConfirmTitle")}
+                description={t("suppliers.noVatConfirmDescription")}
+                confirmLabel={t("suppliers.saveWithoutVat")}
+                cancelLabel={t("common.cancel")}
+                variant="default"
+                onConfirm={doSubmit}
+            />
         </Dialog>
     );
 }

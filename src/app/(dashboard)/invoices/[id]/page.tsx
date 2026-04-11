@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntryTab } from "@/components/journal-entry-tab";
-import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, Pencil, Printer, Receipt, CreditCard, Share2 } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, Copy, Download, Eye, Loader2, Pencil, Printer, Receipt, CreditCard, Share2, FileDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -447,6 +447,13 @@ export default function InvoiceDetailPage({
                 <span className="hidden sm:inline">{t("sales.recordPayment")}</span>
               </Button>
             )}
+            <Link href={`/credit-notes/new?invoiceId=${invoice?.id}`}>
+              <Button variant="outline" size="sm" className="col-span-1 h-9 w-full sm:h-10 sm:w-auto">
+                <FileDown className="h-4 w-4 sm:mr-2" />
+                <span className="sm:hidden">{t("sales.createCreditNote")}</span>
+                <span className="hidden sm:inline">{t("sales.createCreditNote")}</span>
+              </Button>
+            </Link>
             <div className="col-span-1 flex w-full sm:w-auto">
               <Button variant="outline" size="sm" onClick={() => handleDownloadPDF()} disabled={isDownloading} className="h-9 flex-1 rounded-r-none border-r-0 sm:h-10 sm:flex-initial">
                 {isDownloading

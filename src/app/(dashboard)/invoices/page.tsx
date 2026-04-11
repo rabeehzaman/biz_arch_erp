@@ -74,6 +74,7 @@ export default function InvoicesPage() {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [mobileCompact, setMobileCompact] = useState(false);
   const { t, lang } = useLanguage();
@@ -97,16 +98,33 @@ export default function InvoicesPage() {
   };
 
   const filteredInvoices = useMemo(() => {
-    if (statusFilter === "all") return invoices;
-    return invoices.filter((inv) => {
-      const balance = Number(inv.balanceDue);
-      const overdue = new Date(inv.dueDate) < new Date();
-      if (statusFilter === "paid") return balance <= 0;
-      if (statusFilter === "overdue") return balance > 0 && overdue;
-      if (statusFilter === "unpaid") return balance > 0;
-      return true;
-    });
-  }, [invoices, statusFilter]);
+    let filtered = invoices;
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((inv) => {
+        const balance = Number(inv.balanceDue);
+        const overdue = new Date(inv.dueDate) < new Date();
+        if (statusFilter === "paid") return balance <= 0;
+        if (statusFilter === "overdue") return balance > 0 && overdue;
+        if (statusFilter === "unpaid") return balance > 0;
+        return true;
+      });
+    }
+    if (dateFilter !== "all") {
+      const now = new Date();
+      let cutoff: Date;
+      if (dateFilter === "today") {
+        cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (dateFilter === "thisMonth") {
+        cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (dateFilter === "last30") {
+        cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      } else {
+        cutoff = new Date(0);
+      }
+      filtered = filtered.filter((inv) => new Date(inv.issueDate) >= cutoff);
+    }
+    return filtered;
+  }, [invoices, statusFilter, dateFilter]);
 
   const sortedInvoices = useMemo(() => {
     if (!sortField) return filteredInvoices;
@@ -204,11 +222,29 @@ export default function InvoicesPage() {
                     className="pl-10"
                   />
                 </div>
-                <ListFilters
-                  statusFilter={statusFilter}
-                  onStatusFilterChange={setStatusFilter}
-                  statusOptions={statusFilterOptions}
-                />
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    {[
+                      { value: "all", label: t("common.all") },
+                      { value: "today", label: t("common.today") },
+                      { value: "thisMonth", label: t("common.thisMonth") },
+                      { value: "last30", label: t("common.last30Days") },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setDateFilter(opt.value)}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${dateFilter === opt.value ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <ListFilters
+                    statusFilter={statusFilter}
+                    onStatusFilterChange={setStatusFilter}
+                    statusOptions={statusFilterOptions}
+                  />
+                </div>
               </div>
               {invoices.length > 0 && (
                 <ListSummaryBar

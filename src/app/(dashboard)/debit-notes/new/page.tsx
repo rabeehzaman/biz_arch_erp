@@ -132,6 +132,23 @@ export default function NewDebitNotePage() {
               conversionFactor: item.conversionFactor || 1,
               unitCost: Number(item.unitCost) || 0,
               discount: Number(item.discount) || 0,
+              gstRate: Number(item.gstRate) || 0,
+              hsnCode: item.hsnCode || "",
+              vatRate: Number(item.vatRate) ?? 0,
+              jewellery: item.jewelleryItemId ? {
+                jewelleryItemId: item.jewelleryItemId,
+                goldRate: Number(item.goldRate) || 0,
+                purity: item.purity || "",
+                metalType: item.metalType || "",
+                grossWeight: Number(item.grossWeight) || 0,
+                stoneWeight: Number(item.stoneWeight) || 0,
+                wastagePercent: Number(item.wastagePercent) || 0,
+                makingChargeType: (item.makingChargeType as "PER_GRAM" | "PERCENTAGE" | "FIXED") || "PER_GRAM",
+                makingChargeValue: Number(item.makingChargeValue) || 0,
+                stoneValue: Number(item.stoneValue) || 0,
+                tagNumber: item.tagNumber || "",
+                huidNumber: item.huidNumber || "",
+              } : undefined,
             }))
           );
         }

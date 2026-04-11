@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
           email: true,
           phone: true,
           balance: true,
+          vatNumber: true,
         },
       });
 

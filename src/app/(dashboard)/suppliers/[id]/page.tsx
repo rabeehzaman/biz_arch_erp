@@ -21,6 +21,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
 import { useLanguage } from "@/lib/i18n";
+import { useCurrency } from "@/hooks/use-currency";
 import { toast } from "sonner";
 
 type DetailTab = "overview" | "transactions" | "statement" | "comments";
@@ -67,6 +68,7 @@ export default function SupplierDetailPage({
 }) {
   const { id } = use(params);
   const { t } = useLanguage();
+  const { fmt } = useCurrency();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -187,6 +189,9 @@ export default function SupplierDetailPage({
               </div>
               {supplier.email && (
                 <p className="truncate text-sm text-slate-500">{supplier.email}</p>
+              )}
+              {Number(supplier.balance) > 0 && (
+                <p className="text-sm font-medium text-red-600">{t("suppliers.outstanding")}: {fmt(Number(supplier.balance))}</p>
               )}
             </div>
           </div>

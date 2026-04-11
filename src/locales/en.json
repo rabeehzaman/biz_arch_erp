@@ -416,6 +416,7 @@
     "thisYear": "This Year",
     "lastMonth": "Last Month",
     "lastYear": "Last Year",
+    "last30Days": "Last 30 Days",
     "custom": "Custom",
     "period": "Period",
     "startDate": "Start Date",
@@ -547,7 +548,7 @@
     "allInvoices": "All Invoices",
     "paidInvoices": "Paid Invoices",
     "unpaidInvoices": "Unpaid Invoices",
-    "searchInvoices": "Search invoices...",
+    "searchInvoices": "Search by invoice #, customer, or phone...",
     "invoiceTotal": "Invoice Total",
     "amountPaid": "Amount Paid",
     "amountDue": "Amount Due",
@@ -630,6 +631,7 @@
     "converting": "Converting...",
     "convertedToInvoice": "Quotation converted to invoice",
     "convertedAlert": "This quotation was converted to invoice",
+    "viewInvoice": "View Invoice",
     "expiredAlert": "This quotation has expired",
     "notFound": "Quotation not found",
     "failedToLoad": "Failed to load quotation",
@@ -741,7 +743,7 @@
     "left": "left",
     "recordPaymentForInvoice": "Record a payment for purchase invoice",
     "vatLabel": "VAT (15%)",
-    "searchPurchases": "Search purchases..."
+    "searchPurchases": "Search by invoice #, supplier, ref, or phone..."
   },
   "debitNotes": {
     "title": "Debit Notes",

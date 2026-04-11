@@ -288,6 +288,20 @@ export default function NewInvoicePage() {
               hsnCode: item.hsnCode || "",
               vatRate: Number(item.vatRate) ?? 15,
               selectedImeis: [],
+              jewellery: item.jewelleryItemId ? {
+                jewelleryItemId: item.jewelleryItemId,
+                goldRate: Number(item.goldRate) || 0,
+                purity: item.purity || "",
+                metalType: item.metalType || "",
+                grossWeight: Number(item.grossWeight) || 0,
+                stoneWeight: Number(item.stoneWeight) || 0,
+                wastagePercent: Number(item.wastagePercent) || 0,
+                makingChargeType: (item.makingChargeType as "PER_GRAM" | "PERCENTAGE" | "FIXED") || "PER_GRAM",
+                makingChargeValue: Number(item.makingChargeValue) || 0,
+                stoneValue: Number(item.stoneValue) || 0,
+                tagNumber: item.tagNumber || "",
+                huidNumber: item.huidNumber || "",
+              } : undefined,
             }))
           );
         }
@@ -938,8 +952,13 @@ export default function NewInvoicePage() {
                                   className={`border-0 focus-visible:ring-1 rounded-sm bg-transparent transition-colors hover:bg-slate-100 ${hasStockShortfall ? "border border-yellow-500 bg-yellow-50 focus-visible:ring-yellow-500" : ""}`}
                                   required
                                 />
+                                {item.productId && formData.warehouseId && !product?.isService && (
+                                  <p className={`text-[10px] mt-0.5 px-1 ${availableStock === 0 ? "text-red-500 font-medium" : availableStock <= 5 ? "text-yellow-600 font-medium" : "text-slate-400"}`}>
+                                    {t("products.stockLabel")} {availableStock}{product?.unit?.name ? ` ${product.unit.name}` : ""}
+                                  </p>
+                                )}
                                 {hasStockShortfall && (
-                                  <p className="text-[10px] text-yellow-600 mt-1 absolute bottom-[-5px] left-2">
+                                  <p className="text-[10px] text-yellow-600 mt-0.5 px-1">
                                     {availableStock === 0
                                       ? `⚠ ${t("sales.noStock")}`
                                       : `⚠ ${t("sales.onlyNInStock").replace("{n}", String(availableStock))}`}
@@ -1264,6 +1283,11 @@ export default function NewInvoicePage() {
                               className={hasStockShortfall ? "border-yellow-500 bg-yellow-50" : ""}
                               required
                             />
+                            {item.productId && formData.warehouseId && !product?.isService && (
+                              <p className={`text-[10px] mt-0.5 ${availableStock === 0 ? "text-red-500 font-medium" : availableStock <= 5 ? "text-yellow-600 font-medium" : "text-slate-400"}`}>
+                                {t("products.stockLabel")} {availableStock}{product?.unit?.name ? ` ${product.unit.name}` : ""}
+                              </p>
+                            )}
                             {hasStockShortfall && (
                               <p className="text-[10px] text-yellow-600 mt-0.5">
                                 {availableStock === 0 ? `⚠ ${t("sales.noStock")}` : `⚠ ${t("sales.onlyNInStock").replace("{n}", String(availableStock))}`}

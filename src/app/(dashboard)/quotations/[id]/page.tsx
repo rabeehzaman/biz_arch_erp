@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Copy, Download, FileCheck, Ban, Info, Loader2, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, Building2, Copy, Download, Eye, FileCheck, Ban, Info, Loader2, Pencil, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -280,6 +280,14 @@ export default function QuotationDetailPage({
             </div>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap">
+            {quotation.status === "CONVERTED" && quotation.convertedInvoice && (
+              <Link href={`/invoices/${quotation.convertedInvoice.id}`} className="col-span-1 sm:w-auto">
+                <Button size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
+                  <Eye className="h-4 w-4 sm:mr-2" />
+                  {t("quotations.viewInvoice")} {quotation.convertedInvoice.invoiceNumber}
+                </Button>
+              </Link>
+            )}
             {quotation.status !== "CONVERTED" && (
               <Link href={`/quotations/${id}/edit`} className="col-span-1 sm:w-auto">
                 <Button variant="outline" size="sm" className="h-9 w-full sm:h-10 sm:w-auto">
