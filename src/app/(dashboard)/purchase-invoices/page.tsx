@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, Receipt, Eye, Trash2 } from "lucide-react";
+import { Plus, Search, Receipt, Eye, Trash2, SlidersHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
@@ -36,6 +36,12 @@ import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 import { SwipeableCard } from "@/components/mobile/swipeable-card";
+import { AdvancedSearchModal } from "@/components/list-page/advanced-search-modal";
+import { ViewsDropdown } from "@/components/list-page/views-dropdown";
+import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
+import { PURCHASE_INVOICE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
+import { PURCHASE_INVOICE_SYSTEM_VIEWS } from "@/lib/system-views";
+import { useCustomViews } from "@/hooks/use-custom-views";
 
 interface PurchaseInvoice {
   id: string;
@@ -66,12 +72,28 @@ const statusColors: Record<string, string> = {
 
 export default function PurchaseInvoicesPage() {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const {
+    activeViewId, activeFilters, statusFilter, setStatusFilter,
+    dateFilter, setDateFilter, sortField, sortDirection: sortDir,
+    toggleSort, advancedSearch, advancedSearchOpen, setAdvancedSearchOpen,
+    activeFilterCount, handleViewChange, handleAdvancedSearch,
+    handleResetAdvancedSearch, saveViewDialogOpen, setSaveViewDialogOpen,
+    handleSaveView, filtersForSave, sortFieldForSave, sortDirectionForSave,
+    viewsRefreshKey, handleViewSaved, editingView, handleEditView,
+  } = useCustomViews({ module: "purchase-invoices", systemViews: PURCHASE_INVOICE_SYSTEM_VIEWS });
+
+  // Merge status filter into API params
+  const paginationParams = useMemo(
+    (): Record<string, string> => {
+      const p: Record<string, string> = { ...activeFilters };
+      if (statusFilter !== "all") p.status = statusFilter;
+      return p;
+    },
+    [statusFilter, activeFilters]
+  );
+
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
@@ -86,11 +108,6 @@ export default function PurchaseInvoicesPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  const paginationParams = useMemo(
-    (): Record<string, string> => (statusFilter !== "all" ? { status: statusFilter } : {}),
-    [statusFilter]
-  );
 
   const {
     items: invoices,
@@ -110,15 +127,6 @@ export default function PurchaseInvoicesPage() {
     PAID: t("purchases.statusPaid"),
     PARTIALLY_PAID: t("purchases.statusPartial"),
     CANCELLED: t("purchases.statusCancelled"),
-  };
-
-  const toggleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDir(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDir("desc");
-    }
   };
 
   const dateFilteredInvoices = useMemo(() => {
@@ -179,8 +187,8 @@ export default function PurchaseInvoicesPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{t("purchases.purchaseInvoices")}</h2>
-            <p className="text-slate-500">{t("purchases.subtitle")}</p>
+              <h2 className="text-2xl font-bold text-slate-900">{t("purchases.purchaseInvoices")}</h2>
+              <p className="text-slate-500">{t("purchases.subtitle")}</p>
           </div>
           <Link href="/purchase-invoices/new" className="hidden sm:inline-flex">
             <Button className="w-full">
@@ -193,15 +201,32 @@ export default function PurchaseInvoicesPage() {
         <Card>
           <CardHeader>
             <div className="flex flex-wrap items-center gap-4">
-              <div className="relative flex-1 min-w-[200px] sm:max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  ref={searchInputRef}
-                  placeholder={t("purchases.searchPurchases")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+              <div className="flex items-center gap-2 flex-1 min-w-[200px] sm:max-w-sm">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder={t("purchases.searchPurchases")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <ViewsDropdown
+                  module="purchase-invoices"
+                  systemViews={PURCHASE_INVOICE_SYSTEM_VIEWS}
+                  activeViewId={activeViewId}
+                  onViewChange={handleViewChange}
+                  onSaveView={handleSaveView}
+                  onEditView={handleEditView}
+                  refreshKey={viewsRefreshKey}
                 />
+                <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">{activeFilterCount}</span>
+                  )}
+                </Button>
               </div>
               <div className="flex gap-1">
                 {[
@@ -540,6 +565,24 @@ export default function PurchaseInvoicesPage() {
         )}
       </div>
       <FloatingActionButton href="/purchase-invoices/new" label={t("purchases.newPurchase")} />
+      <AdvancedSearchModal
+        open={advancedSearchOpen}
+        onOpenChange={setAdvancedSearchOpen}
+        fields={PURCHASE_INVOICE_SEARCH_FIELDS}
+        values={advancedSearch}
+        onSearch={handleAdvancedSearch}
+        onReset={handleResetAdvancedSearch}
+      />
+      <SaveViewDialog
+        open={saveViewDialogOpen}
+        onOpenChange={setSaveViewDialogOpen}
+        module="purchase-invoices"
+        filters={filtersForSave}
+        sortField={sortFieldForSave}
+        sortDirection={sortDirectionForSave}
+        onSaved={handleViewSaved}
+        editingView={editingView}
+      />
     </PageAnimation>
   );
 }

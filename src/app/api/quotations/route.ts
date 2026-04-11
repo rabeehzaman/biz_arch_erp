@@ -7,7 +7,7 @@ import { extractTaxExclusiveAmount } from "@/lib/tax/tax-inclusive";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { toMidnightUTC } from "@/lib/date-utils";
-import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { parsePagination, parseAdvancedSearch, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate quotation number: QUO-YYYYMMDD-XXX
@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const { limit, offset, search } = parsePagination(request);
+    const adv = parseAdvancedSearch(request);
     const isAdmin = isAdminRole(session.user.role);
     const userId = session.user.id;
 
@@ -48,9 +49,35 @@ export async function GET(request: NextRequest) {
     }
     const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
-    const baseWhere = isAdmin
+    const baseWhere: Record<string, unknown> = isAdmin
       ? { organizationId, ...branchFilter }
       : { organizationId, customer: { assignments: { some: { userId } } }, ...branchFilter };
+
+    // Advanced search filters
+    if (adv.quotationNumber) baseWhere.quotationNumber = { contains: adv.quotationNumber, mode: "insensitive" };
+    if (adv.customerId) baseWhere.customerId = adv.customerId;
+    if (adv.status) baseWhere.status = adv.status;
+    if (adv.branchId) baseWhere.branchId = adv.branchId;
+    if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
+    if (adv.issueDateFrom || adv.issueDateTo) {
+      const issueDate: Record<string, Date> = {};
+      if (adv.issueDateFrom) issueDate.gte = new Date(adv.issueDateFrom);
+      if (adv.issueDateTo) issueDate.lte = new Date(adv.issueDateTo + "T23:59:59.999Z");
+      baseWhere.issueDate = issueDate;
+    }
+    if (adv.validUntilFrom || adv.validUntilTo) {
+      const validUntil: Record<string, Date> = {};
+      if (adv.validUntilFrom) validUntil.gte = new Date(adv.validUntilFrom);
+      if (adv.validUntilTo) validUntil.lte = new Date(adv.validUntilTo + "T23:59:59.999Z");
+      baseWhere.validUntil = validUntil;
+    }
+    if (adv.totalMin || adv.totalMax) {
+      const total: Record<string, number> = {};
+      if (adv.totalMin) total.gte = parseFloat(adv.totalMin);
+      if (adv.totalMax) total.lte = parseFloat(adv.totalMax);
+      baseWhere.total = total;
+    }
+
     const where = search
       ? {
           ...baseWhere,

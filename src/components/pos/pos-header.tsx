@@ -1,6 +1,6 @@
 "use client";
 
-import { Armchair, ArrowLeft, Clock, CopyPlus, History, Languages, Loader2, LogOut, MapPin, Package, PauseCircle, Printer, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Armchair, ArrowLeft, Banknote, Clock, CopyPlus, History, Languages, Loader2, LogOut, MapPin, Package, PauseCircle, Printer, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
@@ -28,6 +28,7 @@ interface POSHeaderProps {
   onReturn?: () => void;
   isReturnMode?: boolean;
   onPreviousOrders?: () => void;
+  onCashMovement?: () => void;
   selectedTable?: { number: number; name: string } | null;
   orderType?: "DINE_IN" | "TAKEAWAY";
   isRestaurantMode?: boolean;
@@ -65,6 +66,7 @@ export function POSHeader({
   onReturn,
   isReturnMode,
   onPreviousOrders,
+  onCashMovement,
   selectedTable,
   orderType,
   isRestaurantMode,
@@ -182,6 +184,20 @@ export function POSHeader({
           >
             <History className="h-4 w-4" />
             <span className="hidden sm:inline ml-1">{t("pos.previousOrders")}</span>
+          </Button>
+        )}
+
+        {onCashMovement && !hiddenComponents?.has("cash-movement-button") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 px-2"
+            onClick={onCashMovement}
+            title={lang === "ar" ? "حركة نقدية" : "Cash In/Out"}
+            aria-label={lang === "ar" ? "حركة نقدية" : "Cash In/Out"}
+          >
+            <Banknote className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">{lang === "ar" ? "نقد" : "Cash"}</span>
           </Button>
         )}
 

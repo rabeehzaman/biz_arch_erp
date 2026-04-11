@@ -123,6 +123,20 @@ export interface SessionReportData {
   invoices: SessionReportInvoiceData[];
   paymentBreakdown: SessionReportPaymentBreakdownData[];
   soldProducts: SessionReportSoldProductData[];
+  cashMovements?: {
+    id: string;
+    movementNumber: string;
+    movementType: string;
+    reason: string;
+    amount: number;
+    description: string | null;
+    createdAt: string | Date;
+  }[];
+  cashMovementTotals?: {
+    totalCashIn: number;
+    totalCashOut: number;
+    netCashMovement: number;
+  };
   totals: {
     invoiceCount: number;
     soldProductCount: number;
@@ -194,6 +208,10 @@ type Labels = {
   returnTransactions: string;
   netSales: string;
   settledTo: string;
+  cashMovements: string;
+  cashIn: string;
+  cashOut: string;
+  netCashMovement: string;
 };
 
 const LABELS: Record<SessionReportLanguage, Labels> = {
@@ -252,6 +270,10 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     returnTransactions: "Return Transactions",
     netSales: "Net Sales",
     settledTo: "Settled To",
+    cashMovements: "Cash Movements",
+    cashIn: "Cash In",
+    cashOut: "Cash Out",
+    netCashMovement: "Net Cash Movement",
   },
   ar: {
     title: "تقرير جلسة نقطة البيع",
@@ -308,6 +330,10 @@ const LABELS: Record<SessionReportLanguage, Labels> = {
     returnTransactions: "عمليات الإرجاع",
     netSales: "صافي المبيعات",
     settledTo: "تمت التسوية إلى",
+    cashMovements: "حركات النقد",
+    cashIn: "إيداع نقدي",
+    cashOut: "سحب نقدي",
+    netCashMovement: "صافي حركات النقد",
   },
 };
 
@@ -327,6 +353,23 @@ const PAYMENT_LABELS: Record<SessionReportLanguage, Record<string, string>> = {
     UPI: "UPI",
     CHECK: "شيك",
     OTHER: "أخرى",
+  },
+};
+
+const CASH_MOVEMENT_REASON_LABELS: Record<SessionReportLanguage, Record<string, string>> = {
+  en: {
+    EXPENSE: "Expense",
+    SUPPLIER_PAYMENT: "Supplier Payment",
+    OWNER_DRAWING: "Owner Drawing",
+    OWNER_INVESTMENT: "Owner Investment",
+    OTHER_INCOME: "Other Income",
+  },
+  ar: {
+    EXPENSE: "مصروف",
+    SUPPLIER_PAYMENT: "دفعة مورد",
+    OWNER_DRAWING: "سحب مالك",
+    OWNER_INVESTMENT: "استثمار مالك",
+    OTHER_INCOME: "دخل آخر",
   },
 };
 
@@ -570,6 +613,39 @@ export function POSSessionReportReceipt({
           value={formatCurrency(cashDifference, currency, language)}
         />
       </div>
+
+      {report.cashMovements && report.cashMovements.length > 0 && (
+        <>
+          <div style={dividerStyle} />
+          <div style={{ marginBottom: "7px" }}>
+            <div style={sectionTitleStyle}>{labels.cashMovements}</div>
+            {report.cashMovements.map((m) => (
+              <KeyValueRow
+                key={m.id}
+                label={`${m.movementType === "CASH_IN" ? "+" : "-"} ${CASH_MOVEMENT_REASON_LABELS[language][m.reason] || m.reason}${m.description ? ` (${m.description})` : ""}`}
+                value={formatCurrency(m.amount, currency, language)}
+              />
+            ))}
+            <div style={itemDividerStyle} />
+            {report.cashMovementTotals && (
+              <>
+                <KeyValueRow
+                  label={labels.cashIn}
+                  value={formatCurrency(report.cashMovementTotals.totalCashIn, currency, language)}
+                />
+                <KeyValueRow
+                  label={labels.cashOut}
+                  value={formatCurrency(report.cashMovementTotals.totalCashOut, currency, language)}
+                />
+                <KeyValueRow
+                  label={labels.netCashMovement}
+                  value={formatCurrency(report.cashMovementTotals.netCashMovement, currency, language)}
+                />
+              </>
+            )}
+          </div>
+        </>
+      )}
 
       <div style={dividerStyle} />
 

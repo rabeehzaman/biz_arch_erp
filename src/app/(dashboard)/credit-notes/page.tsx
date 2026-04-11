@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, FileText, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, FileText, Eye, Edit, Trash2, SlidersHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
@@ -28,6 +28,12 @@ import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/mobile/pull-to-refresh-indicator";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 import { SwipeableCard } from "@/components/mobile/swipeable-card";
+import { AdvancedSearchModal } from "@/components/list-page/advanced-search-modal";
+import { ViewsDropdown } from "@/components/list-page/views-dropdown";
+import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
+import { CREDIT_NOTE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
+import { CREDIT_NOTE_SYSTEM_VIEWS } from "@/lib/system-views";
+import { useCustomViews } from "@/hooks/use-custom-views";
 
 interface CreditNote {
   id: string;
@@ -52,6 +58,14 @@ interface CreditNote {
 export default function CreditNotesPage() {
   const router = useRouter();
   const {
+    activeViewId, activeFilters, advancedSearch, advancedSearchOpen,
+    setAdvancedSearchOpen, activeFilterCount, handleViewChange,
+    handleAdvancedSearch, handleResetAdvancedSearch,
+    saveViewDialogOpen, setSaveViewDialogOpen, handleSaveView,
+    filtersForSave, sortFieldForSave, sortDirectionForSave,
+    viewsRefreshKey, handleViewSaved, editingView, handleEditView,
+  } = useCustomViews({ module: "credit-notes", systemViews: CREDIT_NOTE_SYSTEM_VIEWS });
+  const {
     items: creditNotes,
     isLoading,
     isLoadingMore,
@@ -60,7 +74,7 @@ export default function CreditNotesPage() {
     setSearchQuery,
     loadMore,
     refresh,
-  } = useInfiniteList<CreditNote>({ url: "/api/credit-notes" });
+  } = useInfiniteList<CreditNote>({ url: "/api/credit-notes", params: activeFilters });
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { t, lang } = useLanguage();
   const { fmt } = useCurrency();
@@ -91,10 +105,10 @@ export default function CreditNotesPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{t("creditNotes.title")}</h2>
-            <p className="text-slate-500">
-              {t("creditNotes.manageCreditNotes")}
-            </p>
+              <h2 className="text-2xl font-bold text-slate-900">{t("creditNotes.title")}</h2>
+              <p className="text-slate-500">
+                {t("creditNotes.manageCreditNotes")}
+              </p>
           </div>
           <Link href="/credit-notes/new" className="hidden sm:inline-flex">
             <Button className="w-full">
@@ -106,14 +120,31 @@ export default function CreditNotesPage() {
 
         <Card>
           <CardHeader>
-            <div className="relative w-full sm:max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder={t("creditNotes.searchCreditNotes")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+            <div className="flex items-center gap-2 w-full sm:max-w-sm">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder={t("creditNotes.searchCreditNotes")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <ViewsDropdown
+                module="credit-notes"
+                systemViews={CREDIT_NOTE_SYSTEM_VIEWS}
+                activeViewId={activeViewId}
+                onViewChange={handleViewChange}
+                onSaveView={handleSaveView}
+                onEditView={handleEditView}
+                refreshKey={viewsRefreshKey}
               />
+              <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
+                <SlidersHorizontal className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">{activeFilterCount}</span>
+                )}
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -310,6 +341,24 @@ export default function CreditNotesPage() {
         )}
       </div>
       <FloatingActionButton href="/credit-notes/new" label={t("creditNotes.newCreditNote")} />
+      <AdvancedSearchModal
+        open={advancedSearchOpen}
+        onOpenChange={setAdvancedSearchOpen}
+        fields={CREDIT_NOTE_SEARCH_FIELDS}
+        values={advancedSearch}
+        onSearch={handleAdvancedSearch}
+        onReset={handleResetAdvancedSearch}
+      />
+      <SaveViewDialog
+        open={saveViewDialogOpen}
+        onOpenChange={setSaveViewDialogOpen}
+        module="credit-notes"
+        filters={filtersForSave}
+        sortField={sortFieldForSave}
+        sortDirection={sortDirectionForSave}
+        onSaved={handleViewSaved}
+        editingView={editingView}
+      />
     </PageAnimation>
   );
 }

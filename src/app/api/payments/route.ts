@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { isAdminRole } from "@/lib/access-control";
 import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
-import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { parsePagination, parseAdvancedSearch, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate payment number: PAY-YYYYMMDD-XXX
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
 
     const organizationId = getOrgId(session);
     const { limit, offset, search } = parsePagination(request);
+    const adv = parseAdvancedSearch(request);
     const isAdmin = isAdminRole(session.user.role);
     const userId = session.user.id;
 
@@ -46,9 +47,29 @@ export async function GET(request: NextRequest) {
     }
     const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
-    const baseWhere = isAdmin
+    const baseWhere: Record<string, unknown> = isAdmin
       ? { organizationId, ...branchFilter }
       : { organizationId, customer: { assignments: { some: { userId } } }, ...branchFilter };
+
+    // Advanced search filters
+    if (adv.paymentNumber) baseWhere.paymentNumber = { contains: adv.paymentNumber, mode: "insensitive" };
+    if (adv.customerId) baseWhere.customerId = adv.customerId;
+    if (adv.paymentMethod) baseWhere.paymentMethod = adv.paymentMethod;
+    if (adv.reference) baseWhere.reference = { contains: adv.reference, mode: "insensitive" };
+    if (adv.branchId) baseWhere.branchId = adv.branchId;
+    if (adv.paymentDateFrom || adv.paymentDateTo) {
+      const paymentDate: Record<string, Date> = {};
+      if (adv.paymentDateFrom) paymentDate.gte = new Date(adv.paymentDateFrom);
+      if (adv.paymentDateTo) paymentDate.lte = new Date(adv.paymentDateTo + "T23:59:59.999Z");
+      baseWhere.paymentDate = paymentDate;
+    }
+    if (adv.amountMin || adv.amountMax) {
+      const amount: Record<string, number> = {};
+      if (adv.amountMin) amount.gte = parseFloat(adv.amountMin);
+      if (adv.amountMax) amount.lte = parseFloat(adv.amountMax);
+      baseWhere.amount = amount;
+    }
+
     const where = search
       ? {
           ...baseWhere,

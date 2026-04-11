@@ -338,8 +338,9 @@ export function ProductFormDialog({
             categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : null,
             sku: formData.sku || null,
             barcode: formData.barcode || null,
-            hsnCode: formData.hsnCode || null,
-            gstRate: parseFloat(formData.gstRate) || 0,
+            ...(sessionUser?.gstEnabled && !sessionUser?.saudiEInvoiceEnabled
+                ? { hsnCode: formData.hsnCode || null, gstRate: parseFloat(formData.gstRate) || 0 }
+                : {}),
             isService: formData.isService,
             isImeiTracked: formData.isImeiTracked,
             isBundle: formData.isBundle,

@@ -58,6 +58,22 @@ export interface POSSessionPaymentBreakdown {
   count: number;
 }
 
+export interface POSSessionCashMovement {
+  id: string;
+  movementNumber: string;
+  movementType: string;
+  reason: string;
+  amount: number;
+  description: string | null;
+  createdAt: Date;
+}
+
+export interface POSSessionCashMovementTotals {
+  totalCashIn: number;
+  totalCashOut: number;
+  netCashMovement: number;
+}
+
 export interface POSSessionReportData {
   session: {
     id: string;
@@ -103,6 +119,8 @@ export interface POSSessionReportData {
   invoices: POSSessionReportInvoice[];
   paymentBreakdown: POSSessionPaymentBreakdown[];
   soldProducts: POSSessionSoldProduct[];
+  cashMovements: POSSessionCashMovement[];
+  cashMovementTotals: POSSessionCashMovementTotals;
   totals: {
     invoiceCount: number;
     soldProductCount: number;
@@ -317,6 +335,44 @@ export async function getPOSSessionReportData(
     }))
     .sort((a, b) => b.total - a.total);
 
+  // Fetch cash movements for this session
+  const rawCashMovements = await prisma.pOSCashMovement.findMany({
+    where: { sessionId: id, organizationId },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      movementNumber: true,
+      movementType: true,
+      reason: true,
+      amount: true,
+      description: true,
+      createdAt: true,
+    },
+  });
+
+  const cashMovements: POSSessionCashMovement[] = rawCashMovements.map((m) => ({
+    id: m.id,
+    movementNumber: m.movementNumber,
+    movementType: m.movementType,
+    reason: m.reason,
+    amount: Number(m.amount),
+    description: m.description,
+    createdAt: m.createdAt,
+  }));
+
+  const totalCashIn = cashMovements
+    .filter((m) => m.movementType === "CASH_IN")
+    .reduce((sum, m) => sum + m.amount, 0);
+  const totalCashOut = cashMovements
+    .filter((m) => m.movementType === "CASH_OUT")
+    .reduce((sum, m) => sum + m.amount, 0);
+
+  const cashMovementTotals: POSSessionCashMovementTotals = {
+    totalCashIn,
+    totalCashOut,
+    netCashMovement: totalCashIn - totalCashOut,
+  };
+
   return {
     session: {
       id: posSession.id,
@@ -358,6 +414,8 @@ export async function getPOSSessionReportData(
     invoices: normalizedInvoices,
     paymentBreakdown,
     soldProducts,
+    cashMovements,
+    cashMovementTotals,
     totals: {
       invoiceCount: normalizedInvoices.length,
       soldProductCount: soldProducts.length,

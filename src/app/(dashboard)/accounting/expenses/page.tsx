@@ -16,12 +16,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, Receipt } from "lucide-react";
+import { Plus, Search, Receipt, SlidersHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { toast } from "sonner";
 import { PageAnimation } from "@/components/ui/page-animation";
 import { useLanguage } from "@/lib/i18n";
+import { AdvancedSearchModal } from "@/components/list-page/advanced-search-modal";
+import { ViewsDropdown } from "@/components/list-page/views-dropdown";
+import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
+import { EXPENSE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
+import { EXPENSE_SYSTEM_VIEWS } from "@/lib/system-views";
+import { useCustomViews } from "@/hooks/use-custom-views";
 
 interface Expense {
   id: string;
@@ -46,17 +52,28 @@ export default function ExpensesPage() {
   const router = useRouter();
   const { fmt } = useCurrency();
   const { t } = useLanguage();
+  const {
+    activeViewId, activeFilters, advancedSearch, advancedSearchOpen,
+    setAdvancedSearchOpen, activeFilterCount, handleViewChange,
+    handleAdvancedSearch, handleResetAdvancedSearch,
+    saveViewDialogOpen, setSaveViewDialogOpen, handleSaveView,
+    filtersForSave, sortFieldForSave, sortDirectionForSave,
+    viewsRefreshKey, handleViewSaved, editingView, handleEditView,
+  } = useCustomViews({ module: "expenses", systemViews: EXPENSE_SYSTEM_VIEWS });
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchExpenses();
-  }, []);
+  }, [activeFilters]);
 
   const fetchExpenses = async () => {
     try {
-      const response = await fetch("/api/expenses");
+      const params = new URLSearchParams();
+      Object.entries(activeFilters).forEach(([k, v]) => { if (v) params.set(k, v); });
+      const qs = params.toString();
+      const response = await fetch(`/api/expenses${qs ? `?${qs}` : ""}`);
       if (!response.ok) throw new Error("Failed to fetch");
       setExpenses(await response.json());
     } catch {
@@ -78,8 +95,8 @@ export default function ExpensesPage() {
           <div className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">{t("accounting.expenses")}</h2>
-              <p className="text-slate-500">{t("accounting.trackManageExpenses")}</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t("accounting.expenses")}</h2>
+                <p className="text-slate-500">{t("accounting.trackManageExpenses")}</p>
             </div>
             <Link href="/accounting/expenses/new" className="w-full sm:w-auto">
               <Button className="w-full">
@@ -92,14 +109,31 @@ export default function ExpensesPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    placeholder={t("accounting.searchExpenses")}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                <div className="flex items-center gap-2 flex-1 max-w-sm">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      placeholder={t("accounting.searchExpenses")}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <ViewsDropdown
+                    module="expenses"
+                    systemViews={EXPENSE_SYSTEM_VIEWS}
+                    activeViewId={activeViewId}
+                    onViewChange={handleViewChange}
+                    onSaveView={handleSaveView}
+                    onEditView={handleEditView}
+                    refreshKey={viewsRefreshKey}
                   />
+                  <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {activeFilterCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">{activeFilterCount}</span>
+                    )}
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -210,6 +244,24 @@ export default function ExpensesPage() {
             </CardContent>
           </Card>
         </div>
+        <AdvancedSearchModal
+          open={advancedSearchOpen}
+          onOpenChange={setAdvancedSearchOpen}
+          fields={EXPENSE_SEARCH_FIELDS}
+          values={advancedSearch}
+          onSearch={handleAdvancedSearch}
+          onReset={handleResetAdvancedSearch}
+        />
+        <SaveViewDialog
+          open={saveViewDialogOpen}
+          onOpenChange={setSaveViewDialogOpen}
+          module="expenses"
+          filters={filtersForSave}
+          sortField={sortFieldForSave}
+          sortDirection={sortDirectionForSave}
+          onSaved={handleViewSaved}
+          editingView={editingView}
+        />
         </PageAnimation>
       );
 }

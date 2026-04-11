@@ -5,9 +5,10 @@ import { getOrgId, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
 import { generateAutoNumber } from "@/lib/accounting/auto-number";
 import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
+import { parsePagination, parseAdvancedSearch, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -17,29 +18,67 @@ export async function GET() {
     const organizationId = getOrgId(session);
     const userId = session.user.id!;
     const role = (session.user as any).role || "user";
+    const { limit, offset, search } = parsePagination(request);
+    const adv = parseAdvancedSearch(request);
 
     const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId, role);
     if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
-      return NextResponse.json([]);
+      return paginatedResponse([], 0, false);
     }
     const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
-    const expenses = await prisma.expense.findMany({
-      where: { organizationId, ...branchFilter },
-      orderBy: { createdAt: "desc" },
-      include: {
-        supplier: { select: { id: true, name: true } },
-        cashBankAccount: { select: { id: true, name: true } },
-        items: {
-          include: {
-            account: { select: { id: true, code: true, name: true } },
-          },
-        },
-        _count: { select: { items: true } },
-      },
-    });
+    const baseWhere: Record<string, unknown> = { organizationId, ...branchFilter };
 
-    return NextResponse.json(expenses);
+    // Advanced search filters
+    if (adv.expenseNumber) baseWhere.expenseNumber = { contains: adv.expenseNumber, mode: "insensitive" };
+    if (adv.supplierId) baseWhere.supplierId = adv.supplierId;
+    if (adv.description) baseWhere.description = { contains: adv.description, mode: "insensitive" };
+    if (adv.branchId) baseWhere.branchId = adv.branchId;
+    if (adv.expenseDateFrom || adv.expenseDateTo) {
+      const expenseDate: Record<string, Date> = {};
+      if (adv.expenseDateFrom) expenseDate.gte = new Date(adv.expenseDateFrom);
+      if (adv.expenseDateTo) expenseDate.lte = new Date(adv.expenseDateTo + "T23:59:59.999Z");
+      baseWhere.expenseDate = expenseDate;
+    }
+    if (adv.totalMin || adv.totalMax) {
+      const total: Record<string, number> = {};
+      if (adv.totalMin) total.gte = parseFloat(adv.totalMin);
+      if (adv.totalMax) total.lte = parseFloat(adv.totalMax);
+      baseWhere.total = total;
+    }
+
+    const where = search
+      ? {
+          ...baseWhere,
+          OR: [
+            { expenseNumber: { contains: search, mode: "insensitive" as const } },
+            { description: { contains: search, mode: "insensitive" as const } },
+            { supplier: { name: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : baseWhere;
+
+    const [expenses, total] = await Promise.all([
+      prisma.expense.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          supplier: { select: { id: true, name: true } },
+          cashBankAccount: { select: { id: true, name: true } },
+          items: {
+            include: {
+              account: { select: { id: true, code: true, name: true } },
+            },
+          },
+          _count: { select: { items: true } },
+        },
+      }),
+      prisma.expense.count({ where }),
+    ]);
+
+    return paginatedResponse(expenses, total, offset + expenses.length < total);
   } catch (error) {
     console.error("Failed to fetch expenses:", error);
     return NextResponse.json(

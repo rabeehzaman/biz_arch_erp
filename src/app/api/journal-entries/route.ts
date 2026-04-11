@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { generateAutoNumber } from "@/lib/accounting/auto-number";
 import { validateJournalBalance, syncCashBankForJournalLines } from "@/lib/accounting/journal";
+import { parsePagination, parseAdvancedSearch, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 export async function GET(request: NextRequest) {
@@ -19,10 +20,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const sourceType = searchParams.get("sourceType");
     const sourceId = searchParams.get("sourceId");
+    const { limit, offset, search } = parsePagination(request);
+    const adv = parseAdvancedSearch(request);
 
     const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId, role);
     if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
-      return NextResponse.json([]);
+      return paginatedResponse([], 0, false);
     }
     const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
@@ -30,20 +33,44 @@ export async function GET(request: NextRequest) {
     if (sourceType) where.sourceType = sourceType;
     if (sourceId) where.sourceId = sourceId;
 
-    const entries = await prisma.journalEntry.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        lines: {
-          include: {
-            account: { select: { id: true, code: true, name: true } },
-          },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
+    // Advanced search filters
+    if (adv.journalNumber) where.journalNumber = { contains: adv.journalNumber, mode: "insensitive" };
+    if (adv.description) where.description = { contains: adv.description, mode: "insensitive" };
+    if (adv.sourceType && !sourceType) where.sourceType = adv.sourceType;
+    if (adv.branchId) where.branchId = adv.branchId;
+    if (adv.dateFrom || adv.dateTo) {
+      const date: Record<string, Date> = {};
+      if (adv.dateFrom) date.gte = new Date(adv.dateFrom);
+      if (adv.dateTo) date.lte = new Date(adv.dateTo + "T23:59:59.999Z");
+      where.date = date;
+    }
 
-    return NextResponse.json(entries);
+    if (search) {
+      (where as any).OR = [
+        { journalNumber: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [entries, total] = await Promise.all([
+      prisma.journalEntry.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          lines: {
+            include: {
+              account: { select: { id: true, code: true, name: true } },
+            },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      }),
+      prisma.journalEntry.count({ where }),
+    ]);
+
+    return paginatedResponse(entries, total, offset + entries.length < total);
   } catch (error) {
     console.error("Failed to fetch journal entries:", error);
     return NextResponse.json(

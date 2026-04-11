@@ -17,7 +17,7 @@ import { getOrgGSTInfo, computeDocumentGST } from "@/lib/gst/document-gst";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 import { isAdminRole } from "@/lib/access-control";
-import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { parsePagination, parseAdvancedSearch, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate credit note number: CN-YYYYMMDD-XXX
@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id;
     const isAdmin = isAdminRole(session.user.role);
     const { limit, offset, search } = parsePagination(request);
+    const adv = parseAdvancedSearch(request);
 
     const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId!, session.user.role);
     if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     }
     const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
-    const baseWhere = isAdmin
+    const baseWhere: Record<string, unknown> = isAdmin
       ? { organizationId, ...branchFilter }
       : {
           organizationId,
@@ -71,6 +72,25 @@ export async function GET(request: NextRequest) {
           },
           ...branchFilter,
         };
+
+    // Advanced search filters
+    if (adv.creditNoteNumber) baseWhere.creditNoteNumber = { contains: adv.creditNoteNumber, mode: "insensitive" };
+    if (adv.customerId) baseWhere.customerId = adv.customerId;
+    if (adv.reason) baseWhere.reason = { contains: adv.reason, mode: "insensitive" };
+    if (adv.branchId) baseWhere.branchId = adv.branchId;
+    if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
+    if (adv.issueDateFrom || adv.issueDateTo) {
+      const issueDate: Record<string, Date> = {};
+      if (adv.issueDateFrom) issueDate.gte = new Date(adv.issueDateFrom);
+      if (adv.issueDateTo) issueDate.lte = new Date(adv.issueDateTo + "T23:59:59.999Z");
+      baseWhere.issueDate = issueDate;
+    }
+    if (adv.totalMin || adv.totalMax) {
+      const total: Record<string, number> = {};
+      if (adv.totalMin) total.gte = parseFloat(adv.totalMin);
+      if (adv.totalMax) total.lte = parseFloat(adv.totalMax);
+      baseWhere.total = total;
+    }
 
     const where = search
       ? {

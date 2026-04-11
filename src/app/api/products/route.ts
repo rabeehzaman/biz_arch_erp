@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOrgId, isPriceListEnabled, getPriceListId } from "@/lib/auth-utils";
+import { getOrgId, isPriceListEnabled, getPriceListId, isSaudiEInvoiceEnabled } from "@/lib/auth-utils";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 import { resolveProductPrices } from "@/lib/price-list/resolve-price";
 
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
     }
 
     const VALID_GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 7.5, 12, 18, 28];
-    if (gstRate !== undefined && gstRate !== null && !VALID_GST_RATES.includes(Number(gstRate))) {
+    if (!isSaudiEInvoiceEnabled(session) && gstRate !== undefined && gstRate !== null && !VALID_GST_RATES.includes(Number(gstRate))) {
       return NextResponse.json(
         { error: `Invalid GST rate: ${gstRate}. Valid rates are: ${VALID_GST_RATES.join(", ")}` },
         { status: 400 }

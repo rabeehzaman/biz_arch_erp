@@ -7,10 +7,10 @@
   },
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && NODE_OPTIONS='--max-old-space-size=8192' next build",
+    "build": "prisma generate && NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "node server.mjs",
     "start:next": "next start",
-    "typecheck": "NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit",
+    "typecheck": "NODE_OPTIONS='--max-old-space-size=4096' tsc --noEmit",
     "lint": "eslint",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",

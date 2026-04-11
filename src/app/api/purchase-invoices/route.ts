@@ -13,7 +13,7 @@ import { SAUDI_VAT_RATE, VATCategory } from "@/lib/saudi-vat/constants";
 import { calculateLineVAT, LineVATResult } from "@/lib/saudi-vat/calculator";
 import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
-import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { parsePagination, parseAdvancedSearch, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate purchase invoice number: PI-YYYYMMDD-XXX
@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const { limit, offset, search } = parsePagination(request);
+    const adv = parseAdvancedSearch(request);
 
     const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId, role);
     if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
@@ -56,9 +57,35 @@ export async function GET(request: NextRequest) {
     }
     const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
-    const baseWhere = status && status !== "all"
+    const baseWhere: Record<string, unknown> = status && status !== "all"
       ? { status: status as never, organizationId, ...branchFilter }
       : { organizationId, ...branchFilter };
+
+    // Advanced search filters
+    if (adv.purchaseInvoiceNumber) baseWhere.purchaseInvoiceNumber = { contains: adv.purchaseInvoiceNumber, mode: "insensitive" };
+    if (adv.supplierId) baseWhere.supplierId = adv.supplierId;
+    if (adv.supplierInvoiceRef) baseWhere.supplierInvoiceRef = { contains: adv.supplierInvoiceRef, mode: "insensitive" };
+    if (adv.status && !status) baseWhere.status = adv.status;
+    if (adv.branchId) baseWhere.branchId = adv.branchId;
+    if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
+    if (adv.invoiceDateFrom || adv.invoiceDateTo) {
+      const invoiceDate: Record<string, Date> = {};
+      if (adv.invoiceDateFrom) invoiceDate.gte = new Date(adv.invoiceDateFrom);
+      if (adv.invoiceDateTo) invoiceDate.lte = new Date(adv.invoiceDateTo + "T23:59:59.999Z");
+      baseWhere.invoiceDate = invoiceDate;
+    }
+    if (adv.dueDateFrom || adv.dueDateTo) {
+      const dueDate: Record<string, Date> = {};
+      if (adv.dueDateFrom) dueDate.gte = new Date(adv.dueDateFrom);
+      if (adv.dueDateTo) dueDate.lte = new Date(adv.dueDateTo + "T23:59:59.999Z");
+      baseWhere.dueDate = dueDate;
+    }
+    if (adv.totalMin || adv.totalMax) {
+      const total: Record<string, number> = {};
+      if (adv.totalMin) total.gte = parseFloat(adv.totalMin);
+      if (adv.totalMax) total.lte = parseFloat(adv.totalMax);
+      baseWhere.total = total;
+    }
 
     const where = search
       ? {
@@ -457,6 +484,13 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Read supplier balance before incrementing to detect advance payments
+      const supplierBeforeUpdate = await tx.supplier.findUnique({
+        where: { id: supplierId },
+        select: { balance: true },
+      });
+      const balanceBefore = Number(supplierBeforeUpdate?.balance || 0);
+
       // Update supplier balance (Accounts Payable)
       await tx.supplier.update({
         where: { id: supplierId, organizationId },
@@ -478,6 +512,22 @@ export async function POST(request: NextRequest) {
           runningBalance: 0, // Will be recalculated if needed
         },
       });
+
+      // Auto-apply advance if supplier had credit (negative balance = overpaid)
+      if (balanceBefore < 0) {
+        const advance = Math.abs(balanceBefore);
+        const applyAmount = Math.min(advance, total);
+        const newBalanceDue = total - applyAmount;
+
+        await tx.purchaseInvoice.update({
+          where: { id: invoice.id, organizationId },
+          data: {
+            amountPaid: applyAmount,
+            balanceDue: Math.max(0, newBalanceDue),
+            status: newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID",
+          },
+        });
+      }
 
       // Create purchase journal entry using shared helper
       await syncPurchaseJournal(tx, organizationId, invoice.id);

@@ -20,6 +20,19 @@ export function parsePagination(request: NextRequest): PaginationParams {
   return { limit, offset, search };
 }
 
+const RESERVED_PARAMS = new Set(["limit", "offset", "search"]);
+
+export function parseAdvancedSearch(request: NextRequest): Record<string, string> {
+  const { searchParams } = new URL(request.url);
+  const result: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    if (!RESERVED_PARAMS.has(key) && value) {
+      result[key] = value;
+    }
+  });
+  return result;
+}
+
 export function paginatedResponse<T>(
   data: T[],
   total: number,

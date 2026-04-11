@@ -4,7 +4,7 @@ import { PaymentMethod } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { createAutoJournalEntry, getSystemAccount, getDefaultCashBankAccount } from "@/lib/accounting/journal";
-import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { parsePagination, parseAdvancedSearch, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate supplier payment number: SPAY-YYYYMMDD-XXX
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id!;
     const role = (session.user as any).role || "user";
     const { limit, offset, search } = parsePagination(request);
+    const adv = parseAdvancedSearch(request);
 
     const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId, role);
     if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
@@ -45,7 +46,27 @@ export async function GET(request: NextRequest) {
     }
     const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
-    const baseWhere = { organizationId, ...branchFilter };
+    const baseWhere: Record<string, unknown> = { organizationId, ...branchFilter };
+
+    // Advanced search filters
+    if (adv.paymentNumber) baseWhere.paymentNumber = { contains: adv.paymentNumber, mode: "insensitive" };
+    if (adv.supplierId) baseWhere.supplierId = adv.supplierId;
+    if (adv.paymentMethod) baseWhere.paymentMethod = adv.paymentMethod;
+    if (adv.reference) baseWhere.reference = { contains: adv.reference, mode: "insensitive" };
+    if (adv.branchId) baseWhere.branchId = adv.branchId;
+    if (adv.paymentDateFrom || adv.paymentDateTo) {
+      const paymentDate: Record<string, Date> = {};
+      if (adv.paymentDateFrom) paymentDate.gte = new Date(adv.paymentDateFrom);
+      if (adv.paymentDateTo) paymentDate.lte = new Date(adv.paymentDateTo + "T23:59:59.999Z");
+      baseWhere.paymentDate = paymentDate;
+    }
+    if (adv.amountMin || adv.amountMax) {
+      const amount: Record<string, number> = {};
+      if (adv.amountMin) amount.gte = parseFloat(adv.amountMin);
+      if (adv.amountMax) amount.lte = parseFloat(adv.amountMax);
+      baseWhere.amount = amount;
+    }
+
     const where = search
       ? {
           ...baseWhere,

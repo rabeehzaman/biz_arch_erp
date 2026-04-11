@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Plus, Search, FileText, Eye, Trash2, LayoutList, LayoutGrid } from "lucide-react";
+import { Plus, Search, FileText, Eye, Trash2, LayoutList, LayoutGrid, SlidersHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -32,6 +32,12 @@ import { FloatingActionButton } from "@/components/mobile/floating-action-button
 import { SwipeableCard } from "@/components/mobile/swipeable-card";
 import { ListFilters } from "@/components/list-page/list-filters";
 import { ListSummaryBar } from "@/components/list-page/list-summary-bar";
+import { AdvancedSearchModal } from "@/components/list-page/advanced-search-modal";
+import { ViewsDropdown } from "@/components/list-page/views-dropdown";
+import { SaveViewDialog } from "@/components/list-page/save-view-dialog";
+import { INVOICE_SEARCH_FIELDS } from "@/lib/advanced-search-configs";
+import { INVOICE_SYSTEM_VIEWS } from "@/lib/system-views";
+import { useCustomViews } from "@/hooks/use-custom-views";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 interface Invoice {
@@ -60,6 +66,16 @@ function getInvoiceStatus(balanceDue: number, dueDate: string, t: (key: string) 
 export default function InvoicesPage() {
   const router = useRouter();
   const {
+    activeViewId, activeFilters, statusFilter, setStatusFilter,
+    dateFilter, setDateFilter, sortField, sortDirection: sortDir,
+    setSortField, setSortDirection: setSortDir, toggleSort,
+    advancedSearch, advancedSearchOpen, setAdvancedSearchOpen,
+    activeFilterCount, handleViewChange, handleAdvancedSearch,
+    handleResetAdvancedSearch, saveViewDialogOpen, setSaveViewDialogOpen,
+    handleSaveView, filtersForSave, sortFieldForSave, sortDirectionForSave,
+    viewsRefreshKey, handleViewSaved, editingView, handleEditView,
+  } = useCustomViews({ module: "invoices", systemViews: INVOICE_SYSTEM_VIEWS });
+  const {
     items: invoices,
     isLoading,
     isLoadingMore,
@@ -68,13 +84,9 @@ export default function InvoicesPage() {
     setSearchQuery,
     loadMore,
     refresh,
-  } = useInfiniteList<Invoice>({ url: "/api/invoices" });
+  } = useInfiniteList<Invoice>({ url: "/api/invoices", params: activeFilters });
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [mobileCompact, setMobileCompact] = useState(false);
   const { t, lang } = useLanguage();
@@ -87,15 +99,6 @@ export default function InvoicesPage() {
     { value: "unpaid", label: t("common.unpaid") },
     { value: "overdue", label: t("common.overdue") },
   ];
-
-  const toggleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDir(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDir("desc");
-    }
-  };
 
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
@@ -212,15 +215,32 @@ export default function InvoicesPage() {
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="relative w-full sm:max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    ref={searchInputRef}
-                    placeholder={t("sales.searchInvoices")}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                <div className="flex items-center gap-2 w-full sm:max-w-sm">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      ref={searchInputRef}
+                      placeholder={t("sales.searchInvoices")}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <ViewsDropdown
+                    module="invoices"
+                    systemViews={INVOICE_SYSTEM_VIEWS}
+                    activeViewId={activeViewId}
+                    onViewChange={handleViewChange}
+                    onSaveView={handleSaveView}
+                    onEditView={handleEditView}
+                    refreshKey={viewsRefreshKey}
                   />
+                  <Button variant="outline" size="icon" className="relative shrink-0" onClick={() => setAdvancedSearchOpen(true)} title={t("common.advancedSearch")}>
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {activeFilterCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">{activeFilterCount}</span>
+                    )}
+                  </Button>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
@@ -646,6 +666,24 @@ export default function InvoicesPage() {
         />
       )}
       <FloatingActionButton href="/invoices/new" label={t("sales.newInvoice")} />
+      <AdvancedSearchModal
+        open={advancedSearchOpen}
+        onOpenChange={setAdvancedSearchOpen}
+        fields={INVOICE_SEARCH_FIELDS}
+        values={advancedSearch}
+        onSearch={handleAdvancedSearch}
+        onReset={handleResetAdvancedSearch}
+      />
+      <SaveViewDialog
+        open={saveViewDialogOpen}
+        onOpenChange={setSaveViewDialogOpen}
+        module="invoices"
+        filters={filtersForSave}
+        sortField={sortFieldForSave}
+        sortDirection={sortDirectionForSave}
+        onSaved={handleViewSaved}
+        editingView={editingView}
+      />
     </PageAnimation>
   );
 }

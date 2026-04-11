@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { cn } from "@/lib/utils";
 import { POSHeader } from "@/components/pos/pos-header";
+import { CashMovementDialog } from "@/components/pos/cash-movement-dialog";
 import { ProductSearch } from "@/components/pos/product-search";
 import { CategoryTabs } from "@/components/pos/category-tabs";
 import { ProductGrid } from "@/components/pos/product-grid";
@@ -342,7 +343,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 function POSTerminalContent() {
   const { fmt } = useCurrency();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { data: authSession } = useSession();
   const organizationId = (authSession?.user as { organizationId?: string } | undefined)?.organizationId ?? null;
   const taxInclusive = !!(authSession?.user as { isTaxInclusivePrice?: boolean } | undefined)?.isTaxInclusivePrice;
@@ -430,6 +431,7 @@ function POSTerminalContent() {
   const [showHeldSheet, setShowHeldSheet] = useState(false);
   const [isReturnMode, setIsReturnMode] = useState(false);
   const [showPreviousOrdersSheet, setShowPreviousOrdersSheet] = useState(false);
+  const [showCashMovementDialog, setShowCashMovementDialog] = useState(false);
   const [closingCash, setClosingCash] = useState("");
   const [closePinCode, setClosePinCode] = useState("");
   const [countedClosingCash, setCountedClosingCash] = useState<number | null>(null);
@@ -585,12 +587,23 @@ function POSTerminalContent() {
   );
 
   // POS Session Summary (for Expected Cash during closing)
-  const { data: sessionSummary, isLoading: isLoadingSummary } = useSWR<{ paymentBreakdown: { method: string; total: number }[] }>(
+  const { data: sessionSummary, isLoading: isLoadingSummary, mutate: mutateSessionSummary } = useSWR<{
+    paymentBreakdown: { method: string; total: number }[];
+    cashMovementTotals?: { totalCashIn: number; totalCashOut: number; netCashMovement: number };
+  }>(
     showCloseDialog && posSession?.id ? `/api/pos/sessions/${posSession.id}/summary` : null,
     fetcher
   );
 
+  // Re-fetch session summary when cash movements are recorded
+  useEffect(() => {
+    const handler = () => mutateSessionSummary();
+    window.addEventListener("pos-cash-movement-updated", handler);
+    return () => window.removeEventListener("pos-cash-movement-updated", handler);
+  }, [mutateSessionSummary]);
+
   const paymentBreakdown = sessionSummary?.paymentBreakdown ?? EMPTY_PAYMENT_BREAKDOWN;
+  const cashMovementTotals = sessionSummary?.cashMovementTotals;
   const paymentTotals = useMemo(
     () =>
       paymentBreakdown.reduce<Record<string, number>>((totals, payment) => {
@@ -608,7 +621,11 @@ function POSTerminalContent() {
     )
   );
   const expectedCash = posSession
-    ? roundCurrency(Number(posSession.openingCash) + cashSalesTotal - cashRefundsTotal)
+    ? roundCurrency(
+        Number(posSession.openingCash) + cashSalesTotal - cashRefundsTotal
+        + (cashMovementTotals?.totalCashIn || 0)
+        - (cashMovementTotals?.totalCashOut || 0)
+      )
     : 0;
 
   const parsedClosingCash = countedClosingCash ?? 0;
@@ -2056,6 +2073,7 @@ function POSTerminalContent() {
         hiddenComponents={posHiddenSet}
         isReturnMode={isReturnMode}
         onPreviousOrders={openPreviousOrders}
+        onCashMovement={() => setShowCashMovementDialog(true)}
         selectedTable={selectedTable}
         orderType={orderType}
         isRestaurantMode={isRestaurantEnabled}
@@ -2523,6 +2541,19 @@ function POSTerminalContent() {
                       <span className="font-medium tabular-nums">{fmt(cashSalesTotal)}</span>
                     </div>
                   )}
+                  {/* Cash In/Out totals */}
+                  {cashMovementTotals && cashMovementTotals.totalCashIn > 0 && (
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-green-600">{lang === "ar" ? "إيداع نقدي" : "Cash In"}</span>
+                      <span className="font-medium tabular-nums text-green-600">+{fmt(cashMovementTotals.totalCashIn)}</span>
+                    </div>
+                  )}
+                  {cashMovementTotals && cashMovementTotals.totalCashOut > 0 && (
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-red-500">{lang === "ar" ? "سحب نقدي" : "Cash Out"}</span>
+                      <span className="font-medium tabular-nums text-red-500">-{fmt(cashMovementTotals.totalCashOut)}</span>
+                    </div>
+                  )}
                   {/* Payment breakdown rows (non-cash + refunds) */}
                   {visiblePaymentBreakdown
                     .filter((p) => p.method !== "CASH")
@@ -2638,6 +2669,20 @@ function POSTerminalContent() {
         sessionId={posSession?.id ?? null}
         companySettings={companySettings}
       />
+
+      {posSession && (
+        <CashMovementDialog
+          open={showCashMovementDialog}
+          onOpenChange={setShowCashMovementDialog}
+          sessionId={posSession.id}
+          onSuccess={() => {
+            // Invalidate session summary so close dialog picks up updated expected cash
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("pos-cash-movement-updated"));
+            }
+          }}
+        />
+      )}
 
       <OrderTabsSheet
         open={showTabsSheet}

@@ -15,7 +15,7 @@ import { toMidnightUTC } from "@/lib/date-utils";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 import { consumeBOMIngredientsForSale } from "@/lib/manufacturing/auto-consume";
 import { isAdminRole } from "@/lib/access-control";
-import { parsePagination, paginatedResponse } from "@/lib/pagination";
+import { parsePagination, parseAdvancedSearch, paginatedResponse } from "@/lib/pagination";
 import { getUserAllowedBranchIds, buildBranchWhereClause } from "@/lib/user-access";
 
 // Generate invoice number: INV-YYYYMMDD-XXX
@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
     const isAdmin = isAdminRole(session.user.role);
 
     const { limit, offset, search } = parsePagination(request);
+    const adv = parseAdvancedSearch(request);
 
     const allowedBranchIds = await getUserAllowedBranchIds(prisma, organizationId, userId!, session.user.role);
     if (allowedBranchIds !== null && allowedBranchIds.length === 0) {
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
     }
     const branchFilter = buildBranchWhereClause(allowedBranchIds, { includeNullBranch: true });
 
-    const baseWhere = isAdmin ? { organizationId, ...branchFilter } : {
+    const baseWhere: Record<string, unknown> = isAdmin ? { organizationId, ...branchFilter } : {
       organizationId,
       customer: {
         assignments: {
@@ -66,6 +67,39 @@ export async function GET(request: NextRequest) {
       },
       ...branchFilter,
     };
+
+    // Advanced search filters
+    if (adv.invoiceNumber) baseWhere.invoiceNumber = { contains: adv.invoiceNumber, mode: "insensitive" };
+    if (adv.customerId) baseWhere.customerId = adv.customerId;
+    if (adv.paymentType) baseWhere.paymentType = adv.paymentType;
+    if (adv.branchId) baseWhere.branchId = adv.branchId;
+    if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
+    if (adv.notes) baseWhere.notes = { contains: adv.notes, mode: "insensitive" };
+    if (adv.issueDateFrom || adv.issueDateTo) {
+      const issueDate: Record<string, Date> = {};
+      if (adv.issueDateFrom) issueDate.gte = new Date(adv.issueDateFrom);
+      if (adv.issueDateTo) issueDate.lte = new Date(adv.issueDateTo + "T23:59:59.999Z");
+      baseWhere.issueDate = issueDate;
+    }
+    if (adv.dueDateFrom || adv.dueDateTo) {
+      const dueDate: Record<string, Date> = {};
+      if (adv.dueDateFrom) dueDate.gte = new Date(adv.dueDateFrom);
+      if (adv.dueDateTo) dueDate.lte = new Date(adv.dueDateTo + "T23:59:59.999Z");
+      baseWhere.dueDate = dueDate;
+    }
+    if (adv.totalMin || adv.totalMax) {
+      const total: Record<string, number> = {};
+      if (adv.totalMin) total.gte = parseFloat(adv.totalMin);
+      if (adv.totalMax) total.lte = parseFloat(adv.totalMax);
+      baseWhere.total = total;
+    }
+    // Status filter (computed from balanceDue/dueDate)
+    if (adv.status === "paid") baseWhere.balanceDue = { lte: 0 };
+    if (adv.status === "unpaid") baseWhere.balanceDue = { gt: 0 };
+    if (adv.status === "overdue") {
+      baseWhere.balanceDue = { gt: 0 };
+      baseWhere.dueDate = { ...(baseWhere.dueDate as Record<string, Date> || {}), lt: new Date() };
+    }
 
     const where = search
       ? {

@@ -204,6 +204,7 @@ model Organization {
   posSessions                POSSession[]
   posHeldOrders              POSHeldOrder[]
   posOpenOrders              POSOpenOrder[]
+  posCashMovements           POSCashMovement[]
   posRegisterConfigs         POSRegisterConfig[]
   unitConversions            UnitConversion[]
   branches                   Branch[]
@@ -264,6 +265,9 @@ model Organization {
   // Attachments
   attachments                Attachment[]
 
+  // Custom Views
+  customViews                CustomView[]
+
   @@map("organizations")
 }
 
@@ -306,6 +310,7 @@ model User {
   creditNotes         CreditNote[]
   posSessionsOpened   POSSession[]   @relation("OpenedSessions")
   posSessionsClosed   POSSession[]   @relation("ClosedSessions")
+  posCashMovements    POSCashMovement[] @relation("POSCashMovementUser")
   warehouseAccess     UserWarehouseAccess[]
   soldDevices         MobileDevice[]     @relation("SoldDevices")
   kotOrders           KOTOrder[]
@@ -318,6 +323,7 @@ model User {
   cashBankAccess      UserCashBankAccess[]
   cashBankTransactions CashBankTransaction[] @relation("CashBankTransactionCreator")
   attachments          Attachment[]
+  customViews          CustomView[]
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -570,9 +576,9 @@ model Customer {
   quotations    Quotation[]
   assignments   CustomerAssignment[]
   creditNotes   CreditNote[]
-  posHeldOrders POSHeldOrder[]
-  posOpenOrders POSOpenOrder[]
-  mobileDevices MobileDevice[]
+  posHeldOrders    POSHeldOrder[]
+  posOpenOrders    POSOpenOrder[]
+  mobileDevices    MobileDevice[]
 
   comments             CustomerComment[]
   restaurantPOSOrders  RestaurantPOSOrder[]
@@ -638,9 +644,10 @@ model Supplier {
   purchaseInvoices PurchaseInvoice[]
   payments         SupplierPayment[]
   transactions     SupplierTransaction[]
-  debitNotes       DebitNote[]
-  expenses         Expense[]
-  mobileDevices    MobileDevice[]
+  debitNotes        DebitNote[]
+  expenses          Expense[]
+  posCashMovements  POSCashMovement[]
+  mobileDevices     MobileDevice[]
 
   comments         SupplierComment[]
 
@@ -1881,6 +1888,7 @@ model POSSession {
   creditNotes          CreditNote[]
   heldOrders           POSHeldOrder[]
   openOrders           POSOpenOrder[]
+  cashMovements        POSCashMovement[]
   kotOrders            KOTOrder[]
   restaurantPOSOrders  RestaurantPOSOrder[]
 
@@ -1945,6 +1953,40 @@ model POSOpenOrder {
   @@index([organizationId])
   @@index([organizationId, tableId])
   @@map("pos_open_orders")
+}
+
+model POSCashMovement {
+  id               String                @id @default(cuid())
+  movementNumber   String
+  organizationId   String
+  organization     Organization          @relation(fields: [organizationId], references: [id])
+  sessionId        String
+  session          POSSession            @relation(fields: [sessionId], references: [id])
+  userId           String
+  user             User                  @relation("POSCashMovementUser", fields: [userId], references: [id])
+  movementType     POSCashMovementType
+  reason           POSCashMovementReason
+  amount           Decimal               @db.Decimal(12, 2)
+  description      String?
+  notes            String?
+
+  supplierId       String?
+  supplier         Supplier?             @relation(fields: [supplierId], references: [id])
+  expenseAccountId String?
+  expenseAccount   Account?              @relation("POSCashMovementExpenseAccount", fields: [expenseAccountId], references: [id])
+
+  journalEntryId   String?
+
+  branchId         String?
+  branch           Branch?               @relation(fields: [branchId], references: [id])
+
+  createdAt        DateTime              @default(now())
+
+  @@unique([organizationId, movementNumber])
+  @@index([organizationId])
+  @@index([sessionId])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@map("pos_cash_movements")
 }
 
 // ==================== SETTINGS ====================
@@ -2020,6 +2062,7 @@ enum JournalSourceType {
   POS_SESSION_OPEN
   KARIGAR_TRANSACTION
   INVENTORY_ADJUSTMENT
+  POS_CASH_MOVEMENT
 }
 
 enum ExpenseStatus {
@@ -2036,6 +2079,19 @@ enum CashBankTransactionType {
   TRANSFER_OUT
   OPENING_BALANCE
   ADJUSTMENT
+}
+
+enum POSCashMovementType {
+  CASH_IN
+  CASH_OUT
+}
+
+enum POSCashMovementReason {
+  EXPENSE
+  SUPPLIER_PAYMENT
+  OWNER_DRAWING
+  OWNER_INVESTMENT
+  OTHER_INCOME
 }
 
 // ==================== CHART OF ACCOUNTS ====================
@@ -2062,6 +2118,7 @@ model Account {
   cashBankAccount   CashBankAccount?
   paymentAdjustments Payment[] @relation("PaymentAdjustmentAccount")
   supplierPaymentAdjustments SupplierPayment[] @relation("SupplierPaymentAdjustmentAccount")
+  posCashMovements POSCashMovement[] @relation("POSCashMovementExpenseAccount")
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -2284,6 +2341,7 @@ model Branch {
   stockTransfersTo   StockTransfer[]       @relation("DestinationBranch")
   userAccess         UserWarehouseAccess[]
   posRegisterConfigs POSRegisterConfig[]
+  posCashMovements   POSCashMovement[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -3524,4 +3582,26 @@ model ProductionConsumption {
   @@index([stockLotId])
   @@index([organizationId])
   @@map("production_consumptions")
+}
+
+// ==================== CUSTOM VIEWS ====================
+
+model CustomView {
+  id             String   @id @default(cuid())
+  name           String
+  module         String   // e.g. "invoices", "payments", "expenses"
+  filters        Json     // Saved filter criteria as key-value pairs
+  sortField      String?
+  sortDirection  String?  // "asc" or "desc"
+  isDefault      Boolean  @default(false)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, organizationId, module, name])
+  @@index([organizationId, module, userId])
+  @@map("custom_views")
 }

@@ -57,6 +57,7 @@ function getTableName(numberField: string): string {
     transferNumber: "stock_transfers",
     adjustmentNumber: "inventory_adjustments",
     productionNumber: "production_orders",
+    movementNumber: "pos_cash_movements",
   };
   return fieldToTable[numberField] || "journal_entries";
 }

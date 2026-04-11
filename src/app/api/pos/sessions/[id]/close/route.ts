@@ -176,7 +176,21 @@ export async function PUT(
       });
       const cashRefundsGiven = roundCurrency(Number(returnAggregates._sum.total || 0));
 
-      const expectedCash = roundCurrency(Number(posSession.openingCash) + cashReceived - cashRefundsGiven);
+      // Include POS cash in/out movements in expected cash calculation
+      const cashMovements = await tx.pOSCashMovement.findMany({
+        where: { organizationId, sessionId: id },
+        select: { movementType: true, amount: true },
+      });
+      let totalCashIn = 0;
+      let totalCashOut = 0;
+      for (const m of cashMovements) {
+        if (m.movementType === "CASH_IN") totalCashIn += Number(m.amount);
+        else totalCashOut += Number(m.amount);
+      }
+
+      const expectedCash = roundCurrency(
+        Number(posSession.openingCash) + cashReceived - cashRefundsGiven + totalCashIn - totalCashOut
+      );
       const cashDifference = roundCurrency(Number(closingCash) - expectedCash);
 
       // Aggregate non-cash payments

@@ -20,6 +20,47 @@ export async function getSystemAccount(
   }
 }
 
+// Auto-create a system account if it doesn't exist.
+// Used by POS cash movements so first-time use doesn't fail.
+const ACCOUNT_DEFS: Record<string, { name: string; accountType: string; accountSubType: string; parentCode: string }> = {
+  "3100": { name: "Owner's Capital (رأس مال المالك)", accountType: "EQUITY", accountSubType: "OWNERS_EQUITY", parentCode: "3000" },
+  "3300": { name: "Owner's Drawings (المسحوبات الشخصية)", accountType: "EQUITY", accountSubType: "OTHER_EQUITY", parentCode: "3000" },
+  "4900": { name: "Other Revenue (إيرادات أخرى)", accountType: "REVENUE", accountSubType: "OTHER_REVENUE", parentCode: "4000" },
+};
+
+export async function ensureSystemAccount(
+  tx: Tx,
+  organizationId: string,
+  code: string
+): Promise<{ id: string; code: string; name: string }> {
+  const existing = await getSystemAccount(tx, organizationId, code);
+  if (existing) return existing;
+
+  const def = ACCOUNT_DEFS[code];
+  if (!def) throw new Error(`No account definition for code ${code}`);
+
+  const parentAccount = await tx.account.findFirst({
+    where: { organizationId, code: def.parentCode },
+    select: { id: true },
+  });
+  if (!parentAccount) throw new Error(`Parent account ${def.parentCode} not found`);
+
+  return tx.account.upsert({
+    where: { organizationId_code: { organizationId, code } },
+    update: {},
+    create: {
+      organizationId,
+      code,
+      name: def.name,
+      accountType: def.accountType,
+      accountSubType: def.accountSubType,
+      parentId: parentAccount.id,
+      isSystem: false,
+    },
+    select: { id: true, code: true, name: true },
+  });
+}
+
 export async function ensureCashShortOverAccount(
   tx: Tx,
   organizationId: string
