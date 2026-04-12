@@ -1077,12 +1077,15 @@ function POSTerminalContent() {
 
   const handleNewTab = useCallback(() => {
     const snapshot = snapshotCurrentTab();
-    // If current tab is completely empty (no items, no KOT, no table), just reset it
-    // instead of creating a new tab and wasting an order number
-    const isEmpty = snapshot.cartState.items.length === 0
-      && snapshot.kotSentQuantities.size === 0
-      && !snapshot.selectedTable;
-    if (isEmpty) {
+    const hasItems = snapshot.cartState.items.length > 0;
+    const hasKot = snapshot.kotSentQuantities.size > 0;
+    const hasTable = !!snapshot.selectedTable;
+
+    // If current tab has no items and no KOT, free any assigned table and reset
+    if (!hasItems && !hasKot) {
+      if (hasTable) {
+        freeTable(snapshot.selectedTable!.id);
+      }
       resetLiveState();
       if (isRestaurantEnabled) {
         setShowTableSelect(true);
@@ -1096,7 +1099,7 @@ function POSTerminalContent() {
     if (isRestaurantEnabled) {
       setShowTableSelect(true);
     }
-  }, [snapshotCurrentTab, switchToNewTab, resetLiveState, isRestaurantEnabled]);
+  }, [snapshotCurrentTab, switchToNewTab, resetLiveState, isRestaurantEnabled, freeTable]);
 
   const handleCloseTab = useCallback((tabId: string) => {
     // Free the table if the closed tab had one assigned (skip if bill already freed it)
