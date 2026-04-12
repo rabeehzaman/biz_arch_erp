@@ -103,6 +103,7 @@ export interface ServerToClientEvents {
     ops: OrderOperation[];
     version: number;
     deviceId: string;
+    state?: SerializedOrderState;
   }) => void;
   "order:deleted": (payload: {
     orderId: string;
@@ -116,6 +117,11 @@ export interface ServerToClientEvents {
     orderId: string;
     state: SerializedOrderState;
     version: number;
+  }) => void;
+  "table:statusChanged": (payload: {
+    tableId: string;
+    status: "AVAILABLE" | "OCCUPIED" | "RESERVED" | "CLEANING";
+    orderId?: string | null;
   }) => void;
 }
 

@@ -21,6 +21,7 @@ declare module "next-auth" {
       isMobileShopModuleEnabled?: boolean;
       isJewelleryModuleEnabled?: boolean;
       isRestaurantModuleEnabled?: boolean;
+      isSocketIOEnabled?: boolean;
       isPriceListEnabled?: boolean;
       priceListId?: string | null;
       gstStateCode?: string | null;
@@ -43,6 +44,7 @@ declare module "next-auth" {
     isMobileShopModuleEnabled?: boolean;
     isJewelleryModuleEnabled?: boolean;
     isRestaurantModuleEnabled?: boolean;
+    isSocketIOEnabled?: boolean;
     isPriceListEnabled?: boolean;
     priceListId?: string | null;
     gstStateCode?: string | null;
@@ -67,6 +69,7 @@ declare module "next-auth/jwt" {
     isMobileShopModuleEnabled?: boolean;
     isJewelleryModuleEnabled?: boolean;
     isRestaurantModuleEnabled?: boolean;
+    isSocketIOEnabled?: boolean;
     isPriceListEnabled?: boolean;
     priceListId?: string | null;
     gstStateCode?: string | null;

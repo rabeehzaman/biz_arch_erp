@@ -306,12 +306,14 @@ posNamespace.on("connection", (socket) => {
       }
 
       // Broadcast to other devices in the room (not the sender)
+      // Include full state so clients can use it directly (same shape as Ably)
       const room = orderRoom(organizationId, orderId);
       socket.to(room).emit("order:updated", {
         orderId,
         ops,
         version: newVersion,
         deviceId,
+        state: newState,
       });
 
       // Also notify org room for tab-list sync

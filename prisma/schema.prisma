@@ -87,6 +87,7 @@ model Organization {
 
   // Restaurant Module
   isRestaurantModuleEnabled         Boolean  @default(false)
+  isSocketIOEnabled                 Boolean  @default(false)
   restaurantTablesEnabled           Boolean  @default(true)
   restaurantKotPrintingEnabled      Boolean  @default(true)
 

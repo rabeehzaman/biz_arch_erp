@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 import { posEventBus } from "@/lib/pos-event-bus";
 import { publishOrderDeleted, publishOrderUpdate } from "@/lib/pos/ably-server";
+import { getIO } from "@/lib/pos/socket-io-server";
 
 export async function GET(
   _request: NextRequest,
@@ -55,7 +56,7 @@ export async function PUT(
       customerId, customerName,
       tableId, tableNumber, tableName, tableSection, tableCapacity,
       heldOrderId, kotSentQuantities, kotOrderIds,
-      preBillPrinted, broadcast,
+      preBillPrinted, broadcast, deviceId,
     } = body;
 
     const data = {
@@ -132,7 +133,7 @@ export async function PUT(
 
     // Broadcast via Ably only on KOT saves (broadcast: true), not draft saves
     if (broadcast) {
-      await publishOrderUpdate(organizationId, result.id, [], result.version, "api", {
+      await publishOrderUpdate(organizationId, result.id, [], result.version, deviceId || "api", {
         items: data.items,
         label: data.label,
         orderType: data.orderType,
@@ -147,6 +148,30 @@ export async function PUT(
         heldOrderId: data.heldOrderId,
         kotSentQuantities: data.kotSentQuantities,
         kotOrderIds: data.kotOrderIds,
+      });
+    }
+
+    // Socket.IO live sync — broadcast every save on VPS (not just KOT)
+    const io = getIO();
+    if (io) {
+      const senderDeviceId = deviceId || "api";
+      const state = {
+        items: data.items, label: data.label, orderType: data.orderType,
+        isReturnMode: data.isReturnMode, customerId: data.customerId,
+        customerName: data.customerName, tableId: data.tableId,
+        tableNumber: data.tableNumber, tableName: data.tableName,
+        tableSection: data.tableSection, tableCapacity: data.tableCapacity,
+        heldOrderId: data.heldOrderId, kotSentQuantities: data.kotSentQuantities,
+        kotOrderIds: data.kotOrderIds,
+      };
+      const orderRoom = `org:${organizationId}:order:${result.id}`;
+      io.to(orderRoom).emit("order:updated", {
+        orderId: result.id, ops: [], version: result.version,
+        deviceId: senderDeviceId, state,
+      });
+      io.to(`org:${organizationId}`).emit("order:updated", {
+        orderId: result.id, ops: [], version: result.version,
+        deviceId: senderDeviceId,
       });
     }
 
@@ -186,6 +211,14 @@ export async function DELETE(
     // Notify other POS devices via SSE (legacy) and Ably
     posEventBus.emit(organizationId, JSON.stringify({ type: "order-deleted", id }));
     await publishOrderDeleted(organizationId, id, "api");
+
+    // Socket.IO broadcast
+    const io = getIO();
+    if (io) {
+      const orderRoom = `org:${organizationId}:order:${id}`;
+      io.to(orderRoom).emit("order:deleted", { orderId: id, deviceId: "api" });
+      io.to(`org:${organizationId}`).emit("order:deleted", { orderId: id, deviceId: "api" });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

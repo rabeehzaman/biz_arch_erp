@@ -50,6 +50,7 @@ import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
 import { TableSelect } from "@/components/pos/table-select";
 import { usePOSTabs, type TabContext } from "@/hooks/use-pos-tabs";
 import { useRealtimeOrder } from "@/hooks/use-realtime-order";
+import { useRealtimeOrderSocketIO } from "@/hooks/use-realtime-order-socketio";
 import type { OrderOperation, SerializedOrderState } from "@/lib/pos/realtime-types";
 import { cartLineKey as makeLineKey } from "@/lib/pos/realtime-types";
 import { applyOperations } from "@/lib/pos/apply-operations";
@@ -452,6 +453,8 @@ function POSTerminalContent() {
 
   // Restaurant state
   const isRestaurantEnabled = !!(authSession?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
+  const isSocketIOEnabled = !!(authSession?.user as { isSocketIOEnabled?: boolean })?.isSocketIOEnabled
+    && !!process.env.NEXT_PUBLIC_SOCKET_URL;
   const [selectedTable, setSelectedTable] = useState<{ id: string; number: number; name: string; section?: string; capacity: number } | null>(null);
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [orderType, setOrderType] = useState<"DINE_IN" | "TAKEAWAY">("DINE_IN");
@@ -507,51 +510,61 @@ function POSTerminalContent() {
   );
   const [showTabsSheet, setShowTabsSheet] = useState(false);
 
-  // ── Real-time sync via Socket.IO ──────────────────────────────────
-  const { isConnected: isSocketConnected } = useRealtimeOrder(
-    isHydrated && isRestaurantEnabled ? activeTabId : null,
-    {
-      organizationId,
-      onRemoteUpdate: useCallback((serverItems: CartItemData[], _version: number, state: SerializedOrderState) => {
-        // Another device sent a KOT — merge server items with our local unsent items
-        const localItems = cartStateRef.current.items;
-        const localSentQtys = kotSentQuantitiesRef.current;
-        const lineKey = (item: CartItemData) => item.variantId ? `${item.productId}::${item.variantId}` : item.productId;
+  // ── Real-time sync (Ably or Socket.IO based on org toggle) ─────────
+  const realtimeCallbacks = {
+    organizationId,
+    onRemoteUpdate: useCallback((serverItems: CartItemData[], _version: number, state: SerializedOrderState) => {
+      // Another device sent updates — merge server items with our local unsent items
+      const localItems = cartStateRef.current.items;
+      const localSentQtys = kotSentQuantitiesRef.current;
+      const lineKey = (item: CartItemData) => item.variantId ? `${item.productId}::${item.variantId}` : item.productId;
 
-        // Find local items that have unsent quantities (added locally but not yet KOT'd)
-        const unsentOps: OrderOperation[] = [];
-        for (const item of localItems) {
-          const key = lineKey(item);
-          const sentQty = localSentQtys.get(key) ?? 0;
-          const unsent = item.quantity - sentQty;
-          if (unsent > 0) {
-            unsentOps.push({ op: "ADD_ITEM", item, quantity: unsent });
-          }
+      // Find local items that have unsent quantities (added locally but not yet KOT'd)
+      const unsentOps: OrderOperation[] = [];
+      for (const item of localItems) {
+        const key = lineKey(item);
+        const sentQty = localSentQtys.get(key) ?? 0;
+        const unsent = item.quantity - sentQty;
+        if (unsent > 0) {
+          unsentOps.push({ op: "ADD_ITEM", item, quantity: unsent });
         }
+      }
 
-        // Merge: server items (committed) + our unsent local items on top
-        let mergedItems = serverItems;
-        if (unsentOps.length > 0) {
-          const baseState: SerializedOrderState = {
-            items: serverItems, label: "", orderType: "DINE_IN", isReturnMode: false,
-            customerId: null, customerName: null, tableId: null, tableNumber: null,
-            tableName: null, tableSection: null, tableCapacity: null, heldOrderId: null,
-            kotSentQuantities: {}, kotOrderIds: [],
-          };
-          mergedItems = applyOperations(baseState, unsentOps).items;
-        }
+      // Merge: server items (committed) + our unsent local items on top
+      let mergedItems = serverItems;
+      if (unsentOps.length > 0) {
+        const baseState: SerializedOrderState = {
+          items: serverItems, label: "", orderType: "DINE_IN", isReturnMode: false,
+          customerId: null, customerName: null, tableId: null, tableNumber: null,
+          tableName: null, tableSection: null, tableCapacity: null, heldOrderId: null,
+          kotSentQuantities: {}, kotOrderIds: [],
+        };
+        mergedItems = applyOperations(baseState, unsentOps).items;
+      }
 
-        dispatchCart({ type: "RESTORE", items: mergedItems });
-        setKotSentQuantities(new Map(Object.entries(state.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
-        setKotOrderIds(state.kotOrderIds || []);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, []),
-      onRemoteDelete: useCallback(() => {
-        resetLiveState();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, []),
-    },
+      dispatchCart({ type: "RESTORE", items: mergedItems });
+      setKotSentQuantities(new Map(Object.entries(state.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
+      setKotOrderIds(state.kotOrderIds || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+    onRemoteDelete: useCallback(() => {
+      resetLiveState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  };
+
+  // Both hooks always called (React rules), but only one receives a non-null orderId
+  const activeOrderId = isHydrated && isRestaurantEnabled ? activeTabId : null;
+
+  const { isConnected: ablyConnected } = useRealtimeOrder(
+    !isSocketIOEnabled ? activeOrderId : null,
+    realtimeCallbacks,
   );
+  const { isConnected: socketIOConnected, emitMutation } = useRealtimeOrderSocketIO(
+    isSocketIOEnabled ? activeOrderId : null,
+    realtimeCallbacks,
+  );
+  const isSocketConnected = isSocketIOEnabled ? socketIOConnected : ablyConnected;
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null; posReceiptRenderConfig?: { electron: { allowedModes: string[]; defaultMode: string | null }; mobile: { renderMode: string } } }>(
@@ -1160,6 +1173,20 @@ function POSTerminalContent() {
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
   }, [isHydrated, snapshotCurrentTab, persistTab]);
+
+  // Socket.IO live cart sync — persist immediately on cart changes for instant broadcast
+  // On VPS, the PUT route broadcasts via Socket.IO to all connected devices
+  useEffect(() => {
+    if (!isSocketIOEnabled || !isHydrated || !posSession) return;
+    // Don't persist blank tabs
+    if (!selectedTable && cartState.items.length === 0 && kotSentQuantities.size === 0) return;
+
+    const timer = setTimeout(() => {
+      persistTab(snapshotCurrentTab());
+    }, 150); // Short debounce to batch rapid changes while still feeling instant
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSocketIOEnabled, cartState.revision]);
 
   const confirmClearCartWithKot = async () => {
     // Send VOID KOT to kitchen for all already-sent items
@@ -2827,6 +2854,7 @@ function POSTerminalContent() {
           open={showTableSelect}
           onOpenChange={setShowTableSelect}
           required={!selectedTable && cart.length === 0}
+          organizationId={organizationId}
           onSelectTable={async (table) => {
             if (!table) {
               setShowTableSelect(false);

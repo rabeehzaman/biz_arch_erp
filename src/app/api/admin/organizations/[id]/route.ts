@@ -181,6 +181,7 @@ export async function PUT(
       jewelleryEnabledPurities,
       jewelleryEnabledMetals,
       isRestaurantModuleEnabled,
+      isSocketIOEnabled,
       isManufacturingModuleEnabled,
       restaurantTablesEnabled,
       restaurantKotPrintingEnabled,
@@ -457,6 +458,7 @@ export async function PUT(
 
     // Restaurant module settings
     if (isRestaurantModuleEnabled !== undefined) updateData.isRestaurantModuleEnabled = isRestaurantModuleEnabled;
+    if (isSocketIOEnabled !== undefined) updateData.isSocketIOEnabled = isSocketIOEnabled;
     if (restaurantTablesEnabled !== undefined) updateData.restaurantTablesEnabled = restaurantTablesEnabled;
     if (restaurantKotPrintingEnabled !== undefined) updateData.restaurantKotPrintingEnabled = restaurantKotPrintingEnabled;
     if (restaurantThemeEnabled !== undefined) updateData.restaurantThemeEnabled = restaurantThemeEnabled;

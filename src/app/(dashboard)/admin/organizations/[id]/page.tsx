@@ -81,6 +81,7 @@ interface OrganizationDetails {
     jewelleryEnabledPurities: string[];
     jewelleryEnabledMetals: string[];
     isRestaurantModuleEnabled: boolean;
+    isSocketIOEnabled: boolean;
     restaurantTablesEnabled: boolean;
     restaurantKotPrintingEnabled: boolean;
     restaurantThemeEnabled: boolean;
@@ -208,6 +209,7 @@ export default function OrganizationDetailsPage() {
     const [jewelleryEnabledMetals, setJewelleryEnabledMetals] = useState<string[]>(["GOLD", "SILVER", "PLATINUM"]);
     const [isPriceListEnabled, setIsPriceListEnabled] = useState(false);
     const [isRestaurantModuleEnabled, setIsRestaurantModuleEnabled] = useState(false);
+    const [isSocketIOEnabled, setIsSocketIOEnabled] = useState(false);
     const [isManufacturingModuleEnabled, setIsManufacturingModuleEnabled] = useState(false);
     const [restaurantTablesEnabled, setRestaurantTablesEnabled] = useState(true);
     const [restaurantKotPrintingEnabled, setRestaurantKotPrintingEnabled] = useState(true);
@@ -362,6 +364,7 @@ export default function OrganizationDetailsPage() {
         setJewelleryEnabledMetals(data.jewelleryEnabledMetals || ["GOLD", "SILVER", "PLATINUM"]);
         setIsPriceListEnabled(data.isPriceListEnabled || false);
         setIsRestaurantModuleEnabled(data.isRestaurantModuleEnabled || false);
+        setIsSocketIOEnabled(data.isSocketIOEnabled || false);
         setIsManufacturingModuleEnabled(data.isManufacturingModuleEnabled || false);
         setRestaurantTablesEnabled(data.restaurantTablesEnabled ?? true);
         setRestaurantKotPrintingEnabled(data.restaurantKotPrintingEnabled ?? true);
@@ -567,6 +570,7 @@ export default function OrganizationDetailsPage() {
                     jewelleryEnabledMetals,
                     isPriceListEnabled,
                     isRestaurantModuleEnabled,
+                    isSocketIOEnabled,
                     isManufacturingModuleEnabled,
                     restaurantTablesEnabled,
                     restaurantKotPrintingEnabled,
@@ -2339,6 +2343,18 @@ export default function OrganizationDetailsPage() {
                                                         )}
                                                     </div>
                                                 )}
+                                            </div>
+
+                                            {/* Real-time Transport */}
+                                            <div className="space-y-4 border-t border-border pt-6">
+                                                <h4 className="text-sm font-semibold text-foreground">Real-time Transport</h4>
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <Label>Use Socket.IO</Label>
+                                                        <Switch checked={isSocketIOEnabled} onCheckedChange={setIsSocketIOEnabled} />
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">Use Socket.IO instead of Ably for real-time POS sync. Only effective on VPS deployment (app.bizarch.in). Vercel always uses Ably.</p>
+                                                </div>
                                             </div>
 
                                             {/* Sub-features */}

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import type { CartItemData } from "@/components/pos/cart-item";
+import { getPosDeviceId } from "@/lib/pos/ably-client";
 
 interface CartState {
   items: CartItemData[];
@@ -247,6 +248,35 @@ export function usePOSTabs(
     };
   }, [sessionId, organizationId, mutateOpenOrders]);
 
+  // Socket.IO: listen for org-level events for instant tab list sync on VPS
+  useEffect(() => {
+    if (!sessionId || !organizationId) return;
+    if (!process.env.NEXT_PUBLIC_SOCKET_URL) return; // No Socket.IO server available
+
+    let socket: import("socket.io-client").Socket | null = null;
+    let cleanup: (() => void) | null = null;
+
+    import("@/lib/pos/socket-client").then(({ getPosSocket, getPosDeviceId }) => {
+      socket = getPosSocket();
+      const deviceId = getPosDeviceId();
+      const handler = (payload: { deviceId?: string }) => {
+        // Don't revalidate for our own events
+        if (payload?.deviceId === deviceId) return;
+        mutateOpenOrders();
+      };
+      socket.on("order:created", handler);
+      socket.on("order:deleted", handler);
+      socket.on("order:updated", handler);
+      cleanup = () => {
+        socket?.off("order:created", handler);
+        socket?.off("order:deleted", handler);
+        socket?.off("order:updated", handler);
+      };
+    }).catch(() => {});
+
+    return () => { cleanup?.(); };
+  }, [sessionId, organizationId, mutateOpenOrders]);
+
   // Hydrate from DB — runs once when data first arrives
   useEffect(() => {
     if (isHydrated || !dbOrders) return;
@@ -359,7 +389,7 @@ export function usePOSTabs(
 
   const persistTab = useCallback((tab: TabContext, opts?: { broadcast?: boolean }) => {
     if (!sessionId) return;
-    const body = { ...serializeTab(tab), ...(opts?.broadcast ? { broadcast: true } : {}) };
+    const body = { ...serializeTab(tab), ...(opts?.broadcast ? { broadcast: true } : {}), deviceId: getPosDeviceId() };
     fetch(`/api/pos/open-orders/${tab.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
