@@ -1,6 +1,8 @@
 // Default Chart of Accounts seed function
 // Can be called from seed.ts and from org creation API
 
+import { randomUUID } from "crypto";
+
 type PrismaTransactionClient = {
   account: {
     upsert: (args: {
@@ -11,6 +13,10 @@ type PrismaTransactionClient = {
     findFirst: (args: {
       where: { organizationId: string; code: string };
     }) => Promise<{ id: string } | null>;
+    createMany: (args: {
+      data: Record<string, unknown>[];
+      skipDuplicates?: boolean;
+    }) => Promise<{ count: number }>;
   };
   cashBankAccount: {
     findFirst: (args: {
@@ -22,6 +28,12 @@ type PrismaTransactionClient = {
       update: Record<string, unknown>;
       create: Record<string, unknown>;
     }) => Promise<unknown>;
+  };
+  unit: {
+    createMany: (args: {
+      data: Record<string, unknown>[];
+      skipDuplicates?: boolean;
+    }) => Promise<{ count: number }>;
   };
 };
 
@@ -117,6 +129,100 @@ export async function seedDefaultCOA(
   await _createCashBankAccounts(tx, organizationId, accountMap);
 
   return accountMap;
+}
+
+// ─── Default Units ─────────────────────────────────────────────────────────
+// Seed common units for a new org so the org is usable out of the box.
+
+const DEFAULT_UNITS = [
+  { code: "pcs", name: "Piece" },
+  { code: "kg", name: "Kilogram" },
+  { code: "gm", name: "Gram" },
+  { code: "ltr", name: "Liter" },
+  { code: "mtr", name: "Meter" },
+  { code: "box", name: "Box" },
+  { code: "hr", name: "Hour" },
+  { code: "day", name: "Day" },
+  { code: "month", name: "Month" },
+];
+
+export async function seedDefaultUnits(
+  tx: PrismaTransactionClient,
+  organizationId: string
+) {
+  await tx.unit.createMany({
+    data: DEFAULT_UNITS.map((u) => ({ ...u, organizationId })),
+    skipDuplicates: true,
+  });
+}
+
+// ─── Fast batch seeder for new org creation ────────────────────────────────
+// Replaces calling seedDefaultCOA + seedXxxAccounts sequentially (~99 DB
+// round-trips) with a single createMany (~3 round-trips). Only used when
+// creating a BRAND NEW org. The individual seed functions are kept for the
+// re-seed endpoint and feature-toggle seeding paths.
+
+export async function seedAllAccountsForNewOrg(
+  tx: PrismaTransactionClient,
+  organizationId: string,
+  edition: string
+) {
+  // Merge all account definitions for this edition into one list.
+  const editionAccounts: AccountDef[] =
+    edition === "SAUDI"
+      ? [...SAUDI_VAT_ACCOUNTS, ...SAUDI_STANDARD_ACCOUNTS]
+      : [...GST_ACCOUNTS];
+
+  const allAccountDefs = [...DEFAULT_ACCOUNTS, ...editionAccounts];
+
+  // Pre-generate IDs so we can resolve parentId references locally —
+  // no per-account DB lookups needed.
+  const codeToId = new Map<string, string>();
+  for (const acct of allAccountDefs) {
+    codeToId.set(acct.code, randomUUID());
+  }
+
+  // Build flat batch data with resolved parentIds.
+  const batchData = allAccountDefs.map((acct) => ({
+    id: codeToId.get(acct.code)!,
+    code: acct.code,
+    name: acct.name,
+    accountType: acct.accountType,
+    accountSubType: acct.accountSubType,
+    parentId: acct.parentCode ? (codeToId.get(acct.parentCode) ?? null) : null,
+    isSystem: acct.isSystem,
+    organizationId,
+  }));
+
+  // One SQL INSERT … ON CONFLICT DO NOTHING.
+  await tx.account.createMany({ data: batchData, skipDuplicates: true });
+
+  // Create default Cash and Bank cash-bank accounts (2 queries).
+  const cashId = codeToId.get("1100")!;
+  await tx.cashBankAccount.upsert({
+    where: { organizationId_name: { organizationId, name: "Cash (النقدية)" } },
+    update: {},
+    create: {
+      name: "Cash (النقدية)",
+      accountId: cashId,
+      accountSubType: "CASH",
+      isDefault: true,
+      organizationId,
+    },
+  });
+
+  const bankId = codeToId.get("1200")!;
+  await tx.cashBankAccount.upsert({
+    where: { organizationId_name: { organizationId, name: "Bank Account (حساب البنك)" } },
+    update: {},
+    create: {
+      name: "Bank Account (حساب البنك)",
+      accountId: bankId,
+      accountSubType: "BANK",
+      isDefault: false,
+      organizationId,
+    },
+  });
 }
 
 // ─── GST Accounts ──────────────────────────────────────────────────────────

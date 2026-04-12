@@ -449,7 +449,10 @@ export default function NewInvoicePage() {
       if (field === "unitId") {
         const product = products.find((p) => p.id === item.productId);
         if (product) {
-          const resolved = resolveUnitPrice(Number(product.price), value as string, product.unitId!, product.unitConversions);
+          const baseUnitPrice = item.conversionFactor > 0
+            ? item.unitPrice / item.conversionFactor
+            : Number(product.price);
+          const resolved = resolveUnitPrice(baseUnitPrice, value as string, product.unitId!, product.unitConversions);
           return {
             ...item,
             unitId: value as string,

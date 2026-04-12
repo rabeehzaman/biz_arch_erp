@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { seedDefaultCOA, seedSaudiVATAccounts, seedSaudiStandardAccounts, seedGSTAccounts } from "@/lib/accounting/seed-coa";
+import { seedAllAccountsForNewOrg, seedDefaultUnits } from "@/lib/accounting/seed-coa";
 
 export async function GET() {
   try {
@@ -99,21 +99,23 @@ export async function POST(request: NextRequest) {
       data: orgData as never,
     });
 
-    // Seed default chart of accounts for the new organization.
-    // On failure, delete the org and surface the error — an org with no COA
-    // will silently fail to create journal entries for all transactions.
+    // Seed chart of accounts and default units for the new organization.
+    // Uses a single-batch seeder to avoid Vercel serverless timeouts.
+    // On failure, clean up accounts/units before deleting the org to avoid
+    // FK constraint violations (no ON DELETE CASCADE on account → org).
     try {
-      await seedDefaultCOA(prisma as never, organization.id);
-      // Seed edition-specific accounts (VAT/GST)
-      if (editionValue === "SAUDI") {
-        await seedSaudiVATAccounts(prisma as never, organization.id);
-        await seedSaudiStandardAccounts(prisma as never, organization.id);
-      } else {
-        await seedGSTAccounts(prisma as never, organization.id);
-      }
+      await seedAllAccountsForNewOrg(prisma as never, organization.id, editionValue);
+      await seedDefaultUnits(prisma as never, organization.id);
     } catch (coaError) {
-      console.error("Failed to seed COA for new org:", coaError);
-      await prisma.organization.delete({ where: { id: organization.id } });
+      console.error("Failed to seed new org:", coaError);
+      try {
+        await prisma.cashBankAccount.deleteMany({ where: { organizationId: organization.id } });
+        await prisma.account.deleteMany({ where: { organizationId: organization.id } });
+        await prisma.unit.deleteMany({ where: { organizationId: organization.id } });
+        await prisma.organization.delete({ where: { id: organization.id } });
+      } catch (cleanupErr) {
+        console.error("Failed to cleanup org after seed failure:", cleanupErr);
+      }
       return NextResponse.json(
         { error: "Organization created but failed to seed chart of accounts. Please try again." },
         { status: 500 }

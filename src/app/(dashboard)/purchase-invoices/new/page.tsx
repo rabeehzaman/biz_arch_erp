@@ -340,12 +340,10 @@ export default function NewPurchaseInvoicePage() {
       if (field === "unitId") {
         const product = products.find((p) => p.id === item.productId);
         if (product) {
-          let baseCost = Number(product.cost) || Number(product.price);
-          if (taxInclusive && baseCost > 0) {
-            const rate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
-            if (rate > 0) baseCost = Math.round(baseCost * (1 + rate / 100) * 100) / 100;
-          }
-          const resolved = resolveUnitPrice(baseCost, value as string, product.unitId!, product.unitConversions, { ignoreOverridePrice: true });
+          const baseUnitCost = item.conversionFactor > 0
+            ? item.unitCost / item.conversionFactor
+            : (Number(product.cost) || Number(product.price));
+          const resolved = resolveUnitPrice(baseUnitCost, value as string, product.unitId!, product.unitConversions, { ignoreOverridePrice: true });
           return { ...item, unitId: value as string, conversionFactor: resolved.conversionFactor, unitCost: resolved.unitPrice };
         }
       }

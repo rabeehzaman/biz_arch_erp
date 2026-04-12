@@ -44,10 +44,13 @@ export function ItemUnitSelect({
         ? value
         : options[0]?.id || "";
 
-    // Sync parent state when effectiveValue diverges from passed value
-    // (e.g. default unit selected via options reorder but parent still holds base unit)
+    // Sync parent state when effectiveValue diverges from passed value,
+    // but ONLY when parent has no value (blank → first option auto-select).
+    // If parent already has a non-empty unitId that isn't in the current options
+    // (e.g. a stale unit after product edit), keep parent state unchanged to
+    // avoid silently resetting the line item price to the catalog default.
     useEffect(() => {
-        if (effectiveValue && effectiveValue !== value) {
+        if (effectiveValue && effectiveValue !== value && !value) {
             onValueChange(effectiveValue);
         }
     }, [effectiveValue, value, onValueChange]);

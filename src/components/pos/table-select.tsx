@@ -52,7 +52,7 @@ export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway, req
   const { data: tables, isLoading } = useSWR<RestaurantTable[]>(
     open ? "/api/restaurant/tables" : null,
     fetcher,
-    { revalidateOnMount: true, dedupingInterval: 0 }
+    { revalidateOnMount: true, dedupingInterval: 0, refreshInterval: 3000 }
   );
 
   const handleTableClick = (table: RestaurantTable) => {

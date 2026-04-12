@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
     if (adv.supplierId) baseWhere.supplierId = adv.supplierId;
     if (adv.supplierInvoiceRef) baseWhere.supplierInvoiceRef = { contains: adv.supplierInvoiceRef, mode: "insensitive" };
     if (adv.status && !status) baseWhere.status = adv.status;
+    if (adv.createdById) baseWhere.createdById = adv.createdById;
     if (adv.branchId) baseWhere.branchId = adv.branchId;
     if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
     if (adv.invoiceDateFrom || adv.invoiceDateTo) {

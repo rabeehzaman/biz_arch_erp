@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
     if (adv.invoiceNumber) baseWhere.invoiceNumber = { contains: adv.invoiceNumber, mode: "insensitive" };
     if (adv.customerId) baseWhere.customerId = adv.customerId;
     if (adv.paymentType) baseWhere.paymentType = adv.paymentType;
+    if (adv.createdById) baseWhere.createdById = adv.createdById;
     if (adv.branchId) baseWhere.branchId = adv.branchId;
     if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
     if (adv.notes) baseWhere.notes = { contains: adv.notes, mode: "insensitive" };

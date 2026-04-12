@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
     if (adv.quotationNumber) baseWhere.quotationNumber = { contains: adv.quotationNumber, mode: "insensitive" };
     if (adv.customerId) baseWhere.customerId = adv.customerId;
     if (adv.status) baseWhere.status = adv.status;
+    if (adv.createdById) baseWhere.createdById = adv.createdById;
     if (adv.branchId) baseWhere.branchId = adv.branchId;
     if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
     if (adv.issueDateFrom || adv.issueDateTo) {

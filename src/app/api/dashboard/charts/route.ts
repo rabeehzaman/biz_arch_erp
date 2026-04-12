@@ -11,6 +11,16 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    if (!session.user.organizationId) {
+      return NextResponse.json({
+        receivables: { total: 0, current: 0, overdue: 0, overdueCount: 0 },
+        payables: { total: 0, current: 0, overdue: 0, overdueCount: 0 },
+        cashFlow: { totalIncoming: 0, totalOutgoing: 0, monthly: [] },
+        incomeExpense: { totalIncome: 0, totalExpense: 0, monthly: [] },
+        topExpenses: [],
+        bankAccounts: [],
+      });
+    }
     const organizationId = getOrgId(session);
 
     const { searchParams } = new URL(request.url);

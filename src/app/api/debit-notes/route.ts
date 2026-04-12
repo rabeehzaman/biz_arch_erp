@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
     if (adv.debitNoteNumber) baseWhere.debitNoteNumber = { contains: adv.debitNoteNumber, mode: "insensitive" };
     if (adv.supplierId) baseWhere.supplierId = adv.supplierId;
     if (adv.reason) baseWhere.reason = { contains: adv.reason, mode: "insensitive" };
+    if (adv.createdById) baseWhere.createdById = adv.createdById;
     if (adv.branchId) baseWhere.branchId = adv.branchId;
     if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
     if (adv.issueDateFrom || adv.issueDateTo) {

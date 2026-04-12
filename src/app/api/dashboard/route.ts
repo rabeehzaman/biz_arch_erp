@@ -12,6 +12,13 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    if (!session.user.organizationId) {
+      return NextResponse.json({
+        totalInvoices: 0, pendingInvoices: 0, totalCustomers: 0, totalProducts: 0,
+        totalRevenue: 0, totalCollected: 0, totalBranches: 0, totalWarehouses: 0,
+        recentInvoices: [], timestamp: Date.now(),
+      });
+    }
     const organizationId = getOrgId(session);
     const isAdmin = isAdminRole(session.user.role);
     const userId = session.user.id;

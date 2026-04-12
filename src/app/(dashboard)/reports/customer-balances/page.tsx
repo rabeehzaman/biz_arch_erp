@@ -112,6 +112,7 @@ export default function CustomerBalancesPage() {
     setIsDownloading(true);
     try {
       const params = new URLSearchParams({ lang });
+      if (branchParam) params.set("branchId", branchParam);
       const response = await fetch(`/api/reports/customer-balances/pdf?${params}`);
       if (!response.ok) throw new Error("Failed to generate PDF");
       const blob = await response.blob();

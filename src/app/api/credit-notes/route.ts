@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
     if (adv.creditNoteNumber) baseWhere.creditNoteNumber = { contains: adv.creditNoteNumber, mode: "insensitive" };
     if (adv.customerId) baseWhere.customerId = adv.customerId;
     if (adv.reason) baseWhere.reason = { contains: adv.reason, mode: "insensitive" };
+    if (adv.createdById) baseWhere.createdById = adv.createdById;
     if (adv.branchId) baseWhere.branchId = adv.branchId;
     if (adv.warehouseId) baseWhere.warehouseId = adv.warehouseId;
     if (adv.issueDateFrom || adv.issueDateTo) {
