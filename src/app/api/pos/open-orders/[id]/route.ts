@@ -151,28 +151,31 @@ export async function PUT(
       });
     }
 
-    // Socket.IO live sync — broadcast every save on VPS (not just KOT)
-    const io = getIO();
-    if (io) {
-      const senderDeviceId = deviceId || "api";
-      const state = {
-        items: data.items, label: data.label, orderType: data.orderType,
-        isReturnMode: data.isReturnMode, customerId: data.customerId,
-        customerName: data.customerName, tableId: data.tableId,
-        tableNumber: data.tableNumber, tableName: data.tableName,
-        tableSection: data.tableSection, tableCapacity: data.tableCapacity,
-        heldOrderId: data.heldOrderId, kotSentQuantities: data.kotSentQuantities,
-        kotOrderIds: data.kotOrderIds,
-      };
-      const orderRoom = `org:${organizationId}:order:${result.id}`;
-      io.to(orderRoom).emit("order:updated", {
-        orderId: result.id, ops: [], version: result.version,
-        deviceId: senderDeviceId, state,
-      });
-      io.to(`org:${organizationId}`).emit("order:updated", {
-        orderId: result.id, ops: [], version: result.version,
-        deviceId: senderDeviceId,
-      });
+    // Socket.IO broadcast on KOT saves (broadcast: true) — uses server.mjs rooms
+    // which properly exclude the sender via socket.to(room).emit()
+    if (broadcast) {
+      const io = getIO();
+      if (io) {
+        const senderDeviceId = deviceId || "api";
+        const state = {
+          items: data.items, label: data.label, orderType: data.orderType,
+          isReturnMode: data.isReturnMode, customerId: data.customerId,
+          customerName: data.customerName, tableId: data.tableId,
+          tableNumber: data.tableNumber, tableName: data.tableName,
+          tableSection: data.tableSection, tableCapacity: data.tableCapacity,
+          heldOrderId: data.heldOrderId, kotSentQuantities: data.kotSentQuantities,
+          kotOrderIds: data.kotOrderIds,
+        };
+        const orderRoom = `org:${organizationId}:order:${result.id}`;
+        io.to(orderRoom).emit("order:updated", {
+          orderId: result.id, ops: [], version: result.version,
+          deviceId: senderDeviceId, state,
+        });
+        io.to(`org:${organizationId}`).emit("order:updated", {
+          orderId: result.id, ops: [], version: result.version,
+          deviceId: senderDeviceId,
+        });
+      }
     }
 
     return NextResponse.json(result);

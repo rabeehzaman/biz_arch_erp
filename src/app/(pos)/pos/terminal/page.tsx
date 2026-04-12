@@ -1174,20 +1174,6 @@ function POSTerminalContent() {
     return () => document.removeEventListener("visibilitychange", handler);
   }, [isHydrated, snapshotCurrentTab, persistTab]);
 
-  // Socket.IO live cart sync — persist immediately on cart changes for instant broadcast
-  // On VPS, the PUT route broadcasts via Socket.IO to all connected devices
-  useEffect(() => {
-    if (!isSocketIOEnabled || !isHydrated || !posSession) return;
-    // Don't persist blank tabs
-    if (!selectedTable && cartState.items.length === 0 && kotSentQuantities.size === 0) return;
-
-    const timer = setTimeout(() => {
-      persistTab(snapshotCurrentTab());
-    }, 150); // Short debounce to batch rapid changes while still feeling instant
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSocketIOEnabled, cartState.revision]);
-
   const confirmClearCartWithKot = async () => {
     // Send VOID KOT to kitchen for all already-sent items
     const voidItems = cartState.items
