@@ -818,8 +818,8 @@ function POSTerminalContent() {
     }
   }, []);
 
-  const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string) => {
-    dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName });
+  const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string, modifiers?: string[]) => {
+    dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName, modifiers });
     // If items are added after bill was printed, reset billed state
     if (preBillPrinted) {
       setPreBillPrinted(false);
@@ -3054,6 +3054,7 @@ function POSTerminalContent() {
               variant ? variant.price : null,
               variant?.id,
               variant?.name,
+              selectedModifiers,
             );
           }
         }}
