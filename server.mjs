@@ -228,6 +228,11 @@ posNamespace.use(async (socket, next) => {
 
 posNamespace.on("connection", (socket) => {
   const { organizationId, userId, deviceId } = socket.data;
+  console.log(`[Socket.IO] Connected: user=${userId} device=${deviceId} org=${organizationId}`);
+
+  socket.on("disconnect", () => {
+    console.log(`[Socket.IO] Disconnected: device=${deviceId}`);
+  });
 
   // -- Join an order's room (get current state back) --
   socket.on("order:join", async (orderId, ack) => {
@@ -240,8 +245,10 @@ posNamespace.on("connection", (socket) => {
       });
 
       if (record) {
+        console.log(`[Socket.IO] order:join ${orderId} → found, version=${record.version}, items=${Array.isArray(record.items) ? record.items.length : 0}`);
         ack(recordToState(record), record.version);
       } else {
+        console.log(`[Socket.IO] order:join ${orderId} → NOT FOUND`);
         ack(null, 0);
       }
     } catch (err) {
@@ -265,11 +272,13 @@ posNamespace.on("connection", (socket) => {
       });
 
       if (!record) {
+        console.log(`[Socket.IO] order:mutate ${orderId} → NOT_FOUND`);
         return ack({ ok: false, reason: "NOT_FOUND" });
       }
 
       // Optimistic lock check
       if (record.version !== expectedVersion) {
+        console.log(`[Socket.IO] order:mutate ${orderId} → VERSION_CONFLICT expected=${expectedVersion} actual=${record.version}`);
         return ack({
           ok: false,
           reason: "VERSION_CONFLICT",
@@ -313,6 +322,8 @@ posNamespace.on("connection", (socket) => {
         }
         throw err;
       }
+
+      console.log(`[Socket.IO] order:mutate ${orderId} → OK version=${newVersion} items=${newState.items.length} ops=${ops.map(o=>o.op).join(",")}`);
 
       // Broadcast to other devices in the room (not the sender)
       // Include full state so clients can use it directly (same shape as Ably)
