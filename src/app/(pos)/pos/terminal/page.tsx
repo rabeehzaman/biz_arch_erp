@@ -2868,7 +2868,8 @@ function POSTerminalContent() {
             // 1. Check local tabs (from this device's session)
             const localTabId = findTabByTableId(table.id, selectedTable?.id);
             if (localTabId && localTabId !== activeTabId) {
-              switchTab(localTabId);
+              const restored = switchTab(localTabId, snapshotCurrentTab());
+              if (restored) restoreTabContext(restored);
               setShowTableSelect(false);
               return;
             }
