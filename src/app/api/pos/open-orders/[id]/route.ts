@@ -167,19 +167,10 @@ export async function DELETE(
     }
 
     const organizationId = getOrgId(session);
-    const userId = session.user.id;
     const { id } = await params;
 
-    const posSession = await prisma.pOSSession.findFirst({
-      where: { organizationId, userId, status: "OPEN" },
-    });
-
     const order = await prisma.pOSOpenOrder.findFirst({
-      where: {
-        id,
-        organizationId,
-        ...(posSession ? { sessionId: posSession.id } : {}),
-      },
+      where: { id, organizationId },
     });
 
     if (!order) {

@@ -22,7 +22,7 @@ export async function GET() {
     }
 
     const openOrders = await prisma.pOSOpenOrder.findMany({
-      where: { organizationId, sessionId: posSession.id },
+      where: { organizationId, session: { status: "OPEN" } },
       orderBy: { createdAt: "asc" },
     });
 
