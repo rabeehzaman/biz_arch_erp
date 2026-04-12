@@ -17,19 +17,19 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
-    // Filter out stale empty orders (no items, no KOT) — these are abandoned tabs
-    // that pollute the tab list and occupy tables they shouldn't
+    // Filter out stale empty orders — no items, no KOT, AND no table assigned.
+    // Orders with a table but no items yet are valid (just selected, about to add items).
     const activeOrders = openOrders.filter((o) => {
       const items = Array.isArray(o.items) ? o.items : [];
       const kotIds = Array.isArray(o.kotOrderIds) ? o.kotOrderIds : [];
-      return items.length > 0 || kotIds.length > 0;
+      return items.length > 0 || kotIds.length > 0 || !!o.tableId;
     });
 
-    // Clean up stale empty orders in the background (free their tables too)
+    // Clean up truly stale orders: no items, no KOT, no table
     const staleOrders = openOrders.filter((o) => {
       const items = Array.isArray(o.items) ? o.items : [];
       const kotIds = Array.isArray(o.kotOrderIds) ? o.kotOrderIds : [];
-      return items.length === 0 && kotIds.length === 0;
+      return items.length === 0 && kotIds.length === 0 && !o.tableId;
     });
     if (staleOrders.length > 0) {
       const staleIds = staleOrders.map((o) => o.id);
