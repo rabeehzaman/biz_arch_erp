@@ -2863,6 +2863,40 @@ function POSTerminalContent() {
               setShowTableSelect(false);
               return;
             }
+
+            // ── Auto-join: check if an order for this table already exists ──
+            // 1. Check local tabs (from this device's session)
+            const localTabId = findTabByTableId(table.id, selectedTable?.id);
+            if (localTabId && localTabId !== activeTabId) {
+              switchTab(localTabId);
+              setShowTableSelect(false);
+              return;
+            }
+            // 2. Check DB for orders from OTHER devices/sessions
+            if (!localTabId) {
+              try {
+                const res = await fetch(`/api/pos/open-orders/by-table/${table.id}`);
+                const data = await res.json();
+                if (data.order && data.order.id !== activeTabId) {
+                  // Another device has an order for this table — adopt it
+                  const o = data.order;
+                  const snapshot = snapshotCurrentTab();
+                  adoptAsActiveTab(o.id, o.label, new Date(o.createdAt).getTime(), o.version, snapshot);
+                  // Restore the adopted order's cart state
+                  dispatchCart({ type: "RESTORE", items: Array.isArray(o.items) ? o.items : [] });
+                  setSelectedTable(table);
+                  setOrderType(o.orderType || "DINE_IN");
+                  setSelectedCustomer(o.customerId ? { id: o.customerId, name: o.customerName || "", phone: null } : null);
+                  setKotSentQuantities(new Map(Object.entries(o.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
+                  setKotOrderIds(o.kotOrderIds || []);
+                  setShowTableSelect(false);
+                  return;
+                }
+              } catch {
+                // DB check failed — proceed to create new order for this table
+              }
+            }
+
             const oldTable = selectedTable;
             if (oldTable) {
               // Free the old table before reassigning

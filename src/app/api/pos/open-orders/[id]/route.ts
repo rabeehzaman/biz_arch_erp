@@ -102,13 +102,16 @@ export async function PUT(
 
       sessionIdForCreate = posSession.id;
 
-      // Atomically increment session counter and assign order number
-      const updated = await prisma.pOSSession.update({
-        where: { id: posSession.id },
-        data: { orderCounter: { increment: 1 } },
-        select: { orderCounter: true },
-      });
-      orderNumber = updated.orderCounter;
+      // Only consume an order number when the order has items or a table
+      // Prevents wasting numbers on empty/abandoned tabs
+      if (data.items.length > 0 || data.tableId) {
+        const updated = await prisma.pOSSession.update({
+          where: { id: posSession.id },
+          data: { orderCounter: { increment: 1 } },
+          select: { orderCounter: true },
+        });
+        orderNumber = updated.orderCounter;
+      }
     }
 
     const result = await prisma.pOSOpenOrder.upsert({

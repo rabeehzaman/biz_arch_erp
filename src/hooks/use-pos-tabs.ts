@@ -259,18 +259,63 @@ export function usePOSTabs(
     import("@/lib/pos/socket-client").then(({ getPosSocket, getPosDeviceId }) => {
       socket = getPosSocket();
       const deviceId = getPosDeviceId();
-      const handler = (payload: { deviceId?: string }) => {
-        // Don't revalidate for our own events
+      const simpleHandler = (payload: { deviceId?: string }) => {
         if (payload?.deviceId === deviceId) return;
         mutateOpenOrders();
       };
-      socket.on("order:created", handler);
-      socket.on("order:deleted", handler);
-      socket.on("order:updated", handler);
+      const updateHandler = (payload: { orderId?: string; deviceId?: string; state?: { items: CartItemData[]; label: string; orderType: "DINE_IN" | "TAKEAWAY"; isReturnMode: boolean; customerId: string | null; customerName: string | null; tableId: string | null; tableNumber: number | null; tableName: string | null; tableSection: string | null; tableCapacity: number | null; heldOrderId: string | null; kotSentQuantities: Record<string, number>; kotOrderIds: string[] }; version?: number }) => {
+        if (payload?.deviceId === deviceId) return;
+        // Direct tab update from full state — instant, no DB round-trip
+        if (payload.orderId && payload.state) {
+          const oid = payload.orderId;
+          const s = payload.state;
+          // Update active tab if it matches
+          if (oid === activeTabIdRef.current) {
+            onActiveTabRemoteUpdateRef.current?.({
+              id: oid,
+              label: s.label,
+              orderNumber: 0,
+              cartState: buildCartState(s.items),
+              selectedCustomer: s.customerId ? { id: s.customerId, name: s.customerName || "", phone: null } : null,
+              selectedTable: s.tableId ? { id: s.tableId, number: s.tableNumber || 0, name: s.tableName || "", section: s.tableSection || undefined, capacity: s.tableCapacity || 0 } : null,
+              heldOrderId: s.heldOrderId,
+              isReturnMode: s.isReturnMode,
+              orderType: s.orderType,
+              kotSentQuantities: new Map(Object.entries(s.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])),
+              kotOrderIds: s.kotOrderIds || [],
+              view: "cart",
+              preBillPrinted: false,
+              createdAt: Date.now(),
+            });
+          } else {
+            // Update inactive tab
+            setTabs((prev) => {
+              const existing = prev.get(oid);
+              if (!existing) return prev;
+              const next = new Map(prev);
+              next.set(oid, {
+                ...existing,
+                cartState: buildCartState(s.items),
+                selectedCustomer: s.customerId ? { id: s.customerId, name: s.customerName || "", phone: null } : null,
+                selectedTable: s.tableId ? { id: s.tableId, number: s.tableNumber || 0, name: s.tableName || "", section: s.tableSection || undefined, capacity: s.tableCapacity || 0 } : null,
+                kotSentQuantities: new Map(Object.entries(s.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])),
+                kotOrderIds: s.kotOrderIds || [],
+                orderType: s.orderType,
+              });
+              return next;
+            });
+          }
+          if (payload.version != null) versionsRef.current.set(oid, payload.version);
+        }
+        mutateOpenOrders(); // Safety net
+      };
+      socket.on("order:created", simpleHandler);
+      socket.on("order:deleted", simpleHandler);
+      socket.on("order:updated", updateHandler);
       cleanup = () => {
-        socket?.off("order:created", handler);
-        socket?.off("order:deleted", handler);
-        socket?.off("order:updated", handler);
+        socket?.off("order:created", simpleHandler);
+        socket?.off("order:deleted", simpleHandler);
+        socket?.off("order:updated", updateHandler);
       };
     }).catch(() => {});
 

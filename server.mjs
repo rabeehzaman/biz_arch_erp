@@ -325,12 +325,13 @@ posNamespace.on("connection", (socket) => {
         state: newState,
       });
 
-      // Also notify org room for tab-list sync
+      // Also notify org room for tab-list sync (includes full state for direct updates)
       socket.to(orgRoom(organizationId)).emit("order:updated", {
         orderId,
         ops,
         version: newVersion,
         deviceId,
+        state: newState,
       });
 
       ack({ ok: true, version: newVersion });
