@@ -820,12 +820,11 @@ function POSTerminalContent() {
 
   const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string) => {
     dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName });
-    // If items are added after bill was printed, reset billed state and re-occupy the table
-    if (preBillPrinted && selectedTable) {
+    // If items are added after bill was printed, reset billed state
+    if (preBillPrinted) {
       setPreBillPrinted(false);
-      occupyTable(selectedTable.id);
     }
-  }, [preBillPrinted, selectedTable, occupyTable]);
+  }, [preBillPrinted]);
 
   // Quick Sale handler — adds an ad-hoc item with no inventory record
   const handleQuickSale = useCallback((price: number, description: string) => {
@@ -1569,11 +1568,8 @@ function POSTerminalContent() {
       };
       const { printPreBill } = await import("@/lib/pos/pre-bill-print");
       await printPreBill(data);
-      // Mark order as billed and free the table for new guests
+      // Mark order as billed (table stays occupied until payment)
       setPreBillPrinted(true);
-      if (selectedTable) {
-        freeTable(selectedTable.id);
-      }
       // Persist the billed state immediately (spread to avoid stale closure on preBillPrinted)
       persistTab({ ...snapshotCurrentTab(), preBillPrinted: true });
       toast.success(t("pos.preBillPrinted") || "Bill printed");
@@ -1583,7 +1579,7 @@ function POSTerminalContent() {
     } finally {
       setIsPrintingPreBill(false);
     }
-  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, activeTabOrderNumber, hasUnsentKotItems, t, freeTable, persistTab, snapshotCurrentTab]);
+  }, [isPrintingPreBill, cart, companySettings, preBillReceiptMeta, selectedTable, authSession, orderType, selectedCustomer, cartTotals, taxInclusive, activeTabOrderNumber, hasUnsentKotItems, t, persistTab, snapshotCurrentTab]);
 
   const handleSendToKitchen = async () => {
     if (kotInFlightRef.current) return;
@@ -2897,7 +2893,7 @@ function POSTerminalContent() {
               freeTable(oldTable.id);
             }
 
-            // Assign table to the current tab and mark it OCCUPIED in DB
+            // Assign table to the current tab (table becomes OCCUPIED when KOT is sent)
             setSelectedTable(table);
             setOrderType("DINE_IN");
             // Update tab label immediately (don't wait for auto-label effect)
@@ -2905,7 +2901,6 @@ function POSTerminalContent() {
               ? `#${activeTabOrderNumber} · T${table.number} - ${selectedCustomer.name}`
               : `#${activeTabOrderNumber} · T${table.number}`;
             updateActiveTabLabel(newLabel);
-            occupyTable(table.id);
             setShowTableSelect(false);
             // Sync table change to server
             requestAnimationFrame(() => {
