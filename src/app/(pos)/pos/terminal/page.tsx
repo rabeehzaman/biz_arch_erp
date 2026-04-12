@@ -2858,9 +2858,8 @@ function POSTerminalContent() {
               persistTab(snapshotCurrentTab());
             });
 
-            // If KOTs were already sent, update them and notify kitchen
+            // If KOTs were already sent, update them to the new table
             if (oldTable && kotOrderIds.length > 0) {
-              // Update KOT records in DB to new table
               for (const kotId of kotOrderIds) {
                 fetch(`/api/restaurant/kot/${kotId}/move`, {
                   method: "PUT",
@@ -2868,28 +2867,6 @@ function POSTerminalContent() {
                   body: JSON.stringify({ tableId: table.id }),
                 }).catch(() => {});
               }
-              // Print table move notification to kitchen
-              import("@/lib/restaurant/kot-print").then(({ printKOTMulti }) =>
-                printKOTMulti({
-                  kotNumber: "TABLE MOVE",
-                  kotType: "STANDARD",
-                  orderType: "DINE_IN",
-                  tableName: table.name,
-                  tableNumber: table.number,
-                  section: table.section,
-                  serverName: authSession?.user?.name || undefined,
-                  timestamp: new Date(),
-                  specialInstructions: `MOVED FROM TABLE ${oldTable.number} → TABLE ${table.number}`,
-                  items: cartState.items
-                    .filter(i => (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0) > 0)
-                    .map(i => ({
-                      name: i.variantName ? `${i.name} - ${i.variantName}` : i.name,
-                      quantity: kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? i.quantity,
-                      modifiers: i.modifiers,
-                      categoryId: i.categoryId,
-                    })),
-                })
-              ).catch(() => {});
             }
           }}
           onTakeaway={() => {
@@ -2908,9 +2885,8 @@ function POSTerminalContent() {
               persistTab(snapshotCurrentTab());
             });
 
-            // Notify kitchen if KOTs were already sent for this table
+            // If KOTs were already sent, clear their table reference
             if (kotOrderIds.length > 0 && oldTable) {
-              // Update KOT records to clear table reference
               for (const kotId of kotOrderIds) {
                 fetch(`/api/restaurant/kot/${kotId}/move`, {
                   method: "PUT",
@@ -2918,28 +2894,6 @@ function POSTerminalContent() {
                   body: JSON.stringify({ tableId: null }),
                 }).catch(() => {});
               }
-              // Print kitchen notification
-              import("@/lib/restaurant/kot-print").then(({ printKOTMulti }) =>
-                printKOTMulti({
-                  kotNumber: "ORDER TYPE CHANGE",
-                  kotType: "STANDARD",
-                  orderType: "TAKEAWAY",
-                  tableName: oldTable.name,
-                  tableNumber: oldTable.number,
-                  section: oldTable.section || undefined,
-                  serverName: authSession?.user?.name || undefined,
-                  timestamp: new Date(),
-                  specialInstructions: `TABLE ${oldTable.number} → TAKEAWAY`,
-                  items: cartState.items
-                    .filter(i => (kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? 0) > 0)
-                    .map(i => ({
-                      name: i.variantName ? `${i.name} - ${i.variantName}` : i.name,
-                      quantity: kotSentQuantities.get(cartLineKey(i.productId, i.variantId)) ?? i.quantity,
-                      modifiers: i.modifiers,
-                      categoryId: i.categoryId,
-                    })),
-                })
-              ).catch(() => {});
             }
           }}
         />
