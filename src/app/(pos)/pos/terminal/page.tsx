@@ -2820,73 +2820,11 @@ function POSTerminalContent() {
               return;
             }
 
-            // Check if a tab already exists for this table locally
-            const existingTabId = findTabByTableId(table.id, selectedTable?.id);
-            if (existingTabId && existingTabId !== activeTabId) {
-              // Switch to existing tab for this table
-              handleTabSwitch(existingTabId);
+            // Already on this table's tab — just close
+            if (selectedTable?.id === table.id) {
               setShowTableSelect(false);
               return;
             }
-
-            if (existingTabId === activeTabId) {
-              // Already on this table's tab
-              setShowTableSelect(false);
-              return;
-            }
-
-            // Check if another session/device has an open order for this table
-            try {
-              const res = await fetch(`/api/pos/open-orders/by-table/${table.id}`);
-              if (res.ok) {
-                const { order: remoteOrder } = await res.json();
-                if (remoteOrder) {
-                  // Join the remote order's room via Socket.IO (no ownership transfer)
-                  const items = Array.isArray(remoteOrder.items) ? remoteOrder.items : [];
-                  const joinedCustomer = remoteOrder.customerId
-                    ? { id: remoteOrder.customerId, name: remoteOrder.customerName || "", phone: null }
-                    : null;
-                  const joinedTable = remoteOrder.tableId
-                    ? {
-                        id: remoteOrder.tableId,
-                        number: remoteOrder.tableNumber || table.number,
-                        name: remoteOrder.tableName || table.name,
-                        section: remoteOrder.tableSection || table.section,
-                        capacity: remoteOrder.tableCapacity || table.capacity,
-                      }
-                    : table;
-
-                  // Switch active tab identity to the remote order's DB id
-                  adoptAsActiveTab(
-                    remoteOrder.id,
-                    remoteOrder.label || `T${table.number}`,
-                    new Date(remoteOrder.createdAt).getTime(),
-                    remoteOrder.version ?? 0,
-                    snapshotCurrentTab()
-                  );
-
-                  // Restore remote order state — Socket.IO room join happens
-                  // automatically via the useRealtimeOrder hook when activeTabId changes
-                  dispatchCart({ type: "RESTORE", items });
-                  setSelectedCustomer(joinedCustomer);
-                  setSelectedTable(joinedTable);
-                  setOrderType(remoteOrder.orderType || "DINE_IN");
-                  setIsReturnMode(remoteOrder.isReturnMode || false);
-                  setKotSentQuantities(
-                    new Map(Object.entries(remoteOrder.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)]))
-                  );
-                  setKotOrderIds(Array.isArray(remoteOrder.kotOrderIds) ? remoteOrder.kotOrderIds : []);
-                  if (mutateOpenOrders) mutateOpenOrders();
-                  toast.success(`${t("pos.joinedOrderForTable")} ${table.number}`);
-                  setShowTableSelect(false);
-                  return;
-                }
-              }
-            } catch {
-              // Cross-session check failed — fall through to create new order
-            }
-
-            // No existing order for this table anywhere
             const oldTable = selectedTable;
             if (oldTable) {
               // Free the old table before reassigning
