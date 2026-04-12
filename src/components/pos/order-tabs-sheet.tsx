@@ -52,7 +52,7 @@ export function OrderTabsSheet({
             // Only show tabs that have KOT-sent items, cart items, or are the active tab
             const visibleTabs = tabs.filter(
               (tab) => tab.id === activeTabId || tab.kotSentQuantities.size > 0 || tab.cartState.items.length > 0
-            );
+            ).sort((a, b) => a.orderNumber - b.orderNumber);
             return visibleTabs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
               <ShoppingCart className="h-8 w-8" />

@@ -149,7 +149,7 @@ export function useRealtimeOrderSocketIO(
           return;
         }
 
-        function attempt(expectedVersion: number, isRetry: boolean) {
+        function attempt(expectedVersion: number, retries: number) {
           socket!.emit(
             "order:mutate",
             { orderId: targetOrderId, ops, expectedVersion },
@@ -157,10 +157,10 @@ export function useRealtimeOrderSocketIO(
               if (result.ok) {
                 versionRef.current = result.version;
                 resolve({ ok: true, version: result.version });
-              } else if (result.reason === "VERSION_CONFLICT" && !isRetry) {
-                // Retry once with the server's current version
+              } else if (result.reason === "VERSION_CONFLICT" && retries < 3) {
+                // Retry with the server's current version
                 versionRef.current = result.currentVersion;
-                attempt(result.currentVersion, true);
+                attempt(result.currentVersion, retries + 1);
               } else if (result.reason === "VERSION_CONFLICT") {
                 versionRef.current = result.currentVersion;
                 resolve({ ok: false, version: result.currentVersion, state: result.currentState });
@@ -171,7 +171,7 @@ export function useRealtimeOrderSocketIO(
           );
         }
 
-        attempt(versionRef.current, false);
+        attempt(versionRef.current, 0);
       });
     },
     [],

@@ -1000,12 +1000,13 @@ function POSTerminalContent() {
 
   const clearCart = useCallback(() => {
     dispatchCart({ type: "CLEAR" });
+    emitCartOp([{ op: "CLEAR_ITEMS" }]);
     setHeldOrderId(null);
     setSelectedCustomer(null);
     setGlobalDiscount(0);
     setGlobalDiscountType("percent");
     setMobileView("products");
-  }, []);
+  }, [emitCartOp]);
 
   const [showClearCartKotWarning, setShowClearCartKotWarning] = useState(false);
 
