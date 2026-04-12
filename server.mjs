@@ -53,22 +53,11 @@ let applyOperations;
 let dbRecordToState;
 
 async function loadModules() {
-  // These are compiled by Next.js build into .next — import from source
-  // using dynamic import with absolute paths resolved at runtime.
-  // Since server.mjs runs outside Next.js bundler, we use the pg pool directly.
-  const { PrismaClient } = await import("./src/generated/prisma/client/index.js");
+  // Prisma 7 generates .ts files — Node.js 24 handles them with --experimental-strip-types
+  const { PrismaClient } = await import("./src/generated/prisma/client.ts");
   const { PrismaPg } = await import("@prisma/adapter-pg");
-  const pg = await import("pg");
 
-  const pool = new pg.default.Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 20,
-    min: 2,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
-  });
-
-  const adapter = new PrismaPg(pool);
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
   prisma = new PrismaClient({ adapter });
 }
 

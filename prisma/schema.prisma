@@ -1,9 +1,10 @@
 // BizArch ERP - Database Schema
-// Prisma 7.x with PostgreSQL on Neon
+// Prisma 7.x with PostgreSQL (Neon on Vercel, local PG 17 on VPS)
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
