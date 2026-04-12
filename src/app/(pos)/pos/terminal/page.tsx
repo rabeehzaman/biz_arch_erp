@@ -1065,8 +1065,6 @@ function POSTerminalContent() {
     setView("cart");
     setMobileView("products");
     setPreBillPrinted(false);
-    // Restaurant resting state: always prompt for next table/order
-    setShowTableSelect(true);
   }, []);
 
   const handleTabSwitch = useCallback((targetId: string) => {
@@ -2932,8 +2930,14 @@ function POSTerminalContent() {
             }
 
             const oldTable = selectedTable;
-            if (oldTable) {
-              // Free the old table before reassigning — await to ensure it completes
+
+            // If current tab already has items AND a different table, stash it
+            // and start fresh — don't carry items from one table to another
+            if (oldTable && oldTable.id !== table.id && cartState.items.length > 0) {
+              switchToNewTab(snapshotCurrentTab());
+              resetLiveState();
+            } else if (oldTable) {
+              // Free the old table (empty cart, just switching tables)
               await freeTable(oldTable.id);
             }
 
