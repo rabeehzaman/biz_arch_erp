@@ -17,12 +17,10 @@ export async function GET(
     const { tableId } = await params;
 
     // Find any open order for this table across ALL open sessions in the org
-    // Exclude orders that already had their estimate bill printed (table was freed)
     const order = await prisma.pOSOpenOrder.findFirst({
       where: {
         organizationId,
         tableId,
-        preBillPrinted: false,
         session: { status: "OPEN" },
       },
       orderBy: { updatedAt: "desc" },
