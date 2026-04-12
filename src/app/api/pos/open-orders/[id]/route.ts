@@ -114,6 +114,11 @@ export async function PUT(
       }
     }
 
+    // When Socket.IO is active (deviceId present), don't increment version on
+    // HTTP persist — Socket.IO order:mutate owns the version counter.
+    // This prevents version conflicts between the two write paths.
+    const shouldIncrementVersion = !deviceId;
+
     const result = await prisma.pOSOpenOrder.upsert({
       where: { id },
       create: {
@@ -126,7 +131,7 @@ export async function PUT(
       },
       update: {
         ...data,
-        version: { increment: 1 },
+        ...(shouldIncrementVersion ? { version: { increment: 1 } } : {}),
       },
       select: { id: true, version: true, orderNumber: true },
     });
