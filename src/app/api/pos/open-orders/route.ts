@@ -17,7 +17,37 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json(openOrders);
+    // Filter out stale empty orders (no items, no KOT) — these are abandoned tabs
+    // that pollute the tab list and occupy tables they shouldn't
+    const activeOrders = openOrders.filter((o) => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      const kotIds = Array.isArray(o.kotOrderIds) ? o.kotOrderIds : [];
+      return items.length > 0 || kotIds.length > 0;
+    });
+
+    // Clean up stale empty orders in the background (free their tables too)
+    const staleOrders = openOrders.filter((o) => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      const kotIds = Array.isArray(o.kotOrderIds) ? o.kotOrderIds : [];
+      return items.length === 0 && kotIds.length === 0;
+    });
+    if (staleOrders.length > 0) {
+      const staleIds = staleOrders.map((o) => o.id);
+      const staleTableIds = staleOrders.filter((o) => o.tableId).map((o) => o.tableId!);
+      // Delete stale orders and free their tables
+      prisma.pOSOpenOrder.deleteMany({ where: { id: { in: staleIds } } })
+        .then(() => {
+          if (staleTableIds.length > 0) {
+            return prisma.restaurantTable.updateMany({
+              where: { id: { in: staleTableIds }, organizationId, status: "OCCUPIED" },
+              data: { status: "AVAILABLE", guestCount: null, currentOrderId: null },
+            });
+          }
+        })
+        .catch(() => {}); // fire-and-forget cleanup
+    }
+
+    return NextResponse.json(activeOrders);
   } catch (error) {
     console.error("Failed to fetch open orders:", error);
     return NextResponse.json(
