@@ -16,11 +16,11 @@ jobs:
           host: 157.180.86.23
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
-          script_stop: true
           command_timeout: 10m
           script: |
+            set -e
             cd /opt/bizarch/app
-            git pull origin main
+            git checkout -- . && git pull origin main
             npm ci --production=false
             npx prisma generate
             npx prisma db push --accept-data-loss
