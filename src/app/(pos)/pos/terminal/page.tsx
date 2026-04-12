@@ -497,19 +497,17 @@ function POSTerminalContent() {
   const activeTabRemovedRef = useRef<(() => void) | null>(null);
 
   // Tab system — generalises per-table context to unlimited concurrent orders
+  const socketVersionSyncRef = useRef<(tabId: string, version: number) => void>();
   const {
     tabs, activeTabId, activeTabLabel, activeTabOrderNumber, activeTabCreatedAt, tabCount,
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
     findTabByTableId, updateActiveTabLabel, getAllTableIds, clearAllTabs,
     isHydrated, initialTabContext, persistTab, scheduleSave, mutateOpenOrders, adoptAsActiveTab,
-  const socketVersionSyncRef = useRef<(tabId: string, version: number) => void>();
-
   } = usePOSTabs(
     posSession?.id ?? null,
     (tab) => remoteUpdateRef.current?.(tab),
     () => activeTabRemovedRef.current?.(),
     isRestaurantEnabled ? organizationId : null,
-    // Sync DB version to Socket.IO hook after HTTP persist
     (tabId: string, version: number) => { socketVersionSyncRef.current?.(tabId, version); },
   );
   const [showTabsSheet, setShowTabsSheet] = useState(false);
@@ -1168,12 +1166,18 @@ function POSTerminalContent() {
     };
   }, [resetLiveState]);
 
-  // Auto-save active tab to DB on KOT/metadata changes only (not live cart edits)
+  // Auto-save active tab to DB on metadata changes.
+  // When Socket.IO is active, only persist on critical metadata (table, KOT, customer) —
+  // cart item mutations go through Socket.IO order:mutate to avoid version conflicts.
   useEffect(() => {
     if (!isHydrated || !posSession) return;
-    // Don't persist blank tabs (no table, no items) — avoids ghost orders after checkout/reset
     if (!selectedTable && cartState.items.length === 0 && kotSentQuantities.size === 0) return;
-    scheduleSave(snapshotCurrentTab());
+    if (isSocketIOEnabled) {
+      // Immediate persist for metadata only — Socket.IO handles cart items
+      persistTab(snapshotCurrentTab());
+    } else {
+      scheduleSave(snapshotCurrentTab());
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, preBillPrinted]);
 
