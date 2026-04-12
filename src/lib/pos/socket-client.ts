@@ -32,8 +32,8 @@ function getDeviceId(): string {
 export function getPosSocket(): POSSocket {
   if (socket) return socket;
 
-  const url = process.env.NEXT_PUBLIC_SOCKET_URL || "";
-  socket = io(`${url}/pos`, {
+  // Connect to same origin — cookies sent automatically, no cross-origin issues
+  socket = io("/pos", {
     withCredentials: true,
     transports: ["websocket", "polling"],
     reconnection: true,

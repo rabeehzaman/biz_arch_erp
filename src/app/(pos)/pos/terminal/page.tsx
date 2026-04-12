@@ -453,8 +453,8 @@ function POSTerminalContent() {
 
   // Restaurant state
   const isRestaurantEnabled = !!(authSession?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
-  const isSocketIOEnabled = !!(authSession?.user as { isSocketIOEnabled?: boolean })?.isSocketIOEnabled
-    && !!process.env.NEXT_PUBLIC_SOCKET_URL;
+  // Socket.IO enabled when NEXT_PUBLIC_SOCKET_URL is set at build time (VPS only, never on Vercel)
+  const isSocketIOEnabled = !!process.env.NEXT_PUBLIC_SOCKET_URL;
   const [selectedTable, setSelectedTable] = useState<{ id: string; number: number; name: string; section?: string; capacity: number } | null>(null);
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [orderType, setOrderType] = useState<"DINE_IN" | "TAKEAWAY">("DINE_IN");
@@ -2872,9 +2872,10 @@ function POSTerminalContent() {
               freeTable(oldTable.id);
             }
 
-            // Assign table to the current tab (table becomes OCCUPIED when KOT is sent)
+            // Assign table and mark OCCUPIED immediately so other devices see it
             setSelectedTable(table);
             setOrderType("DINE_IN");
+            occupyTable(table.id);
             // Update tab label immediately (don't wait for auto-label effect)
             const newLabel = selectedCustomer
               ? `#${activeTabOrderNumber} · T${table.number} - ${selectedCustomer.name}`
