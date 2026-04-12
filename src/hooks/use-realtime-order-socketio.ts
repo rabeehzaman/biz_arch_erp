@@ -15,7 +15,7 @@ interface UseRealtimeOrderSocketIOOptions {
 interface UseRealtimeOrderSocketIOReturn {
   isConnected: boolean;
   /** Emit a mutation directly via Socket.IO for instant broadcast */
-  emitMutation: (orderId: string, ops: OrderOperation[], expectedVersion: number) => Promise<{
+  emitMutation: (orderId: string, ops: OrderOperation[]) => Promise<{
     ok: boolean;
     version: number;
     state?: SerializedOrderState;
