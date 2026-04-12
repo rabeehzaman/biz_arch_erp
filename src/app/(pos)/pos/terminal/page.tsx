@@ -2376,7 +2376,7 @@ function POSTerminalContent() {
                     <CartItem
                       key={`${item.productId}:${item.variantId || ""}:${item.quantity}:${item.discount}`}
                       item={item}
-                      onRemove={(productId) => { feedbackRemoveItem(); (isRestaurantEnabled ? handleCartItemRemove : removeFromCart)(productId); }}
+                      onRemove={(productId, variantId) => { feedbackRemoveItem(); (isRestaurantEnabled ? handleCartItemRemove : removeFromCart)(productId, variantId); }}
                       kotSentQty={isRestaurantEnabled ? (kotSentQuantities.get(cartLineKey(item.productId, item.variantId)) ?? 0) : undefined}
                       onQuantityChange={isRestaurantEnabled ? (productId, variantId, qty) => {
                         feedbackQuantity();
