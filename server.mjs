@@ -56,8 +56,14 @@ async function loadModules() {
   // Prisma 7 generates .ts files — Node.js 24 handles them with --experimental-strip-types
   const { PrismaClient } = await import("./src/generated/prisma/client.ts");
   const { PrismaPg } = await import("@prisma/adapter-pg");
+  const pg = await import("pg");
 
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  // Use DIRECT_URL (no PgBouncer) for the long-running server process.
+  // Pass explicit pg.Pool so PrismaPg reads credentials from the connection string.
+  const pool = new pg.default.Pool({
+    connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL,
+  });
+  const adapter = new PrismaPg(pool);
   prisma = new PrismaClient({ adapter });
 }
 
