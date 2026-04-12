@@ -836,7 +836,11 @@ function POSTerminalContent() {
       quantity: 1,
       variantId: uniqueId,
     });
-  }, [feedbackAddItem]);
+    // If items are added after bill was printed, reset billed state
+    if (preBillPrinted) {
+      setPreBillPrinted(false);
+    }
+  }, [feedbackAddItem, preBillPrinted]);
 
   // State for variant picker dialog
   const [variantPickerProduct, setVariantPickerProduct] = useState<POSProduct | null>(null);
@@ -1143,7 +1147,7 @@ function POSTerminalContent() {
     if (!selectedTable && cartState.items.length === 0 && kotSentQuantities.size === 0) return;
     scheduleSave(snapshotCurrentTab());
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view]);
+  }, [selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, preBillPrinted]);
 
   // Persist immediately when page becomes hidden (browser tab close / app switch)
   useEffect(() => {
@@ -1515,13 +1519,9 @@ function POSTerminalContent() {
       toast.success(`KOT ${kot.kotNumber} sent to kitchen`);
     }
 
-    // Update table status to OCCUPIED if it was AVAILABLE
+    // Update table status to OCCUPIED (with retry logic)
     if (selectedTable?.id) {
-      fetch(`/api/restaurant/tables/${selectedTable.id}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "OCCUPIED" }),
-      }).catch(() => {});
+      occupyTable(selectedTable.id);
     }
 
     return { kotId: kot.id, kotSentQuantities: newSentQtys, kotOrderIds: updatedKotOrderIds };
