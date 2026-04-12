@@ -497,7 +497,7 @@ function POSTerminalContent() {
   const activeTabRemovedRef = useRef<(() => void) | null>(null);
 
   // Tab system — generalises per-table context to unlimited concurrent orders
-  const socketVersionSyncRef = useRef<(tabId: string, version: number) => void>();
+  const socketVersionSyncRef = useRef<((tabId: string, version: number) => void) | undefined>(undefined);
   const {
     tabs, activeTabId, activeTabLabel, activeTabOrderNumber, activeTabCreatedAt, tabCount,
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
