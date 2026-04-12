@@ -20,6 +20,8 @@ interface UseRealtimeOrderSocketIOReturn {
     version: number;
     state?: SerializedOrderState;
   }>;
+  /** Sync version after HTTP persistTab bumps the DB version */
+  updateVersion: (v: number) => void;
 }
 
 export function useRealtimeOrderSocketIO(
@@ -132,7 +134,12 @@ export function useRealtimeOrderSocketIO(
     };
   }, [orderId]);
 
-  // ── Emit mutation for instant cart sync ─────────────────────────
+  // Allow external version sync (e.g. after HTTP persistTab bumps the version)
+  const updateVersion = useCallback((v: number) => {
+    versionRef.current = v;
+  }, []);
+
+  // ── Emit mutation for instant cart sync (auto-retries on version conflict) ──
   const emitMutation = useCallback(
     (targetOrderId: string, ops: OrderOperation[]) => {
       return new Promise<{ ok: boolean; version: number; state?: SerializedOrderState }>((resolve) => {
@@ -142,25 +149,33 @@ export function useRealtimeOrderSocketIO(
           return;
         }
 
-        socket.emit(
-          "order:mutate",
-          { orderId: targetOrderId, ops, expectedVersion: versionRef.current },
-          (result: any) => {
-            if (result.ok) {
-              versionRef.current = result.version;
-              resolve({ ok: true, version: result.version });
-            } else if (result.reason === "VERSION_CONFLICT") {
-              versionRef.current = result.currentVersion;
-              resolve({ ok: false, version: result.currentVersion, state: result.currentState });
-            } else {
-              resolve({ ok: false, version: versionRef.current });
-            }
-          },
-        );
+        function attempt(expectedVersion: number, isRetry: boolean) {
+          socket!.emit(
+            "order:mutate",
+            { orderId: targetOrderId, ops, expectedVersion },
+            (result: any) => {
+              if (result.ok) {
+                versionRef.current = result.version;
+                resolve({ ok: true, version: result.version });
+              } else if (result.reason === "VERSION_CONFLICT" && !isRetry) {
+                // Retry once with the server's current version
+                versionRef.current = result.currentVersion;
+                attempt(result.currentVersion, true);
+              } else if (result.reason === "VERSION_CONFLICT") {
+                versionRef.current = result.currentVersion;
+                resolve({ ok: false, version: result.currentVersion, state: result.currentState });
+              } else {
+                resolve({ ok: false, version: versionRef.current });
+              }
+            },
+          );
+        }
+
+        attempt(versionRef.current, false);
       });
     },
     [],
   );
 
-  return { isConnected, emitMutation };
+  return { isConnected, emitMutation, updateVersion };
 }

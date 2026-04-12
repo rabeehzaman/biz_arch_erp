@@ -178,6 +178,7 @@ export function usePOSTabs(
   onActiveTabRemoteUpdate?: (tab: TabContext) => void,
   onActiveTabRemoved?: () => void,
   organizationId?: string | null,
+  onVersionUpdate?: (tabId: string, version: number) => void,
 ) {
   // Inactive tabs — the active tab's state lives in the component's hooks
   const [tabs, setTabs] = useState<Map<string, TabContext>>(() => new Map());
@@ -192,6 +193,8 @@ export function usePOSTabs(
   onActiveTabRemoteUpdateRef.current = onActiveTabRemoteUpdate;
   const onActiveTabRemovedRef = useRef(onActiveTabRemoved);
   onActiveTabRemovedRef.current = onActiveTabRemoved;
+  const onVersionUpdateRef = useRef(onVersionUpdate);
+  onVersionUpdateRef.current = onVersionUpdate;
 
   // DB persistence state
   const [isHydrated, setIsHydrated] = useState(false);
@@ -444,6 +447,7 @@ export function usePOSTabs(
       .then((result) => {
         if (result?.version != null) {
           versionsRef.current.set(tab.id, result.version);
+          onVersionUpdateRef.current?.(tab.id, result.version);
         }
         // Adopt server-assigned order number if local tab has a provisional one
         if (result?.orderNumber && result.orderNumber > 0) {

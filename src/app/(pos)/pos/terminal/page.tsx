@@ -502,11 +502,15 @@ function POSTerminalContent() {
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
     findTabByTableId, updateActiveTabLabel, getAllTableIds, clearAllTabs,
     isHydrated, initialTabContext, persistTab, scheduleSave, mutateOpenOrders, adoptAsActiveTab,
+  const socketVersionSyncRef = useRef<(tabId: string, version: number) => void>();
+
   } = usePOSTabs(
     posSession?.id ?? null,
     (tab) => remoteUpdateRef.current?.(tab),
     () => activeTabRemovedRef.current?.(),
     isRestaurantEnabled ? organizationId : null,
+    // Sync DB version to Socket.IO hook after HTTP persist
+    (tabId: string, version: number) => { socketVersionSyncRef.current?.(tabId, version); },
   );
   const [showTabsSheet, setShowTabsSheet] = useState(false);
 
@@ -560,11 +564,12 @@ function POSTerminalContent() {
     !isSocketIOEnabled ? activeOrderId : null,
     realtimeCallbacks,
   );
-  const { isConnected: socketIOConnected, emitMutation } = useRealtimeOrderSocketIO(
+  const { isConnected: socketIOConnected, emitMutation, updateVersion: updateSocketVersion } = useRealtimeOrderSocketIO(
     isSocketIOEnabled ? activeOrderId : null,
     realtimeCallbacks,
   );
   const isSocketConnected = isSocketIOEnabled ? socketIOConnected : ablyConnected;
+  socketVersionSyncRef.current = (_tabId, version) => updateSocketVersion(version);
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null; posReceiptRenderConfig?: { electron: { allowedModes: string[]; defaultMode: string | null }; mobile: { renderMode: string } } }>(
