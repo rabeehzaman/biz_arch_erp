@@ -516,39 +516,41 @@ function POSTerminalContent() {
   const realtimeCallbacks = {
     organizationId,
     onRemoteUpdate: useCallback((serverItems: CartItemData[], _version: number, state: SerializedOrderState) => {
-      // Another device sent updates — merge server items with our local unsent items
-      const localItems = cartStateRef.current.items;
-      const localSentQtys = kotSentQuantitiesRef.current;
-      const lineKey = (item: CartItemData) => item.variantId ? `${item.productId}::${item.variantId}` : item.productId;
+      if (isSocketIOEnabled) {
+        // Socket.IO: server state is the single source of truth — use directly
+        dispatchCart({ type: "RESTORE", items: serverItems });
+      } else {
+        // Ably: merge server items with local unsent items (KOT-only sync)
+        const localItems = cartStateRef.current.items;
+        const localSentQtys = kotSentQuantitiesRef.current;
+        const lineKey = (item: CartItemData) => item.variantId ? `${item.productId}::${item.variantId}` : item.productId;
 
-      // Find local items that have unsent quantities (added locally but not yet KOT'd)
-      const unsentOps: OrderOperation[] = [];
-      for (const item of localItems) {
-        const key = lineKey(item);
-        const sentQty = localSentQtys.get(key) ?? 0;
-        const unsent = item.quantity - sentQty;
-        if (unsent > 0) {
-          unsentOps.push({ op: "ADD_ITEM", item, quantity: unsent });
+        const unsentOps: OrderOperation[] = [];
+        for (const item of localItems) {
+          const key = lineKey(item);
+          const sentQty = localSentQtys.get(key) ?? 0;
+          const unsent = item.quantity - sentQty;
+          if (unsent > 0) {
+            unsentOps.push({ op: "ADD_ITEM", item, quantity: unsent });
+          }
         }
-      }
 
-      // Merge: server items (committed) + our unsent local items on top
-      let mergedItems = serverItems;
-      if (unsentOps.length > 0) {
-        const baseState: SerializedOrderState = {
-          items: serverItems, label: "", orderType: "DINE_IN", isReturnMode: false,
-          customerId: null, customerName: null, tableId: null, tableNumber: null,
-          tableName: null, tableSection: null, tableCapacity: null, heldOrderId: null,
-          kotSentQuantities: {}, kotOrderIds: [],
-        };
-        mergedItems = applyOperations(baseState, unsentOps).items;
+        let mergedItems = serverItems;
+        if (unsentOps.length > 0) {
+          const baseState: SerializedOrderState = {
+            items: serverItems, label: "", orderType: "DINE_IN", isReturnMode: false,
+            customerId: null, customerName: null, tableId: null, tableNumber: null,
+            tableName: null, tableSection: null, tableCapacity: null, heldOrderId: null,
+            kotSentQuantities: {}, kotOrderIds: [],
+          };
+          mergedItems = applyOperations(baseState, unsentOps).items;
+        }
+        dispatchCart({ type: "RESTORE", items: mergedItems });
       }
-
-      dispatchCart({ type: "RESTORE", items: mergedItems });
       setKotSentQuantities(new Map(Object.entries(state.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
       setKotOrderIds(state.kotOrderIds || []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
+    }, [isSocketIOEnabled]),
     onRemoteDelete: useCallback(() => {
       resetLiveState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2909,14 +2911,14 @@ function POSTerminalContent() {
 
             const oldTable = selectedTable;
             if (oldTable) {
-              // Free the old table before reassigning
-              freeTable(oldTable.id);
+              // Free the old table before reassigning — await to ensure it completes
+              await freeTable(oldTable.id);
             }
 
             // Assign table and mark OCCUPIED immediately so other devices see it
             setSelectedTable(table);
             setOrderType("DINE_IN");
-            occupyTable(table.id);
+            await occupyTable(table.id);
             // Update tab label immediately (don't wait for auto-label effect)
             const newLabel = selectedCustomer
               ? `#${activeTabOrderNumber} · T${table.number} - ${selectedCustomer.name}`
