@@ -86,6 +86,7 @@ export function useRealtimeOrder(
             heldOrderId: (data.heldOrderId as string) || null,
             kotSentQuantities: (data.kotSentQuantities as Record<string, number>) || {},
             kotOrderIds: (data.kotOrderIds as string[]) || [],
+            preBillPrinted: (data.preBillPrinted as boolean) || false,
           };
           onRemoteUpdateRef.current(payload.items, payload.version, state);
         }

@@ -549,6 +549,7 @@ function POSTerminalContent() {
       }
       setKotSentQuantities(new Map(Object.entries(state.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
       setKotOrderIds(state.kotOrderIds || []);
+      if (state.preBillPrinted !== undefined) setPreBillPrinted(state.preBillPrinted);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isSocketIOEnabled]),
     onRemoteDelete: useCallback(() => {

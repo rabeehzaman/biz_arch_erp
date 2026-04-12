@@ -151,6 +151,7 @@ export async function PUT(
         heldOrderId: data.heldOrderId,
         kotSentQuantities: data.kotSentQuantities,
         kotOrderIds: data.kotOrderIds,
+        preBillPrinted: data.preBillPrinted,
       });
     }
 
@@ -167,7 +168,7 @@ export async function PUT(
           tableNumber: data.tableNumber, tableName: data.tableName,
           tableSection: data.tableSection, tableCapacity: data.tableCapacity,
           heldOrderId: data.heldOrderId, kotSentQuantities: data.kotSentQuantities,
-          kotOrderIds: data.kotOrderIds,
+          kotOrderIds: data.kotOrderIds, preBillPrinted: data.preBillPrinted,
         };
         const orderRoom = `org:${organizationId}:order:${result.id}`;
         io.to(orderRoom).emit("order:updated", {

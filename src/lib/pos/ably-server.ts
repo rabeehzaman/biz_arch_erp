@@ -63,6 +63,7 @@ export async function publishOrderUpdate(
       heldOrderId: state?.heldOrderId,
       kotSentQuantities: state?.kotSentQuantities,
       kotOrderIds: state?.kotOrderIds,
+      preBillPrinted: state?.preBillPrinted,
     });
 
     // Also notify org channel for tab-list sync

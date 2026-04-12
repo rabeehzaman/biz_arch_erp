@@ -143,6 +143,7 @@ function recordToState(record) {
     heldOrderId: record.heldOrderId,
     kotSentQuantities: record.kotSentQuantities ?? {},
     kotOrderIds: Array.isArray(record.kotOrderIds) ? record.kotOrderIds : [],
+    preBillPrinted: record.preBillPrinted ?? false,
   };
 }
 

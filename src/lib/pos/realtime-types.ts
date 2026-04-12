@@ -36,6 +36,7 @@ export interface SerializedOrderState {
   heldOrderId: string | null;
   kotSentQuantities: Record<string, number>;
   kotOrderIds: string[];
+  preBillPrinted?: boolean;
 }
 
 // ---------------------------------------------------------------------------
