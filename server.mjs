@@ -178,12 +178,14 @@ posNamespace.use(async (socket, next) => {
     const cookies = parseCookies(socket.handshake.headers.cookie);
 
     // Next-Auth v5 stores the JWT in authjs.session-token (HTTP) or
-    // __Secure-authjs.session-token (HTTPS)
-    const token =
-      cookies["authjs.session-token"] ||
-      cookies["__Secure-authjs.session-token"] ||
-      cookies["next-auth.session-token"] ||
-      cookies["__Secure-next-auth.session-token"];
+    // __Secure-authjs.session-token (HTTPS). Salt must match the cookie name.
+    const cookieName =
+      cookies["__Secure-authjs.session-token"] ? "__Secure-authjs.session-token" :
+      cookies["authjs.session-token"] ? "authjs.session-token" :
+      cookies["__Secure-next-auth.session-token"] ? "__Secure-next-auth.session-token" :
+      cookies["next-auth.session-token"] ? "next-auth.session-token" : "";
+
+    const token = cookies[cookieName];
 
     if (!token) {
       return next(new Error("No session token"));
@@ -194,7 +196,7 @@ posNamespace.use(async (socket, next) => {
       return next(new Error("AUTH_SECRET not configured"));
     }
 
-    const decoded = await decode({ token, secret, salt: "" });
+    const decoded = await decode({ token, secret, salt: cookieName });
 
     if (!decoded?.id || !decoded?.organizationId) {
       return next(new Error("Invalid session"));
