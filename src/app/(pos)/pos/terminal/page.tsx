@@ -1698,6 +1698,14 @@ function POSTerminalContent() {
       // Remove from cart
       removeFromCart(productId, variantId);
       toast.success(`Cancelled: ${item.variantName ? `${item.name} - ${item.variantName}` : item.name} (void KOT sent to kitchen)`);
+
+      // If order is now completely empty (no KOT items, no remaining cart items), close the tab
+      const hasRemainingItems = cartState.items.some(
+        i => makeLineKey(i.productId, i.variantId) !== makeLineKey(productId, variantId)
+      );
+      if (newSentQtys.size === 0 && !hasRemainingItems) {
+        handleCloseTab(activeTabId);
+      }
     } catch (error) {
       console.error("Failed to cancel kitchen item:", error);
       toast.error(t("pos.failedToCancelKitchenItem"));
