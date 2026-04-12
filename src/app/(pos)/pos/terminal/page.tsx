@@ -957,8 +957,8 @@ function POSTerminalContent() {
 
   const removeFromCart = useCallback((productId: string, variantId?: string) => {
     dispatchCart({ type: "REMOVE", productId, variantId });
-    emitCartOp([{ op: "REMOVE_ITEM", lineKey: makeLineKey(productId, variantId) }]);
-  }, [emitCartOp]);
+    // Note: Socket.IO REMOVE_ITEM is emitted in the onRemove handler with full lineKey (incl. unitId)
+  }, []);
 
   const scrollCartToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = cartItemsContainerRef.current;
@@ -2376,12 +2376,21 @@ function POSTerminalContent() {
                     <CartItem
                       key={`${item.productId}:${item.variantId || ""}:${item.quantity}:${item.discount}`}
                       item={item}
-                      onRemove={(productId, variantId) => { feedbackRemoveItem(); (isRestaurantEnabled ? handleCartItemRemove : removeFromCart)(productId, variantId); }}
+                      onRemove={(productId, variantId) => {
+                        feedbackRemoveItem();
+                        const fullKey = makeLineKey(productId, variantId, item.unitId);
+                        if (isRestaurantEnabled) {
+                          handleCartItemRemove(productId, variantId);
+                        } else {
+                          removeFromCart(productId, variantId);
+                        }
+                        emitCartOp([{ op: "REMOVE_ITEM", lineKey: fullKey }]);
+                      }}
                       kotSentQty={isRestaurantEnabled ? (kotSentQuantities.get(cartLineKey(item.productId, item.variantId)) ?? 0) : undefined}
                       onQuantityChange={isRestaurantEnabled ? (productId, variantId, qty) => {
                         feedbackQuantity();
                         dispatchCart({ type: "SET_QUANTITY", productId, variantId, quantity: qty });
-                        emitCartOp([{ op: "SET_QUANTITY", lineKey: makeLineKey(productId, variantId), quantity: qty }]);
+                        emitCartOp([{ op: "SET_QUANTITY", lineKey: makeLineKey(productId, variantId, item.unitId), quantity: qty }]);
                       } : undefined}
                     />
                   ))
