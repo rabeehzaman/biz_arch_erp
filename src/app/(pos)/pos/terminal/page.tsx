@@ -1690,6 +1690,11 @@ function POSTerminalContent() {
       newSentQtys.delete(key);
       setKotSentQuantities(newSentQtys);
 
+      // If all KOT items have been voided, free the table
+      if (newSentQtys.size === 0 && selectedTable) {
+        freeTable(selectedTable.id);
+      }
+
       // Remove from cart
       removeFromCart(productId, variantId);
       toast.success(`Cancelled: ${item.variantName ? `${item.name} - ${item.variantName}` : item.name} (void KOT sent to kitchen)`);
