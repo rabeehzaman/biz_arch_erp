@@ -2092,13 +2092,18 @@ function POSTerminalContent() {
   }, []);
 
   const toggleReturnMode = useCallback(() => {
-    setIsReturnMode((prev) => !prev);
+    setIsReturnMode((prev) => {
+      const next = !prev;
+      emitCartOp([{ op: "SET_RETURN_MODE", isReturnMode: next }]);
+      return next;
+    });
     dispatchCart({ type: "CLEAR" });
+    emitCartOp([{ op: "CLEAR_ITEMS" }]);
     setSelectedCustomer(null);
     setHeldOrderId(null);
     setView("cart");
     setMobileView("products");
-  }, []);
+  }, [emitCartOp]);
 
   const openPreviousOrders = useCallback(() => {
     setShowPreviousOrdersSheet(true);
@@ -2338,7 +2343,10 @@ function POSTerminalContent() {
                 <div className="border-b p-3">
                   <CustomerSelect
                     selectedCustomer={selectedCustomer}
-                    onSelect={setSelectedCustomer}
+                    onSelect={(c) => {
+                      setSelectedCustomer(c);
+                      emitCartOp([{ op: "SET_CUSTOMER", customerId: c?.id ?? null, customerName: c?.name ?? null }]);
+                    }}
                   />
                 </div>
               )}
@@ -2923,6 +2931,7 @@ function POSTerminalContent() {
             // Assign table and mark OCCUPIED immediately so other devices see it
             setSelectedTable(table);
             setOrderType("DINE_IN");
+            emitCartOp([{ op: "SET_TABLE", table: { id: table.id, number: table.number, name: table.name, section: table.section, capacity: table.capacity } }, { op: "SET_ORDER_TYPE", orderType: "DINE_IN" }]);
             await occupyTable(table.id);
             // Update tab label immediately (don't wait for auto-label effect)
             const newLabel = selectedCustomer
@@ -2955,6 +2964,7 @@ function POSTerminalContent() {
 
             setSelectedTable(null);
             setOrderType("TAKEAWAY");
+            emitCartOp([{ op: "SET_TABLE", table: null }, { op: "SET_ORDER_TYPE", orderType: "TAKEAWAY" }]);
             updateActiveTabLabel(`#${activeTabOrderNumber} · Takeaway`);
             setShowTableSelect(false);
             // Sync change to server
