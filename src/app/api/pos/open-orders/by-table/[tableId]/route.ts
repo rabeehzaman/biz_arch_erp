@@ -16,8 +16,8 @@ export async function GET(
     const organizationId = getOrgId(session);
     const { tableId } = await params;
 
-    // Find any open order for this table across ALL open sessions in the org
-    const order = await prisma.pOSOpenOrder.findFirst({
+    // Find open orders for this table, then filter out stale empty ones
+    const orders = await prisma.pOSOpenOrder.findMany({
       where: {
         organizationId,
         tableId,
@@ -25,6 +25,13 @@ export async function GET(
       },
       orderBy: { updatedAt: "desc" },
     });
+
+    // Only return orders that have items or KOT data — skip abandoned empty orders
+    const order = orders.find((o) => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      const kotIds = Array.isArray(o.kotOrderIds) ? o.kotOrderIds : [];
+      return items.length > 0 || kotIds.length > 0;
+    }) || null;
 
     return NextResponse.json({ order: order || null });
   } catch (error) {
