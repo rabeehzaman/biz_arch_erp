@@ -150,8 +150,9 @@ function recordToState(record) {
 // Boot
 // ---------------------------------------------------------------------------
 
-await loadModules();
+// app.prepare() loads .env files — must run before loadModules() reads DIRECT_URL
 await app.prepare();
+await loadModules();
 
 const httpServer = createServer((req, res) => {
   const parsedUrl = parse(req.url, true);
