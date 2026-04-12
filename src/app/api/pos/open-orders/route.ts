@@ -11,15 +11,6 @@ export async function GET() {
     }
 
     const organizationId = getOrgId(session);
-    const userId = session.user.id;
-
-    const posSession = await prisma.pOSSession.findFirst({
-      where: { organizationId, userId, status: "OPEN" },
-    });
-
-    if (!posSession) {
-      return NextResponse.json([]);
-    }
 
     const openOrders = await prisma.pOSOpenOrder.findMany({
       where: { organizationId, session: { status: "OPEN" } },

@@ -47,20 +47,8 @@ export async function PUT(
     }
 
     const organizationId = getOrgId(session);
-    const userId = session.user.id;
     const { id } = await params;
     const body = await request.json();
-
-    const posSession = await prisma.pOSSession.findFirst({
-      where: { organizationId, userId, status: "OPEN" },
-    });
-
-    if (!posSession) {
-      return NextResponse.json(
-        { error: "No open POS session found" },
-        { status: 400 }
-      );
-    }
 
     const {
       label, orderType, isReturnMode, items,
@@ -91,12 +79,28 @@ export async function PUT(
     // Check if this is a new order (needs server-assigned orderNumber)
     const existing = await prisma.pOSOpenOrder.findUnique({
       where: { id },
-      select: { id: true, orderNumber: true },
+      select: { id: true, orderNumber: true, sessionId: true },
     });
 
     let orderNumber = existing?.orderNumber ?? 0;
+    let sessionIdForCreate = existing?.sessionId ?? "";
 
     if (!existing) {
+      // New order — find any open session in the org for counter + assignment
+      const posSession = await prisma.pOSSession.findFirst({
+        where: { organizationId, status: "OPEN" },
+        orderBy: { openedAt: "desc" },
+      });
+
+      if (!posSession) {
+        return NextResponse.json(
+          { error: "No open POS session found" },
+          { status: 400 }
+        );
+      }
+
+      sessionIdForCreate = posSession.id;
+
       // Atomically increment session counter and assign order number
       const updated = await prisma.pOSSession.update({
         where: { id: posSession.id },
@@ -111,7 +115,7 @@ export async function PUT(
       create: {
         id,
         organizationId,
-        sessionId: posSession.id,
+        sessionId: sessionIdForCreate,
         ...data,
         orderNumber,
         version: 0,
