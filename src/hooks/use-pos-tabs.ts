@@ -202,7 +202,7 @@ export function usePOSTabs(
   const { data: dbOrders, mutate: mutateOpenOrders } = useSWR<DBOpenOrder[]>(
     sessionId ? "/api/pos/open-orders" : null,
     fetcher,
-    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 5000 }
+    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 30000 }
   );
 
   // Ably: listen for org-level order create/delete events to refresh the tab list.

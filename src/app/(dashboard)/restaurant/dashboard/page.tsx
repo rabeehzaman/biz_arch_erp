@@ -86,7 +86,7 @@ export default function RestaurantDashboardPage() {
   const { data: tables, isLoading, mutate } = useSWR<RestaurantTable[]>(
     "/api/restaurant/tables",
     fetcher,
-    { refreshInterval: 5000 }
+    {}
   );
 
   const [statusDialog, setStatusDialog] = useState<{

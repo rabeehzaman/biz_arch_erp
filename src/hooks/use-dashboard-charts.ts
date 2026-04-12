@@ -59,9 +59,9 @@ export function useDashboardCharts(fromDate?: string, toDate?: string) {
   const key = `/api/dashboard/charts${query ? `?${query}` : ""}`;
 
   const { data, error, isLoading } = useSWR<DashboardChartsData>(key, {
-    refreshInterval: 120000,
-    dedupingInterval: 30000,
-    revalidateOnFocus: true,
+    refreshInterval: 600000,
+    dedupingInterval: 60000,
+    revalidateOnFocus: false,
     refreshWhenHidden: false,
     refreshWhenOffline: false,
     keepPreviousData: true,
