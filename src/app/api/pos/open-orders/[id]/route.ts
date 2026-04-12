@@ -134,6 +134,18 @@ export async function PUT(
     // Notify other POS devices via SSE (legacy — tab list refresh)
     posEventBus.emit(organizationId, JSON.stringify({ type: "order-updated", id: result.id }));
 
+    // Socket.IO: broadcast order:created when a new order is first persisted
+    // so other devices see it immediately (not waiting for 30s SWR poll)
+    if (!existing) {
+      const io = getIO();
+      if (io) {
+        io.to(`org:${organizationId}`).emit("order:created", {
+          orderId: result.id,
+          deviceId: deviceId || "api",
+        });
+      }
+    }
+
     // Broadcast via Ably only on KOT saves (broadcast: true), not draft saves
     if (broadcast) {
       await publishOrderUpdate(organizationId, result.id, [], result.version, deviceId || "api", {
