@@ -36,11 +36,13 @@ export function useRealtimeOrderSocketIO(
   onRemoteDeleteRef.current = options.onRemoteDelete;
 
   const socketRef = useRef<Socket | null>(null);
+  const versionRef = useRef(0);
 
   // ── Socket.IO subscription ─────────────────────────────────────
   useEffect(() => {
     if (!orderId) {
       setIsConnected(false);
+      versionRef.current = 0;
       return;
     }
 
@@ -54,11 +56,17 @@ export function useRealtimeOrderSocketIO(
 
     const deviceId = getPosDeviceId();
 
+    function joinRoom(oid: string) {
+      socket.emit("order:join", oid, (_state: any, version: number) => {
+        versionRef.current = version || 0;
+      });
+    }
+
     function onConnect() {
       setIsConnected(true);
       // Rejoin room on reconnect
       if (orderIdRef.current) {
-        socket.emit("order:join", orderIdRef.current, () => {});
+        joinRoom(orderIdRef.current);
       }
     }
 
@@ -77,6 +85,9 @@ export function useRealtimeOrderSocketIO(
       if (payload.deviceId === deviceId) return;
       // Only handle updates for our order
       if (payload.orderId !== orderIdRef.current) return;
+
+      // Track server version for optimistic locking
+      if (payload.version) versionRef.current = payload.version;
 
       if (payload.state && onRemoteUpdateRef.current) {
         onRemoteUpdateRef.current(payload.state.items, payload.version, payload.state);
@@ -100,8 +111,8 @@ export function useRealtimeOrderSocketIO(
       }
     }
 
-    // Join the order room
-    socket.emit("order:join", orderId, () => {});
+    // Join the order room and capture server version
+    joinRoom(orderId);
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -123,24 +134,26 @@ export function useRealtimeOrderSocketIO(
 
   // ── Emit mutation for instant cart sync ─────────────────────────
   const emitMutation = useCallback(
-    (targetOrderId: string, ops: OrderOperation[], expectedVersion: number) => {
+    (targetOrderId: string, ops: OrderOperation[]) => {
       return new Promise<{ ok: boolean; version: number; state?: SerializedOrderState }>((resolve) => {
         const socket = socketRef.current;
         if (!socket?.connected) {
-          resolve({ ok: false, version: expectedVersion });
+          resolve({ ok: false, version: versionRef.current });
           return;
         }
 
         socket.emit(
           "order:mutate",
-          { orderId: targetOrderId, ops, expectedVersion },
+          { orderId: targetOrderId, ops, expectedVersion: versionRef.current },
           (result: any) => {
             if (result.ok) {
+              versionRef.current = result.version;
               resolve({ ok: true, version: result.version });
             } else if (result.reason === "VERSION_CONFLICT") {
+              versionRef.current = result.currentVersion;
               resolve({ ok: false, version: result.currentVersion, state: result.currentState });
             } else {
-              resolve({ ok: false, version: expectedVersion });
+              resolve({ ok: false, version: versionRef.current });
             }
           },
         );

@@ -831,13 +831,22 @@ function POSTerminalContent() {
     }
   }, []);
 
+  // Socket.IO live cart sync — emit operations directly for instant broadcast
+  const emitCartOp = useCallback((ops: OrderOperation[]) => {
+    if (!isSocketIOEnabled || !activeTabId) return;
+    emitMutation(activeTabId, ops);
+  }, [isSocketIOEnabled, activeTabId, emitMutation]);
+
   const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string, modifiers?: string[]) => {
     dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName, modifiers });
+    // Emit via Socket.IO for instant sync to other devices (VPS only)
+    const item = buildCartItemFromProduct(product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName, modifiers);
+    emitCartOp([{ op: "ADD_ITEM", item, quantity: quantity ?? 1 }]);
     // If items are added after bill was printed, reset billed state
     if (preBillPrinted) {
       setPreBillPrinted(false);
     }
-  }, [preBillPrinted]);
+  }, [preBillPrinted, emitCartOp]);
 
   // Quick Sale handler — adds an ad-hoc item with no inventory record
   const handleQuickSale = useCallback((price: number, description: string) => {
@@ -942,7 +951,8 @@ function POSTerminalContent() {
 
   const removeFromCart = useCallback((productId: string, variantId?: string) => {
     dispatchCart({ type: "REMOVE", productId, variantId });
-  }, []);
+    emitCartOp([{ op: "REMOVE_ITEM", lineKey: makeLineKey(productId, variantId) }]);
+  }, [emitCartOp]);
 
   const scrollCartToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = cartItemsContainerRef.current;
@@ -2347,6 +2357,7 @@ function POSTerminalContent() {
                       onQuantityChange={isRestaurantEnabled ? (productId, variantId, qty) => {
                         feedbackQuantity();
                         dispatchCart({ type: "SET_QUANTITY", productId, variantId, quantity: qty });
+                        emitCartOp([{ op: "SET_QUANTITY", lineKey: makeLineKey(productId, variantId), quantity: qty }]);
                       } : undefined}
                     />
                   ))
