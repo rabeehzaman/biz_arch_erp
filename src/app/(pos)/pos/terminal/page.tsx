@@ -2110,7 +2110,6 @@ function POSTerminalContent() {
         onTableClick={() => setShowTableSelect(true)}
         tabCount={tabCount}
         onTabsClick={() => setShowTabsSheet(true)}
-        isSocketConnected={isRestaurantEnabled ? isSocketConnected : undefined}
         soundEnabled={soundEnabled}
         onToggleSound={toggleSound}
       />
