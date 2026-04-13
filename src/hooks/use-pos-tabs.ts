@@ -202,30 +202,11 @@ export function usePOSTabs(
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const versionsRef = useRef<Map<string, number>>(new Map());
 
-  // Fetch open orders from DB — Ably provides instant sync, polling is a 5s safety-net fallback
+  // Fetch open orders from DB — fetches once on load to hydrate tabs
   const { data: dbOrders, mutate: mutateOpenOrders } = useSWR<DBOpenOrder[]>(
     sessionId ? "/api/pos/open-orders" : null,
-    fetcher,
-    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 10000 }
+    fetcher
   );
-
-  // SSE: fallback event stream for tab list sync
-  useEffect(() => {
-    if (!sessionId || !organizationId) return;
-
-    let es: EventSource | null = null;
-    try {
-      es = new EventSource("/api/pos/events");
-      es.onmessage = () => { mutateOpenOrders(); };
-      es.onerror = () => {};
-    } catch {
-      // EventSource not supported
-    }
-
-    return () => {
-      es?.close();
-    };
-  }, [sessionId, organizationId, mutateOpenOrders]);
 
   // Hydrate from DB — runs once when data first arrives
   useEffect(() => {
