@@ -49,11 +49,7 @@ import { ReturnPanel } from "@/components/pos/return-panel";
 import { PreviousOrdersSheet } from "@/components/pos/previous-orders-sheet";
 import { TableSelect } from "@/components/pos/table-select";
 import { usePOSTabs, type TabContext } from "@/hooks/use-pos-tabs";
-import { useRealtimeOrder } from "@/hooks/use-realtime-order";
-import { useRealtimeOrderSocketIO } from "@/hooks/use-realtime-order-socketio";
-import type { OrderOperation, SerializedOrderState } from "@/lib/pos/realtime-types";
 import { cartLineKey as makeLineKey } from "@/lib/pos/realtime-types";
-import { applyOperations } from "@/lib/pos/apply-operations";
 import { OrderTabsSheet } from "@/components/pos/order-tabs-sheet";
 import type { PreBillReceiptData } from "@/lib/pos/pre-bill-print";
 import type { KOTReceiptData } from "@/components/restaurant/kot-receipt";
@@ -453,8 +449,6 @@ function POSTerminalContent() {
 
   // Restaurant state
   const isRestaurantEnabled = !!(authSession?.user as { isRestaurantModuleEnabled?: boolean })?.isRestaurantModuleEnabled;
-  // Socket.IO enabled when NEXT_PUBLIC_SOCKET_URL is set at build time (VPS only, never on Vercel)
-  const isSocketIOEnabled = !!process.env.NEXT_PUBLIC_SOCKET_URL;
   const [selectedTable, setSelectedTable] = useState<{ id: string; number: number; name: string; section?: string; capacity: number } | null>(null);
   const [showTableSelect, setShowTableSelect] = useState(false);
   const [orderType, setOrderType] = useState<"DINE_IN" | "TAKEAWAY">("DINE_IN");
@@ -497,7 +491,6 @@ function POSTerminalContent() {
   const activeTabRemovedRef = useRef<(() => void) | null>(null);
 
   // Tab system — generalises per-table context to unlimited concurrent orders
-  const socketVersionSyncRef = useRef<((tabId: string, version: number) => void) | undefined>(undefined);
   const {
     tabs, activeTabId, activeTabLabel, activeTabOrderNumber, activeTabCreatedAt, tabCount,
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
@@ -507,70 +500,9 @@ function POSTerminalContent() {
     posSession?.id ?? null,
     (tab) => remoteUpdateRef.current?.(tab),
     () => activeTabRemovedRef.current?.(),
-    isRestaurantEnabled ? organizationId : null,
-    (tabId: string, version: number) => { socketVersionSyncRef.current?.(tabId, version); },
+    isRestaurantEnabled ? organizationId : null
   );
   const [showTabsSheet, setShowTabsSheet] = useState(false);
-
-  // ── Real-time sync (Ably or Socket.IO based on org toggle) ─────────
-  const realtimeCallbacks = {
-    organizationId,
-    onRemoteUpdate: useCallback((serverItems: CartItemData[], _version: number, state: SerializedOrderState) => {
-      if (isSocketIOEnabled) {
-        // Socket.IO: server state is the single source of truth — use directly
-        dispatchCart({ type: "RESTORE", items: serverItems });
-      } else {
-        // Ably: merge server items with local unsent items (KOT-only sync)
-        const localItems = cartStateRef.current.items;
-        const localSentQtys = kotSentQuantitiesRef.current;
-        const lineKey = (item: CartItemData) => item.variantId ? `${item.productId}::${item.variantId}` : item.productId;
-
-        const unsentOps: OrderOperation[] = [];
-        for (const item of localItems) {
-          const key = lineKey(item);
-          const sentQty = localSentQtys.get(key) ?? 0;
-          const unsent = item.quantity - sentQty;
-          if (unsent > 0) {
-            unsentOps.push({ op: "ADD_ITEM", item, quantity: unsent });
-          }
-        }
-
-        let mergedItems = serverItems;
-        if (unsentOps.length > 0) {
-          const baseState: SerializedOrderState = {
-            items: serverItems, label: "", orderType: "DINE_IN", isReturnMode: false,
-            customerId: null, customerName: null, tableId: null, tableNumber: null,
-            tableName: null, tableSection: null, tableCapacity: null, heldOrderId: null,
-            kotSentQuantities: {}, kotOrderIds: [],
-          };
-          mergedItems = applyOperations(baseState, unsentOps).items;
-        }
-        dispatchCart({ type: "RESTORE", items: mergedItems });
-      }
-      setKotSentQuantities(new Map(Object.entries(state.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
-      setKotOrderIds(state.kotOrderIds || []);
-      if (state.preBillPrinted !== undefined) setPreBillPrinted(state.preBillPrinted);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSocketIOEnabled]),
-    onRemoteDelete: useCallback(() => {
-      resetLiveState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
-  };
-
-  // Both hooks always called (React rules), but only one receives a non-null orderId
-  const activeOrderId = isHydrated && isRestaurantEnabled ? activeTabId : null;
-
-  const { isConnected: ablyConnected } = useRealtimeOrder(
-    !isSocketIOEnabled ? activeOrderId : null,
-    realtimeCallbacks,
-  );
-  const { isConnected: socketIOConnected, emitMutation, updateVersion: updateSocketVersion } = useRealtimeOrderSocketIO(
-    isSocketIOEnabled ? activeOrderId : null,
-    realtimeCallbacks,
-  );
-  const isSocketConnected = isSocketIOEnabled ? socketIOConnected : ablyConnected;
-  socketVersionSyncRef.current = (_tabId, version) => updateSocketVersion(version);
 
   // Fetch org settings for POS accounting mode
   const { data: orgSettings } = useSWR<{ posAccountingMode: string; roundOffMode: string; posDefaultCashAccountId: string | null; posDefaultBankAccountId: string | null; posReceiptRenderConfig?: { electron: { allowedModes: string[]; defaultMode: string | null }; mobile: { renderMode: string } } }>(
@@ -837,11 +769,10 @@ function POSTerminalContent() {
     }
   }, []);
 
-  // Socket.IO live cart sync — emit operations directly for instant broadcast
-  const emitCartOp = useCallback((ops: OrderOperation[]) => {
-    if (!isSocketIOEnabled || !activeTabId) return;
-    emitMutation(activeTabId, ops);
-  }, [isSocketIOEnabled, activeTabId, emitMutation]);
+  // Socket.IO live cart sync — abandoned
+  const emitCartOp = useCallback((ops: any[]) => {
+    // No-op
+  }, []);
 
   const addToCart = useCallback((product: any, quantity?: number, unitId?: string, unitName?: string, conversionFactor?: number, price?: number | null, variantId?: string, variantName?: string, modifiers?: string[]) => {
     dispatchCart({ type: "ADD", product, quantity, unitId, unitName, conversionFactor, price, variantId, variantName, modifiers });
@@ -1171,20 +1102,13 @@ function POSTerminalContent() {
     };
   }, [resetLiveState]);
 
-  // Auto-save active tab to DB on metadata changes.
-  // When Socket.IO is active, only persist on critical metadata (table, KOT, customer) —
-  // cart item mutations go through Socket.IO order:mutate to avoid version conflicts.
+  // Auto-save active tab to DB on cart or metadata changes.
   useEffect(() => {
     if (!isHydrated || !posSession) return;
     if (!selectedTable && cartState.items.length === 0 && kotSentQuantities.size === 0) return;
-    if (isSocketIOEnabled) {
-      // Immediate persist for metadata only — Socket.IO handles cart items
-      persistTab(snapshotCurrentTab());
-    } else {
-      scheduleSave(snapshotCurrentTab());
-    }
+    scheduleSave(snapshotCurrentTab());
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, preBillPrinted]);
+  }, [selectedCustomer?.id, selectedTable?.id, isReturnMode, orderType, kotSentQuantities, kotOrderIds, view, preBillPrinted, cartState.revision]);
 
   // Persist immediately when page becomes hidden (browser tab close / app switch)
   useEffect(() => {
