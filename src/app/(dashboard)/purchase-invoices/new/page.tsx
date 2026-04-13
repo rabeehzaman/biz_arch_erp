@@ -252,7 +252,7 @@ export default function NewPurchaseInvoicePage() {
         discount: 0,
         gstRate: 0,
         hsnCode: "",
-        vatRate: 15,
+        vatRate: defaultVatRateRef.current,
         imeiNumbers: [],
       },
     ]);
@@ -292,7 +292,7 @@ export default function NewPurchaseInvoicePage() {
           let jewellery: JewelleryLineState | null = null;
           let unitCost = Number(product.cost) || Number(product.price);
           if (taxInclusive && unitCost > 0) {
-            const rate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
+            const rate = saudiEnabled ? (defaultVatRateRef.current) : (Number(product.gstRate) || 0);
             if (rate > 0) unitCost = Math.round(unitCost * (1 + rate / 100) * 100) / 100;
           }
 
@@ -320,7 +320,7 @@ export default function NewPurchaseInvoicePage() {
           let finalConversionFactor = defaultUnit ? defaultUnit.conversionFactor : 1;
           let finalUnitCost = defaultUnit ? defaultUnit.unitPrice : unitCost;
           if (defaultUnit && taxInclusive && finalUnitCost > 0) {
-            const taxRate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
+            const taxRate = saudiEnabled ? (defaultVatRateRef.current) : (Number(product.gstRate) || 0);
             if (taxRate > 0) finalUnitCost = Math.round(finalUnitCost * (1 + taxRate / 100) * 100) / 100;
           }
 
@@ -379,7 +379,7 @@ export default function NewPurchaseInvoicePage() {
             discount: 0,
             gstRate: 0,
             hsnCode: "",
-            vatRate: 15,
+            vatRate: defaultVatRateRef.current,
             imeiNumbers: [],
           },
         ]);
@@ -615,10 +615,8 @@ export default function NewPurchaseInvoicePage() {
                     <SupplierCombobox
                       suppliers={suppliers}
                       value={formData.supplierId}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, supplierId: value })
-                      }
-                      onSupplierCreated={fetchSuppliers}
+                      onValueChange={handleSupplierChange}
+                      onSupplierCreated={handleSupplierUpdated}
                       required
                       onSelectFocusNext={(triggerRef) => focusNextFocusable(triggerRef)}
                       autoFocus={true}

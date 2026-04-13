@@ -34,6 +34,7 @@ interface Supplier {
   id: string;
   name: string;
   email: string | null;
+  vatNumber?: string | null;
 }
 
 interface Product {
@@ -211,7 +212,7 @@ export default function EditPurchaseInvoicePage({
         discount: 0,
         gstRate: 0,
         hsnCode: "",
-        vatRate: 15,
+        vatRate: defaultVatRateRef.current,
       },
     ]);
   }, []);
@@ -238,7 +239,7 @@ export default function EditPurchaseInvoicePage({
           }
           let unitCost = Number(product.cost) || Number(product.price);
           if (taxInclusive && unitCost > 0) {
-            const rate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
+            const rate = saudiEnabled ? (defaultVatRateRef.current) : (Number(product.gstRate) || 0);
             if (rate > 0) unitCost = Math.round(unitCost * (1 + rate / 100) * 100) / 100;
           }
           const baseCostForDefault = Number(product.cost) || Number(product.price);
@@ -247,7 +248,7 @@ export default function EditPurchaseInvoicePage({
           let finalConversionFactor = defaultUnit ? defaultUnit.conversionFactor : 1;
           let finalUnitCost = defaultUnit ? defaultUnit.unitPrice : unitCost;
           if (defaultUnit && taxInclusive && finalUnitCost > 0) {
-            const taxRate = saudiEnabled ? 15 : (Number(product.gstRate) || 0);
+            const taxRate = saudiEnabled ? (defaultVatRateRef.current) : (Number(product.gstRate) || 0);
             if (taxRate > 0) finalUnitCost = Math.round(finalUnitCost * (1 + taxRate / 100) * 100) / 100;
           }
 
@@ -294,7 +295,7 @@ export default function EditPurchaseInvoicePage({
             discount: 0,
             gstRate: 0,
             hsnCode: "",
-            vatRate: 15,
+            vatRate: defaultVatRateRef.current,
           },
         ]);
       }, 0);
@@ -303,6 +304,33 @@ export default function EditPurchaseInvoicePage({
 
   const saudiEnabled = !!(session?.user as { saudiEInvoiceEnabled?: boolean })?.saudiEInvoiceEnabled;
   const taxEnabled = session?.user?.gstEnabled || saudiEnabled;
+
+  // Determine default VAT rate based on whether the selected supplier has a VAT number
+  const getDefaultVatRate = useCallback(() => {
+    if (!saudiEnabled || !formData.supplierId) return 15;
+    const supplier = suppliers.find(s => s.id === formData.supplierId);
+    return supplier?.vatNumber ? 15 : 0;
+  }, [saudiEnabled, suppliers, formData.supplierId]);
+  const defaultVatRateRef = useRef(15);
+  useEffect(() => { defaultVatRateRef.current = getDefaultVatRate(); }, [getDefaultVatRate]);
+
+  const handleSupplierChange = (supplierId: string) => {
+    setFormData(prev => ({ ...prev, supplierId }));
+    if (saudiEnabled) {
+      const supplier = suppliers.find(s => s.id === supplierId);
+      const newVatRate = supplier?.vatNumber ? 15 : 0;
+      setLineItems(prev => prev.map(item => ({ ...item, vatRate: newVatRate })));
+    }
+  };
+
+  const handleSupplierUpdated = (supplier: Supplier) => {
+    fetchSuppliers();
+    if (saudiEnabled && supplier.id === formData.supplierId) {
+      const newVatRate = supplier.vatNumber ? 15 : 0;
+      setLineItems(prev => prev.map(item => ({ ...item, vatRate: newVatRate })));
+    }
+  };
+
   const orgTaxInclusive = !!(session?.user as { isTaxInclusivePrice?: boolean })?.isTaxInclusivePrice;
   const [taxInclusive, setTaxInclusive] = useState(orgTaxInclusive);
   useEffect(() => { setTaxInclusive(orgTaxInclusive); }, [orgTaxInclusive]);
@@ -429,10 +457,8 @@ export default function EditPurchaseInvoicePage({
                     <SupplierCombobox
                       suppliers={suppliers}
                       value={formData.supplierId}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, supplierId: value })
-                      }
-                      onSupplierCreated={fetchSuppliers}
+                      onValueChange={handleSupplierChange}
+                      onSupplierCreated={handleSupplierUpdated}
                       required
                     />
                   </div>
