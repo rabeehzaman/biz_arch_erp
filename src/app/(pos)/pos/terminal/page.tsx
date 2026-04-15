@@ -1369,28 +1369,7 @@ function POSTerminalContent() {
     }
     if (itemsToSend.length === 0) return null;
 
-    // 2. Merge any server-only items (added by other devices) into local cart
-    let mergedItems = cartState.items;
-    try {
-      const serverRes = await fetch(`/api/pos/open-orders/${activeTabId}`);
-      if (serverRes.ok) {
-        const serverOrder = await serverRes.json();
-        const serverItems: CartItemData[] = Array.isArray(serverOrder.items) ? serverOrder.items : [];
-        if (serverItems.length > 0) {
-          // Only add items from server that don't exist in local cart (from other devices)
-          const localKeys = new Set(cartState.items.map(i => cartLineKey(i.productId, i.variantId)));
-          const serverOnlyItems = serverItems.filter(i => !localKeys.has(cartLineKey(i.productId, i.variantId)));
-          if (serverOnlyItems.length > 0) {
-            mergedItems = [...cartState.items, ...serverOnlyItems];
-            dispatchCart({ type: "RESTORE", items: mergedItems });
-          }
-        }
-      }
-    } catch {
-      // If server fetch fails, proceed with local items only
-    }
-
-    // 3. Create KOT record
+    // 2. Create KOT record
     const kotType = kotOrderIds.length === 0 ? "STANDARD" : "FOLLOWUP";
     const res = await fetch("/api/restaurant/kot", {
       method: "POST",
@@ -1415,16 +1394,16 @@ function POSTerminalContent() {
     if (!res.ok) throw new Error("Failed to create KOT");
     const kot = await res.json();
 
-    // 4. Update sent quantities for the MERGED items
+    // 3. Update sent quantities
     const newSentQtys = new Map(kotSentQuantities);
-    for (const item of mergedItems) {
+    for (const item of cartState.items) {
       const key = cartLineKey(item.productId, item.variantId);
       newSentQtys.set(key, item.quantity);
     }
     setKotSentQuantities(newSentQtys);
     setKotOrderIds(prev => [...prev, kot.id]);
 
-    // 5. Persist merged state + KOT info to server
+    // 4. Persist state + KOT info to server
     const updatedKotOrderIds = [...kotOrderIds, kot.id];
     persistTab({
       ...snapshotCurrentTab(),
@@ -1432,7 +1411,7 @@ function POSTerminalContent() {
       kotOrderIds: updatedKotOrderIds,
     });
 
-    // 6. Print KOT (only the unsent diff items)
+    // 5. Print KOT (only the unsent diff items)
     try {
       const kotReceiptData: KOTReceiptData = {
         kotNumber: kot.kotNumber,
