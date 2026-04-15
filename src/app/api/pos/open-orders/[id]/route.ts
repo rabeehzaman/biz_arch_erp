@@ -3,6 +3,26 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
 
+// Recently deleted order IDs — prevents stale in-flight PUTs from resurrecting
+// orders after checkout/close.  Entries expire after 30 seconds.
+const recentlyDeleted = new Map<string, number>();
+function markDeleted(id: string) {
+  recentlyDeleted.set(id, Date.now());
+  // Prune old entries
+  if (recentlyDeleted.size > 200) {
+    const cutoff = Date.now() - 30_000;
+    for (const [key, ts] of recentlyDeleted) {
+      if (ts < cutoff) recentlyDeleted.delete(key);
+    }
+  }
+}
+function wasRecentlyDeleted(id: string): boolean {
+  const ts = recentlyDeleted.get(id);
+  if (!ts) return false;
+  if (Date.now() - ts > 30_000) { recentlyDeleted.delete(id); return false; }
+  return true;
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -74,61 +94,83 @@ export async function PUT(
       preBillPrinted: preBillPrinted ?? false,
     };
 
-    // Check if this is a new order (needs server-assigned orderNumber)
+    // Check if this order already exists in DB
     const existing = await prisma.pOSOpenOrder.findUnique({
       where: { id },
       select: { id: true, orderNumber: true, sessionId: true },
     });
 
-    let orderNumber = existing?.orderNumber ?? 0;
-    let sessionIdForCreate = existing?.sessionId ?? "";
-
-    if (!existing) {
-      // New order — find any open session in the org for counter + assignment
-      const posSession = await prisma.pOSSession.findFirst({
-        where: { organizationId, status: "OPEN" },
-        orderBy: { openedAt: "desc" },
+    if (existing) {
+      // Update existing order
+      const result = await prisma.pOSOpenOrder.update({
+        where: { id },
+        data: {
+          ...data,
+          version: { increment: 1 },
+        },
+        select: { id: true, version: true, orderNumber: true },
       });
-
-      if (!posSession) {
-        return NextResponse.json(
-          { error: "No open POS session found" },
-          { status: 400 }
-        );
-      }
-
-      sessionIdForCreate = posSession.id;
-
-      // Only consume an order number when the order has items or a table
-      // Prevents wasting numbers on empty/abandoned tabs
-      if (data.items.length > 0 || data.tableId) {
-        const updated = await prisma.pOSSession.update({
-          where: { id: posSession.id },
-          data: { orderCounter: { increment: 1 } },
-          select: { orderCounter: true },
-        });
-        orderNumber = updated.orderCounter;
-      }
+      return NextResponse.json(result);
     }
 
-    const result = await prisma.pOSOpenOrder.upsert({
-      where: { id },
-      create: {
-        id,
-        organizationId,
-        sessionId: sessionIdForCreate,
-        ...data,
-        orderNumber,
-        version: 0,
-      },
-      update: {
-        ...data,
-        version: { increment: 1 },
-      },
-      select: { id: true, version: true, orderNumber: true },
+    // Stale save for an order that was just deleted (checkout/close) — ignore
+    if (wasRecentlyDeleted(id)) {
+      return NextResponse.json({ id, version: 0, orderNumber: 0 });
+    }
+
+    // New order — find any open session in the org for counter + assignment
+    const posSession = await prisma.pOSSession.findFirst({
+      where: { organizationId, status: "OPEN" },
+      orderBy: { openedAt: "desc" },
     });
 
-    return NextResponse.json(result);
+    if (!posSession) {
+      return NextResponse.json(
+        { error: "No open POS session found" },
+        { status: 400 }
+      );
+    }
+
+    // Only consume an order number when the order has items or a table
+    // Prevents wasting numbers on empty/abandoned tabs
+    let orderNumber = 0;
+    if (data.items.length > 0 || data.tableId) {
+      const updated = await prisma.pOSSession.update({
+        where: { id: posSession.id },
+        data: { orderCounter: { increment: 1 } },
+        select: { orderCounter: true },
+      });
+      orderNumber = updated.orderCounter;
+    }
+
+    // Use create (not upsert) — if a concurrent DELETE just removed this order,
+    // the create will fail with a unique constraint error rather than silently
+    // resurrecting the deleted order.
+    try {
+      const result = await prisma.pOSOpenOrder.create({
+        data: {
+          id,
+          organizationId,
+          sessionId: posSession.id,
+          ...data,
+          orderNumber,
+          version: 0,
+        },
+        select: { id: true, version: true, orderNumber: true },
+      });
+      return NextResponse.json(result);
+    } catch (err: unknown) {
+      // If the order was just re-checked-in by a concurrent request, update instead
+      if ((err as { code?: string })?.code === "P2002") {
+        const result = await prisma.pOSOpenOrder.update({
+          where: { id },
+          data: { ...data, version: { increment: 1 } },
+          select: { id: true, version: true, orderNumber: true },
+        });
+        return NextResponse.json(result);
+      }
+      throw err;
+    }
   } catch (error) {
     console.error("Failed to save open order:", error);
     return NextResponse.json(
@@ -160,6 +202,7 @@ export async function DELETE(
     }
 
     await prisma.pOSOpenOrder.delete({ where: { id } });
+    markDeleted(id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

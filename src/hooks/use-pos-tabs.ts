@@ -190,6 +190,8 @@ export function usePOSTabs(
   const [initialTabContext, setInitialTabContext] = useState<TabContext | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const versionsRef = useRef<Map<string, number>>(new Map());
+  // Tracks deleted tab IDs so in-flight/pending saves don't resurrect them via upsert
+  const deletedTabIdsRef = useRef<Set<string>>(new Set());
 
   // Fetch open orders from DB — fetches once on load to hydrate tabs
   const { data: dbOrders, mutate: mutateOpenOrders } = useSWR<DBOpenOrder[]>(
@@ -242,6 +244,7 @@ export function usePOSTabs(
 
   const persistTab = useCallback((tab: TabContext) => {
     if (!sessionId) return;
+    if (deletedTabIdsRef.current.has(tab.id)) return; // Don't resurrect deleted orders
     const body = serializeTab(tab);
     fetch(`/api/pos/open-orders/${tab.id}`, {
       method: "PUT",
@@ -289,6 +292,7 @@ export function usePOSTabs(
 
   const deletePersistedTab = useCallback((tabId: string) => {
     if (!sessionId) return;
+    deletedTabIdsRef.current.add(tabId); // Block any in-flight or future saves
     versionsRef.current.delete(tabId);
     fetch(`/api/pos/open-orders/${tabId}`, { method: "DELETE" }).catch(() => {});
   }, [sessionId]);
