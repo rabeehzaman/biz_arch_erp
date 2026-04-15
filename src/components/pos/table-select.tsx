@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import useSWR from "swr";
 import { Loader2, Users, Package } from "lucide-react";
 import {
@@ -12,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/i18n";
-import { useRealtimeTables } from "@/hooks/use-realtime-tables";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -33,8 +31,6 @@ interface TableSelectProps {
   onTakeaway: () => void;
   /** When true, the sheet cannot be dismissed by tapping outside — user must pick a table or takeaway */
   required?: boolean;
-  /** Organization ID for real-time table status subscription */
-  organizationId?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -51,20 +47,13 @@ const statusLabelKeys: Record<string, string> = {
   CLEANING: "restaurant.cleaning",
 };
 
-export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway, required, organizationId }: TableSelectProps) {
+export function TableSelect({ open, onOpenChange, onSelectTable, onTakeaway, required }: TableSelectProps) {
   const { t } = useLanguage();
   const { data: tables, isLoading, mutate } = useSWR<RestaurantTable[]>(
     open ? "/api/restaurant/tables" : null,
     fetcher,
     { revalidateOnMount: true, dedupingInterval: 5000 }
   );
-
-  // Real-time table status subscription — refresh table list on status changes
-  const onTableStatusChanged = useCallback(() => { mutate(); }, [mutate]);
-  useRealtimeTables(open && !!organizationId, {
-    organizationId,
-    onTableStatusChanged,
-  });
 
   const handleTableClick = (table: RestaurantTable) => {
     if (table.status !== "AVAILABLE" && table.status !== "OCCUPIED") return;

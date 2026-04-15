@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { posEventBus } from "@/lib/pos-event-bus";
-import { publishOrderDeleted, publishOrderUpdate } from "@/lib/pos/ably-server";
-import { getIO } from "@/lib/pos/socket-io-server";
 
 export async function GET(
   _request: NextRequest,
@@ -56,7 +53,7 @@ export async function PUT(
       customerId, customerName,
       tableId, tableNumber, tableName, tableSection, tableCapacity,
       heldOrderId, kotSentQuantities, kotOrderIds,
-      preBillPrinted, broadcast, deviceId,
+      preBillPrinted,
     } = body;
 
     const data = {
@@ -114,11 +111,6 @@ export async function PUT(
       }
     }
 
-    // When Socket.IO is active (deviceId present), don't increment version on
-    // HTTP persist — Socket.IO order:mutate owns the version counter.
-    // This prevents version conflicts between the two write paths.
-    const shouldIncrementVersion = !deviceId;
-
     const result = await prisma.pOSOpenOrder.upsert({
       where: { id },
       create: {
@@ -131,73 +123,10 @@ export async function PUT(
       },
       update: {
         ...data,
-        ...(shouldIncrementVersion ? { version: { increment: 1 } } : {}),
+        version: { increment: 1 },
       },
       select: { id: true, version: true, orderNumber: true },
     });
-
-    // Notify other POS devices via SSE (legacy — tab list refresh)
-    posEventBus.emit(organizationId, JSON.stringify({ type: "order-updated", id: result.id }));
-
-    // Socket.IO: broadcast order:created when a new order is first persisted
-    // so other devices see it immediately (not waiting for 30s SWR poll)
-    if (!existing) {
-      const io = getIO();
-      if (io) {
-        io.to(`org:${organizationId}`).emit("order:created", {
-          orderId: result.id,
-          deviceId: deviceId || "api",
-        });
-      }
-    }
-
-    // Broadcast via Ably only on KOT saves (broadcast: true), not draft saves
-    if (broadcast) {
-      await publishOrderUpdate(organizationId, result.id, [], result.version, deviceId || "api", {
-        items: data.items,
-        label: data.label,
-        orderType: data.orderType,
-        isReturnMode: data.isReturnMode,
-        customerId: data.customerId,
-        customerName: data.customerName,
-        tableId: data.tableId,
-        tableNumber: data.tableNumber,
-        tableName: data.tableName,
-        tableSection: data.tableSection,
-        tableCapacity: data.tableCapacity,
-        heldOrderId: data.heldOrderId,
-        kotSentQuantities: data.kotSentQuantities,
-        kotOrderIds: data.kotOrderIds,
-        preBillPrinted: data.preBillPrinted,
-      });
-    }
-
-    // Socket.IO broadcast on KOT saves (broadcast: true) — uses server.mjs rooms
-    // which properly exclude the sender via socket.to(room).emit()
-    if (broadcast) {
-      const io = getIO();
-      if (io) {
-        const senderDeviceId = deviceId || "api";
-        const state = {
-          items: data.items, label: data.label, orderType: data.orderType,
-          isReturnMode: data.isReturnMode, customerId: data.customerId,
-          customerName: data.customerName, tableId: data.tableId,
-          tableNumber: data.tableNumber, tableName: data.tableName,
-          tableSection: data.tableSection, tableCapacity: data.tableCapacity,
-          heldOrderId: data.heldOrderId, kotSentQuantities: data.kotSentQuantities,
-          kotOrderIds: data.kotOrderIds, preBillPrinted: data.preBillPrinted,
-        };
-        const orderRoom = `org:${organizationId}:order:${result.id}`;
-        io.to(orderRoom).emit("order:updated", {
-          orderId: result.id, ops: [], version: result.version,
-          deviceId: senderDeviceId, state,
-        });
-        io.to(`org:${organizationId}`).emit("order:updated", {
-          orderId: result.id, ops: [], version: result.version,
-          deviceId: senderDeviceId,
-        });
-      }
-    }
 
     return NextResponse.json(result);
   } catch (error) {
@@ -231,18 +160,6 @@ export async function DELETE(
     }
 
     await prisma.pOSOpenOrder.delete({ where: { id } });
-
-    // Notify other POS devices via SSE (legacy) and Ably
-    posEventBus.emit(organizationId, JSON.stringify({ type: "order-deleted", id }));
-    await publishOrderDeleted(organizationId, id, "api");
-
-    // Socket.IO broadcast
-    const io = getIO();
-    if (io) {
-      const orderRoom = `org:${organizationId}:order:${id}`;
-      io.to(orderRoom).emit("order:deleted", { orderId: id, deviceId: "api" });
-      io.to(`org:${organizationId}`).emit("order:deleted", { orderId: id, deviceId: "api" });
-    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -21,7 +21,6 @@ import { SAUDI_VAT_RATE } from "@/lib/saudi-vat/constants";
 import { getPOSRegisterConfig } from "@/lib/pos/register-config";
 import { calculateRoundOff, getOrganizationRoundOffMode } from "@/lib/round-off";
 import { consumeBOMIngredientsForSale } from "@/lib/manufacturing/auto-consume";
-import { broadcastTableStatus } from "@/lib/pos/broadcast-table-status";
 
 
 type Tx = any;
@@ -1137,11 +1136,6 @@ export async function POST(request: NextRequest) {
         transactionStages,
       };
     }, { timeout: 60000 });
-
-    // Broadcast table status after transaction succeeds
-    if (tableId) {
-      broadcastTableStatus(organizationId, tableId, "AVAILABLE").catch(() => {});
-    }
 
     if (includeDebugTimings) {
       requestStages.transactionTotalMs = roundTimingMs(

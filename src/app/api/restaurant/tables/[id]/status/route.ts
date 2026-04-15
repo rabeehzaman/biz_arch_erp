@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrgId } from "@/lib/auth-utils";
-import { broadcastTableStatus } from "@/lib/pos/broadcast-table-status";
 
 const VALID_STATUSES = ["AVAILABLE", "OCCUPIED", "RESERVED", "CLEANING"] as const;
 
@@ -54,9 +53,6 @@ export async function PUT(
             where: { id },
             data: updateData,
         });
-
-        // Broadcast table status change to all connected POS devices
-        broadcastTableStatus(organizationId, id, status as "AVAILABLE" | "OCCUPIED" | "RESERVED" | "CLEANING").catch(() => {});
 
         return NextResponse.json(table);
     } catch (error) {

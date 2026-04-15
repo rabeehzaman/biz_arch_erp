@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import type { CartItemData } from "@/components/pos/cart-item";
-import { getPosDeviceId } from "@/lib/pos/ably-client";
 
 interface CartState {
   items: CartItemData[];
@@ -175,10 +174,6 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function usePOSTabs(
   sessionId: string | null,
-  onActiveTabRemoteUpdate?: (tab: TabContext) => void,
-  onActiveTabRemoved?: () => void,
-  organizationId?: string | null,
-  onVersionUpdate?: (tabId: string, version: number) => void,
 ) {
   // Inactive tabs — the active tab's state lives in the component's hooks
   const [tabs, setTabs] = useState<Map<string, TabContext>>(() => new Map());
@@ -189,12 +184,6 @@ export function usePOSTabs(
   const orderCounterRef = useRef(1);
   const activeTabIdRef = useRef(activeTabId);
   activeTabIdRef.current = activeTabId;
-  const onActiveTabRemoteUpdateRef = useRef(onActiveTabRemoteUpdate);
-  onActiveTabRemoteUpdateRef.current = onActiveTabRemoteUpdate;
-  const onActiveTabRemovedRef = useRef(onActiveTabRemoved);
-  onActiveTabRemovedRef.current = onActiveTabRemoved;
-  const onVersionUpdateRef = useRef(onVersionUpdate);
-  onVersionUpdateRef.current = onVersionUpdate;
 
   // DB persistence state
   const [isHydrated, setIsHydrated] = useState(false);
@@ -247,80 +236,13 @@ export function usePOSTabs(
     setIsHydrated(true);
   }, [dbOrders, isHydrated]);
 
-  // Reconcile remote changes after initial hydration (polling sync)
-  useEffect(() => {
-    if (!isHydrated || !dbOrders) return;
-
-    const currentActiveTabId = activeTabIdRef.current;
-    let hasChanges = false;
-
-    const dbMap = new Map<string, DBOpenOrder>();
-    for (const record of dbOrders) {
-      dbMap.set(record.id, record);
-    }
-
-    // Update inactive tabs that changed on the server
-    setTabs((prev) => {
-      const next = new Map(prev);
-
-      for (const record of dbOrders) {
-        const localVersion = versionsRef.current.get(record.id);
-        if (localVersion != null && record.version <= localVersion) continue;
-
-        // Version increased — this record was modified externally
-        if (record.id === currentActiveTabId) {
-          // Active tab — only update if no local save is pending
-          if (!saveTimerRef.current && onActiveTabRemoteUpdateRef.current) {
-            versionsRef.current.set(record.id, record.version);
-            onActiveTabRemoteUpdateRef.current(deserializeTab(record, 0));
-          }
-          continue;
-        }
-
-        // Inactive tab or new tab from another device
-        versionsRef.current.set(record.id, record.version);
-        next.set(record.id, deserializeTab(record, 0));
-        hasChanges = true;
-      }
-
-      // Remove local tabs that no longer exist on the server (deleted/checked out elsewhere)
-      for (const tabId of prev.keys()) {
-        if (!dbMap.has(tabId)) {
-          next.delete(tabId);
-          versionsRef.current.delete(tabId);
-          hasChanges = true;
-        }
-      }
-
-      // Add new tabs that appeared on the server (adopted from other sessions, etc.)
-      for (const record of dbOrders) {
-        if (record.id !== currentActiveTabId && !prev.has(record.id) && !versionsRef.current.has(record.id)) {
-          versionsRef.current.set(record.id, record.version);
-          next.set(record.id, deserializeTab(record, 0));
-          hasChanges = true;
-        }
-      }
-
-      return hasChanges ? next : prev;
-    });
-
-    // If the active tab was removed from the server (adopted by another device / checked out),
-    // reset to a fresh empty tab so auto-save doesn't re-create the deleted order
-    if (!dbMap.has(currentActiveTabId) && versionsRef.current.has(currentActiveTabId)) {
-      versionsRef.current.delete(currentActiveTabId);
-      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
-      onActiveTabRemovedRef.current?.();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dbOrders]);
-
   const tabCount = tabs.size + 1; // inactive + active
 
   // ── Persistence functions ─────────────────────────────────────────
 
-  const persistTab = useCallback((tab: TabContext, opts?: { broadcast?: boolean }) => {
+  const persistTab = useCallback((tab: TabContext) => {
     if (!sessionId) return;
-    const body = { ...serializeTab(tab), ...(opts?.broadcast ? { broadcast: true } : {}), deviceId: getPosDeviceId() };
+    const body = serializeTab(tab);
     fetch(`/api/pos/open-orders/${tab.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -330,7 +252,6 @@ export function usePOSTabs(
       .then((result) => {
         if (result?.version != null) {
           versionsRef.current.set(tab.id, result.version);
-          onVersionUpdateRef.current?.(tab.id, result.version);
         }
         // Adopt server-assigned order number if local tab has a provisional one
         if (result?.orderNumber && result.orderNumber > 0) {
@@ -543,33 +464,6 @@ export function usePOSTabs(
     [tabs]
   );
 
-  /** Replace the active tab's identity with an adopted order's ID (e.g. from another session) */
-  const adoptAsActiveTab = useCallback(
-    (adoptedId: string, label: string, createdAt: number, version: number, currentSnapshot: TabContext) => {
-      // Cancel any pending save for the old tab
-      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
-      // If current tab is empty, just replace its identity
-      if (currentSnapshot.cartState.items.length === 0) {
-        deletePersistedTab(currentSnapshot.id);
-      } else {
-        // Current tab has work — stash it as inactive
-        setTabs((prev) => {
-          const next = new Map(prev);
-          next.set(currentSnapshot.id, currentSnapshot);
-          return next;
-        });
-        persistTab(currentSnapshot);
-      }
-      // Track the adopted order's version so polling doesn't overwrite local changes
-      versionsRef.current.set(adoptedId, version);
-      setActiveTabId(adoptedId);
-      setActiveTabLabel(label);
-      setActiveTabOrderNumber(parseOrderNumber(label) || orderCounterRef.current);
-      setActiveTabCreatedAt(createdAt);
-    },
-    [deletePersistedTab, persistTab]
-  );
-
   const clearAllTabs = useCallback(() => {
     // DB cleanup happens server-side in session close
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -605,6 +499,5 @@ export function usePOSTabs(
     persistTab,
     scheduleSave,
     mutateOpenOrders,
-    adoptAsActiveTab,
   };
 }

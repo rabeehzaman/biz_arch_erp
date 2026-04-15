@@ -487,20 +487,15 @@ function POSTerminalContent() {
   }, [mobileView, chargedFromProducts, showCloseDialog, showHeldSheet, showPreviousOrdersSheet, showTableSelect]));
 
   // Callbacks for remote tab events (from polling)
-  const remoteUpdateRef = useRef<((tab: TabContext) => void) | null>(null);
-  const activeTabRemovedRef = useRef<(() => void) | null>(null);
 
   // Tab system — generalises per-table context to unlimited concurrent orders
   const {
     tabs, activeTabId, activeTabLabel, activeTabOrderNumber, activeTabCreatedAt, tabCount,
     allTabs, switchTab, switchToNewTab, closeTab: closeTabAction,
     findTabByTableId, updateActiveTabLabel, getAllTableIds, clearAllTabs,
-    isHydrated, initialTabContext, persistTab, scheduleSave, mutateOpenOrders, adoptAsActiveTab,
+    isHydrated, initialTabContext, persistTab, scheduleSave, mutateOpenOrders,
   } = usePOSTabs(
     posSession?.id ?? null,
-    (tab) => remoteUpdateRef.current?.(tab),
-    () => activeTabRemovedRef.current?.(),
-    isRestaurantEnabled ? organizationId : null
   );
   const [showTabsSheet, setShowTabsSheet] = useState(false);
 
@@ -1089,19 +1084,6 @@ function POSTerminalContent() {
     }
   }, [isHydrated, initialTabContext, restoreTabContext, isRestaurantEnabled]);
 
-  // Wire up remote tab event callbacks
-  useEffect(() => {
-    remoteUpdateRef.current = (tab: TabContext) => {
-      // Polling detected a server-side change on the active tab.
-      // Only update KOT metadata — never overwrite local cart items.
-      setKotSentQuantities(tab.kotSentQuantities);
-      setKotOrderIds(tab.kotOrderIds);
-    };
-    activeTabRemovedRef.current = () => {
-      resetLiveState();
-    };
-  }, [resetLiveState]);
-
   // Auto-save active tab to DB on cart or metadata changes.
   useEffect(() => {
     if (!isHydrated || !posSession) return;
@@ -1442,13 +1424,13 @@ function POSTerminalContent() {
     setKotSentQuantities(newSentQtys);
     setKotOrderIds(prev => [...prev, kot.id]);
 
-    // 5. Persist merged state + KOT info to server (Ably notification via PUT route)
+    // 5. Persist merged state + KOT info to server
     const updatedKotOrderIds = [...kotOrderIds, kot.id];
     persistTab({
       ...snapshotCurrentTab(),
       kotSentQuantities: newSentQtys,
       kotOrderIds: updatedKotOrderIds,
-    }, { broadcast: true });
+    });
 
     // 6. Print KOT (only the unsent diff items)
     try {
@@ -2805,7 +2787,6 @@ function POSTerminalContent() {
           open={showTableSelect}
           onOpenChange={setShowTableSelect}
           required={!selectedTable && cart.length === 0}
-          organizationId={organizationId}
           onSelectTable={async (table) => {
             if (!table) {
               setShowTableSelect(false);
@@ -2827,31 +2808,6 @@ function POSTerminalContent() {
               setShowTableSelect(false);
               return;
             }
-            // 2. Check DB for orders from OTHER devices/sessions
-            if (!localTabId) {
-              try {
-                const res = await fetch(`/api/pos/open-orders/by-table/${table.id}`);
-                const data = await res.json();
-                if (data.order && data.order.id !== activeTabId) {
-                  // Another device has an order for this table — adopt it
-                  const o = data.order;
-                  const snapshot = snapshotCurrentTab();
-                  adoptAsActiveTab(o.id, o.label, new Date(o.createdAt).getTime(), o.version, snapshot);
-                  // Restore the adopted order's cart state
-                  dispatchCart({ type: "RESTORE", items: Array.isArray(o.items) ? o.items : [] });
-                  setSelectedTable(table);
-                  setOrderType(o.orderType || "DINE_IN");
-                  setSelectedCustomer(o.customerId ? { id: o.customerId, name: o.customerName || "", phone: null } : null);
-                  setKotSentQuantities(new Map(Object.entries(o.kotSentQuantities || {}).map(([k, v]) => [k, Number(v)])));
-                  setKotOrderIds(o.kotOrderIds || []);
-                  setShowTableSelect(false);
-                  return;
-                }
-              } catch {
-                // DB check failed — proceed to create new order for this table
-              }
-            }
-
             const oldTable = selectedTable;
 
             // If current tab already has items AND a different table, stash it

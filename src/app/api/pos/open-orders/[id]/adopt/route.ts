@@ -6,11 +6,7 @@ import { getOrgId } from "@/lib/auth-utils";
 /**
  * POST /api/pos/open-orders/[id]/adopt
  *
- * Previously transferred sessionId (ownership) from one device to another.
- * Now returns the order state without transferring ownership — multi-device
- * collaboration is handled via Socket.IO rooms instead.
- *
- * Kept as a read-only endpoint for backward compatibility with older clients.
+ * Returns the order state for a given order ID (read-only).
  */
 export async function POST(
   _request: NextRequest,
