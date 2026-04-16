@@ -1099,8 +1099,8 @@ export async function POST(request: NextRequest) {
 
       // ── 11. Delete held order if applicable ──────────────────────────
       if (heldOrderId) {
-        await tx.pOSHeldOrder.delete({
-          where: { id: heldOrderId },
+        await tx.pOSHeldOrder.deleteMany({
+          where: { id: heldOrderId, organizationId },
         });
       }
 
