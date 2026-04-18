@@ -456,8 +456,8 @@ export default function NewInvoicePage() {
                               }}
                               type="number"
                               onFocus={(e) => e.target.select()}
-                              min="1"
-                              step="0.01"
+                              min="0.0001"
+                              step="0.0001"
                               value={item.quantity || ""}
                               onChange={(e) =>
                                 updateLineItem(

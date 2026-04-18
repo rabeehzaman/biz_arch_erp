@@ -337,7 +337,7 @@ model InvoiceItem {
   conversionFactor Decimal @default(1) @db.Decimal(10, 4)
 
   description String
-  quantity    Decimal @db.Decimal(10, 2)
+  quantity    Decimal @db.Decimal(10, 4)
   unitPrice   Decimal @db.Decimal(10, 2)
   discount    Decimal @default(0) @db.Decimal(5, 2)
   total       Decimal @db.Decimal(12, 2)
